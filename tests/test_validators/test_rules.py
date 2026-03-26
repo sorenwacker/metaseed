@@ -118,6 +118,101 @@ class TestUniqueIdPatternRule:
         assert len(errors) == 0
 
 
+class TestEntityReferenceRule:
+    """Tests for EntityReferenceRule cross-reference validation."""
+
+    def test_valid_single_reference(self) -> None:
+        """Valid entity reference passes."""
+        from miappe_api.validators.rules import EntityReferenceRule
+
+        # Available entities by their unique_id
+        available_locations = {"LOC-001", "LOC-002"}
+
+        rule = EntityReferenceRule(
+            field="geographic_location",
+            reference_id_field="unique_id",
+            available_ids=available_locations,
+        )
+        data = {"geographic_location": {"unique_id": "LOC-001", "name": "Field A"}}
+        errors = rule.validate(data)
+        assert len(errors) == 0
+
+    def test_invalid_reference(self) -> None:
+        """Invalid entity reference returns error."""
+        from miappe_api.validators.rules import EntityReferenceRule
+
+        available_locations = {"LOC-001", "LOC-002"}
+
+        rule = EntityReferenceRule(
+            field="geographic_location",
+            reference_id_field="unique_id",
+            available_ids=available_locations,
+        )
+        data = {"geographic_location": {"unique_id": "LOC-INVALID", "name": "Unknown"}}
+        errors = rule.validate(data)
+        assert len(errors) == 1
+        assert "LOC-INVALID" in errors[0].message
+
+    def test_missing_reference_skipped(self) -> None:
+        """Missing reference field is skipped."""
+        from miappe_api.validators.rules import EntityReferenceRule
+
+        rule = EntityReferenceRule(
+            field="geographic_location",
+            reference_id_field="unique_id",
+            available_ids={"LOC-001"},
+        )
+        data = {}  # No geographic_location
+        errors = rule.validate(data)
+        assert len(errors) == 0
+
+    def test_none_reference_skipped(self) -> None:
+        """None reference is skipped."""
+        from miappe_api.validators.rules import EntityReferenceRule
+
+        rule = EntityReferenceRule(
+            field="geographic_location",
+            reference_id_field="unique_id",
+            available_ids={"LOC-001"},
+        )
+        data = {"geographic_location": None}
+        errors = rule.validate(data)
+        assert len(errors) == 0
+
+    def test_list_references_all_valid(self) -> None:
+        """All valid list references pass."""
+        from miappe_api.validators.rules import EntityReferenceRule
+
+        available_sources = {"SRC-001", "SRC-002", "SRC-003"}
+
+        rule = EntityReferenceRule(
+            field="derives_from",
+            reference_id_field="name",
+            available_ids=available_sources,
+            is_list=True,
+        )
+        data = {"derives_from": [{"name": "SRC-001"}, {"name": "SRC-002"}]}
+        errors = rule.validate(data)
+        assert len(errors) == 0
+
+    def test_list_references_with_invalid(self) -> None:
+        """Invalid reference in list returns error."""
+        from miappe_api.validators.rules import EntityReferenceRule
+
+        available_sources = {"SRC-001", "SRC-002"}
+
+        rule = EntityReferenceRule(
+            field="derives_from",
+            reference_id_field="name",
+            available_ids=available_sources,
+            is_list=True,
+        )
+        data = {"derives_from": [{"name": "SRC-001"}, {"name": "SRC-INVALID"}]}
+        errors = rule.validate(data)
+        assert len(errors) == 1
+        assert "SRC-INVALID" in errors[0].message
+
+
 class TestValidationError:
     """Tests for ValidationError dataclass."""
 

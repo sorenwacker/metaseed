@@ -173,9 +173,98 @@ class UniqueIdPatternRule(ValidationRule):
         return []
 
 
+class EntityReferenceRule(ValidationRule):
+    """Validates that entity references point to existing entities.
+
+    Used for cross-reference validation when entities reference other entities
+    by ID fields (e.g., Study.geographic_location -> Location).
+
+    Attributes:
+        field: Name of the reference field.
+        reference_id_field: Name of the ID field in the referenced entity.
+        available_ids: Set of valid IDs that exist in the collection.
+        is_list: Whether the field contains a list of references.
+    """
+
+    def __init__(
+        self: Self,
+        field: str,
+        reference_id_field: str,
+        available_ids: set[str],
+        is_list: bool = False,
+    ) -> None:
+        """Initialize the rule.
+
+        Args:
+            field: Name of the field containing the reference.
+            reference_id_field: Name of the ID field in referenced entities.
+            available_ids: Set of valid entity IDs.
+            is_list: True if field contains a list of references.
+        """
+        self.field = field
+        self.reference_id_field = reference_id_field
+        self.available_ids = available_ids
+        self.is_list = is_list
+
+    @property
+    def name(self: Self) -> str:
+        """Return the rule name."""
+        return "entity_reference"
+
+    def validate(self: Self, data: dict[str, Any]) -> list[ValidationError]:
+        """Validate that all references point to existing entities.
+
+        Args:
+            data: Dictionary containing the reference field.
+
+        Returns:
+            List of errors for invalid references.
+        """
+        value = data.get(self.field)
+
+        # Skip if field is missing or None
+        if value is None:
+            return []
+
+        errors: list[ValidationError] = []
+
+        if self.is_list:
+            # Validate list of references
+            if not isinstance(value, list):
+                return errors
+            for i, ref in enumerate(value):
+                if isinstance(ref, dict):
+                    ref_id = ref.get(self.reference_id_field)
+                    if ref_id and ref_id not in self.available_ids:
+                        errors.append(
+                            ValidationError(
+                                field=f"{self.field}[{i}]",
+                                message=f"Reference '{ref_id}' not found in "
+                                f"available {self.reference_id_field}s",
+                                rule=self.name,
+                            )
+                        )
+        else:
+            # Validate single reference
+            if isinstance(value, dict):
+                ref_id = value.get(self.reference_id_field)
+                if ref_id and ref_id not in self.available_ids:
+                    errors.append(
+                        ValidationError(
+                            field=self.field,
+                            message=f"Reference '{ref_id}' not found in "
+                            f"available {self.reference_id_field}s",
+                            rule=self.name,
+                        )
+                    )
+
+        return errors
+
+
 # Re-export ValidationError for convenience
 __all__ = [
     "DateRangeRule",
+    "EntityReferenceRule",
     "RequiredFieldsRule",
     "UniqueIdPatternRule",
     "ValidationError",

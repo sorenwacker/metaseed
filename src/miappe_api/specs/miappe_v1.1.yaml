@@ -1,0 +1,1054 @@
+# MIAPPE v1.1 Specification
+# Minimum Information About Plant Phenotyping Experiments
+# Single source of truth for all entity definitions
+
+version: "1.1"
+name: MIAPPE
+description: >
+  MIAPPE (Minimum Information About Plant Phenotyping Experiments) is a
+  reporting standard for plant phenotyping experiments. This specification
+  defines 14 entities following the Plant Phenotyping Experiment Ontology (PPEO).
+ontology: PPEO
+
+# Validation rules applied across entities
+validation_rules:
+  - name: date_range
+    description: End date must not be before start date
+    applies_to: [Study, Event]
+    condition: end_date >= start_date
+
+  - name: unique_id_pattern
+    description: Unique IDs must contain only alphanumeric characters, underscores, and hyphens
+    applies_to: all
+    field: unique_id
+    pattern: "^[A-Za-z0-9_-]+$"
+
+# Entity definitions
+entities:
+
+  Investigation:
+    ontology_term: PPEO:investigation
+    description: >
+      A MIAPPE investigation represents a phenotyping project or experiment.
+      An investigation contains one or more studies and metadata about the
+      overall project, including submission information and licensing.
+    fields:
+      - name: unique_id
+        type: string
+        required: true
+        description: Unique identifier for the investigation.
+        ontology_term: PPEO:hasIdentifier
+        constraints:
+          pattern: "^[A-Za-z0-9_-]+$"
+          min_length: 1
+          max_length: 100
+
+      - name: title
+        type: string
+        required: true
+        description: Human-readable title of the investigation.
+        ontology_term: PPEO:hasName
+        constraints:
+          min_length: 1
+          max_length: 255
+
+      - name: description
+        type: string
+        required: false
+        description: Detailed description of the investigation.
+        ontology_term: PPEO:hasDescription
+
+      - name: submission_date
+        type: date
+        required: false
+        description: "Date submitted to archive. Format: ISO 8601 (YYYY-MM-DD)."
+        ontology_term: PPEO:hasSubmissionDate
+
+      - name: public_release_date
+        type: date
+        required: false
+        description: "Date of public release. Format: ISO 8601 (YYYY-MM-DD)."
+        ontology_term: PPEO:hasPublicReleaseDate
+
+      - name: license
+        type: uri
+        required: false
+        description: URL to the license document.
+        ontology_term: PPEO:hasLicense
+
+      - name: miappe_version
+        type: string
+        required: false
+        description: Version of MIAPPE standard used.
+        ontology_term: PPEO:hasMIAPPEVersion
+        constraints:
+          pattern: "^[0-9]+\\.[0-9]+$"
+
+      - name: associated_publications
+        type: list
+        items: string
+        required: false
+        description: DOIs or URLs to associated publications.
+        ontology_term: PPEO:hasAssociatedPublication
+
+      - name: contacts
+        type: list
+        items: Person
+        required: false
+        description: Persons associated with the investigation.
+        ontology_term: PPEO:hasPersonWithRole
+
+      - name: studies
+        type: list
+        items: Study
+        required: false
+        description: Studies within this investigation.
+        ontology_term: PPEO:hasPart
+
+  Study:
+    ontology_term: PPEO:study
+    description: >
+      A study represents a single experiment within an investigation.
+    fields:
+      - name: unique_id
+        type: string
+        required: true
+        description: Unique identifier for the study.
+        ontology_term: PPEO:hasIdentifier
+        constraints:
+          pattern: "^[A-Za-z0-9_-]+$"
+          min_length: 1
+          max_length: 100
+
+      - name: title
+        type: string
+        required: true
+        description: Human-readable title of the study.
+        ontology_term: PPEO:hasName
+        constraints:
+          min_length: 1
+          max_length: 255
+
+      - name: description
+        type: string
+        required: false
+        description: Detailed description of the study.
+        ontology_term: PPEO:hasDescription
+
+      - name: start_date
+        type: date
+        required: false
+        description: "Start date. Format: ISO 8601 (YYYY-MM-DD)."
+        ontology_term: PPEO:hasStartDate
+
+      - name: end_date
+        type: date
+        required: false
+        description: "End date. Format: ISO 8601 (YYYY-MM-DD)."
+        ontology_term: PPEO:hasEndDate
+
+      - name: contact_institution
+        type: string
+        required: false
+        description: Institution responsible for the study.
+        ontology_term: PPEO:hasContactInstitution
+
+      - name: geographic_location
+        type: entity
+        items: Location
+        required: false
+        description: Geographic location of the study.
+        ontology_term: PPEO:hasLocation
+
+      - name: experimental_site_name
+        type: string
+        required: false
+        description: Name of the experimental site.
+        ontology_term: PPEO:hasGrowthFacility
+
+      - name: latitude
+        type: float
+        required: false
+        description: Latitude in decimal degrees (WGS84).
+        ontology_term: PPEO:hasLatitude
+        constraints:
+          minimum: -90
+          maximum: 90
+
+      - name: longitude
+        type: float
+        required: false
+        description: Longitude in decimal degrees (WGS84).
+        ontology_term: PPEO:hasLongitude
+        constraints:
+          minimum: -180
+          maximum: 180
+
+      - name: altitude
+        type: float
+        required: false
+        description: Altitude in meters above sea level.
+        ontology_term: PPEO:hasAltitude
+
+      - name: experimental_design_type
+        type: string
+        required: false
+        description: Type of experimental design.
+        ontology_term: PPEO:hasExperimentalDesign
+
+      - name: experimental_design_description
+        type: string
+        required: false
+        description: Description of the experimental design.
+        ontology_term: PPEO:hasDescription
+
+      - name: observation_unit_level_hierarchy
+        type: list
+        items: string
+        required: false
+        description: Hierarchy of observation unit levels.
+        ontology_term: PPEO:hasObservationLevelHierarchy
+
+      - name: observation_unit_description
+        type: string
+        required: false
+        description: Description of observation units.
+        ontology_term: PPEO:hasObservationUnitDescription
+
+      - name: growth_facility_type
+        type: string
+        required: false
+        description: Type of growth facility.
+        ontology_term: PPEO:hasGrowthFacility
+
+      - name: cultural_practices
+        type: string
+        required: false
+        description: Cultural practices applied.
+        ontology_term: PPEO:hasCulturalPractices
+
+      - name: map_of_experimental_design
+        type: uri
+        required: false
+        description: URL to experimental design map.
+        ontology_term: PPEO:hasExperimentalDesignMap
+
+      - name: persons
+        type: list
+        items: Person
+        required: false
+        description: Persons involved in the study.
+        ontology_term: PPEO:hasPersonWithRole
+
+      - name: data_files
+        type: list
+        items: DataFile
+        required: false
+        description: Data files associated with the study.
+        ontology_term: PPEO:hasDataFile
+
+      - name: biological_materials
+        type: list
+        items: BiologicalMaterial
+        required: false
+        description: Biological materials used.
+        ontology_term: PPEO:hasBiologicalMaterial
+
+      - name: observation_units
+        type: list
+        items: ObservationUnit
+        required: false
+        description: Observation units in the study.
+        ontology_term: PPEO:hasPart
+
+      - name: observed_variables
+        type: list
+        items: ObservedVariable
+        required: false
+        description: Variables observed.
+        ontology_term: PPEO:hasVariable
+
+      - name: factors
+        type: list
+        items: Factor
+        required: false
+        description: Experimental factors.
+        ontology_term: PPEO:hasFactor
+
+      - name: events
+        type: list
+        items: Event
+        required: false
+        description: Events during the study.
+        ontology_term: PPEO:hasEvent
+
+      - name: environments
+        type: list
+        items: Environment
+        required: false
+        description: Environmental conditions.
+        ontology_term: PPEO:hasEnvironment
+
+  Person:
+    ontology_term: PPEO:person
+    description: A person involved in an investigation or study.
+    fields:
+      - name: name
+        type: string
+        required: true
+        description: Full name of the person.
+        ontology_term: PPEO:hasName
+        constraints:
+          min_length: 1
+          max_length: 255
+
+      - name: email
+        type: string
+        required: false
+        description: Email address.
+        ontology_term: PPEO:hasEMailContact
+        constraints:
+          pattern: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+
+      - name: institution
+        type: string
+        required: false
+        description: Affiliation or institution.
+        ontology_term: PPEO:hasAffiliation
+
+      - name: role
+        type: string
+        required: false
+        description: Role in the investigation or study.
+        ontology_term: PPEO:hasRole
+
+      - name: orcid
+        type: string
+        required: false
+        description: "ORCID identifier (format: XXXX-XXXX-XXXX-XXXX)."
+        ontology_term: PPEO:hasIdentifier
+        constraints:
+          pattern: "^[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X]$"
+
+  BiologicalMaterial:
+    ontology_term: PPEO:biological_material
+    description: Biological material (germplasm) used in a study.
+    fields:
+      - name: unique_id
+        type: string
+        required: true
+        description: Unique identifier for the biological material.
+        ontology_term: PPEO:hasIdentifier
+        constraints:
+          pattern: "^[A-Za-z0-9_-]+$"
+          min_length: 1
+          max_length: 100
+
+      - name: organism
+        type: string
+        required: false
+        description: Scientific name (genus and species).
+        ontology_term: PPEO:hasOrganism
+
+      - name: genus
+        type: string
+        required: false
+        description: Genus of the organism.
+        ontology_term: PPEO:hasGenus
+
+      - name: species
+        type: string
+        required: false
+        description: Species epithet.
+        ontology_term: PPEO:hasSpecies
+
+      - name: infraspecific_name
+        type: string
+        required: false
+        description: Subspecies, variety, or cultivar.
+        ontology_term: PPEO:hasInfraspecificName
+
+      - name: material_source
+        type: entity
+        items: MaterialSource
+        required: false
+        description: Reference to material source.
+        ontology_term: PPEO:hasMaterialSource
+
+      - name: accession_number
+        type: string
+        required: false
+        description: Genebank accession number.
+        ontology_term: PPEO:hasGermplasmAccessionNumber
+
+      - name: biological_material_description
+        type: string
+        required: false
+        description: Description of the biological material.
+        ontology_term: PPEO:hasDescription
+
+      - name: biological_material_latitude
+        type: float
+        required: false
+        description: Latitude of collection site.
+        ontology_term: PPEO:hasLatitude
+        constraints:
+          minimum: -90
+          maximum: 90
+
+      - name: biological_material_longitude
+        type: float
+        required: false
+        description: Longitude of collection site.
+        ontology_term: PPEO:hasLongitude
+        constraints:
+          minimum: -180
+          maximum: 180
+
+      - name: biological_material_altitude
+        type: float
+        required: false
+        description: Altitude of collection site.
+        ontology_term: PPEO:hasAltitude
+
+      - name: biological_material_coordinates_uncertainty
+        type: string
+        required: false
+        description: Coordinate uncertainty.
+        ontology_term: PPEO:hasCoordinatesUncertainty
+
+      - name: biological_material_preprocessing
+        type: string
+        required: false
+        description: Preprocessing applied.
+        ontology_term: PPEO:hasPreprocessing
+
+      - name: external_references
+        type: list
+        items: string
+        required: false
+        description: External database identifiers.
+        ontology_term: PPEO:hasExternalIdentifier
+
+  ObservationUnit:
+    ontology_term: PPEO:observation_unit
+    description: Smallest unit on which observations are made.
+    fields:
+      - name: unique_id
+        type: string
+        required: true
+        description: Unique identifier for the observation unit.
+        ontology_term: PPEO:hasIdentifier
+        constraints:
+          pattern: "^[A-Za-z0-9_-]+$"
+          min_length: 1
+          max_length: 100
+
+      - name: observation_unit_type
+        type: string
+        required: false
+        description: Type (plant, plot, pot, etc.).
+        ontology_term: PPEO:hasObservationLevel
+
+      - name: biological_material_id
+        type: string
+        required: false
+        description: Reference to biological material.
+        ontology_term: PPEO:hasBiologicalMaterial
+
+      - name: spatial_distribution_type
+        type: string
+        required: false
+        description: Type of spatial distribution.
+        ontology_term: PPEO:hasSpatialDistributionType
+
+      - name: spatial_distribution
+        type: string
+        required: false
+        description: Spatial position information.
+        ontology_term: PPEO:hasSpatialDistribution
+
+      - name: observation_unit_x_ref
+        type: string
+        required: false
+        description: X coordinate or column.
+        ontology_term: PPEO:hasSpatialCoordinate
+
+      - name: observation_unit_y_ref
+        type: string
+        required: false
+        description: Y coordinate or row.
+        ontology_term: PPEO:hasSpatialCoordinate
+
+      - name: observation_unit_block
+        type: string
+        required: false
+        description: Block identifier.
+        ontology_term: PPEO:hasSpatialDistribution
+
+      - name: observation_unit_replicate
+        type: string
+        required: false
+        description: Replicate number.
+        ontology_term: PPEO:hasEntryNumber
+
+      - name: entry_type
+        type: string
+        required: false
+        description: Entry type (test, check, filler).
+        ontology_term: PPEO:hasEntryType
+
+      - name: observation_level
+        type: string
+        required: false
+        description: Level in hierarchy.
+        ontology_term: PPEO:hasObservationLevel
+
+      - name: observation_level_code
+        type: string
+        required: false
+        description: Code at observation level.
+        ontology_term: PPEO:hasIdentifier
+
+      - name: factor_values
+        type: list
+        items: FactorValue
+        required: false
+        description: Factor values applied.
+        ontology_term: PPEO:hasFactorValue
+
+      - name: samples
+        type: list
+        items: Sample
+        required: false
+        description: Samples from this unit.
+        ontology_term: PPEO:hasSample
+
+      - name: external_references
+        type: list
+        items: string
+        required: false
+        description: External identifiers.
+        ontology_term: PPEO:hasExternalIdentifier
+
+  ObservedVariable:
+    ontology_term: PPEO:observed_variable
+    description: Trait + Method + Scale combination for measurements.
+    fields:
+      - name: unique_id
+        type: string
+        required: true
+        description: Unique identifier.
+        ontology_term: PPEO:hasIdentifier
+        constraints:
+          pattern: "^[A-Za-z0-9_-]+$"
+          min_length: 1
+          max_length: 100
+
+      - name: name
+        type: string
+        required: true
+        description: Human-readable name.
+        ontology_term: PPEO:hasName
+        constraints:
+          min_length: 1
+          max_length: 255
+
+      - name: trait
+        type: string
+        required: false
+        description: The trait being measured.
+        ontology_term: PPEO:hasTrait
+
+      - name: trait_accession_number
+        type: string
+        required: false
+        description: Trait ontology accession.
+        ontology_term: PPEO:hasTraitAccession
+
+      - name: trait_description
+        type: string
+        required: false
+        description: Description of the trait.
+        ontology_term: PPEO:hasDescription
+
+      - name: method
+        type: string
+        required: false
+        description: Measurement method.
+        ontology_term: PPEO:hasMethod
+
+      - name: method_accession_number
+        type: string
+        required: false
+        description: Method ontology accession.
+        ontology_term: PPEO:hasMethodAccession
+
+      - name: method_description
+        type: string
+        required: false
+        description: Description of the method.
+        ontology_term: PPEO:hasDescription
+
+      - name: scale
+        type: string
+        required: false
+        description: Scale or unit of measurement.
+        ontology_term: PPEO:hasScale
+
+      - name: scale_accession_number
+        type: string
+        required: false
+        description: Scale ontology accession.
+        ontology_term: PPEO:hasScaleAccession
+
+      - name: scale_description
+        type: string
+        required: false
+        description: Description of the scale.
+        ontology_term: PPEO:hasDescription
+
+      - name: time_scale
+        type: string
+        required: false
+        description: Time scale for observations.
+        ontology_term: PPEO:hasTimeScale
+
+      - name: reference
+        type: uri
+        required: false
+        description: URI to variable definition.
+        ontology_term: PPEO:hasExternalIdentifier
+
+  Factor:
+    ontology_term: PPEO:factor
+    description: Experimental factor (controlled variable).
+    fields:
+      - name: unique_id
+        type: string
+        required: true
+        description: Unique identifier.
+        ontology_term: PPEO:hasIdentifier
+        constraints:
+          pattern: "^[A-Za-z0-9_-]+$"
+          min_length: 1
+          max_length: 100
+
+      - name: name
+        type: string
+        required: true
+        description: Name of the factor.
+        ontology_term: PPEO:hasName
+        constraints:
+          min_length: 1
+          max_length: 255
+
+      - name: description
+        type: string
+        required: false
+        description: Description of the factor.
+        ontology_term: PPEO:hasDescription
+
+      - name: factor_type
+        type: string
+        required: false
+        description: Type (treatment, genotype, environment).
+        ontology_term: PPEO:hasFactorType
+
+      - name: values
+        type: list
+        items: FactorValue
+        required: false
+        description: Possible values for this factor.
+        ontology_term: PPEO:hasModality
+
+  FactorValue:
+    ontology_term: PPEO:factor_value
+    description: A specific value or level of a factor.
+    fields:
+      - name: unique_id
+        type: string
+        required: true
+        description: Unique identifier.
+        ontology_term: PPEO:hasIdentifier
+        constraints:
+          pattern: "^[A-Za-z0-9_-]+$"
+          min_length: 1
+          max_length: 100
+
+      - name: factor_id
+        type: string
+        required: false
+        description: Reference to parent factor.
+        ontology_term: PPEO:isModalityOf
+
+      - name: value
+        type: string
+        required: true
+        description: The actual value or level.
+        ontology_term: PPEO:hasName
+        constraints:
+          min_length: 1
+
+      - name: description
+        type: string
+        required: false
+        description: Description of this value.
+        ontology_term: PPEO:hasDescription
+
+  Event:
+    ontology_term: PPEO:event
+    description: A discrete occurrence during a study.
+    fields:
+      - name: unique_id
+        type: string
+        required: true
+        description: Unique identifier.
+        ontology_term: PPEO:hasIdentifier
+        constraints:
+          pattern: "^[A-Za-z0-9_-]+$"
+          min_length: 1
+          max_length: 100
+
+      - name: event_type
+        type: string
+        required: true
+        description: Type of event.
+        ontology_term: PPEO:hasEventType
+        constraints:
+          min_length: 1
+          max_length: 255
+
+      - name: date
+        type: datetime
+        required: false
+        description: When the event occurred.
+        ontology_term: PPEO:hasDateTime
+
+      - name: end_date
+        type: datetime
+        required: false
+        description: End date if event spans a period.
+        ontology_term: PPEO:hasEndDateTime
+
+      - name: description
+        type: string
+        required: false
+        description: Description of the event.
+        ontology_term: PPEO:hasDescription
+
+      - name: observation_unit_ids
+        type: list
+        items: string
+        required: false
+        description: Observation units affected.
+        ontology_term: PPEO:hasObservedSubject
+
+      - name: event_accession_number
+        type: string
+        required: false
+        description: Event type ontology accession.
+        ontology_term: PPEO:hasEventAccession
+
+  Environment:
+    ontology_term: PPEO:environment
+    description: Environmental conditions recorded during a study.
+    fields:
+      - name: unique_id
+        type: string
+        required: true
+        description: Unique identifier.
+        ontology_term: PPEO:hasIdentifier
+        constraints:
+          pattern: "^[A-Za-z0-9_-]+$"
+          min_length: 1
+          max_length: 100
+
+      - name: parameter
+        type: string
+        required: true
+        description: Environmental parameter name.
+        ontology_term: PPEO:hasEnvironmentParameter
+        constraints:
+          min_length: 1
+          max_length: 255
+
+      - name: parameter_accession_number
+        type: string
+        required: false
+        description: Parameter ontology accession.
+        ontology_term: PPEO:hasEnvironmentParameterAccession
+
+      - name: value
+        type: string
+        required: false
+        description: Value of the parameter.
+        ontology_term: PPEO:hasValue
+
+      - name: unit
+        type: string
+        required: false
+        description: Unit of measurement.
+        ontology_term: PPEO:hasUnit
+
+      - name: date
+        type: datetime
+        required: false
+        description: When recorded.
+        ontology_term: PPEO:hasDateTime
+
+      - name: description
+        type: string
+        required: false
+        description: Additional description.
+        ontology_term: PPEO:hasDescription
+
+  Sample:
+    ontology_term: PPEO:sample
+    description: A sample derived from an observation unit.
+    fields:
+      - name: unique_id
+        type: string
+        required: true
+        description: Unique identifier.
+        ontology_term: PPEO:hasIdentifier
+        constraints:
+          pattern: "^[A-Za-z0-9_-]+$"
+          min_length: 1
+          max_length: 100
+
+      - name: observation_unit_id
+        type: string
+        required: false
+        description: Source observation unit.
+        ontology_term: PPEO:derivesFrom
+
+      - name: plant_structural_development_stage
+        type: string
+        required: false
+        description: Development stage when collected.
+        ontology_term: PPEO:hasPlantStructureDevelopmentStage
+
+      - name: plant_anatomical_entity
+        type: string
+        required: false
+        description: Plant part sampled.
+        ontology_term: PPEO:hasPlantAnatomicalEntity
+
+      - name: collection_date
+        type: datetime
+        required: false
+        description: When collected.
+        ontology_term: PPEO:hasCollectionDate
+
+      - name: description
+        type: string
+        required: false
+        description: Description of the sample.
+        ontology_term: PPEO:hasDescription
+
+      - name: external_references
+        type: list
+        items: string
+        required: false
+        description: External identifiers.
+        ontology_term: PPEO:hasExternalIdentifier
+
+  DataFile:
+    ontology_term: PPEO:data_file
+    description: A data file associated with a study.
+    fields:
+      - name: unique_id
+        type: string
+        required: true
+        description: Unique identifier.
+        ontology_term: PPEO:hasIdentifier
+        constraints:
+          pattern: "^[A-Za-z0-9_-]+$"
+          min_length: 1
+          max_length: 100
+
+      - name: name
+        type: string
+        required: true
+        description: Filename or name.
+        ontology_term: PPEO:hasName
+        constraints:
+          min_length: 1
+          max_length: 255
+
+      - name: link
+        type: uri
+        required: false
+        description: URL or path to file.
+        ontology_term: PPEO:hasDigitalLocation
+
+      - name: description
+        type: string
+        required: false
+        description: Description of contents.
+        ontology_term: PPEO:hasDescription
+
+      - name: version
+        type: string
+        required: false
+        description: File version.
+        ontology_term: PPEO:hasVersion
+
+      - name: file_type
+        type: string
+        required: false
+        description: File format.
+        ontology_term: PPEO:hasFileType
+
+  Location:
+    ontology_term: PPEO:location
+    description: A geographic location.
+    fields:
+      - name: unique_id
+        type: string
+        required: true
+        description: Unique identifier.
+        ontology_term: PPEO:hasIdentifier
+        constraints:
+          pattern: "^[A-Za-z0-9_-]+$"
+          min_length: 1
+          max_length: 100
+
+      - name: name
+        type: string
+        required: true
+        description: Name of the location.
+        ontology_term: PPEO:hasName
+        constraints:
+          min_length: 1
+          max_length: 255
+
+      - name: abbreviation
+        type: string
+        required: false
+        description: Short code.
+        ontology_term: PPEO:hasAbbreviation
+        constraints:
+          max_length: 20
+
+      - name: country
+        type: string
+        required: false
+        description: Country name.
+        ontology_term: PPEO:hasCountry
+
+      - name: country_code
+        type: string
+        required: false
+        description: ISO 3166-1 alpha-3 code.
+        ontology_term: PPEO:hasCountryCode
+        constraints:
+          pattern: "^[A-Z]{3}$"
+
+      - name: latitude
+        type: float
+        required: false
+        description: Latitude (WGS84).
+        ontology_term: PPEO:hasLatitude
+        constraints:
+          minimum: -90
+          maximum: 90
+
+      - name: longitude
+        type: float
+        required: false
+        description: Longitude (WGS84).
+        ontology_term: PPEO:hasLongitude
+        constraints:
+          minimum: -180
+          maximum: 180
+
+      - name: altitude
+        type: float
+        required: false
+        description: Altitude in meters.
+        ontology_term: PPEO:hasAltitude
+
+      - name: description
+        type: string
+        required: false
+        description: Description.
+        ontology_term: PPEO:hasDescription
+
+      - name: address
+        type: string
+        required: false
+        description: Full address.
+        ontology_term: PPEO:hasAddress
+
+      - name: location_type
+        type: string
+        required: false
+        description: Type (field, greenhouse, etc.).
+        ontology_term: PPEO:hasLocationType
+
+  MaterialSource:
+    ontology_term: PPEO:material_source
+    description: Source of biological material (genebank, institution).
+    fields:
+      - name: unique_id
+        type: string
+        required: true
+        description: Unique identifier.
+        ontology_term: PPEO:hasIdentifier
+        constraints:
+          pattern: "^[A-Za-z0-9_-]+$"
+          min_length: 1
+          max_length: 100
+
+      - name: name
+        type: string
+        required: true
+        description: Name of the source.
+        ontology_term: PPEO:hasName
+        constraints:
+          min_length: 1
+          max_length: 255
+
+      - name: description
+        type: string
+        required: false
+        description: Description.
+        ontology_term: PPEO:hasDescription
+
+      - name: institute_code
+        type: string
+        required: false
+        description: FAO WIEWS institute code.
+        ontology_term: PPEO:hasInstituteCode
+
+      - name: country
+        type: string
+        required: false
+        description: Country.
+        ontology_term: PPEO:hasCountry
+
+      - name: address
+        type: string
+        required: false
+        description: Address.
+        ontology_term: PPEO:hasAddress
+
+      - name: latitude
+        type: float
+        required: false
+        description: Latitude.
+        ontology_term: PPEO:hasLatitude
+        constraints:
+          minimum: -90
+          maximum: 90
+
+      - name: longitude
+        type: float
+        required: false
+        description: Longitude.
+        ontology_term: PPEO:hasLongitude
+        constraints:
+          minimum: -180
+          maximum: 180

@@ -50,15 +50,74 @@ fields:
 | `datetime` | ISO 8601 datetime |
 | `uri` | Valid URI/URL |
 | `ontology_term` | Reference to an ontology term |
+| `list` | Collection of items (with `items` specifying element type) |
+| `entity` | Reference to another entity (with `items` specifying entity type) |
 
-## MIAPPE Versions
+## Entity References
 
-The system supports multiple MIAPPE versions:
+Fields can reference other entities using the `entity` type with an `items` attribute:
 
-- **MIAPPE 1.1**: Initial supported version
-- **MIAPPE 1.2**: Extended version with additional fields
+```yaml
+- name: geographic_location
+  type: entity
+  items: Location
+  required: false
+  description: Geographic location of the study.
+```
 
-Version-specific specs are stored in separate directories under `src/miappe_api/specs/`.
+This pattern enables proper relationship modeling between entities. For example:
+
+- **MIAPPE**: `Study.geographic_location` references a `Location` entity
+- **MIAPPE**: `BiologicalMaterial.material_source` references a `MaterialSource` entity
+- **ISA**: `Sample.derives_from` references a `Source` entity
+
+## Profiles
+
+### MIAPPE v1.1
+
+The MIAPPE profile supports 14 entities for plant phenotyping metadata:
+
+- Investigation, Study, Person, BiologicalMaterial, MaterialSource, Sample
+- ObservationUnit, ObservedVariable, Factor, FactorValue
+- Event, Environment, DataFile, Location
+
+Key entity relationships:
+
+- `Study.geographic_location` -> `Location`
+- `BiologicalMaterial.material_source` -> `MaterialSource`
+- `Sample` -> `ObservationUnit` (via `observation_unit_id`)
+
+### ISA v1.0
+
+The ISA (Investigation/Study/Assay) profile supports experimental metadata:
+
+- Investigation, Study, Assay, Person, Publication, Protocol
+- Source, Sample, Extract, LabeledExtract, DataFile
+- OntologyAnnotation, OntologySource, Comment
+
+#### ISA Material Flow Chain
+
+The ISA specification models material derivation using `derives_from` fields:
+
+```
+Source (origin material)
+   |
+   v derives_from
+Sample (collected from source)
+   |
+   v derives_from
+Extract (extracted material)
+   |
+   v derives_from
+LabeledExtract (labeled for assay)
+   |
+   v derives_from
+DataFile (measurement data)
+```
+
+This chain enables traceability from raw data back to the original source material.
+
+Version-specific specs are stored under `src/miappe_api/specs/`.
 
 ## See Also
 
