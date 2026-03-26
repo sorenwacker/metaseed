@@ -258,7 +258,7 @@ class EntityForm:
         entity_type: str,  # noqa: ARG002
         label: str,
     ) -> None:
-        """Render a field that contains a list of nested entities as a table."""
+        """Render a field that contains a list of nested entities as an Excel-like grid."""
         # Load existing items from instance if editing
         existing = []
         if self.instance:
@@ -270,64 +270,90 @@ class EntityForm:
                 ui.label(label).classes("font-semibold text-sm flex-grow")
                 count_label = ui.label(f"{len(existing)} items").classes("text-xs text-gray-500")
 
-            # Table container
-            table_container = ui.column().classes("w-full mt-2")
+            # Grid container
+            grid_container = ui.column().classes("w-full mt-2")
 
-            def get_table_data() -> list[dict]:
-                """Convert items to table rows."""
+            def get_grid_data() -> list[dict]:
+                """Convert items to grid rows."""
                 rows = []
                 for i, item in enumerate(self.nested_items[field_name]):
                     if hasattr(item, "model_dump"):
                         data = item.model_dump(exclude_none=True)
                     elif isinstance(item, dict):
-                        data = item
+                        data = item.copy()
                     else:
                         data = {"value": str(item)}
-                    # Add index for deletion
+                    # Flatten nested objects to strings for display
+                    for k, v in list(data.items()):
+                        if isinstance(v, list | dict):
+                            data[k] = str(v)[:50] + "..." if len(str(v)) > 50 else str(v)
                     data["_idx"] = i
                     rows.append(data)
                 return rows
 
-            def refresh_table():
-                table_container.clear()
+            def refresh_grid():
+                grid_container.clear()
                 items = self.nested_items[field_name]
                 count_label.set_text(f"{len(items)} item{'s' if len(items) != 1 else ''}")
 
                 if not items:
-                    with table_container:
+                    with grid_container:
                         ui.label("No items").classes("text-gray-400 text-sm italic")
                     return
 
-                rows = get_table_data()
+                rows = get_grid_data()
                 # Get columns from first item (exclude internal _idx)
-                cols = [k for k in rows[0] if not k.startswith("_")][:5]  # Max 5 columns
+                cols = [k for k in rows[0] if not k.startswith("_")]
 
-                with table_container:
-                    columns = [{"name": c, "label": c, "field": c, "sortable": True} for c in cols]
-                    columns.append({"name": "actions", "label": "", "field": "_idx"})
+                with grid_container:
+                    column_defs = [
+                        {
+                            "field": c,
+                            "headerName": c.replace("_", " ").title(),
+                            "sortable": True,
+                            "filter": True,
+                            "resizable": True,
+                            "editable": True,
+                        }
+                        for c in cols
+                    ]
 
-                    table = ui.table(
-                        columns=columns,
-                        rows=rows,
-                        row_key="_idx",
-                        pagination={"rowsPerPage": 10},
-                    ).classes("w-full")
-                    table.add_slot(
-                        "body-cell-actions",
-                        """
-                        <q-td :props="props">
-                            <q-btn flat dense icon="delete" color="negative" size="sm"
-                                   @click="$parent.$emit('delete', props.row._idx)" />
-                        </q-td>
-                        """,
+                    grid = (
+                        ui.aggrid(
+                            {
+                                "columnDefs": column_defs,
+                                "rowData": rows,
+                                "rowSelection": "single",
+                                "defaultColDef": {
+                                    "flex": 1,
+                                    "minWidth": 100,
+                                    "filter": True,
+                                    "sortable": True,
+                                    "resizable": True,
+                                },
+                                "pagination": True,
+                                "paginationPageSize": 20,
+                                "domLayout": "autoHeight",
+                            }
+                        )
+                        .classes("w-full")
+                        .style("height: auto; min-height: 150px; max-height: 400px;")
                     )
-                    table.on("delete", lambda e: delete_item(e.args))
 
-            def delete_item(idx: int):
-                del self.nested_items[field_name][idx]
-                refresh_table()
+                    async def on_cell_changed(e):
+                        """Update nested_items when cell is edited."""
+                        row_idx = e.args["data"]["_idx"]
+                        col = e.args["colId"]
+                        new_value = e.args["value"]
+                        item = self.nested_items[field_name][row_idx]
+                        if hasattr(item, "__setattr__"):
+                            setattr(item, col, new_value)
+                        elif isinstance(item, dict):
+                            item[col] = new_value
 
-            refresh_table()
+                    grid.on("cellValueChanged", on_cell_changed)
+
+            refresh_grid()
 
     def _render_nested_entity_field(self, field_name: str, entity_type: str, label: str) -> None:
         """Render a field that contains a single nested entity."""
