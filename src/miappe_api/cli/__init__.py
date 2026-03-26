@@ -175,5 +175,17 @@ def entities(
         typer.echo(f"  - {entity}")
 
 
+@app.command(name="ui")
+def web_ui(
+    host: Annotated[str, typer.Option("--host", "-h", help="Host to bind to")] = "127.0.0.1",
+    port: Annotated[int, typer.Option("--port", "-p", help="Port to bind to")] = 8080,
+) -> None:
+    """Launch the web interface."""
+    from miappe_api.ui import run_ui
+
+    typer.echo(f"Starting MIAPPE-API web interface at http://{host}:{port}")
+    run_ui(host=host, port=port)
+
+
 if __name__ == "__main__":
     app()

@@ -23,6 +23,7 @@ dependencies = [
     "typer>=0.12",
     "uvicorn>=0.29",
     "pyyaml>=6.0",
+    "nicegui>=3.9.0",
 ]
 
 [project.optional-dependencies]
@@ -70,6 +71,7 @@ select = [
 ignore = [
     "E501",   # line too long (handled by formatter)
     "B008",   # do not perform function calls in argument defaults
+    "SIM117", # nested with statements (normal for declarative UI code)
 ]
 
 [tool.ruff.lint.isort]
