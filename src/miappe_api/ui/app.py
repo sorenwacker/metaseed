@@ -233,6 +233,67 @@ class MIAPPEApp:
         self.facade: ProfileFacade | None = None
         self.main_content: ui.element | None = None
 
+    def _build_entity_hierarchy(self) -> list[tuple[str, int]]:
+        """Build entity hierarchy from spec relationships.
+
+        Returns:
+            List of (entity_name, depth) tuples in hierarchical order.
+        """
+        if self.facade is None:
+            return []
+
+        # Build parent -> children map from entity references
+        children: dict[str, list[str]] = {name: [] for name in self.facade.entities}
+        referenced_by: dict[str, set[str]] = {name: set() for name in self.facade.entities}
+
+        for entity_name in self.facade.entities:
+            helper = getattr(self.facade, entity_name)
+            nested = helper.nested_fields  # {field_name: entity_type}
+
+            for ref_entity in nested.values():
+                if ref_entity in children:
+                    children[entity_name].append(ref_entity)
+                    referenced_by[ref_entity].add(entity_name)
+
+        # Find root entities (not referenced by others, or self-referential only)
+        roots = []
+        for name in self.facade.entities:
+            refs = referenced_by[name] - {name}  # Exclude self-references
+            if not refs:
+                roots.append(name)
+
+        # If no clear roots, use Investigation or first entity
+        if not roots:
+            if "Investigation" in self.facade.entities:
+                roots = ["Investigation"]
+            else:
+                roots = [self.facade.entities[0]]
+
+        # BFS to build hierarchy with depths
+        result: list[tuple[str, int]] = []
+        visited: set[str] = set()
+
+        def visit(name: str, depth: int) -> None:
+            if name in visited:
+                return
+            visited.add(name)
+            result.append((name, depth))
+
+            # Sort children for consistent ordering
+            for child in sorted(children.get(name, [])):
+                visit(child, depth + 1)
+
+        # Start from roots
+        for root in sorted(roots):
+            visit(root, 0)
+
+        # Add any unvisited entities at depth 0
+        for name in sorted(self.facade.entities):
+            if name not in visited:
+                result.append((name, 0))
+
+        return result
+
     def run(self, host: str = "127.0.0.1", port: int = 8080) -> None:
         """Run the application.
 
@@ -267,23 +328,29 @@ class MIAPPEApp:
                 self._render_welcome()
 
     def _render_sidebar(self) -> None:
-        """Render the entity list sidebar."""
+        """Render the entity list sidebar in hierarchical order."""
         if self.facade is None:
             self._load_profile(self.current_profile)
 
         ui.label("Entities").classes("text-lg font-bold mb-2")
 
-        for entity_name in self.facade.entities:
+        hierarchy = self._build_entity_hierarchy()
+
+        for entity_name, depth in hierarchy:
             helper = getattr(self.facade, entity_name)
             req_count = len(helper.required_fields)
 
+            # Indent based on depth
+            margin = f"ml-{depth * 4}" if depth > 0 else ""
+            border = "border-l-4 border-blue-300" if depth > 0 else ""
+
             with (
                 ui.card()
-                .classes("w-full mb-2 cursor-pointer hover:bg-blue-50")
+                .classes(f"w-full mb-1 cursor-pointer hover:bg-blue-50 {margin} {border}")
                 .on("click", lambda _, name=entity_name: self._on_entity_select(name))
             ):
-                ui.label(entity_name).classes("font-semibold")
-                ui.label(f"{req_count} required fields").classes("text-xs text-gray-500")
+                ui.label(entity_name).classes("font-semibold text-sm")
+                ui.label(f"{req_count} required").classes("text-xs text-gray-500")
 
     def _render_welcome(self) -> None:
         """Render welcome message."""
