@@ -1,0 +1,71 @@
+<div class="card">
+    <h2 class="card-title">
+        {% if is_edit %}Edit{% else %}New{% endif %} {{ entity_type }}
+    </h2>
+    {% if description %}
+    <p class="card-subtitle">{{ description }}</p>
+    {% endif %}
+    {% if ontology_term %}
+    <p class="text-small text-muted mb-4">Ontology: {{ ontology_term }}</p>
+    {% endif %}
+
+    <form {% if is_edit %}
+          hx-put="/entity/{{ node_id }}"
+          {% else %}
+          hx-post="/entity"
+          {% endif %}
+          hx-target="#main"
+          hx-swap="innerHTML">
+
+        <input type="hidden" name="_entity_type" value="{{ entity_type }}">
+        {% if node_id %}
+        <input type="hidden" name="_node_id" value="{{ node_id }}">
+        {% endif %}
+
+        {% if required_fields %}
+        <div class="form-section">
+            <h3 class="form-section-title">Required Fields</h3>
+            {% for field in required_fields %}
+            {% include "partials/field.html" %}
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if optional_fields %}
+        <div class="collapsible">
+            <div class="collapsible-header">
+                <span class="collapsible-icon">&#9654;</span>
+                <span>Optional Fields</span>
+            </div>
+            <div class="collapsible-content">
+                {% for field in optional_fields %}
+                {% include "partials/field.html" %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="form-actions">
+            {% if is_edit %}
+            <button type="submit" class="btn btn-primary" data-testid="btn-update-{{ entity_type|lower }}">
+                Update
+            </button>
+            <button type="button" class="btn btn-secondary"
+                    hx-get="/"
+                    hx-target="#main"
+                    hx-swap="innerHTML"
+                    hx-select="#main > *"
+                    data-testid="btn-cancel-{{ entity_type|lower }}">
+                Cancel
+            </button>
+            {% else %}
+            <button type="submit" class="btn btn-primary" data-testid="btn-create-{{ entity_type|lower }}">
+                Create
+            </button>
+            <button type="reset" class="btn btn-secondary" data-testid="btn-clear-{{ entity_type|lower }}">
+                Clear
+            </button>
+            {% endif %}
+        </div>
+    </form>
+</div>

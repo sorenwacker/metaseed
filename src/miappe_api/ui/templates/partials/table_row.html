@@ -1,0 +1,16 @@
+<tr id="row-{{ row._idx }}" data-idx="{{ row._idx }}">
+    {% for col in columns %}
+    <td contenteditable="true"
+        data-field="{{ col }}"
+        data-idx="{{ row._idx }}">{{ row.get(col, '') }}</td>
+    {% endfor %}
+    <td>
+        <button class="btn-icon danger"
+                hx-delete="/table/{{ field_name }}/row/{{ row._idx }}"
+                hx-target="#row-{{ row._idx }}"
+                hx-swap="delete"
+                data-testid="table-delete-row-{{ row._idx }}">
+            &#128465;
+        </button>
+    </td>
+</tr>

@@ -1,0 +1,32 @@
+<h3 class="sidebar-title">Project</h3>
+
+<div class="entity-buttons">
+    {% for entity_type in root_types %}
+    <button class="btn btn-sm btn-secondary"
+            hx-get="/form/{{ entity_type }}"
+            hx-target="#main"
+            hx-swap="innerHTML"
+            data-testid="btn-new-{{ entity_type|lower }}">
+        + {{ entity_type }}
+    </button>
+    {% endfor %}
+</div>
+
+{% if tree_nodes %}
+<div class="tree">
+    {% for node in tree_nodes %}
+    {% with node=node, editing_node_id=editing_node_id %}
+    {% include "partials/tree_node.html" %}
+    {% endwith %}
+    {% endfor %}
+</div>
+{% else %}
+<p class="tree-empty">No entities created yet</p>
+<p class="tree-empty text-small">Click a button above to start</p>
+{% endif %}
+
+{% if notification %}
+<div id="notification-container" hx-swap-oob="true">
+    {% include "components/notification.html" %}
+</div>
+{% endif %}

@@ -1,0 +1,19 @@
+<nav class="breadcrumb">
+    {% for item in breadcrumbs %}
+    {% if loop.first %}
+    {% else %}
+    <span class="breadcrumb-separator">/</span>
+    {% endif %}
+
+    {% if loop.last %}
+    <span class="breadcrumb-item active">{{ item.label }}</span>
+    {% else %}
+    <span class="breadcrumb-item">
+        <a href="#"
+           hx-get="{{ item.url }}"
+           hx-target="#main"
+           hx-swap="innerHTML">{{ item.label }}</a>
+    </span>
+    {% endif %}
+    {% endfor %}
+</nav>

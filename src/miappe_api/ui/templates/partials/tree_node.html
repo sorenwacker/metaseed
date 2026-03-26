@@ -1,0 +1,32 @@
+<div class="tree-node {% if node.id == editing_node_id %}selected{% endif %}"
+     hx-get="/form/{{ node.entity_type }}/{{ node.id }}"
+     hx-target="#main"
+     hx-swap="innerHTML"
+     data-testid="tree-node-{{ node.id }}">
+    <span class="tree-node-icon">
+        {% if node.has_children %}&#128193;{% else %}&#128196;{% endif %}
+    </span>
+    <div class="tree-node-content">
+        <div class="tree-node-label">{{ node.label }}</div>
+        <div class="tree-node-type">{{ node.entity_type }}</div>
+    </div>
+    <button class="btn-icon danger tree-node-delete"
+            hx-delete="/entity/{{ node.id }}"
+            hx-target="#sidebar"
+            hx-swap="innerHTML"
+            hx-confirm="Delete {{ node.label }}?"
+            onclick="event.stopPropagation()"
+            data-testid="btn-delete-{{ node.id }}">
+        &#128465;
+    </button>
+</div>
+
+{% if node.children %}
+<div class="tree-children">
+    {% for child in node.children %}
+    {% with node=child, editing_node_id=editing_node_id %}
+    {% include "partials/tree_node.html" %}
+    {% endwith %}
+    {% endfor %}
+</div>
+{% endif %}

@@ -1,0 +1,47 @@
+<div class="card">
+    <div class="table-header">
+        <div>
+            <button class="btn btn-secondary btn-sm"
+                    hx-get="/form/{{ parent_entity_type }}"
+                    hx-target="#main"
+                    hx-swap="innerHTML"
+                    data-testid="table-back">
+                &#8592; Back
+            </button>
+            <h2 class="card-title" style="display: inline-block; margin-left: 1rem;">
+                {{ field_name|replace('_', ' ')|title }}
+            </h2>
+        </div>
+        <span class="text-muted" data-testid="table-count">{{ rows|length }} items</span>
+    </div>
+
+    <div class="table-actions">
+        <button class="btn btn-primary btn-sm"
+                hx-post="/table/{{ field_name }}/row"
+                hx-target="#table-body"
+                hx-swap="beforeend"
+                hx-include="[name^='_col_']"
+                data-testid="table-add-row">
+            + Add Row
+        </button>
+    </div>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                {% for col in columns %}
+                <th>
+                    {{ col|replace('_', ' ')|title }}
+                    <input type="hidden" name="_col_{{ col }}" value="{{ col }}">
+                </th>
+                {% endfor %}
+                <th style="width: 60px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody id="table-body">
+            {% for row in rows %}
+            {% include "partials/table_row.html" %}
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

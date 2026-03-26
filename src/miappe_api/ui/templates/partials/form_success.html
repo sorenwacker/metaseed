@@ -1,0 +1,12 @@
+<div class="welcome">
+    <h2 class="text-success">{{ message }}</h2>
+    <p>Select an entity from the sidebar or create a new one</p>
+</div>
+
+<div id="sidebar" hx-swap-oob="true" hx-get="/sidebar" hx-trigger="load"></div>
+
+<div id="notification-container" hx-swap-oob="true">
+    <div class="notification notification-success">
+        {{ message }}
+    </div>
+</div>

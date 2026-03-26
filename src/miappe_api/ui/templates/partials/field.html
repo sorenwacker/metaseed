@@ -1,0 +1,110 @@
+<div class="form-group">
+    <label class="form-label" for="field-{{ field.name }}">
+        {{ field.name }}
+        {% if field.required %}<span class="required">*</span>{% endif %}
+    </label>
+
+    {% set value = values.get(field.name, '') %}
+
+    {% if field.type == 'string' %}
+    <input type="text"
+           id="field-{{ field.name }}"
+           name="{{ field.name }}"
+           class="form-input"
+           value="{{ value }}"
+           {% if field.required %}required{% endif %}
+           data-testid="input-{{ field.name|replace('_', '-') }}">
+
+    {% elif field.type == 'integer' %}
+    <input type="number"
+           id="field-{{ field.name }}"
+           name="{{ field.name }}"
+           class="form-input"
+           value="{{ value }}"
+           step="1"
+           {% if field.required %}required{% endif %}
+           data-testid="input-{{ field.name|replace('_', '-') }}">
+
+    {% elif field.type == 'float' %}
+    <input type="number"
+           id="field-{{ field.name }}"
+           name="{{ field.name }}"
+           class="form-input"
+           value="{{ value }}"
+           step="any"
+           {% if field.required %}required{% endif %}
+           data-testid="input-{{ field.name|replace('_', '-') }}">
+
+    {% elif field.type == 'boolean' %}
+    <div class="form-checkbox">
+        <input type="checkbox"
+               id="field-{{ field.name }}"
+               name="{{ field.name }}"
+               value="true"
+               {% if value %}checked{% endif %}
+               data-testid="input-{{ field.name|replace('_', '-') }}">
+        <label for="field-{{ field.name }}">{{ field.name }}</label>
+    </div>
+
+    {% elif field.type == 'date' %}
+    <input type="date"
+           id="field-{{ field.name }}"
+           name="{{ field.name }}"
+           class="form-input"
+           value="{{ value }}"
+           {% if field.required %}required{% endif %}
+           data-testid="input-{{ field.name|replace('_', '-') }}">
+
+    {% elif field.type == 'uri' %}
+    <input type="url"
+           id="field-{{ field.name }}"
+           name="{{ field.name }}"
+           class="form-input"
+           value="{{ value }}"
+           {% if field.required %}required{% endif %}
+           data-testid="input-{{ field.name|replace('_', '-') }}">
+
+    {% elif field.type == 'list' %}
+        {% if field.items and field.items not in ['string', 'int', 'float', 'bool'] %}
+        <button type="button"
+                class="btn nested-field-btn"
+                hx-get="/table/{{ entity_type }}/{{ field.name }}"
+                hx-target="#main"
+                hx-swap="innerHTML"
+                data-testid="btn-nested-{{ field.name|replace('_', '-') }}">
+            {% set count = value|length if value else 0 %}
+            {{ field.name }} ({{ count }})
+        </button>
+        {% else %}
+        <textarea id="field-{{ field.name }}"
+                  name="{{ field.name }}"
+                  class="form-input form-textarea"
+                  placeholder="One item per line"
+                  {% if field.required %}required{% endif %}
+                  data-testid="input-{{ field.name|replace('_', '-') }}">{% if value is iterable and value is not string %}{{ value|join('\n') }}{% else %}{{ value }}{% endif %}</textarea>
+        {% endif %}
+
+    {% elif field.type == 'entity' %}
+    <button type="button"
+            class="btn nested-field-btn"
+            hx-get="/table/{{ entity_type }}/{{ field.name }}"
+            hx-target="#main"
+            hx-swap="innerHTML"
+            data-testid="btn-nested-{{ field.name|replace('_', '-') }}">
+        {% if value %}(1 item){% else %}(not set){% endif %}
+    </button>
+
+    {% else %}
+    <input type="text"
+           id="field-{{ field.name }}"
+           name="{{ field.name }}"
+           class="form-input"
+           value="{{ value }}"
+           {% if field.required %}required{% endif %}
+           data-testid="input-{{ field.name|replace('_', '-') }}">
+    {% endif %}
+
+    {% if field.description %}
+    <p class="form-help">{{ field.description }}</p>
+    {% endif %}
+</div>
