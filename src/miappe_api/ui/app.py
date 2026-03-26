@@ -17,18 +17,29 @@ from miappe_api.facade import ProfileFacade
 class EntityForm:
     """Dynamic form for creating entities."""
 
-    def __init__(self, facade: ProfileFacade, entity_name: str) -> None:
+    def __init__(
+        self,
+        facade: ProfileFacade,
+        entity_name: str,
+        on_save: Any = None,
+        is_nested: bool = False,
+    ) -> None:
         """Initialize form for an entity.
 
         Args:
             facade: Profile facade instance.
             entity_name: Name of entity to create form for.
+            on_save: Callback when entity is saved (for nested forms).
+            is_nested: Whether this is a nested form (in dialog).
         """
         self.facade = facade
         self.entity_name = entity_name
         self.helper = getattr(facade, entity_name)
         self.inputs: dict[str, Any] = {}
+        self.nested_items: dict[str, list[Any]] = {}  # Store nested entities
         self.result_container: ui.element | None = None
+        self.on_save = on_save
+        self.is_nested = is_nested
 
     def render(self) -> None:
         """Render the form UI."""
@@ -51,11 +62,16 @@ class EntityForm:
 
         # Action buttons
         with ui.row().classes("gap-4 mt-4"):
-            ui.button("Create", on_click=self._on_create, icon="add").props("color=primary")
-            ui.button("Clear", on_click=self._on_clear, icon="clear").props("flat")
+            if self.is_nested:
+                # Nested form - Save button calls callback
+                ui.button("Save", on_click=self._on_save_nested, icon="save").props("color=primary")
+            else:
+                # Top-level form - Create button
+                ui.button("Create", on_click=self._on_create, icon="add").props("color=primary")
+                ui.button("Clear", on_click=self._on_clear, icon="clear").props("flat")
 
-        # Result container
-        self.result_container = ui.column().classes("w-full mt-4")
+                # Result container (only for top-level forms)
+                self.result_container = ui.column().classes("w-full mt-4")
 
     def _render_field(self, field_name: str, required: bool) -> None:
         """Render a single form field."""
@@ -104,27 +120,19 @@ class EntityForm:
                 ).classes("w-full")
 
             elif field_type == "list":
-                # For list fields, use textarea with one item per line
-                hint = (
-                    f"One {items or 'item'} per line"
-                    if items == "string"
-                    else f"JSON array of {items}"
-                )
-                self.inputs[field_name] = ui.textarea(
-                    label=label,
-                    placeholder=hint,
-                ).classes("w-full")
+                if items and items not in ("string", "int", "float", "bool"):
+                    # List of entities - show add button and list
+                    self._render_nested_list_field(field_name, items, label)
+                else:
+                    # List of primitives - use textarea
+                    self.inputs[field_name] = ui.textarea(
+                        label=label,
+                        placeholder=f"One {items or 'item'} per line",
+                    ).classes("w-full")
 
             elif field_type == "entity":
-                # For entity references, use JSON input
-                self.inputs[field_name] = (
-                    ui.textarea(
-                        label=f"{label} ({items})",
-                        placeholder=f"JSON object for {items}",
-                    )
-                    .classes("w-full")
-                    .props("rows=3")
-                )
+                # Single entity reference - show add button
+                self._render_nested_entity_field(field_name, items, label)
 
             else:
                 # Fallback to text input
@@ -133,9 +141,159 @@ class EntityForm:
             if description:
                 ui.label(description).classes("text-xs text-gray-500 mt-1")
 
+    def _render_nested_list_field(self, field_name: str, entity_type: str, label: str) -> None:
+        """Render a field that contains a list of nested entities."""
+        self.nested_items[field_name] = []
+
+        with ui.card().classes("w-full p-2 bg-gray-50"):
+            ui.label(label).classes("font-semibold text-sm")
+
+            # Container for added items
+            items_container = ui.column().classes("w-full gap-1 mt-2")
+
+            def refresh_items():
+                items_container.clear()
+                with items_container:
+                    for i, item in enumerate(self.nested_items[field_name]):
+                        with ui.row().classes("w-full items-center gap-2 p-1 bg-white rounded"):
+                            # Show summary of the item
+                            summary = self._get_entity_summary(item)
+                            ui.label(summary).classes("flex-grow text-sm")
+                            ui.button(
+                                icon="delete",
+                                on_click=lambda _, idx=i: self._remove_nested_item(
+                                    field_name, idx, refresh_items
+                                ),
+                            ).props("flat dense color=negative size=sm")
+
+            def on_add_item():
+                self._open_nested_dialog(entity_type, field_name, refresh_items)
+
+            with ui.row().classes("w-full justify-between items-center mt-2"):
+                ui.label(f"0 {entity_type}(s)").bind_text_from(
+                    self.nested_items,
+                    field_name,
+                    lambda items: f"{len(items)} {entity_type}(s)",
+                )
+                ui.button(
+                    f"Add {entity_type}",
+                    on_click=on_add_item,
+                    icon="add",
+                ).props("flat dense color=primary")
+
+    def _render_nested_entity_field(self, field_name: str, entity_type: str, label: str) -> None:
+        """Render a field that contains a single nested entity."""
+        self.nested_items[field_name] = None
+
+        with ui.card().classes("w-full p-2 bg-gray-50"):
+            ui.label(label).classes("font-semibold text-sm")
+
+            # Container for the item
+            item_container = ui.column().classes("w-full mt-2")
+
+            def refresh_item():
+                item_container.clear()
+                with item_container:
+                    item = self.nested_items[field_name]
+                    if item:
+                        with ui.row().classes("w-full items-center gap-2 p-1 bg-white rounded"):
+                            summary = self._get_entity_summary(item)
+                            ui.label(summary).classes("flex-grow text-sm")
+                            ui.button(
+                                icon="delete",
+                                on_click=lambda: self._clear_nested_item(field_name, refresh_item),
+                            ).props("flat dense color=negative size=sm")
+                    else:
+                        ui.label("Not set").classes("text-gray-400 text-sm italic")
+
+            def on_add_item():
+                self._open_nested_dialog(entity_type, field_name, refresh_item, is_single=True)
+
+            refresh_item()
+
+            ui.button(
+                f"Set {entity_type}",
+                on_click=on_add_item,
+                icon="edit",
+            ).props("flat dense color=primary").classes("mt-2")
+
+    def _get_entity_summary(self, entity: Any) -> str:
+        """Get a short summary string for an entity."""
+        if hasattr(entity, "model_dump"):
+            data = entity.model_dump()
+        elif isinstance(entity, dict):
+            data = entity
+        else:
+            return str(entity)
+
+        # Try common identifier fields
+        for key in ["name", "title", "unique_id", "identifier", "filename", "term"]:
+            if key in data and data[key]:
+                return f"{data[key]}"
+        # Fallback to first non-empty value
+        for _, val in data.items():
+            if val and isinstance(val, str):
+                return f"{val[:30]}..."
+        return "(unnamed)"
+
+    def _open_nested_dialog(
+        self,
+        entity_type: str,
+        field_name: str,
+        refresh_callback: Any,
+        is_single: bool = False,
+    ) -> None:
+        """Open a dialog to create a nested entity."""
+        with ui.dialog() as dialog, ui.card().classes("w-96"):
+            ui.label(f"Add {entity_type}").classes("text-lg font-bold")
+
+            def on_save(instance: Any):
+                if is_single:
+                    self.nested_items[field_name] = instance
+                else:
+                    self.nested_items[field_name].append(instance)
+                dialog.close()
+                refresh_callback()
+
+            # Create nested form
+            nested_form = EntityForm(self.facade, entity_type, on_save=on_save, is_nested=True)
+            nested_form.render()
+
+            with ui.row().classes("w-full justify-end gap-2 mt-4"):
+                ui.button("Cancel", on_click=dialog.close).props("flat")
+
+        dialog.open()
+
+    def _remove_nested_item(self, field_name: str, index: int, refresh_callback: Any) -> None:
+        """Remove a nested item from a list field."""
+        del self.nested_items[field_name][index]
+        refresh_callback()
+
+    def _clear_nested_item(self, field_name: str, refresh_callback: Any) -> None:
+        """Clear a single nested item field."""
+        self.nested_items[field_name] = None
+        refresh_callback()
+
+    async def _on_save_nested(self) -> None:
+        """Handle save button click for nested forms."""
+        values = self._collect_values()
+
+        try:
+            instance = self.helper.create(**values)
+            if self.on_save:
+                self.on_save(instance)
+        except ValidationError as e:
+            # Show validation errors in a notification
+            errors = "; ".join(
+                f"{'.'.join(str(loc) for loc in err['loc'])}: {err['msg']}" for err in e.errors()
+            )
+            ui.notify(f"Validation error: {errors}", type="negative")
+
     def _collect_values(self) -> dict[str, Any]:
         """Collect form values into a dictionary."""
         values = {}
+
+        # Collect regular input values
         for field_name, input_elem in self.inputs.items():
             value = input_elem.value
             if value is None or value == "":
@@ -158,6 +316,16 @@ class EntityForm:
                     pass  # Keep as string, will fail validation
 
             values[field_name] = value
+
+        # Collect nested entity values
+        for field_name, items in self.nested_items.items():
+            if items is None:
+                continue
+            if isinstance(items, list):
+                if items:  # Only include non-empty lists
+                    values[field_name] = items
+            else:
+                values[field_name] = items
 
         return values
 
