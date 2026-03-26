@@ -320,7 +320,7 @@ class MIAPPEApp:
                     ).props("dense dark").classes("w-32")
 
             with ui.left_drawer().classes("bg-gray-100") as drawer:
-                drawer.props("width=250")
+                drawer.props("width=280")
                 self._render_sidebar()
 
             with ui.column().classes("w-full p-4") as main:
@@ -340,13 +340,14 @@ class MIAPPEApp:
             helper = getattr(self.facade, entity_name)
             req_count = len(helper.required_fields)
 
-            # Indent based on depth
-            margin = f"ml-{depth * 4}" if depth > 0 else ""
-            border = "border-l-4 border-blue-300" if depth > 0 else ""
+            # Indent using inline style for precise control
+            indent_px = depth * 12
+            border_style = "border-left: 3px solid #93c5fd;" if depth > 0 else ""
 
             with (
                 ui.card()
-                .classes(f"w-full mb-1 cursor-pointer hover:bg-blue-50 {margin} {border}")
+                .classes("w-full mb-1 cursor-pointer hover:bg-blue-50")
+                .style(f"margin-left: {indent_px}px; {border_style}")
                 .on("click", lambda _, name=entity_name: self._on_entity_select(name))
             ):
                 ui.label(entity_name).classes("font-semibold text-sm")
