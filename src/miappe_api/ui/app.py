@@ -139,6 +139,7 @@ class EntityForm:
                     )
                     .classes("w-full")
                     .props(f"data-testid={testid}")
+                    .mark(field_name)
                 )
 
             elif field_type == "integer":
@@ -149,6 +150,7 @@ class EntityForm:
                     )
                     .classes("w-full")
                     .props(f"data-testid={testid}")
+                    .mark(field_name)
                 )
 
             elif field_type == "float":
@@ -158,10 +160,13 @@ class EntityForm:
                     )
                     .classes("w-full")
                     .props(f"data-testid={testid}")
+                    .mark(field_name)
                 )
 
             elif field_type == "boolean":
-                self.inputs[field_name] = ui.checkbox(label).props(f"data-testid={testid}")
+                self.inputs[field_name] = (
+                    ui.checkbox(label).props(f"data-testid={testid}").mark(field_name)
+                )
 
             elif field_type == "date":
                 # Simple date input without complex bindings
@@ -172,6 +177,7 @@ class EntityForm:
                     )
                     .classes("w-full")
                     .props(f"data-testid={testid}")
+                    .mark(field_name)
                 )
 
             elif field_type == "uri":
@@ -182,6 +188,7 @@ class EntityForm:
                     )
                     .classes("w-full")
                     .props(f"data-testid={testid}")
+                    .mark(field_name)
                 )
 
             elif field_type == "list":
@@ -197,6 +204,7 @@ class EntityForm:
                         )
                         .classes("w-full")
                         .props(f"data-testid={testid}")
+                        .mark(field_name)
                     )
 
             elif field_type == "entity":
@@ -206,7 +214,10 @@ class EntityForm:
             else:
                 # Fallback to text input
                 self.inputs[field_name] = (
-                    ui.input(label=label).classes("w-full").props(f"data-testid={testid}")
+                    ui.input(label=label)
+                    .classes("w-full")
+                    .props(f"data-testid={testid}")
+                    .mark(field_name)
                 )
 
             if description:
@@ -641,6 +652,7 @@ class MIAPPEApp:
                 )
                 .style(f"margin-left: {indent_px}px")
                 .props(f"data-testid=tree-node-{node.id}")
+                .mark(f"tree-{node.id}", node.label)
                 .on("click", lambda _, n=node: self._on_tree_node_click(n))
             ):
                 # Icon based on entity type

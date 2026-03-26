@@ -11,7 +11,7 @@ make test
 # Run tests with coverage
 make test-cov
 
-# Run UI tests (requires Chrome)
+# Run UI tests (NiceGUI native tests)
 make test-ui
 ```
 
@@ -26,8 +26,11 @@ tests/
 ├── test_specs/         # YAML spec loading tests
 ├── test_storage/       # JSON/YAML storage tests
 ├── test_validators/    # Validation rule tests
-├── test_ui/            # Selenium E2E tests
-│   └── test_selenium.py
+├── test_ui/            # UI tests
+│   ├── test_nicegui.py # NiceGUI native tests (primary)
+│   ├── test_selenium.py # Selenium E2E tests (fallback)
+│   ├── conftest.py     # UI test fixtures
+│   └── main_test.py    # NiceGUI test entry point
 └── test_version.py
 ```
 
@@ -48,35 +51,92 @@ Integration tests verify component interactions:
 - **API**: Test REST endpoints with TestClient
 - **Facade**: Test entity creation through the facade pattern
 
-## E2E UI Tests (Selenium)
+## E2E UI Tests
 
-End-to-end tests verify the complete user workflow through the web interface.
+### NiceGUI Native Tests (Recommended)
 
-### Prerequisites
+NiceGUI provides a built-in testing framework that simulates user interactions in Python without requiring a browser. This is faster and more reliable than Selenium.
+
+#### Test Configuration
+
+Tests use NiceGUI's `user_plugin` fixture:
+
+```python
+from nicegui import ui
+from nicegui.testing import User
+
+pytest_plugins = ["nicegui.testing.user_plugin"]
+
+async def test_page_loads(user: User, app) -> None:
+    await user.open("/")
+    await user.should_see("MIAPPE-API")
+```
+
+#### Element Markers
+
+Input elements are marked for easy selection:
+
+```python
+# In app.py - add markers to inputs
+ui.input(label="title").mark("title")
+
+# In tests - find by marker
+title_input = user.find(kind=ui.input, marker="title")
+title_input.type("My Title")
+```
+
+#### Test Patterns
+
+```python
+async def test_create_investigation(user: User, app) -> None:
+    _ = app  # Ensure app fixture is loaded
+    await user.open("/")
+
+    # Click button by text content
+    user.find("+ Investigation").click()
+
+    # Fill form fields by marker
+    user.find(kind=ui.input, marker="unique_id").type("INV-001")
+    title_input = user.find(kind=ui.input, marker="title")
+    title_input.type("Test Investigation")
+
+    # Click create
+    user.find("Create").click()
+
+    # Assert results
+    await user.should_see("Test Investigation")
+    await user.should_not_see("No entities created")
+```
+
+### Selenium Tests (Alternative)
+
+For testing browser-specific behaviors, Selenium tests are available.
+
+#### Prerequisites
 
 - Chrome browser installed
 - ChromeDriver (automatically managed by webdriver-manager)
 
-### Test ID Convention
+#### Test ID Convention
 
 All interactive UI elements have `data-testid` attributes for reliable Selenium selection:
 
 | Pattern | Description | Example |
 |---------|-------------|---------|
 | `select-profile` | Profile dropdown | `[data-testid='select-profile']` |
-| `btn-new-{entity}` | New entity button in sidebar | `[data-testid='btn-new-investigation']` |
+| `btn-new-{entity}` | New entity button | `[data-testid='btn-new-investigation']` |
 | `btn-create-{entity}` | Form create button | `[data-testid='btn-create-investigation']` |
-| `btn-save-{entity}` | Nested form save button | `[data-testid='btn-save-study']` |
+| `btn-save-{entity}` | Nested form save | `[data-testid='btn-save-study']` |
 | `btn-clear-{entity}` | Form clear button | `[data-testid='btn-clear-investigation']` |
-| `btn-cancel-{entity}` | Dialog cancel button | `[data-testid='btn-cancel-study']` |
-| `btn-add-{entity}` | Add nested entity button | `[data-testid='btn-add-study']` |
-| `btn-add-child-{entity}` | Add child in detail view | `[data-testid='btn-add-child-study']` |
+| `btn-cancel-{entity}` | Dialog cancel | `[data-testid='btn-cancel-study']` |
+| `btn-add-{entity}` | Add nested entity | `[data-testid='btn-add-study']` |
+| `btn-add-child-{entity}` | Add child entity | `[data-testid='btn-add-child-study']` |
 | `btn-explore-{entity}` | Explore entity type | `[data-testid='btn-explore-study']` |
-| `btn-set-{entity}` | Set single entity ref | `[data-testid='btn-set-location']` |
+| `btn-set-{entity}` | Set single reference | `[data-testid='btn-set-location']` |
 | `input-{field}` | Form input field | `[data-testid='input-unique-id']` |
-| `tree-node-{id}` | Tree node in sidebar | `[data-testid='tree-node-abc123']` |
+| `tree-node-{id}` | Tree node | `[data-testid='tree-node-abc123']` |
 
-### Writing UI Tests
+#### Writing Selenium Tests
 
 ```python
 from selenium.webdriver.common.by import By
@@ -90,56 +150,26 @@ def test_create_entity(driver, app_server):
     btn = driver.find_element(By.CSS_SELECTOR, "[data-testid='btn-new-investigation']")
     btn.click()
 
-    # Fill form field (note: input is nested inside the component)
-    input_field = driver.find_element(By.CSS_SELECTOR, "[data-testid='input-unique-id'] input")
+    # Fill form field (note: input is nested inside NiceGUI component)
+    container = driver.find_element(By.CSS_SELECTOR, "[data-testid='input-unique-id']")
+    input_field = container.find_element(By.TAG_NAME, "input")
     input_field.send_keys("INV-001")
 
     # Submit
     create_btn = driver.find_element(By.CSS_SELECTOR, "[data-testid='btn-create-investigation']")
     create_btn.click()
 
-    # Verify backend state
-    assert len(app_server.entity_tree) == 1
-    assert app_server.entity_tree[0].instance.unique_id == "INV-001"
-```
-
-### Test Architecture
-
-The UI tests use a class-scoped fixture pattern:
-
-1. `app_server` fixture starts NiceGUI in a daemon thread
-2. `driver` fixture creates a headless Chrome WebDriver
-3. Tests interact with the UI and verify backend state via `app_server`
-
-```python
-@pytest.fixture(scope="class")
-def app_server():
-    app = MIAPPEApp()
-    thread = threading.Thread(target=lambda: app.run(port=8099), daemon=True)
-    thread.start()
-    time.sleep(2)  # Wait for server
-    yield app
-
-@pytest.fixture(scope="class")
-def driver(app_server):
-    options = Options()
-    options.add_argument("--headless")
-    driver = webdriver.Chrome(options=options)
-    yield driver
-    driver.quit()
+    # Wait for result
+    WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.CSS_SELECTOR, "[data-testid^='tree-node-']"))
+    )
 ```
 
 ### Debugging UI Tests
 
-Run tests with visible browser:
+For NiceGUI tests, failed assertions print the full DOM tree.
 
-```python
-# Remove --headless from options
-options = Options()
-# options.add_argument("--headless")  # Comment out for debugging
-```
-
-Take screenshots on failure:
+For Selenium tests, take screenshots on failure:
 
 ```python
 def test_something(driver):
@@ -154,7 +184,7 @@ def test_something(driver):
 
 Tests are marked for selective execution:
 
-- `@pytest.mark.ui` - UI tests requiring Chrome
+- `@pytest.mark.ui` - UI tests (both NiceGUI and Selenium)
 
 Run specific markers:
 
