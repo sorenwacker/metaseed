@@ -905,8 +905,10 @@ class MIAPPEApp:
             if nested:
                 ui.separator().classes("my-4")
                 ui.label("Add Child Entities").classes("text-lg font-semibold mb-2")
+                # Deduplicate child types (e.g., ISA Study has 3 OntologyAnnotation fields)
+                unique_child_types = sorted(set(nested.values()))
                 with ui.row().classes("gap-2 flex-wrap"):
-                    for _field_name, child_type in nested.items():
+                    for child_type in unique_child_types:
                         ui.button(
                             f"+ {child_type}",
                             on_click=lambda _,
