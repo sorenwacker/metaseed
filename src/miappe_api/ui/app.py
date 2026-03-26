@@ -5,6 +5,8 @@ Provides a web interface for creating and validating MIAPPE/ISA entities.
 
 from __future__ import annotations
 
+import uuid
+from dataclasses import dataclass, field
 from typing import Any
 
 import yaml
@@ -12,6 +14,40 @@ from nicegui import ui
 from pydantic import ValidationError
 
 from miappe_api.facade import ProfileFacade
+
+
+@dataclass
+class TreeNode:
+    """A node in the entity tree."""
+
+    id: str
+    entity_type: str
+    instance: Any
+    label: str
+    children: list[TreeNode] = field(default_factory=list)
+    parent_id: str | None = None
+
+    @classmethod
+    def create(cls, entity_type: str, instance: Any, parent_id: str | None = None) -> TreeNode:
+        """Create a new tree node from an entity instance."""
+        # Try to get a label from common fields
+        label = ""
+        if hasattr(instance, "model_dump"):
+            data = instance.model_dump()
+            for key in ["title", "name", "unique_id", "identifier", "filename"]:
+                if key in data and data[key]:
+                    label = str(data[key])
+                    break
+        if not label:
+            label = f"New {entity_type}"
+
+        return cls(
+            id=str(uuid.uuid4())[:8],
+            entity_type=entity_type,
+            instance=instance,
+            label=label,
+            parent_id=parent_id,
+        )
 
 
 class EntityForm:
@@ -348,52 +384,56 @@ class EntityForm:
 
     async def _on_create(self) -> None:
         """Handle create button click."""
-        self.result_container.clear()
+        if self.result_container:
+            self.result_container.clear()
 
         values = self._collect_values()
 
         try:
             instance = self.helper.create(**values)
 
-            # Show success
-            with self.result_container:
-                ui.label("Created successfully!").classes("text-green-600 font-bold")
+            # Call on_save callback if set (for tree integration)
+            if self.on_save:
+                self.on_save(instance)
+                return  # Tree view handles the display
 
-                # Show YAML output
-                with ui.expansion("YAML Output", icon="code").classes("w-full"):
-                    yaml_str = yaml.dump(
-                        instance.model_dump(exclude_none=True),
-                        default_flow_style=False,
-                        allow_unicode=True,
-                    )
-                    ui.code(yaml_str, language="yaml").classes("w-full")
+            # Show success (fallback for forms without tree integration)
+            if self.result_container:
+                with self.result_container:
+                    ui.label("Created successfully!").classes("text-green-600 font-bold")
 
-                # Download buttons
-                with ui.row().classes("gap-2 mt-2"):
-                    yaml_bytes = yaml_str.encode()
-                    ui.download(
-                        yaml_bytes,
-                        f"{self.entity_name.lower()}.yaml",
-                    ).classes("hidden").props("id=download-yaml")
-                    ui.button(
-                        "Download YAML",
-                        on_click=lambda: ui.run_javascript(
-                            "document.getElementById('download-yaml').click()"
-                        ),
-                        icon="download",
-                    ).props("flat")
+                    # Show YAML output
+                    with ui.expansion("YAML Output", icon="code").classes("w-full"):
+                        yaml_str = yaml.dump(
+                            instance.model_dump(exclude_none=True),
+                            default_flow_style=False,
+                            allow_unicode=True,
+                        )
+                        ui.code(yaml_str, language="yaml").classes("w-full")
+
+                    # Download buttons
+                    with ui.row().classes("gap-2 mt-2"):
+                        yaml_bytes = yaml_str.encode()
+                        ui.download(
+                            yaml_bytes,
+                            f"{self.entity_name.lower()}.yaml",
+                        ).classes("hidden").props("id=download-yaml")
+                        ui.button(
+                            "Download YAML",
+                            on_click=lambda: ui.run_javascript(
+                                "document.getElementById('download-yaml').click()"
+                            ),
+                            icon="download",
+                        ).props("flat")
 
         except ValidationError as e:
-            with self.result_container:
-                ui.label("Validation Error").classes("text-red-600 font-bold")
-                for error in e.errors():
-                    field = ".".join(str(loc) for loc in error["loc"])
-                    msg = error["msg"]
-                    ui.label(f"  {field}: {msg}").classes("text-red-500 text-sm")
+            error_msg = "; ".join(
+                f"{'.'.join(str(loc) for loc in err['loc'])}: {err['msg']}" for err in e.errors()
+            )
+            ui.notify(f"Validation error: {error_msg}", type="negative")
 
         except Exception as e:
-            with self.result_container:
-                ui.label(f"Error: {e}").classes("text-red-600")
+            ui.notify(f"Error: {e}", type="negative")
 
     def _on_clear(self) -> None:
         """Clear all form inputs."""
@@ -418,7 +458,12 @@ class MIAPPEApp:
         self.facade: ProfileFacade | None = None
         self.main_content: ui.element | None = None
         self.breadcrumb_container: ui.element | None = None
+        self.sidebar_container: ui.element | None = None
         self.nav_stack: list[str] = []  # Stack of entity names for breadcrumbs
+        # Tree of created entities
+        self.entity_tree: list[TreeNode] = []
+        self.nodes_by_id: dict[str, TreeNode] = {}
+        self.editing_node: TreeNode | None = None
 
     def _build_entity_hierarchy(self) -> list[tuple[str, int]]:
         """Build entity hierarchy from spec relationships.
@@ -507,8 +552,10 @@ class MIAPPEApp:
                     ).props("dense dark").classes("w-32")
 
             with ui.left_drawer().classes("bg-gray-100") as drawer:
-                drawer.props("width=280")
-                self._render_sidebar()
+                drawer.props("width=300")
+                with ui.column().classes("w-full") as sidebar:
+                    self.sidebar_container = sidebar
+                    self._render_sidebar()
 
             with ui.column().classes("w-full p-4"):
                 # Breadcrumb container at top
@@ -519,30 +566,169 @@ class MIAPPEApp:
                     self._render_welcome()
 
     def _render_sidebar(self) -> None:
-        """Render the entity list sidebar in hierarchical order."""
+        """Render the entity tree sidebar."""
         if self.facade is None:
             self._load_profile(self.current_profile)
 
-        ui.label("Entities").classes("text-lg font-bold mb-2")
+        ui.label("Project").classes("text-lg font-bold mb-2")
 
-        hierarchy = self._build_entity_hierarchy()
+        # New entity buttons for root types
+        root_types = self._get_root_entity_types()
+        with ui.row().classes("gap-1 mb-4 flex-wrap"):
+            for entity_type in root_types[:3]:  # Show top 3 root types
+                ui.button(
+                    f"+ {entity_type}",
+                    on_click=lambda _, et=entity_type: self._create_new_root_entity(et),
+                ).props("dense size=sm").classes("text-xs")
 
-        for entity_name, depth in hierarchy:
-            helper = getattr(self.facade, entity_name)
-            req_count = len(helper.required_fields)
+        # Entity tree
+        if not self.entity_tree:
+            ui.label("No entities created yet").classes("text-gray-400 text-sm italic")
+            ui.label("Click a button above to start").classes("text-gray-400 text-xs")
+        else:
+            self._render_tree_nodes(self.entity_tree, depth=0)
 
-            # Indent using inline style for precise control
-            indent_px = depth * 12
-            border_style = "border-left: 3px solid #93c5fd;" if depth > 0 else ""
+    def _render_tree_nodes(self, nodes: list[TreeNode], depth: int) -> None:
+        """Render tree nodes recursively."""
+        for node in nodes:
+            indent_px = depth * 16
+            is_selected = self.editing_node and self.editing_node.id == node.id
 
             with (
-                ui.card()
-                .classes("w-full mb-1 cursor-pointer hover:bg-blue-50")
-                .style(f"margin-left: {indent_px}px; {border_style}")
-                .on("click", lambda _, name=entity_name: self._on_entity_select(name))
+                ui.row()
+                .classes(
+                    f"w-full items-center gap-1 p-1 rounded cursor-pointer "
+                    f"{'bg-blue-100' if is_selected else 'hover:bg-gray-200'}"
+                )
+                .style(f"margin-left: {indent_px}px")
+                .on("click", lambda _, n=node: self._on_tree_node_click(n))
             ):
-                ui.label(entity_name).classes("font-semibold text-sm")
-                ui.label(f"{req_count} required").classes("text-xs text-gray-500")
+                # Icon based on entity type
+                icon = "folder" if node.children else "description"
+                ui.icon(icon, size="xs").classes("text-gray-500")
+                with ui.column().classes("gap-0"):
+                    ui.label(node.label).classes("text-sm font-medium")
+                    ui.label(node.entity_type).classes("text-xs text-gray-400")
+
+            # Render children
+            if node.children:
+                self._render_tree_nodes(node.children, depth + 1)
+
+    def _get_root_entity_types(self) -> list[str]:
+        """Get entity types that can be created at root level."""
+        if self.facade is None:
+            return []
+
+        # Find entities not referenced by others
+        referenced_by: dict[str, set[str]] = {name: set() for name in self.facade.entities}
+
+        for entity_name in self.facade.entities:
+            helper = getattr(self.facade, entity_name)
+            for ref_entity in helper.nested_fields.values():
+                if ref_entity in referenced_by:
+                    referenced_by[ref_entity].add(entity_name)
+
+        roots = []
+        for name in self.facade.entities:
+            refs = referenced_by[name] - {name}
+            if not refs:
+                roots.append(name)
+
+        # Prioritize Investigation
+        if "Investigation" in roots:
+            roots.remove("Investigation")
+            roots.insert(0, "Investigation")
+
+        return roots
+
+    def _create_new_root_entity(self, entity_type: str) -> None:
+        """Create a new root-level entity."""
+        self.nav_stack = [entity_type]
+        self.editing_node = None
+        self._render_breadcrumbs()
+        self.main_content.clear()
+
+        with self.main_content:
+            form = EntityForm(
+                self.facade,
+                entity_type,
+                app=self,
+                on_save=lambda inst: self._add_to_tree(entity_type, inst),
+            )
+            form.render()
+
+    def _add_to_tree(self, entity_type: str, instance: Any, parent_id: str | None = None) -> None:
+        """Add a created entity to the tree."""
+        node = TreeNode.create(entity_type, instance, parent_id)
+        self.nodes_by_id[node.id] = node
+
+        if parent_id and parent_id in self.nodes_by_id:
+            self.nodes_by_id[parent_id].children.append(node)
+        else:
+            self.entity_tree.append(node)
+
+        # Refresh sidebar
+        self._refresh_sidebar()
+        ui.notify(f"Created {entity_type}: {node.label}", type="positive")
+
+    def _refresh_sidebar(self) -> None:
+        """Refresh the sidebar tree view."""
+        if self.sidebar_container:
+            self.sidebar_container.clear()
+            with self.sidebar_container:
+                self._render_sidebar()
+
+    def _on_tree_node_click(self, node: TreeNode) -> None:
+        """Handle click on a tree node to edit it."""
+        self.editing_node = node
+        self.nav_stack = [node.entity_type]
+        self._render_breadcrumbs()
+        self._refresh_sidebar()
+        self.main_content.clear()
+
+        with self.main_content:
+            # Show entity details with edit capability
+            ui.label(f"Editing: {node.label}").classes("text-2xl font-bold mb-2")
+            ui.label(node.entity_type).classes("text-gray-600 mb-4")
+
+            # Show current data
+            with ui.expansion("Current Data", icon="data_object").classes("w-full mb-4"):
+                yaml_str = yaml.dump(
+                    node.instance.model_dump(exclude_none=True),
+                    default_flow_style=False,
+                    allow_unicode=True,
+                )
+                ui.code(yaml_str, language="yaml").classes("w-full")
+
+            # Show nested entity options
+            helper = getattr(self.facade, node.entity_type)
+            nested = helper.nested_fields
+
+            if nested:
+                ui.label("Add Child Entities").classes("text-lg font-semibold mb-2")
+                with ui.row().classes("gap-2 flex-wrap"):
+                    for _field_name, child_type in nested.items():
+                        ui.button(
+                            f"+ {child_type}",
+                            on_click=lambda _,
+                            ct=child_type,
+                            nid=node.id: self._create_child_entity(ct, nid),
+                        ).props("outline")
+
+    def _create_child_entity(self, entity_type: str, parent_id: str) -> None:
+        """Create a child entity under a parent."""
+        self.nav_stack.append(entity_type)
+        self._render_breadcrumbs()
+        self.main_content.clear()
+
+        with self.main_content:
+            form = EntityForm(
+                self.facade,
+                entity_type,
+                app=self,
+                on_save=lambda inst: self._add_to_tree(entity_type, inst, parent_id),
+            )
+            form.render()
 
     def _render_welcome(self) -> None:
         """Render welcome message."""
