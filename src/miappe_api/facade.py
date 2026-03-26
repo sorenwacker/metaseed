@@ -86,6 +86,16 @@ class EntityHelper:
                 nested[f.name] = f.items
         return nested
 
+    @property
+    def example_data(self: Self) -> dict[str, Any]:
+        """Example values for this entity from the spec.
+
+        Returns:
+            Dictionary of field names to example values.
+            Empty dict if no example defined.
+        """
+        return self._spec.example or {}
+
     def field_info(self: Self, field_name: str) -> dict[str, Any]:
         """Get detailed information about a field.
 
@@ -160,11 +170,21 @@ class EntityHelper:
         print(f"{self._name} = profile.{self._name}")
         print()
 
+        # Use spec example if available
+        spec_example = self._spec.example or {}
+
         # Build example with required fields
         args = []
         for f in self._spec.fields:
             if f.required:
-                if f.type == FieldType.STRING:
+                # Use spec example value if available
+                if f.name in spec_example:
+                    val = spec_example[f.name]
+                    if isinstance(val, str):
+                        args.append(f'{f.name}="{val}"')
+                    else:
+                        args.append(f"{f.name}={val}")
+                elif f.type == FieldType.STRING:
                     args.append(f'{f.name}="..."')
                 elif f.type == FieldType.INTEGER:
                     args.append(f"{f.name}=0")

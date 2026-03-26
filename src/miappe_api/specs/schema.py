@@ -81,6 +81,7 @@ class EntitySpec(BaseModel):
         ontology_term: Reference to PPEO ontology term.
         description: Human-readable description.
         fields: List of field specifications.
+        example: Example values for this entity (for documentation and testing).
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -90,6 +91,7 @@ class EntitySpec(BaseModel):
     ontology_term: str | None = None
     description: str = ""
     fields: list[FieldSpec] = []
+    example: dict[str, str | int | float | bool | list] | None = None
 
     def get_required_fields(self: Self) -> list[FieldSpec]:
         """Return list of required fields.
@@ -119,6 +121,7 @@ class EntityDefSpec(BaseModel):
     ontology_term: str | None = None
     description: str = ""
     fields: list[FieldSpec] = []
+    example: dict[str, str | int | float | bool | list] | None = None
 
 
 class ValidationRuleSpec(BaseModel):
@@ -199,6 +202,7 @@ class ProfileSpec(BaseModel):
                 ontology_term=entity_def.ontology_term,
                 description=entity_def.description,
                 fields=entity_def.fields,
+                example=entity_def.example,
             )
 
         # Try PascalCase conversion (for snake_case input)
@@ -211,6 +215,7 @@ class ProfileSpec(BaseModel):
                 ontology_term=entity_def.ontology_term,
                 description=entity_def.description,
                 fields=entity_def.fields,
+                example=entity_def.example,
             )
 
         # Try case-insensitive match
@@ -222,6 +227,7 @@ class ProfileSpec(BaseModel):
                     ontology_term=entity_def.ontology_term,
                     description=entity_def.description,
                     fields=entity_def.fields,
+                    example=entity_def.example,
                 )
 
         raise KeyError(f"Entity '{entity_name}' not found in profile {self.name} v{self.version}")

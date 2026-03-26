@@ -32,6 +32,13 @@ entities:
       A MIAPPE investigation represents a phenotyping project or experiment.
       An investigation contains one or more studies and metadata about the
       overall project, including submission information and licensing.
+    example:
+      unique_id: INV-DROUGHT-2024
+      title: Drought Tolerance in European Wheat Cultivars
+      description: Multi-year field study assessing drought response across 50 wheat varieties
+      submission_date: "2024-03-15"
+      license: https://creativecommons.org/licenses/by/4.0/
+      miappe_version: "1.1"
     fields:
       - name: unique_id
         type: string
@@ -109,6 +116,18 @@ entities:
     ontology_term: PPEO:study
     description: >
       A study represents a single experiment within an investigation.
+    example:
+      unique_id: STU-FIELD-2024
+      title: Field Trial Summer 2024
+      description: Randomized complete block design with 3 replicates
+      start_date: "2024-05-01"
+      end_date: "2024-09-30"
+      contact_institution: Wageningen University
+      experimental_site_name: Wageningen Campus Field Station
+      latitude: 51.9851
+      longitude: 5.6631
+      growth_facility_type: field
+      experimental_design_type: RCBD
     fields:
       - name: unique_id
         type: string
@@ -292,6 +311,12 @@ entities:
   Person:
     ontology_term: PPEO:person
     description: A person involved in an investigation or study.
+    example:
+      name: Dr. Maria van der Berg
+      email: m.vanderberg@wur.nl
+      institution: Wageningen University and Research
+      role: Principal Investigator
+      orcid: 0000-0001-2345-6789
     fields:
       - name: name
         type: string
@@ -333,6 +358,14 @@ entities:
   BiologicalMaterial:
     ontology_term: PPEO:biological_material
     description: Biological material (germplasm) used in a study.
+    example:
+      unique_id: BM-WHEAT-001
+      organism: Triticum aestivum
+      genus: Triticum
+      species: aestivum
+      infraspecific_name: cv. Apache
+      accession_number: PI-123456
+      biological_material_description: Winter wheat cultivar adapted to European conditions
     fields:
       - name: unique_id
         type: string
@@ -433,6 +466,15 @@ entities:
   ObservationUnit:
     ontology_term: PPEO:observation_unit
     description: Smallest unit on which observations are made.
+    example:
+      unique_id: OU-PLOT-001
+      observation_unit_type: plot
+      biological_material_id: BM-WHEAT-001
+      spatial_distribution_type: grid
+      observation_unit_x_ref: "1"
+      observation_unit_y_ref: "1"
+      observation_unit_block: "A"
+      observation_unit_replicate: "1"
     fields:
       - name: unique_id
         type: string
@@ -534,6 +576,14 @@ entities:
   ObservedVariable:
     ontology_term: PPEO:observed_variable
     description: Trait + Method + Scale combination for measurements.
+    example:
+      unique_id: VAR-PLANTHEIGHT
+      name: Plant Height
+      trait: plant height
+      trait_accession_number: CO_321:0000020
+      method: Ruler measurement from soil to highest point
+      scale: cm
+      scale_description: Continuous numeric scale in centimeters
     fields:
       - name: unique_id
         type: string
@@ -623,6 +673,11 @@ entities:
   Factor:
     ontology_term: PPEO:factor
     description: Experimental factor (controlled variable).
+    example:
+      unique_id: FAC-IRRIGATION
+      name: Irrigation Treatment
+      description: Water stress treatment levels
+      factor_type: treatment
     fields:
       - name: unique_id
         type: string
@@ -665,6 +720,11 @@ entities:
   FactorValue:
     ontology_term: PPEO:factor_value
     description: A specific value or level of a factor.
+    example:
+      unique_id: FV-DROUGHT
+      factor_id: FAC-IRRIGATION
+      value: Drought stress
+      description: 50% reduction in irrigation from flowering stage
     fields:
       - name: unique_id
         type: string
@@ -699,6 +759,11 @@ entities:
   Event:
     ontology_term: PPEO:event
     description: A discrete occurrence during a study.
+    example:
+      unique_id: EVT-SOWING-001
+      event_type: Sowing
+      date: "2024-05-01"
+      description: Seeds sown at 300 seeds per square meter
     fields:
       - name: unique_id
         type: string
@@ -753,6 +818,13 @@ entities:
   Environment:
     ontology_term: PPEO:environment
     description: Environmental conditions recorded during a study.
+    example:
+      unique_id: ENV-TEMP-001
+      parameter: Air temperature
+      parameter_accession_number: ENVO:09200001
+      value: "22.5"
+      unit: degrees Celsius
+      description: Average daily temperature during flowering
     fields:
       - name: unique_id
         type: string
@@ -806,6 +878,13 @@ entities:
   Sample:
     ontology_term: PPEO:sample
     description: A sample derived from an observation unit.
+    example:
+      unique_id: SAM-LEAF-001
+      observation_unit_id: OU-PLOT-001
+      plant_structural_development_stage: flowering
+      plant_anatomical_entity: leaf
+      collection_date: "2024-07-15"
+      description: Flag leaf sample for RNA extraction
     fields:
       - name: unique_id
         type: string
@@ -857,6 +936,13 @@ entities:
   DataFile:
     ontology_term: PPEO:data_file
     description: A data file associated with a study.
+    example:
+      unique_id: DF-PHENOTYPES-001
+      name: phenotype_measurements.csv
+      link: https://doi.org/10.5281/zenodo.1234567
+      description: Raw phenotype measurements for all plots
+      version: "1.0"
+      file_type: text/csv
     fields:
       - name: unique_id
         type: string
@@ -904,6 +990,16 @@ entities:
   Location:
     ontology_term: PPEO:location
     description: A geographic location.
+    example:
+      unique_id: LOC-WUR
+      name: Wageningen Campus Field Station
+      abbreviation: WUR-FS
+      country: Netherlands
+      country_code: NLD
+      latitude: 51.9851
+      longitude: 5.6631
+      altitude: 15.0
+      location_type: field
     fields:
       - name: unique_id
         type: string
@@ -991,6 +1087,12 @@ entities:
   MaterialSource:
     ontology_term: PPEO:material_source
     description: Source of biological material (genebank, institution).
+    example:
+      unique_id: SRC-CGNGENEBANK
+      name: Centre for Genetic Resources Netherlands
+      description: Dutch national genebank for plant genetic resources
+      institute_code: NLD037
+      country: Netherlands
     fields:
       - name: unique_id
         type: string
