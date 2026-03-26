@@ -36,7 +36,8 @@ class YamlStorage(StorageBackend):
         """
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
-            data = entity.model_dump(exclude_none=True)
+            # Use mode="json" to get JSON-serializable types (URLs as strings, etc.)
+            data = entity.model_dump(mode="json", exclude_none=True)
             yaml_str = yaml.dump(
                 data,
                 default_flow_style=False,

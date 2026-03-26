@@ -4,7 +4,10 @@ This module provides validation rules and engine for validating
 MIAPPE-compliant metadata beyond basic type checking.
 """
 
+import re
 from typing import Any
+
+from pydantic import BaseModel
 
 from miappe_api.validators.base import ValidationError, ValidationRule
 from miappe_api.validators.engine import ValidationEngine, create_engine_for_entity
@@ -26,25 +29,113 @@ __all__ = [
 ]
 
 
-def validate(data: dict[str, Any], entity: str, version: str = "1.1") -> list[ValidationError]:
-    """Validate data against entity rules.
+def _to_snake_case(name: str) -> str:
+    """Convert PascalCase to snake_case."""
+    s1 = re.sub(r"(.)([A-Z][a-z]+)", r"\1_\2", name)
+    return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
 
-    Convenience function that creates an engine for the entity and
-    runs validation.
+
+def _validate_nested(
+    data: dict[str, Any],
+    entity: str,
+    version: str,
+    path: str = "",
+) -> list[ValidationError]:
+    """Recursively validate data and nested entities.
 
     Args:
-        data: Dictionary of field values to validate.
-        entity: Entity name (e.g., "investigation").
+        data: Dictionary to validate.
+        entity: Entity type name.
         version: MIAPPE version.
+        path: Current path for error reporting.
+
+    Returns:
+        List of all validation errors including nested ones.
+    """
+    from miappe_api.specs.loader import SpecLoader
+
+    errors: list[ValidationError] = []
+
+    # Validate current entity
+    engine = create_engine_for_entity(entity, version)
+    for error in engine.validate(data):
+        # Prefix field with path for nested errors
+        field = f"{path}.{error.field}" if path else error.field
+        errors.append(ValidationError(field=field, message=error.message, rule=error.rule))
+
+    # Find and validate nested list fields
+    loader = SpecLoader()
+    try:
+        spec = loader.load_entity(entity, version)
+    except Exception:
+        return errors
+
+    for field in spec.fields:
+        if field.type.value == "list" and field.items:
+            items = data.get(field.name, [])
+            if not items:
+                continue
+
+            # Check if items is a known entity type
+            item_entity = _to_snake_case(field.items)
+            try:
+                loader.load_entity(item_entity, version)
+            except Exception:
+                continue
+
+            # Validate each item in the list
+            for i, item in enumerate(items):
+                if isinstance(item, dict):
+                    item_path = f"{path}.{field.name}[{i}]" if path else f"{field.name}[{i}]"
+                    errors.extend(_validate_nested(item, item_entity, version, item_path))
+
+    return errors
+
+
+def validate(
+    data: dict[str, Any] | BaseModel,
+    entity: str | None = None,
+    version: str = "1.1",
+    cascade: bool = True,
+) -> list[ValidationError]:
+    """Validate data against entity rules.
+
+    Supports both dict and Pydantic model instances. When cascade=True,
+    recursively validates nested entities.
+
+    Args:
+        data: Dictionary or Pydantic model to validate.
+        entity: Entity name (e.g., "investigation"). Auto-detected from
+            model class name if data is a BaseModel and entity is None.
+        version: MIAPPE version.
+        cascade: If True, recursively validate nested entities.
 
     Returns:
         List of validation errors. Empty if validation passes.
 
     Example:
+        >>> # Validate a dict
         >>> errors = validate({"unique_id": "INV001"}, "investigation")
-        >>> if errors:
-        ...     for error in errors:
-        ...         print(error)
+
+        >>> # Validate a model instance (entity auto-detected)
+        >>> inv = Investigation(unique_id="INV001", title="Test")
+        >>> errors = validate(inv)
+
+        >>> # Cascade validation to nested entities
+        >>> inv.studies.append(Study(unique_id="STU001", title="Study"))
+        >>> errors = validate(inv, cascade=True)
     """
+    # Handle Pydantic model instances
+    if isinstance(data, BaseModel):
+        if entity is None:
+            entity = _to_snake_case(data.__class__.__name__)
+        data = data.model_dump(mode="json")
+
+    if entity is None:
+        raise ValueError("entity must be specified when data is a dict")
+
+    if cascade:
+        return _validate_nested(data, entity, version)
+
     engine = create_engine_for_entity(entity, version)
     return engine.validate(data)

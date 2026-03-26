@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict
 
 
 class FieldType(StrEnum):
-    """Supported field types in MIAPPE specifications.
+    """Supported field types in profile specifications.
 
     These types map to Python/Pydantic types in the model factory.
     """
@@ -25,6 +25,7 @@ class FieldType(StrEnum):
     URI = "uri"
     ONTOLOGY_TERM = "ontology_term"
     LIST = "list"
+    ENTITY = "entity"  # Reference to another entity (single object)
 
 
 class Constraints(BaseModel):
@@ -105,3 +106,130 @@ class EntitySpec(BaseModel):
             List of FieldSpec objects where required is False.
         """
         return [f for f in self.fields if not f.required]
+
+
+class EntityDefSpec(BaseModel):
+    """Entity definition within a unified profile spec.
+
+    Similar to EntitySpec but without name/version (inherited from profile).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    ontology_term: str | None = None
+    description: str = ""
+    fields: list[FieldSpec] = []
+
+
+class ValidationRuleSpec(BaseModel):
+    """Validation rule definition in profile spec.
+
+    Attributes:
+        name: Rule identifier.
+        description: What the rule checks.
+        applies_to: List of entity names or "all".
+        field: Field the rule applies to (optional).
+        condition: Rule condition expression.
+        pattern: Regex pattern for pattern rules.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    description: str = ""
+    applies_to: list[str] | str = "all"
+    field: str | None = None
+    condition: str | None = None
+    pattern: str | None = None
+
+
+class ProfileSpec(BaseModel):
+    """Unified profile specification containing all entities.
+
+    A profile spec defines a complete metadata standard (e.g., MIAPPE v1.1)
+    in a single YAML file.
+
+    Attributes:
+        version: Profile version (e.g., "1.1").
+        name: Profile name (e.g., "MIAPPE").
+        description: Description of the profile.
+        ontology: Base ontology used (e.g., "PPEO").
+        validation_rules: Cross-entity validation rules.
+        entities: Dictionary of entity name to definition.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    version: str
+    name: str
+    description: str = ""
+    ontology: str | None = None
+    validation_rules: list[ValidationRuleSpec] = []
+    entities: dict[str, EntityDefSpec] = {}
+
+    def _to_pascal_case(self: Self, name: str) -> str:
+        """Convert snake_case to PascalCase.
+
+        Args:
+            name: Name in snake_case (e.g., "biological_material").
+
+        Returns:
+            Name in PascalCase (e.g., "BiologicalMaterial").
+        """
+        return "".join(word.capitalize() for word in name.split("_"))
+
+    def get_entity(self: Self, entity_name: str) -> EntitySpec:
+        """Get an EntitySpec for a specific entity.
+
+        Args:
+            entity_name: Name of the entity (snake_case or PascalCase).
+
+        Returns:
+            EntitySpec with name and version populated.
+
+        Raises:
+            KeyError: If entity not found.
+        """
+        # Try exact match first
+        if entity_name in self.entities:
+            entity_def = self.entities[entity_name]
+            return EntitySpec(
+                name=entity_name,
+                version=self.version,
+                ontology_term=entity_def.ontology_term,
+                description=entity_def.description,
+                fields=entity_def.fields,
+            )
+
+        # Try PascalCase conversion (for snake_case input)
+        pascal_name = self._to_pascal_case(entity_name)
+        if pascal_name in self.entities:
+            entity_def = self.entities[pascal_name]
+            return EntitySpec(
+                name=pascal_name,
+                version=self.version,
+                ontology_term=entity_def.ontology_term,
+                description=entity_def.description,
+                fields=entity_def.fields,
+            )
+
+        # Try case-insensitive match
+        for name, entity_def in self.entities.items():
+            if name.lower() == entity_name.lower():
+                return EntitySpec(
+                    name=name,
+                    version=self.version,
+                    ontology_term=entity_def.ontology_term,
+                    description=entity_def.description,
+                    fields=entity_def.fields,
+                )
+
+        raise KeyError(f"Entity '{entity_name}' not found in profile {self.name} v{self.version}")
+
+    def list_entities(self: Self) -> list[str]:
+        """List all entity names in the profile.
+
+        Returns:
+            List of entity names.
+        """
+        return list(self.entities.keys())

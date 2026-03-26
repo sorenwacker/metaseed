@@ -4,13 +4,80 @@ This module provides the core functionality to dynamically create Pydantic
 models from YAML specifications.
 """
 
-import datetime
-from typing import Annotated, Any
+from __future__ import annotations
 
-from pydantic import AnyUrl, Field, create_model
+import datetime
+from typing import TYPE_CHECKING, Annotated, Any
+
+from pydantic import AnyUrl, BaseModel, ConfigDict, Field, create_model, model_validator
 
 from miappe_api.models.types import OntologyTerm
 from miappe_api.specs.schema import EntitySpec, FieldSpec, FieldType
+
+if TYPE_CHECKING:
+    pass
+
+# Registry for resolving entity types during deserialization
+_MODEL_REGISTRY: dict[str, type[BaseModel]] = {}
+
+
+def register_model(name: str, model: type[BaseModel]) -> None:
+    """Register a model for nested entity resolution."""
+    _MODEL_REGISTRY[name] = model
+
+
+def get_registered_model(name: str) -> type[BaseModel] | None:
+    """Get a registered model by name."""
+    return _MODEL_REGISTRY.get(name)
+
+
+class MIAPPEBaseModel(BaseModel):
+    """Base model for all MIAPPE/ISA entities.
+
+    Provides validation on assignment, JSON serialization mode, and
+    automatic nested entity deserialization.
+    """
+
+    model_config = ConfigDict(
+        validate_assignment=True,
+        extra="forbid",
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _convert_nested_entities(cls, data: Any) -> Any:
+        """Convert nested dicts to their proper model types."""
+        if not isinstance(data, dict):
+            return data
+
+        # Get field metadata from class
+        entity_fields = getattr(cls, "__entity_fields__", {})
+
+        for field_name, entity_type in entity_fields.items():
+            if field_name not in data:
+                continue
+
+            value = data[field_name]
+            model_class = get_registered_model(entity_type)
+
+            if model_class is None:
+                continue
+
+            # Handle list of entities
+            if isinstance(value, list):
+                converted = []
+                for item in value:
+                    if isinstance(item, dict):
+                        converted.append(model_class.model_validate(item))
+                    else:
+                        converted.append(item)
+                data[field_name] = converted
+            # Handle single entity
+            elif isinstance(value, dict):
+                data[field_name] = model_class.model_validate(value)
+
+        return data
+
 
 # Type mapping from spec types to Python types
 TYPE_MAP: dict[FieldType, type] = {
@@ -23,6 +90,7 @@ TYPE_MAP: dict[FieldType, type] = {
     FieldType.URI: AnyUrl,
     FieldType.ONTOLOGY_TERM: OntologyTerm,
     FieldType.LIST: list,
+    FieldType.ENTITY: Any,  # Reference to another entity
 }
 
 
@@ -43,6 +111,12 @@ def _build_field_type(field: FieldSpec) -> type:
         # the referenced model available during creation
         # In future phases, this could resolve to actual model types
         return list[Any]
+
+    # Handle entity references
+    if field.type == FieldType.ENTITY:
+        # For now, treat as Any since we don't have the referenced model
+        # available during creation. Could resolve to actual model types later.
+        return Any
 
     return base_type
 
@@ -94,6 +168,20 @@ def _create_field_definition(field: FieldSpec) -> tuple[type, Any]:
     python_type = _build_field_type(field)
     constraints = _build_field_constraints(field)
 
+    # List fields default to empty list for easier use
+    if field.type == FieldType.LIST:
+        constraints["default_factory"] = list
+        return (Annotated[python_type, Field(**constraints)], ...)
+
+    # Entity references are optional by default
+    if field.type == FieldType.ENTITY:
+        annotated_type = (
+            Annotated[python_type, Field(**constraints)] if constraints else python_type
+        )
+        if field.required:
+            return (annotated_type, ...)
+        return (annotated_type | None, None)
+
     annotated_type = Annotated[python_type, Field(**constraints)] if constraints else python_type
 
     if field.required:
@@ -120,15 +208,32 @@ def create_model_from_spec(spec: EntitySpec) -> type:
         >>> spec = loader.load_entity("investigation", "1.1")
         >>> Investigation = create_model_from_spec(spec)
         >>> inv = Investigation(unique_id="INV1", title="My Investigation")
+        >>> inv.studies.append(study)  # Standard Python list operations
     """
     field_definitions: dict[str, Any] = {}
+    entity_fields: dict[str, str] = {}
 
     for field in spec.fields:
         field_definitions[field.name] = _create_field_definition(field)
 
+        # Track fields that reference other entities for deserialization
+        if field.type == FieldType.LIST and field.items:
+            # Don't track primitive list types
+            if field.items not in ("string", "int", "float", "bool"):
+                entity_fields[field.name] = field.items
+        elif field.type == FieldType.ENTITY and field.items:
+            entity_fields[field.name] = field.items
+
     model = create_model(
         spec.name,
+        __base__=MIAPPEBaseModel,
         **field_definitions,
     )
+
+    # Store entity field metadata for nested deserialization
+    model.__entity_fields__ = entity_fields  # type: ignore[attr-defined]
+
+    # Register model for resolution by other models
+    register_model(spec.name, model)
 
     return model
