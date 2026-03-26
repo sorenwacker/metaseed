@@ -871,6 +871,7 @@ class MIAPPEApp:
             self.sidebar_container.clear()
             with self.sidebar_container:
                 self._render_sidebar()
+            self.sidebar_container.update()
 
     def _on_tree_node_click(self, node: TreeNode) -> None:
         """Handle click on a tree node to edit it."""
