@@ -81,6 +81,9 @@ known-first-party = ["miappe_api"]
 testpaths = ["tests"]
 pythonpath = ["src"]
 addopts = "-v --tb=short"
+markers = [
+    "ui: marks tests as UI tests (requires Chrome)",
+]
 
 [tool.coverage.run]
 source = ["src/miappe_api"]

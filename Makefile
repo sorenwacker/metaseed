@@ -1,10 +1,11 @@
-.PHONY: install dev test lint format docs docs-serve ui clean help
+.PHONY: install dev test test-ui test-cov lint format docs docs-serve ui clean help
 
 help:
 	@echo "Available targets:"
 	@echo "  install    - Install dependencies"
 	@echo "  dev        - Install dev + docs dependencies and pre-commit hooks"
-	@echo "  test       - Run tests"
+	@echo "  test       - Run tests (excluding UI tests)"
+	@echo "  test-ui    - Run UI tests (requires Chrome)"
 	@echo "  test-cov   - Run tests with coverage"
 	@echo "  lint       - Run linter"
 	@echo "  format     - Format code"
@@ -21,7 +22,10 @@ dev:
 	uv run pre-commit install
 
 test:
-	uv run pytest
+	uv run pytest -m "not ui"
+
+test-ui:
+	uv run pytest -m ui
 
 test-cov:
 	uv run pytest --cov --cov-report=term-missing
