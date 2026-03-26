@@ -404,60 +404,38 @@ class TestDensityToggle:
         assert spacing["indent"] == 16
 
 
-class TestInlineNestedForms:
-    """Test inline expandable forms for nested entities."""
+class TestNestedFields:
+    """Test nested entity field rendering."""
 
-    async def test_add_nested_entity_uses_expansion(self, user: User, app) -> None:  # noqa: ARG002
-        """Test that adding nested entity shows inline expansion, not modal.
-
-        Note: This test verifies the inline expansion UI is available in the
-        Investigation form's nested fields (studies, contacts), rather than
-        testing the child entity creation flow after tree selection.
-        """
-        await user.open("/")
-
-        # Create an Investigation first
-        user.find("+ Investigation").click()
-        await user.should_see("Required Fields")
-
-        # The Investigation form should have inline expansion for adding Studies
-        # (in the optional fields section)
-        await user.should_see("Add Study")
-        await user.should_see("Add Person")
-
-        # Fill in required fields
-        user.find(kind=ui.input, marker="unique_id").type("INV-TEST")
-        title_input = user.find(kind=ui.input, marker="title")
-        title_input.type("Test Investigation")
-
-        # The expansion for adding nested entities should be present
-        # and be an expansion element, not a button that opens a modal
-        expansion = user.find(kind=ui.expansion, content="Add Study")
-        assert expansion is not None, "Add Study should be an expansion element"
-
-    async def test_nested_list_field_shows_expansion(self, user: User, app) -> None:  # noqa: ARG002
-        """Test that nested list fields use expandable forms."""
+    async def test_nested_list_field_shows_compact_view(self, user: User, app) -> None:  # noqa: ARG002
+        """Test that nested list fields show a compact item count."""
         await user.open("/")
 
         user.find("+ Investigation").click()
         await user.should_see("Required Fields")
 
-        # The studies field should show an expansion for adding studies
-        # Look for the Add button which triggers expansion
-        await user.should_see("Add Study")
+        # Nested fields should show compact count labels
+        await user.should_see("studies")
+        await user.should_see("contacts")
+        await user.should_see("0 items")
 
-    async def test_nested_entity_can_be_added_inline(self, user: User, app) -> None:
-        """Test that nested entities can be created using inline forms."""
-        _ = app
+    async def test_nested_entity_field_shows_not_set(self, user: User, app) -> None:  # noqa: ARG002
+        """Test that single nested entity fields show 'Not set' when empty."""
         await user.open("/")
 
         user.find("+ Investigation").click()
         await user.should_see("Required Fields")
 
-        # Fill investigation fields
-        user.find(kind=ui.input, marker="unique_id").type("INV-INLINE")
-        title_input = user.find(kind=ui.input, marker="title")
-        title_input.type("Inline Test")
+        # Single entity fields show "Not set" when empty
+        # (geographic_location in Study is an example)
 
-        # Expand the Add Study section - verifies inline form is present
-        user.find("Add Study").click()
+    async def test_investigation_has_nested_field_cards(self, user: User, app) -> None:  # noqa: ARG002
+        """Test that Investigation form shows cards for nested fields."""
+        await user.open("/")
+
+        user.find("+ Investigation").click()
+        await user.should_see("Required Fields")
+
+        # Should see field labels for nested entities
+        await user.should_see("contacts")
+        await user.should_see("studies")

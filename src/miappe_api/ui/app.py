@@ -257,21 +257,41 @@ class EntityForm:
         self.nested_items[field_name] = []
 
         with ui.card().classes("w-full p-2 bg-gray-50"):
-            ui.label(label).classes("font-semibold text-sm")
+            with ui.row().classes("w-full items-center"):
+                ui.label(label).classes("font-semibold text-sm flex-grow")
+                count_label = ui.label("0 items").classes("text-xs text-gray-500")
 
-            # Container for added items
+            # Compact list of added items
             items_container = ui.column().classes("w-full gap-1 mt-2")
-            count_label = ui.label(f"0 {entity_type}(s)").classes("text-xs text-gray-500")
+
+            def show_item_details(item: Any):
+                """Show item details in a dialog."""
+                with ui.dialog() as dialog, ui.card().classes("min-w-[400px]"):
+                    ui.label(f"{entity_type} Details").classes("text-lg font-bold mb-2")
+                    data = (
+                        item.model_dump(exclude_none=True) if hasattr(item, "model_dump") else item
+                    )
+                    for key, val in data.items():
+                        if val and not isinstance(val, list | dict):
+                            with ui.row().classes("gap-2"):
+                                ui.label(f"{key}:").classes("font-medium text-sm")
+                                ui.label(str(val)[:100]).classes("text-sm text-gray-600")
+                    ui.button("Close", on_click=dialog.close).props("flat").classes("mt-4")
+                dialog.open()
 
             def refresh_list():
                 items_container.clear()
                 items = self.nested_items[field_name]
-                count_label.set_text(f"{len(items)} {entity_type}(s)")
+                count_label.set_text(f"{len(items)} item{'s' if len(items) != 1 else ''}")
                 with items_container:
                     for i, item in enumerate(items):
-                        with ui.row().classes("w-full items-center gap-2 p-1 bg-white rounded"):
+                        with ui.row().classes(
+                            "w-full items-center gap-2 p-1 bg-white rounded hover:bg-gray-100 cursor-pointer"
+                        ):
                             summary = self._get_entity_summary(item)
-                            ui.label(summary).classes("flex-grow text-sm")
+                            ui.label(summary).classes("flex-grow text-sm").on(
+                                "click", lambda _, it=item: show_item_details(it)
+                            )
 
                             def make_delete_handler(idx: int):
                                 def handler():
@@ -280,45 +300,9 @@ class EntityForm:
 
                                 return handler
 
-                            ui.button(
-                                icon="delete",
-                                on_click=make_delete_handler(i),
-                            ).props("flat dense color=negative size=sm")
-
-            # Inline expandable form for adding nested entities (lazy loaded)
-            with (
-                ui.expansion(f"Add {entity_type}", icon="add")
-                .classes("w-full mt-2")
-                .props(f"data-testid=expansion-add-{entity_type.lower()}") as expansion
-            ):
-                form_container = ui.column().classes("w-full")
-                form_rendered = {"done": False}
-
-                def render_form_on_expand(e):
-                    if e.value and not form_rendered["done"]:
-                        form_rendered["done"] = True
-                        with form_container:
-
-                            def on_save(instance: Any):
-                                self.nested_items[field_name].append(instance)
-                                refresh_list()
-                                expansion.close()
-
-                            nested_form = EntityForm(
-                                self.facade, entity_type, on_save=on_save, is_nested=True
+                            ui.button(icon="delete", on_click=make_delete_handler(i)).props(
+                                "flat dense color=negative size=sm"
                             )
-                            nested_form.render()
-
-                expansion.on_value_change(render_form_on_expand)
-
-            # Navigation link to explore the entity type
-            if self.app is not None:
-                with ui.row().classes("gap-2 mt-2"):
-                    ui.button(
-                        f"Explore {entity_type}",
-                        on_click=lambda et=entity_type: self.app.navigate_to_entity(et),
-                        icon="arrow_forward",
-                    ).props(f"flat dense data-testid=btn-explore-{entity_type.lower()}")
 
     def _render_nested_entity_field(self, field_name: str, entity_type: str, label: str) -> None:
         """Render a field that contains a single nested entity."""
@@ -330,14 +314,33 @@ class EntityForm:
             # Container for the item
             item_container = ui.column().classes("w-full mt-2")
 
+            def show_item_details(item: Any):
+                """Show item details in a dialog."""
+                with ui.dialog() as dialog, ui.card().classes("min-w-[400px]"):
+                    ui.label(f"{entity_type} Details").classes("text-lg font-bold mb-2")
+                    data = (
+                        item.model_dump(exclude_none=True) if hasattr(item, "model_dump") else item
+                    )
+                    for key, val in data.items():
+                        if val and not isinstance(val, list | dict):
+                            with ui.row().classes("gap-2"):
+                                ui.label(f"{key}:").classes("font-medium text-sm")
+                                ui.label(str(val)[:100]).classes("text-sm text-gray-600")
+                    ui.button("Close", on_click=dialog.close).props("flat").classes("mt-4")
+                dialog.open()
+
             def refresh_item():
                 item_container.clear()
                 with item_container:
                     item = self.nested_items[field_name]
                     if item:
-                        with ui.row().classes("w-full items-center gap-2 p-1 bg-white rounded"):
+                        with ui.row().classes(
+                            "w-full items-center gap-2 p-1 bg-white rounded hover:bg-gray-100 cursor-pointer"
+                        ):
                             summary = self._get_entity_summary(item)
-                            ui.label(summary).classes("flex-grow text-sm")
+                            ui.label(summary).classes("flex-grow text-sm").on(
+                                "click", lambda _, it=item: show_item_details(it)
+                            )
                             ui.button(
                                 icon="delete",
                                 on_click=lambda: self._clear_nested_item(field_name, refresh_item),
@@ -346,41 +349,6 @@ class EntityForm:
                         ui.label("Not set").classes("text-gray-400 text-sm italic")
 
             refresh_item()
-
-            # Inline expandable form for setting the nested entity (lazy loaded)
-            with (
-                ui.expansion(f"Set {entity_type}", icon="edit")
-                .classes("w-full mt-2")
-                .props(f"data-testid=expansion-set-{entity_type.lower()}") as expansion
-            ):
-                form_container = ui.column().classes("w-full")
-                form_rendered = {"done": False}
-
-                def render_form_on_expand(e):
-                    if e.value and not form_rendered["done"]:
-                        form_rendered["done"] = True
-                        with form_container:
-
-                            def on_save(instance: Any):
-                                self.nested_items[field_name] = instance
-                                refresh_item()
-                                expansion.close()
-
-                            nested_form = EntityForm(
-                                self.facade, entity_type, on_save=on_save, is_nested=True
-                            )
-                            nested_form.render()
-
-                expansion.on_value_change(render_form_on_expand)
-
-            # Navigation link to explore the entity type
-            if self.app is not None:
-                with ui.row().classes("gap-2 mt-2"):
-                    ui.button(
-                        f"Explore {entity_type}",
-                        on_click=lambda et=entity_type: self.app.navigate_to_entity(et),
-                        icon="arrow_forward",
-                    ).props(f"flat dense data-testid=btn-explore-{entity_type.lower()}")
 
     def _get_entity_summary(self, entity: Any) -> str:
         """Get a short summary string for an entity."""
