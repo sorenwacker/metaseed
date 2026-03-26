@@ -160,11 +160,7 @@ class EntityForm:
         with ui.column().classes("w-full mb-2"):
             if field_type == "string":
                 self.inputs[field_name] = (
-                    ui.input(
-                        label=label,
-                        placeholder=description[:50] if description else None,
-                        value=existing_value or "",
-                    )
+                    ui.input(label=label, value=existing_value or "")
                     .classes("w-full")
                     .props(f"data-testid={testid}")
                     .mark(field_name)
@@ -212,13 +208,8 @@ class EntityForm:
                 )
 
             elif field_type == "date":
-                # Simple date input without complex bindings
                 self.inputs[field_name] = (
-                    ui.input(
-                        label=label,
-                        placeholder="YYYY-MM-DD",
-                        value=existing_value or "",
-                    )
+                    ui.input(label=f"{label} (YYYY-MM-DD)", value=existing_value or "")
                     .classes("w-full")
                     .props(f"data-testid={testid}")
                     .mark(field_name)
@@ -226,11 +217,7 @@ class EntityForm:
 
             elif field_type == "uri":
                 self.inputs[field_name] = (
-                    ui.input(
-                        label=label,
-                        placeholder="https://...",
-                        value=existing_value or "",
-                    )
+                    ui.input(label=label, value=existing_value or "")
                     .classes("w-full")
                     .props(f"data-testid={testid}")
                     .mark(field_name)
@@ -243,10 +230,7 @@ class EntityForm:
                 else:
                     # List of primitives - use textarea
                     self.inputs[field_name] = (
-                        ui.textarea(
-                            label=label,
-                            placeholder=f"One {items or 'item'} per line",
-                        )
+                        ui.textarea(label=f"{label} (one per line)")
                         .classes("w-full")
                         .props(f"data-testid={testid}")
                         .mark(field_name)
@@ -301,20 +285,31 @@ class EntityForm:
                                 on_click=make_delete_handler(i),
                             ).props("flat dense color=negative size=sm")
 
-            # Inline expandable form for adding nested entities
+            # Inline expandable form for adding nested entities (lazy loaded)
             with (
                 ui.expansion(f"Add {entity_type}", icon="add")
                 .classes("w-full mt-2")
                 .props(f"data-testid=expansion-add-{entity_type.lower()}") as expansion
             ):
+                form_container = ui.column().classes("w-full")
+                form_rendered = {"done": False}
 
-                def on_save(instance: Any):
-                    self.nested_items[field_name].append(instance)
-                    refresh_list()
-                    expansion.close()
+                def render_form_on_expand(e):
+                    if e.value and not form_rendered["done"]:
+                        form_rendered["done"] = True
+                        with form_container:
 
-                nested_form = EntityForm(self.facade, entity_type, on_save=on_save, is_nested=True)
-                nested_form.render()
+                            def on_save(instance: Any):
+                                self.nested_items[field_name].append(instance)
+                                refresh_list()
+                                expansion.close()
+
+                            nested_form = EntityForm(
+                                self.facade, entity_type, on_save=on_save, is_nested=True
+                            )
+                            nested_form.render()
+
+                expansion.on_value_change(render_form_on_expand)
 
             # Navigation link to explore the entity type
             if self.app is not None:
@@ -352,20 +347,31 @@ class EntityForm:
 
             refresh_item()
 
-            # Inline expandable form for setting the nested entity
+            # Inline expandable form for setting the nested entity (lazy loaded)
             with (
                 ui.expansion(f"Set {entity_type}", icon="edit")
                 .classes("w-full mt-2")
                 .props(f"data-testid=expansion-set-{entity_type.lower()}") as expansion
             ):
+                form_container = ui.column().classes("w-full")
+                form_rendered = {"done": False}
 
-                def on_save(instance: Any):
-                    self.nested_items[field_name] = instance
-                    refresh_item()
-                    expansion.close()
+                def render_form_on_expand(e):
+                    if e.value and not form_rendered["done"]:
+                        form_rendered["done"] = True
+                        with form_container:
 
-                nested_form = EntityForm(self.facade, entity_type, on_save=on_save, is_nested=True)
-                nested_form.render()
+                            def on_save(instance: Any):
+                                self.nested_items[field_name] = instance
+                                refresh_item()
+                                expansion.close()
+
+                            nested_form = EntityForm(
+                                self.facade, entity_type, on_save=on_save, is_nested=True
+                            )
+                            nested_form.render()
+
+                expansion.on_value_change(render_form_on_expand)
 
             # Navigation link to explore the entity type
             if self.app is not None:
