@@ -111,3 +111,65 @@ class TestValidateFunction:
         }
         errors = validate(data, "investigation", version="1.1")
         assert len(errors) >= 2
+
+    def test_validate_model_instance(self) -> None:
+        """Validate a Pydantic model instance directly."""
+        from miappe_api.models import get_model
+
+        Investigation = get_model("Investigation")
+        inv = Investigation(unique_id="INV001", title="Test")
+
+        # Entity type is auto-detected from model class name
+        errors = validate(inv)
+        assert len(errors) == 0
+
+    def test_validate_cascading(self) -> None:
+        """Cascading validation checks nested entities."""
+        from miappe_api.models import get_model
+
+        Investigation = get_model("Investigation")
+        Study = get_model("Study")
+
+        inv = Investigation(
+            unique_id="INV001",
+            title="Test",
+            studies=[
+                Study(
+                    unique_id="STU001",
+                    title="Study",
+                    start_date=datetime.date(2024, 12, 31),
+                    end_date=datetime.date(2024, 1, 1),  # End before start
+                ),
+            ],
+        )
+
+        errors = validate(inv, cascade=True)
+
+        # Should find date range error in nested study
+        assert len(errors) >= 1
+        # Check that errors have path prefixes for nested entities
+        assert any("studies[0]" in e.field for e in errors)
+
+    def test_validate_no_cascade(self) -> None:
+        """Without cascade, only validates the top-level entity."""
+        from miappe_api.models import get_model
+
+        Investigation = get_model("Investigation")
+        Study = get_model("Study")
+
+        inv = Investigation(
+            unique_id="INV001",
+            title="Test",
+            studies=[
+                Study(
+                    unique_id="STU001",
+                    title="Study",
+                    start_date=datetime.date(2024, 12, 31),
+                    end_date=datetime.date(2024, 1, 1),  # Invalid dates
+                ),
+            ],
+        )
+
+        # Without cascade, should only validate Investigation (which is valid)
+        errors = validate(inv, cascade=False)
+        assert len(errors) == 0  # Investigation itself is valid

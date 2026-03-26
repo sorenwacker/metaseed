@@ -146,3 +146,35 @@ class TestGlobalRegistry:
 
         with pytest.raises(SpecLoadError):
             get_model("NonExistent", version="1.1")
+
+    def test_get_model_camel_case_names(self) -> None:
+        """get_model handles CamelCase entity names correctly."""
+        from miappe_api.models import get_model
+
+        # Multi-word entity names should work
+        BiologicalMaterial = get_model("BiologicalMaterial", version="1.1")
+        assert BiologicalMaterial.__name__ == "BiologicalMaterial"
+        assert "unique_id" in BiologicalMaterial.model_fields
+
+        ObservedVariable = get_model("ObservedVariable", version="1.1")
+        assert ObservedVariable.__name__ == "ObservedVariable"
+
+        FactorValue = get_model("FactorValue", version="1.1")
+        assert FactorValue.__name__ == "FactorValue"
+
+        ObservationUnit = get_model("ObservationUnit", version="1.1")
+        assert ObservationUnit.__name__ == "ObservationUnit"
+
+        MaterialSource = get_model("MaterialSource", version="1.1")
+        assert MaterialSource.__name__ == "MaterialSource"
+
+        DataFile = get_model("DataFile", version="1.1")
+        assert DataFile.__name__ == "DataFile"
+
+    def test_get_model_snake_case_names(self) -> None:
+        """get_model also handles snake_case entity names."""
+        from miappe_api.models import get_model
+
+        # snake_case should also work
+        model = get_model("biological_material", version="1.1")
+        assert "unique_id" in model.model_fields

@@ -26,6 +26,7 @@ class TestFieldType:
             "uri",
             "ontology_term",
             "list",
+            "entity",
         }
         actual = {t.value for t in FieldType}
         assert actual == expected

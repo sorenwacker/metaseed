@@ -125,3 +125,24 @@ class TestYamlStorage:
         file_path.write_text("key: value\n  invalid indent")
         with pytest.raises(StorageError):
             storage.load(file_path, investigation_model)
+
+    def test_url_fields_serialized_as_strings(
+        self,
+        storage: YamlStorage,
+        investigation_model,
+        tmp_path: Path,
+    ) -> None:
+        """URL fields are serialized as plain strings, not Pydantic objects."""
+        inv = investigation_model(
+            unique_id="INV-URL-TEST",
+            title="URL Test",
+            license="https://creativecommons.org/licenses/by/4.0/",
+        )
+        file_path = tmp_path / "url_test.yaml"
+        storage.save(inv, file_path)
+
+        content = file_path.read_text()
+        # Should be plain URL, not Pydantic internal representation
+        assert "license: https://creativecommons.org/licenses/by/4.0/" in content
+        assert "!!python" not in content
+        assert "_url" not in content

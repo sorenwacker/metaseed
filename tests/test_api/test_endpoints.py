@@ -35,8 +35,10 @@ class TestSchemasEndpoint:
         assert response.status_code == 200
         data = response.json()
         assert "entities" in data
-        assert "investigation" in data["entities"]
-        assert "study" in data["entities"]
+        # Case-insensitive check since profile may use PascalCase
+        entities_lower = [e.lower() for e in data["entities"]]
+        assert "investigation" in entities_lower
+        assert "study" in entities_lower
 
     def test_get_entity_schema(self) -> None:
         """Get JSON schema for an entity."""

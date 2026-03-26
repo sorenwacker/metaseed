@@ -285,3 +285,91 @@ class TestCreateModelFromSpec:
         json_str = instance.model_dump_json()
         assert "test" in json_str
         assert "42" in json_str
+
+    def test_nested_models_in_constructor(self) -> None:
+        """Models can contain nested models in constructor."""
+        from miappe_api.models import get_model
+
+        Investigation = get_model("Investigation")
+        Study = get_model("Study")
+        Person = get_model("Person")
+
+        inv = Investigation(
+            unique_id="INV-001",
+            title="Test",
+            contacts=[
+                Person(name="Dr. Smith", email="smith@uni.edu", institution="Uni"),
+            ],
+            studies=[
+                Study(unique_id="STU-001", title="Study 1"),
+            ],
+        )
+
+        assert len(inv.contacts) == 1
+        assert len(inv.studies) == 1
+        assert inv.contacts[0].name == "Dr. Smith"
+        assert inv.studies[0].unique_id == "STU-001"
+
+    def test_list_fields_default_to_empty_list(self) -> None:
+        """List fields default to empty list for easier use."""
+        from miappe_api.models import get_model
+
+        Investigation = get_model("Investigation")
+        inv = Investigation(unique_id="INV-001", title="Test")
+
+        # Lists default to empty, not None
+        assert inv.studies == []
+        assert inv.contacts == []
+
+    def test_list_fields_support_append(self) -> None:
+        """List fields support standard Python operations."""
+        from miappe_api.models import get_model
+
+        Investigation = get_model("Investigation")
+        Study = get_model("Study")
+
+        inv = Investigation(unique_id="INV-001", title="Test")
+        inv.studies.append(Study(unique_id="STU-001", title="Study 1"))
+        inv.studies.append(Study(unique_id="STU-002", title="Study 2"))
+
+        assert len(inv.studies) == 2
+        assert inv.studies[0].unique_id == "STU-001"
+        assert inv.studies[1].unique_id == "STU-002"
+
+    def test_deeply_nested_models(self) -> None:
+        """Models support deep nesting following PPEO hierarchy."""
+        from miappe_api.models import get_model
+
+        Investigation = get_model("Investigation")
+        Study = get_model("Study")
+        Factor = get_model("Factor")
+        ObservedVariable = get_model("ObservedVariable")
+
+        inv = Investigation(
+            unique_id="INV-001",
+            title="Test",
+            studies=[
+                Study(
+                    unique_id="STU-001",
+                    title="Study 1",
+                    factors=[
+                        Factor(unique_id="F-001", name="Water", description="Treatment"),
+                    ],
+                    observed_variables=[
+                        ObservedVariable(
+                            unique_id="VAR-001",
+                            name="Plant Height",
+                            trait="Height",
+                            method="Ruler",
+                            scale="cm",
+                        ),
+                    ],
+                ),
+            ],
+        )
+
+        assert len(inv.studies) == 1
+        assert len(inv.studies[0].factors) == 1
+        assert len(inv.studies[0].observed_variables) == 1
+        assert inv.studies[0].factors[0].name == "Water"
+        assert inv.studies[0].observed_variables[0].name == "Plant Height"

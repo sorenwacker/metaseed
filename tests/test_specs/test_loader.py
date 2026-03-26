@@ -237,11 +237,80 @@ class TestSpecLoaderVersioned:
         """List available entities for a version."""
         entities = loader.list_entities(version="1.1")
 
-        # Should include at least Investigation
-        assert "investigation" in entities
+        # Should include Investigation (case-insensitive check)
+        entities_lower = [e.lower() for e in entities]
+        assert "investigation" in entities_lower
 
     def test_list_versions(self, loader: SpecLoader) -> None:
         """List available versions."""
         versions = loader.list_versions()
 
         assert "1.1" in versions
+
+
+class TestISAProfile:
+    """Tests for loading ISA profile specs."""
+
+    @pytest.fixture
+    def isa_loader(self) -> SpecLoader:
+        """Create a spec loader for ISA profile."""
+        return SpecLoader(profile="isa")
+
+    def test_list_profiles(self, isa_loader: SpecLoader) -> None:
+        """List available profiles."""
+        profiles = isa_loader.list_profiles()
+
+        assert "isa" in profiles
+        assert "miappe" in profiles
+
+    def test_load_isa_version(self, isa_loader: SpecLoader) -> None:
+        """Load ISA profile v1.0."""
+        versions = isa_loader.list_versions()
+
+        assert "1.0" in versions
+
+    def test_list_isa_entities(self, isa_loader: SpecLoader) -> None:
+        """List ISA entities for v1.0."""
+        entities = isa_loader.list_entities(version="1.0")
+
+        # ISA should have core entities
+        entities_lower = [e.lower() for e in entities]
+        assert "investigation" in entities_lower
+        assert "study" in entities_lower
+        assert "assay" in entities_lower
+        assert "person" in entities_lower
+        assert "sample" in entities_lower
+        assert "source" in entities_lower
+        assert "protocol" in entities_lower
+
+    def test_load_isa_investigation(self, isa_loader: SpecLoader) -> None:
+        """Load ISA Investigation spec."""
+        spec = isa_loader.load_entity("investigation", version="1.0")
+
+        assert spec.name == "Investigation"
+        assert spec.version == "1.0"
+        field_names = [f.name for f in spec.fields]
+        assert "identifier" in field_names
+        assert "title" in field_names
+        assert "studies" in field_names
+
+    def test_load_isa_study(self, isa_loader: SpecLoader) -> None:
+        """Load ISA Study spec."""
+        spec = isa_loader.load_entity("study", version="1.0")
+
+        assert spec.name == "Study"
+        field_names = [f.name for f in spec.fields]
+        assert "identifier" in field_names
+        assert "title" in field_names
+        assert "assays" in field_names
+        assert "protocols" in field_names
+
+    def test_load_isa_assay(self, isa_loader: SpecLoader) -> None:
+        """Load ISA Assay spec."""
+        spec = isa_loader.load_entity("assay", version="1.0")
+
+        assert spec.name == "Assay"
+        field_names = [f.name for f in spec.fields]
+        assert "filename" in field_names
+        assert "measurement_type" in field_names
+        assert "technology_type" in field_names
