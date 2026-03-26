@@ -407,17 +407,16 @@ class TestDensityToggle:
 class TestNestedFields:
     """Test nested entity field rendering."""
 
-    async def test_nested_list_field_shows_compact_view(self, user: User, app) -> None:  # noqa: ARG002
-        """Test that nested list fields show a compact item count."""
+    async def test_nested_list_field_shows_button(self, user: User, app) -> None:  # noqa: ARG002
+        """Test that nested list fields show a button with count."""
         await user.open("/")
 
         user.find("+ Investigation").click()
         await user.should_see("Required Fields")
 
-        # Nested fields should show compact count labels
-        await user.should_see("studies")
-        await user.should_see("contacts")
-        await user.should_see("0 items")
+        # Nested fields should show buttons with count
+        await user.should_see("studies (0)")
+        await user.should_see("contacts (0)")
 
     async def test_nested_entity_field_shows_not_set(self, user: User, app) -> None:  # noqa: ARG002
         """Test that single nested entity fields show 'Not set' when empty."""
