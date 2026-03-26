@@ -45,3 +45,4 @@ nav:
       - REST API: api/rest.md
   - Development:
       - Contributing: development/contributing.md
+      - Testing: development/testing.md
