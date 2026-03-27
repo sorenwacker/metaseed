@@ -1354,9 +1354,21 @@ def _build_breadcrumb(state: AppState) -> list[dict]:
                 else None,
             }
         )
+
+        # Get label from the nested item data
+        item_label = f"{ctx.entity_type} {ctx.row_idx + 1}"
+        items = state.current_nested_items.get(ctx.field_name, [])
+        if ctx.row_idx < len(items):
+            item = items[ctx.row_idx]
+            if isinstance(item, dict):
+                for key in ["title", "name", "unique_id", "identifier"]:
+                    if key in item and item[key]:
+                        item_label = str(item[key])
+                        break
+
         breadcrumb.append(
             {
-                "label": f"{ctx.entity_type}[{ctx.row_idx}]",
+                "label": item_label,
                 "entity_type": ctx.entity_type,
                 "url": None,  # Current position - no link
             }
