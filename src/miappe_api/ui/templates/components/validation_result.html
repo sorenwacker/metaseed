@@ -1,0 +1,19 @@
+{% if valid %}
+<div class="notification notification-success" data-testid="validation-success">
+    Validation passed - all fields are valid.
+</div>
+{% else %}
+<div class="validation-errors" data-testid="validation-errors">
+    <div class="notification notification-error mb-2">
+        Validation failed - {{ errors|length }} error(s) found:
+    </div>
+    <ul class="validation-error-list">
+        {% for error in errors %}
+        <li class="validation-error-item" data-testid="validation-error-{{ error.field }}">
+            <strong>{{ error.field }}</strong>: {{ error.message }}
+            {% if error.rule %}<span class="text-muted text-small">({{ error.rule }})</span>{% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}

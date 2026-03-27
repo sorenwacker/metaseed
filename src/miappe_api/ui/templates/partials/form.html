@@ -52,6 +52,14 @@
                 Update
             </button>
             <button type="button" class="btn btn-secondary"
+                    hx-post="/validate"
+                    hx-include="closest form"
+                    hx-target="#validation-results"
+                    hx-swap="innerHTML"
+                    data-testid="btn-validate">
+                Validate
+            </button>
+            <button type="button" class="btn btn-secondary"
                     hx-get="/"
                     hx-target="#main"
                     hx-swap="innerHTML"
@@ -63,10 +71,20 @@
             <button type="submit" class="btn btn-primary" data-testid="btn-create">
                 Create
             </button>
+            <button type="button" class="btn btn-secondary"
+                    hx-post="/validate"
+                    hx-include="closest form"
+                    hx-target="#validation-results"
+                    hx-swap="innerHTML"
+                    data-testid="btn-validate">
+                Validate
+            </button>
             <button type="reset" class="btn btn-secondary" data-testid="btn-clear-{{ entity_type|lower }}">
                 Clear
             </button>
             {% endif %}
         </div>
+
+        <div id="validation-results" class="mt-4"></div>
     </form>
 </div>

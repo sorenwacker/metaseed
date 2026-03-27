@@ -937,35 +937,111 @@ class TestAddNestedStudy:
 
 
 @pytest.mark.ui
-class TestValidationError:
-    """Test validation error display."""
+class TestValidation:
+    """Test validation functionality using the Validate button."""
 
-    def test_validation_error_missing_required(self, browser):
-        """Submit form without required fields and verify error message."""
+    def test_validate_valid_investigation(self, browser):
+        """Validate a correctly filled Investigation form."""
         browser.get(BASE_URL)
         time.sleep(CLICK_DELAY)
 
-        # Click create Investigation
+        # Create new Investigation form
         click_button(browser, "btn-create-Investigation")
 
-        # Don't fill any fields, just click Create
-        # The HTML5 validation should prevent submission, but if it gets through:
-        create_btn = browser.find_element(By.CSS_SELECTOR, "[data-testid='btn-create']")
+        # Fill all required fields from YAML example
+        fill_field(browser, "input-unique-id", INV_EXAMPLE["unique_id"])
+        fill_field(browser, "input-title", INV_EXAMPLE["title"])
+
+        # Click Validate button
+        click_button(browser, "btn-validate")
+
+        # Verify validation success message
+        assert element_exists(browser, "validation-success")
+        success_msg = browser.find_element(By.CSS_SELECTOR, "[data-testid='validation-success']")
+        assert "Validation passed" in success_msg.text
+
+    def test_validate_missing_required_fields(self, browser):
+        """Validate form with missing required fields shows errors."""
+        browser.get(BASE_URL)
+        time.sleep(CLICK_DELAY)
+
+        # Create new Investigation form
+        click_button(browser, "btn-create-Investigation")
+
+        # Fill only unique_id, leave title empty (both required)
+        fill_field(browser, "input-unique-id", "INV-VAL-001")
+
+        # Click Validate button
+        click_button(browser, "btn-validate")
+
+        # Verify validation errors are displayed
+        assert element_exists(browser, "validation-errors")
+        errors_div = browser.find_element(By.CSS_SELECTOR, "[data-testid='validation-errors']")
+        assert "Validation failed" in errors_div.text
+
+        # Verify specific field error for title
+        assert element_exists(browser, "validation-error-title")
+        title_error = browser.find_element(
+            By.CSS_SELECTOR, "[data-testid='validation-error-title']"
+        )
+        assert "title" in title_error.text.lower()
+
+    def test_validate_invalid_pattern(self, browser):
+        """Validate form with invalid field pattern shows error."""
+        browser.get(BASE_URL)
+        time.sleep(CLICK_DELAY)
+
+        # Create new Investigation form
+        click_button(browser, "btn-create-Investigation")
+
+        # Fill required fields
+        fill_field(browser, "input-unique-id", "INVALID ID WITH SPACES!")  # Invalid pattern
+        fill_field(browser, "input-title", "Test Investigation")
+
+        # Click Validate button
+        click_button(browser, "btn-validate")
+
+        # Verify validation errors for pattern violation
+        assert element_exists(browser, "validation-errors")
+        assert element_exists(browser, "validation-error-unique_id")
+
+    def test_validate_then_fix_and_revalidate(self, browser):
+        """Validate with errors, fix them, and revalidate successfully."""
+        browser.get(BASE_URL)
+        time.sleep(CLICK_DELAY)
+
+        # Create new Investigation form
+        click_button(browser, "btn-create-Investigation")
+
+        # Fill only unique_id (missing title)
+        fill_field(browser, "input-unique-id", INV_EXAMPLE["unique_id"])
+
+        # Validate - should fail
+        click_button(browser, "btn-validate")
+        assert element_exists(browser, "validation-errors")
+
+        # Fix by adding title
+        fill_field(browser, "input-title", INV_EXAMPLE["title"])
+
+        # Validate again - should pass
+        click_button(browser, "btn-validate")
+        assert element_exists(browser, "validation-success")
+
+    def test_html5_validation_required_fields(self, browser):
+        """Verify HTML5 required attribute is set on required fields."""
+        browser.get(BASE_URL)
+        time.sleep(CLICK_DELAY)
+
+        # Create new Investigation form
+        click_button(browser, "btn-create-Investigation")
 
         # Check if unique_id field has required attribute
         unique_id = browser.find_element(By.CSS_SELECTOR, "[data-testid='input-unique-id']")
         assert unique_id.get_attribute("required") is not None
 
-        # Fill unique_id but not title (both required)
-        fill_field(browser, "input-unique-id", "INV-VAL-001")
-        # Leave title empty
-
-        # Try to submit - HTML5 validation should block
-        create_btn.click()
-        time.sleep(CLICK_DELAY)
-
-        # The form should still be visible (not submitted)
-        assert element_exists(browser, "form-entity")
+        # Check if title field has required attribute
+        title = browser.find_element(By.CSS_SELECTOR, "[data-testid='input-title']")
+        assert title.get_attribute("required") is not None
 
 
 @pytest.mark.ui

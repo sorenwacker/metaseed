@@ -593,3 +593,22 @@ body {
     opacity: 0;
     transition: opacity 0.2s;
 }
+
+/* Validation errors */
+.validation-errors {
+    margin-top: 1rem;
+}
+
+.validation-error-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.validation-error-item {
+    padding: 0.5rem 0.75rem;
+    border-left: 3px solid #dc2626;
+    background: #fee2e2;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+}

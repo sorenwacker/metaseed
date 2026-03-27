@@ -18,6 +18,7 @@ from fastapi.templating import Jinja2Templates
 from pydantic import ValidationError
 
 from miappe_api.facade import ProfileFacade
+from miappe_api.validators import validate as validate_data
 
 UI_DIR = Path(__file__).parent
 TEMPLATES_DIR = UI_DIR / "templates"
@@ -780,6 +781,55 @@ def create_app(state: AppState | None = None) -> FastAPI:
         state.current_nested_items = {}
         state.nested_edit_stack = []
         return HTMLResponse(content="OK")
+
+    @app.post("/validate", response_class=HTMLResponse)
+    async def validate_form(request: Request):
+        """Validate form data against MIAPPE spec.
+
+        Returns HTML fragment with validation results.
+        """
+        state = get_state()
+        form_data = await request.form()
+        entity_type = form_data.get("_entity_type")
+
+        if not entity_type:
+            return templates.TemplateResponse(
+                request,
+                "components/validation_result.html",
+                {
+                    "valid": False,
+                    "errors": [
+                        {
+                            "field": "_entity_type",
+                            "message": "Entity type is required",
+                            "rule": "required",
+                        }
+                    ],
+                },
+            )
+
+        # Get field helper for collecting form values
+        facade = ProfileFacade(profile=state.profile)
+        helper = getattr(facade, entity_type)
+
+        # Collect form values
+        values = _collect_form_values(dict(form_data), helper)
+
+        # Add nested items if in nested context or from current state
+        for field_name, items in state.current_nested_items.items():
+            if items:
+                values[field_name] = items
+
+        # Run validation
+        errors = validate_data(values, entity_type, version="1.1")
+
+        error_list = [{"field": e.field, "message": e.message, "rule": e.rule} for e in errors]
+
+        return templates.TemplateResponse(
+            request,
+            "components/validation_result.html",
+            {"valid": len(errors) == 0, "errors": error_list},
+        )
 
     return app
 
