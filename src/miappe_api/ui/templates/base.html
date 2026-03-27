@@ -25,7 +25,10 @@
             </div>
         </header>
 
-        <aside class="sidebar" id="sidebar">
+        <aside class="sidebar" id="sidebar"
+               hx-get="/sidebar"
+               hx-trigger="entityCreated from:body, entityUpdated from:body"
+               hx-swap="innerHTML">
             {% include "partials/sidebar.html" %}
         </aside>
 
