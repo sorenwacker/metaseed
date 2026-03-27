@@ -485,6 +485,42 @@ body {
     margin-bottom: 0.5rem;
 }
 
+/* Profile selection */
+.profile-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.profile-option {
+    padding: 1.5rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    background: white;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.profile-option:hover {
+    border-color: #2563eb;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.profile-option h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 0.5rem;
+}
+
+.profile-option p {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin: 0;
+}
+
 /* Dialog/Modal */
 .dialog-overlay {
     position: fixed;

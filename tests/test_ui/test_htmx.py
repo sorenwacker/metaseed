@@ -46,12 +46,6 @@ class TestIndex:
         response = client.get("/")
         assert "MIAPPE-API" in response.text
 
-    def test_index_contains_profile_select(self, client):
-        """Index page contains profile selector."""
-        response = client.get("/")
-        assert "profile-select" in response.text
-        assert "miappe" in response.text
-
     def test_index_contains_entity_buttons(self, client):
         """Index page contains entity creation buttons."""
         response = client.get("/")
@@ -61,27 +55,35 @@ class TestIndex:
 class TestForm:
     """Tests for entity forms."""
 
-    def test_new_form_returns_html(self, client):
-        """New entity form route returns HTML."""
+    def test_new_investigation_shows_profile_select(self, client):
+        """New Investigation shows profile selection first."""
         response = client.get("/form/Investigation")
+        assert response.status_code == 200
+        assert "Select Metadata Model" in response.text
+        assert "MIAPPE" in response.text
+        assert "ISA" in response.text
+
+    def test_new_form_returns_html(self, client):
+        """New entity form route returns HTML with profile specified."""
+        response = client.get("/form/Investigation?profile=miappe")
         assert response.status_code == 200
         assert "New Investigation" in response.text
 
     def test_new_form_contains_required_fields(self, client):
         """Form contains required fields section."""
-        response = client.get("/form/Investigation")
+        response = client.get("/form/Investigation?profile=miappe")
         assert "Required Fields" in response.text
         assert "unique_id" in response.text
         assert "title" in response.text
 
     def test_new_form_contains_optional_fields(self, client):
         """Form contains optional fields section."""
-        response = client.get("/form/Investigation")
+        response = client.get("/form/Investigation?profile=miappe")
         assert "Optional Fields" in response.text
 
     def test_new_form_unknown_entity_404(self, client):
         """Unknown entity type returns 404."""
-        response = client.get("/form/UnknownEntity")
+        response = client.get("/form/UnknownEntity?profile=miappe")
         assert response.status_code == 404
 
 

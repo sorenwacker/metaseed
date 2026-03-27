@@ -1,0 +1,33 @@
+<div class="card">
+    <h2 class="card-title">Select Metadata Model</h2>
+    <p class="card-subtitle">Choose which metadata standard to use for this investigation.</p>
+
+    <div class="profile-options">
+        <button class="profile-option"
+                hx-get="/form/Investigation?profile=miappe"
+                hx-target="#main"
+                hx-swap="innerHTML"
+                data-testid="profile-miappe">
+            <h3>MIAPPE</h3>
+            <p>Minimum Information About Plant Phenotyping Experiments. Best for plant phenotyping studies.</p>
+        </button>
+
+        <button class="profile-option"
+                hx-get="/form/Investigation?profile=isa"
+                hx-target="#main"
+                hx-swap="innerHTML"
+                data-testid="profile-isa">
+            <h3>ISA</h3>
+            <p>Investigation-Study-Assay framework. General purpose for life science experiments.</p>
+        </button>
+
+        <button class="profile-option"
+                hx-get="/form/Investigation?profile=combined"
+                hx-target="#main"
+                hx-swap="innerHTML"
+                data-testid="profile-combined">
+            <h3>Combined</h3>
+            <p>Unified model combining ISA and MIAPPE. Supports both multi-omics and phenotyping.</p>
+        </button>
+    </div>
+</div>

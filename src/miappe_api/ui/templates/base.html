@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MIAPPE-API</title>
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
-    <link rel="stylesheet" href="/static/css/style.css?v=2">
+    <link rel="stylesheet" href="/static/css/style.css?v=3">
 </head>
 <body hx-headers='{"X-Requested-With": "XMLHttpRequest"}'>
     <div class="layout">
@@ -21,18 +21,6 @@
                     + {{ entity_type }}
                 </button>
                 {% endfor %}
-            </div>
-            <div class="header-controls">
-                <label for="profile-select">Profile:</label>
-                <select id="profile-select"
-                        name="profile"
-                        hx-post="/profile/{value}"
-                        hx-trigger="change"
-                        hx-swap="none">
-                    {% for p in profiles %}
-                    <option value="{{ p }}" {% if p == current_profile %}selected{% endif %}>{{ p }}</option>
-                    {% endfor %}
-                </select>
             </div>
         </header>
 

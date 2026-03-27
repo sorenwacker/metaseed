@@ -296,6 +296,23 @@ def create_app(state: AppState | None = None) -> FastAPI:
     async def new_entity_form(request: Request, entity_type: str):
         """Render a new entity form."""
         state = get_state()
+
+        # Check if profile is specified in query params
+        profile = request.query_params.get("profile")
+
+        # For Investigation, show profile selection if no profile specified
+        if entity_type == "Investigation" and not profile:
+            return templates.TemplateResponse(
+                request,
+                "partials/profile_select.html",
+                {},
+            )
+
+        # If profile specified, switch to it
+        if profile and profile in ["miappe", "isa", "combined"]:
+            state.profile = profile
+            state.facade = None  # Reset facade to use new profile
+
         facade = state.get_or_create_facade()
 
         try:
@@ -331,6 +348,7 @@ def create_app(state: AppState | None = None) -> FastAPI:
                 "nested_fields": [f for f in fields if _is_nested_field(f)],
                 "values": auto_values,
                 "auto_fields": set(auto_values.keys()),
+                "current_profile": state.profile,
             },
         )
 
