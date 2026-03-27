@@ -57,18 +57,19 @@
     </td>
     {% endfor %}
     <td class="row-actions">
-        <button class="btn-icon"
+        <button class="btn btn-sm btn-secondary"
                 hx-get="/nested/{{ parent_entity_type }}/{{ field_name }}/{{ row._idx }}"
                 hx-target="#main"
                 hx-swap="innerHTML"
-                title="Edit {{ entity_type }}"
-                data-testid="row-{{ row._idx }}">
-            &#9998;
+                title="Edit details and nested items"
+                data-testid="row-edit-{{ row._idx }}">
+            Edit
         </button>
         <button class="btn-icon danger"
                 hx-delete="/table/{{ field_name }}/row/{{ row._idx }}"
                 hx-target="#row-{{ row._idx }}"
                 hx-swap="delete"
+                title="Delete row"
                 data-testid="table-delete-row-{{ row._idx }}">
             &#128465;
         </button>

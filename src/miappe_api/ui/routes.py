@@ -533,10 +533,14 @@ def create_app(state: AppState | None = None) -> FastAPI:
 
         columns = []
         column_types = {}
+        required_columns = set()
+        has_nested_children = False
         if nested_helper:
             cols = list(nested_helper.required_fields) + list(nested_helper.optional_fields)
             nested = set(nested_helper.nested_fields.keys())
             columns = [c for c in cols if c not in nested]
+            required_columns = set(nested_helper.required_fields)
+            has_nested_children = bool(nested_helper.nested_fields)
             for col in columns:
                 info = nested_helper.field_info(col)
                 column_types[col] = info.get("type", "string")
@@ -573,6 +577,8 @@ def create_app(state: AppState | None = None) -> FastAPI:
                 "entity_type": nested_entity_type,
                 "columns": columns,
                 "column_types": column_types,
+                "required_columns": required_columns,
+                "has_nested_children": has_nested_children,
                 "rows": rows,
                 "parent_entity_type": entity_type,
                 "editing_node_id": state.editing_node_id,
@@ -926,14 +932,6 @@ def create_app(state: AppState | None = None) -> FastAPI:
                 data = node.instance.model_dump(exclude_none=True)
             else:
                 data = {}
-
-            # Debug: log nested fields
-            with open("/tmp/export_debug.txt", "a") as f:
-                f.write(f"\n=== Entity: {entity_type} ===\n")
-                helper = getattr(facade, entity_type, None)
-                if helper:
-                    for field_name in helper.nested_fields:
-                        f.write(f"  {field_name}: {data.get(field_name, 'NOT IN DATA')}\n")
 
             entities_by_type[entity_type].append(data)
 

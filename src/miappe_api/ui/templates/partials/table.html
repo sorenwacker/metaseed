@@ -54,11 +54,11 @@
             <tr>
                 {% for col in columns %}
                 <th>
-                    {{ col|replace('_', ' ')|title }}
+                    {{ col|replace('_', ' ')|title }}{% if required_columns and col in required_columns %}<span class="required">*</span>{% endif %}
                     <input type="hidden" name="_col_{{ col }}" value="{{ col }}">
                 </th>
                 {% endfor %}
-                <th style="width: 60px;">Actions</th>
+                <th style="width: {% if has_nested_children %}100px{% else %}60px{% endif %};">Actions</th>
             </tr>
         </thead>
         <tbody id="table-body">
