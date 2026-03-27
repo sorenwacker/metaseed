@@ -30,3 +30,19 @@ def load_spec_examples(profile: str = "miappe") -> dict[str, dict]:
 
 # Pre-load MIAPPE examples for convenience
 MIAPPE_EXAMPLES = load_spec_examples("miappe")
+
+# Export all entity examples for easy access
+INV_EXAMPLE = MIAPPE_EXAMPLES.get("Investigation", {})
+STUDY_EXAMPLE = MIAPPE_EXAMPLES.get("Study", {})
+PERSON_EXAMPLE = MIAPPE_EXAMPLES.get("Person", {})
+BIO_MAT_EXAMPLE = MIAPPE_EXAMPLES.get("BiologicalMaterial", {})
+OBS_UNIT_EXAMPLE = MIAPPE_EXAMPLES.get("ObservationUnit", {})
+OBS_VAR_EXAMPLE = MIAPPE_EXAMPLES.get("ObservedVariable", {})
+FACTOR_EXAMPLE = MIAPPE_EXAMPLES.get("Factor", {})
+FACTOR_VALUE_EXAMPLE = MIAPPE_EXAMPLES.get("FactorValue", {})
+EVENT_EXAMPLE = MIAPPE_EXAMPLES.get("Event", {})
+ENVIRONMENT_EXAMPLE = MIAPPE_EXAMPLES.get("Environment", {})
+SAMPLE_EXAMPLE = MIAPPE_EXAMPLES.get("Sample", {})
+DATA_FILE_EXAMPLE = MIAPPE_EXAMPLES.get("DataFile", {})
+LOCATION_EXAMPLE = MIAPPE_EXAMPLES.get("Location", {})
+MATERIAL_SOURCE_EXAMPLE = MIAPPE_EXAMPLES.get("MaterialSource", {})

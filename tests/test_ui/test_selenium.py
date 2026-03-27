@@ -14,19 +14,26 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
-from tests.test_ui.examples import MIAPPE_EXAMPLES
+from tests.test_ui.examples import (
+    BIO_MAT_EXAMPLE,
+    DATA_FILE_EXAMPLE,
+    ENVIRONMENT_EXAMPLE,
+    EVENT_EXAMPLE,
+    FACTOR_EXAMPLE,
+    FACTOR_VALUE_EXAMPLE,
+    INV_EXAMPLE,
+    OBS_UNIT_EXAMPLE,
+    OBS_VAR_EXAMPLE,
+    PERSON_EXAMPLE,
+    SAMPLE_EXAMPLE,
+    STUDY_EXAMPLE,
+)
 
 # Delay constants per requirements
 FILL_DELAY = 0.1  # Delay between form fills
 CLICK_DELAY = 0.5  # Delay after button clicks
 
 BASE_URL = "http://127.0.0.1:8081"
-
-# Load examples from YAML spec
-INV_EXAMPLE = MIAPPE_EXAMPLES["Investigation"]
-STUDY_EXAMPLE = MIAPPE_EXAMPLES["Study"]
-PERSON_EXAMPLE = MIAPPE_EXAMPLES["Person"]
-BIO_MAT_EXAMPLE = MIAPPE_EXAMPLES["BiologicalMaterial"]
 
 
 @pytest.fixture(scope="module")
@@ -322,6 +329,264 @@ def fill_all_biological_material_fields(driver, row_idx: int = 0):
     ext_refs = BIO_MAT_EXAMPLE.get("external_references", [])
     if ext_refs:
         fill_field(driver, f"{prefix}external_references", "\n".join(ext_refs), trigger_change=True)
+
+
+def fill_all_observation_unit_fields(driver, row_idx: int = 0):
+    """Fill all ObservationUnit fields from YAML example in a table row."""
+    prefix = f"cell-{row_idx}-"
+
+    # Required field
+    fill_field(driver, f"{prefix}unique_id", OBS_UNIT_EXAMPLE["unique_id"], trigger_change=True)
+
+    # Optional fields
+    fill_field(
+        driver,
+        f"{prefix}observation_unit_type",
+        OBS_UNIT_EXAMPLE["observation_unit_type"],
+        trigger_change=True,
+    )
+    fill_field(
+        driver,
+        f"{prefix}biological_material_id",
+        OBS_UNIT_EXAMPLE["biological_material_id"],
+        trigger_change=True,
+    )
+    fill_field(
+        driver,
+        f"{prefix}spatial_distribution_type",
+        OBS_UNIT_EXAMPLE["spatial_distribution_type"],
+        trigger_change=True,
+    )
+    fill_field(
+        driver,
+        f"{prefix}spatial_distribution",
+        OBS_UNIT_EXAMPLE["spatial_distribution"],
+        trigger_change=True,
+    )
+    fill_field(
+        driver,
+        f"{prefix}observation_unit_x_ref",
+        OBS_UNIT_EXAMPLE["observation_unit_x_ref"],
+        trigger_change=True,
+    )
+    fill_field(
+        driver,
+        f"{prefix}observation_unit_y_ref",
+        OBS_UNIT_EXAMPLE["observation_unit_y_ref"],
+        trigger_change=True,
+    )
+    fill_field(
+        driver,
+        f"{prefix}observation_unit_block",
+        OBS_UNIT_EXAMPLE["observation_unit_block"],
+        trigger_change=True,
+    )
+    fill_field(
+        driver,
+        f"{prefix}observation_unit_replicate",
+        OBS_UNIT_EXAMPLE["observation_unit_replicate"],
+        trigger_change=True,
+    )
+    fill_field(driver, f"{prefix}entry_type", OBS_UNIT_EXAMPLE["entry_type"], trigger_change=True)
+    fill_field(
+        driver,
+        f"{prefix}observation_level",
+        OBS_UNIT_EXAMPLE["observation_level"],
+        trigger_change=True,
+    )
+    fill_field(
+        driver,
+        f"{prefix}observation_level_code",
+        OBS_UNIT_EXAMPLE["observation_level_code"],
+        trigger_change=True,
+    )
+
+    # List field
+    ext_refs = OBS_UNIT_EXAMPLE.get("external_references", [])
+    if ext_refs:
+        fill_field(driver, f"{prefix}external_references", "\n".join(ext_refs), trigger_change=True)
+
+
+def fill_all_observed_variable_fields(driver, row_idx: int = 0):
+    """Fill all ObservedVariable fields from YAML example in a table row."""
+    prefix = f"cell-{row_idx}-"
+
+    # Required fields
+    fill_field(driver, f"{prefix}unique_id", OBS_VAR_EXAMPLE["unique_id"], trigger_change=True)
+    fill_field(driver, f"{prefix}name", OBS_VAR_EXAMPLE["name"], trigger_change=True)
+
+    # Optional fields
+    fill_field(driver, f"{prefix}trait", OBS_VAR_EXAMPLE["trait"], trigger_change=True)
+    fill_field(
+        driver,
+        f"{prefix}trait_accession_number",
+        OBS_VAR_EXAMPLE["trait_accession_number"],
+        trigger_change=True,
+    )
+    fill_field(
+        driver,
+        f"{prefix}trait_description",
+        OBS_VAR_EXAMPLE["trait_description"],
+        trigger_change=True,
+    )
+    fill_field(driver, f"{prefix}method", OBS_VAR_EXAMPLE["method"], trigger_change=True)
+    fill_field(
+        driver,
+        f"{prefix}method_accession_number",
+        OBS_VAR_EXAMPLE["method_accession_number"],
+        trigger_change=True,
+    )
+    fill_field(
+        driver,
+        f"{prefix}method_description",
+        OBS_VAR_EXAMPLE["method_description"],
+        trigger_change=True,
+    )
+    fill_field(driver, f"{prefix}scale", OBS_VAR_EXAMPLE["scale"], trigger_change=True)
+    fill_field(
+        driver,
+        f"{prefix}scale_accession_number",
+        OBS_VAR_EXAMPLE["scale_accession_number"],
+        trigger_change=True,
+    )
+    fill_field(
+        driver,
+        f"{prefix}scale_description",
+        OBS_VAR_EXAMPLE["scale_description"],
+        trigger_change=True,
+    )
+    fill_field(driver, f"{prefix}time_scale", OBS_VAR_EXAMPLE["time_scale"], trigger_change=True)
+    fill_field(driver, f"{prefix}reference", OBS_VAR_EXAMPLE["reference"], trigger_change=True)
+
+
+def fill_all_factor_fields(driver, row_idx: int = 0):
+    """Fill all Factor fields from YAML example in a table row."""
+    prefix = f"cell-{row_idx}-"
+
+    # Required fields
+    fill_field(driver, f"{prefix}unique_id", FACTOR_EXAMPLE["unique_id"], trigger_change=True)
+    fill_field(driver, f"{prefix}name", FACTOR_EXAMPLE["name"], trigger_change=True)
+
+    # Optional fields
+    fill_field(driver, f"{prefix}description", FACTOR_EXAMPLE["description"], trigger_change=True)
+    fill_field(driver, f"{prefix}factor_type", FACTOR_EXAMPLE["factor_type"], trigger_change=True)
+
+
+def fill_all_factor_value_fields(driver, row_idx: int = 0):
+    """Fill all FactorValue fields from YAML example in a table row."""
+    prefix = f"cell-{row_idx}-"
+
+    # Required fields
+    fill_field(driver, f"{prefix}unique_id", FACTOR_VALUE_EXAMPLE["unique_id"], trigger_change=True)
+    fill_field(driver, f"{prefix}value", FACTOR_VALUE_EXAMPLE["value"], trigger_change=True)
+
+    # Optional fields
+    fill_field(driver, f"{prefix}factor_id", FACTOR_VALUE_EXAMPLE["factor_id"], trigger_change=True)
+    fill_field(
+        driver, f"{prefix}description", FACTOR_VALUE_EXAMPLE["description"], trigger_change=True
+    )
+
+
+def fill_all_event_fields(driver, row_idx: int = 0):
+    """Fill all Event fields from YAML example in a table row."""
+    prefix = f"cell-{row_idx}-"
+
+    # Required fields
+    fill_field(driver, f"{prefix}unique_id", EVENT_EXAMPLE["unique_id"], trigger_change=True)
+    fill_field(driver, f"{prefix}event_type", EVENT_EXAMPLE["event_type"], trigger_change=True)
+
+    # Optional fields
+    fill_field(driver, f"{prefix}date", EVENT_EXAMPLE["date"], trigger_change=True)
+    fill_field(driver, f"{prefix}end_date", EVENT_EXAMPLE["end_date"], trigger_change=True)
+    fill_field(driver, f"{prefix}description", EVENT_EXAMPLE["description"], trigger_change=True)
+    fill_field(
+        driver,
+        f"{prefix}event_accession_number",
+        EVENT_EXAMPLE["event_accession_number"],
+        trigger_change=True,
+    )
+
+    # List field
+    ou_ids = EVENT_EXAMPLE.get("observation_unit_ids", [])
+    if ou_ids:
+        fill_field(driver, f"{prefix}observation_unit_ids", "\n".join(ou_ids), trigger_change=True)
+
+
+def fill_all_environment_fields(driver, row_idx: int = 0):
+    """Fill all Environment fields from YAML example in a table row."""
+    prefix = f"cell-{row_idx}-"
+
+    # Required fields
+    fill_field(driver, f"{prefix}unique_id", ENVIRONMENT_EXAMPLE["unique_id"], trigger_change=True)
+    fill_field(driver, f"{prefix}parameter", ENVIRONMENT_EXAMPLE["parameter"], trigger_change=True)
+
+    # Optional fields
+    fill_field(
+        driver,
+        f"{prefix}parameter_accession_number",
+        ENVIRONMENT_EXAMPLE["parameter_accession_number"],
+        trigger_change=True,
+    )
+    fill_field(driver, f"{prefix}value", ENVIRONMENT_EXAMPLE["value"], trigger_change=True)
+    fill_field(driver, f"{prefix}unit", ENVIRONMENT_EXAMPLE["unit"], trigger_change=True)
+    fill_field(driver, f"{prefix}date", ENVIRONMENT_EXAMPLE["date"], trigger_change=True)
+    fill_field(
+        driver, f"{prefix}description", ENVIRONMENT_EXAMPLE["description"], trigger_change=True
+    )
+
+
+def fill_all_sample_fields(driver, row_idx: int = 0):
+    """Fill all Sample fields from YAML example in a table row."""
+    prefix = f"cell-{row_idx}-"
+
+    # Required field
+    fill_field(driver, f"{prefix}unique_id", SAMPLE_EXAMPLE["unique_id"], trigger_change=True)
+
+    # Optional fields
+    fill_field(
+        driver,
+        f"{prefix}observation_unit_id",
+        SAMPLE_EXAMPLE["observation_unit_id"],
+        trigger_change=True,
+    )
+    fill_field(
+        driver,
+        f"{prefix}plant_structural_development_stage",
+        SAMPLE_EXAMPLE["plant_structural_development_stage"],
+        trigger_change=True,
+    )
+    fill_field(
+        driver,
+        f"{prefix}plant_anatomical_entity",
+        SAMPLE_EXAMPLE["plant_anatomical_entity"],
+        trigger_change=True,
+    )
+    fill_field(
+        driver, f"{prefix}collection_date", SAMPLE_EXAMPLE["collection_date"], trigger_change=True
+    )
+    fill_field(driver, f"{prefix}description", SAMPLE_EXAMPLE["description"], trigger_change=True)
+
+    # List field
+    ext_refs = SAMPLE_EXAMPLE.get("external_references", [])
+    if ext_refs:
+        fill_field(driver, f"{prefix}external_references", "\n".join(ext_refs), trigger_change=True)
+
+
+def fill_all_data_file_fields(driver, row_idx: int = 0):
+    """Fill all DataFile fields from YAML example in a table row."""
+    prefix = f"cell-{row_idx}-"
+
+    # Required fields
+    fill_field(driver, f"{prefix}unique_id", DATA_FILE_EXAMPLE["unique_id"], trigger_change=True)
+    fill_field(driver, f"{prefix}name", DATA_FILE_EXAMPLE["name"], trigger_change=True)
+
+    # Optional fields
+    fill_field(driver, f"{prefix}link", DATA_FILE_EXAMPLE["link"], trigger_change=True)
+    fill_field(
+        driver, f"{prefix}description", DATA_FILE_EXAMPLE["description"], trigger_change=True
+    )
+    fill_field(driver, f"{prefix}version", DATA_FILE_EXAMPLE["version"], trigger_change=True)
+    fill_field(driver, f"{prefix}file_type", DATA_FILE_EXAMPLE["file_type"], trigger_change=True)
 
 
 def expand_optional_fields(driver):
@@ -932,3 +1197,180 @@ class TestNestedEntityEditing:
 
         # Verify we're back at Investigation level (btn-create or btn-update visible)
         assert element_exists(browser, "btn-update")
+
+
+@pytest.mark.ui
+class TestCreateAllEntityTypes:
+    """Test creating ALL entity types from YAML examples in one comprehensive test."""
+
+    def test_create_all_entities(self, browser):
+        """Create Investigation with ALL nested entity types from YAML examples.
+
+        This test creates one instance of 10 MIAPPE entity types:
+        - Investigation (root)
+        - Person (via contacts)
+        - Study (via studies)
+        - DataFile (via Study > data_files)
+        - BiologicalMaterial (via Study > biological_materials)
+        - ObservationUnit (via Study > observation_units)
+        - ObservedVariable (via Study > observed_variables)
+        - Factor (via Study > factors)
+        - Event (via Study > events)
+        - Environment (via Study > environments)
+        """
+        browser.get(BASE_URL)
+        time.sleep(1)
+
+        # === 1. Create Investigation with all fields ===
+        click_button(browser, "btn-create-Investigation")
+
+        fill_field(browser, "input-unique-id", INV_EXAMPLE["unique_id"])
+        fill_field(browser, "input-title", INV_EXAMPLE["title"])
+
+        expand_optional_fields(browser)
+        fill_field(browser, "input-description", INV_EXAMPLE["description"])
+        fill_field(browser, "input-submission-date", INV_EXAMPLE["submission_date"])
+        fill_field(browser, "input-public-release-date", INV_EXAMPLE["public_release_date"])
+        fill_field(browser, "input-license", INV_EXAMPLE["license"])
+        fill_field(browser, "input-miappe-version", INV_EXAMPLE["miappe_version"])
+
+        pubs = INV_EXAMPLE.get("associated_publications", [])
+        if pubs:
+            fill_field(browser, "input-associated-publications", "\n".join(pubs))
+
+        click_button(browser, "btn-create")
+        time.sleep(CLICK_DELAY)
+
+        # Click on created Investigation
+        browser.refresh()
+        time.sleep(CLICK_DELAY)
+
+        tree_nodes = browser.find_elements(By.CSS_SELECTOR, "[data-testid^='tree-node-']")
+        for node in tree_nodes:
+            if INV_EXAMPLE["title"] in node.text:
+                node.click()
+                break
+        time.sleep(CLICK_DELAY)
+
+        # === 2. Add Person (via contacts) ===
+        expand_optional_fields(browser)
+        click_button(browser, "btn-nested-contacts")
+        click_button(browser, "table-add-row")
+        time.sleep(CLICK_DELAY)
+
+        fill_all_person_fields(browser)
+
+        click_button(browser, "table-save")
+        time.sleep(CLICK_DELAY)
+
+        # === 3. Add Study ===
+        expand_optional_fields(browser)
+        click_button(browser, "btn-nested-studies")
+        click_button(browser, "table-add-row")
+        time.sleep(CLICK_DELAY)
+
+        fill_all_study_fields(browser)
+
+        click_button(browser, "table-save")
+        time.sleep(CLICK_DELAY)
+
+        # Navigate into Study to add nested entities
+        expand_optional_fields(browser)
+        click_button(browser, "btn-nested-studies")
+        time.sleep(CLICK_DELAY)
+        click_element(browser, "row-0")
+        time.sleep(CLICK_DELAY)
+
+        # === 4. Add DataFile (via Study > data_files) ===
+        expand_optional_fields(browser)
+        click_button(browser, "btn-nested-data-files")
+        click_button(browser, "table-add-row")
+        time.sleep(CLICK_DELAY)
+
+        fill_all_data_file_fields(browser)
+
+        click_button(browser, "table-save")
+        time.sleep(CLICK_DELAY)
+
+        # === 5. Add BiologicalMaterial (via Study > biological_materials) ===
+        expand_optional_fields(browser)
+        click_button(browser, "btn-nested-biological-materials")
+        click_button(browser, "table-add-row")
+        time.sleep(CLICK_DELAY)
+
+        fill_all_biological_material_fields(browser)
+
+        click_button(browser, "table-save")
+        time.sleep(CLICK_DELAY)
+
+        # === 6. Add ObservationUnit (via Study > observation_units) ===
+        expand_optional_fields(browser)
+        click_button(browser, "btn-nested-observation-units")
+        click_button(browser, "table-add-row")
+        time.sleep(CLICK_DELAY)
+
+        fill_all_observation_unit_fields(browser)
+
+        click_button(browser, "table-save")
+        time.sleep(CLICK_DELAY)
+
+        # === 7. Add ObservedVariable (via Study > observed_variables) ===
+        expand_optional_fields(browser)
+        click_button(browser, "btn-nested-observed-variables")
+        click_button(browser, "table-add-row")
+        time.sleep(CLICK_DELAY)
+
+        fill_all_observed_variable_fields(browser)
+
+        click_button(browser, "table-save")
+        time.sleep(CLICK_DELAY)
+
+        # === 8. Add Factor (via Study > factors) ===
+        expand_optional_fields(browser)
+        click_button(browser, "btn-nested-factors")
+        click_button(browser, "table-add-row")
+        time.sleep(CLICK_DELAY)
+
+        fill_all_factor_fields(browser)
+
+        click_button(browser, "table-save")
+        time.sleep(CLICK_DELAY)
+
+        # === 9. Add Event (via Study > events) ===
+        expand_optional_fields(browser)
+        click_button(browser, "btn-nested-events")
+        click_button(browser, "table-add-row")
+        time.sleep(CLICK_DELAY)
+
+        fill_all_event_fields(browser)
+
+        click_button(browser, "table-save")
+        time.sleep(CLICK_DELAY)
+
+        # === 10. Add Environment (via Study > environments) ===
+        expand_optional_fields(browser)
+        click_button(browser, "btn-nested-environments")
+        click_button(browser, "table-add-row")
+        time.sleep(CLICK_DELAY)
+
+        fill_all_environment_fields(browser)
+
+        click_button(browser, "table-save")
+        time.sleep(CLICK_DELAY)
+
+        # Verify we're on Study form after adding all nested entities
+        assert element_exists(browser, "form-entity")
+
+        # Navigate back to Investigation
+        click_button(browser, "btn-back")  # Study form to studies table
+        time.sleep(CLICK_DELAY)
+        click_button(browser, "table-save")  # studies table to Investigation form
+        time.sleep(CLICK_DELAY)
+
+        # Verify Investigation form is displayed
+        assert element_exists(browser, "form-entity")
+        assert element_exists(browser, "btn-update")
+
+        # All 10 entity types were successfully created:
+        # Investigation, Person, Study, DataFile, BiologicalMaterial, ObservationUnit,
+        # ObservedVariable, Factor, Event, Environment
