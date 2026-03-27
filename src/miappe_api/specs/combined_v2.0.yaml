@@ -5,10 +5,18 @@
 # - Person: unified name handling (given_name/family_name, full_name computed)
 # - Publication: promoted to shared core (was ISA-only)
 # - Removed associated_publications URL list (use Publication entities)
+# - NEW: Experiment entity for multi-trial studies
+# - Reference model: Study owns entities, Experiment references them
 # - Better entity organization
 #
+# Ownership model:
+# - Study OWNS: BiologicalMaterials, ObservationUnits, Samples, ObservedVariables,
+#               Factors, Protocols (shared pool)
+# - Experiment OWNS: Events, Environments, Assays (time/location specific)
+# - Experiment REFERENCES: observation_unit_ids, sample_ids (from Study's pool)
+#
 # Entity categories:
-# - Shared Core (6): Investigation, Study, Person, Publication, Factor, FactorValue
+# - Shared Core (7): Investigation, Study, Experiment, Person, Publication, Factor, FactorValue
 # - ISA Extensions (9): Assay, Protocol, ProtocolParameter, Process, ParameterValue,
 #                       Source, Sample, Extract, LabeledExtract
 # - MIAPPE Extensions (5): BiologicalMaterial, ObservationUnit, ObservedVariable,
@@ -129,8 +137,9 @@ entities:
   Study:
     ontology_term: isaterms:study
     description: >
-      Central experimental unit containing information on subjects under study,
-      their characteristics, treatments, and experimental design.
+      Central experimental unit containing shared definitions and entity pools.
+      Contains one or more Experiments which represent specific trials/executions.
+      Study OWNS the shared entities; Experiments REFERENCE them.
     fields:
       - name: identifier
         type: string
@@ -164,25 +173,150 @@ entities:
         description: Date of public release.
         ontology_term: isaterms:release_date
 
-      - name: start_date
-        type: datetime
-        required: false
-        description: Study start date/time.
-        ontology_term: PPEO:hasStartDateTime
-
-      - name: end_date
-        type: datetime
-        required: false
-        description: Study end date/time.
-        ontology_term: PPEO:hasEndDateTime
-
       - name: contact_institution
         type: string
         required: false
         description: Institution responsible for the study.
         ontology_term: PPEO:hasContactInstitution
 
-      # Location fields (MIAPPE)
+      # Experimental design (shared across experiments)
+      - name: experimental_design_type
+        type: string
+        required: false
+        description: Type of experimental design (e.g., RCBD, split-plot).
+        ontology_term: PPEO:hasExperimentalDesign
+
+      - name: experimental_design_description
+        type: string
+        required: false
+        description: Description of the experimental design.
+
+      - name: observation_unit_level_hierarchy
+        type: list
+        items: string
+        required: false
+        description: Hierarchy of observation levels (block, plot, plant).
+        ontology_term: PPEO:hasObservationLevelHierarchy
+
+      # Design descriptors (ISA)
+      - name: design_descriptors
+        type: list
+        items: OntologyAnnotation
+        required: false
+        description: Classifications based on experimental design (ISA style).
+        ontology_term: isaterms:study_design
+
+      # People and publications
+      - name: contacts
+        type: list
+        items: Person
+        required: false
+        description: People involved in the study.
+
+      - name: publications
+        type: list
+        items: Publication
+        required: false
+        description: Publications associated with the study.
+
+      # Shared definitions (owned by Study)
+      - name: factors
+        type: list
+        items: Factor
+        required: false
+        description: Experimental factors (shared across experiments).
+
+      - name: protocols
+        type: list
+        items: Protocol
+        required: false
+        description: Protocols used (shared across experiments).
+
+      - name: observed_variables
+        type: list
+        items: ObservedVariable
+        required: false
+        description: Variables being measured (shared definitions).
+
+      # Entity pools (owned by Study, referenced by Experiments)
+      - name: biological_materials
+        type: list
+        items: BiologicalMaterial
+        required: false
+        description: Plant materials/germplasm pool.
+
+      - name: sources
+        type: list
+        items: Source
+        required: false
+        description: Source materials pool.
+
+      - name: observation_units
+        type: list
+        items: ObservationUnit
+        required: false
+        description: Observation units pool (plots, plants).
+
+      - name: samples
+        type: list
+        items: Sample
+        required: false
+        description: Samples pool (can be used by multiple experiments).
+
+      - name: data_files
+        type: list
+        items: DataFile
+        required: false
+        description: Data files associated with the study.
+
+      # Experiments (specific trials/executions)
+      - name: experiments
+        type: list
+        items: Experiment
+        required: false
+        description: Specific trials or experimental executions.
+
+  Experiment:
+    ontology_term: PPEO:study
+    description: >
+      A specific trial or experimental execution within a Study. Has its own
+      location, timeframe, events, and environmental conditions. References
+      entities from the parent Study's pools (observation_units, samples).
+    fields:
+      - name: identifier
+        type: string
+        required: true
+        description: Unique identifier for the experiment.
+        ontology_term: PPEO:hasIdentifier
+        constraints:
+          pattern: "^[A-Za-z0-9_-]+$"
+
+      - name: name
+        type: string
+        required: true
+        description: Name of the experiment.
+        ontology_term: PPEO:hasName
+
+      - name: description
+        type: string
+        required: false
+        description: Description of this specific experiment.
+        ontology_term: PPEO:hasDescription
+
+      # Timeframe
+      - name: start_date
+        type: datetime
+        required: false
+        description: Experiment start date/time.
+        ontology_term: PPEO:hasStartDateTime
+
+      - name: end_date
+        type: datetime
+        required: false
+        description: Experiment end date/time.
+        ontology_term: PPEO:hasEndDateTime
+
+      # Location
       - name: experimental_site_name
         type: string
         required: false
@@ -213,18 +347,6 @@ entities:
         description: Altitude in meters above sea level.
         ontology_term: PPEO:hasAltitude
 
-      # Experimental design (MIAPPE)
-      - name: experimental_design_type
-        type: string
-        required: false
-        description: Type of experimental design (e.g., RCBD, split-plot).
-        ontology_term: PPEO:hasExperimentalDesign
-
-      - name: experimental_design_description
-        type: string
-        required: false
-        description: Description of the experimental design.
-
       - name: growth_facility_type
         type: string
         required: false
@@ -234,104 +356,52 @@ entities:
       - name: cultural_practices
         type: string
         required: false
-        description: Cultural practices applied (fertilization, irrigation).
+        description: Cultural practices applied in this experiment.
         ontology_term: PPEO:hasCulturalPractices
 
-      - name: observation_unit_level_hierarchy
+      # References to Study's entity pools
+      - name: observation_unit_ids
         type: list
         items: string
         required: false
-        description: Hierarchy of observation levels (block, plot, plant).
-        ontology_term: PPEO:hasObservationLevelHierarchy
+        description: IDs of observation units used (references Study's pool).
 
-      # Design descriptors (ISA)
-      - name: design_descriptors
+      - name: sample_ids
         type: list
-        items: OntologyAnnotation
+        items: string
         required: false
-        description: Classifications based on experimental design (ISA style).
-        ontology_term: isaterms:study_design
+        description: IDs of samples used (references Study's pool).
 
-      # Shared nested entities
-      - name: contacts
+      - name: biological_material_ids
         type: list
-        items: Person
+        items: string
         required: false
-        description: People involved in the study.
+        description: IDs of biological materials used (references Study's pool).
 
-      - name: publications
-        type: list
-        items: Publication
-        required: false
-        description: Publications associated with the study.
-
-      - name: factors
-        type: list
-        items: Factor
-        required: false
-        description: Experimental factors (independent variables).
-
-      - name: data_files
-        type: list
-        items: DataFile
-        required: false
-        description: Data files associated with the study.
-
-      # ISA-specific nested entities
-      - name: protocols
-        type: list
-        items: Protocol
-        required: false
-        description: Protocols used in the study.
-
-      - name: assays
-        type: list
-        items: Assay
-        required: false
-        description: Assays/measurements performed.
-
-      - name: sources
-        type: list
-        items: Source
-        required: false
-        description: Source materials.
-
-      - name: samples
-        type: list
-        items: Sample
-        required: false
-        description: Sample materials.
-
-      # MIAPPE-specific nested entities
-      - name: biological_materials
-        type: list
-        items: BiologicalMaterial
-        required: false
-        description: Plant materials/germplasm used.
-
-      - name: observation_units
-        type: list
-        items: ObservationUnit
-        required: false
-        description: Units being observed (plots, plants).
-
-      - name: observed_variables
-        type: list
-        items: ObservedVariable
-        required: false
-        description: Variables being measured (trait/method/scale).
-
+      # Owned by Experiment (time/location specific)
       - name: events
         type: list
         items: Event
         required: false
-        description: Discrete occurrences during the study.
+        description: Discrete occurrences during this experiment.
 
       - name: environments
         type: list
         items: Environment
         required: false
-        description: Environmental conditions recorded.
+        description: Environmental conditions recorded in this experiment.
+
+      - name: assays
+        type: list
+        items: Assay
+        required: false
+        description: Assays/measurements performed in this experiment.
+
+      - name: process_sequence
+        type: list
+        items: Process
+        required: false
+        description: Process workflow for this experiment.
 
   Person:
     ontology_term: isaterms:person
