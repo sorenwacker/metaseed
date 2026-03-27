@@ -173,16 +173,16 @@ entities:
         ontology_term: PPEO:hasDescription
 
       - name: start_date
-        type: date
+        type: datetime
         required: false
-        description: "Start date. Format: ISO 8601 (YYYY-MM-DD)."
-        ontology_term: PPEO:hasStartDate
+        description: "Start date/time. Format: ISO 8601."
+        ontology_term: PPEO:hasStartDateTime
 
       - name: end_date
-        type: date
+        type: datetime
         required: false
-        description: "End date. Format: ISO 8601 (YYYY-MM-DD)."
-        ontology_term: PPEO:hasEndDate
+        description: "End date/time. Format: ISO 8601."
+        ontology_term: PPEO:hasEndDateTime
 
       - name: contact_institution
         type: string
@@ -201,7 +201,7 @@ entities:
         type: string
         required: false
         description: Name of the experimental site.
-        ontology_term: PPEO:hasGrowthFacility
+        ontology_term: PPEO:hasName
 
       - name: latitude
         type: float
@@ -256,7 +256,7 @@ entities:
         type: string
         required: false
         description: Type of growth facility.
-        ontology_term: PPEO:hasGrowthFacility
+        ontology_term: PPEO:hasType
 
       - name: cultural_practices
         type: string
@@ -349,7 +349,7 @@ entities:
         type: string
         required: false
         description: Email address.
-        ontology_term: PPEO:hasEMailContact
+        ontology_term: PPEO:hasEmailContact
         constraints:
           pattern: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
 
@@ -407,7 +407,6 @@ entities:
         type: string
         required: false
         description: Scientific name (genus and species).
-        ontology_term: PPEO:hasOrganism
 
       - name: genus
         type: string
@@ -474,7 +473,7 @@ entities:
         type: string
         required: false
         description: Coordinate uncertainty.
-        ontology_term: PPEO:hasCoordinatesUncertainty
+        ontology_term: PPEO:hasUncertainty
 
       - name: biological_material_preprocessing
         type: string
@@ -546,13 +545,13 @@ entities:
         type: string
         required: false
         description: X coordinate or column.
-        ontology_term: PPEO:hasSpatialCoordinate
+        ontology_term: PPEO:hasSpatialDistribution
 
       - name: observation_unit_y_ref
         type: string
         required: false
         description: Y coordinate or row.
-        ontology_term: PPEO:hasSpatialCoordinate
+        ontology_term: PPEO:hasSpatialDistribution
 
       - name: observation_unit_block
         type: string
@@ -596,7 +595,7 @@ entities:
         items: Sample
         required: false
         description: Samples from this unit.
-        ontology_term: PPEO:hasSample
+        ontology_term: PPEO:hasPart
 
       - name: external_references
         type: list
@@ -652,7 +651,7 @@ entities:
         type: string
         required: false
         description: Trait ontology accession.
-        ontology_term: PPEO:hasTraitAccession
+        ontology_term: PPEO:hasExternalIdentifier
 
       - name: trait_description
         type: string
@@ -670,7 +669,7 @@ entities:
         type: string
         required: false
         description: Method ontology accession.
-        ontology_term: PPEO:hasMethodAccession
+        ontology_term: PPEO:hasExternalIdentifier
 
       - name: method_description
         type: string
@@ -688,7 +687,7 @@ entities:
         type: string
         required: false
         description: Scale ontology accession.
-        ontology_term: PPEO:hasScaleAccession
+        ontology_term: PPEO:hasExternalIdentifier
 
       - name: scale_description
         type: string
@@ -746,7 +745,7 @@ entities:
         type: string
         required: false
         description: Type (treatment, genotype, environment).
-        ontology_term: PPEO:hasFactorType
+        ontology_term: PPEO:hasType
 
       - name: values
         type: list
@@ -822,7 +821,7 @@ entities:
         type: string
         required: true
         description: Type of event.
-        ontology_term: PPEO:hasEventType
+        ontology_term: PPEO:hasType
         constraints:
           min_length: 1
           max_length: 255
@@ -856,7 +855,7 @@ entities:
         type: string
         required: false
         description: Event type ontology accession.
-        ontology_term: PPEO:hasEventAccession
+        ontology_term: PPEO:hasExternalIdentifier
 
   Environment:
     ontology_term: PPEO:environment
@@ -893,7 +892,7 @@ entities:
         type: string
         required: false
         description: Parameter ontology accession.
-        ontology_term: PPEO:hasEnvironmentParameterAccession
+        ontology_term: PPEO:hasExternalIdentifier
 
       - name: value
         type: string
@@ -905,7 +904,6 @@ entities:
         type: string
         required: false
         description: Unit of measurement.
-        ontology_term: PPEO:hasUnit
 
       - name: date
         type: datetime
@@ -1032,7 +1030,7 @@ entities:
         type: string
         required: false
         description: File format.
-        ontology_term: PPEO:hasFileType
+        ontology_term: PPEO:hasType
 
   Location:
     ontology_term: PPEO:location
@@ -1131,7 +1129,7 @@ entities:
         type: string
         required: false
         description: Type (field, greenhouse, etc.).
-        ontology_term: PPEO:hasLocationType
+        ontology_term: PPEO:hasType
 
   MaterialSource:
     ontology_term: PPEO:material_source
