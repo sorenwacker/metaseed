@@ -201,6 +201,21 @@ When filling table cells that have HTMX handlers, trigger the change event:
 fill_field(browser, "cell-0-name", "Dr. Smith", trigger_change=True)
 ```
 
+## Selenium Test Coverage
+
+The following end-to-end tests are implemented:
+
+| Test Class | Test Method | Description |
+|------------|-------------|-------------|
+| `TestCreateInvestigationRequiredFields` | `test_create_investigation_required_fields` | Create Investigation with only required fields |
+| `TestCreateInvestigationAllFields` | `test_create_investigation_all_fields` | Create Investigation with all optional fields |
+| `TestAddNestedContacts` | `test_add_nested_contacts` | Add contacts through nested table |
+| `TestEditInvestigation` | `test_edit_investigation` | Edit existing entity and verify persistence |
+| `TestDeleteInvestigation` | `test_delete_investigation` | Delete entity and verify removal |
+| `TestAddNestedStudy` | `test_add_nested_study` | Add Study through nested table |
+| `TestValidationError` | `test_validation_error_missing_required` | Verify HTML5 validation on required fields |
+| `TestProfileSwitch` | `test_switch_profile_clears_state` | Switch profile and verify state cleared |
+
 ## Markers
 
 Tests are marked for selective execution:

@@ -62,12 +62,9 @@ def server():
 
 
 @pytest.fixture
-def browser(_server):
-    """Create a visible Chrome browser for testing.
-
-    Args:
-        _server: Server fixture dependency (ensures server is running).
-    """
+def browser(server):  # noqa: ARG001
+    """Create a visible Chrome browser for testing."""
+    _ = server  # Ensure server is running
     options = Options()
     # Run in visible mode (no headless)
     options.add_argument("--window-size=1280,900")
@@ -310,6 +307,7 @@ class TestAddNestedContacts:
         fill_field(browser, "cell-0-email", "jane.smith@example.org", trigger_change=True)
         fill_field(browser, "cell-0-institution", "Research Institute", trigger_change=True)
         fill_field(browser, "cell-0-role", "Principal Investigator", trigger_change=True)
+        fill_field(browser, "cell-0-orcid", "0000-0001-2345-6789", trigger_change=True)
 
         # Click "Save & Back" button
         click_button(browser, "table-save")
@@ -324,3 +322,230 @@ class TestAddNestedContacts:
         # Verify contacts button shows count of 1
         contacts_btn = browser.find_element(By.CSS_SELECTOR, "[data-testid='btn-nested-contacts']")
         assert "(1)" in contacts_btn.text
+
+
+@pytest.mark.ui
+class TestEditInvestigation:
+    """Test editing an existing Investigation."""
+
+    def test_edit_investigation(self, browser):
+        """Edit an existing Investigation and verify changes persist."""
+        browser.get(BASE_URL)
+        time.sleep(CLICK_DELAY)
+
+        # Create an Investigation first
+        click_button(browser, "btn-create-Investigation")
+        fill_field(browser, "input-unique-id", "INV-EDIT-001")
+        fill_field(browser, "input-title", "Original Title")
+        click_button(browser, "btn-create")
+        time.sleep(CLICK_DELAY)
+
+        # Click on the created entity in sidebar
+        tree_nodes = browser.find_elements(By.CSS_SELECTOR, "[data-testid^='tree-node-']")
+        target_node = None
+        for node in tree_nodes:
+            if "Original Title" in node.text:
+                target_node = node
+                break
+        assert target_node is not None
+        target_node.click()
+        time.sleep(CLICK_DELAY)
+
+        # Verify edit form is shown
+        assert element_exists(browser, "btn-update")
+
+        # Modify the title
+        title_field = browser.find_element(By.CSS_SELECTOR, "[data-testid='input-title']")
+        title_field.clear()
+        title_field.send_keys("Updated Title")
+        time.sleep(FILL_DELAY)
+
+        # Click Update
+        click_button(browser, "btn-update")
+        time.sleep(CLICK_DELAY)
+
+        # Refresh and verify the change persisted
+        browser.refresh()
+        time.sleep(CLICK_DELAY)
+
+        sidebar = browser.find_element(By.ID, "sidebar")
+        assert "Updated Title" in sidebar.text
+
+
+@pytest.mark.ui
+class TestDeleteInvestigation:
+    """Test deleting an Investigation."""
+
+    def test_delete_investigation(self, browser):
+        """Delete an Investigation and verify it's removed from sidebar."""
+        browser.get(BASE_URL)
+        time.sleep(CLICK_DELAY)
+
+        # Create an Investigation
+        click_button(browser, "btn-create-Investigation")
+        fill_field(browser, "input-unique-id", "INV-DELETE-001")
+        fill_field(browser, "input-title", "To Be Deleted")
+        click_button(browser, "btn-create")
+        time.sleep(CLICK_DELAY)
+
+        browser.refresh()
+        time.sleep(CLICK_DELAY)
+
+        # Verify it exists in sidebar
+        sidebar = browser.find_element(By.ID, "sidebar")
+        assert "To Be Deleted" in sidebar.text
+
+        # Find the delete button for this entity
+        tree_nodes = browser.find_elements(By.CSS_SELECTOR, "[data-testid^='tree-node-']")
+        target_node = None
+        for node in tree_nodes:
+            if "To Be Deleted" in node.text:
+                target_node = node
+                break
+        assert target_node is not None
+
+        # Get the node ID from the data-testid
+        node_testid = target_node.get_attribute("data-testid")
+        node_id = node_testid.replace("tree-node-", "")
+
+        # Click delete button and accept confirmation
+        delete_btn = browser.find_element(By.CSS_SELECTOR, f"[data-testid='btn-delete-{node_id}']")
+        delete_btn.click()
+
+        # Handle browser confirm dialog
+        alert = browser.switch_to.alert
+        alert.accept()
+        time.sleep(CLICK_DELAY)
+
+        # Verify entity is removed from sidebar
+        sidebar = browser.find_element(By.ID, "sidebar")
+        assert "To Be Deleted" not in sidebar.text
+
+
+@pytest.mark.ui
+class TestAddNestedStudy:
+    """Test adding a nested Study to an Investigation."""
+
+    def test_add_nested_study(self, browser):
+        """Add a Study to an Investigation through nested table."""
+        browser.get(BASE_URL)
+        time.sleep(CLICK_DELAY)
+
+        # Create Investigation
+        click_button(browser, "btn-create-Investigation")
+        fill_field(browser, "input-unique-id", "INV-STUDY-001")
+        fill_field(browser, "input-title", "Investigation with Study")
+        click_button(browser, "btn-create")
+        time.sleep(CLICK_DELAY)
+
+        # Click on the created entity
+        tree_nodes = browser.find_elements(By.CSS_SELECTOR, "[data-testid^='tree-node-']")
+        for node in tree_nodes:
+            if "Investigation with Study" in node.text:
+                node.click()
+                break
+        time.sleep(CLICK_DELAY)
+
+        # Expand optional fields
+        expand_optional_fields(browser)
+
+        # Click on studies nested field button
+        click_button(browser, "btn-nested-studies")
+
+        # Add a row
+        click_button(browser, "table-add-row")
+        time.sleep(CLICK_DELAY)
+
+        # Fill study fields
+        fill_field(browser, "cell-0-unique_id", "STU-001", trigger_change=True)
+        fill_field(browser, "cell-0-title", "Field Trial 2024", trigger_change=True)
+
+        # Save & Back
+        click_button(browser, "table-save")
+        time.sleep(CLICK_DELAY)
+
+        # Verify studies count shows 1
+        expand_optional_fields(browser)
+        studies_btn = browser.find_element(By.CSS_SELECTOR, "[data-testid='btn-nested-studies']")
+        assert "(1)" in studies_btn.text
+
+
+@pytest.mark.ui
+class TestValidationError:
+    """Test validation error display."""
+
+    def test_validation_error_missing_required(self, browser):
+        """Submit form without required fields and verify error message."""
+        browser.get(BASE_URL)
+        time.sleep(CLICK_DELAY)
+
+        # Click create Investigation
+        click_button(browser, "btn-create-Investigation")
+
+        # Don't fill any fields, just click Create
+        # The HTML5 validation should prevent submission, but if it gets through:
+        create_btn = browser.find_element(By.CSS_SELECTOR, "[data-testid='btn-create']")
+
+        # Check if unique_id field has required attribute
+        unique_id = browser.find_element(By.CSS_SELECTOR, "[data-testid='input-unique-id']")
+        assert unique_id.get_attribute("required") is not None
+
+        # Fill unique_id but not title (both required)
+        fill_field(browser, "input-unique-id", "INV-VAL-001")
+        # Leave title empty
+
+        # Try to submit - HTML5 validation should block
+        create_btn.click()
+        time.sleep(CLICK_DELAY)
+
+        # The form should still be visible (not submitted)
+        assert element_exists(browser, "form-entity")
+
+
+@pytest.mark.ui
+class TestProfileSwitch:
+    """Test profile switching between miappe and isa."""
+
+    def test_switch_profile_clears_state(self, browser):
+        """Switch profile and verify state is cleared."""
+        browser.get(BASE_URL)
+        time.sleep(CLICK_DELAY)
+
+        # Create an Investigation in miappe profile
+        click_button(browser, "btn-create-Investigation")
+        fill_field(browser, "input-unique-id", "INV-PROFILE-001")
+        fill_field(browser, "input-title", "Miappe Investigation")
+        click_button(browser, "btn-create")
+        time.sleep(CLICK_DELAY)
+
+        browser.refresh()
+        time.sleep(CLICK_DELAY)
+
+        # Verify entity exists
+        sidebar = browser.find_element(By.ID, "sidebar")
+        assert "Miappe Investigation" in sidebar.text
+
+        # Switch to ISA profile using the select dropdown
+        profile_select = browser.find_element(By.ID, "profile-select")
+        profile_select.click()
+        time.sleep(FILL_DELAY)
+
+        # Select ISA option
+        isa_option = profile_select.find_element(By.CSS_SELECTOR, "option[value='isa']")
+        isa_option.click()
+        time.sleep(1)  # Wait for redirect
+
+        # Verify state is cleared (no entities)
+        sidebar = browser.find_element(By.ID, "sidebar")
+        assert "No entities created yet" in sidebar.text
+        assert "Miappe Investigation" not in sidebar.text
+
+        # Switch back to miappe
+        profile_select = browser.find_element(By.ID, "profile-select")
+        miappe_option = profile_select.find_element(By.CSS_SELECTOR, "option[value='miappe']")
+        miappe_option.click()
+        time.sleep(1)
+
+        # Verify miappe is selected but state was cleared
+        sidebar = browser.find_element(By.ID, "sidebar")
+        assert "No entities created yet" in sidebar.text
