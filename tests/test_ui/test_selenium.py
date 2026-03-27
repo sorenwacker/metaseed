@@ -784,12 +784,65 @@ class TestNestedEntityEditing:
         # Verify we're in BiologicalMaterial table view
         assert element_exists(browser, "table-add-row")
 
-        # Add a BiologicalMaterial from YAML example
+        # Add a BiologicalMaterial from YAML example - fill ALL fields
         click_button(browser, "table-add-row")
         time.sleep(CLICK_DELAY)
 
+        # Required field
         fill_field(browser, "cell-0-unique_id", BIO_MAT_EXAMPLE["unique_id"], trigger_change=True)
+
+        # All optional fields from YAML example
         fill_field(browser, "cell-0-organism", BIO_MAT_EXAMPLE["organism"], trigger_change=True)
+        fill_field(browser, "cell-0-genus", BIO_MAT_EXAMPLE["genus"], trigger_change=True)
+        fill_field(browser, "cell-0-species", BIO_MAT_EXAMPLE["species"], trigger_change=True)
+        fill_field(
+            browser,
+            "cell-0-infraspecific_name",
+            BIO_MAT_EXAMPLE["infraspecific_name"],
+            trigger_change=True,
+        )
+        fill_field(
+            browser,
+            "cell-0-accession_number",
+            BIO_MAT_EXAMPLE["accession_number"],
+            trigger_change=True,
+        )
+        fill_field(
+            browser,
+            "cell-0-biological_material_description",
+            BIO_MAT_EXAMPLE["biological_material_description"],
+            trigger_change=True,
+        )
+        fill_field(
+            browser,
+            "cell-0-biological_material_latitude",
+            str(BIO_MAT_EXAMPLE["biological_material_latitude"]),
+            trigger_change=True,
+        )
+        fill_field(
+            browser,
+            "cell-0-biological_material_longitude",
+            str(BIO_MAT_EXAMPLE["biological_material_longitude"]),
+            trigger_change=True,
+        )
+        fill_field(
+            browser,
+            "cell-0-biological_material_altitude",
+            str(BIO_MAT_EXAMPLE["biological_material_altitude"]),
+            trigger_change=True,
+        )
+        fill_field(
+            browser,
+            "cell-0-biological_material_coordinates_uncertainty",
+            BIO_MAT_EXAMPLE["biological_material_coordinates_uncertainty"],
+            trigger_change=True,
+        )
+        fill_field(
+            browser,
+            "cell-0-biological_material_preprocessing",
+            BIO_MAT_EXAMPLE["biological_material_preprocessing"],
+            trigger_change=True,
+        )
 
         # Save
         click_button(browser, "table-save")
