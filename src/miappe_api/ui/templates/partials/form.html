@@ -16,6 +16,12 @@
     <p class="text-small text-muted mb-4">Ontology: {{ ontology_term }}</p>
     {% endif %}
 
+    {% if error_message %}
+    <div class="notification notification-error" data-testid="form-error">
+        {{ error_message }}
+    </div>
+    {% endif %}
+
     <form {% if is_edit %}
           hx-put="/entity/{{ node_id }}"
           {% else %}

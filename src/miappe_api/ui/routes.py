@@ -376,7 +376,32 @@ def create_app(state: AppState | None = None) -> FastAPI:
 
         except ValidationError as e:
             errors = _format_validation_errors(e)
-            return _error_response(request, templates, f"Validation error: {errors}")
+            # Re-render form with errors and user's data preserved
+            fields = _get_field_data(helper)
+            auto_values = {}
+            if "miappe_version" in helper.all_fields:
+                auto_values["miappe_version"] = facade.version
+            values.update(auto_values)
+
+            return templates.TemplateResponse(
+                request,
+                "partials/form.html",
+                {
+                    "entity_type": entity_type,
+                    "is_edit": False,
+                    "node_id": None,
+                    "description": helper.description,
+                    "ontology_term": helper.ontology_term,
+                    "required_fields": [f for f in fields if f["required"]],
+                    "optional_fields": [
+                        f for f in fields if not f["required"] and not _is_nested_field(f)
+                    ],
+                    "nested_fields": [f for f in fields if _is_nested_field(f)],
+                    "values": values,
+                    "auto_fields": set(auto_values.keys()),
+                    "error_message": f"Validation error: {errors}",
+                },
+            )
 
     @app.put("/entity/{node_id}", response_class=HTMLResponse)
     async def update_entity(request: Request, node_id: str):
@@ -431,7 +456,32 @@ def create_app(state: AppState | None = None) -> FastAPI:
 
         except ValidationError as e:
             errors = _format_validation_errors(e)
-            return _error_response(request, templates, f"Validation error: {errors}")
+            # Re-render form with errors and user's data preserved
+            fields = _get_field_data(helper)
+            auto_fields = set()
+            if "miappe_version" in helper.all_fields:
+                values["miappe_version"] = facade.version
+                auto_fields.add("miappe_version")
+
+            return templates.TemplateResponse(
+                request,
+                "partials/form.html",
+                {
+                    "entity_type": entity_type,
+                    "is_edit": True,
+                    "node_id": node_id,
+                    "description": helper.description,
+                    "ontology_term": helper.ontology_term,
+                    "required_fields": [f for f in fields if f["required"]],
+                    "optional_fields": [
+                        f for f in fields if not f["required"] and not _is_nested_field(f)
+                    ],
+                    "nested_fields": [f for f in fields if _is_nested_field(f)],
+                    "values": values,
+                    "auto_fields": auto_fields,
+                    "error_message": f"Validation error: {errors}",
+                },
+            )
 
     @app.delete("/entity/{node_id}", response_class=HTMLResponse)
     async def delete_entity(request: Request, node_id: str):
