@@ -261,3 +261,78 @@ class TestISAFacade:
 
         assert "studies" in nested
         assert nested["studies"] == "Study"
+
+
+class TestCombinedFacade:
+    """Tests specific to combined ISA+MIAPPE profile facade."""
+
+    @pytest.fixture
+    def combined_facade(self) -> ProfileFacade:
+        """Create combined facade."""
+        return ProfileFacade("combined", "1.0")
+
+    def test_combined_loads(self, combined_facade: ProfileFacade) -> None:
+        """Combined profile loads successfully."""
+        assert combined_facade.profile == "combined"
+        assert combined_facade.version == "1.0"
+
+    def test_combined_has_isa_entities(self, combined_facade: ProfileFacade) -> None:
+        """Combined profile has ISA-specific entities."""
+        entities = combined_facade.entities
+
+        assert "Assay" in entities
+        assert "Protocol" in entities
+        assert "Source" in entities
+        assert "Extract" in entities
+        assert "Process" in entities
+
+    def test_combined_has_miappe_entities(self, combined_facade: ProfileFacade) -> None:
+        """Combined profile has MIAPPE-specific entities."""
+        entities = combined_facade.entities
+
+        assert "BiologicalMaterial" in entities
+        assert "ObservationUnit" in entities
+        assert "ObservedVariable" in entities
+        assert "Event" in entities
+        assert "Environment" in entities
+
+    def test_combined_has_shared_entities(self, combined_facade: ProfileFacade) -> None:
+        """Combined profile has shared core entities."""
+        entities = combined_facade.entities
+
+        assert "Investigation" in entities
+        assert "Study" in entities
+        assert "Sample" in entities
+        assert "Person" in entities
+        assert "Factor" in entities
+        assert "DataFile" in entities
+
+    def test_combined_create_investigation(self, combined_facade: ProfileFacade) -> None:
+        """Create Investigation from combined profile."""
+        inv = combined_facade.Investigation(
+            identifier="COMB-001",
+            title="Combined Test Investigation",
+        )
+
+        assert inv.identifier == "COMB-001"
+        assert inv.title == "Combined Test Investigation"
+
+    def test_combined_create_miappe_entity(self, combined_facade: ProfileFacade) -> None:
+        """Create MIAPPE-specific entity from combined profile."""
+        bm = combined_facade.BiologicalMaterial(
+            identifier="BM-001",
+            organism="Zea mays",
+        )
+
+        assert bm.identifier == "BM-001"
+        assert bm.organism == "Zea mays"
+
+    def test_combined_create_isa_entity(self, combined_facade: ProfileFacade) -> None:
+        """Create ISA-specific entity from combined profile."""
+        prot = combined_facade.Protocol(
+            name="Test Protocol",
+            protocol_type="sample collection",
+        )
+
+        assert prot.name == "Test Protocol"
+        assert prot.protocol_type == "sample collection"

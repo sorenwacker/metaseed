@@ -201,6 +201,35 @@ When converting between ISA and MIAPPE:
 - Working with BrAPI-compatible systems
 - Environmental data is important
 
+**Use Combined when:**
+
+- Need both multi-omics and phenotyping capabilities
+- Conducting integrated plant research (phenomics + genomics/transcriptomics)
+- Want a single unified schema for diverse experimental data
+
+!!! warning "Experimental"
+    The combined profile (`combined_v1.0.yaml`) is experimental and merges ISA and MIAPPE entities into a unified model. It uses ISA-style `identifier` fields as the common naming convention.
+
+## Combined Profile Usage
+
+```python
+from miappe_api.facade import ProfileFacade
+
+# Load combined profile
+combined = ProfileFacade("combined", "1.0")
+
+# Create ISA entities
+protocol = combined.Protocol(name="RNA Extraction", protocol_type="extraction")
+assay = combined.Assay(filename="assay.txt", measurement_type="transcription profiling")
+
+# Create MIAPPE entities
+material = combined.BiologicalMaterial(identifier="BM-001", organism="Zea mays")
+obs_unit = combined.ObservationUnit(identifier="OU-001", observation_unit_type="plant")
+
+# Create shared entities
+investigation = combined.Investigation(identifier="INV-001", title="Integrated Study")
+```
+
 ## References
 
 - [ISA Tools - Official Site](https://isa-tools.org/)

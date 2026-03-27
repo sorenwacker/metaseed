@@ -1,7 +1,14 @@
 <div class="card">
-    <h2 class="card-title">
-        {% if is_edit %}Edit{% else %}New{% endif %} {{ entity_type }}
-    </h2>
+    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <h2 class="card-title">
+            {% if is_edit %}Edit{% else %}New{% endif %} {{ entity_type }}
+        </h2>
+        {% if is_edit %}
+        <a href="/export" class="btn btn-secondary btn-sm" data-testid="btn-export" download>
+            Export All
+        </a>
+        {% endif %}
+    </div>
     {% if description %}
     <p class="card-subtitle">{{ description }}</p>
     {% endif %}

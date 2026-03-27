@@ -1,19 +1,21 @@
-.PHONY: install dev test test-ui test-cov demo lint format docs docs-serve ui clean help
+.PHONY: install dev test test-ui test-cov demo test-export test-validation lint format docs docs-serve ui clean help
 
 help:
 	@echo "Available targets:"
-	@echo "  install    - Install dependencies"
-	@echo "  dev        - Install dev + docs dependencies and pre-commit hooks"
-	@echo "  test       - Run tests (excluding UI tests)"
-	@echo "  test-ui    - Run UI tests (requires Chrome)"
-	@echo "  test-cov   - Run tests with coverage"
-	@echo "  demo       - Run demo test creating all MIAPPE entities (visible browser)"
-	@echo "  lint       - Run linter"
-	@echo "  format     - Format code"
-	@echo "  docs       - Build documentation"
-	@echo "  docs-serve - Serve documentation locally"
-	@echo "  ui         - Launch web interface"
-	@echo "  clean      - Remove build artifacts"
+	@echo "  install         - Install dependencies"
+	@echo "  dev             - Install dev + docs dependencies and pre-commit hooks"
+	@echo "  test            - Run tests (excluding UI tests)"
+	@echo "  test-ui         - Run UI tests (requires Chrome)"
+	@echo "  test-cov        - Run tests with coverage"
+	@echo "  demo            - Run demo test creating all MIAPPE entities (visible browser)"
+	@echo "  test-export     - Run Excel export tests (visible browser)"
+	@echo "  test-validation - Run validation UI tests (visible browser)"
+	@echo "  lint            - Run linter"
+	@echo "  format          - Format code"
+	@echo "  docs            - Build documentation"
+	@echo "  docs-serve      - Serve documentation locally"
+	@echo "  ui              - Launch web interface"
+	@echo "  clean           - Remove build artifacts"
 
 install:
 	uv sync
@@ -33,6 +35,12 @@ test-cov:
 
 demo:
 	uv run pytest tests/test_ui/test_selenium.py::TestCreateAllEntityTypes::test_create_all_entities -v
+
+test-export:
+	uv run pytest tests/test_ui/test_selenium.py::TestExcelExport -v
+
+test-validation:
+	uv run pytest tests/test_ui/test_selenium.py::TestValidation -v
 
 lint:
 	uv run ruff check src tests

@@ -208,7 +208,7 @@ def create_app(state: AppState | None = None) -> FastAPI:
             request,
             "base.html",
             {
-                "profiles": ["miappe", "isa"],
+                "profiles": ["miappe", "isa", "combined"],
                 "current_profile": state.profile,
                 "version": facade.version,
                 "root_types": state.get_root_entity_types()[:3],
@@ -789,7 +789,7 @@ def create_app(state: AppState | None = None) -> FastAPI:
         """Switch to a different profile."""
         state = get_state()
 
-        if name not in ["miappe", "isa"]:
+        if name not in ["miappe", "isa", "combined"]:
             raise HTTPException(status_code=400, detail=f"Unknown profile: {name}")
 
         state.profile = name
@@ -891,7 +891,7 @@ def create_app(state: AppState | None = None) -> FastAPI:
                     columns = [f for f in helper.all_fields if f not in nested_fields]
                 else:
                     # Fallback: get keys from first entity, excluding nested
-                    columns = [k for k in entities[0].keys() if not isinstance(entities[0].get(k), list)]
+                    columns = [k for k in entities[0] if not isinstance(entities[0].get(k), list)]
 
                 # Write header
                 ws.append(columns)
