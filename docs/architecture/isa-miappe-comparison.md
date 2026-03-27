@@ -307,16 +307,25 @@ The isa4j library addresses this, achieving 1 million row writes in 43 seconds c
 | BrAPI integration | High | BrAPI v2 is MIAPPE 1.1 compatible |
 | Multi-omics + Phenotyping | High | ISA Assay + MIAPPE observations coexist |
 
-### Recommended Approach
+### Integration Approaches
 
-Based on the [FAIRDOM-SEEK model](https://fair-dom.org/fairdom-in-use/plant-is-and-miappe):
+Several approaches exist for combining ISA and MIAPPE:
 
-1. Use ISA as the structural backbone
-2. Implement MIAPPE entities as extensions (current `combined_v1.0.yaml` approach)
-3. Map BiologicalMaterial to ISA Source with additional characteristics
-4. Map ObservationUnit to ISA Sample
-5. Keep ObservedVariable parallel to ISA Assay (not a replacement)
-6. Use PPEO ontology terms for semantic interoperability
+| Approach | Used By | Description | Pros | Cons |
+|----------|---------|-------------|------|------|
+| **ISA Configuration** | Official MIAPPE | XML config files define MIAPPE fields within ISA-Tab | Standard tooling, validated | ISA-Tab file limitations at scale |
+| **Extended Metadata** | FAIRDOM-SEEK | Key-value extensions on ISA entities | Flexible, minimal changes | Loose typing, no schema enforcement |
+| **Merged Schema** | This project (`combined_v1.0`) | Single typed schema with both entity sets | Strong typing, single model | Custom implementation, no existing ecosystem |
+| **BrAPI Bridge** | Phenotyping databases | API layer translates between formats | API-first, widely adopted | Conversion overhead, potential data loss |
+| **Dual Export** | Some platforms | Maintain both formats separately | Full compliance with each | Duplication, sync issues |
+
+Each approach has trade-offs. The choice depends on:
+
+- **Scale**: ISA-Tab struggles with large phenotyping datasets
+- **Tooling**: ISA config approach has existing validator support
+- **Flexibility**: Extended metadata allows ad-hoc fields
+- **Type Safety**: Merged schema enforces field types
+- **Interoperability**: BrAPI bridge connects to existing systems
 
 ### The PPEO Ontology
 
