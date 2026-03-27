@@ -16,7 +16,7 @@ body {
 /* Layout */
 .layout {
     display: grid;
-    grid-template: "header header" auto "sidebar main" 1fr / 280px 1fr;
+    grid-template: "header header" auto "sidebar main" 1fr / 200px 1fr;
     min-height: 100vh;
 }
 

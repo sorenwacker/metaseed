@@ -927,6 +927,14 @@ def create_app(state: AppState | None = None) -> FastAPI:
             else:
                 data = {}
 
+            # Debug: log nested fields
+            with open("/tmp/export_debug.txt", "a") as f:
+                f.write(f"\n=== Entity: {entity_type} ===\n")
+                helper = getattr(facade, entity_type, None)
+                if helper:
+                    for field_name in helper.nested_fields:
+                        f.write(f"  {field_name}: {data.get(field_name, 'NOT IN DATA')}\n")
+
             entities_by_type[entity_type].append(data)
 
             # Extract nested entities recursively
