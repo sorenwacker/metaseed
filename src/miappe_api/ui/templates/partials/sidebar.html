@@ -6,7 +6,7 @@
             hx-get="/form/{{ entity_type }}"
             hx-target="#main"
             hx-swap="innerHTML"
-            data-testid="btn-new-{{ entity_type|lower }}">
+            data-testid="btn-create-{{ entity_type }}">
         + {{ entity_type }}
     </button>
     {% endfor %}

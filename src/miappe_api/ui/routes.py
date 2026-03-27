@@ -267,14 +267,21 @@ def create_app(state: AppState | None = None) -> FastAPI:
             ) from e
 
         state.editing_node_id = node_id
-        state.current_nested_items = {}  # Reset nested items
 
         fields = _get_field_data(helper)
         values = {}
         if node.instance and hasattr(node.instance, "model_dump"):
             values = node.instance.model_dump(exclude_none=True)
 
-            # Load nested items into current_nested_items for table editing
+        # Merge current_nested_items (from table editing) into values for display
+        # This preserves data from table edits that haven't been saved yet
+        for field_name, items in state.current_nested_items.items():
+            if items:
+                values[field_name] = items
+
+        # Only load nested items from entity if we don't have any pending edits
+        if not state.current_nested_items:
+            # Load nested items from entity for table editing
             for field_name in helper.nested_fields:
                 if field_name in values and values[field_name]:
                     items = values[field_name]

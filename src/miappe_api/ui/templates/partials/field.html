@@ -65,7 +65,7 @@
            data-testid="input-{{ field.name|replace('_', '-') }}">
 
     {% elif field.type == 'list' %}
-        {% if field.items and field.items not in ['string', 'int', 'float', 'bool'] %}
+        {% if field['items'] and field['items'] not in ['string', 'int', 'float', 'bool'] %}
             {% if is_edit %}
             <button type="button"
                     class="btn nested-field-btn"

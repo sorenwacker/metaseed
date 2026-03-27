@@ -15,7 +15,8 @@
           hx-post="/entity"
           {% endif %}
           hx-target="#main"
-          hx-swap="innerHTML">
+          hx-swap="innerHTML"
+          data-testid="form-entity">
 
         <input type="hidden" name="_entity_type" value="{{ entity_type }}">
         {% if node_id %}
@@ -33,7 +34,7 @@
 
         {% if optional_fields %}
         <div class="collapsible">
-            <div class="collapsible-header">
+            <div class="collapsible-header" data-testid="section-optional-toggle">
                 <span class="collapsible-icon">&#9654;</span>
                 <span>Optional Fields</span>
             </div>
@@ -47,7 +48,7 @@
 
         <div class="form-actions">
             {% if is_edit %}
-            <button type="submit" class="btn btn-primary" data-testid="btn-update-{{ entity_type|lower }}">
+            <button type="submit" class="btn btn-primary" data-testid="btn-update">
                 Update
             </button>
             <button type="button" class="btn btn-secondary"
@@ -59,7 +60,7 @@
                 Cancel
             </button>
             {% else %}
-            <button type="submit" class="btn btn-primary" data-testid="btn-create-{{ entity_type|lower }}">
+            <button type="submit" class="btn btn-primary" data-testid="btn-create">
                 Create
             </button>
             <button type="reset" class="btn btn-secondary" data-testid="btn-clear-{{ entity_type|lower }}">
