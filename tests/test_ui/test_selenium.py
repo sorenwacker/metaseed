@@ -1,6 +1,7 @@
 """Selenium end-to-end tests for the HTMX UI.
 
 Tests run with a visible Chrome browser to demonstrate UI functionality.
+Example values are loaded from the MIAPPE YAML spec.
 """
 
 import subprocess
@@ -13,11 +14,19 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
+from tests.test_ui.examples import MIAPPE_EXAMPLES
+
 # Delay constants per requirements
 FILL_DELAY = 0.1  # Delay between form fills
 CLICK_DELAY = 0.5  # Delay after button clicks
 
 BASE_URL = "http://127.0.0.1:8081"
+
+# Load examples from YAML spec
+INV_EXAMPLE = MIAPPE_EXAMPLES["Investigation"]
+STUDY_EXAMPLE = MIAPPE_EXAMPLES["Study"]
+PERSON_EXAMPLE = MIAPPE_EXAMPLES["Person"]
+BIO_MAT_EXAMPLE = MIAPPE_EXAMPLES["BiologicalMaterial"]
 
 
 @pytest.fixture(scope="module")
@@ -170,7 +179,7 @@ class TestCreateInvestigationRequiredFields:
     """Test creating an Investigation with required fields only."""
 
     def test_create_investigation_required_fields(self, browser):
-        """Create Investigation with only required fields."""
+        """Create Investigation with only required fields using YAML examples."""
         # Navigate to home
         browser.get(BASE_URL)
         time.sleep(1)  # Wait for page to fully load
@@ -182,11 +191,9 @@ class TestCreateInvestigationRequiredFields:
         assert element_exists(browser, "form-entity")
         assert element_exists(browser, "input-unique-id")
 
-        # Fill required field: unique_id
-        fill_field(browser, "input-unique-id", "INV-TEST-001")
-
-        # Fill required field: title (also required per MIAPPE spec)
-        fill_field(browser, "input-title", "Test Investigation Required Fields")
+        # Fill required fields from YAML example
+        fill_field(browser, "input-unique-id", INV_EXAMPLE["unique_id"])
+        fill_field(browser, "input-title", INV_EXAMPLE["title"])
 
         # Click Create button
         click_button(browser, "btn-create")
@@ -194,7 +201,7 @@ class TestCreateInvestigationRequiredFields:
         # Verify entity appears in sidebar (tree node should exist)
         time.sleep(CLICK_DELAY)
         sidebar = browser.find_element(By.ID, "sidebar")
-        assert "Test Investigation Required Fields" in sidebar.text
+        assert INV_EXAMPLE["title"] in sidebar.text
 
         # Verify notification shows success
         body_text = browser.find_element(By.TAG_NAME, "body").text
@@ -203,10 +210,10 @@ class TestCreateInvestigationRequiredFields:
 
 @pytest.mark.ui
 class TestCreateInvestigationAllFields:
-    """Test creating an Investigation with all fields."""
+    """Test creating an Investigation with all fields using YAML examples."""
 
     def test_create_investigation_all_fields(self, browser):
-        """Create Investigation with all available fields."""
+        """Create Investigation with all fields from YAML examples including nested entities."""
         # Navigate to home
         browser.get(BASE_URL)
         time.sleep(CLICK_DELAY)
@@ -214,68 +221,154 @@ class TestCreateInvestigationAllFields:
         # Click "+ Investigation" button
         click_button(browser, "btn-create-Investigation")
 
-        # Fill required fields
-        fill_field(browser, "input-unique-id", "INV-TEST-002")
-        fill_field(browser, "input-title", "Full Investigation Test")
+        # Fill required fields from YAML example
+        fill_field(browser, "input-unique-id", INV_EXAMPLE["unique_id"])
+        fill_field(browser, "input-title", INV_EXAMPLE["title"])
 
         # Expand optional fields
         expand_optional_fields(browser)
 
-        # Fill optional fields
-        fill_field(browser, "input-description", "A comprehensive test investigation")
-        fill_field(browser, "input-submission-date", "2024-03-15")
-        fill_field(browser, "input-public-release-date", "2024-06-01")
-        fill_field(browser, "input-license", "https://creativecommons.org/licenses/by/4.0/")
-        fill_field(browser, "input-miappe-version", "1.1")
+        # Fill all optional scalar fields from YAML example
+        fill_field(browser, "input-description", INV_EXAMPLE["description"])
+        fill_field(browser, "input-submission-date", INV_EXAMPLE["submission_date"])
+        fill_field(browser, "input-public-release-date", INV_EXAMPLE["public_release_date"])
+        fill_field(browser, "input-license", INV_EXAMPLE["license"])
+        fill_field(browser, "input-miappe-version", INV_EXAMPLE["miappe_version"])
 
         # Fill associated_publications (textarea, one per line)
-        fill_field(browser, "input-associated-publications", "https://doi.org/10.1234/test.001")
+        pubs = INV_EXAMPLE.get("associated_publications", [])
+        if pubs:
+            fill_field(browser, "input-associated-publications", "\n".join(pubs))
 
         # Click Create button
         click_button(browser, "btn-create")
-
-        # Wait for HTMX to process and sidebar to refresh
         time.sleep(1)
 
-        # Force refresh the page to ensure sidebar is updated
+        # Refresh and click on created entity
         browser.refresh()
         time.sleep(CLICK_DELAY)
 
-        # Verify entity appears in sidebar
-        sidebar = browser.find_element(By.ID, "sidebar")
-        sidebar_text = sidebar.text
-        assert (
-            "Full Investigation Test" in sidebar_text
-        ), f"Expected 'Full Investigation Test' in sidebar, got: {sidebar_text}"
-
-        # Click on the created entity to verify values
-        # Find the tree node with the correct label
         tree_nodes = browser.find_elements(By.CSS_SELECTOR, "[data-testid^='tree-node-']")
-        target_node = None
         for node in tree_nodes:
-            if "Full Investigation Test" in node.text:
-                target_node = node
+            if INV_EXAMPLE["title"] in node.text:
+                node.click()
                 break
-        assert (
-            target_node is not None
-        ), f"Could not find tree node with 'Full Investigation Test', found: {[n.text for n in tree_nodes]}"
-        target_node.click()
         time.sleep(CLICK_DELAY)
 
-        # Verify form shows edit mode with preserved values
-        unique_id_field = browser.find_element(By.CSS_SELECTOR, "[data-testid='input-unique-id']")
-        assert unique_id_field.get_attribute("value") == "INV-TEST-002"
+        # Add contact from YAML Person example
+        expand_optional_fields(browser)
+        click_button(browser, "btn-nested-contacts")
+        click_button(browser, "table-add-row")
+        time.sleep(CLICK_DELAY)
 
-        title_field = browser.find_element(By.CSS_SELECTOR, "[data-testid='input-title']")
-        assert title_field.get_attribute("value") == "Full Investigation Test"
+        fill_field(browser, "cell-0-name", PERSON_EXAMPLE["name"], trigger_change=True)
+        fill_field(browser, "cell-0-email", PERSON_EXAMPLE["email"], trigger_change=True)
+        fill_field(
+            browser, "cell-0-institution", PERSON_EXAMPLE["institution"], trigger_change=True
+        )
+        fill_field(browser, "cell-0-role", PERSON_EXAMPLE["role"], trigger_change=True)
+        fill_field(browser, "cell-0-orcid", PERSON_EXAMPLE["orcid"], trigger_change=True)
+
+        click_button(browser, "table-save")
+        time.sleep(CLICK_DELAY)
+
+        # Add study from YAML Study example - fill ALL available fields
+        expand_optional_fields(browser)
+        click_button(browser, "btn-nested-studies")
+        click_button(browser, "table-add-row")
+        time.sleep(CLICK_DELAY)
+
+        # Required fields
+        fill_field(browser, "cell-0-unique_id", STUDY_EXAMPLE["unique_id"], trigger_change=True)
+        fill_field(browser, "cell-0-title", STUDY_EXAMPLE["title"], trigger_change=True)
+
+        # All optional fields from YAML example
+        fill_field(browser, "cell-0-description", STUDY_EXAMPLE["description"], trigger_change=True)
+        fill_field(browser, "cell-0-start_date", STUDY_EXAMPLE["start_date"], trigger_change=True)
+        fill_field(browser, "cell-0-end_date", STUDY_EXAMPLE["end_date"], trigger_change=True)
+        fill_field(
+            browser,
+            "cell-0-contact_institution",
+            STUDY_EXAMPLE["contact_institution"],
+            trigger_change=True,
+        )
+        fill_field(
+            browser,
+            "cell-0-experimental_site_name",
+            STUDY_EXAMPLE["experimental_site_name"],
+            trigger_change=True,
+        )
+        fill_field(browser, "cell-0-latitude", str(STUDY_EXAMPLE["latitude"]), trigger_change=True)
+        fill_field(
+            browser, "cell-0-longitude", str(STUDY_EXAMPLE["longitude"]), trigger_change=True
+        )
+        fill_field(browser, "cell-0-altitude", str(STUDY_EXAMPLE["altitude"]), trigger_change=True)
+        fill_field(
+            browser,
+            "cell-0-growth_facility_type",
+            STUDY_EXAMPLE["growth_facility_type"],
+            trigger_change=True,
+        )
+        fill_field(
+            browser,
+            "cell-0-experimental_design_type",
+            STUDY_EXAMPLE["experimental_design_type"],
+            trigger_change=True,
+        )
+        fill_field(
+            browser,
+            "cell-0-experimental_design_description",
+            STUDY_EXAMPLE["experimental_design_description"],
+            trigger_change=True,
+        )
+        fill_field(
+            browser,
+            "cell-0-observation_unit_description",
+            STUDY_EXAMPLE["observation_unit_description"],
+            trigger_change=True,
+        )
+        fill_field(
+            browser,
+            "cell-0-cultural_practices",
+            STUDY_EXAMPLE["cultural_practices"],
+            trigger_change=True,
+        )
+        fill_field(
+            browser,
+            "cell-0-map_of_experimental_design",
+            STUDY_EXAMPLE["map_of_experimental_design"],
+            trigger_change=True,
+        )
+
+        click_button(browser, "table-save")
+        time.sleep(CLICK_DELAY)
+
+        # Verify Investigation form shows correct counts
+        expand_optional_fields(browser)
+        contacts_btn = browser.find_element(By.CSS_SELECTOR, "[data-testid='btn-nested-contacts']")
+        assert "(1)" in contacts_btn.text, f"Expected 1 contact, got: {contacts_btn.text}"
+
+        studies_btn = browser.find_element(By.CSS_SELECTOR, "[data-testid='btn-nested-studies']")
+        assert "(1)" in studies_btn.text, f"Expected 1 study, got: {studies_btn.text}"
+
+        # Update the Investigation to save all nested data
+        click_button(browser, "btn-update")
+        time.sleep(CLICK_DELAY)
+
+        # Verify persistence by refreshing
+        browser.refresh()
+        time.sleep(CLICK_DELAY)
+
+        sidebar = browser.find_element(By.ID, "sidebar")
+        assert INV_EXAMPLE["title"] in sidebar.text
 
 
 @pytest.mark.ui
 class TestAddNestedContacts:
-    """Test adding nested contacts to an Investigation."""
+    """Test adding nested contacts to an Investigation using YAML examples."""
 
     def test_add_nested_contacts(self, browser):
-        """Create Investigation and add contacts through nested table."""
+        """Create Investigation and add contacts from YAML Person example."""
         # Navigate to home
         browser.get(BASE_URL)
         time.sleep(CLICK_DELAY)
@@ -283,9 +376,9 @@ class TestAddNestedContacts:
         # Click "+ Investigation" button
         click_button(browser, "btn-create-Investigation")
 
-        # Fill required fields
-        fill_field(browser, "input-unique-id", "INV-TEST-003")
-        fill_field(browser, "input-title", "Investigation with Contacts")
+        # Fill required fields from YAML example
+        fill_field(browser, "input-unique-id", INV_EXAMPLE["unique_id"] + "-contacts")
+        fill_field(browser, "input-title", INV_EXAMPLE["title"] + " (Contacts Test)")
 
         # Click Create button
         click_button(browser, "btn-create")
@@ -311,13 +404,14 @@ class TestAddNestedContacts:
         click_button(browser, "table-add-row")
         time.sleep(CLICK_DELAY)
 
-        # Fill contact fields in the new row (row index 0)
-        # trigger_change=True to ensure HTMX saves each cell value
-        fill_field(browser, "cell-0-name", "Dr. Jane Smith", trigger_change=True)
-        fill_field(browser, "cell-0-email", "jane.smith@example.org", trigger_change=True)
-        fill_field(browser, "cell-0-institution", "Research Institute", trigger_change=True)
-        fill_field(browser, "cell-0-role", "Principal Investigator", trigger_change=True)
-        fill_field(browser, "cell-0-orcid", "0000-0001-2345-6789", trigger_change=True)
+        # Fill contact fields from YAML Person example
+        fill_field(browser, "cell-0-name", PERSON_EXAMPLE["name"], trigger_change=True)
+        fill_field(browser, "cell-0-email", PERSON_EXAMPLE["email"], trigger_change=True)
+        fill_field(
+            browser, "cell-0-institution", PERSON_EXAMPLE["institution"], trigger_change=True
+        )
+        fill_field(browser, "cell-0-role", PERSON_EXAMPLE["role"], trigger_change=True)
+        fill_field(browser, "cell-0-orcid", PERSON_EXAMPLE["orcid"], trigger_change=True)
 
         # Click "Save & Back" button
         click_button(browser, "table-save")
@@ -434,24 +528,24 @@ class TestDeleteInvestigation:
 
 @pytest.mark.ui
 class TestAddNestedStudy:
-    """Test adding a nested Study to an Investigation."""
+    """Test adding a nested Study to an Investigation using YAML examples."""
 
     def test_add_nested_study(self, browser):
-        """Add a Study to an Investigation through nested table."""
+        """Add a Study from YAML example to an Investigation through nested table."""
         browser.get(BASE_URL)
         time.sleep(CLICK_DELAY)
 
-        # Create Investigation
+        # Create Investigation using YAML example
         click_button(browser, "btn-create-Investigation")
-        fill_field(browser, "input-unique-id", "INV-STUDY-001")
-        fill_field(browser, "input-title", "Investigation with Study")
+        fill_field(browser, "input-unique-id", INV_EXAMPLE["unique_id"] + "-study")
+        fill_field(browser, "input-title", INV_EXAMPLE["title"] + " (Study Test)")
         click_button(browser, "btn-create")
         time.sleep(CLICK_DELAY)
 
         # Click on the created entity
         tree_nodes = browser.find_elements(By.CSS_SELECTOR, "[data-testid^='tree-node-']")
         for node in tree_nodes:
-            if "Investigation with Study" in node.text:
+            if "(Study Test)" in node.text:
                 node.click()
                 break
         time.sleep(CLICK_DELAY)
@@ -466,9 +560,9 @@ class TestAddNestedStudy:
         click_button(browser, "table-add-row")
         time.sleep(CLICK_DELAY)
 
-        # Fill study fields
-        fill_field(browser, "cell-0-unique_id", "STU-001", trigger_change=True)
-        fill_field(browser, "cell-0-title", "Field Trial 2024", trigger_change=True)
+        # Fill study fields from YAML Study example
+        fill_field(browser, "cell-0-unique_id", STUDY_EXAMPLE["unique_id"], trigger_change=True)
+        fill_field(browser, "cell-0-title", STUDY_EXAMPLE["title"], trigger_change=True)
 
         # Save & Back
         click_button(browser, "table-save")
@@ -563,24 +657,24 @@ class TestProfileSwitch:
 
 @pytest.mark.ui
 class TestNestedEntityEditing:
-    """Test editing nested entities by clicking on table rows."""
+    """Test editing nested entities by clicking on table rows using YAML examples."""
 
     def test_edit_nested_study(self, browser):
         """Click a Study row in table to open edit form for that Study."""
         browser.get(BASE_URL)
         time.sleep(CLICK_DELAY)
 
-        # Create Investigation with a Study
+        # Create Investigation with a Study using YAML examples
         click_button(browser, "btn-create-Investigation")
-        fill_field(browser, "input-unique-id", "INV-NESTED-001")
-        fill_field(browser, "input-title", "Investigation for Nested Edit")
+        fill_field(browser, "input-unique-id", INV_EXAMPLE["unique_id"] + "-nested")
+        fill_field(browser, "input-title", INV_EXAMPLE["title"] + " (Nested Edit)")
         click_button(browser, "btn-create")
         time.sleep(CLICK_DELAY)
 
         # Click on the created entity
         tree_nodes = browser.find_elements(By.CSS_SELECTOR, "[data-testid^='tree-node-']")
         for node in tree_nodes:
-            if "Investigation for Nested Edit" in node.text:
+            if "(Nested Edit)" in node.text:
                 node.click()
                 break
         time.sleep(CLICK_DELAY)
@@ -591,12 +685,12 @@ class TestNestedEntityEditing:
         # Click on studies nested field button
         click_button(browser, "btn-nested-studies")
 
-        # Add a Study row
+        # Add a Study row from YAML example
         click_button(browser, "table-add-row")
         time.sleep(CLICK_DELAY)
 
-        fill_field(browser, "cell-0-unique_id", "STU-NESTED-001", trigger_change=True)
-        fill_field(browser, "cell-0-title", "Study for Nested Edit", trigger_change=True)
+        fill_field(browser, "cell-0-unique_id", STUDY_EXAMPLE["unique_id"], trigger_change=True)
+        fill_field(browser, "cell-0-title", STUDY_EXAMPLE["title"], trigger_change=True)
 
         # Save the Study first to ensure it's persisted
         click_button(browser, "table-save")
@@ -615,15 +709,15 @@ class TestNestedEntityEditing:
         # Should show Study-specific fields
         assert element_exists(browser, "form-entity")
 
-        # Verify breadcrumb shows navigation path
+        # Verify breadcrumb shows navigation path (uses Investigation title, not type name)
         assert element_exists(browser, "breadcrumb")
         breadcrumb = browser.find_element(By.CSS_SELECTOR, "[data-testid='breadcrumb']")
-        assert "Investigation" in breadcrumb.text
+        assert "(Nested Edit)" in breadcrumb.text  # Part of Investigation title
         assert "studies" in breadcrumb.text
 
-        # Verify the Study form has the correct values
+        # Verify the Study form has the correct values from YAML example
         unique_id_field = browser.find_element(By.CSS_SELECTOR, "[data-testid='input-unique-id']")
-        assert unique_id_field.get_attribute("value") == "STU-NESTED-001"
+        assert unique_id_field.get_attribute("value") == STUDY_EXAMPLE["unique_id"]
 
         # Verify back button exists
         assert element_exists(browser, "btn-back")
@@ -636,33 +730,33 @@ class TestNestedEntityEditing:
         assert element_exists(browser, "table-save")
 
     def test_deep_nesting_navigation(self, browser):
-        """Navigate from Investigation > Study > BiologicalMaterial."""
+        """Navigate from Investigation > Study > BiologicalMaterial using YAML examples."""
         browser.get(BASE_URL)
         time.sleep(CLICK_DELAY)
 
-        # Create Investigation
+        # Create Investigation using YAML examples
         click_button(browser, "btn-create-Investigation")
-        fill_field(browser, "input-unique-id", "INV-DEEP-001")
-        fill_field(browser, "input-title", "Deep Nesting Investigation")
+        fill_field(browser, "input-unique-id", INV_EXAMPLE["unique_id"] + "-deep")
+        fill_field(browser, "input-title", INV_EXAMPLE["title"] + " (Deep Nesting)")
         click_button(browser, "btn-create")
         time.sleep(CLICK_DELAY)
 
         # Click on the created entity
         tree_nodes = browser.find_elements(By.CSS_SELECTOR, "[data-testid^='tree-node-']")
         for node in tree_nodes:
-            if "Deep Nesting Investigation" in node.text:
+            if "(Deep Nesting)" in node.text:
                 node.click()
                 break
         time.sleep(CLICK_DELAY)
 
-        # Expand optional fields and add a Study
+        # Expand optional fields and add a Study from YAML example
         expand_optional_fields(browser)
         click_button(browser, "btn-nested-studies")
         click_button(browser, "table-add-row")
         time.sleep(CLICK_DELAY)
 
-        fill_field(browser, "cell-0-unique_id", "STU-DEEP-001", trigger_change=True)
-        fill_field(browser, "cell-0-title", "Deep Study", trigger_change=True)
+        fill_field(browser, "cell-0-unique_id", STUDY_EXAMPLE["unique_id"], trigger_change=True)
+        fill_field(browser, "cell-0-title", STUDY_EXAMPLE["title"], trigger_change=True)
 
         # Save and go back to Investigation
         click_button(browser, "table-save")
@@ -690,12 +784,12 @@ class TestNestedEntityEditing:
         # Verify we're in BiologicalMaterial table view
         assert element_exists(browser, "table-add-row")
 
-        # Add a BiologicalMaterial
+        # Add a BiologicalMaterial from YAML example
         click_button(browser, "table-add-row")
         time.sleep(CLICK_DELAY)
 
-        fill_field(browser, "cell-0-unique_id", "BM-001", trigger_change=True)
-        fill_field(browser, "cell-0-organism", "Arabidopsis thaliana", trigger_change=True)
+        fill_field(browser, "cell-0-unique_id", BIO_MAT_EXAMPLE["unique_id"], trigger_change=True)
+        fill_field(browser, "cell-0-organism", BIO_MAT_EXAMPLE["organism"], trigger_change=True)
 
         # Save
         click_button(browser, "table-save")
@@ -713,17 +807,17 @@ class TestNestedEntityEditing:
         click_element(browser, "row-0")
         time.sleep(CLICK_DELAY)
 
-        # Verify breadcrumb shows full path
+        # Verify breadcrumb shows full path (uses Investigation title, not type name)
         assert element_exists(browser, "breadcrumb")
         breadcrumb = browser.find_element(By.CSS_SELECTOR, "[data-testid='breadcrumb']")
         breadcrumb_text = breadcrumb.text
-        assert "Investigation" in breadcrumb_text
+        assert "(Deep Nesting)" in breadcrumb_text  # Part of Investigation title
         assert "studies" in breadcrumb_text
         assert "biological_materials" in breadcrumb_text
 
-        # Verify BiologicalMaterial form fields
+        # Verify BiologicalMaterial form fields from YAML example
         unique_id_field = browser.find_element(By.CSS_SELECTOR, "[data-testid='input-unique-id']")
-        assert unique_id_field.get_attribute("value") == "BM-001"
+        assert unique_id_field.get_attribute("value") == BIO_MAT_EXAMPLE["unique_id"]
 
         # Navigate all the way back using back buttons
         click_button(browser, "btn-back")  # Back to BM table
