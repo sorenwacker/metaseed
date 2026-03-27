@@ -264,7 +264,10 @@ def create_app(state: AppState | None = None) -> FastAPI:
                 "description": helper.description,
                 "ontology_term": helper.ontology_term,
                 "required_fields": [f for f in fields if f["required"]],
-                "optional_fields": [f for f in fields if not f["required"]],
+                "optional_fields": [
+                    f for f in fields if not f["required"] and not _is_nested_field(f)
+                ],
+                "nested_fields": [f for f in fields if _is_nested_field(f)],
                 "values": auto_values,
                 "auto_fields": set(auto_values.keys()),
             },
@@ -328,7 +331,10 @@ def create_app(state: AppState | None = None) -> FastAPI:
                 "description": helper.description,
                 "ontology_term": helper.ontology_term,
                 "required_fields": [f for f in fields if f["required"]],
-                "optional_fields": [f for f in fields if not f["required"]],
+                "optional_fields": [
+                    f for f in fields if not f["required"] and not _is_nested_field(f)
+                ],
+                "nested_fields": [f for f in fields if _is_nested_field(f)],
                 "values": values,
                 "auto_fields": auto_fields,
             },
@@ -715,7 +721,10 @@ def create_app(state: AppState | None = None) -> FastAPI:
                 "description": nested_helper.description if nested_helper else "",
                 "ontology_term": nested_helper.ontology_term if nested_helper else "",
                 "required_fields": [f for f in fields if f["required"]],
-                "optional_fields": [f for f in fields if not f["required"]],
+                "optional_fields": [
+                    f for f in fields if not f["required"] and not _is_nested_field(f)
+                ],
+                "nested_fields": [f for f in fields if _is_nested_field(f)],
                 "values": item_data,
                 "editing_node_id": state.editing_node_id,
                 "breadcrumb": _build_breadcrumb(state),
@@ -992,6 +1001,17 @@ def _get_field_data(helper) -> list[dict]:
             }
         )
     return fields
+
+
+def _is_nested_field(field: dict) -> bool:
+    """Check if a field represents a nested entity (list of entities or single entity)."""
+    if field["type"] == "entity":
+        return True
+    if field["type"] == "list":
+        items = field.get("items")
+        if items and items not in ("string", "int", "float", "bool"):
+            return True
+    return False
 
 
 def _collect_form_values(form_data, helper) -> dict:

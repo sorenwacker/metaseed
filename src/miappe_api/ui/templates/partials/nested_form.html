@@ -38,6 +38,16 @@
         </div>
         {% endif %}
 
+        {% if nested_fields %}
+        <div class="form-section">
+            <h3 class="form-section-title">Related Entities</h3>
+            {% for field in nested_fields %}
+            {% set is_edit = True %}
+            {% include "partials/field.html" %}
+            {% endfor %}
+        </div>
+        {% endif %}
+
         {% if optional_fields %}
         <div class="collapsible">
             <div class="collapsible-header" data-testid="section-optional-toggle">
