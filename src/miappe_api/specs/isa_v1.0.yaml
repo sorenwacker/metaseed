@@ -11,10 +11,100 @@ description: >
 ontology: isaterms
 
 validation_rules:
+  # Date rules
   - name: submission_before_release
     description: Submission date should not be after public release date
     applies_to: [Investigation, Study]
-    condition: public_release_date >= submission_date
+    condition: (NOT submission_date OR NOT public_release_date) OR (submission_date <= public_release_date)
+
+  - name: date_order
+    description: End date must not be before start date
+    applies_to: [Study, Assay]
+    condition: end_date >= start_date
+
+  # Identifier pattern
+  - name: identifier_pattern
+    description: Identifiers must be alphanumeric with underscores/hyphens
+    applies_to: all
+    field: identifier
+    pattern: "^[A-Za-z0-9_-]+$"
+
+  # Format validations
+  - name: email_format
+    description: Email must be valid format
+    applies_to: [Person]
+    field: email
+    pattern: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+
+  - name: orcid_format
+    description: ORCID must be in standard format
+    applies_to: [Person]
+    field: orcid
+    pattern: "^[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X]$"
+
+  - name: assay_filename_format
+    description: Assay filename should follow ISA-Tab pattern
+    applies_to: [Assay]
+    field: filename
+    pattern: "^a_.*\\.txt$"
+
+  # Publication identifiers
+  - name: doi_format
+    description: DOI must follow standard format
+    applies_to: [Publication]
+    field: doi
+    pattern: "^10\\.[0-9]{4,}/.*$"
+
+  - name: pubmed_id_format
+    description: PubMed ID must be numeric
+    applies_to: [Publication]
+    field: pubmed_id
+    pattern: "^[0-9]+$"
+
+  - name: publication_identifier_required
+    description: Publication must have doi, pubmed_id, or title
+    applies_to: [Publication]
+    condition: doi OR pubmed_id OR title
+
+  # Ontology term format
+  - name: ontology_accession_format
+    description: Ontology term accession must be PREFIX:ID or URI format
+    applies_to: [OntologyAnnotation]
+    field: term_accession
+    pattern: "^[A-Za-z]+:[0-9]+$|^https?://.*$"
+
+  # Person name
+  - name: person_name_required
+    description: Person must have name OR (first_name AND last_name)
+    applies_to: [Person]
+    condition: (first_name AND last_name) OR name
+
+  # Cardinality
+  - name: investigation_has_studies
+    description: Investigation must have at least one study
+    applies_to: [Investigation]
+    field: studies
+    min_items: 1
+
+  # Protocol reference
+  - name: process_protocol_reference
+    description: Process executes_protocol must reference valid Protocol
+    applies_to: [Process]
+    field: executes_protocol
+    reference: Protocol.name
+
+  # Date format
+  - name: date_format
+    description: Dates must be ISO 8601 format (YYYY-MM-DD)
+    applies_to: all
+    field: submission_date
+    pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+
+  - name: public_release_date_format
+    description: Public release date must be ISO 8601 format
+    applies_to: [Investigation, Study]
+    field: public_release_date
+    pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
 
 entities:
   Investigation:
