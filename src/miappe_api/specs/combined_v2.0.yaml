@@ -35,7 +35,7 @@ ontology: combined
 validation_rules:
   - name: date_order
     description: End date must not be before start date
-    applies_to: [Study, Assay]
+    applies_to: [Study, Assay, Experiment]
     condition: end_date >= start_date
 
   - name: event_date_order
@@ -48,6 +48,232 @@ validation_rules:
     applies_to: all
     field: identifier
     pattern: "^[A-Za-z0-9_-]+$"
+
+  - name: coordinate_pair
+    description: Latitude and longitude must be provided together
+    applies_to: [Study, BiologicalMaterial, MaterialSource, Experiment]
+    condition: (latitude AND longitude) OR (NOT latitude AND NOT longitude)
+
+  - name: person_name_required
+    description: Person must have name OR (first_name AND last_name)
+    applies_to: [Person]
+    condition: name OR (first_name AND last_name)
+
+  # Numeric range constraints
+  - name: latitude_range
+    description: Latitude must be between -90 and 90 degrees
+    applies_to: [Study, BiologicalMaterial, MaterialSource, Experiment]
+    field: latitude
+    minimum: -90
+    maximum: 90
+
+  - name: longitude_range
+    description: Longitude must be between -180 and 180 degrees
+    applies_to: [Study, BiologicalMaterial, MaterialSource, Experiment]
+    field: longitude
+    minimum: -180
+    maximum: 180
+
+  - name: altitude_range
+    description: Altitude must be reasonable (-500 to 9000 meters)
+    applies_to: [Study, Experiment]
+    field: altitude
+    minimum: -500
+    maximum: 9000
+
+  # Format validations
+  - name: email_format
+    description: Email must be valid format
+    applies_to: [Person]
+    field: email
+    pattern: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+
+  - name: orcid_format
+    description: ORCID must be in standard format
+    applies_to: [Person]
+    field: orcid
+    pattern: "^[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X]$"
+
+  - name: assay_filename_format
+    description: Assay filename should follow ISA-Tab pattern
+    applies_to: [Assay]
+    field: filename
+    pattern: "^a_.*\\.txt$"
+
+  - name: doi_format
+    description: DOI must follow standard format
+    applies_to: [Publication]
+    field: doi
+    pattern: "^10\\.[0-9]{4,}/.*$"
+
+  - name: pubmed_id_format
+    description: PubMed ID must be numeric
+    applies_to: [Publication]
+    field: pubmed_id
+    pattern: "^[0-9]+$"
+
+  - name: ontology_accession_format
+    description: Ontology term accession must be PREFIX:ID or URI format
+    applies_to: [OntologyAnnotation]
+    field: term_accession
+    pattern: "^[A-Za-z]+:[0-9]+$|^https?://.*$"
+
+  # Conditional requirements
+  - name: publication_identifier_required
+    description: Publication must have doi, pubmed_id, or title
+    applies_to: [Publication]
+    condition: doi OR pubmed_id OR title
+
+  - name: factor_value_reference
+    description: FactorValue must reference factor_name or factor_id
+    applies_to: [FactorValue]
+    condition: factor_name OR factor_id
+
+  - name: observed_variable_trait_consistency
+    description: If trait_accession_number provided, trait must also be provided
+    applies_to: [ObservedVariable]
+    condition: (NOT trait_accession_number) OR (trait AND trait_accession_number)
+
+  - name: observed_variable_method_consistency
+    description: If method_accession_number provided, method must also be provided
+    applies_to: [ObservedVariable]
+    condition: (NOT method_accession_number) OR (method AND method_accession_number)
+
+  - name: observed_variable_scale_consistency
+    description: If scale_accession_number provided, scale must also be provided
+    applies_to: [ObservedVariable]
+    condition: (NOT scale_accession_number) OR (scale AND scale_accession_number)
+
+  - name: observation_unit_spatial_pair
+    description: Spatial x and y references must be provided together
+    applies_to: [ObservationUnit]
+    condition: (observation_unit_x_ref AND observation_unit_y_ref) OR (NOT observation_unit_x_ref AND NOT observation_unit_y_ref)
+
+  - name: submission_before_release
+    description: Submission date must not be after public release date
+    applies_to: [Study, Investigation]
+    condition: (NOT submission_date OR NOT public_release_date) OR (submission_date <= public_release_date)
+
+  # Vocabulary constraints
+  - name: observation_unit_type_vocabulary
+    description: Observation unit type must be valid
+    applies_to: [ObservationUnit]
+    field: observation_unit_type
+    enum: [plant, plot, pot, block, row, column, sub-plot, sample]
+
+  - name: entry_type_vocabulary
+    description: Entry type must be valid
+    applies_to: [ObservationUnit]
+    field: entry_type
+    enum: [test, check, filler]
+
+  - name: growth_facility_type_vocabulary
+    description: Growth facility type must be valid
+    applies_to: [Study, Experiment]
+    field: growth_facility_type
+    enum: [field, greenhouse, growth chamber, phytotron, open top chamber, glasshouse]
+
+  # Cardinality constraints
+  - name: investigation_has_studies
+    description: Investigation must have at least one study
+    applies_to: [Investigation]
+    field: studies
+    min_items: 1
+
+  - name: investigation_has_contacts
+    description: Investigation must have at least one contact
+    applies_to: [Investigation]
+    field: contacts
+    min_items: 1
+
+  - name: study_has_contacts
+    description: Study must have at least one contact
+    applies_to: [Study]
+    field: contacts
+    min_items: 1
+
+  # Reference integrity
+  - name: sample_observation_unit_reference
+    description: Sample observation_unit_id must reference valid ObservationUnit
+    applies_to: [Sample]
+    field: observation_unit_id
+    reference: ObservationUnit.identifier
+
+  - name: factor_value_factor_reference
+    description: FactorValue factor_id must reference valid Factor
+    applies_to: [FactorValue]
+    field: factor_id
+    reference: Factor.identifier
+
+  - name: observation_unit_biological_material_reference
+    description: ObservationUnit biological_material_id must reference valid BiologicalMaterial
+    applies_to: [ObservationUnit]
+    field: biological_material_id
+    reference: BiologicalMaterial.identifier
+
+  - name: event_observation_units_reference
+    description: Event observation_unit_ids must reference valid ObservationUnits
+    applies_to: [Event]
+    field: observation_unit_ids
+    reference: ObservationUnit.identifier
+
+  - name: process_protocol_reference
+    description: Process executes_protocol must reference valid Protocol
+    applies_to: [Process]
+    field: executes_protocol
+    reference: Protocol.name
+
+  # Experiment-specific references (v2.0)
+  - name: experiment_observation_units_reference
+    description: Experiment observation_unit_ids must reference Study's ObservationUnits
+    applies_to: [Experiment]
+    field: observation_unit_ids
+    reference: ObservationUnit.identifier
+
+  - name: experiment_samples_reference
+    description: Experiment sample_ids must reference Study's Samples
+    applies_to: [Experiment]
+    field: sample_ids
+    reference: Sample.identifier
+
+  - name: experiment_biological_materials_reference
+    description: Experiment biological_material_ids must reference Study's BiologicalMaterials
+    applies_to: [Experiment]
+    field: biological_material_ids
+    reference: BiologicalMaterial.identifier
+
+  # DataFile source references (v2.0)
+  - name: datafile_experiment_reference
+    description: DataFile experiment_ids must reference valid Experiments
+    applies_to: [DataFile]
+    field: experiment_ids
+    reference: Experiment.identifier
+
+  - name: datafile_assay_reference
+    description: DataFile assay_ids must reference valid Assays
+    applies_to: [DataFile]
+    field: assay_ids
+    reference: Assay.identifier
+
+  # Uniqueness constraints
+  - name: identifier_uniqueness
+    description: Entity identifiers must be unique within parent scope
+    applies_to: [BiologicalMaterial, ObservationUnit, ObservedVariable, Event, Environment, Sample, Factor, DataFile, Experiment]
+    field: identifier
+    unique_within: parent
+
+  # Date format
+  - name: date_format
+    description: Dates must be ISO 8601 format (YYYY-MM-DD)
+    applies_to: all
+    field: start_date
+    pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+
+  - name: end_date_format
+    description: End dates must be ISO 8601 format (YYYY-MM-DD)
+    applies_to: all
+    field: end_date
+    pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
 
 entities:
 
