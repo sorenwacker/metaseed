@@ -160,11 +160,6 @@ validation_rules:
     field: contacts
     min_items: 1
 
-  - name: study_has_contacts
-    description: Study must have at least one contact
-    applies_to: [Study]
-    field: contacts
-    min_items: 1
 
   # ObservedVariable completeness
   - name: observed_variable_trait_required

@@ -51,9 +51,16 @@ class DateRangeRule(ValidationRule):
 
         # Convert strings to dates if needed
         if isinstance(start, str):
-            start = datetime.date.fromisoformat(start)
+            # Handle both date and datetime strings
+            if "T" in start:
+                start = datetime.datetime.fromisoformat(start).date()
+            else:
+                start = datetime.date.fromisoformat(start)
         if isinstance(end, str):
-            end = datetime.date.fromisoformat(end)
+            if "T" in end:
+                end = datetime.datetime.fromisoformat(end).date()
+            else:
+                end = datetime.date.fromisoformat(end)
 
         if end < start:
             return [
@@ -261,10 +268,469 @@ class EntityReferenceRule(ValidationRule):
         return errors
 
 
+class PatternRule(ValidationRule):
+    """Validates that a field matches a regex pattern.
+
+    Attributes:
+        field: Name of the field to validate.
+        pattern: Compiled regex pattern.
+        rule_name: Name for this specific rule instance.
+        message: Custom error message.
+    """
+
+    def __init__(
+        self: Self,
+        field: str,
+        pattern: str,
+        rule_name: str = "pattern",
+        message: str | None = None,
+    ) -> None:
+        """Initialize the rule.
+
+        Args:
+            field: Name of the field to validate.
+            pattern: Regex pattern string.
+            rule_name: Name for this rule instance.
+            message: Custom error message.
+        """
+        self.field = field
+        self.pattern = re.compile(pattern)
+        self.rule_name = rule_name
+        self._message = message
+
+    @property
+    def name(self: Self) -> str:
+        """Return the rule name."""
+        return self.rule_name
+
+    def validate(self: Self, data: dict[str, Any]) -> list[ValidationError]:
+        """Validate field matches pattern.
+
+        Args:
+            data: Dictionary with field to validate.
+
+        Returns:
+            List with one error if pattern doesn't match, empty otherwise.
+        """
+        value = data.get(self.field)
+
+        if value is None or value == "":
+            return []
+
+        if not isinstance(value, str):
+            return []
+
+        if not self.pattern.match(value):
+            msg = self._message or f"Field '{self.field}' does not match required format"
+            return [ValidationError(field=self.field, message=msg, rule=self.name)]
+        return []
+
+
+class NumericRangeRule(ValidationRule):
+    """Validates that a numeric field is within a range.
+
+    Attributes:
+        field: Name of the field to validate.
+        minimum: Minimum allowed value (inclusive).
+        maximum: Maximum allowed value (inclusive).
+        rule_name: Name for this specific rule instance.
+    """
+
+    def __init__(
+        self: Self,
+        field: str,
+        minimum: float | None = None,
+        maximum: float | None = None,
+        rule_name: str = "numeric_range",
+    ) -> None:
+        """Initialize the rule.
+
+        Args:
+            field: Name of the field to validate.
+            minimum: Minimum allowed value.
+            maximum: Maximum allowed value.
+            rule_name: Name for this rule instance.
+        """
+        self.field = field
+        self.minimum = minimum
+        self.maximum = maximum
+        self.rule_name = rule_name
+
+    @property
+    def name(self: Self) -> str:
+        """Return the rule name."""
+        return self.rule_name
+
+    def validate(self: Self, data: dict[str, Any]) -> list[ValidationError]:
+        """Validate field is within range.
+
+        Args:
+            data: Dictionary with field to validate.
+
+        Returns:
+            List with one error if out of range, empty otherwise.
+        """
+        value = data.get(self.field)
+
+        if value is None or value == "":
+            return []
+
+        try:
+            num_value = float(value)
+        except (TypeError, ValueError):
+            return [
+                ValidationError(
+                    field=self.field,
+                    message=f"Field '{self.field}' must be a number",
+                    rule=self.name,
+                )
+            ]
+
+        if self.minimum is not None and num_value < self.minimum:
+            return [
+                ValidationError(
+                    field=self.field,
+                    message=f"Field '{self.field}' must be >= {self.minimum}",
+                    rule=self.name,
+                )
+            ]
+
+        if self.maximum is not None and num_value > self.maximum:
+            return [
+                ValidationError(
+                    field=self.field,
+                    message=f"Field '{self.field}' must be <= {self.maximum}",
+                    rule=self.name,
+                )
+            ]
+
+        return []
+
+
+class EnumRule(ValidationRule):
+    """Validates that a field value is in an allowed set.
+
+    Attributes:
+        field: Name of the field to validate.
+        allowed_values: Set of allowed values.
+        rule_name: Name for this specific rule instance.
+    """
+
+    def __init__(
+        self: Self,
+        field: str,
+        allowed_values: list[str],
+        rule_name: str = "enum",
+    ) -> None:
+        """Initialize the rule.
+
+        Args:
+            field: Name of the field to validate.
+            allowed_values: List of allowed values.
+            rule_name: Name for this rule instance.
+        """
+        self.field = field
+        self.allowed_values = set(allowed_values)
+        self.rule_name = rule_name
+
+    @property
+    def name(self: Self) -> str:
+        """Return the rule name."""
+        return self.rule_name
+
+    def validate(self: Self, data: dict[str, Any]) -> list[ValidationError]:
+        """Validate field value is in allowed set.
+
+        Args:
+            data: Dictionary with field to validate.
+
+        Returns:
+            List with one error if not in set, empty otherwise.
+        """
+        value = data.get(self.field)
+
+        if value is None or value == "":
+            return []
+
+        if value not in self.allowed_values:
+            allowed = ", ".join(sorted(self.allowed_values))
+            return [
+                ValidationError(
+                    field=self.field,
+                    message=f"Field '{self.field}' must be one of: {allowed}",
+                    rule=self.name,
+                )
+            ]
+        return []
+
+
+class CardinalityRule(ValidationRule):
+    """Validates list field has required number of items.
+
+    Attributes:
+        field: Name of the list field to validate.
+        min_items: Minimum number of items required.
+        max_items: Maximum number of items allowed.
+        rule_name: Name for this specific rule instance.
+    """
+
+    def __init__(
+        self: Self,
+        field: str,
+        min_items: int | None = None,
+        max_items: int | None = None,
+        rule_name: str = "cardinality",
+    ) -> None:
+        """Initialize the rule.
+
+        Args:
+            field: Name of the list field to validate.
+            min_items: Minimum number of items.
+            max_items: Maximum number of items.
+            rule_name: Name for this rule instance.
+        """
+        self.field = field
+        self.min_items = min_items
+        self.max_items = max_items
+        self.rule_name = rule_name
+
+    @property
+    def name(self: Self) -> str:
+        """Return the rule name."""
+        return self.rule_name
+
+    def validate(self: Self, data: dict[str, Any]) -> list[ValidationError]:
+        """Validate list has required number of items.
+
+        Args:
+            data: Dictionary with list field to validate.
+
+        Returns:
+            List of errors if cardinality violated.
+        """
+        value = data.get(self.field)
+
+        if value is None:
+            if self.min_items and self.min_items > 0:
+                return [
+                    ValidationError(
+                        field=self.field,
+                        message=f"Field '{self.field}' must have at least {self.min_items} item(s)",
+                        rule=self.name,
+                    )
+                ]
+            return []
+
+        if not isinstance(value, list):
+            return []
+
+        count = len(value)
+
+        if self.min_items is not None and count < self.min_items:
+            return [
+                ValidationError(
+                    field=self.field,
+                    message=f"Field '{self.field}' must have at least {self.min_items} item(s), has {count}",
+                    rule=self.name,
+                )
+            ]
+
+        if self.max_items is not None and count > self.max_items:
+            return [
+                ValidationError(
+                    field=self.field,
+                    message=f"Field '{self.field}' must have at most {self.max_items} item(s), has {count}",
+                    rule=self.name,
+                )
+            ]
+
+        return []
+
+
+class ConditionalRule(ValidationRule):
+    """Validates conditional field requirements.
+
+    Supports simple conditions like:
+    - "A OR B" - at least one must be present
+    - "A AND B" - both must be present
+    - "(NOT A) OR B" - if A missing, B not required; if A present, B required
+    - "(A AND B) OR (NOT A AND NOT B)" - both or neither
+
+    Attributes:
+        condition: Condition expression string.
+        rule_name: Name for this specific rule instance.
+    """
+
+    def __init__(self: Self, condition: str, rule_name: str = "conditional") -> None:
+        """Initialize the rule.
+
+        Args:
+            condition: Condition expression (e.g., "A OR B").
+            rule_name: Name for this rule instance.
+        """
+        self.condition = condition
+        self.rule_name = rule_name
+        self._fields = self._extract_fields(condition)
+
+    @property
+    def name(self: Self) -> str:
+        """Return the rule name."""
+        return self.rule_name
+
+    def _extract_fields(self: Self, condition: str) -> list[str]:
+        """Extract field names from condition."""
+        # Remove operators and parentheses
+        cleaned = condition.replace("(", " ").replace(")", " ")
+        tokens = cleaned.split()
+        # Filter out operators
+        operators = {"AND", "OR", "NOT"}
+        return [t for t in tokens if t not in operators]
+
+    def _has_value(self: Self, data: dict[str, Any], field: str) -> bool:
+        """Check if field has a non-empty value."""
+        value = data.get(field)
+        if value is None:
+            return False
+        if isinstance(value, str) and value == "":
+            return False
+        if isinstance(value, list) and len(value) == 0:
+            return False
+        return True
+
+    def _evaluate(self: Self, condition: str, data: dict[str, Any]) -> bool:
+        """Evaluate condition expression."""
+        # Simple parser for common patterns
+        condition = condition.strip()
+
+        # Handle parentheses by recursive evaluation
+        while "(" in condition:
+            # Find innermost parentheses
+            start = condition.rfind("(")
+            end = condition.find(")", start)
+            if end == -1:
+                break
+            inner = condition[start + 1 : end]
+            result = self._evaluate(inner, data)
+            condition = condition[:start] + ("TRUE" if result else "FALSE") + condition[end + 1 :]
+
+        # Handle NOT
+        condition = condition.replace("NOT TRUE", "FALSE")
+        condition = condition.replace("NOT FALSE", "TRUE")
+
+        # Replace field names with TRUE/FALSE
+        for field in self._fields:
+            has_val = "TRUE" if self._has_value(data, field) else "FALSE"
+            condition = re.sub(
+                rf"\bNOT\s+{re.escape(field)}\b",
+                "FALSE" if has_val == "TRUE" else "TRUE",
+                condition,
+            )
+            condition = re.sub(rf"\b{re.escape(field)}\b", has_val, condition)
+
+        # Evaluate AND/OR
+        condition = condition.strip()
+
+        if " OR " in condition:
+            parts = condition.split(" OR ")
+            return any(self._evaluate(p.strip(), data) for p in parts)
+
+        if " AND " in condition:
+            parts = condition.split(" AND ")
+            return all(self._evaluate(p.strip(), data) for p in parts)
+
+        return condition.strip() == "TRUE"
+
+    def validate(self: Self, data: dict[str, Any]) -> list[ValidationError]:
+        """Validate conditional requirement.
+
+        Args:
+            data: Dictionary to validate.
+
+        Returns:
+            List with error if condition not met.
+        """
+        if not self._evaluate(self.condition, data):
+            return [
+                ValidationError(
+                    field=", ".join(self._fields),
+                    message=f"Condition not satisfied: {self.condition}",
+                    rule=self.name,
+                )
+            ]
+        return []
+
+
+class CoordinatePairRule(ValidationRule):
+    """Validates that latitude and longitude are provided together.
+
+    Attributes:
+        lat_field: Name of the latitude field.
+        lon_field: Name of the longitude field.
+        rule_name: Name for this specific rule instance.
+    """
+
+    def __init__(
+        self: Self,
+        lat_field: str = "latitude",
+        lon_field: str = "longitude",
+        rule_name: str = "coordinate_pair",
+    ) -> None:
+        """Initialize the rule.
+
+        Args:
+            lat_field: Name of the latitude field.
+            lon_field: Name of the longitude field.
+            rule_name: Name for this rule instance.
+        """
+        self.lat_field = lat_field
+        self.lon_field = lon_field
+        self.rule_name = rule_name
+
+    @property
+    def name(self: Self) -> str:
+        """Return the rule name."""
+        return self.rule_name
+
+    def _has_value(self: Self, data: dict[str, Any], field: str) -> bool:
+        """Check if field has a non-empty value."""
+        value = data.get(field)
+        return value is not None and value != ""
+
+    def validate(self: Self, data: dict[str, Any]) -> list[ValidationError]:
+        """Validate lat/lon are both present or both absent.
+
+        Args:
+            data: Dictionary to validate.
+
+        Returns:
+            List with error if only one coordinate provided.
+        """
+        has_lat = self._has_value(data, self.lat_field)
+        has_lon = self._has_value(data, self.lon_field)
+
+        if has_lat != has_lon:
+            missing = self.lon_field if has_lat else self.lat_field
+            present = self.lat_field if has_lat else self.lon_field
+            return [
+                ValidationError(
+                    field=missing,
+                    message=f"'{missing}' is required when '{present}' is provided",
+                    rule=self.name,
+                )
+            ]
+        return []
+
+
 # Re-export ValidationError for convenience
 __all__ = [
+    "CardinalityRule",
+    "ConditionalRule",
+    "CoordinatePairRule",
     "DateRangeRule",
     "EntityReferenceRule",
+    "EnumRule",
+    "NumericRangeRule",
+    "PatternRule",
     "RequiredFieldsRule",
     "UniqueIdPatternRule",
     "ValidationError",

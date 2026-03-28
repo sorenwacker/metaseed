@@ -81,6 +81,8 @@ class TestValidateFunction:
         data = {
             "unique_id": "INV001",
             "title": "Test Investigation",
+            "contacts": [{"name": "Test Contact"}],
+            "studies": [{"unique_id": "STU001", "title": "Test Study"}],
         }
         errors = validate(data, "investigation", version="1.1")
         assert len(errors) == 0
@@ -117,7 +119,14 @@ class TestValidateFunction:
         from miappe_api.models import get_model
 
         Investigation = get_model("Investigation")
-        inv = Investigation(unique_id="INV001", title="Test")
+        Person = get_model("Person")
+        Study = get_model("Study")
+        inv = Investigation(
+            unique_id="INV001",
+            title="Test",
+            contacts=[Person(name="Test Contact")],
+            studies=[Study(unique_id="STU001", title="Test Study")],
+        )
 
         # Entity type is auto-detected from model class name
         errors = validate(inv)
@@ -129,10 +138,12 @@ class TestValidateFunction:
 
         Investigation = get_model("Investigation")
         Study = get_model("Study")
+        Person = get_model("Person")
 
         inv = Investigation(
             unique_id="INV001",
             title="Test",
+            contacts=[Person(name="Test Contact")],
             studies=[
                 Study(
                     unique_id="STU001",
@@ -156,10 +167,12 @@ class TestValidateFunction:
 
         Investigation = get_model("Investigation")
         Study = get_model("Study")
+        Person = get_model("Person")
 
         inv = Investigation(
             unique_id="INV001",
             title="Test",
+            contacts=[Person(name="Test Contact")],
             studies=[
                 Study(
                     unique_id="STU001",
