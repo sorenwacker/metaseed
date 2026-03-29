@@ -838,21 +838,31 @@ def create_app(state: AppState | None = None) -> FastAPI:
                 if state.profile == "miappe" and "miappe_version" in helper.all_fields:
                     inv_data["miappe_version"] = facade.version
 
+                # Add nested items directly to the investigation data
+                if result.studies and "studies" in helper.nested_fields:
+                    inv_data["studies"] = result.studies
+
+                if result.persons:
+                    # Try different field names for persons
+                    for field_name in ["persons", "contacts", "people"]:
+                        if field_name in helper.nested_fields:
+                            inv_data[field_name] = result.persons
+                            break
+
                 try:
                     instance = helper.create(**inv_data)
                     node = state.add_node("Investigation", instance)
-
-                    # Store nested items for later editing
                     state.editing_node_id = node.id
                     state.current_nested_items = {}
 
-                    # Add studies as nested items
+                    # Also store in current_nested_items for editing
                     if result.studies:
                         state.current_nested_items["studies"] = result.studies
-
-                    # Add persons as nested items
                     if result.persons:
-                        state.current_nested_items["persons"] = result.persons
+                        for field_name in ["persons", "contacts", "people"]:
+                            if field_name in helper.nested_fields:
+                                state.current_nested_items[field_name] = result.persons
+                                break
 
                 except ValidationError:
                     pass  # Skip invalid entities

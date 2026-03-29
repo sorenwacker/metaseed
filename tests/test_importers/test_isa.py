@@ -146,8 +146,8 @@ class TestISATabImport(TestISAImporter):
         result = importer.import_tab(isa_tab_path)
 
         study = result.studies[0]
-        assert "experimental_factors" in study
-        factor_names = [f["name"] for f in study["experimental_factors"]]
+        assert "factors" in study
+        factor_names = [f["name"] for f in study["factors"]]
         assert "Gender" in factor_names
 
     def test_import_tab_samples_extracted(self, importer: ISAImporter, isa_tab_path: Path) -> None:

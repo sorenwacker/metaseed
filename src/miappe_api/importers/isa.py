@@ -72,7 +72,7 @@ class ISAImporter:
     PERSON_MAPPING = {
         "first_name": "name",  # Will be combined with last_name
         "email": "email",
-        "affiliation": "affiliation",
+        "affiliation": "institution",
     }
 
     def import_json(self: Self, path: Path | str) -> ImportResult:
@@ -127,7 +127,7 @@ class ISAImporter:
             if value:
                 inv_data[miappe_field] = str(value)
 
-        # Add publications as associated_publication
+        # Add publications as associated_publications
         if isa_inv.publications:
             pubs = []
             for pub in isa_inv.publications:
@@ -136,7 +136,7 @@ class ISAImporter:
                 elif pub.pubmed_id:
                     pubs.append(f"PMID:{pub.pubmed_id}")
             if pubs:
-                inv_data["associated_publication"] = pubs
+                inv_data["associated_publications"] = pubs
 
         result.investigation = inv_data
 
@@ -178,23 +178,24 @@ class ISAImporter:
             if value:
                 study_data[miappe_field] = str(value)
 
-        # Extract factors
+        # Extract factors as nested Factor entities
         if isa_study.factors:
-            study_data["experimental_factors"] = [
+            study_data["factors"] = [
                 {
+                    "unique_id": f"factor_{i}_{f.name.replace(' ', '_')}",
                     "name": f.name,
-                    "description": getattr(f, "factor_type", {}).term
-                    if hasattr(f, "factor_type") and f.factor_type
-                    else "",
+                    "description": (
+                        f.factor_type.term if hasattr(f, "factor_type") and f.factor_type else ""
+                    ),
                 }
-                for f in isa_study.factors
+                for i, f in enumerate(isa_study.factors)
             ]
 
-        # Extract design descriptors
+        # Extract design descriptors as experimental_design_type
         if isa_study.design_descriptors:
-            study_data["study_design"] = [
-                d.term for d in isa_study.design_descriptors if hasattr(d, "term")
-            ]
+            design_terms = [d.term for d in isa_study.design_descriptors if hasattr(d, "term")]
+            if design_terms:
+                study_data["experimental_design_type"] = ", ".join(design_terms)
 
         # Convert samples
         samples = []
@@ -265,7 +266,7 @@ class ISAImporter:
             person_data["email"] = isa_person.email
 
         if hasattr(isa_person, "affiliation") and isa_person.affiliation:
-            person_data["affiliation"] = isa_person.affiliation
+            person_data["institution"] = isa_person.affiliation
 
         if hasattr(isa_person, "roles") and isa_person.roles:
             person_data["role"] = ", ".join(
