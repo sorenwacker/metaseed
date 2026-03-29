@@ -10,7 +10,7 @@ from io import BytesIO
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -793,6 +793,84 @@ def create_app(state: AppState | None = None) -> FastAPI:
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             headers={"Content-Disposition": f'attachment; filename="{filename}"'},
         )
+
+    @app.post("/import", response_class=HTMLResponse)
+    async def import_isa(
+        request: Request,
+        file: UploadFile = File(...),
+    ) -> HTMLResponse:
+        """Import ISA-JSON file and create entities."""
+        import tempfile
+
+        from miappe_api.importers.isa import ISAImporter
+
+        state = get_state()
+        facade = state.get_or_create_facade()
+
+        # Check file type
+        filename = file.filename or ""
+        content = await file.read()
+
+        try:
+            importer = ISAImporter()
+
+            if filename.endswith(".json"):
+                # ISA-JSON file
+                with tempfile.NamedTemporaryFile(mode="wb", suffix=".json", delete=False) as tmp:
+                    tmp.write(content)
+                    tmp_path = tmp.name
+
+                result = importer.import_json(tmp_path)
+                Path(tmp_path).unlink()
+            else:
+                return error_response(
+                    request,
+                    templates,
+                    "Unsupported file type. Please upload an ISA-JSON file (.json).",
+                )
+
+            # Create Investigation entity
+            if result.investigation and "Investigation" in facade.entities:
+                helper = facade.Investigation
+                inv_data = result.investigation.copy()
+
+                # Add miappe_version for MIAPPE profile
+                if state.profile == "miappe" and "miappe_version" in helper.all_fields:
+                    inv_data["miappe_version"] = facade.version
+
+                try:
+                    instance = helper.create(**inv_data)
+                    node = state.add_node("Investigation", instance)
+
+                    # Store nested items for later editing
+                    state.editing_node_id = node.id
+                    state.current_nested_items = {}
+
+                    # Add studies as nested items
+                    if result.studies:
+                        state.current_nested_items["studies"] = result.studies
+
+                    # Add persons as nested items
+                    if result.persons:
+                        state.current_nested_items["persons"] = result.persons
+
+                except ValidationError:
+                    pass  # Skip invalid entities
+
+            # Return success notification
+            response = templates.TemplateResponse(
+                request,
+                "components/notification.html",
+                {
+                    "type": "success",
+                    "message": result.summary,
+                },
+            )
+            response.headers["HX-Trigger"] = "refreshPage"
+            return response
+
+        except Exception as e:
+            return error_response(request, templates, f"Import failed: {e!s}")
 
     @app.post("/validate", response_class=HTMLResponse)
     async def validate_form(request: Request) -> HTMLResponse:

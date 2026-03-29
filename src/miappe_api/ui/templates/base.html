@@ -6,7 +6,7 @@
     <title>MIAPPE-API</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%234a7c59' rx='20' width='100' height='100'/></svg>">
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
-    <link rel="stylesheet" href="/static/css/style.css?v=7">
+    <link rel="stylesheet" href="/static/css/style.css?v=8">
 </head>
 <body hx-headers='{"X-Requested-With": "XMLHttpRequest"}'>
     <div class="layout">
@@ -22,6 +22,22 @@
                     + {{ entity_type }}
                 </button>
                 {% endfor %}
+                <span class="header-divider"></span>
+                <label class="btn btn-header btn-file" data-testid="btn-import">
+                    Import
+                    <input type="file"
+                           accept=".json"
+                           hx-post="/import"
+                           hx-trigger="change"
+                           hx-target="#notification-container"
+                           hx-swap="beforeend"
+                           hx-encoding="multipart/form-data"
+                           name="file"
+                           hidden>
+                </label>
+                <a href="/export" class="btn btn-header" data-testid="btn-export" download>
+                    Export
+                </a>
             </div>
         </header>
 
@@ -34,6 +50,6 @@
 
     <div id="notification-container" class="notification-container"></div>
 
-    <script src="/static/js/app.js?v=5"></script>
+    <script src="/static/js/app.js?v=6"></script>
 </body>
 </html>

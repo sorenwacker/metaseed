@@ -151,3 +151,15 @@ document.addEventListener('htmx:afterSwap', function(e) {
         }
     });
 });
+
+// Handle page refresh trigger (e.g., after import)
+document.body.addEventListener('refreshPage', function() {
+    window.location.reload();
+});
+
+// Reset file input after upload (to allow re-uploading same file)
+document.addEventListener('htmx:afterRequest', function(e) {
+    if (e.target.type === 'file') {
+        e.target.value = '';
+    }
+});

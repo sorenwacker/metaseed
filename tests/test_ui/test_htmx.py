@@ -320,3 +320,37 @@ class TestAppState:
         roots = state.get_root_entity_types()
         assert "Investigation" in roots
         assert roots[0] == "Investigation"
+
+
+class TestImportExport:
+    """Tests for import/export functionality."""
+
+    def test_export_empty_returns_excel(self, client):
+        """Export with no entities returns Excel file."""
+        response = client.get("/export")
+        assert response.status_code == 200
+        assert "spreadsheetml" in response.headers["content-type"]
+
+    def test_import_requires_file(self, client):
+        """Import requires a file upload."""
+        response = client.post("/import")
+        assert response.status_code == 422  # Validation error
+
+    def test_import_rejects_non_json(self, client):
+        """Import rejects non-JSON files."""
+        response = client.post(
+            "/import",
+            files={"file": ("test.txt", b"not json", "text/plain")},
+        )
+        assert response.status_code == 200
+        assert "Unsupported file type" in response.text
+
+    def test_index_contains_import_button(self, client):
+        """Index page contains import button."""
+        response = client.get("/")
+        assert "Import" in response.text
+
+    def test_index_contains_export_button(self, client):
+        """Index page contains export button."""
+        response = client.get("/")
+        assert "Export" in response.text
