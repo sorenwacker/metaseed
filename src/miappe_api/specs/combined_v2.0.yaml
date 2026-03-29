@@ -330,12 +330,6 @@ entities:
         description: URL to the license document.
         ontology_term: PPEO:hasLicense
 
-      - name: miappe_version
-        type: string
-        required: false
-        description: Version of MIAPPE standard used (if applicable).
-        ontology_term: PPEO:hasMIAPPEVersion
-
       - name: contacts
         type: list
         items: Person
