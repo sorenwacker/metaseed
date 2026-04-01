@@ -1,18 +1,18 @@
 # Metaseed
 
-Schema-driven API for MIAPPE-compliant phenotyping metadata.
+Schema-driven metadata management from YAML specifications.
 
 ## Overview
 
-Metaseed provides tools for creating, editing, and validating experimental metadata following [MIAPPE](https://www.miappe.org/) (Minimum Information About Plant Phenotyping Experiments) standards.
+Metaseed provides tools for creating, editing, and validating structured metadata from schema specifications.
 
 ### Features
 
-- **Schema-driven**: YAML specifications define metadata standards
-- **Ontology-backed**: References real ontologies (PPEO, ISA, PROV-O)
+- **Schema-driven**: YAML specifications define metadata structures
+- **Ontology-backed**: Reference external ontologies via URIs
 - **Factory pattern**: Dynamically generates Pydantic models from specs
-- **Multiple interfaces**: REST API (FastAPI) and CLI (Typer)
-- **Validation**: Built-in validation against MIAPPE 1.1/1.2 standards
+- **Multiple interfaces**: REST API (FastAPI), CLI (Typer), and web UI (HTMX)
+- **Validation**: Composable validation rules from schema definitions
 
 ## Capabilities
 
@@ -39,8 +39,7 @@ Metaseed provides tools for creating, editing, and validating experimental metad
 Requires Python 3.11+ and [UV](https://docs.astral.sh/uv/).
 
 ```bash
-# Clone the repository
-git clone <repository-url>
+git clone https://github.com/sorenwacker/metaseed.git
 cd metaseed
 
 # Install dependencies
