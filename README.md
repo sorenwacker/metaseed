@@ -2,6 +2,8 @@
 
 Schema-driven metadata management from YAML specifications.
 
+[Documentation](https://sorenwacker.github.io/metaseed/)
+
 ## Overview
 
 Metaseed provides tools for creating, editing, and validating structured metadata from schema specifications.
