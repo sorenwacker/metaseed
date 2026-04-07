@@ -4,32 +4,27 @@ Metaseed follows a schema-driven architecture where YAML specifications define t
 
 ## System Components
 
-```
-┌───────────────────────────────────────────────────────────┐
-│                       Interfaces                          │
-│  ┌───────────┐  ┌───────────┐  ┌───────────────────────┐  │
-│  │CLI (Typer)│  │Web (HTMX) │  │  REST API (FastAPI)   │  │
-│  └───────────┘  └───────────┘  └───────────────────────┘  │
-└───────────────────────────────────────────────────────────┘
-                             │
-                             ▼
-┌───────────────────────────────────────────────────────────┐
-│                       Core Layer                          │
-│  ┌───────────────────┐    ┌───────────────────────────┐   │
-│  │   Model Factory   │    │        Validators         │   │
-│  └───────────────────┘    └───────────────────────────┘   │
-│  ┌─────────────────────────────────────────────────────┐  │
-│  │                   ProfileFacade                     │  │
-│  └─────────────────────────────────────────────────────┘  │
-└───────────────────────────────────────────────────────────┘
-                             │
-                             ▼
-┌───────────────────────────────────────────────────────────┐
-│                       Data Layer                          │
-│  ┌───────────────────┐    ┌───────────────────────────┐   │
-│  │ Schema Specs (YAML)│    │         Storage          │   │
-│  └───────────────────┘    └───────────────────────────┘   │
-└───────────────────────────────────────────────────────────┘
+```mermaid
+graph TB
+    subgraph Interfaces
+        CLI[CLI - Typer]
+        Web[Web - HTMX]
+        API[REST API - FastAPI]
+    end
+
+    subgraph Core["Core Layer"]
+        Factory[Model Factory]
+        Validators
+        Facade[ProfileFacade]
+    end
+
+    subgraph Data["Data Layer"]
+        Specs[Schema Specs - YAML]
+        Storage
+    end
+
+    Interfaces --> Core
+    Core --> Data
 ```
 
 ## Component Responsibilities
