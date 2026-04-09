@@ -207,16 +207,50 @@ When converting between ISA and MIAPPE:
 - Conducting integrated plant research (phenomics + genomics/transcriptomics)
 - Want a single unified schema for diverse experimental data
 
-!!! warning "Experimental"
-    The combined profile (`combined_v1.0.yaml`) is experimental and merges ISA and MIAPPE entities into a unified model. It uses ISA-style `identifier` fields as the common naming convention.
+## Combined Profile (ISA-MIAPPE-Combined)
 
-## Combined Profile Usage
+The `isa-miappe-combined` profile merges ISA and MIAPPE entities into a unified model. It uses ISA-style `identifier` fields as the common naming convention.
+
+### Available Versions
+
+| Version | Status | Key Features |
+|---------|--------|--------------|
+| **v1.0** | Stable | Initial unified model with all ISA and MIAPPE entities |
+| **v2.0** | Current | Streamlined model with new Experiment entity and reference-based ownership |
+
+### Version 2.0 Changes
+
+Version 2.0 introduces significant improvements:
+
+- **Person**: Unified name handling (`given_name`/`family_name`, `full_name` computed)
+- **Publication**: Promoted to shared core (was ISA-only in v1.0)
+- **New Experiment entity**: For multi-trial studies within a Study
+- **Reference model**: Study owns entities, Experiment references them by ID
+- **Removed**: `associated_publications` URL list (use Publication entities instead)
+
+**Ownership Model (v2.0):**
+
+- **Study owns**: BiologicalMaterials, ObservationUnits, Samples, ObservedVariables, Factors, Protocols
+- **Experiment owns**: Events, Environments, Assays (time/location specific)
+- **Experiment references**: `observation_unit_ids`, `sample_ids` (from Study's pool)
+
+**Entity Categories (v2.0):**
+
+| Category | Count | Entities |
+|----------|-------|----------|
+| Shared Core | 7 | Investigation, Study, Experiment, Person, Publication, Factor, FactorValue |
+| ISA Extensions | 9 | Assay, Protocol, ProtocolParameter, Process, ParameterValue, Source, Sample, Extract, LabeledExtract |
+| MIAPPE Extensions | 5 | BiologicalMaterial, ObservationUnit, ObservedVariable, Event, Environment |
+| Shared Annotations | 3 | OntologyAnnotation, OntologySource, Characteristic |
+| MIAPPE Support | 1 | MaterialSource |
+
+### Combined Profile Usage
 
 ```python
 from metaseed.facade import ProfileFacade
 
-# Load combined profile
-combined = ProfileFacade("combined", "1.0")
+# Load combined profile (v2.0 recommended)
+combined = ProfileFacade("isa-miappe-combined", "2.0")
 
 # Create ISA entities
 protocol = combined.Protocol(name="RNA Extraction", protocol_type="extraction")
@@ -228,6 +262,18 @@ obs_unit = combined.ObservationUnit(identifier="OU-001", observation_unit_type="
 
 # Create shared entities
 investigation = combined.Investigation(identifier="INV-001", title="Integrated Study")
+
+# v2.0: Create Experiment for multi-trial studies
+experiment = combined.Experiment(
+    identifier="EXP-001",
+    title="Field Trial 2024",
+    observation_unit_ids=["OU-001", "OU-002"]  # Reference Study's observation units
+)
+```
+
+```python
+# Load v1.0 if needed for compatibility
+combined_v1 = ProfileFacade("isa-miappe-combined", "1.0")
 ```
 
 ## MIAPPE as an ISA Profile
@@ -315,7 +361,7 @@ Several approaches exist for combining ISA and MIAPPE:
 |----------|---------|-------------|------|------|
 | **ISA Configuration** | Official MIAPPE | XML config files define MIAPPE fields within ISA-Tab | Standard tooling, validated | ISA-Tab file limitations at scale |
 | **Extended Metadata** | FAIRDOM-SEEK | Key-value extensions on ISA entities | Flexible, minimal changes | Loose typing, no schema enforcement |
-| **Merged Schema** | This project (`combined_v1.0`) | Single typed schema with both entity sets | Strong typing, single model | Custom implementation, no existing ecosystem |
+| **Merged Schema** | This project (`isa-miappe-combined`) | Single typed schema with both entity sets | Strong typing, single model | Custom implementation, no existing ecosystem |
 | **BrAPI Bridge** | Phenotyping databases | API layer translates between formats | API-first, widely adopted | Conversion overhead, potential data loss |
 | **Dual Export** | Some platforms | Maintain both formats separately | Full compliance with each | Duplication, sync issues |
 

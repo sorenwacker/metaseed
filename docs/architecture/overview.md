@@ -62,7 +62,28 @@ A fluent API layer providing intuitive access to entity helpers:
 
 - **Entity Discovery**: `facade.entities` lists available entity types
 - **Entity Helpers**: `facade.Investigation` provides field info and creation
-- **Profile Support**: Separate facades for MIAPPE and ISA profiles via `miappe()` and `isa()` functions
+- **Profile Support**: Separate facades for different profiles
+
+## Available Profiles
+
+| Profile | Versions | Description |
+|---------|----------|-------------|
+| **miappe** | 1.1 | Plant phenotyping metadata (MIAPPE standard) |
+| **isa** | 1.0 | Life science experiments (ISA framework) |
+| **isa-miappe-combined** | 1.0, 2.0 | Unified model combining ISA and MIAPPE |
+
+Access profiles via convenience functions or `ProfileFacade`:
+
+```python
+from metaseed import miappe, isa
+from metaseed.facade import ProfileFacade
+
+m = miappe()                                    # MIAPPE v1.1
+i = isa()                                       # ISA v1.0
+combined = ProfileFacade("isa-miappe-combined", "2.0")  # Combined v2.0
+```
+
+See [ISA and MIAPPE Comparison](isa-miappe-comparison.md) for detailed profile documentation.
 
 ### Interfaces
 

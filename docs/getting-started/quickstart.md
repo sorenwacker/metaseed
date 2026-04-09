@@ -188,6 +188,24 @@ source = i.Source(unique_id="SRC001", name="Patient 1")
 sample = i.Sample(unique_id="SAM001", name="Blood sample", derives_from=[source])
 ```
 
+For the combined ISA-MIAPPE profile (both multi-omics and phenotyping):
+
+```python
+from metaseed.facade import ProfileFacade
+
+# Load combined profile (v2.0 recommended)
+combined = ProfileFacade("isa-miappe-combined", "2.0")
+
+# Access both ISA and MIAPPE entities
+combined.entities
+# ['Investigation', 'Study', 'Experiment', 'Protocol', 'Assay',
+#  'BiologicalMaterial', 'ObservationUnit', 'ObservedVariable', ...]
+
+# Create entities from either standard
+protocol = combined.Protocol(name="RNA Extraction", protocol_type="extraction")
+material = combined.BiologicalMaterial(identifier="BM-001", organism="Zea mays")
+```
+
 ### Direct Model Access
 
 For lower-level control, use `get_model`:
