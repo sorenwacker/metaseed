@@ -1,6 +1,9 @@
 # ISA and MIAPPE Comparison
 
-Two metadata standards for life science experiments. See [Diagrams](diagrams.md) for visual comparison.
+Two metadata standards for life science experiments.
+
+!!! tip "Visual Reference"
+    See **[Diagrams](diagrams.md)** for entity comparison and workflow diagrams.
 
 ## When to Use Each
 
