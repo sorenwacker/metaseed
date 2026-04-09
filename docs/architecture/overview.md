@@ -1,6 +1,9 @@
 # Architecture Overview
 
-Schema-driven architecture where YAML specs define metadata structure, and Pydantic models are generated at runtime. See [Diagrams](diagrams.md) for visual overview.
+Schema-driven architecture where YAML specs define metadata structure, and Pydantic models are generated at runtime.
+
+!!! tip "Visual Reference"
+    See **[Diagrams](diagrams.md)** for system architecture and data model visuals.
 
 ## Components
 
