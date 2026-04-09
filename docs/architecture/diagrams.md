@@ -1,33 +1,6 @@
-# Diagrams
+# Data Model Diagrams
 
-Visual reference for system architecture and data models.
-
-## System Architecture
-
-```mermaid
-graph TB
-    subgraph Interfaces
-        CLI[CLI - Typer]
-        Web[Web - HTMX]
-        API[REST API - FastAPI]
-    end
-
-    subgraph Core["Core Layer"]
-        Factory[Model Factory]
-        Validators
-        Facade[ProfileFacade]
-    end
-
-    subgraph Data["Data Layer"]
-        Specs[Schema Specs - YAML]
-        Storage
-    end
-
-    Interfaces --> Core
-    Core --> Data
-```
-
----
+Visual reference for profile data models.
 
 ## ISA v1.0
 

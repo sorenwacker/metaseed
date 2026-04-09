@@ -2,8 +2,28 @@
 
 Schema-driven architecture where YAML specs define metadata structure, and Pydantic models are generated at runtime.
 
-!!! tip "Visual Reference"
-    See **[Diagrams](diagrams.md)** for system architecture and data model visuals.
+```mermaid
+graph TB
+    subgraph Interfaces
+        CLI[CLI - Typer]
+        Web[Web - HTMX]
+        API[REST API - FastAPI]
+    end
+
+    subgraph Core["Core Layer"]
+        Factory[Model Factory]
+        Validators
+        Facade[ProfileFacade]
+    end
+
+    subgraph Data["Data Layer"]
+        Specs[Schema Specs - YAML]
+        Storage
+    end
+
+    Interfaces --> Core
+    Core --> Data
+```
 
 ## Components
 
