@@ -29,70 +29,6 @@ graph TB
 
 ---
 
-## MIAPPE v1.1
-
-14 entities for plant phenotyping experiments.
-
-```mermaid
-flowchart TB
-    subgraph core["Core"]
-        INV[Investigation]
-        STU[Study]
-        PER[Person]
-    end
-
-    subgraph material["Plant Material"]
-        BM[BiologicalMaterial]
-        MS[MaterialSource]
-    end
-
-    subgraph observation["Observations"]
-        OU[ObservationUnit]
-        OV[ObservedVariable]
-        SAM[Sample]
-    end
-
-    subgraph experiment["Experiment Context"]
-        FAC[Factor]
-        FV[FactorValue]
-        EVT[Event]
-        ENV[Environment]
-        LOC[Location]
-    end
-
-    subgraph output["Output"]
-        DF[DataFile]
-    end
-
-    INV --> STU
-    INV --> PER
-    STU --> BM
-    STU --> OU
-    STU --> OV
-    STU --> FAC
-    STU --> EVT
-    STU --> ENV
-    STU -.-> LOC
-    BM --> MS
-    OU --> SAM
-    FAC --> FV
-    STU --> DF
-
-    classDef core fill:#e8f5e9,stroke:#4caf50,stroke-width:2px
-    classDef material fill:#fff3e0,stroke:#ff9800,stroke-width:2px
-    classDef obs fill:#e3f2fd,stroke:#2196f3,stroke-width:2px
-    classDef exp fill:#fce4ec,stroke:#e91e63,stroke-width:2px
-    classDef out fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px
-
-    class INV,STU,PER core
-    class BM,MS material
-    class OU,OV,SAM obs
-    class FAC,FV,EVT,ENV,LOC exp
-    class DF out
-```
-
----
-
 ## ISA v1.0
 
 20 entities for life science experiments with process-centric workflows.
@@ -170,6 +106,70 @@ flowchart TB
     class PROC,PV,CHAR proc
     class SF,FV fac
     class OA,OS,COM ont
+    class DF out
+```
+
+---
+
+## MIAPPE v1.1
+
+14 entities for plant phenotyping experiments.
+
+```mermaid
+flowchart TB
+    subgraph core["Core"]
+        INV[Investigation]
+        STU[Study]
+        PER[Person]
+    end
+
+    subgraph material["Plant Material"]
+        BM[BiologicalMaterial]
+        MS[MaterialSource]
+    end
+
+    subgraph observation["Observations"]
+        OU[ObservationUnit]
+        OV[ObservedVariable]
+        SAM[Sample]
+    end
+
+    subgraph experiment["Experiment Context"]
+        FAC[Factor]
+        FV[FactorValue]
+        EVT[Event]
+        ENV[Environment]
+        LOC[Location]
+    end
+
+    subgraph output["Output"]
+        DF[DataFile]
+    end
+
+    INV --> STU
+    INV --> PER
+    STU --> BM
+    STU --> OU
+    STU --> OV
+    STU --> FAC
+    STU --> EVT
+    STU --> ENV
+    STU -.-> LOC
+    BM --> MS
+    OU --> SAM
+    FAC --> FV
+    STU --> DF
+
+    classDef core fill:#e8f5e9,stroke:#4caf50,stroke-width:2px
+    classDef material fill:#fff3e0,stroke:#ff9800,stroke-width:2px
+    classDef obs fill:#e3f2fd,stroke:#2196f3,stroke-width:2px
+    classDef exp fill:#fce4ec,stroke:#e91e63,stroke-width:2px
+    classDef out fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px
+
+    class INV,STU,PER core
+    class BM,MS material
+    class OU,OV,SAM obs
+    class FAC,FV,EVT,ENV,LOC exp
     class DF out
 ```
 
@@ -371,7 +371,7 @@ flowchart LR
 
 | Profile | Entities | Focus |
 |---------|----------|-------|
-| MIAPPE v1.1 | 14 | Plant phenotyping, field trials |
 | ISA v1.0 | 20 | Multi-omics, process workflows |
+| MIAPPE v1.1 | 14 | Plant phenotyping, field trials |
 | Combined v1.0 | 25 | Unified ISA + MIAPPE |
 | Combined v2.0 | 26 | + Experiment entity, reference model |
