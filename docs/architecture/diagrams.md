@@ -157,6 +157,25 @@ flowchart TB
 | Combined v1.0 | 25 | Unified ISA + MIAPPE |
 | Combined v2.0 | 26 | + Experiment entity, reference model |
 
+### ISA vs MIAPPE Workflow Models
+
+```mermaid
+flowchart LR
+    subgraph isa_flow["ISA: Process-Centric"]
+        S1[Source] --> P1[Process] --> S2[Sample]
+        S2 --> P2[Process] --> E1[Extract]
+        E1 --> P3[Process] --> D1[Data]
+    end
+
+    subgraph miappe_flow["MIAPPE: Observation-Centric"]
+        BM1[BiologicalMaterial] --> OU1[ObservationUnit]
+        OU1 --> OBS[Observations]
+        OBS --> VAR[ObservedVariable]
+        EVT1[Events] --> OU1
+        ENV1[Environment] --> OU1
+    end
+```
+
 ---
 
 ## ISA-MIAPPE-Combined v1.0
