@@ -9,13 +9,9 @@ from metaseed.specs.loader import SpecLoader
 from metaseed.specs.schema import ValidationRuleSpec
 from metaseed.validators.base import ValidationError, ValidationRule
 from metaseed.validators.rules import (
-    CardinalityRule,
     ConditionalRule,
     CoordinatePairRule,
     DateRangeRule,
-    EnumRule,
-    NumericRangeRule,
-    PatternRule,
     RequiredFieldsRule,
     UniqueIdPatternRule,
 )
@@ -67,40 +63,27 @@ def _create_rule_from_spec(rule_spec: ValidationRuleSpec) -> ValidationRule | No
 
     Returns:
         A ValidationRule instance, or None if rule type not supported.
+
+    Note:
+        The following rule types are now handled by Pydantic constraints
+        and are skipped here:
+        - Pattern rules (Pydantic pattern constraint)
+        - Numeric range rules (Pydantic ge/le constraints)
+        - Enum rules (Pydantic Literal types)
+        - Cardinality rules (Pydantic min_length/max_length on lists)
     """
-    # Pattern-based rules
+    # Skip rules now handled by Pydantic constraints
     if rule_spec.pattern and rule_spec.field:
-        return PatternRule(
-            field=rule_spec.field,
-            pattern=rule_spec.pattern,
-            rule_name=rule_spec.name,
-        )
+        return None  # Handled by Pydantic pattern constraint
 
-    # Numeric range rules
     if (rule_spec.minimum is not None or rule_spec.maximum is not None) and rule_spec.field:
-        return NumericRangeRule(
-            field=rule_spec.field,
-            minimum=rule_spec.minimum,
-            maximum=rule_spec.maximum,
-            rule_name=rule_spec.name,
-        )
+        return None  # Handled by Pydantic ge/le constraints
 
-    # Enum rules
     if rule_spec.enum and rule_spec.field:
-        return EnumRule(
-            field=rule_spec.field,
-            allowed_values=rule_spec.enum,
-            rule_name=rule_spec.name,
-        )
+        return None  # Handled by Pydantic Literal types
 
-    # Cardinality rules
     if (rule_spec.min_items is not None or rule_spec.max_items is not None) and rule_spec.field:
-        return CardinalityRule(
-            field=rule_spec.field,
-            min_items=rule_spec.min_items,
-            max_items=rule_spec.max_items,
-            rule_name=rule_spec.name,
-        )
+        return None  # Handled by Pydantic min_length/max_length on lists
 
     # Conditional rules
     if rule_spec.condition:

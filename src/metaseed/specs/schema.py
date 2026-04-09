@@ -37,6 +37,7 @@ class Constraints(BaseModel):
         max_length: Maximum string length.
         minimum: Minimum numeric value.
         maximum: Maximum numeric value.
+        enum: List of allowed values for enumerated fields.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -46,6 +47,7 @@ class Constraints(BaseModel):
     max_length: int | None = None
     minimum: int | float | None = None
     maximum: int | float | None = None
+    enum: list[str] | None = None
 
 
 class FieldSpec(BaseModel):

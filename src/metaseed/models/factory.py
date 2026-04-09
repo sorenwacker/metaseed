@@ -7,7 +7,7 @@ models from YAML specifications.
 from __future__ import annotations
 
 import datetime
-from typing import TYPE_CHECKING, Annotated, Any
+from typing import TYPE_CHECKING, Annotated, Any, Literal
 
 from pydantic import AnyUrl, BaseModel, ConfigDict, Field, create_model, model_validator
 
@@ -156,6 +156,19 @@ def _build_field_constraints(field: FieldSpec) -> dict[str, Any]:
     return kwargs
 
 
+def _build_enum_type(enum_values: list[str]) -> type:
+    """Build a Literal type from enum values.
+
+    Args:
+        enum_values: List of allowed string values.
+
+    Returns:
+        A Literal type constraining values to the given list.
+    """
+    # Create Literal type from the enum values
+    return Literal[tuple(enum_values)]  # type: ignore[misc]
+
+
 def _create_field_definition(field: FieldSpec) -> tuple[type, Any]:
     """Create a Pydantic field definition tuple.
 
@@ -167,6 +180,10 @@ def _create_field_definition(field: FieldSpec) -> tuple[type, Any]:
     """
     python_type = _build_field_type(field)
     constraints = _build_field_constraints(field)
+
+    # Check if field has enum constraint - use Literal type instead
+    if field.constraints and field.constraints.enum:
+        python_type = _build_enum_type(field.constraints.enum)
 
     # List fields default to empty list for easier use
     if field.type == FieldType.LIST:
