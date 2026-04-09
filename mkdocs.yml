@@ -43,6 +43,7 @@ nav:
       - Quick Start: getting-started/quickstart.md
   - Architecture:
       - Overview: architecture/overview.md
+      - Diagrams: architecture/diagrams.md
       - ISA vs MIAPPE: architecture/isa-miappe-comparison.md
       - Schema Specs: architecture/schema-specs.md
       - Model Factory: architecture/model-factory.md
