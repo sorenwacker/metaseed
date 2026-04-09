@@ -41,9 +41,11 @@ graph TB
 
 | Profile | Versions | Description |
 |---------|----------|-------------|
-| `miappe` | 1.1 | Plant phenotyping (MIAPPE standard) |
-| `isa` | 1.0 | Life science experiments (ISA framework) |
-| `isa-miappe-combined` | 1.0, 2.0 | Unified ISA + MIAPPE model |
+| [`isa`](isa.md) | 1.0 | Life science experiments (ISA framework) |
+| [`miappe`](miappe.md) | 1.1 | Plant phenotyping (MIAPPE standard) |
+| [`isa-miappe-combined`](combined.md) | 1.0, 2.0 | Unified ISA + MIAPPE model |
+
+See [Comparison](comparison.md) for differences between ISA and MIAPPE.
 
 ```python
 from metaseed import miappe, isa
