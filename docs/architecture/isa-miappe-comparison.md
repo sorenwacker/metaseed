@@ -3,7 +3,7 @@
 Two metadata standards for life science experiments.
 
 !!! tip "Visual Reference"
-    See **[Diagrams](diagrams.md)** for entity comparison and workflow diagrams.
+    See **[Data Model Diagrams](diagrams.md)** for entity diagrams.
 
 ## When to Use Each
 
