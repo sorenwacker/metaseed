@@ -175,6 +175,17 @@ flowchart TB
 
 ---
 
+## Profile Comparison
+
+| Profile | Entities | Focus |
+|---------|----------|-------|
+| ISA v1.0 | 20 | Multi-omics, process workflows |
+| MIAPPE v1.1 | 14 | Plant phenotyping, field trials |
+| Combined v1.0 | 25 | Unified ISA + MIAPPE |
+| Combined v2.0 | 26 | + Experiment entity, reference model |
+
+---
+
 ## ISA-MIAPPE-Combined v1.0
 
 25 entities combining ISA and MIAPPE.
@@ -364,14 +375,3 @@ flowchart LR
     class BM,OU,SAM,OV,FAC,PROT owns
     class EVT,ENV,ASS refs
 ```
-
----
-
-## Profile Comparison
-
-| Profile | Entities | Focus |
-|---------|----------|-------|
-| ISA v1.0 | 20 | Multi-omics, process workflows |
-| MIAPPE v1.1 | 14 | Plant phenotyping, field trials |
-| Combined v1.0 | 25 | Unified ISA + MIAPPE |
-| Combined v2.0 | 26 | + Experiment entity, reference model |
