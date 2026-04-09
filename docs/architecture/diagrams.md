@@ -26,12 +26,12 @@ flowchart TB
         SAM[Sample]
         EXT[Extract]
         LEXT[LabeledExtract]
+        CHAR[Characteristic]
     end
 
     subgraph process["Process Graph"]
         PROC[Process]
         PV[ParameterValue]
-        CHAR[Characteristic]
     end
 
     subgraph factors["Factors"]
@@ -39,7 +39,7 @@ flowchart TB
         FV[FactorValue]
     end
 
-    subgraph ontology["Ontology"]
+    subgraph ontology["Ontology & Annotations"]
         OA[OntologyAnnotation]
         OS[OntologySource]
         COM[Comment]
@@ -52,6 +52,7 @@ flowchart TB
     INV --> STU
     INV --> PER
     INV --> PUB
+    INV --> OS
     STU --> ASS
     STU --> PROT
     STU --> SRC
@@ -60,10 +61,15 @@ flowchart TB
     SRC -->|Process| SAM
     SAM -->|Process| EXT
     EXT -->|Process| LEXT
+    SRC --> CHAR
+    SAM --> CHAR
     ASS --> PROC
     ASS --> DF
     PROC --> PV
     SF --> FV
+    CHAR -.-> OA
+    SF -.-> OA
+    OA --> OS
 
     classDef core fill:#e8f5e9,stroke:#4caf50,stroke-width:2px
     classDef prot fill:#e3f2fd,stroke:#2196f3,stroke-width:2px
@@ -75,8 +81,8 @@ flowchart TB
 
     class INV,STU,ASS,PER,PUB core
     class PROT,PP prot
-    class SRC,SAM,EXT,LEXT mat
-    class PROC,PV,CHAR proc
+    class SRC,SAM,EXT,LEXT,CHAR mat
+    class PROC,PV proc
     class SF,FV fac
     class OA,OS,COM ont
     class DF out
