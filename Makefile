@@ -1,10 +1,10 @@
-.PHONY: install dev test test-ui test-cov demo test-export test-validation lint format docs docs-build ui serve clean help
+.PHONY: install setup test test-ui test-cov demo test-export test-validation lint format docs docs-build ui dev clean help
 
 help:
 	@echo "Available targets:"
 	@echo "  install         - Install dependencies"
-	@echo "  dev             - Install dev + docs dependencies and pre-commit hooks"
-	@echo "  serve           - Run web UI with hot reload (for development)"
+	@echo "  setup           - Install dev + docs dependencies and pre-commit hooks"
+	@echo "  dev             - Run web UI with hot reload (for development)"
 	@echo "  test            - Run tests (excluding UI tests)"
 	@echo "  test-ui         - Run UI tests (requires Chrome)"
 	@echo "  test-cov        - Run tests with coverage"
@@ -21,7 +21,7 @@ help:
 install:
 	uv sync
 
-dev:
+setup:
 	uv sync --extra dev --extra docs
 	uv run pre-commit install
 
@@ -59,7 +59,7 @@ docs-build:
 ui:
 	uv run metaseed ui
 
-serve:
+dev:
 	uv run python -m uvicorn metaseed.ui.routes:app --host 127.0.0.1 --port 8080 --reload
 
 clean:
