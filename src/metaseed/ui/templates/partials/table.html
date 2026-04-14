@@ -65,9 +65,38 @@
         {% endif %}
     </div>
 
-    <table class="data-table">
+    <div id="bulk-edit-toolbar" class="bulk-edit-toolbar hidden" data-testid="bulk-edit-toolbar">
+        <span class="bulk-edit-count"><span id="selected-count">0</span> rows selected</span>
+        <select id="bulk-edit-field" class="form-input bulk-edit-field" data-testid="bulk-edit-field">
+            <option value="">Select field...</option>
+            {% for col in columns %}
+            <option value="{{ col }}">{{ col|replace('_', ' ')|title }}</option>
+            {% endfor %}
+        </select>
+        <input type="text" id="bulk-edit-value" class="form-input bulk-edit-value" placeholder="New value" data-testid="bulk-edit-value">
+        <button class="btn btn-primary btn-sm"
+                id="bulk-apply-btn"
+                hx-post="/table/{{ parent_entity_type }}/{{ field_name }}/bulk"
+                hx-target="#main"
+                hx-swap="innerHTML"
+                hx-include="#bulk-edit-field, #bulk-edit-value, #bulk-edit-indices"
+                data-testid="bulk-apply">
+            Apply
+        </button>
+        <button class="btn btn-secondary btn-sm" id="bulk-cancel-btn" data-testid="bulk-cancel">
+            Cancel
+        </button>
+        <input type="hidden" id="bulk-edit-indices" name="indices" value="">
+    </div>
+
+    <table class="data-table" id="data-table"
+           data-parent-type="{{ parent_entity_type }}"
+           data-field-name="{{ field_name }}">
         <thead>
             <tr>
+                <th class="select-header">
+                    <input type="checkbox" id="select-all" data-testid="select-all">
+                </th>
                 {% for col in columns %}
                 <th>
                     {{ col|replace('_', ' ')|title }}{% if required_columns and col in required_columns %}<span class="required">*</span>{% endif %}
@@ -79,7 +108,7 @@
         </thead>
         <tbody id="table-body">
             {% for row in rows %}
-            {% include "partials/table_row.html" %}
+            {% include "partials/table_row.html" with context %}
             {% endfor %}
         </tbody>
     </table>

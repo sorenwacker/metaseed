@@ -1,0 +1,20 @@
+<div id="lookup-modal" class="lookup-modal hidden">
+    <div class="lookup-modal-backdrop" onclick="closeLookupModal()"></div>
+    <div class="lookup-modal-content">
+        <div class="lookup-modal-header">
+            <h3>Select <span id="lookup-modal-entity-type"></span></h3>
+            <button type="button" class="lookup-modal-close" onclick="closeLookupModal()" title="Close">&times;</button>
+        </div>
+        <div class="lookup-modal-body">
+            <input type="text"
+                   id="lookup-modal-search"
+                   class="form-input"
+                   placeholder="Search..."
+                   autocomplete="off"
+                   data-testid="lookup-modal-search">
+            <div id="lookup-modal-results" class="lookup-modal-results" data-testid="lookup-modal-results">
+                <div class="lookup-modal-loading">Loading...</div>
+            </div>
+        </div>
+    </div>
+</div>

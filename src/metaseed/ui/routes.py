@@ -10,8 +10,8 @@ from io import BytesIO
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, File, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
+from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import ValidationError
@@ -22,12 +22,14 @@ from metaseed.validators import validate as validate_data
 
 from .helpers import (
     build_breadcrumb,
+    collect_entities_by_type,
     collect_form_values,
     error_response,
     format_table_rows,
     format_validation_errors,
     get_field_data,
     get_items_store,
+    get_reference_fields,
     get_table_column_info,
     get_table_columns,
     is_nested_field,
@@ -464,6 +466,13 @@ def create_app(state: AppState | None = None) -> FastAPI:
         col_info = get_table_column_info(facade, nested_entity_type)
         _, items = get_items_store(state, entity_type, field_name)
 
+        # Get reference fields for the nested entity type
+        reference_fields = get_reference_fields(
+            profile=state.profile,
+            version=facade.version,
+            entity_type=nested_entity_type,
+        )
+
         rows = []
         for i, item in enumerate(items):
             if hasattr(item, "model_dump"):
@@ -486,6 +495,7 @@ def create_app(state: AppState | None = None) -> FastAPI:
                 "column_constraints": col_info["column_constraints"],
                 "required_columns": col_info["required_columns"],
                 "has_nested_children": col_info["has_nested_children"],
+                "reference_fields": reference_fields,
                 "rows": rows,
                 "parent_entity_type": entity_type,
                 "editing_node_id": state.editing_node_id,
@@ -508,6 +518,17 @@ def create_app(state: AppState | None = None) -> FastAPI:
         entity_type = parent_helper.nested_fields.get(field_name) if parent_helper else None
         col_info = get_table_column_info(facade, entity_type)
 
+        # Get reference fields for this entity type
+        reference_fields = (
+            get_reference_fields(
+                profile=state.profile,
+                version=facade.version,
+                entity_type=entity_type,
+            )
+            if entity_type
+            else {}
+        )
+
         new_row = dict.fromkeys(col_info["columns"], "")
         new_row["_idx"] = len(items)
         items.append(new_row)
@@ -520,6 +541,7 @@ def create_app(state: AppState | None = None) -> FastAPI:
                 "columns": col_info["columns"],
                 "column_types": col_info["column_types"],
                 "column_constraints": col_info["column_constraints"],
+                "reference_fields": reference_fields,
                 "field_name": field_name,
                 "parent_entity_type": parent_entity_type,
                 "entity_type": entity_type,
@@ -559,6 +581,197 @@ def create_app(state: AppState | None = None) -> FastAPI:
                         item[key] = value
 
         return HTMLResponse(content="")
+
+    @app.post("/table/{parent_entity_type}/{field_name}/bulk", response_class=HTMLResponse)
+    async def bulk_update_rows(
+        request: Request, parent_entity_type: str, field_name: str
+    ) -> HTMLResponse:
+        """Bulk update multiple rows with the same value."""
+        state = get_state()
+        facade = state.get_or_create_facade()
+
+        form_data = await request.form()
+        field = form_data.get("bulk-edit-field", "")
+        value = form_data.get("bulk-edit-value", "")
+        indices_str = form_data.get("indices", "")
+
+        if not field or not indices_str:
+            return error_response(request, templates, "Field and indices are required")
+
+        try:
+            indices = [int(i.strip()) for i in indices_str.split(",") if i.strip()]
+        except ValueError:
+            return error_response(request, templates, "Invalid indices format")
+
+        _, items = get_items_store(state, parent_entity_type, field_name)
+
+        updated_count = 0
+        for idx in indices:
+            if 0 <= idx < len(items):
+                item = items[idx]
+                if isinstance(item, dict):
+                    item[field] = value
+                    updated_count += 1
+
+        # Return the refreshed table view
+        try:
+            helper = getattr(facade, parent_entity_type)
+        except AttributeError as e:
+            raise HTTPException(
+                status_code=404, detail=f"Entity type not found: {parent_entity_type}"
+            ) from e
+
+        nested_entity_type = helper.nested_fields.get(field_name)
+        col_info = get_table_column_info(facade, nested_entity_type)
+
+        rows = []
+        for i, item in enumerate(items):
+            if hasattr(item, "model_dump"):
+                row = item.model_dump(exclude_none=True)
+            elif isinstance(item, dict):
+                row = item.copy()
+            else:
+                row = {"value": str(item)}
+            row["_idx"] = i
+            rows.append(row)
+
+        response = templates.TemplateResponse(
+            request,
+            "partials/table.html",
+            {
+                "field_name": field_name,
+                "entity_type": nested_entity_type,
+                "columns": col_info["columns"],
+                "column_types": col_info["column_types"],
+                "column_constraints": col_info["column_constraints"],
+                "required_columns": col_info["required_columns"],
+                "has_nested_children": col_info["has_nested_children"],
+                "rows": rows,
+                "parent_entity_type": parent_entity_type,
+                "editing_node_id": state.editing_node_id,
+                "breadcrumb": build_breadcrumb(state),
+                "nested_context": state.nested_edit_stack[-1] if state.nested_edit_stack else None,
+                "notification": {
+                    "type": "success",
+                    "message": f"Updated {updated_count} rows",
+                },
+            },
+        )
+        return response
+
+    @app.post("/table/{parent_entity_type}/{field_name}/paste", response_class=HTMLResponse)
+    async def paste_cells(
+        request: Request, parent_entity_type: str, field_name: str
+    ) -> HTMLResponse:
+        """Apply pasted cell values from clipboard."""
+        import json
+
+        state = get_state()
+        form_data = await request.form()
+        changes_json = form_data.get("changes", "[]")
+
+        try:
+            changes = json.loads(changes_json)
+        except json.JSONDecodeError:
+            return error_response(request, templates, "Invalid paste data format")
+
+        _, items = get_items_store(state, parent_entity_type, field_name)
+
+        updated_count = 0
+        for change in changes:
+            idx = change.get("idx")
+            field = change.get("field")
+            value = change.get("value")
+
+            if idx is not None and field and 0 <= idx < len(items):
+                item = items[idx]
+                if isinstance(item, dict):
+                    item[field] = value
+                    updated_count += 1
+
+        return templates.TemplateResponse(
+            request,
+            "components/notification.html",
+            {
+                "type": "success",
+                "message": f"Pasted {updated_count} cells",
+            },
+        )
+
+    # -------------------------------------------------------------------------
+    # Lookup API routes (for cross-entity references)
+    # -------------------------------------------------------------------------
+
+    @app.get("/api/lookup/{entity_type}")
+    async def lookup_entities(
+        entity_type: str,
+        q: str = Query(default="", description="Search query"),
+    ) -> JSONResponse:
+        """Search entities of a given type for autocomplete.
+
+        Args:
+            entity_type: The type of entity to search (e.g., "ObservationUnit").
+            q: Search query to filter by identifier and label fields.
+
+        Returns:
+            JSON with results list containing value and label for each match.
+        """
+        state = get_state()
+        facade = state.get_or_create_facade()
+
+        # Collect all entities organized by type
+        entities_by_type = collect_entities_by_type(state, facade)
+
+        # Get entities of the requested type
+        entities = entities_by_type.get(entity_type, [])
+
+        # Filter by search query
+        query = q.lower().strip()
+        if query:
+            filtered = []
+            for entity in entities:
+                value = entity.get("value", "").lower()
+                label = entity.get("label", "").lower()
+                if query in value or query in label:
+                    filtered.append(entity)
+            entities = filtered
+
+        # Return unique results (dedupe by value)
+        seen = set()
+        results = []
+        for entity in entities:
+            value = entity.get("value", "")
+            if value and value not in seen:
+                seen.add(value)
+                results.append(
+                    {
+                        "value": value,
+                        "label": entity.get("label", value),
+                    }
+                )
+
+        return JSONResponse(content={"results": results})
+
+    @app.get("/api/reference-fields/{entity_type}")
+    async def get_reference_fields_api(entity_type: str) -> JSONResponse:
+        """Get reference field definitions for an entity type.
+
+        Args:
+            entity_type: The entity type to get reference fields for.
+
+        Returns:
+            JSON with reference fields mapping field name to target info.
+        """
+        state = get_state()
+        facade = state.get_or_create_facade()
+
+        ref_fields = get_reference_fields(
+            profile=state.profile,
+            version=facade.version,
+            entity_type=entity_type,
+        )
+
+        return JSONResponse(content=ref_fields)
 
     # -------------------------------------------------------------------------
     # Nested form routes

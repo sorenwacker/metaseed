@@ -1,29 +1,54 @@
 <tr id="row-{{ row._idx }}" data-idx="{{ row._idx }}">
+    <td class="select-cell">
+        <input type="checkbox"
+               class="row-select"
+               data-idx="{{ row._idx }}"
+               data-testid="row-select-{{ row._idx }}">
+    </td>
     {% for col in columns %}
-    <td>
+    <td class="editable-cell" data-col="{{ col }}" data-row="{{ row._idx }}">
         {% set col_type = column_types.get(col, 'string') if column_types else 'string' %}
         {% set constraints = column_constraints.get(col, {}) if column_constraints else {} %}
-        <input type="text"
-               class="form-input"
-               name="{{ col }}"
-               value="{{ row.get(col, '') }}"
-               {% if col_type == 'date' %}
-               pattern="\d{4}-\d{2}-\d{2}"
-               placeholder="YYYY-MM-DD"
-               title="Date format: YYYY-MM-DD"
-               {% elif constraints.get('pattern') %}
-               pattern="{{ constraints.pattern }}"
-               {% endif %}
-               {% if constraints.get('min_length') %}data-minlength="{{ constraints.min_length }}"{% endif %}
-               {% if constraints.get('max_length') %}data-maxlength="{{ constraints.max_length }}"{% endif %}
-               {% if constraints.get('minimum') is not none %}data-min="{{ constraints.minimum }}"{% endif %}
-               {% if constraints.get('maximum') is not none %}data-max="{{ constraints.maximum }}"{% endif %}
-               hx-post="/table/{{ parent_entity_type }}/{{ field_name }}/row/{{ row._idx }}/cell"
-               hx-trigger="change"
-               hx-swap="none"
-               data-field="{{ col }}"
-               data-type="{{ col_type }}"
-               data-testid="cell-{{ row._idx }}-{{ col }}">
+        {% set ref_info = reference_fields.get(col, {}) if reference_fields else {} %}
+        <span class="cell-display" data-testid="cell-display-{{ row._idx }}-{{ col }}">{{ row.get(col, '') }}</span>
+        <div class="cell-input-wrapper{% if ref_info %} has-lookup{% endif %}">
+            <input type="text"
+                   class="form-input cell-input{% if ref_info %} lookup-input{% endif %}"
+                   name="{{ col }}"
+                   value="{{ row.get(col, '') }}"
+                   {% if ref_info %}
+                   data-lookup="{{ ref_info.target_entity }}"
+                   data-lookup-field="{{ ref_info.target_field }}"
+                   autocomplete="off"
+                   {% endif %}
+                   {% if col_type == 'date' %}
+                   pattern="\d{4}-\d{2}-\d{2}"
+                   placeholder="YYYY-MM-DD"
+                   title="Date format: YYYY-MM-DD"
+                   {% elif constraints.get('pattern') %}
+                   pattern="{{ constraints.pattern }}"
+                   {% endif %}
+                   {% if constraints.get('min_length') %}data-minlength="{{ constraints.min_length }}"{% endif %}
+                   {% if constraints.get('max_length') %}data-maxlength="{{ constraints.max_length }}"{% endif %}
+                   {% if constraints.get('minimum') is not none %}data-min="{{ constraints.minimum }}"{% endif %}
+                   {% if constraints.get('maximum') is not none %}data-max="{{ constraints.maximum }}"{% endif %}
+                   hx-post="/table/{{ parent_entity_type }}/{{ field_name }}/row/{{ row._idx }}/cell"
+                   hx-trigger="change"
+                   hx-swap="none"
+                   data-field="{{ col }}"
+                   data-type="{{ col_type }}"
+                   data-testid="cell-{{ row._idx }}-{{ col }}">
+            {% if ref_info %}
+            <button type="button"
+                    class="lookup-btn"
+                    data-lookup="{{ ref_info.target_entity }}"
+                    data-input="cell-{{ row._idx }}-{{ col }}"
+                    title="Browse {{ ref_info.target_entity }}"
+                    data-testid="lookup-btn-{{ row._idx }}-{{ col }}">
+                &#128269;
+            </button>
+            {% endif %}
+        </div>
     </td>
     {% endfor %}
     <td class="row-actions">

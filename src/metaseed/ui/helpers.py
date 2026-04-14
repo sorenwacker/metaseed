@@ -13,6 +13,8 @@ from fastapi.templating import Jinja2Templates
 from pydantic import ValidationError
 from starlette.requests import Request
 
+from metaseed.specs.loader import SpecLoader
+
 if TYPE_CHECKING:
     from metaseed.facade import ProfileFacade
 
@@ -192,6 +194,154 @@ def format_table_rows(items: list) -> list[dict]:
         row["_idx"] = i
         rows.append(row)
     return rows
+
+
+def get_reference_fields(profile: str, version: str, entity_type: str) -> dict[str, dict]:
+    """Get all reference fields for an entity type by parsing YAML validation rules.
+
+    Reference rules are defined in the spec like:
+        - name: sample_observation_unit_reference
+          applies_to: [Sample]
+          field: observation_unit_id
+          reference: ObservationUnit.unique_id
+
+    Args:
+        profile: Profile name (e.g., "miappe").
+        version: Profile version (e.g., "1.1").
+        entity_type: Entity type name (e.g., "Sample").
+
+    Returns:
+        Dictionary mapping field names to their reference info:
+        {
+            "observation_unit_id": {
+                "target_entity": "ObservationUnit",
+                "target_field": "unique_id"
+            },
+            ...
+        }
+    """
+    loader = SpecLoader(profile=profile)
+    try:
+        spec = loader.load_profile(version=version, profile=profile)
+    except Exception:
+        return {}
+
+    reference_fields = {}
+    for rule in spec.validation_rules:
+        if not rule.reference or not rule.field:
+            continue
+
+        applies_to = rule.applies_to
+        if isinstance(applies_to, str):
+            applies_to = [applies_to] if applies_to != "all" else []
+
+        if entity_type in applies_to:
+            target_entity, target_field = rule.reference.split(".")
+            reference_fields[rule.field] = {
+                "target_entity": target_entity,
+                "target_field": target_field,
+            }
+
+    return reference_fields
+
+
+def collect_entities_by_type(state: AppState, facade: ProfileFacade) -> dict[str, list[dict]]:
+    """Collect all entities (root and nested) organized by type.
+
+    Traverses nodes_by_id and nested items to extract all entities.
+
+    Args:
+        state: Application state containing nodes and nested items.
+        facade: Profile facade for entity metadata.
+
+    Returns:
+        Dictionary mapping entity type to list of entity data:
+        {
+            "ObservationUnit": [
+                {"identifier": "OU-1", "label": "Obs Unit 1", "data": {...}},
+                ...
+            ],
+            ...
+        }
+    """
+    entities_by_type: dict[str, list[dict]] = {}
+
+    def add_entity(entity_type: str, data: dict) -> None:
+        """Add an entity to the collection."""
+        if entity_type not in entities_by_type:
+            entities_by_type[entity_type] = []
+
+        # Extract identifier and label for display
+        identifier = ""
+        label = ""
+
+        # Try common ID field names
+        for id_field in ["unique_id", "identifier", "name", "title"]:
+            if id_field in data and data[id_field]:
+                identifier = str(data[id_field])
+                break
+
+        # Try to build a label from multiple fields
+        for label_field in ["title", "name", "description", "unique_id", "identifier"]:
+            if label_field in data and data[label_field]:
+                label = str(data[label_field])
+                break
+
+        if not label:
+            label = identifier
+
+        entities_by_type[entity_type].append(
+            {
+                "value": identifier,
+                "label": label,
+                "data": data,
+            }
+        )
+
+    def extract_nested(data: dict, entity_type: str) -> None:
+        """Recursively extract nested entities."""
+        helper = getattr(facade, entity_type, None)
+        if not helper:
+            return
+
+        for field_name, nested_type in helper.nested_fields.items():
+            if field_name in data and data[field_name]:
+                nested_items = data[field_name]
+                if isinstance(nested_items, list):
+                    for item in nested_items:
+                        if hasattr(item, "model_dump"):
+                            item_data = item.model_dump(exclude_none=True)
+                        elif isinstance(item, dict):
+                            item_data = item.copy()
+                        else:
+                            continue
+                        add_entity(nested_type, item_data)
+                        extract_nested(item_data, nested_type)
+
+    # Process root nodes
+    for node in state.nodes_by_id.values():
+        if hasattr(node.instance, "model_dump"):
+            data = node.instance.model_dump(exclude_none=True)
+        else:
+            data = {}
+        add_entity(node.entity_type, data)
+        extract_nested(data, node.entity_type)
+
+    # Process current_nested_items (in-progress edits)
+    for field_name, items in state.current_nested_items.items():
+        # Try to determine the entity type from context
+        if state.editing_node_id:
+            editing_node = state.nodes_by_id.get(state.editing_node_id)
+            if editing_node:
+                helper = getattr(facade, editing_node.entity_type, None)
+                if helper and field_name in helper.nested_fields:
+                    nested_type = helper.nested_fields[field_name]
+                    for item in items:
+                        if isinstance(item, dict):
+                            add_entity(nested_type, item)
+                            extract_nested(item, nested_type)
+
+    return entities_by_type
 
 
 def build_breadcrumb(state: AppState) -> list[dict]:
