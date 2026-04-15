@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 
 from pydantic import BaseModel
 
-from metaseed.models.factory import create_model_from_spec
+from metaseed.models.factory import create_model_from_spec, set_model_context, set_model_loader
 from metaseed.models.registry import (
     ModelNotFoundError,
     ModelRegistry,
@@ -81,6 +81,9 @@ def get_model(name: str, version: str = "1.1", profile: str = "miappe") -> type[
     # Include profile in cache key
     cache_version = f"{profile.lower()}:{version}"
 
+    # Set context for nested entity resolution
+    set_model_context(profile.lower(), version)
+
     # Check if already cached
     if registry.has(normalized_name, cache_version):
         return registry.get(normalized_name, cache_version)
@@ -98,3 +101,7 @@ def get_model(name: str, version: str = "1.1", profile: str = "miappe") -> type[
     registry.register(normalized_name, cache_version, model)
 
     return model
+
+
+# Initialize the model loader for nested entity resolution
+set_model_loader(get_model)

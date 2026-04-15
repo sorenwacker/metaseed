@@ -42,6 +42,7 @@ def _validate_nested(
     data: dict[str, Any],
     entity: str,
     version: str,
+    profile: str = "miappe",
     path: str = "",
 ) -> list[ValidationError]:
     """Recursively validate data and nested entities.
@@ -49,7 +50,8 @@ def _validate_nested(
     Args:
         data: Dictionary to validate.
         entity: Entity type name.
-        version: MIAPPE version.
+        version: Profile version.
+        profile: Profile name.
         path: Current path for error reporting.
 
     Returns:
@@ -60,14 +62,14 @@ def _validate_nested(
     errors: list[ValidationError] = []
 
     # Validate current entity
-    engine = create_engine_for_entity(entity, version)
+    engine = create_engine_for_entity(entity, version, profile=profile)
     for error in engine.validate(data):
         # Prefix field with path for nested errors
         field = f"{path}.{error.field}" if path else error.field
         errors.append(ValidationError(field=field, message=error.message, rule=error.rule))
 
     # Find and validate nested list fields
-    loader = SpecLoader()
+    loader = SpecLoader(profile=profile)
     try:
         spec = loader.load_entity(entity, version)
     except Exception:
@@ -90,7 +92,7 @@ def _validate_nested(
             for i, item in enumerate(items):
                 if isinstance(item, dict):
                     item_path = f"{path}.{field.name}[{i}]" if path else f"{field.name}[{i}]"
-                    errors.extend(_validate_nested(item, item_entity, version, item_path))
+                    errors.extend(_validate_nested(item, item_entity, version, profile, item_path))
 
     return errors
 
@@ -99,6 +101,7 @@ def validate(
     data: dict[str, Any] | BaseModel,
     entity: str | None = None,
     version: str = "1.1",
+    profile: str = "miappe",
     cascade: bool = True,
 ) -> list[ValidationError]:
     """Validate data against entity rules.
@@ -110,7 +113,8 @@ def validate(
         data: Dictionary or Pydantic model to validate.
         entity: Entity name (e.g., "investigation"). Auto-detected from
             model class name if data is a BaseModel and entity is None.
-        version: MIAPPE version.
+        version: Profile version.
+        profile: Profile name (e.g., "miappe", "isa").
         cascade: If True, recursively validate nested entities.
 
     Returns:
@@ -138,7 +142,7 @@ def validate(
         raise ValueError("entity must be specified when data is a dict")
 
     if cascade:
-        return _validate_nested(data, entity, version)
+        return _validate_nested(data, entity, version, profile)
 
-    engine = create_engine_for_entity(entity, version)
+    engine = create_engine_for_entity(entity, version, profile=profile)
     return engine.validate(data)

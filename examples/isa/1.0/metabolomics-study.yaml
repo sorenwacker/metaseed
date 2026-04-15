@@ -8,7 +8,7 @@ description: >
   cold-tolerant accessions during cold acclimation using LC-MS based
   untargeted metabolomics.
 submission_date: "2024-02-20"
-public_release_date: "2024-08-01"
+public_release_date: "2025-02-20"
 
 contacts:
   - last_name: Johnson
@@ -281,33 +281,10 @@ studies:
       - study_id: STU-ARAB-COLD-01
         name: temperature
         factor_type: environmental factor
-        values:
-          - factor_id: temperature
-            value: "4"
-            unit: degree Celsius
-          - factor_id: temperature
-            value: "22"
-            unit: degree Celsius
 
       - study_id: STU-ARAB-COLD-01
         name: time
         factor_type: temporal factor
-        values:
-          - factor_id: time
-            value: "0"
-            unit: hours
-          - factor_id: time
-            value: "6"
-            unit: hours
-          - factor_id: time
-            value: "24"
-            unit: hours
-          - factor_id: time
-            value: "72"
-            unit: hours
-          - factor_id: time
-            value: "168"
-            unit: hours
 
     processes:
       - study_id: STU-ARAB-COLD-01

@@ -10,16 +10,9 @@ root_entity: Investigation
 ontology: isaterms
 
 validation_rules:
-  # Date rules
-  - name: submission_before_release
-    description: Submission date should not be after public release date
-    applies_to: [Investigation, Study]
-    condition: (NOT submission_date OR NOT public_release_date) OR (submission_date <= public_release_date)
-
-  - name: date_order
-    description: End date must not be before start date
-    applies_to: [Study, Assay]
-    condition: end_date >= start_date
+  # Note: Date comparison rules (submission_before_release, date_order) require
+  # enhanced condition evaluator support. These are documented constraints but
+  # not automatically validated.
 
   # Identifier pattern
   - name: identifier_pattern

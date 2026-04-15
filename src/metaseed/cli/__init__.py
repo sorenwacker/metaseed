@@ -116,7 +116,7 @@ def validate(
         echo_error(f"Invalid YAML: {e}")
         raise typer.Exit(EXIT_INPUT_ERROR) from None
 
-    errors = validate_data(data, entity, version)
+    errors = validate_data(data, entity, version, profile=profile)
 
     if errors:
         typer.echo(f"Validation failed with {len(errors)} error(s):")

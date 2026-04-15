@@ -18,17 +18,56 @@ if TYPE_CHECKING:
     pass
 
 # Registry for resolving entity types during deserialization
+# Keys are "profile:version:name" to support multiple profiles
 _MODEL_REGISTRY: dict[str, type[BaseModel]] = {}
 
+# Current profile context for nested entity resolution
+_CURRENT_PROFILE: str = "miappe"
+_CURRENT_VERSION: str = "1.1"
 
-def register_model(name: str, model: type[BaseModel]) -> None:
+# Lazy loader function (set by __init__.py to avoid circular imports)
+_MODEL_LOADER: Any = None
+
+
+def set_model_loader(loader: Any) -> None:
+    """Set the model loader function for lazy loading nested entities."""
+    global _MODEL_LOADER
+    _MODEL_LOADER = loader
+
+
+def set_model_context(profile: str, version: str) -> None:
+    """Set the current profile context for nested entity resolution."""
+    global _CURRENT_PROFILE, _CURRENT_VERSION
+    _CURRENT_PROFILE = profile
+    _CURRENT_VERSION = version
+
+
+def register_model(name: str, model: type[BaseModel], profile: str = "", version: str = "") -> None:
     """Register a model for nested entity resolution."""
-    _MODEL_REGISTRY[name] = model
+    # Use provided profile/version or fall back to current context
+    p = profile or _CURRENT_PROFILE
+    v = version or _CURRENT_VERSION
+    key = f"{p}:{v}:{name}"
+    _MODEL_REGISTRY[key] = model
 
 
 def get_registered_model(name: str) -> type[BaseModel] | None:
-    """Get a registered model by name."""
-    return _MODEL_REGISTRY.get(name)
+    """Get a registered model by name using current profile context.
+
+    If the model is not in the registry but a loader is available,
+    attempt to load it on demand.
+    """
+    key = f"{_CURRENT_PROFILE}:{_CURRENT_VERSION}:{name}"
+    model = _MODEL_REGISTRY.get(key)
+
+    if model is None and _MODEL_LOADER is not None:
+        # Try to load the model on demand (silently fail if not found)
+        import contextlib
+
+        with contextlib.suppress(Exception):
+            model = _MODEL_LOADER(name, version=_CURRENT_VERSION, profile=_CURRENT_PROFILE)
+
+    return model
 
 
 class MIAPPEBaseModel(BaseModel):
