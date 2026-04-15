@@ -309,6 +309,8 @@ studies:
             value: B73
         samples:
           - identifier: SAM-B73-HN-R1-LEAF
+            study_id: STU-MAIZE-N-2024
+            name: B73 high nitrogen leaf sample
             observation_unit_id: OU-B73-HN-R1
             plant_anatomical_entity: leaf
             collection_date: "2024-05-15T10:00:00"

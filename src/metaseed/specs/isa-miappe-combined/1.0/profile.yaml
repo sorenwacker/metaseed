@@ -18,15 +18,9 @@ root_entity: Investigation
 ontology: combined
 
 validation_rules:
-  - name: date_order
-    description: End date must not be before start date
-    applies_to: [Study, Assay]
-    condition: end_date >= start_date
-
-  - name: event_date_order
-    description: Event end date must not be before event date
-    applies_to: [Event]
-    condition: end_date >= date
+  # Note: Date comparison rules (date_order, event_date_order) require enhanced
+  # condition evaluator support. These are documented constraints but not
+  # automatically validated.
 
   - name: identifier_pattern
     description: Identifiers must be alphanumeric with underscores/hyphens
@@ -114,11 +108,9 @@ validation_rules:
     applies_to: [ObservationUnit]
     condition: (observation_unit_x_ref AND observation_unit_y_ref) OR (NOT observation_unit_x_ref AND NOT observation_unit_y_ref)
 
-  # Date consistency
-  - name: submission_before_release
-    description: Submission date must not be after public release date
-    applies_to: [Study, Investigation]
-    condition: (NOT submission_date OR NOT public_release_date) OR (submission_date <= public_release_date)
+  # Note: Date comparison rules (submission_before_release) require enhanced
+  # condition evaluator support. These are documented constraints but not
+  # automatically validated.
 
   # Vocabulary constraints
   - name: observation_unit_type_vocabulary

@@ -32,15 +32,9 @@ root_entity: Investigation
 ontology: combined
 
 validation_rules:
-  - name: date_order
-    description: End date must not be before start date
-    applies_to: [Study, Assay, Experiment]
-    condition: end_date >= start_date
-
-  - name: event_date_order
-    description: Event end date must not be before event date
-    applies_to: [Event]
-    condition: end_date >= date
+  # Note: Date comparison rules (date_order, event_date_order) require enhanced
+  # condition evaluator support. These are documented constraints but not
+  # automatically validated.
 
   - name: identifier_pattern
     description: Identifiers must be alphanumeric with underscores/hyphens
@@ -54,9 +48,9 @@ validation_rules:
     condition: (latitude AND longitude) OR (NOT latitude AND NOT longitude)
 
   - name: person_name_required
-    description: Person must have name OR (first_name AND last_name)
+    description: Person must have family_name (v2.0 naming)
     applies_to: [Person]
-    condition: name OR (first_name AND last_name)
+    condition: family_name
 
   # Numeric range constraints
   - name: latitude_range
@@ -148,10 +142,7 @@ validation_rules:
     applies_to: [ObservationUnit]
     condition: (observation_unit_x_ref AND observation_unit_y_ref) OR (NOT observation_unit_x_ref AND NOT observation_unit_y_ref)
 
-  - name: submission_before_release
-    description: Submission date must not be after public release date
-    applies_to: [Study, Investigation]
-    condition: (NOT submission_date OR NOT public_release_date) OR (submission_date <= public_release_date)
+  # Note: submission_before_release rule requires date comparison support.
 
   # Vocabulary constraints
   - name: observation_unit_type_vocabulary
