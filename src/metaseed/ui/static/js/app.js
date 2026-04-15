@@ -590,11 +590,16 @@ function handleLookupKeydown(e) {
     var input = e.target;
     var entityType = input.dataset.lookup;
 
-    // Tab key: show all available foreign keys if autocomplete not visible
+    // Tab key: open the lookup modal for better UX
     if (e.key === 'Tab' && !activeAutocomplete) {
         e.preventDefault();
-        // Fetch all values (empty query) and show dropdown
-        fetchLookupSuggestions(input, entityType, '');
+        // Find or create a testid for this input
+        var inputId = input.getAttribute('data-testid');
+        if (!inputId) {
+            inputId = 'lookup-input-' + Date.now();
+            input.setAttribute('data-testid', inputId);
+        }
+        openLookupModal(entityType, inputId);
         return;
     }
 
@@ -669,91 +674,30 @@ function fetchLookupSuggestions(input, entityType, query) {
         });
 }
 
-// Show autocomplete dropdown with search box
+// Show simple autocomplete dropdown (no inline search - use Tab for modal)
 function showAutocomplete(input, results, entityType) {
     hideAutocomplete();
+
+    if (!results || results.length === 0) return;
 
     var dropdown = document.createElement('div');
     dropdown.className = 'autocomplete-dropdown';
     dropdown.setAttribute('data-testid', 'autocomplete-dropdown');
 
-    // Add search input at top
-    var searchWrapper = document.createElement('div');
-    searchWrapper.className = 'autocomplete-search-wrapper';
-    var searchInput = document.createElement('input');
-    searchInput.type = 'text';
-    searchInput.className = 'autocomplete-search';
-    searchInput.placeholder = 'Filter...';
-    searchInput.setAttribute('data-testid', 'autocomplete-search');
-    searchWrapper.appendChild(searchInput);
-    dropdown.appendChild(searchWrapper);
+    results.forEach(function(result, index) {
+        var item = document.createElement('div');
+        item.className = 'autocomplete-item';
+        if (index === 0) item.classList.add('active');
+        item.dataset.value = result.value;
+        item.innerHTML = '<span class="autocomplete-value">' + escapeHtml(result.value) + '</span>' +
+                        (result.label !== result.value ? '<span class="autocomplete-label">' + escapeHtml(result.label) + '</span>' : '');
 
-    // Results container
-    var resultsContainer = document.createElement('div');
-    resultsContainer.className = 'autocomplete-results';
-    dropdown.appendChild(resultsContainer);
-
-    // Store entity type for filtering
-    var currentEntityType = entityType || input.dataset.lookup;
-
-    function renderResults(filteredResults) {
-        resultsContainer.innerHTML = '';
-
-        if (!filteredResults || filteredResults.length === 0) {
-            var emptyMsg = document.createElement('div');
-            emptyMsg.className = 'autocomplete-empty';
-            emptyMsg.textContent = 'No items found';
-            resultsContainer.appendChild(emptyMsg);
-            return;
-        }
-
-        filteredResults.forEach(function(result, index) {
-            var item = document.createElement('div');
-            item.className = 'autocomplete-item';
-            if (index === 0) item.classList.add('active');
-            item.dataset.value = result.value;
-            item.innerHTML = '<span class="autocomplete-value">' + escapeHtml(result.value) + '</span>' +
-                            (result.label !== result.value ? '<span class="autocomplete-label">' + escapeHtml(result.label) + '</span>' : '');
-
-            item.addEventListener('mousedown', function(e) {
-                e.preventDefault();
-                selectLookupValue(input, result.value);
-            });
-
-            resultsContainer.appendChild(item);
+        item.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            selectLookupValue(input, result.value);
         });
-    }
 
-    // Initial render
-    if (!results || results.length === 0) {
-        var emptyMsg = document.createElement('div');
-        emptyMsg.className = 'autocomplete-empty';
-        emptyMsg.textContent = 'No items available. Create some first.';
-        resultsContainer.appendChild(emptyMsg);
-    } else {
-        renderResults(results);
-    }
-
-    // Filter on search input
-    searchInput.addEventListener('input', function() {
-        var query = this.value.toLowerCase().trim();
-        if (!results) return;
-
-        if (!query) {
-            renderResults(results);
-            return;
-        }
-
-        var filtered = results.filter(function(r) {
-            return r.value.toLowerCase().includes(query) ||
-                   (r.label && r.label.toLowerCase().includes(query));
-        });
-        renderResults(filtered);
-    });
-
-    // Prevent dropdown from closing when clicking search
-    searchInput.addEventListener('mousedown', function(e) {
-        e.stopPropagation();
+        dropdown.appendChild(item);
     });
 
     // Position dropdown below input
@@ -765,11 +709,6 @@ function showAutocomplete(input, results, entityType) {
     }
 
     activeAutocomplete = dropdown;
-
-    // Focus search input after small delay
-    setTimeout(function() {
-        searchInput.focus();
-    }, 50);
 }
 
 // Hide autocomplete dropdown
