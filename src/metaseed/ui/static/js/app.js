@@ -669,30 +669,91 @@ function fetchLookupSuggestions(input, entityType, query) {
         });
 }
 
-// Show autocomplete dropdown
-function showAutocomplete(input, results) {
+// Show autocomplete dropdown with search box
+function showAutocomplete(input, results, entityType) {
     hideAutocomplete();
-
-    if (!results || results.length === 0) return;
 
     var dropdown = document.createElement('div');
     dropdown.className = 'autocomplete-dropdown';
     dropdown.setAttribute('data-testid', 'autocomplete-dropdown');
 
-    results.forEach(function(result, index) {
-        var item = document.createElement('div');
-        item.className = 'autocomplete-item';
-        if (index === 0) item.classList.add('active');
-        item.dataset.value = result.value;
-        item.innerHTML = '<span class="autocomplete-value">' + escapeHtml(result.value) + '</span>' +
-                        (result.label !== result.value ? '<span class="autocomplete-label">' + escapeHtml(result.label) + '</span>' : '');
+    // Add search input at top
+    var searchWrapper = document.createElement('div');
+    searchWrapper.className = 'autocomplete-search-wrapper';
+    var searchInput = document.createElement('input');
+    searchInput.type = 'text';
+    searchInput.className = 'autocomplete-search';
+    searchInput.placeholder = 'Filter...';
+    searchInput.setAttribute('data-testid', 'autocomplete-search');
+    searchWrapper.appendChild(searchInput);
+    dropdown.appendChild(searchWrapper);
 
-        item.addEventListener('mousedown', function(e) {
-            e.preventDefault();
-            selectLookupValue(input, result.value);
+    // Results container
+    var resultsContainer = document.createElement('div');
+    resultsContainer.className = 'autocomplete-results';
+    dropdown.appendChild(resultsContainer);
+
+    // Store entity type for filtering
+    var currentEntityType = entityType || input.dataset.lookup;
+
+    function renderResults(filteredResults) {
+        resultsContainer.innerHTML = '';
+
+        if (!filteredResults || filteredResults.length === 0) {
+            var emptyMsg = document.createElement('div');
+            emptyMsg.className = 'autocomplete-empty';
+            emptyMsg.textContent = 'No items found';
+            resultsContainer.appendChild(emptyMsg);
+            return;
+        }
+
+        filteredResults.forEach(function(result, index) {
+            var item = document.createElement('div');
+            item.className = 'autocomplete-item';
+            if (index === 0) item.classList.add('active');
+            item.dataset.value = result.value;
+            item.innerHTML = '<span class="autocomplete-value">' + escapeHtml(result.value) + '</span>' +
+                            (result.label !== result.value ? '<span class="autocomplete-label">' + escapeHtml(result.label) + '</span>' : '');
+
+            item.addEventListener('mousedown', function(e) {
+                e.preventDefault();
+                selectLookupValue(input, result.value);
+            });
+
+            resultsContainer.appendChild(item);
         });
+    }
 
-        dropdown.appendChild(item);
+    // Initial render
+    if (!results || results.length === 0) {
+        var emptyMsg = document.createElement('div');
+        emptyMsg.className = 'autocomplete-empty';
+        emptyMsg.textContent = 'No items available. Create some first.';
+        resultsContainer.appendChild(emptyMsg);
+    } else {
+        renderResults(results);
+    }
+
+    // Filter on search input
+    searchInput.addEventListener('input', function() {
+        var query = this.value.toLowerCase().trim();
+        if (!results) return;
+
+        if (!query) {
+            renderResults(results);
+            return;
+        }
+
+        var filtered = results.filter(function(r) {
+            return r.value.toLowerCase().includes(query) ||
+                   (r.label && r.label.toLowerCase().includes(query));
+        });
+        renderResults(filtered);
+    });
+
+    // Prevent dropdown from closing when clicking search
+    searchInput.addEventListener('mousedown', function(e) {
+        e.stopPropagation();
     });
 
     // Position dropdown below input
@@ -704,6 +765,11 @@ function showAutocomplete(input, results) {
     }
 
     activeAutocomplete = dropdown;
+
+    // Focus search input after small delay
+    setTimeout(function() {
+        searchInput.focus();
+    }, 50);
 }
 
 // Hide autocomplete dropdown
@@ -738,11 +804,13 @@ function escapeHtml(text) {
 }
 
 // ============================================
-// Lookup Modal
+// Lookup Modal with Multi-select
 // ============================================
 
 var lookupModalInput = null;
 var lookupModalEntityType = null;
+var lookupModalSelectedValues = new Set();
+var lookupModalMultiSelectEnabled = false;
 
 // Open lookup modal
 function openLookupModal(entityType, inputId) {
@@ -751,18 +819,45 @@ function openLookupModal(entityType, inputId) {
 
     lookupModalInput = input;
     lookupModalEntityType = entityType;
+    lookupModalSelectedValues.clear();
+    lookupModalMultiSelectEnabled = false;
 
     var modal = document.getElementById('lookup-modal');
     var entityTypeSpan = document.getElementById('lookup-modal-entity-type');
     var searchInput = document.getElementById('lookup-modal-search');
     var resultsDiv = document.getElementById('lookup-modal-results');
+    var multiSelectCheckbox = document.getElementById('lookup-modal-multiselect');
+    var footer = document.getElementById('lookup-modal-footer');
+    var selectionDiv = document.getElementById('lookup-modal-selection');
 
     entityTypeSpan.textContent = entityType;
     searchInput.value = '';
     resultsDiv.innerHTML = '<div class="lookup-modal-loading">Loading...</div>';
+    multiSelectCheckbox.checked = false;
+    footer.classList.add('hidden');
+    selectionDiv.classList.add('hidden');
+
+    // Parse existing values if multi-select
+    var existingValue = input.value.trim();
+    if (existingValue) {
+        existingValue.split(',').forEach(function(v) {
+            var trimmed = v.trim();
+            if (trimmed) lookupModalSelectedValues.add(trimmed);
+        });
+    }
 
     modal.classList.remove('hidden');
     searchInput.focus();
+
+    // Set up multi-select toggle
+    multiSelectCheckbox.onchange = function() {
+        lookupModalMultiSelectEnabled = this.checked;
+        footer.classList.toggle('hidden', !this.checked);
+        selectionDiv.classList.toggle('hidden', !this.checked);
+        updateSelectionCount();
+        // Re-render results with checkboxes
+        loadModalResults(entityType, searchInput.value);
+    };
 
     // Load all entities of this type
     loadModalResults(entityType, '');
@@ -791,7 +886,7 @@ function loadModalResults(entityType, query) {
         })
         .then(function(data) {
             if (!data.results || data.results.length === 0) {
-                resultsDiv.innerHTML = '<div class="lookup-modal-empty">No items found</div>';
+                resultsDiv.innerHTML = '<div class="lookup-modal-empty">No ' + escapeHtml(entityType) + ' items found. Create some first.</div>';
                 return;
             }
 
@@ -800,12 +895,34 @@ function loadModalResults(entityType, query) {
                 var item = document.createElement('div');
                 item.className = 'lookup-modal-item';
                 item.dataset.value = result.value;
-                item.innerHTML = '<span class="lookup-modal-item-value">' + escapeHtml(result.value) + '</span>' +
-                                (result.label !== result.value ? '<span class="lookup-modal-item-label">' + escapeHtml(result.label) + '</span>' : '');
 
-                item.addEventListener('click', function() {
-                    selectModalValue(result.value);
-                });
+                if (lookupModalMultiSelectEnabled) {
+                    // Multi-select mode: show checkbox
+                    var isSelected = lookupModalSelectedValues.has(result.value);
+                    item.innerHTML = '<label class="lookup-modal-item-checkbox">' +
+                        '<input type="checkbox" ' + (isSelected ? 'checked' : '') + ' data-value="' + escapeHtml(result.value) + '">' +
+                        '<span class="lookup-modal-item-value">' + escapeHtml(result.value) + '</span>' +
+                        (result.label !== result.value ? '<span class="lookup-modal-item-label">' + escapeHtml(result.label) + '</span>' : '') +
+                        '</label>';
+
+                    var checkbox = item.querySelector('input[type="checkbox"]');
+                    checkbox.addEventListener('change', function() {
+                        if (this.checked) {
+                            lookupModalSelectedValues.add(result.value);
+                        } else {
+                            lookupModalSelectedValues.delete(result.value);
+                        }
+                        updateSelectionCount();
+                    });
+                } else {
+                    // Single-select mode: click to select
+                    item.innerHTML = '<span class="lookup-modal-item-value">' + escapeHtml(result.value) + '</span>' +
+                                    (result.label !== result.value ? '<span class="lookup-modal-item-label">' + escapeHtml(result.label) + '</span>' : '');
+
+                    item.addEventListener('click', function() {
+                        selectModalValue(result.value);
+                    });
+                }
 
                 resultsDiv.appendChild(item);
             });
@@ -814,6 +931,35 @@ function loadModalResults(entityType, query) {
             console.error('Modal lookup error:', error);
             resultsDiv.innerHTML = '<div class="lookup-modal-error">Error loading results</div>';
         });
+}
+
+// Update selection count display
+function updateSelectionCount() {
+    var countSpan = document.getElementById('lookup-modal-selection-count');
+    if (countSpan) {
+        var count = lookupModalSelectedValues.size;
+        countSpan.textContent = count + ' selected';
+    }
+}
+
+// Confirm multi-select and close modal
+function confirmMultiSelect() {
+    if (lookupModalInput) {
+        var values = Array.from(lookupModalSelectedValues);
+        var valueStr = values.join(', ');
+        lookupModalInput.value = valueStr;
+        lookupModalInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+        // Update display if in editable cell
+        var cell = lookupModalInput.closest('.editable-cell');
+        if (cell) {
+            var display = cell.querySelector('.cell-display');
+            if (display) {
+                display.textContent = valueStr;
+            }
+        }
+    }
+    closeLookupModal();
 }
 
 // Select value from modal

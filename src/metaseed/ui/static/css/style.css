@@ -1321,9 +1321,42 @@ body::before {
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-md);
     z-index: 100;
-    max-height: 200px;
-    overflow-y: auto;
+    max-height: 280px;
+    display: flex;
+    flex-direction: column;
     margin-top: 2px;
+}
+
+.autocomplete-search-wrapper {
+    padding: var(--space-sm);
+    border-bottom: 1px solid var(--clr-parchment);
+    flex-shrink: 0;
+}
+
+.autocomplete-search {
+    width: 100%;
+    padding: var(--space-xs) var(--space-sm);
+    border: 1px solid var(--clr-parchment);
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+    font-family: var(--font-body);
+}
+
+.autocomplete-search:focus {
+    outline: none;
+    border-color: var(--clr-moss);
+}
+
+.autocomplete-results {
+    overflow-y: auto;
+    flex: 1;
+}
+
+.autocomplete-empty {
+    padding: var(--space-md);
+    text-align: center;
+    color: var(--clr-ink-light);
+    font-size: 0.875rem;
 }
 
 .autocomplete-item {
@@ -1489,6 +1522,79 @@ body::before {
 
 .lookup-modal-error {
     color: var(--clr-error);
+}
+
+/* Modal controls row */
+.lookup-modal-controls {
+    display: flex;
+    gap: var(--space-md);
+    align-items: center;
+}
+
+.lookup-modal-controls .form-input {
+    flex: 1;
+}
+
+.lookup-modal-multiselect-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    font-size: 0.875rem;
+    color: var(--clr-ink-light);
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.lookup-modal-multiselect-toggle input {
+    cursor: pointer;
+}
+
+/* Multi-select checkbox in items */
+.lookup-modal-item-checkbox {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-sm);
+    cursor: pointer;
+    width: 100%;
+}
+
+.lookup-modal-item-checkbox input[type="checkbox"] {
+    margin-top: 2px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.lookup-modal-item-checkbox .lookup-modal-item-value,
+.lookup-modal-item-checkbox .lookup-modal-item-label {
+    display: block;
+}
+
+/* Selection count */
+.lookup-modal-selection {
+    padding: var(--space-sm) var(--space-md);
+    background: var(--clr-success-bg);
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+    color: var(--clr-success);
+    font-weight: 500;
+}
+
+.lookup-modal-selection.hidden {
+    display: none;
+}
+
+/* Modal footer */
+.lookup-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-md);
+    padding: var(--space-lg);
+    border-top: 1px solid var(--clr-parchment);
+    background: var(--clr-paper);
+}
+
+.lookup-modal-footer.hidden {
+    display: none;
 }
 
 /* ============================================
