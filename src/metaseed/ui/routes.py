@@ -22,6 +22,7 @@ from metaseed.validators import validate as validate_data
 
 from .helpers import (
     build_breadcrumb,
+    build_inline_tables,
     collect_entities_by_type,
     collect_form_values,
     error_response,
@@ -29,6 +30,7 @@ from .helpers import (
     format_validation_errors,
     get_field_data,
     get_items_store,
+    get_parent_id_fields,
     get_reference_fields,
     get_table_column_info,
     get_table_columns,
@@ -40,42 +42,53 @@ UI_DIR = Path(__file__).parent
 TEMPLATES_DIR = UI_DIR / "templates"
 STATIC_DIR = UI_DIR / "static"
 
-# Profile display metadata for UI
-_PROFILE_DISPLAY_INFO = {
-    "miappe": {
-        "display_name": "MIAPPE",
-        "description": "Minimum Information About Plant Phenotyping Experiments. Best for plant phenotyping studies.",
-    },
-    "isa": {
-        "display_name": "ISA",
-        "description": "Investigation-Study-Assay framework. General purpose for life science experiments.",
-    },
-    "isa-miappe-combined": {
-        "display_name": "ISA-MIAPPE Combined",
-        "description": "Unified model combining ISA and MIAPPE. Supports both multi-omics and phenotyping.",
-    },
-}
-
 
 def _get_profile_display_info(factory: ProfileFactory) -> list[dict]:
     """Get display information for all available profiles.
+
+    Reads metadata from profile.yaml files.
 
     Args:
         factory: ProfileFactory instance.
 
     Returns:
-        List of profile info dicts with name, display_name, and description.
+        List of profile info dicts with name, display_name, description, root_entity, and versions.
     """
+    from metaseed.specs.loader import SpecLoader
+
     profiles = []
     for name in factory.list_profiles():
-        info = _PROFILE_DISPLAY_INFO.get(name, {})
-        profiles.append(
-            {
-                "name": name,
-                "display_name": info.get("display_name", name.upper()),
-                "description": info.get("description", f"{name} metadata profile."),
-            }
-        )
+        loader = SpecLoader(profile=name)
+        versions = loader.list_versions(name)
+        if not versions:
+            continue
+
+        # Load latest version to get profile metadata
+        latest_version = versions[-1]
+        try:
+            profile_spec = loader.load_profile(latest_version, name)
+            profiles.append(
+                {
+                    "name": name,
+                    "display_name": profile_spec.display_name or name.upper(),
+                    "description": profile_spec.description or f"{name} metadata profile.",
+                    "root_entity": profile_spec.root_entity,
+                    "versions": versions,
+                    "latest_version": latest_version,
+                }
+            )
+        except Exception:
+            # Fallback if profile can't be loaded
+            profiles.append(
+                {
+                    "name": name,
+                    "display_name": name.upper(),
+                    "description": f"{name} metadata profile.",
+                    "root_entity": "Investigation",
+                    "versions": versions,
+                    "latest_version": latest_version,
+                }
+            )
     return profiles
 
 
@@ -147,6 +160,76 @@ def create_app(state: AppState | None = None) -> FastAPI:
 
         return RedirectResponse(url="/", status_code=303)
 
+    @app.get("/load-example/{profile_name}/{version}")
+    async def load_example(profile_name: str, version: str) -> RedirectResponse:
+        """Load example data for a profile version."""
+        import yaml
+
+        from metaseed.models import get_model
+
+        state = get_state()
+        profile_factory = ProfileFactory()
+
+        if profile_name not in profile_factory.list_profiles():
+            raise HTTPException(status_code=400, detail=f"Unknown profile: {profile_name}")
+
+        # Find example file (structure: examples/profile/version/*.yaml)
+        examples_dir = Path(__file__).parent.parent.parent.parent / "examples"
+        version_dir = examples_dir / profile_name / version
+
+        if not version_dir.exists():
+            raise HTTPException(
+                status_code=404, detail=f"No example available for {profile_name} v{version}"
+            )
+
+        yaml_files = list(version_dir.glob("*.yaml"))
+        if not yaml_files:
+            raise HTTPException(status_code=404, detail=f"No example file found in {version_dir}")
+
+        example_file = yaml_files[0]
+
+        # Load example data
+        try:
+            example_data = yaml.safe_load(example_file.read_text(encoding="utf-8"))
+        except yaml.YAMLError as e:
+            raise HTTPException(status_code=500, detail=f"Error loading example: {e}") from e
+
+        # Reset state and set profile
+        state.reset()
+        state.profile = profile_name
+        state.version = version
+        state.facade = None
+        facade = state.get_or_create_facade()
+
+        # Determine root entity type (Investigation for most profiles)
+        root_entity = "Investigation"
+
+        # Create entity instance from example data
+        try:
+            Model = get_model(root_entity, version, profile=profile_name)
+            instance = Model(**example_data)
+        except Exception as e:
+            raise HTTPException(
+                status_code=500, detail=f"Error creating entity from example: {e}"
+            ) from e
+
+        # Add to tree and set as editing
+        node = state.add_node(root_entity, instance)
+        state.editing_node_id = node.id
+
+        # Populate current_nested_items from the instance
+        helper = getattr(facade, root_entity)
+        for field_name in helper.nested_fields:
+            if field_name in example_data and example_data[field_name]:
+                items = example_data[field_name]
+                if isinstance(items, list):
+                    state.current_nested_items[field_name] = list(items)
+                elif isinstance(items, dict):
+                    state.current_nested_items[field_name] = [items]
+
+        # Redirect to main page which will show the loaded entity
+        return RedirectResponse(url="/", status_code=303)
+
     @app.post("/reset", response_class=HTMLResponse)
     async def reset_state() -> HTMLResponse:
         """Reset all application state. Used for testing."""
@@ -162,24 +245,27 @@ def create_app(state: AppState | None = None) -> FastAPI:
     async def new_entity_form(request: Request, entity_type: str) -> HTMLResponse:
         """Render a new entity form."""
         state = get_state()
+        profile_factory = ProfileFactory()
 
         # Check if profile is specified in query params
         profile = request.query_params.get("profile")
 
-        # For Investigation, show profile selection if no profile specified
-        if entity_type == "Investigation" and not profile:
-            profile_factory = ProfileFactory()
+        # Show profile selection if this is a root entity request without profile
+        if not profile:
             profiles_info = _get_profile_display_info(profile_factory)
-            return templates.TemplateResponse(
-                request,
-                "partials/profile_select.html",
-                {"profiles": profiles_info},
-            )
+            root_entities = {p["root_entity"] for p in profiles_info}
+            if entity_type in root_entities:
+                return templates.TemplateResponse(
+                    request,
+                    "partials/profile_select.html",
+                    {"profiles": profiles_info},
+                )
 
         # If profile specified, switch to it
-        profile_factory = ProfileFactory()
+        version = request.query_params.get("version")
         if profile and profile in profile_factory.list_profiles():
             state.profile = profile
+            state.version = version  # None means use latest
             state.facade = None  # Reset facade to use new profile
 
         facade = state.get_or_create_facade()
@@ -201,6 +287,10 @@ def create_app(state: AppState | None = None) -> FastAPI:
         if "miappe_version" in helper.all_fields:
             auto_values["miappe_version"] = facade.version
 
+        # Check if example exists for this profile/version
+        examples_dir = Path(__file__).parent.parent.parent.parent / "examples"
+        example_exists = (examples_dir / state.profile / facade.version).exists()
+
         return templates.TemplateResponse(
             request,
             "partials/form.html",
@@ -218,6 +308,8 @@ def create_app(state: AppState | None = None) -> FastAPI:
                 "values": auto_values,
                 "auto_fields": set(auto_values.keys()),
                 "current_profile": state.profile,
+                "current_version": facade.version,
+                "example_available": example_exists,
             },
         )
 
@@ -268,6 +360,9 @@ def create_app(state: AppState | None = None) -> FastAPI:
             values["miappe_version"] = facade.version
             auto_fields.add("miappe_version")
 
+        # Build inline table data for nested fields
+        inline_tables = build_inline_tables(state, facade, entity_type)
+
         return templates.TemplateResponse(
             request,
             "partials/form.html",
@@ -284,6 +379,7 @@ def create_app(state: AppState | None = None) -> FastAPI:
                 "nested_fields": [f for f in fields if is_nested_field(f)],
                 "values": values,
                 "auto_fields": auto_fields,
+                "inline_tables": inline_tables,
             },
         )
 
@@ -338,6 +434,7 @@ def create_app(state: AppState | None = None) -> FastAPI:
                 node.id,
                 instance,
                 f"Created {entity_type}: {node.label}",
+                state,
             )
 
         except ValidationError as e:
@@ -403,6 +500,7 @@ def create_app(state: AppState | None = None) -> FastAPI:
                 node_id,
                 instance,
                 f"Saved {entity_type}: {node.label}",
+                state,
             )
 
         except ValidationError as e:
@@ -529,22 +627,67 @@ def create_app(state: AppState | None = None) -> FastAPI:
             else {}
         )
 
+        # Find fields that reference the parent and should be auto-filled
+        parent_id_fields = get_parent_id_fields(reference_fields, parent_entity_type)
+
+        # Get parent's identifier to auto-fill parent reference fields
+        parent_identifier = ""
+        if parent_id_fields and state.editing_node_id:
+            node = state.nodes_by_id.get(state.editing_node_id)
+            if node:
+                # Get the actual parent data - could be the root node or from nested stack
+                parent_data = None
+                if node.entity_type == parent_entity_type:
+                    # Parent is the root node
+                    if hasattr(node.instance, "model_dump"):
+                        parent_data = node.instance.model_dump(exclude_none=True)
+                elif state.nested_edit_stack:
+                    # Check nested stack for parent
+                    for ctx in reversed(state.nested_edit_stack):
+                        if ctx.entity_type == parent_entity_type:
+                            # Get the item from nested items
+                            parent_items = state.current_nested_items.get(ctx.field_name, [])
+                            if ctx.row_idx < len(parent_items):
+                                parent_data = parent_items[ctx.row_idx]
+                            break
+
+                if parent_data:
+                    # Get the identifier field value (usually "unique_id" or "identifier")
+                    for target_field in parent_id_fields.values():
+                        if target_field in parent_data:
+                            parent_identifier = str(parent_data[target_field])
+                            break
+
         new_row = dict.fromkeys(col_info["columns"], "")
         new_row["_idx"] = len(items)
+
+        # Auto-fill parent reference fields
+        for field_name_ref in parent_id_fields:
+            if field_name_ref in new_row:
+                new_row[field_name_ref] = parent_identifier
+
         items.append(new_row)
+
+        # Check if this is from an inline table (hx-target contains 'inline')
+        hx_target = request.headers.get("hx-target", "")
+        is_inline = "inline" in hx_target
+
+        template_name = "partials/inline_table_row.html" if is_inline else "partials/table_row.html"
 
         return templates.TemplateResponse(
             request,
-            "partials/table_row.html",
+            template_name,
             {
                 "row": new_row,
                 "columns": col_info["columns"],
                 "column_types": col_info["column_types"],
                 "column_constraints": col_info["column_constraints"],
                 "reference_fields": reference_fields,
+                "parent_id_fields": parent_id_fields,
                 "field_name": field_name,
                 "parent_entity_type": parent_entity_type,
                 "entity_type": entity_type,
+                "has_nested_children": col_info["has_nested_children"],
             },
         )
 
@@ -850,6 +993,14 @@ def create_app(state: AppState | None = None) -> FastAPI:
             for nf, nv in ctx.nested_items.items():
                 values[nf] = nv
 
+        # Build inline tables for this nested entity's own nested fields
+        inline_tables = {}
+        if state.nested_edit_stack:
+            ctx = state.nested_edit_stack[-1]
+            inline_tables = build_inline_tables(
+                state, facade, nested_entity_type, items_source=ctx.nested_items
+            )
+
         return templates.TemplateResponse(
             request,
             "partials/nested_form.html",
@@ -869,6 +1020,7 @@ def create_app(state: AppState | None = None) -> FastAPI:
                 "auto_fields": set(),
                 "editing_node_id": state.editing_node_id,
                 "breadcrumb": build_breadcrumb(state),
+                "inline_tables": inline_tables,
             },
         )
 
@@ -939,6 +1091,14 @@ def create_app(state: AppState | None = None) -> FastAPI:
             for nf, nv in ctx.nested_items.items():
                 values[nf] = nv
 
+        # Build inline tables for this nested entity's own nested fields
+        inline_tables = {}
+        if state.nested_edit_stack:
+            ctx = state.nested_edit_stack[-1]
+            inline_tables = build_inline_tables(
+                state, facade, nested_entity_type, items_source=ctx.nested_items
+            )
+
         return templates.TemplateResponse(
             request,
             "partials/nested_form.html",
@@ -958,6 +1118,7 @@ def create_app(state: AppState | None = None) -> FastAPI:
                 "auto_fields": set(),
                 "editing_node_id": state.editing_node_id,
                 "breadcrumb": build_breadcrumb(state),
+                "inline_tables": inline_tables,
                 "success_message": "Saved",
             },
         )
@@ -1046,7 +1207,24 @@ def create_app(state: AppState | None = None) -> FastAPI:
         wb.save(output)
         output.seek(0)
 
-        filename = f"miappe_export_{state.profile}.xlsx"
+        # Generate filename: YYMMDD-<standard>-<version>-<id>.xlsx
+        from datetime import datetime
+
+        date_str = datetime.now().strftime("%y%m%d")
+        version_str = facade.version.replace(".", "-")
+
+        # Try to get ID from root entity
+        entity_id = "export"
+        root_nodes = [n for n in state.nodes_by_id.values() if n.parent_id is None]
+        if root_nodes:
+            root_node = root_nodes[0]
+            if hasattr(root_node.instance, "model_dump"):
+                root_data = root_node.instance.model_dump()
+                if "unique_id" in root_data and root_data["unique_id"]:
+                    # Sanitize the ID for filename
+                    entity_id = str(root_data["unique_id"]).replace("/", "-").replace(":", "-")[:30]
+
+        filename = f"{date_str}-{state.profile}-{version_str}-{entity_id}.xlsx"
         return StreamingResponse(
             output,
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -1201,6 +1379,7 @@ def _render_entity_form(
     node_id: str,
     instance: Any,
     success_message: str,
+    state: AppState | None = None,
 ) -> HTMLResponse:
     """Render entity form after successful create/update."""
     fields = get_field_data(helper)
@@ -1210,6 +1389,11 @@ def _render_entity_form(
     if "miappe_version" in helper.all_fields:
         values["miappe_version"] = facade.version
         auto_fields.add("miappe_version")
+
+    # Build inline table data if state is available
+    inline_tables = {}
+    if state:
+        inline_tables = build_inline_tables(state, facade, entity_type)
 
     response = templates.TemplateResponse(
         request,
@@ -1226,6 +1410,7 @@ def _render_entity_form(
             "values": values,
             "auto_fields": auto_fields,
             "success_message": success_message,
+            "inline_tables": inline_tables,
         },
     )
     response.headers["HX-Trigger"] = (

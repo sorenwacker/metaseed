@@ -1,10 +1,4 @@
-<tr id="row-{{ row._idx }}" data-idx="{{ row._idx }}">
-    <td class="select-cell">
-        <input type="checkbox"
-               class="row-select"
-               data-idx="{{ row._idx }}"
-               data-testid="row-select-{{ row._idx }}">
-    </td>
+<tr id="row-{{ field_name }}-{{ row._idx }}" data-idx="{{ row._idx }}">
     {% for col in columns %}
     {% set is_parent_id = parent_id_fields and col in parent_id_fields %}
     <td class="editable-cell{% if is_parent_id %} readonly-cell{% endif %}" data-col="{{ col }}" data-row="{{ row._idx }}">
@@ -12,7 +6,7 @@
         {% set constraints = column_constraints.get(col, {}) if column_constraints else {} %}
         {% set ref_info = reference_fields.get(col, {}) if reference_fields else {} %}
         {% set show_lookup = ref_info and not is_parent_id %}
-        <span class="cell-display" data-testid="cell-display-{{ row._idx }}-{{ col }}">{{ row.get(col, '') }}</span>
+        <span class="cell-display" data-testid="cell-display-{{ field_name }}-{{ row._idx }}-{{ col }}">{{ row.get(col, '') }}</span>
         <div class="cell-input-wrapper{% if show_lookup %} has-lookup{% endif %}">
             <input type="text"
                    class="form-input cell-input{% if show_lookup %} lookup-input{% endif %}"
@@ -31,27 +25,18 @@
                    {% if col_type == 'date' %}
                    pattern="\d{4}-\d{2}-\d{2}"
                    placeholder="YYYY-MM-DD"
-                   title="Date format: YYYY-MM-DD"
-                   {% elif constraints.get('pattern') %}
-                   pattern="{{ constraints.pattern }}"
                    {% endif %}
-                   {% if constraints.get('min_length') %}data-minlength="{{ constraints.min_length }}"{% endif %}
-                   {% if constraints.get('max_length') %}data-maxlength="{{ constraints.max_length }}"{% endif %}
-                   {% if constraints.get('minimum') is not none %}data-min="{{ constraints.minimum }}"{% endif %}
-                   {% if constraints.get('maximum') is not none %}data-max="{{ constraints.maximum }}"{% endif %}
                    hx-post="/table/{{ parent_entity_type }}/{{ field_name }}/row/{{ row._idx }}/cell"
                    hx-trigger="change"
                    hx-swap="none"
-                   data-field="{{ col }}"
-                   data-type="{{ col_type }}"
-                   data-testid="cell-{{ row._idx }}-{{ col }}">
+                   data-testid="inline-cell-{{ field_name }}-{{ row._idx }}-{{ col }}">
             {% if show_lookup %}
             <button type="button"
                     class="lookup-btn"
                     data-lookup="{{ ref_info.target_entity }}"
-                    data-input="cell-{{ row._idx }}-{{ col }}"
+                    data-input="inline-cell-{{ field_name }}-{{ row._idx }}-{{ col }}"
                     title="Browse {{ ref_info.target_entity }}"
-                    data-testid="lookup-btn-{{ row._idx }}-{{ col }}">
+                    data-testid="lookup-btn-{{ field_name }}-{{ row._idx }}-{{ col }}">
                 &#128269;
             </button>
             {% endif %}
@@ -59,20 +44,22 @@
     </td>
     {% endfor %}
     <td class="row-actions">
-        <button class="btn btn-sm btn-secondary"
+        {% if has_nested_children %}
+        <button type="button" class="btn btn-sm btn-secondary"
                 hx-get="/nested/{{ parent_entity_type }}/{{ field_name }}/{{ row._idx }}"
                 hx-target="#main"
                 hx-swap="innerHTML"
-                title="Edit details and nested items"
-                data-testid="row-edit-{{ row._idx }}">
+                title="Edit nested items"
+                data-testid="inline-edit-{{ field_name }}-{{ row._idx }}">
             Edit
         </button>
-        <button class="btn-icon danger"
+        {% endif %}
+        <button type="button" class="btn-icon danger"
                 hx-delete="/table/{{ parent_entity_type }}/{{ field_name }}/row/{{ row._idx }}"
-                hx-target="#row-{{ row._idx }}"
+                hx-target="#row-{{ field_name }}-{{ row._idx }}"
                 hx-swap="delete"
                 title="Delete row"
-                data-testid="table-delete-row-{{ row._idx }}">
+                data-testid="inline-delete-{{ field_name }}-{{ row._idx }}">
             &#128465;
         </button>
     </td>

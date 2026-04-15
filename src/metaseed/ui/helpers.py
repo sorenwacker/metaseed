@@ -164,6 +164,84 @@ def get_table_column_info(facade: ProfileFacade, entity_type: str) -> dict:
     }
 
 
+def build_inline_tables(
+    state: AppState,
+    facade: ProfileFacade,
+    entity_type: str,
+    items_source: dict[str, list] | None = None,
+) -> dict[str, dict]:
+    """Build inline table data for all nested fields of an entity type.
+
+    Args:
+        state: Application state containing nested items.
+        facade: Profile facade for entity metadata.
+        entity_type: Parent entity type (e.g., "Study").
+        items_source: Optional dict to get items from instead of state.current_nested_items.
+                     Used when building tables for nested edit contexts.
+
+    Returns:
+        Dictionary mapping field names to table data:
+        {
+            "contacts": {
+                "columns": [...],
+                "rows": [...],
+                "column_types": {...},
+                ...
+            },
+            ...
+        }
+    """
+    helper = getattr(facade, entity_type, None)
+    if not helper:
+        return {}
+
+    # Use provided items_source or fall back to state.current_nested_items
+    source = items_source if items_source is not None else state.current_nested_items
+
+    inline_tables = {}
+    for field_name, nested_type in helper.nested_fields.items():
+        col_info = get_table_column_info(facade, nested_type)
+
+        # Get items from source
+        items = source.get(field_name, [])
+
+        # Format rows
+        rows = []
+        for i, item in enumerate(items):
+            if hasattr(item, "model_dump"):
+                row = item.model_dump(exclude_none=True)
+            elif isinstance(item, dict):
+                row = item.copy()
+            else:
+                row = {"value": str(item)}
+            row["_idx"] = i
+            rows.append(row)
+
+        # Get reference fields
+        ref_fields = get_reference_fields(
+            profile=state.profile,
+            version=facade.version,
+            entity_type=nested_type,
+        )
+
+        # Get parent ID fields (fields that should be auto-filled and read-only)
+        parent_id_fields = get_parent_id_fields(ref_fields, entity_type)
+
+        inline_tables[field_name] = {
+            "columns": col_info["columns"],
+            "rows": rows,
+            "column_types": col_info["column_types"],
+            "column_constraints": col_info["column_constraints"],
+            "required_columns": col_info["required_columns"],
+            "has_nested_children": col_info["has_nested_children"],
+            "reference_fields": ref_fields,
+            "parent_id_fields": parent_id_fields,
+            "nested_entity_type": nested_type,
+        }
+
+    return inline_tables
+
+
 def get_items_store(state: AppState, parent_entity_type: str, field_name: str) -> tuple[dict, list]:
     """Get the correct items store and items list based on context.
 
@@ -243,6 +321,56 @@ def get_reference_fields(profile: str, version: str, entity_type: str) -> dict[s
             }
 
     return reference_fields
+
+
+def get_parent_id_fields(
+    reference_fields: dict[str, dict], parent_entity_type: str
+) -> dict[str, str]:
+    """Get fields that reference the parent entity and should be auto-filled.
+
+    Args:
+        reference_fields: Reference field definitions from get_reference_fields().
+        parent_entity_type: The parent entity type (e.g., "Study").
+
+    Returns:
+        Dictionary mapping field names to the target field name:
+        {
+            "study_id": "unique_id",  # study_id references Study.unique_id
+        }
+    """
+    parent_id_fields = {}
+    for field_name, ref_info in reference_fields.items():
+        if ref_info["target_entity"] == parent_entity_type:
+            parent_id_fields[field_name] = ref_info["target_field"]
+    return parent_id_fields
+
+
+def get_parent_identifier(state: AppState, parent_entity_type: str, target_field: str) -> str:
+    """Get the parent entity's identifier value.
+
+    Args:
+        state: Application state.
+        parent_entity_type: The parent entity type.
+        target_field: The field to get (e.g., "unique_id", "identifier").
+
+    Returns:
+        The parent's identifier value, or empty string if not found.
+    """
+    # Check if we're editing a root node
+    if state.editing_node_id:
+        node = state.nodes_by_id.get(state.editing_node_id)
+        if node and node.entity_type == parent_entity_type and hasattr(node.instance, "model_dump"):
+            data = node.instance.model_dump(exclude_none=True)
+            return str(data.get(target_field, ""))
+
+    # Check nested edit stack for parent context
+    for ctx in reversed(state.nested_edit_stack):
+        if ctx.entity_type == parent_entity_type:
+            # The parent is in the nested stack, get its data
+            # This would be the item at ctx.row_idx in the parent's nested items
+            pass
+
+    return ""
 
 
 def collect_entities_by_type(state: AppState, facade: ProfileFacade) -> dict[str, list[dict]]:

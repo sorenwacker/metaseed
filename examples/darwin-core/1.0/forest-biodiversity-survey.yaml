@@ -1,0 +1,89 @@
+# Darwin Core v1.0 Example: Forest Biodiversity Survey
+# A complete example demonstrating Darwin Core entity types
+# Root entity is Occurrence with nested Event, Location, Identification, Taxon, and Organism
+
+occurrenceID: "urn:catalog:FOREST-2024:Bird:001"
+basisOfRecord: HumanObservation
+individualCount: 1
+occurrenceStatus: present
+sex: male
+lifeStage: adult
+behavior: perching
+establishmentMeans: native
+recordedBy: "Sarah Mitchell"
+recordedByID: "https://orcid.org/0000-0001-2345-6789"
+occurrenceRemarks: "Adult male observed perching on dead snag, hunting behavior"
+associatedMedia: "https://example.org/images/hawk_001.jpg"
+
+event:
+  eventID: "EVT-FOREST-2024-001"
+  occurrenceID: "urn:catalog:FOREST-2024:Bird:001"
+  eventDate: "2024-05-15"
+  eventTime: "09:30:00"
+  year: 2024
+  month: 5
+  day: 15
+  startDayOfYear: 136
+  habitat: "Mixed conifer-deciduous forest, forest edge"
+  samplingProtocol: "point count, 10-minute observation period"
+  sampleSizeValue: 50.0
+  sampleSizeUnit: meters
+  samplingEffort: "10 minutes"
+  fieldNumber: "PC-001"
+  fieldNotes: "Clear morning, light wind, good visibility"
+  eventRemarks: "Part of spring breeding bird survey"
+
+  location:
+    locationID: "LOC-FOREST-001"
+    eventID: "EVT-FOREST-2024-001"
+    continent: "North America"
+    country: "United States"
+    countryCode: "US"
+    stateProvince: "Oregon"
+    county: "Multnomah"
+    locality: "Forest Park, Wildwood Trail Mile 3"
+    verbatimLocality: "Wildwood Trail near Pittock Mansion junction"
+    decimalLatitude: 45.5275
+    decimalLongitude: -122.7165
+    geodeticDatum: "WGS84"
+    coordinateUncertaintyInMeters: 10.0
+    minimumElevationInMeters: 280.0
+    maximumElevationInMeters: 290.0
+    georeferencedBy: "Sarah Mitchell"
+    georeferencedDate: "2024-05-15"
+    georeferenceProtocol: "GPS handheld, averaged 3 readings"
+    georeferenceSources: "Garmin GPSMAP 66i"
+    locationRemarks: "Trail junction with good visibility in all directions"
+
+identifications:
+  - identificationID: "ID-FOREST-2024-001"
+    occurrenceID: "urn:catalog:FOREST-2024:Bird:001"
+    identifiedBy: "Sarah Mitchell"
+    identifiedByID: "https://orcid.org/0000-0001-2345-6789"
+    dateIdentified: "2024-05-15"
+    identificationVerificationStatus: "verified by expert"
+    identificationRemarks: "Distinctive rufous tail, dark patagial marks visible"
+
+    taxon:
+      taxonID: "urn:lsid:catalogueoflife.org:taxon:buteo-jamaicensis"
+      identificationID: "ID-FOREST-2024-001"
+      scientificName: "Buteo jamaicensis (Gmelin, 1788)"
+      kingdom: "Animalia"
+      phylum: "Chordata"
+      class: "Aves"
+      order: "Accipitriformes"
+      family: "Accipitridae"
+      genus: "Buteo"
+      specificEpithet: "jamaicensis"
+      taxonRank: "species"
+      scientificNameAuthorship: "(Gmelin, 1788)"
+      vernacularName: "Red-tailed Hawk"
+      nomenclaturalCode: "ICZN"
+      taxonomicStatus: "accepted"
+
+organism:
+  organismID: "ORG-FOREST-2024-001"
+  occurrenceID: "urn:catalog:FOREST-2024:Bird:001"
+  organismName: "RTHA-M-001"
+  organismScope: "individual"
+  organismRemarks: "Unbanded individual, distinctive white breast markings"
