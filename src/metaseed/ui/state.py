@@ -80,6 +80,7 @@ class AppState:
     """Server-side state for the UI."""
 
     profile: str = field(default_factory=_get_default_profile)
+    version: str | None = None  # None means use latest
     facade: ProfileFacade | None = None
     entity_tree: list[TreeNode] = field(default_factory=list)
     nodes_by_id: dict[str, TreeNode] = field(default_factory=dict)
@@ -92,31 +93,32 @@ class AppState:
         from metaseed.facade import ProfileFacade
 
         if self.facade is None or self.facade.profile != self.profile:
-            self.facade = ProfileFacade(self.profile)
+            self.facade = ProfileFacade(self.profile, self.version)
         return self.facade
 
     def get_root_entity_types(self: Self) -> list[str]:
-        """Get entity types that can be created at root level."""
+        """Get entity types that can be created at root level.
+
+        Returns the profile's declared root_entity (typically Investigation).
+        """
+        from metaseed.specs.loader import SpecLoader
+
+        loader = SpecLoader(profile=self.profile)
         facade = self.get_or_create_facade()
-        referenced_by: dict[str, set[str]] = {name: set() for name in facade.entities}
 
-        for entity_name in facade.entities:
-            helper = getattr(facade, entity_name)
-            for ref_entity in helper.nested_fields.values():
-                if ref_entity in referenced_by:
-                    referenced_by[ref_entity].add(entity_name)
+        try:
+            spec = loader.load_profile(version=facade.version, profile=self.profile)
+            root = spec.root_entity
+            if root and root in facade.entities:
+                return [root]
+        except Exception:
+            pass
 
-        roots = []
-        for name in facade.entities:
-            refs = referenced_by[name] - {name}
-            if not refs:
-                roots.append(name)
+        # Fallback to Investigation if available
+        if "Investigation" in facade.entities:
+            return ["Investigation"]
 
-        if "Investigation" in roots:
-            roots.remove("Investigation")
-            roots.insert(0, "Investigation")
-
-        return roots
+        return []
 
     def add_node(
         self: Self, entity_type: str, instance: Any, parent_id: str | None = None

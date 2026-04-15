@@ -3,11 +3,20 @@
         <h2 class="card-title">
             {% if is_edit %}Edit{% else %}New{% endif %} {{ entity_type }}
         </h2>
-        {% if is_edit %}
-        <a href="/export" class="btn btn-secondary btn-sm" data-testid="btn-export" download>
-            Export All
-        </a>
-        {% endif %}
+        <div style="display: flex; gap: 0.5rem;">
+            {% if is_edit %}
+            <a href="/export" class="btn btn-secondary btn-sm" data-testid="btn-export" download>
+                Export All
+            </a>
+            {% elif example_available %}
+            <a href="/load-example/{{ current_profile }}/{{ current_version }}"
+               class="btn btn-outline-secondary btn-sm"
+               data-testid="btn-load-example"
+               title="Load a fully populated example dataset">
+                Load Example
+            </a>
+            {% endif %}
+        </div>
     </div>
     {% if description %}
     <p class="card-subtitle">{{ description }}</p>
@@ -51,7 +60,19 @@
         </div>
         {% endif %}
 
-        {% if nested_fields %}
+        {% if nested_fields and is_edit and inline_tables %}
+        <div class="form-section">
+            <h3 class="form-section-title">Related Entities</h3>
+            {% for field in nested_fields %}
+            {% set table_data = inline_tables.get(field.name, {}) %}
+            {% if table_data %}
+            {% include "partials/inline_table.html" with context %}
+            {% else %}
+            {% include "partials/field.html" %}
+            {% endif %}
+            {% endfor %}
+        </div>
+        {% elif nested_fields %}
         <div class="form-section">
             <h3 class="form-section-title">Related Entities</h3>
             {% for field in nested_fields %}

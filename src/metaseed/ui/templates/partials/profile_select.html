@@ -1,17 +1,68 @@
 <div class="card">
     <h2 class="card-title">Select Metadata Model</h2>
-    <p class="card-subtitle">Choose which metadata standard to use for this investigation.</p>
+    <p class="card-subtitle">Choose which metadata standard and version to use, or load an example dataset.</p>
 
     <div class="profile-options">
         {% for profile in profiles %}
-        <button class="profile-option"
-                hx-get="/form/Investigation?profile={{ profile.name }}"
-                hx-target="#main"
-                hx-swap="innerHTML"
-                data-testid="profile-{{ profile.name }}">
-            <h3>{{ profile.display_name }}</h3>
-            <p>{{ profile.description }}</p>
-        </button>
+        <div class="profile-option-container">
+            <div class="profile-option-header">
+                <h3>{{ profile.display_name }}</h3>
+                <p>{{ profile.description }}</p>
+            </div>
+            <div class="profile-versions">
+                {% for version in profile.versions %}
+                <div class="profile-version-row">
+                    <button class="btn btn-sm {% if version == profile.latest_version %}btn-primary{% else %}btn-secondary{% endif %}"
+                            hx-get="/form/{{ profile.root_entity }}?profile={{ profile.name }}&version={{ version }}"
+                            hx-target="#main"
+                            hx-swap="innerHTML"
+                            data-testid="profile-{{ profile.name }}-v{{ version }}">
+                        v{{ version }}{% if version == profile.latest_version %} (latest){% endif %}
+                    </button>
+                    <a class="btn btn-sm btn-outline-secondary"
+                       href="/load-example/{{ profile.name }}/{{ version }}"
+                       data-testid="example-{{ profile.name }}-v{{ version }}"
+                       title="Load a fully populated example dataset for v{{ version }}">
+                        Load Example
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
         {% endfor %}
     </div>
 </div>
+
+<style>
+.profile-option-container {
+    border: 1px solid var(--border-color, #ddd);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+.profile-option-header {
+    margin-bottom: 0.75rem;
+}
+.profile-option-header h3 {
+    margin: 0 0 0.25rem 0;
+}
+.profile-option-header p {
+    margin: 0;
+    color: var(--text-muted, #666);
+    font-size: 0.9rem;
+}
+.profile-versions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.profile-version-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+.btn-sm {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.875rem;
+}
+</style>
