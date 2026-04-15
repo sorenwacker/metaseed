@@ -71,8 +71,10 @@ class TestValidateEndpoint:
             "data": {
                 "unique_id": "INV001",
                 "title": "Test Investigation",
-                "contacts": [{"name": "Test Contact"}],
-                "studies": [{"unique_id": "STU001", "title": "Test Study"}],
+                "contacts": [{"investigation_id": "INV001", "name": "Test Contact"}],
+                "studies": [
+                    {"unique_id": "STU001", "investigation_id": "INV001", "title": "Test Study"}
+                ],
             },
         }
         response = client.post("/validate", json=data)

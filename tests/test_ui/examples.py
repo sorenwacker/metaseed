@@ -5,17 +5,24 @@ from pathlib import Path
 import yaml
 
 
-def load_spec_examples(profile: str = "miappe") -> dict[str, dict]:
+def load_spec_examples(profile: str = "miappe", version: str | None = None) -> dict[str, dict]:
     """Load example values for all entities from the YAML spec.
 
     Args:
-        profile: The profile to load (miappe or isa).
+        profile: The profile to load (miappe, isa, etc.).
+        version: The version to load. If None, uses default (1.1 for miappe, 1.0 for isa).
 
     Returns:
         Dictionary mapping entity names to their example values.
     """
     spec_dir = Path(__file__).parent.parent.parent / "src" / "metaseed" / "specs"
-    spec_file = spec_dir / "miappe_v1.1.yaml" if profile == "miappe" else spec_dir / "isa_v1.0.yaml"
+
+    # Default versions
+    if version is None:
+        version = "1.1" if profile == "miappe" else "1.0"
+
+    # New directory structure: specs/<profile>/<version>/profile.yaml
+    spec_file = spec_dir / profile / version / "profile.yaml"
 
     with open(spec_file) as f:
         spec = yaml.safe_load(f)

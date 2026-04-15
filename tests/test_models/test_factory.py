@@ -298,10 +298,15 @@ class TestCreateModelFromSpec:
             unique_id="INV-001",
             title="Test",
             contacts=[
-                Person(name="Dr. Smith", email="smith@uni.edu", institution="Uni"),
+                Person(
+                    investigation_id="INV-001",
+                    name="Dr. Smith",
+                    email="smith@uni.edu",
+                    institution="Uni",
+                ),
             ],
             studies=[
-                Study(unique_id="STU-001", title="Study 1"),
+                Study(unique_id="STU-001", investigation_id="INV-001", title="Study 1"),
             ],
         )
 
@@ -329,8 +334,8 @@ class TestCreateModelFromSpec:
         Study = get_model("Study")
 
         inv = Investigation(unique_id="INV-001", title="Test")
-        inv.studies.append(Study(unique_id="STU-001", title="Study 1"))
-        inv.studies.append(Study(unique_id="STU-002", title="Study 2"))
+        inv.studies.append(Study(unique_id="STU-001", investigation_id="INV-001", title="Study 1"))
+        inv.studies.append(Study(unique_id="STU-002", investigation_id="INV-001", title="Study 2"))
 
         assert len(inv.studies) == 2
         assert inv.studies[0].unique_id == "STU-001"
@@ -351,13 +356,20 @@ class TestCreateModelFromSpec:
             studies=[
                 Study(
                     unique_id="STU-001",
+                    investigation_id="INV-001",
                     title="Study 1",
                     factors=[
-                        Factor(unique_id="F-001", name="Water", description="Treatment"),
+                        Factor(
+                            unique_id="F-001",
+                            study_id="STU-001",
+                            name="Water",
+                            description="Treatment",
+                        ),
                     ],
                     observed_variables=[
                         ObservedVariable(
                             unique_id="VAR-001",
+                            study_id="STU-001",
                             name="Plant Height",
                             trait="Height",
                             method="Ruler",
