@@ -22,8 +22,13 @@
     <div class="entity-children">
         {% for child in node.children %}
         <div class="entity-item child">
-            <span class="entity-type">{{ child.entity_type }}</span>
-            <span class="entity-label">{{ child.label }}</span>
+            <button class="btn btn-entity btn-nested"
+                    hx-get="/nested/{{ child.parent_entity_type }}/{{ child.field_name }}/{{ child.idx }}"
+                    hx-target="#main"
+                    hx-swap="innerHTML">
+                <span class="entity-type">{{ child.entity_type }}</span>
+                <span class="entity-label">{{ child.label }}</span>
+            </button>
         </div>
         {% endfor %}
     </div>

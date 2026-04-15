@@ -295,8 +295,8 @@ class ProfileFacade:
 
     @property
     def entities(self: Self) -> list[str]:
-        """List of available entity names."""
-        return sorted(self._entities.keys())
+        """List of available entity names in hierarchical order."""
+        return list(self._entities.keys())
 
     def __getattr__(self: Self, name: str) -> EntityHelper:
         """Get an entity helper by name (enables tab completion).

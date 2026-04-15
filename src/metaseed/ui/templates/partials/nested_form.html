@@ -54,7 +54,20 @@
         </div>
         {% endif %}
 
-        {% if nested_fields %}
+        {% if nested_fields and inline_tables %}
+        <div class="form-section">
+            <h3 class="form-section-title">Related Entities</h3>
+            {% for field in nested_fields %}
+            {% set table_data = inline_tables.get(field.name, {}) %}
+            {% if table_data %}
+            {% include "partials/inline_table.html" with context %}
+            {% else %}
+            {% set is_edit = True %}
+            {% include "partials/field.html" %}
+            {% endif %}
+            {% endfor %}
+        </div>
+        {% elif nested_fields %}
         <div class="form-section">
             <h3 class="form-section-title">Related Entities</h3>
             {% for field in nested_fields %}
