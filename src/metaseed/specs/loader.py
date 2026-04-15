@@ -2,9 +2,14 @@
 
 This module provides functionality to load and parse YAML specification files
 that define entities and their fields for various profiles (MIAPPE, ISA, etc.).
+
+Directory structure:
+    specs/
+        <profile-name>/
+            <version>/
+                profile.yaml
 """
 
-import re
 from pathlib import Path
 from typing import Self
 
@@ -21,8 +26,12 @@ class SpecLoadError(Exception):
 class SpecLoader:
     """Loader for profile YAML specifications.
 
-    Supports multiple profiles (MIAPPE, ISA, etc.) with unified YAML files.
-    Each profile is defined in a single YAML file (e.g., miappe_v1.1.yaml, isa_v1.0.yaml).
+    Supports multiple profiles organized in directories:
+        specs/<profile>/<version>/profile.yaml
+
+    Example:
+        specs/miappe/1.1/profile.yaml
+        specs/darwin-core/1.0/profile.yaml
     """
 
     def __init__(self: Self, profile: str = "miappe") -> None:
@@ -36,7 +45,7 @@ class SpecLoader:
         self._default_profile = profile.lower()
 
     def _find_profile_file(self: Self, version: str, profile: str | None = None) -> Path | None:
-        """Find unified profile file for a version.
+        """Find profile file for a version.
 
         Args:
             version: Version string (e.g., "1.1").
@@ -47,15 +56,11 @@ class SpecLoader:
         """
         profile = (profile or self._default_profile).lower()
 
-        # Try different naming patterns
-        patterns = [
-            f"{profile}_v{version}.yaml",
-            f"{profile}_{version}.yaml",
-        ]
-        for pattern in patterns:
-            path = self._specs_dir / pattern
-            if path.exists():
-                return path
+        # New structure: specs/<profile>/<version>/profile.yaml
+        profile_path = self._specs_dir / profile / version / "profile.yaml"
+        if profile_path.exists():
+            return profile_path
+
         return None
 
     def _cache_key(self: Self, version: str, profile: str | None = None) -> str:
@@ -165,8 +170,6 @@ class SpecLoader:
     ) -> EntitySpec:
         """Load an entity spec by name and version.
 
-        First tries unified profile, then falls back to individual files.
-
         Args:
             entity: Entity name (e.g., "investigation" or "Investigation").
             version: Version string (e.g., "1.1").
@@ -180,7 +183,6 @@ class SpecLoader:
         """
         profile_name = profile or self._default_profile
 
-        # Try unified profile first
         loaded_profile = self._load_profile(version, profile)
         if loaded_profile is not None:
             try:
@@ -190,52 +192,29 @@ class SpecLoader:
                     f"Entity not found: {entity} ({profile_name} v{version})"
                 ) from None
 
-        # Fall back to individual files (only for default MIAPPE profile)
-        if profile_name == "miappe":
-            version_dir = self._specs_dir / f"v{version.replace('.', '_')}"
-            if not version_dir.exists():
-                raise SpecLoadError(f"Version not found: {profile_name} v{version}")
-
-            # Convert CamelCase to snake_case for file lookup
-            entity_snake = re.sub(r"(?<!^)(?=[A-Z])", "_", entity).lower()
-            spec_file = version_dir / f"{entity_snake}.yaml"
-            if not spec_file.exists():
-                # Try original name
-                spec_file = version_dir / f"{entity.lower()}.yaml"
-                if not spec_file.exists():
-                    raise SpecLoadError(f"Entity not found: {entity} ({profile_name} v{version})")
-
-            return self.load(spec_file)
-
         raise SpecLoadError(f"Profile not found: {profile_name} v{version}")
 
     def list_entities(self: Self, version: str = "1.1", profile: str | None = None) -> list[str]:
         """List available entities for a version.
+
+        Returns entities in the order defined in the profile YAML, which is
+        typically hierarchical (Investigation → Study → nested entities).
 
         Args:
             version: Version string (e.g., "1.1").
             profile: Profile name (e.g., "miappe", "isa"). Uses default if None.
 
         Returns:
-            List of entity names.
+            List of entity names in definition order.
 
         Raises:
             SpecLoadError: If the version is not found.
         """
         profile_name = profile or self._default_profile
 
-        # Try unified profile first
         loaded_profile = self._load_profile(version, profile)
         if loaded_profile is not None:
-            return sorted(loaded_profile.list_entities())
-
-        # Fall back to individual files (only for default MIAPPE profile)
-        if profile_name == "miappe":
-            version_dir = self._specs_dir / f"v{version.replace('.', '_')}"
-            if not version_dir.exists():
-                raise SpecLoadError(f"Version not found: {profile_name} v{version}")
-
-            return sorted(f.stem for f in version_dir.glob("*.yaml") if not f.name.startswith("_"))
+            return loaded_profile.list_entities()
 
         raise SpecLoadError(f"Version not found: {profile_name} v{version}")
 
@@ -249,39 +228,35 @@ class SpecLoader:
             List of version strings (e.g., ["1.1"]).
         """
         profile_name = (profile or self._default_profile).lower()
-        versions = set()
+        versions = []
 
-        # Check for unified profile files (profile_v*.yaml pattern)
-        for f in self._specs_dir.glob(f"{profile_name}_v*.yaml"):
-            match = re.search(r"v(\d+\.\d+)", f.name)
-            if match:
-                versions.add(match.group(1))
+        # Look for version directories under profile folder
+        profile_dir = self._specs_dir / profile_name
+        if profile_dir.exists() and profile_dir.is_dir():
+            for version_dir in sorted(profile_dir.iterdir()):
+                if version_dir.is_dir() and (version_dir / "profile.yaml").exists():
+                    versions.append(version_dir.name)
 
-        # Check for version directories (legacy, only for miappe)
-        if profile_name == "miappe":
-            for d in self._specs_dir.iterdir():
-                if d.is_dir() and d.name.startswith("v"):
-                    version = d.name[1:].replace("_", ".")
-                    versions.add(version)
-
-        return sorted(versions)
+        return versions
 
     def list_profiles(self: Self) -> list[str]:
         """List available profiles.
 
         Returns:
-            List of profile names (e.g., ["miappe", "isa", "isa-miappe-combined"]).
+            List of profile names (e.g., ["miappe", "isa", "darwin-core"]).
         """
-        profiles = set()
+        profiles = []
 
-        # Find all profile files by pattern *_v*.yaml
-        for f in self._specs_dir.glob("*_v*.yaml"):
-            # Extract profile name (before _v) - supports letters and hyphens
-            match = re.match(r"([a-z][a-z-]*)_v\d+", f.stem)
-            if match:
-                profiles.add(match.group(1))
+        # Find all directories that contain at least one version with profile.yaml
+        for item in sorted(self._specs_dir.iterdir()):
+            if item.is_dir() and not item.name.startswith("_"):
+                # Check if any subdirectory has a profile.yaml
+                for version_dir in item.iterdir():
+                    if version_dir.is_dir() and (version_dir / "profile.yaml").exists():
+                        profiles.append(item.name)
+                        break
 
-        return sorted(profiles)
+        return profiles
 
     def get_profile_path(
         self: Self, version: str = "1.1", profile: str | None = None

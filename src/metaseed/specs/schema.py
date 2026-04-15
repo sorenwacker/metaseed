@@ -171,8 +171,10 @@ class ProfileSpec(BaseModel):
     Attributes:
         version: Profile version (e.g., "1.1").
         name: Profile name (e.g., "MIAPPE").
+        display_name: Human-friendly name for UI (e.g., "MIAPPE").
         description: Description of the profile.
         ontology: Base ontology used (e.g., "PPEO").
+        root_entity: Primary entity type for this profile (e.g., "Investigation").
         validation_rules: Cross-entity validation rules.
         entities: Dictionary of entity name to definition.
     """
@@ -181,8 +183,10 @@ class ProfileSpec(BaseModel):
 
     version: str
     name: str
+    display_name: str | None = None
     description: str = ""
     ontology: str | None = None
+    root_entity: str = "Investigation"
     validation_rules: list[ValidationRuleSpec] = []
     entities: dict[str, EntityDefSpec] = {}
 

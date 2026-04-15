@@ -1,0 +1,1340 @@
+version: "1.0"
+name: darwin-core
+display_name: Darwin Core
+description: "Biodiversity occurrence data standard for species observations and specimen records"
+ontology: "dwc"
+root_entity: Occurrence
+
+validation_rules:
+  - name: latitude_range
+    description: "Latitude must be between -90 and 90"
+    applies_to: [Location]
+    field: decimalLatitude
+    minimum: -90
+    maximum: 90
+
+  - name: longitude_range
+    description: "Longitude must be between -180 and 180"
+    applies_to: [Location]
+    field: decimalLongitude
+    minimum: -180
+    maximum: 180
+
+  - name: coordinate_uncertainty_positive
+    description: "Coordinate uncertainty must be positive"
+    applies_to: [Location]
+    field: coordinateUncertaintyInMeters
+    minimum: 0
+
+  - name: depth_range
+    description: "Minimum depth cannot exceed maximum depth"
+    applies_to: [Location]
+    condition: maximumDepthInMeters >= minimumDepthInMeters
+
+  - name: elevation_range
+    description: "Minimum elevation cannot exceed maximum elevation"
+    applies_to: [Location]
+    condition: maximumElevationInMeters >= minimumElevationInMeters
+
+  - name: basis_of_record_vocabulary
+    description: "Basis of record must use standard vocabulary"
+    applies_to: [Occurrence]
+    field: basisOfRecord
+    enum:
+      - PreservedSpecimen
+      - FossilSpecimen
+      - LivingSpecimen
+      - MaterialSample
+      - MaterialCitation
+      - HumanObservation
+      - MachineObservation
+      - Occurrence
+
+  - name: occurrence_status_vocabulary
+    description: "Occurrence status vocabulary"
+    applies_to: [Occurrence]
+    field: occurrenceStatus
+    enum:
+      - present
+      - absent
+
+  - name: taxon_rank_vocabulary
+    description: "Taxonomic rank vocabulary"
+    applies_to: [Taxon]
+    field: taxonRank
+    enum:
+      - kingdom
+      - phylum
+      - class
+      - order
+      - family
+      - subfamily
+      - genus
+      - subgenus
+      - species
+      - subspecies
+      - variety
+      - form
+
+  - name: nomenclatural_status_vocabulary
+    description: "Nomenclatural status vocabulary"
+    applies_to: [Taxon]
+    field: nomenclaturalStatus
+    enum:
+      - available
+      - valid
+      - accepted
+      - synonym
+      - homotypicSynonym
+      - heterotypicSynonym
+
+entities:
+  Occurrence:
+    ontology_term: dwc:Occurrence
+    description: "Evidence of an organism at a particular place and time"
+    example:
+      occurrenceID: "urn:catalog:UWBM:Bird:89776"
+      basisOfRecord: HumanObservation
+      individualCount: 1
+      occurrenceStatus: present
+      recordedBy: "John Smith"
+    fields:
+      - name: occurrenceID
+        type: string
+        required: true
+        description: "Unique identifier for the occurrence record"
+        ontology_term: dwc:occurrenceID
+
+      - name: basisOfRecord
+        type: string
+        required: true
+        description: "The specific nature of the data record"
+        ontology_term: dwc:basisOfRecord
+
+      - name: individualCount
+        type: integer
+        required: false
+        description: "Number of individuals present"
+        ontology_term: dwc:individualCount
+
+      - name: organismQuantity
+        type: float
+        required: false
+        description: "Quantity of organisms"
+        ontology_term: dwc:organismQuantity
+
+      - name: organismQuantityType
+        type: string
+        required: false
+        description: "Type of quantification (individuals, biomass, etc.)"
+        ontology_term: dwc:organismQuantityType
+
+      - name: sex
+        type: string
+        required: false
+        description: "Sex of the biological individual(s)"
+        ontology_term: dwc:sex
+
+      - name: lifeStage
+        type: string
+        required: false
+        description: "Age class or life stage"
+        ontology_term: dwc:lifeStage
+
+      - name: reproductiveCondition
+        type: string
+        required: false
+        description: "Reproductive condition of the biological individual"
+        ontology_term: dwc:reproductiveCondition
+
+      - name: behavior
+        type: string
+        required: false
+        description: "Behavior shown by the subject"
+        ontology_term: dwc:behavior
+
+      - name: establishmentMeans
+        type: string
+        required: false
+        description: "Process by which organism established (native, introduced, etc.)"
+        ontology_term: dwc:establishmentMeans
+
+      - name: degreeOfEstablishment
+        type: string
+        required: false
+        description: "Degree to which organism survives and reproduces"
+        ontology_term: dwc:degreeOfEstablishment
+
+      - name: pathway
+        type: string
+        required: false
+        description: "Process by which organism came to be in location"
+        ontology_term: dwc:pathway
+
+      - name: occurrenceStatus
+        type: string
+        required: false
+        description: "Statement about presence or absence"
+        ontology_term: dwc:occurrenceStatus
+
+      - name: preparations
+        type: string
+        required: false
+        description: "Preparation or preservation method for specimen"
+        ontology_term: dwc:preparations
+
+      - name: disposition
+        type: string
+        required: false
+        description: "Current state of specimen (in collection, lost, etc.)"
+        ontology_term: dwc:disposition
+
+      - name: associatedMedia
+        type: string
+        required: false
+        description: "List of identifiers for associated media"
+        ontology_term: dwc:associatedMedia
+
+      - name: associatedReferences
+        type: string
+        required: false
+        description: "List of identifiers for associated literature"
+        ontology_term: dwc:associatedReferences
+
+      - name: associatedSequences
+        type: string
+        required: false
+        description: "List of identifiers for genetic sequence data"
+        ontology_term: dwc:associatedSequences
+
+      - name: associatedTaxa
+        type: string
+        required: false
+        description: "List of identifiers for associated taxa"
+        ontology_term: dwc:associatedTaxa
+
+      - name: otherCatalogNumbers
+        type: string
+        required: false
+        description: "Previous or alternate catalog numbers"
+        ontology_term: dwc:otherCatalogNumbers
+
+      - name: occurrenceRemarks
+        type: string
+        required: false
+        description: "Comments about the occurrence"
+        ontology_term: dwc:occurrenceRemarks
+
+      - name: recordedBy
+        type: string
+        required: false
+        description: "Person(s) responsible for recording the occurrence"
+        ontology_term: dwc:recordedBy
+
+      - name: recordedByID
+        type: string
+        required: false
+        description: "Identifier for the person(s) who recorded"
+        ontology_term: dwc:recordedByID
+
+      - name: event
+        type: entity
+        items: Event
+        required: false
+        description: "The sampling event"
+
+      - name: identifications
+        type: list
+        items: Identification
+        required: false
+        description: "Taxonomic identifications"
+
+      - name: organism
+        type: entity
+        items: Organism
+        required: false
+        description: "The organism observed"
+
+  Event:
+    ontology_term: dwc:Event
+    description: "An action that occurs at a place and during a period of time"
+    example:
+      eventID: "EVT-2024-001"
+      occurrenceID: "urn:catalog:UWBM:Bird:89776"
+      eventDate: "2024-06-15"
+      samplingProtocol: "point count"
+      sampleSizeValue: 100
+      sampleSizeUnit: "meters"
+    fields:
+      - name: eventID
+        type: string
+        required: true
+        description: "Unique identifier for the sampling event"
+        ontology_term: dwc:eventID
+
+      - name: occurrenceID
+        type: string
+        required: true
+        description: "Reference to the parent Occurrence"
+        ontology_term: dwc:occurrenceID
+
+      - name: parentEventID
+        type: string
+        required: false
+        description: "Identifier for the parent event"
+        ontology_term: dwc:parentEventID
+
+      - name: eventDate
+        type: string
+        required: false
+        description: "Date or date-time of the event (ISO 8601)"
+        ontology_term: dwc:eventDate
+
+      - name: eventTime
+        type: string
+        required: false
+        description: "Time of the event"
+        ontology_term: dwc:eventTime
+
+      - name: startDayOfYear
+        type: integer
+        required: false
+        description: "Earliest ordinal day of the year (1-366)"
+        ontology_term: dwc:startDayOfYear
+        constraints:
+          minimum: 1
+          maximum: 366
+
+      - name: endDayOfYear
+        type: integer
+        required: false
+        description: "Latest ordinal day of the year (1-366)"
+        ontology_term: dwc:endDayOfYear
+        constraints:
+          minimum: 1
+          maximum: 366
+
+      - name: year
+        type: integer
+        required: false
+        description: "Four-digit year"
+        ontology_term: dwc:year
+
+      - name: month
+        type: integer
+        required: false
+        description: "Ordinal month (1-12)"
+        ontology_term: dwc:month
+        constraints:
+          minimum: 1
+          maximum: 12
+
+      - name: day
+        type: integer
+        required: false
+        description: "Integer day of the month (1-31)"
+        ontology_term: dwc:day
+        constraints:
+          minimum: 1
+          maximum: 31
+
+      - name: verbatimEventDate
+        type: string
+        required: false
+        description: "Original date-related information"
+        ontology_term: dwc:verbatimEventDate
+
+      - name: habitat
+        type: string
+        required: false
+        description: "Category or description of habitat"
+        ontology_term: dwc:habitat
+
+      - name: samplingProtocol
+        type: string
+        required: false
+        description: "Names or descriptions of sampling methods"
+        ontology_term: dwc:samplingProtocol
+
+      - name: sampleSizeValue
+        type: float
+        required: false
+        description: "Numeric value for sample size measurement"
+        ontology_term: dwc:sampleSizeValue
+
+      - name: sampleSizeUnit
+        type: string
+        required: false
+        description: "Unit of measurement for sample size"
+        ontology_term: dwc:sampleSizeUnit
+
+      - name: samplingEffort
+        type: string
+        required: false
+        description: "Amount of effort expended during the event"
+        ontology_term: dwc:samplingEffort
+
+      - name: fieldNumber
+        type: string
+        required: false
+        description: "Identifier given during field work"
+        ontology_term: dwc:fieldNumber
+
+      - name: fieldNotes
+        type: string
+        required: false
+        description: "Reference to or text of field notes"
+        ontology_term: dwc:fieldNotes
+
+      - name: eventRemarks
+        type: string
+        required: false
+        description: "Comments about the event"
+        ontology_term: dwc:eventRemarks
+
+      - name: location
+        type: entity
+        items: Location
+        required: false
+        description: "The geographic location"
+
+  Location:
+    ontology_term: dcterms:Location
+    description: "A spatial region or named place"
+    example:
+      locationID: "LOC-001"
+      eventID: "EVT-2024-001"
+      decimalLatitude: 45.5231
+      decimalLongitude: -122.6765
+      geodeticDatum: "WGS84"
+      country: "United States"
+      stateProvince: "Oregon"
+      locality: "Forest Park"
+    fields:
+      - name: locationID
+        type: string
+        required: false
+        description: "Unique identifier for the location"
+        ontology_term: dwc:locationID
+
+      - name: eventID
+        type: string
+        required: true
+        description: "Reference to the parent Event"
+        ontology_term: dwc:eventID
+
+      - name: higherGeographyID
+        type: string
+        required: false
+        description: "Identifier for the geographic region"
+        ontology_term: dwc:higherGeographyID
+
+      - name: higherGeography
+        type: string
+        required: false
+        description: "Geographic names less specific than locality"
+        ontology_term: dwc:higherGeography
+
+      - name: continent
+        type: string
+        required: false
+        description: "Name of the continent"
+        ontology_term: dwc:continent
+
+      - name: waterBody
+        type: string
+        required: false
+        description: "Name of the water body"
+        ontology_term: dwc:waterBody
+
+      - name: islandGroup
+        type: string
+        required: false
+        description: "Name of the island group"
+        ontology_term: dwc:islandGroup
+
+      - name: island
+        type: string
+        required: false
+        description: "Name of the island"
+        ontology_term: dwc:island
+
+      - name: country
+        type: string
+        required: false
+        description: "Name of the country"
+        ontology_term: dwc:country
+
+      - name: countryCode
+        type: string
+        required: false
+        description: "Standard country code (ISO 3166-1-alpha-2)"
+        ontology_term: dwc:countryCode
+        constraints:
+          min_length: 2
+          max_length: 2
+
+      - name: stateProvince
+        type: string
+        required: false
+        description: "Name of state, province, or region"
+        ontology_term: dwc:stateProvince
+
+      - name: county
+        type: string
+        required: false
+        description: "Name of the county or shire"
+        ontology_term: dwc:county
+
+      - name: municipality
+        type: string
+        required: false
+        description: "Name of the municipality"
+        ontology_term: dwc:municipality
+
+      - name: locality
+        type: string
+        required: false
+        description: "Specific description of the place"
+        ontology_term: dwc:locality
+
+      - name: verbatimLocality
+        type: string
+        required: false
+        description: "Original textual description of the place"
+        ontology_term: dwc:verbatimLocality
+
+      - name: minimumElevationInMeters
+        type: float
+        required: false
+        description: "Lower limit of elevation range"
+        ontology_term: dwc:minimumElevationInMeters
+
+      - name: maximumElevationInMeters
+        type: float
+        required: false
+        description: "Upper limit of elevation range"
+        ontology_term: dwc:maximumElevationInMeters
+
+      - name: verbatimElevation
+        type: string
+        required: false
+        description: "Original elevation description"
+        ontology_term: dwc:verbatimElevation
+
+      - name: minimumDepthInMeters
+        type: float
+        required: false
+        description: "Lesser depth of a range"
+        ontology_term: dwc:minimumDepthInMeters
+
+      - name: maximumDepthInMeters
+        type: float
+        required: false
+        description: "Greater depth of a range"
+        ontology_term: dwc:maximumDepthInMeters
+
+      - name: verbatimDepth
+        type: string
+        required: false
+        description: "Original depth description"
+        ontology_term: dwc:verbatimDepth
+
+      - name: minimumDistanceAboveSurfaceInMeters
+        type: float
+        required: false
+        description: "Lesser distance above surface"
+        ontology_term: dwc:minimumDistanceAboveSurfaceInMeters
+
+      - name: maximumDistanceAboveSurfaceInMeters
+        type: float
+        required: false
+        description: "Greater distance above surface"
+        ontology_term: dwc:maximumDistanceAboveSurfaceInMeters
+
+      - name: locationAccordingTo
+        type: string
+        required: false
+        description: "Source of location information"
+        ontology_term: dwc:locationAccordingTo
+
+      - name: locationRemarks
+        type: string
+        required: false
+        description: "Comments about the location"
+        ontology_term: dwc:locationRemarks
+
+      - name: decimalLatitude
+        type: float
+        required: false
+        description: "Geographic latitude in decimal degrees"
+        ontology_term: dwc:decimalLatitude
+
+      - name: decimalLongitude
+        type: float
+        required: false
+        description: "Geographic longitude in decimal degrees"
+        ontology_term: dwc:decimalLongitude
+
+      - name: geodeticDatum
+        type: string
+        required: false
+        description: "Geodetic datum (e.g., WGS84)"
+        ontology_term: dwc:geodeticDatum
+
+      - name: coordinateUncertaintyInMeters
+        type: float
+        required: false
+        description: "Horizontal distance from coordinates describing smallest circle containing location"
+        ontology_term: dwc:coordinateUncertaintyInMeters
+
+      - name: coordinatePrecision
+        type: float
+        required: false
+        description: "Decimal precision of the coordinates"
+        ontology_term: dwc:coordinatePrecision
+
+      - name: pointRadiusSpatialFit
+        type: float
+        required: false
+        description: "Ratio of area of point-radius to area of true spatial representation"
+        ontology_term: dwc:pointRadiusSpatialFit
+
+      - name: verbatimCoordinates
+        type: string
+        required: false
+        description: "Original spatial coordinates"
+        ontology_term: dwc:verbatimCoordinates
+
+      - name: verbatimLatitude
+        type: string
+        required: false
+        description: "Original latitude"
+        ontology_term: dwc:verbatimLatitude
+
+      - name: verbatimLongitude
+        type: string
+        required: false
+        description: "Original longitude"
+        ontology_term: dwc:verbatimLongitude
+
+      - name: verbatimCoordinateSystem
+        type: string
+        required: false
+        description: "Coordinate system for verbatim coordinates"
+        ontology_term: dwc:verbatimCoordinateSystem
+
+      - name: verbatimSRS
+        type: string
+        required: false
+        description: "Spatial reference system for verbatim coordinates"
+        ontology_term: dwc:verbatimSRS
+
+      - name: footprintWKT
+        type: string
+        required: false
+        description: "Well-Known Text representation of spatial footprint"
+        ontology_term: dwc:footprintWKT
+
+      - name: footprintSRS
+        type: string
+        required: false
+        description: "Spatial reference system for footprintWKT"
+        ontology_term: dwc:footprintSRS
+
+      - name: footprintSpatialFit
+        type: float
+        required: false
+        description: "Ratio of footprint area to actual spatial extent"
+        ontology_term: dwc:footprintSpatialFit
+
+      - name: georeferencedBy
+        type: string
+        required: false
+        description: "Person(s) who georeferenced the location"
+        ontology_term: dwc:georeferencedBy
+
+      - name: georeferencedDate
+        type: string
+        required: false
+        description: "Date on which location was georeferenced"
+        ontology_term: dwc:georeferencedDate
+
+      - name: georeferenceProtocol
+        type: string
+        required: false
+        description: "Description of georeferencing methods"
+        ontology_term: dwc:georeferenceProtocol
+
+      - name: georeferenceSources
+        type: string
+        required: false
+        description: "Resources used to georeference"
+        ontology_term: dwc:georeferenceSources
+
+      - name: georeferenceRemarks
+        type: string
+        required: false
+        description: "Comments about the georeference"
+        ontology_term: dwc:georeferenceRemarks
+
+  Taxon:
+    ontology_term: dwc:Taxon
+    description: "A group of organisms considered by taxonomists to form a homogeneous unit"
+    example:
+      taxonID: "urn:lsid:catalogueoflife.org:taxon:d79c11aa-29c1-102b-9a4a-00304854f820"
+      identificationID: "ID-2024-001"
+      scientificName: "Puma concolor (Linnaeus, 1771)"
+      kingdom: "Animalia"
+      phylum: "Chordata"
+      class: "Mammalia"
+      order: "Carnivora"
+      family: "Felidae"
+      genus: "Puma"
+      specificEpithet: "concolor"
+      taxonRank: "species"
+    fields:
+      - name: taxonID
+        type: string
+        required: true
+        description: "Unique identifier for the taxon"
+        ontology_term: dwc:taxonID
+
+      - name: identificationID
+        type: string
+        required: true
+        description: "Reference to the parent Identification"
+        ontology_term: dwc:identificationID
+
+      - name: scientificNameID
+        type: string
+        required: false
+        description: "Identifier for the nomenclatural details"
+        ontology_term: dwc:scientificNameID
+
+      - name: acceptedNameUsageID
+        type: string
+        required: false
+        description: "Identifier for the accepted name usage"
+        ontology_term: dwc:acceptedNameUsageID
+
+      - name: parentNameUsageID
+        type: string
+        required: false
+        description: "Identifier for the parent taxon"
+        ontology_term: dwc:parentNameUsageID
+
+      - name: originalNameUsageID
+        type: string
+        required: false
+        description: "Identifier for the original name usage"
+        ontology_term: dwc:originalNameUsageID
+
+      - name: nameAccordingToID
+        type: string
+        required: false
+        description: "Identifier for the reference for taxon concept"
+        ontology_term: dwc:nameAccordingToID
+
+      - name: namePublishedInID
+        type: string
+        required: false
+        description: "Identifier for the publication where name was established"
+        ontology_term: dwc:namePublishedInID
+
+      - name: taxonConceptID
+        type: string
+        required: false
+        description: "Identifier for the taxonomic concept"
+        ontology_term: dwc:taxonConceptID
+
+      - name: scientificName
+        type: string
+        required: true
+        description: "Full scientific name with authorship"
+        ontology_term: dwc:scientificName
+
+      - name: acceptedNameUsage
+        type: string
+        required: false
+        description: "Full name of the accepted taxon"
+        ontology_term: dwc:acceptedNameUsage
+
+      - name: parentNameUsage
+        type: string
+        required: false
+        description: "Full name of the parent taxon"
+        ontology_term: dwc:parentNameUsage
+
+      - name: originalNameUsage
+        type: string
+        required: false
+        description: "Original combination for this name"
+        ontology_term: dwc:originalNameUsage
+
+      - name: nameAccordingTo
+        type: string
+        required: false
+        description: "Reference for taxon concept definition"
+        ontology_term: dwc:nameAccordingTo
+
+      - name: namePublishedIn
+        type: string
+        required: false
+        description: "Reference where name was originally published"
+        ontology_term: dwc:namePublishedIn
+
+      - name: namePublishedInYear
+        type: integer
+        required: false
+        description: "Year in which name was published"
+        ontology_term: dwc:namePublishedInYear
+
+      - name: higherClassification
+        type: string
+        required: false
+        description: "Full taxonomic hierarchy"
+        ontology_term: dwc:higherClassification
+
+      - name: kingdom
+        type: string
+        required: false
+        description: "Full scientific name of the kingdom"
+        ontology_term: dwc:kingdom
+
+      - name: phylum
+        type: string
+        required: false
+        description: "Full scientific name of the phylum"
+        ontology_term: dwc:phylum
+
+      - name: class
+        type: string
+        required: false
+        description: "Full scientific name of the class"
+        ontology_term: dwc:class
+
+      - name: order
+        type: string
+        required: false
+        description: "Full scientific name of the order"
+        ontology_term: dwc:order
+
+      - name: family
+        type: string
+        required: false
+        description: "Full scientific name of the family"
+        ontology_term: dwc:family
+
+      - name: subfamily
+        type: string
+        required: false
+        description: "Full scientific name of the subfamily"
+        ontology_term: dwc:subfamily
+
+      - name: genus
+        type: string
+        required: false
+        description: "Full scientific name of the genus"
+        ontology_term: dwc:genus
+
+      - name: genericName
+        type: string
+        required: false
+        description: "Genus part of the scientificName"
+        ontology_term: dwc:genericName
+
+      - name: subgenus
+        type: string
+        required: false
+        description: "Full scientific name of the subgenus"
+        ontology_term: dwc:subgenus
+
+      - name: infragenericEpithet
+        type: string
+        required: false
+        description: "Infrageneric part of a binomial name"
+        ontology_term: dwc:infragenericEpithet
+
+      - name: specificEpithet
+        type: string
+        required: false
+        description: "Name of the species epithet"
+        ontology_term: dwc:specificEpithet
+
+      - name: infraspecificEpithet
+        type: string
+        required: false
+        description: "Name of the infraspecific epithet"
+        ontology_term: dwc:infraspecificEpithet
+
+      - name: cultivarEpithet
+        type: string
+        required: false
+        description: "Part of the name for a cultivar or cultivar group"
+        ontology_term: dwc:cultivarEpithet
+
+      - name: taxonRank
+        type: string
+        required: false
+        description: "Taxonomic rank of the most specific name"
+        ontology_term: dwc:taxonRank
+
+      - name: verbatimTaxonRank
+        type: string
+        required: false
+        description: "Taxonomic rank as it appeared in original record"
+        ontology_term: dwc:verbatimTaxonRank
+
+      - name: scientificNameAuthorship
+        type: string
+        required: false
+        description: "Authorship for scientificName"
+        ontology_term: dwc:scientificNameAuthorship
+
+      - name: vernacularName
+        type: string
+        required: false
+        description: "Common or vernacular name"
+        ontology_term: dwc:vernacularName
+
+      - name: nomenclaturalCode
+        type: string
+        required: false
+        description: "Nomenclatural code under which name is constructed"
+        ontology_term: dwc:nomenclaturalCode
+
+      - name: taxonomicStatus
+        type: string
+        required: false
+        description: "Status of the use of scientificName (accepted, synonym)"
+        ontology_term: dwc:taxonomicStatus
+
+      - name: nomenclaturalStatus
+        type: string
+        required: false
+        description: "Status related to original publication"
+        ontology_term: dwc:nomenclaturalStatus
+
+      - name: taxonRemarks
+        type: string
+        required: false
+        description: "Comments about the taxon"
+        ontology_term: dwc:taxonRemarks
+
+  Identification:
+    ontology_term: dwc:Identification
+    description: "A taxonomic determination (assignment of a taxon to an organism)"
+    example:
+      identificationID: "ID-2024-001"
+      occurrenceID: "urn:catalog:UWBM:Bird:89776"
+      identifiedBy: "Jane Doe"
+      dateIdentified: "2024-06-15"
+      identificationVerificationStatus: "verified by expert"
+    fields:
+      - name: identificationID
+        type: string
+        required: false
+        description: "Unique identifier for the identification"
+        ontology_term: dwc:identificationID
+
+      - name: occurrenceID
+        type: string
+        required: true
+        description: "Reference to the parent Occurrence"
+        ontology_term: dwc:occurrenceID
+
+      - name: verbatimIdentification
+        type: string
+        required: false
+        description: "String representing the taxonomic identification as it appeared"
+        ontology_term: dwc:verbatimIdentification
+
+      - name: identificationQualifier
+        type: string
+        required: false
+        description: "Expression of uncertainty (cf., aff., etc.)"
+        ontology_term: dwc:identificationQualifier
+
+      - name: typeStatus
+        type: string
+        required: false
+        description: "Nomenclatural type designation"
+        ontology_term: dwc:typeStatus
+
+      - name: identifiedBy
+        type: string
+        required: false
+        description: "Person(s) who assigned the taxon"
+        ontology_term: dwc:identifiedBy
+
+      - name: identifiedByID
+        type: string
+        required: false
+        description: "Identifier for the person(s) who identified"
+        ontology_term: dwc:identifiedByID
+
+      - name: dateIdentified
+        type: string
+        required: false
+        description: "Date on which the identification was made"
+        ontology_term: dwc:dateIdentified
+
+      - name: identificationReferences
+        type: string
+        required: false
+        description: "References used in the identification"
+        ontology_term: dwc:identificationReferences
+
+      - name: identificationVerificationStatus
+        type: string
+        required: false
+        description: "Indicator of the extent to which identification has been verified"
+        ontology_term: dwc:identificationVerificationStatus
+
+      - name: identificationRemarks
+        type: string
+        required: false
+        description: "Comments about the identification"
+        ontology_term: dwc:identificationRemarks
+
+      - name: taxon
+        type: entity
+        items: Taxon
+        required: false
+        description: "The identified taxon"
+
+  Organism:
+    ontology_term: dwc:Organism
+    description: "A particular organism or defined group of organisms"
+    example:
+      organismID: "ORG-2024-001"
+      occurrenceID: "urn:catalog:UWBM:Bird:89776"
+      organismName: "Cheeta"
+      organismScope: "individual"
+    fields:
+      - name: organismID
+        type: string
+        required: true
+        description: "Unique identifier for the organism"
+        ontology_term: dwc:organismID
+
+      - name: occurrenceID
+        type: string
+        required: true
+        description: "Reference to the parent Occurrence"
+        ontology_term: dwc:occurrenceID
+
+      - name: organismName
+        type: string
+        required: false
+        description: "Textual name or label for the organism"
+        ontology_term: dwc:organismName
+
+      - name: organismScope
+        type: string
+        required: false
+        description: "Description of the kind of organism instance"
+        ontology_term: dwc:organismScope
+
+      - name: associatedOccurrences
+        type: string
+        required: false
+        description: "List of identifiers for associated occurrence records"
+        ontology_term: dwc:associatedOccurrences
+
+      - name: associatedOrganisms
+        type: string
+        required: false
+        description: "Relationships to other organisms"
+        ontology_term: dwc:associatedOrganisms
+
+      - name: previousIdentifications
+        type: string
+        required: false
+        description: "List of previous taxonomic identifications"
+        ontology_term: dwc:previousIdentifications
+
+      - name: organismRemarks
+        type: string
+        required: false
+        description: "Comments about the organism"
+        ontology_term: dwc:organismRemarks
+
+  MaterialSample:
+    ontology_term: dwc:MaterialSample
+    description: "A physical result of a sampling event"
+    example:
+      materialSampleID: "MAT-2024-001"
+    fields:
+      - name: materialSampleID
+        type: string
+        required: true
+        description: "Unique identifier for the material sample"
+        ontology_term: dwc:materialSampleID
+
+      - name: materialEntityID
+        type: string
+        required: false
+        description: "Identifier for the material entity"
+        ontology_term: dwc:materialEntityID
+
+      - name: preparations
+        type: string
+        required: false
+        description: "Preparation or preservation method"
+        ontology_term: dwc:preparations
+
+      - name: disposition
+        type: string
+        required: false
+        description: "Current state of the material sample"
+        ontology_term: dwc:disposition
+
+      - name: verbatimLabel
+        type: string
+        required: false
+        description: "Original content of the label"
+        ontology_term: dwc:verbatimLabel
+
+  MeasurementOrFact:
+    ontology_term: dwc:MeasurementOrFact
+    description: "A measurement or characteristic of an occurrence"
+    example:
+      measurementID: "MEAS-001"
+      measurementType: "body mass"
+      measurementValue: "45"
+      measurementUnit: "kg"
+    fields:
+      - name: measurementID
+        type: string
+        required: false
+        description: "Unique identifier for the measurement"
+        ontology_term: dwc:measurementID
+
+      - name: parentMeasurementID
+        type: string
+        required: false
+        description: "Identifier for the parent measurement"
+        ontology_term: dwc:parentMeasurementID
+
+      - name: measurementType
+        type: string
+        required: true
+        description: "Nature of the measurement or characteristic"
+        ontology_term: dwc:measurementType
+
+      - name: measurementValue
+        type: string
+        required: false
+        description: "Value of the measurement"
+        ontology_term: dwc:measurementValue
+
+      - name: measurementAccuracy
+        type: string
+        required: false
+        description: "Accuracy of the measurement"
+        ontology_term: dwc:measurementAccuracy
+
+      - name: measurementUnit
+        type: string
+        required: false
+        description: "Units for the measurement value"
+        ontology_term: dwc:measurementUnit
+
+      - name: measurementDeterminedBy
+        type: string
+        required: false
+        description: "Person(s) who made the measurement"
+        ontology_term: dwc:measurementDeterminedBy
+
+      - name: measurementDeterminedDate
+        type: string
+        required: false
+        description: "Date on which measurement was made"
+        ontology_term: dwc:measurementDeterminedDate
+
+      - name: measurementMethod
+        type: string
+        required: false
+        description: "Description of method used for measurement"
+        ontology_term: dwc:measurementMethod
+
+      - name: measurementRemarks
+        type: string
+        required: false
+        description: "Comments about the measurement"
+        ontology_term: dwc:measurementRemarks
+
+  GeologicalContext:
+    ontology_term: dwc:GeologicalContext
+    description: "Geological information for paleontological specimens"
+    example:
+      geologicalContextID: "GEO-001"
+      earliestEonOrLowestEonothem: "Phanerozoic"
+      latestEraOrHighestErathem: "Cenozoic"
+    fields:
+      - name: geologicalContextID
+        type: string
+        required: false
+        description: "Unique identifier for the geological context"
+        ontology_term: dwc:geologicalContextID
+
+      - name: earliestEonOrLowestEonothem
+        type: string
+        required: false
+        description: "Full name of the earliest possible geochronologic eon"
+        ontology_term: dwc:earliestEonOrLowestEonothem
+
+      - name: latestEonOrHighestEonothem
+        type: string
+        required: false
+        description: "Full name of the latest possible geochronologic eon"
+        ontology_term: dwc:latestEonOrHighestEonothem
+
+      - name: earliestEraOrLowestErathem
+        type: string
+        required: false
+        description: "Full name of the earliest possible geochronologic era"
+        ontology_term: dwc:earliestEraOrLowestErathem
+
+      - name: latestEraOrHighestErathem
+        type: string
+        required: false
+        description: "Full name of the latest possible geochronologic era"
+        ontology_term: dwc:latestEraOrHighestErathem
+
+      - name: earliestPeriodOrLowestSystem
+        type: string
+        required: false
+        description: "Full name of the earliest possible geochronologic period"
+        ontology_term: dwc:earliestPeriodOrLowestSystem
+
+      - name: latestPeriodOrHighestSystem
+        type: string
+        required: false
+        description: "Full name of the latest possible geochronologic period"
+        ontology_term: dwc:latestPeriodOrHighestSystem
+
+      - name: earliestEpochOrLowestSeries
+        type: string
+        required: false
+        description: "Full name of the earliest possible geochronologic epoch"
+        ontology_term: dwc:earliestEpochOrLowestSeries
+
+      - name: latestEpochOrHighestSeries
+        type: string
+        required: false
+        description: "Full name of the latest possible geochronologic epoch"
+        ontology_term: dwc:latestEpochOrHighestSeries
+
+      - name: earliestAgeOrLowestStage
+        type: string
+        required: false
+        description: "Full name of the earliest possible geochronologic age"
+        ontology_term: dwc:earliestAgeOrLowestStage
+
+      - name: latestAgeOrHighestStage
+        type: string
+        required: false
+        description: "Full name of the latest possible geochronologic age"
+        ontology_term: dwc:latestAgeOrHighestStage
+
+      - name: lowestBiostratigraphicZone
+        type: string
+        required: false
+        description: "Full name of the lowest possible biostratigraphic zone"
+        ontology_term: dwc:lowestBiostratigraphicZone
+
+      - name: highestBiostratigraphicZone
+        type: string
+        required: false
+        description: "Full name of the highest possible biostratigraphic zone"
+        ontology_term: dwc:highestBiostratigraphicZone
+
+      - name: lithostratigraphicTerms
+        type: string
+        required: false
+        description: "Lithostratigraphic names for the rock"
+        ontology_term: dwc:lithostratigraphicTerms
+
+      - name: group
+        type: string
+        required: false
+        description: "Full name of the lithostratigraphic group"
+        ontology_term: dwc:group
+
+      - name: formation
+        type: string
+        required: false
+        description: "Full name of the lithostratigraphic formation"
+        ontology_term: dwc:formation
+
+      - name: member
+        type: string
+        required: false
+        description: "Full name of the lithostratigraphic member"
+        ontology_term: dwc:member
+
+      - name: bed
+        type: string
+        required: false
+        description: "Full name of the lithostratigraphic bed"
+        ontology_term: dwc:bed
+
+  ResourceRelationship:
+    ontology_term: dwc:ResourceRelationship
+    description: "A relationship between two resources"
+    example:
+      resourceRelationshipID: "REL-001"
+      resourceID: "OCC-001"
+      relatedResourceID: "OCC-002"
+      relationshipOfResource: "mother of"
+    fields:
+      - name: resourceRelationshipID
+        type: string
+        required: false
+        description: "Unique identifier for the relationship"
+        ontology_term: dwc:resourceRelationshipID
+
+      - name: resourceID
+        type: string
+        required: true
+        description: "Identifier for the subject resource"
+        ontology_term: dwc:resourceID
+
+      - name: relationshipOfResourceID
+        type: string
+        required: false
+        description: "Identifier for the relationship type"
+        ontology_term: dwc:relationshipOfResourceID
+
+      - name: relatedResourceID
+        type: string
+        required: true
+        description: "Identifier for the related resource"
+        ontology_term: dwc:relatedResourceID
+
+      - name: relationshipOfResource
+        type: string
+        required: true
+        description: "Description of the relationship"
+        ontology_term: dwc:relationshipOfResource
+
+      - name: relationshipAccordingTo
+        type: string
+        required: false
+        description: "Source asserting the relationship"
+        ontology_term: dwc:relationshipAccordingTo
+
+      - name: relationshipEstablishedDate
+        type: string
+        required: false
+        description: "Date on which relationship was established"
+        ontology_term: dwc:relationshipEstablishedDate
+
+      - name: relationshipRemarks
+        type: string
+        required: false
+        description: "Comments about the relationship"
+        ontology_term: dwc:relationshipRemarks

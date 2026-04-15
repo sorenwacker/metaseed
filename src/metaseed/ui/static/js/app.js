@@ -9,6 +9,15 @@ document.addEventListener('click', function(e) {
     }
 });
 
+// Handle inline table toggle (clicking on title area)
+document.addEventListener('click', function(e) {
+    var title = e.target.closest('.inline-table-title');
+    if (title) {
+        var section = title.closest('.inline-table-section');
+        section.classList.toggle('collapsed');
+    }
+});
+
 // Handle profile select change
 document.addEventListener('change', function(e) {
     if (e.target.id === 'profile-select') {
@@ -578,6 +587,17 @@ function handleLookupBlur(e) {
 
 // Handle keyboard navigation in autocomplete
 function handleLookupKeydown(e) {
+    var input = e.target;
+    var entityType = input.dataset.lookup;
+
+    // Tab key: show all available foreign keys if autocomplete not visible
+    if (e.key === 'Tab' && !activeAutocomplete) {
+        e.preventDefault();
+        // Fetch all values (empty query) and show dropdown
+        fetchLookupSuggestions(input, entityType, '');
+        return;
+    }
+
     if (!activeAutocomplete) return;
 
     var items = activeAutocomplete.querySelectorAll('.autocomplete-item');
@@ -585,11 +605,20 @@ function handleLookupKeydown(e) {
     var activeIndex = Array.from(items).indexOf(activeItem);
 
     switch (e.key) {
+        case 'Tab':
+            // Tab with autocomplete visible: select current item and close
+            e.preventDefault();
+            if (activeItem) {
+                selectLookupValue(input, activeItem.dataset.value);
+            }
+            hideAutocomplete();
+            break;
         case 'ArrowDown':
             e.preventDefault();
             if (activeIndex < items.length - 1) {
                 if (activeItem) activeItem.classList.remove('active');
                 items[activeIndex + 1].classList.add('active');
+                scrollIntoViewIfNeeded(items[activeIndex + 1]);
             }
             break;
         case 'ArrowUp':
@@ -597,18 +626,32 @@ function handleLookupKeydown(e) {
             if (activeIndex > 0) {
                 if (activeItem) activeItem.classList.remove('active');
                 items[activeIndex - 1].classList.add('active');
+                scrollIntoViewIfNeeded(items[activeIndex - 1]);
             }
             break;
         case 'Enter':
             e.preventDefault();
             if (activeItem) {
-                selectLookupValue(e.target, activeItem.dataset.value);
+                selectLookupValue(input, activeItem.dataset.value);
             }
             break;
         case 'Escape':
             e.preventDefault();
             hideAutocomplete();
             break;
+    }
+}
+
+// Helper to scroll item into view in dropdown
+function scrollIntoViewIfNeeded(element) {
+    var parent = element.parentElement;
+    var elementRect = element.getBoundingClientRect();
+    var parentRect = parent.getBoundingClientRect();
+
+    if (elementRect.bottom > parentRect.bottom) {
+        element.scrollIntoView({ block: 'end', behavior: 'smooth' });
+    } else if (elementRect.top < parentRect.top) {
+        element.scrollIntoView({ block: 'start', behavior: 'smooth' });
     }
 }
 

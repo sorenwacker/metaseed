@@ -1,0 +1,693 @@
+# ISA-MIAPPE-Combined v2.0 Example: Maize Phenotyping Study
+# v2.0 introduces Experiment entity for trial-level details
+# A complete example demonstrating all v2.0 entity types
+
+identifier: COMB-2024-MAIZE-001
+title: High-throughput phenotyping of maize under nitrogen stress
+description: >
+  Image-based phenotyping study of maize inbred lines under optimal and
+  low nitrogen conditions. Uses the v2.0 Experiment entity to organize
+  trial-level metadata separately from Study design metadata.
+submission_date: "2024-04-01"
+public_release_date: "2025-01-01"
+
+contacts:
+  - family_name: Garcia
+    given_name: Carlos
+    email: c.garcia@phenomics-center.org
+    affiliation: International Phenomics Center
+    orcid: "0000-0001-2345-6789"
+    roles:
+      - principal investigator
+
+  - family_name: Mueller
+    given_name: Anna
+    email: a.mueller@phenomics-center.org
+    affiliation: International Phenomics Center
+    orcid: "0000-0002-3456-7890"
+    roles:
+      - data curator
+
+publications:
+  - pubmed_id: "98765432"
+    doi: "10.1234/maize.phenomics.2024.001"
+    author_list: "Garcia C, Kim S, Mueller A, et al."
+    title: Automated phenotyping reveals nitrogen use efficiency QTL in diverse maize germplasm
+    status: published
+
+  - doi: "10.1234/maize.phenomics.2024.002"
+    author_list: "Kim S, Garcia C"
+    title: PlantCV pipeline for high-throughput maize phenotyping
+    status: preprint
+
+ontology_source_references:
+  - name: CO_322
+    file: https://cropontology.org/ontology/CO_322
+    version: "2023.1"
+    description: Maize Crop Ontology
+
+  - name: AGRO
+    file: http://purl.obolibrary.org/obo/agro.owl
+    version: "2023.06"
+    description: Agronomy Ontology
+
+  - name: ENVO
+    file: http://purl.obolibrary.org/obo/envo.owl
+    version: "2023.08"
+    description: Environment Ontology
+
+studies:
+  - identifier: STU-MAIZE-N-2024
+    investigation_id: COMB-2024-MAIZE-001
+    title: Maize nitrogen use efficiency phenotyping 2024
+    description: >
+      Greenhouse experiment with automated phenotyping platform evaluating
+      nitrogen stress effects on maize performance. Study design includes
+      multiple genotypes and nitrogen treatments in a factorial design.
+    experimental_design_type: factorial
+    experimental_design_description: >
+      2 nitrogen treatments x 4 genotypes x 6 replicates = 48 pots.
+      Fully randomized within greenhouse conveyor system.
+
+    contacts:
+      - study_id: STU-MAIZE-N-2024
+        family_name: Kim
+        given_name: Sung
+        email: s.kim@phenomics-center.org
+        affiliation: International Phenomics Center
+        orcid: "0000-0003-4567-8901"
+        roles:
+          - data analyst
+          - software developer
+
+    protocols:
+      - study_id: STU-MAIZE-N-2024
+        name: Plant growth protocol
+        protocol_type: growth protocol
+        description: >
+          Seeds germinated in wet paper for 3 days at 28C. Seedlings transplanted
+          to 5L pots filled with perlite:vermiculite (1:1). Nutrient solution
+          applied via automated drip irrigation 4 times daily.
+        version: "2.0"
+        uri: https://protocols.io/view/maize-greenhouse-growth-456
+        parameters:
+          - name: germination_temp
+            parameter_name: germination temperature
+          - name: pot_volume
+            parameter_name: pot volume
+          - name: substrate
+            parameter_name: growth substrate
+
+      - study_id: STU-MAIZE-N-2024
+        name: RGB imaging protocol
+        protocol_type: data acquisition
+        description: >
+          Daily RGB imaging using LemnaTec Scanalyzer 3D. Three images per plant:
+          top view and two side views at 90 degree rotation. Resolution 4096x3000 pixels.
+        version: "1.5"
+        parameters:
+          - name: image_resolution
+            parameter_name: image resolution
+          - name: imaging_frequency
+            parameter_name: imaging frequency
+          - name: camera_model
+            parameter_name: camera model
+
+      - study_id: STU-MAIZE-N-2024
+        name: Nitrogen treatment protocol
+        protocol_type: treatment protocol
+        description: >
+          High nitrogen: 15 mM NH4NO3 in modified Hoagland solution.
+          Low nitrogen: 1.5 mM NH4NO3 in modified Hoagland solution.
+          Treatment initiated at 14 days after planting.
+        version: "1.0"
+
+      - study_id: STU-MAIZE-N-2024
+        name: Harvest protocol
+        protocol_type: sample collection
+        description: >
+          Plants harvested at V12 stage. Shoot and root biomass separated,
+          dried at 70C for 72h in forced-air oven, and weighed. Leaf tissue
+          samples collected from youngest fully expanded leaf for nitrogen
+          content analysis.
+        version: "1.0"
+
+      - study_id: STU-MAIZE-N-2024
+        name: Elemental analysis protocol
+        protocol_type: data acquisition
+        description: >
+          Flash combustion with thermal conductivity detection using LECO
+          TruSpec CN analyzer. Samples dried, ground, and weighed to 0.1mg.
+        version: "1.0"
+
+    sources:
+      - study_id: STU-MAIZE-N-2024
+        name: B73_seed_lot_2024
+        characteristics:
+          - category: organism
+            value: Zea mays
+          - category: seed lot
+            value: B73-2024-01
+          - category: seed source
+            value: USDA GRIN
+
+      - study_id: STU-MAIZE-N-2024
+        name: Mo17_seed_lot_2024
+        characteristics:
+          - category: organism
+            value: Zea mays
+          - category: seed lot
+            value: Mo17-2024-01
+
+      - study_id: STU-MAIZE-N-2024
+        name: W22_seed_lot_2024
+        characteristics:
+          - category: organism
+            value: Zea mays
+          - category: seed lot
+            value: W22-2024-01
+
+      - study_id: STU-MAIZE-N-2024
+        name: PH207_seed_lot_2024
+        characteristics:
+          - category: organism
+            value: Zea mays
+          - category: seed lot
+            value: PH207-2024-01
+
+    samples:
+      - study_id: STU-MAIZE-N-2024
+        name: B73_HN_R1_leaf
+        derives_from:
+          - B73_seed_lot_2024
+        characteristics:
+          - category: tissue type
+            value: leaf
+          - category: developmental stage
+            value: V12
+          - category: treatment
+            value: high nitrogen
+
+      - study_id: STU-MAIZE-N-2024
+        name: B73_LN_R1_leaf
+        derives_from:
+          - B73_seed_lot_2024
+        characteristics:
+          - category: tissue type
+            value: leaf
+          - category: developmental stage
+            value: V12
+          - category: treatment
+            value: low nitrogen
+
+      - study_id: STU-MAIZE-N-2024
+        name: Mo17_HN_R1_leaf
+        derives_from:
+          - Mo17_seed_lot_2024
+        characteristics:
+          - category: tissue type
+            value: leaf
+          - category: developmental stage
+            value: V12
+          - category: treatment
+            value: high nitrogen
+
+      - study_id: STU-MAIZE-N-2024
+        name: Mo17_LN_R1_leaf
+        derives_from:
+          - Mo17_seed_lot_2024
+        characteristics:
+          - category: tissue type
+            value: leaf
+          - category: treatment
+            value: low nitrogen
+
+    extracts:
+      - study_id: STU-MAIZE-N-2024
+        name: B73_HN_R1_leaf_ground
+        derives_from:
+          - B73_HN_R1_leaf
+        characteristics:
+          - category: preparation
+            value: dried and ground
+
+      - study_id: STU-MAIZE-N-2024
+        name: B73_LN_R1_leaf_ground
+        derives_from:
+          - B73_LN_R1_leaf
+
+      - study_id: STU-MAIZE-N-2024
+        name: Mo17_HN_R1_leaf_ground
+        derives_from:
+          - Mo17_HN_R1_leaf
+
+    biological_materials:
+      - identifier: BM-B73
+        study_id: STU-MAIZE-N-2024
+        organism: Zea mays
+        genus: Zea
+        species: mays
+        infraspecific_name: B73
+        accession_number: PI550473
+        biological_material_description: >
+          Reference inbred line, first sequenced maize genome. Good nitrogen
+          use efficiency, widely used as breeding parent.
+        material_source:
+          identifier: MS-USDA-GRIN
+          name: USDA GRIN
+          description: USDA Germplasm Resources Information Network
+          country: United States
+          institute_code: USA001
+
+      - identifier: BM-Mo17
+        study_id: STU-MAIZE-N-2024
+        organism: Zea mays
+        genus: Zea
+        species: mays
+        infraspecific_name: Mo17
+        accession_number: PI558532
+        biological_material_description: >
+          Second reference inbred line, parental line for B73xMo17 hybrid.
+          Moderate nitrogen use efficiency.
+
+      - identifier: BM-W22
+        study_id: STU-MAIZE-N-2024
+        organism: Zea mays
+        genus: Zea
+        species: mays
+        infraspecific_name: W22
+        accession_number: PI587142
+        biological_material_description: >
+          Inbred line with transposon tagging resources. Variable nitrogen
+          response in preliminary screens.
+
+      - identifier: BM-PH207
+        study_id: STU-MAIZE-N-2024
+        organism: Zea mays
+        genus: Zea
+        species: mays
+        infraspecific_name: PH207
+        accession_number: PI601810
+        biological_material_description: >
+          Stiff stalk inbred line used in commercial hybrid development.
+          High nitrogen use efficiency reported.
+
+    factors:
+      - identifier: FAC-NITROGEN
+        study_id: STU-MAIZE-N-2024
+        name: Nitrogen level
+        description: Nitrogen concentration in nutrient solution
+        values:
+          - identifier: FV-HIGH-N
+            factor_id: FAC-NITROGEN
+            value: High nitrogen
+            description: 15 mM NH4NO3 in modified Hoagland solution
+
+          - identifier: FV-LOW-N
+            factor_id: FAC-NITROGEN
+            value: Low nitrogen
+            description: 1.5 mM NH4NO3 in modified Hoagland solution
+
+      - identifier: FAC-GENOTYPE
+        study_id: STU-MAIZE-N-2024
+        name: Genotype
+        description: Maize inbred line
+        values:
+          - identifier: FV-B73
+            factor_id: FAC-GENOTYPE
+            value: B73
+
+          - identifier: FV-Mo17
+            factor_id: FAC-GENOTYPE
+            value: Mo17
+
+          - identifier: FV-W22
+            factor_id: FAC-GENOTYPE
+            value: W22
+
+          - identifier: FV-PH207
+            factor_id: FAC-GENOTYPE
+            value: PH207
+
+    observed_variables:
+      - identifier: VAR-PROJECTED-AREA
+        study_id: STU-MAIZE-N-2024
+        name: Projected shoot area
+        trait: Shoot area
+        trait_accession_number: CO_322:0000123
+        trait_description: Total projected area of above-ground plant parts from side view
+        method: RGB image segmentation
+        method_accession_number: CO_322:0000456
+        method_description: Automated segmentation using PlantCV adaptive thresholding
+        scale: cm2
+        time_scale: Daily from 14 DAP to 60 DAP
+
+      - identifier: VAR-PLANT-HEIGHT
+        study_id: STU-MAIZE-N-2024
+        name: Plant height
+        trait: Plant height
+        trait_accession_number: CO_322:0000789
+        trait_description: Height from soil surface to highest point
+        method: RGB image analysis
+        method_description: Calculated from side view images using bounding box
+        scale: cm
+        time_scale: Daily from 14 DAP to 60 DAP
+
+      - identifier: VAR-SHOOT-BIOMASS
+        study_id: STU-MAIZE-N-2024
+        name: Shoot dry biomass
+        trait: Shoot biomass
+        trait_accession_number: CO_322:0000234
+        trait_description: Dry weight of above-ground biomass
+        method: Gravimetric measurement
+        method_description: Dried at 70C for 72h, weighed on analytical balance
+        scale: g
+        time_scale: At harvest (V12 stage)
+
+      - identifier: VAR-ROOT-BIOMASS
+        study_id: STU-MAIZE-N-2024
+        name: Root dry biomass
+        trait: Root biomass
+        trait_description: Dry weight of below-ground biomass
+        method: Gravimetric measurement
+        method_description: Washed, dried at 70C for 72h, weighed
+        scale: g
+        time_scale: At harvest
+
+      - identifier: VAR-LEAF-N
+        study_id: STU-MAIZE-N-2024
+        name: Leaf nitrogen content
+        trait: Leaf nitrogen concentration
+        trait_description: Total nitrogen content in leaf tissue
+        method: Elemental analysis
+        method_description: Flash combustion with thermal conductivity detection
+        scale: "% dry weight"
+        time_scale: At harvest
+
+      - identifier: VAR-NUE
+        study_id: STU-MAIZE-N-2024
+        name: Nitrogen use efficiency
+        trait: Nitrogen use efficiency
+        trait_description: Ratio of biomass produced to nitrogen supplied
+        method: Calculated
+        method_description: Shoot biomass (g) / total N supplied (g)
+        scale: g/g
+        time_scale: At harvest
+
+    observation_units:
+      - identifier: OU-B73-HN-R1
+        study_id: STU-MAIZE-N-2024
+        observation_unit_type: pot
+        biological_material_id: BM-B73
+        spatial_distribution: "lane:1,position:1"
+        observation_unit_block: "1"
+        observation_unit_replicate: "1"
+        entry_type: test
+        factor_values:
+          - identifier: FV-OU-B73-HN-R1-N
+            factor_id: FAC-NITROGEN
+            value: High nitrogen
+          - identifier: FV-OU-B73-HN-R1-G
+            factor_id: FAC-GENOTYPE
+            value: B73
+
+      - identifier: OU-B73-LN-R1
+        study_id: STU-MAIZE-N-2024
+        observation_unit_type: pot
+        biological_material_id: BM-B73
+        spatial_distribution: "lane:1,position:2"
+        observation_unit_block: "1"
+        observation_unit_replicate: "1"
+        entry_type: test
+        factor_values:
+          - identifier: FV-OU-B73-LN-R1-N
+            factor_id: FAC-NITROGEN
+            value: Low nitrogen
+          - identifier: FV-OU-B73-LN-R1-G
+            factor_id: FAC-GENOTYPE
+            value: B73
+
+      - identifier: OU-Mo17-HN-R1
+        study_id: STU-MAIZE-N-2024
+        observation_unit_type: pot
+        biological_material_id: BM-Mo17
+        spatial_distribution: "lane:1,position:3"
+        observation_unit_block: "1"
+        observation_unit_replicate: "1"
+        entry_type: test
+        factor_values:
+          - identifier: FV-OU-Mo17-HN-R1-N
+            factor_id: FAC-NITROGEN
+            value: High nitrogen
+
+      - identifier: OU-Mo17-LN-R1
+        study_id: STU-MAIZE-N-2024
+        observation_unit_type: pot
+        biological_material_id: BM-Mo17
+        spatial_distribution: "lane:1,position:4"
+        observation_unit_block: "1"
+        observation_unit_replicate: "1"
+        entry_type: test
+        factor_values:
+          - identifier: FV-OU-Mo17-LN-R1-N
+            factor_id: FAC-NITROGEN
+            value: Low nitrogen
+
+      - identifier: OU-W22-HN-R1
+        study_id: STU-MAIZE-N-2024
+        observation_unit_type: pot
+        biological_material_id: BM-W22
+        spatial_distribution: "lane:1,position:5"
+        observation_unit_block: "1"
+        observation_unit_replicate: "1"
+        entry_type: test
+
+      - identifier: OU-PH207-HN-R1
+        study_id: STU-MAIZE-N-2024
+        observation_unit_type: pot
+        biological_material_id: BM-PH207
+        spatial_distribution: "lane:1,position:6"
+        observation_unit_block: "1"
+        observation_unit_replicate: "1"
+        entry_type: test
+
+    # v2.0 feature: Experiment entity groups trial-level details
+    experiments:
+      - identifier: EXP-MAIZE-2024
+        name: Maize N efficiency trial 2024
+        description: >
+          Main phenotyping trial in automated greenhouse system. Plants imaged
+          daily on conveyor system. Nitrogen treatments applied via fertigation.
+        start_date: "2024-03-01T08:00:00"
+        end_date: "2024-06-15T18:00:00"
+        experimental_site_name: Automated Phenotyping Greenhouse
+        latitude: 41.9028
+        longitude: 12.4964
+        altitude: 50.0
+        growth_facility_type: greenhouse
+        cultural_practices: >
+          Automated fertigation 4x daily. Climate-controlled environment with
+          supplemental LED lighting. Conveyor system for automated imaging.
+
+        events:
+          - identifier: EVT-SOWING
+            study_id: STU-MAIZE-N-2024
+            event_type: Sowing
+            date: "2024-03-01T09:00:00"
+            description: Seeds placed in germination trays
+            event_accession_number: AGRO:00000007
+
+          - identifier: EVT-TRANSPLANT
+            study_id: STU-MAIZE-N-2024
+            event_type: Transplanting
+            date: "2024-03-04T10:00:00"
+            description: Seedlings transplanted to 5L pots
+            event_accession_number: AGRO:00000512
+
+          - identifier: EVT-TREATMENT-START
+            study_id: STU-MAIZE-N-2024
+            event_type: Treatment application
+            date: "2024-03-15T08:00:00"
+            description: Nitrogen treatments initiated at 14 DAP
+            observation_unit_ids:
+              - OU-B73-LN-R1
+              - OU-Mo17-LN-R1
+
+          - identifier: EVT-IMAGING-START
+            study_id: STU-MAIZE-N-2024
+            event_type: Phenotyping
+            date: "2024-03-15T06:00:00"
+            description: Automated daily imaging initiated
+
+          - identifier: EVT-HARVEST
+            study_id: STU-MAIZE-N-2024
+            event_type: Harvest
+            date: "2024-05-15T08:00:00"
+            end_date: "2024-05-17T18:00:00"
+            description: Destructive harvest for biomass measurements at V12 stage
+            event_accession_number: AGRO:00000008
+
+        environments:
+          - identifier: ENV-DAY-TEMP
+            study_id: STU-MAIZE-N-2024
+            parameter: Day temperature
+            parameter_accession_number: ENVO:09200001
+            value: "28"
+            unit: degree Celsius
+            description: Target day temperature maintained by climate control
+
+          - identifier: ENV-NIGHT-TEMP
+            study_id: STU-MAIZE-N-2024
+            parameter: Night temperature
+            value: "22"
+            unit: degree Celsius
+            description: Target night temperature
+
+          - identifier: ENV-PHOTOPERIOD
+            study_id: STU-MAIZE-N-2024
+            parameter: Photoperiod
+            value: "14"
+            unit: hours
+            description: Day length with supplemental LED lighting
+
+          - identifier: ENV-PAR
+            study_id: STU-MAIZE-N-2024
+            parameter: Photosynthetically active radiation
+            value: "400"
+            unit: umol/m2/s
+            description: Light intensity at canopy level
+
+          - identifier: ENV-CO2
+            study_id: STU-MAIZE-N-2024
+            parameter: CO2 concentration
+            value: "400"
+            unit: ppm
+            description: Ambient CO2 level
+
+          - identifier: ENV-HUMIDITY
+            study_id: STU-MAIZE-N-2024
+            parameter: Relative humidity
+            value: "60"
+            unit: "%"
+            description: Target relative humidity
+
+    processes:
+      - study_id: STU-MAIZE-N-2024
+        name: germination_process
+        executes_protocol: Plant growth protocol
+        performer: Sung Kim
+        date: "2024-03-01"
+        inputs:
+          - B73_seed_lot_2024
+          - Mo17_seed_lot_2024
+          - W22_seed_lot_2024
+          - PH207_seed_lot_2024
+        outputs:
+          - OU-B73-HN-R1
+          - OU-B73-LN-R1
+          - OU-Mo17-HN-R1
+          - OU-Mo17-LN-R1
+          - OU-W22-HN-R1
+          - OU-PH207-HN-R1
+        parameter_values:
+          - category: germination temperature
+            value: "28"
+            unit: degree Celsius
+          - category: pot volume
+            value: "5"
+            unit: liters
+          - category: growth substrate
+            value: perlite:vermiculite 1:1
+
+      - study_id: STU-MAIZE-N-2024
+        name: imaging_daily
+        executes_protocol: RGB imaging protocol
+        performer: Automated system
+        date: "2024-03-15"
+        inputs:
+          - OU-B73-HN-R1
+          - OU-B73-LN-R1
+          - OU-Mo17-HN-R1
+          - OU-Mo17-LN-R1
+        outputs:
+          - image_data_2024-03-15
+        parameter_values:
+          - category: image resolution
+            value: "4096x3000"
+            unit: pixels
+          - category: camera model
+            value: Basler acA4096-30gc
+
+      - study_id: STU-MAIZE-N-2024
+        name: harvest_B73_HN_R1
+        executes_protocol: Harvest protocol
+        performer: Anna Mueller
+        date: "2024-05-15"
+        inputs:
+          - OU-B73-HN-R1
+        outputs:
+          - B73_HN_R1_leaf
+
+      - study_id: STU-MAIZE-N-2024
+        name: grinding_B73_HN_R1
+        executes_protocol: Elemental analysis protocol
+        performer: Lab technician
+        date: "2024-05-20"
+        inputs:
+          - B73_HN_R1_leaf
+        outputs:
+          - B73_HN_R1_leaf_ground
+
+    assays:
+      - study_id: STU-MAIZE-N-2024
+        filename: a_rgb_phenotyping.txt
+        measurement_type: phenotyping
+        technology_type: digital imaging
+        technology_platform: LemnaTec Scanalyzer 3D
+
+      - study_id: STU-MAIZE-N-2024
+        filename: a_nitrogen_analysis.txt
+        measurement_type: elemental analysis
+        technology_type: combustion analysis
+        technology_platform: LECO TruSpec CN
+
+    data_files:
+      - identifier: DF-PHENOTYPES
+        study_id: STU-MAIZE-N-2024
+        filename: phenotype_timeseries.csv
+        name: Extracted phenotypes time series
+        link: https://example.com/data/phenotypes.csv
+        file_type: text/csv
+        description: Daily extracted phenotypes (area, height, color indices)
+
+      - identifier: DF-IMAGES
+        study_id: STU-MAIZE-N-2024
+        filename: images.tar.gz
+        name: Raw RGB images
+        link: https://example.com/data/images.tar.gz
+        file_type: application/gzip
+        description: All raw RGB images from the experiment
+
+      - identifier: DF-BIOMASS
+        study_id: STU-MAIZE-N-2024
+        filename: biomass_data.csv
+        name: Biomass measurements
+        link: https://example.com/data/biomass.csv
+        file_type: text/csv
+        description: Final harvest biomass data (shoot and root)
+
+      - identifier: DF-NITROGEN
+        study_id: STU-MAIZE-N-2024
+        filename: nitrogen_content.csv
+        name: Leaf nitrogen content
+        link: https://example.com/data/nitrogen.csv
+        file_type: text/csv
+        description: Elemental analysis results for leaf nitrogen
+
+      - identifier: DF-ANALYSIS
+        study_id: STU-MAIZE-N-2024
+        filename: statistical_analysis.html
+        name: Statistical analysis report
+        link: https://example.com/data/analysis.html
+        file_type: text/html
+        description: R markdown report with ANOVA and mixed model results

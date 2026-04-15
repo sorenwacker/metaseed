@@ -3,11 +3,10 @@
 # Based on ISA-Tab specification and isaterms ontology (http://purl.org/isaterms/)
 
 version: "1.0"
-name: ISA
-description: >
-  Investigation/Study/Assay framework for describing life science experiments.
-  The ISA framework enables experimenters to structure and share experimental
-  metadata in a standard, machine-readable format.
+name: isa
+display_name: ISA
+description: "Investigation-Study-Assay framework. General purpose for life science experiments."
+root_entity: Investigation
 ontology: isaterms
 
 validation_rules:
@@ -190,6 +189,12 @@ entities:
         description: A unique identifier or accession number
         ontology_term: isaterms:identifier
 
+      - name: investigation_id
+        type: string
+        required: true
+        description: Reference to the parent Investigation
+        ontology_term: isaterms:belongsToInvestigation
+
       - name: title
         type: string
         required: true
@@ -304,6 +309,12 @@ entities:
         required: true
         description: The name of the Assay file (a_*.txt)
 
+      - name: study_id
+        type: string
+        required: true
+        description: Reference to the parent Study
+        ontology_term: isaterms:belongsToStudy
+
       - name: measurement_type
         type: entity
         items: OntologyAnnotation
@@ -363,6 +374,7 @@ entities:
     ontology_term: isaterms:person
     description: A person/contact that can be attributed to an Investigation or Study
     fields:
+      # Name fields
       - name: last_name
         type: string
         required: true
@@ -381,6 +393,7 @@ entities:
         description: The middle initials of the person
         ontology_term: isaterms:mid_initials
 
+      # Contact information
       - name: email
         type: string
         required: false
@@ -421,6 +434,19 @@ entities:
         items: Comment
         required: false
         description: Comments associated with the person
+
+      # Reference fields (auto-filled from context)
+      - name: investigation_id
+        type: string
+        required: false
+        description: Reference to parent Investigation (for investigation contacts)
+        ontology_term: isaterms:belongsToInvestigation
+
+      - name: study_id
+        type: string
+        required: false
+        description: Reference to parent Study (for study contacts)
+        ontology_term: isaterms:belongsToStudy
 
   Publication:
     ontology_term: isaterms:publication
@@ -467,6 +493,12 @@ entities:
     ontology_term: isaterms:protocol
     description: An experimental Protocol used in the study
     fields:
+      - name: study_id
+        type: string
+        required: true
+        description: Reference to the parent Study
+        ontology_term: isaterms:belongsToStudy
+
       - name: name
         type: string
         required: true
@@ -535,6 +567,12 @@ entities:
     ontology_term: isaterms:source
     description: Represents a Source material in an experimental graph
     fields:
+      - name: study_id
+        type: string
+        required: true
+        description: Reference to the parent Study
+        ontology_term: isaterms:belongsToStudy
+
       - name: name
         type: string
         required: true
@@ -558,6 +596,12 @@ entities:
     ontology_term: isaterms:sample
     description: Represents a Sample material in an experimental graph
     fields:
+      - name: study_id
+        type: string
+        required: true
+        description: Reference to the parent Study
+        ontology_term: isaterms:belongsToStudy
+
       - name: name
         type: string
         required: true
@@ -662,6 +706,12 @@ entities:
       experimentalist with the intention to affect biological systems in a way
       that can be measured by an assay.
     fields:
+      - name: study_id
+        type: string
+        required: true
+        description: Reference to the parent Study
+        ontology_term: isaterms:belongsToStudy
+
       - name: name
         type: string
         required: true
@@ -821,6 +871,12 @@ entities:
     ontology_term: isaterms:file
     description: Represents a data file in an experimental graph
     fields:
+      - name: assay_id
+        type: string
+        required: true
+        description: Reference to the parent Assay
+        ontology_term: isaterms:belongsToAssay
+
       - name: filename
         type: string
         required: true

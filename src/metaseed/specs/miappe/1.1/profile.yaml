@@ -3,11 +3,10 @@
 # Single source of truth for all entity definitions
 
 version: "1.1"
-name: MIAPPE
-description: >
-  MIAPPE (Minimum Information About Plant Phenotyping Experiments) is a
-  reporting standard for plant phenotyping experiments. This specification
-  defines 14 entities following the Plant Phenotyping Experiment Ontology (PPEO).
+name: miappe
+display_name: MIAPPE
+description: "Minimum Information About Plant Phenotyping Experiments. Best for plant phenotyping studies."
+root_entity: Investigation
 ontology: PPEO
 
 # Validation rules applied across entities
@@ -100,7 +99,74 @@ validation_rules:
     field: growth_facility_type
     enum: [field, greenhouse, growth chamber, phytotron, open top chamber, glasshouse]
 
-  # Reference integrity
+  # Reference integrity - study_id references
+  - name: biological_material_study_reference
+    description: BiologicalMaterial study_id must reference valid Study
+    applies_to: [BiologicalMaterial]
+    field: study_id
+    reference: Study.unique_id
+
+  - name: observation_unit_study_reference
+    description: ObservationUnit study_id must reference valid Study
+    applies_to: [ObservationUnit]
+    field: study_id
+    reference: Study.unique_id
+
+  - name: observed_variable_study_reference
+    description: ObservedVariable study_id must reference valid Study
+    applies_to: [ObservedVariable]
+    field: study_id
+    reference: Study.unique_id
+
+  - name: factor_study_reference
+    description: Factor study_id must reference valid Study
+    applies_to: [Factor]
+    field: study_id
+    reference: Study.unique_id
+
+  - name: event_study_reference
+    description: Event study_id must reference valid Study
+    applies_to: [Event]
+    field: study_id
+    reference: Study.unique_id
+
+  - name: environment_study_reference
+    description: Environment study_id must reference valid Study
+    applies_to: [Environment]
+    field: study_id
+    reference: Study.unique_id
+
+  - name: sample_study_reference
+    description: Sample study_id must reference valid Study
+    applies_to: [Sample]
+    field: study_id
+    reference: Study.unique_id
+
+  - name: datafile_study_reference
+    description: DataFile study_id must reference valid Study
+    applies_to: [DataFile]
+    field: study_id
+    reference: Study.unique_id
+
+  - name: location_study_reference
+    description: Location study_id must reference valid Study
+    applies_to: [Location]
+    field: study_id
+    reference: Study.unique_id
+
+  - name: person_study_reference
+    description: Person study_id must reference valid Study
+    applies_to: [Person]
+    field: study_id
+    reference: Study.unique_id
+
+  - name: person_investigation_reference
+    description: Person investigation_id must reference valid Investigation
+    applies_to: [Person]
+    field: investigation_id
+    reference: Investigation.unique_id
+
+  # Reference integrity - other references
   - name: sample_observation_unit_reference
     description: Sample observation_unit_id must reference valid ObservationUnit
     applies_to: [Sample]
@@ -331,6 +397,12 @@ entities:
           min_length: 1
           max_length: 100
 
+      - name: investigation_id
+        type: string
+        required: true
+        description: Reference to the parent Investigation.
+        ontology_term: PPEO:belongsToInvestigation
+
       - name: title
         type: string
         required: true
@@ -509,6 +581,7 @@ entities:
       institution: Wageningen University and Research
       role: Principal Investigator
       orcid: 0000-0001-2345-6789
+      investigation_id: INV-WHEAT-2024
     fields:
       - name: name
         type: string
@@ -547,11 +620,25 @@ entities:
         constraints:
           pattern: "^[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X]$"
 
+      # Reference fields (auto-filled from context)
+      - name: investigation_id
+        type: string
+        required: false
+        description: Reference to parent Investigation (for investigation contacts).
+        ontology_term: PPEO:belongsToInvestigation
+
+      - name: study_id
+        type: string
+        required: false
+        description: Reference to parent Study (for study personnel).
+        ontology_term: PPEO:belongsToStudy
+
   BiologicalMaterial:
     ontology_term: PPEO:biological_material
     description: Biological material (germplasm) used in a study.
     example:
       unique_id: BM-WHEAT-001
+      study_id: STU-FIELD-2024
       organism: Triticum aestivum
       genus: Triticum
       species: aestivum
@@ -576,6 +663,12 @@ entities:
           pattern: "^[A-Za-z0-9_-]+$"
           min_length: 1
           max_length: 100
+
+      - name: study_id
+        type: string
+        required: true
+        description: Reference to the parent Study.
+        ontology_term: PPEO:belongsToStudy
 
       - name: organism
         type: string
@@ -667,6 +760,7 @@ entities:
     description: Smallest unit on which observations are made.
     example:
       unique_id: OU-PLOT-001
+      study_id: STU-FIELD-2024
       observation_unit_type: plot
       biological_material_id: BM-WHEAT-001
       spatial_distribution_type: grid
@@ -690,6 +784,12 @@ entities:
           pattern: "^[A-Za-z0-9_-]+$"
           min_length: 1
           max_length: 100
+
+      - name: study_id
+        type: string
+        required: true
+        description: Reference to the parent Study.
+        ontology_term: PPEO:belongsToStudy
 
       - name: observation_unit_type
         type: string
@@ -783,6 +883,7 @@ entities:
     description: Trait + Method + Scale combination for measurements.
     example:
       unique_id: VAR-PLANTHEIGHT
+      study_id: STU-FIELD-2024
       name: Plant Height
       trait: plant height
       trait_accession_number: CO_321:0000020
@@ -805,6 +906,12 @@ entities:
           pattern: "^[A-Za-z0-9_-]+$"
           min_length: 1
           max_length: 100
+
+      - name: study_id
+        type: string
+        required: true
+        description: Reference to the parent Study.
+        ontology_term: PPEO:belongsToStudy
 
       - name: name
         type: string
@@ -886,6 +993,7 @@ entities:
     description: Experimental factor (controlled variable).
     example:
       unique_id: FAC-IRRIGATION
+      study_id: STU-FIELD-2024
       name: Irrigation Treatment
       description: Water stress treatment levels applied during reproductive growth stage
       factor_type: treatment
@@ -899,6 +1007,12 @@ entities:
           pattern: "^[A-Za-z0-9_-]+$"
           min_length: 1
           max_length: 100
+
+      - name: study_id
+        type: string
+        required: true
+        description: Reference to the parent Study.
+        ontology_term: PPEO:belongsToStudy
 
       - name: name
         type: string
@@ -972,6 +1086,7 @@ entities:
     description: A discrete occurrence during a study.
     example:
       unique_id: EVT-SOWING-001
+      study_id: STU-FIELD-2024
       event_type: Sowing
       date: "2024-05-01"
       end_date: "2024-05-03"
@@ -990,6 +1105,12 @@ entities:
           pattern: "^[A-Za-z0-9_-]+$"
           min_length: 1
           max_length: 100
+
+      - name: study_id
+        type: string
+        required: true
+        description: Reference to the parent Study.
+        ontology_term: PPEO:belongsToStudy
 
       - name: event_type
         type: string
@@ -1036,6 +1157,7 @@ entities:
     description: Environmental conditions recorded during a study.
     example:
       unique_id: ENV-TEMP-001
+      study_id: STU-FIELD-2024
       parameter: Air temperature
       parameter_accession_number: ENVO:09200001
       value: "22.5"
@@ -1052,6 +1174,12 @@ entities:
           pattern: "^[A-Za-z0-9_-]+$"
           min_length: 1
           max_length: 100
+
+      - name: study_id
+        type: string
+        required: true
+        description: Reference to the parent Study.
+        ontology_term: PPEO:belongsToStudy
 
       - name: parameter
         type: string
@@ -1157,6 +1285,7 @@ entities:
     description: A data file associated with a study.
     example:
       unique_id: DF-PHENOTYPES-001
+      study_id: STU-FIELD-2024
       name: phenotype_measurements.csv
       link: https://doi.org/10.5281/zenodo.1234567
       description: Raw phenotype measurements for all plots including plant height, flowering time, and yield
@@ -1172,6 +1301,12 @@ entities:
           pattern: "^[A-Za-z0-9_-]+$"
           min_length: 1
           max_length: 100
+
+      - name: study_id
+        type: string
+        required: true
+        description: Reference to the parent Study.
+        ontology_term: PPEO:belongsToStudy
 
       - name: name
         type: string
@@ -1211,6 +1346,7 @@ entities:
     description: A geographic location.
     example:
       unique_id: LOC-WUR
+      study_id: STU-FIELD-2024
       name: Wageningen Campus Field Station
       abbreviation: WUR-FS
       country: Netherlands
@@ -1231,6 +1367,12 @@ entities:
           pattern: "^[A-Za-z0-9_-]+$"
           min_length: 1
           max_length: 100
+
+      - name: study_id
+        type: string
+        required: true
+        description: Reference to the parent Study.
+        ontology_term: PPEO:belongsToStudy
 
       - name: name
         type: string

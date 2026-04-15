@@ -1,27 +1,40 @@
-# Combined ISA + MIAPPE Specification v1.0
-# Experimental unified model for life science and plant phenotyping metadata
+# Combined ISA + MIAPPE Specification v2.0
+# Streamlined unified model for life science and plant phenotyping metadata
 #
-# This spec combines:
-# - ISA (Investigation-Study-Assay) framework for general life science experiments
-# - MIAPPE (Minimum Information About Plant Phenotyping Experiments) for plant phenotyping
+# Changes from v1.0:
+# - Person: unified name handling (given_name/family_name, full_name computed)
+# - Publication: promoted to shared core (was ISA-only)
+# - Removed associated_publications URL list (use Publication entities)
+# - NEW: Experiment entity for multi-trial studies
+# - Reference model: Study owns entities, Experiment references them
+# - Better entity organization
 #
-# Entities are organized into:
-# - Shared Core: Common to both standards
-# - ISA Extensions: Assay workflows, protocols, sample processing
-# - MIAPPE Extensions: Plant material, observation units, field trials
+# Ownership model:
+# - Study OWNS: BiologicalMaterials, ObservationUnits, Samples, ObservedVariables,
+#               Factors, Protocols (shared pool)
+# - Experiment OWNS: Events, Environments, Assays (time/location specific)
+# - Experiment REFERENCES: observation_unit_ids, sample_ids (from Study's pool)
+#
+# Entity categories:
+# - Shared Core (7): Investigation, Study, Experiment, Person, Publication, Factor, FactorValue
+# - ISA Extensions (9): Assay, Protocol, ProtocolParameter, Process, ParameterValue,
+#                       Source, Sample, Extract, LabeledExtract
+# - MIAPPE Extensions (5): BiologicalMaterial, ObservationUnit, ObservedVariable,
+#                          Event, Environment
+# - Shared Annotations (3): OntologyAnnotation, OntologySource, Characteristic
+# - MIAPPE Support (1): MaterialSource
 
-version: "1.0"
-name: ISA-MIAPPE-Combined
-description: >
-  Unified metadata model combining ISA (Investigation-Study-Assay) and MIAPPE
-  (Minimum Information About Plant Phenotyping Experiments) standards. Supports
-  both multi-omics workflows and plant phenotyping field trials.
+version: "2.0"
+name: isa-miappe-combined
+display_name: ISA-MIAPPE Combined
+description: "Unified model combining ISA and MIAPPE. Supports both multi-omics and phenotyping."
+root_entity: Investigation
 ontology: combined
 
 validation_rules:
   - name: date_order
     description: End date must not be before start date
-    applies_to: [Study, Assay]
+    applies_to: [Study, Assay, Experiment]
     condition: end_date >= start_date
 
   - name: event_date_order
@@ -37,7 +50,7 @@ validation_rules:
 
   - name: coordinate_pair
     description: Latitude and longitude must be provided together
-    applies_to: [Study, BiologicalMaterial, MaterialSource]
+    applies_to: [Study, BiologicalMaterial, MaterialSource, Experiment]
     condition: (latitude AND longitude) OR (NOT latitude AND NOT longitude)
 
   - name: person_name_required
@@ -48,22 +61,24 @@ validation_rules:
   # Numeric range constraints
   - name: latitude_range
     description: Latitude must be between -90 and 90 degrees
-    applies_to: [Study, BiologicalMaterial, MaterialSource]
+    applies_to: [Study, BiologicalMaterial, MaterialSource, Experiment]
     field: latitude
     minimum: -90
     maximum: 90
 
   - name: longitude_range
     description: Longitude must be between -180 and 180 degrees
-    applies_to: [Study, BiologicalMaterial, MaterialSource]
+    applies_to: [Study, BiologicalMaterial, MaterialSource, Experiment]
     field: longitude
     minimum: -180
     maximum: 180
 
-  - name: biological_material_coordinate_pair
-    description: BiologicalMaterial collection coordinates must be provided together
-    applies_to: [BiologicalMaterial]
-    condition: (biological_material_latitude AND biological_material_longitude) OR (NOT biological_material_latitude AND NOT biological_material_longitude)
+  - name: altitude_range
+    description: Altitude must be reasonable (-500 to 9000 meters)
+    applies_to: [Study, Experiment]
+    field: altitude
+    minimum: -500
+    maximum: 9000
 
   # Format validations
   - name: email_format
@@ -73,7 +88,7 @@ validation_rules:
     pattern: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
 
   - name: orcid_format
-    description: ORCID must be in standard format (XXXX-XXXX-XXXX-XXXX)
+    description: ORCID must be in standard format
     applies_to: [Person]
     field: orcid
     pattern: "^[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X]$"
@@ -83,6 +98,24 @@ validation_rules:
     applies_to: [Assay]
     field: filename
     pattern: "^a_.*\\.txt$"
+
+  - name: doi_format
+    description: DOI must follow standard format
+    applies_to: [Publication]
+    field: doi
+    pattern: "^10\\.[0-9]{4,}/.*$"
+
+  - name: pubmed_id_format
+    description: PubMed ID must be numeric
+    applies_to: [Publication]
+    field: pubmed_id
+    pattern: "^[0-9]+$"
+
+  - name: ontology_accession_format
+    description: Ontology term accession must be PREFIX:ID or URI format
+    applies_to: [OntologyAnnotation]
+    field: term_accession
+    pattern: "^[A-Za-z]+:[0-9]+$|^https?://.*$"
 
   # Conditional requirements
   - name: publication_identifier_required
@@ -115,7 +148,6 @@ validation_rules:
     applies_to: [ObservationUnit]
     condition: (observation_unit_x_ref AND observation_unit_y_ref) OR (NOT observation_unit_x_ref AND NOT observation_unit_y_ref)
 
-  # Date consistency
   - name: submission_before_release
     description: Submission date must not be after public release date
     applies_to: [Study, Investigation]
@@ -136,9 +168,28 @@ validation_rules:
 
   - name: growth_facility_type_vocabulary
     description: Growth facility type must be valid
-    applies_to: [Study]
+    applies_to: [Study, Experiment]
     field: growth_facility_type
     enum: [field, greenhouse, growth chamber, phytotron, open top chamber, glasshouse]
+
+  # Cardinality constraints
+  - name: investigation_has_studies
+    description: Investigation must have at least one study
+    applies_to: [Investigation]
+    field: studies
+    min_items: 1
+
+  - name: investigation_has_contacts
+    description: Investigation must have at least one contact
+    applies_to: [Investigation]
+    field: contacts
+    min_items: 1
+
+  - name: study_has_contacts
+    description: Study must have at least one contact
+    applies_to: [Study]
+    field: contacts
+    min_items: 1
 
   # Reference integrity
   - name: sample_observation_unit_reference
@@ -165,109 +216,52 @@ validation_rules:
     field: observation_unit_ids
     reference: ObservationUnit.identifier
 
-  # Uniqueness constraints
-  - name: identifier_uniqueness
-    description: Entity identifiers must be unique within parent scope
-    applies_to: [BiologicalMaterial, ObservationUnit, ObservedVariable, Event, Environment, Sample, Factor, DataFile]
-    field: identifier
-    unique_within: parent
-
-  # URI format validations
-  - name: license_uri_format
-    description: License must be a valid URI
-    applies_to: [Investigation]
-    field: license
-    pattern: "^https?://.*$"
-
-  - name: datafile_link_format
-    description: DataFile link must be a valid URI
-    applies_to: [DataFile]
-    field: link
-    pattern: "^https?://.*$|^s3://.*$|^ftp://.*$"
-
-  - name: protocol_uri_format
-    description: Protocol URI must be valid
-    applies_to: [Protocol]
-    field: uri
-    pattern: "^https?://.*$"
-
-  # Publication identifiers
-  - name: doi_format
-    description: DOI must follow standard format
-    applies_to: [Publication]
-    field: doi
-    pattern: "^10\\.[0-9]{4,}/.*$"
-
-  - name: pubmed_id_format
-    description: PubMed ID must be numeric
-    applies_to: [Publication]
-    field: pubmed_id
-    pattern: "^[0-9]+$"
-
-  # Ontology term format
-  - name: ontology_accession_format
-    description: Ontology term accession must be PREFIX:ID or URI format
-    applies_to: [OntologyAnnotation]
-    field: term_accession
-    pattern: "^[A-Za-z]+:[0-9]+$|^https?://.*$"
-
-  # Altitude range
-  - name: altitude_range
-    description: Altitude must be reasonable (-500 to 9000 meters)
-    applies_to: [Study]
-    field: altitude
-    minimum: -500
-    maximum: 9000
-
-  # Cardinality constraints
-  - name: investigation_has_studies
-    description: Investigation must have at least one study
-    applies_to: [Investigation]
-    field: studies
-    min_items: 1
-
-  - name: investigation_has_contacts
-    description: Investigation must have at least one contact
-    applies_to: [Investigation]
-    field: contacts
-    min_items: 1
-
-  - name: study_has_contacts
-    description: Study must have at least one contact
-    applies_to: [Study]
-    field: contacts
-    min_items: 1
-
-  # Additional reference integrity
   - name: process_protocol_reference
     description: Process executes_protocol must reference valid Protocol
     applies_to: [Process]
     field: executes_protocol
     reference: Protocol.name
 
-  - name: assay_protocol_reference
-    description: Assay protocols must reference valid Protocols
-    applies_to: [Assay]
-    field: protocols
-    reference: Protocol.name
+  # Experiment-specific references (v2.0)
+  - name: experiment_observation_units_reference
+    description: Experiment observation_unit_ids must reference Study's ObservationUnits
+    applies_to: [Experiment]
+    field: observation_unit_ids
+    reference: ObservationUnit.identifier
 
-  # ObservedVariable completeness
-  - name: observed_variable_trait_required
-    description: ObservedVariable must have trait or trait_accession_number
-    applies_to: [ObservedVariable]
-    condition: trait OR trait_accession_number
+  - name: experiment_samples_reference
+    description: Experiment sample_ids must reference Study's Samples
+    applies_to: [Experiment]
+    field: sample_ids
+    reference: Sample.identifier
 
-  - name: observed_variable_method_required
-    description: ObservedVariable must have method or method_accession_number
-    applies_to: [ObservedVariable]
-    condition: method OR method_accession_number
+  - name: experiment_biological_materials_reference
+    description: Experiment biological_material_ids must reference Study's BiologicalMaterials
+    applies_to: [Experiment]
+    field: biological_material_ids
+    reference: BiologicalMaterial.identifier
 
-  - name: observed_variable_scale_required
-    description: ObservedVariable must have scale or scale_accession_number
-    applies_to: [ObservedVariable]
-    condition: scale OR scale_accession_number
+  # DataFile source references (v2.0)
+  - name: datafile_experiment_reference
+    description: DataFile experiment_ids must reference valid Experiments
+    applies_to: [DataFile]
+    field: experiment_ids
+    reference: Experiment.identifier
 
-  # ISO date format
+  - name: datafile_assay_reference
+    description: DataFile assay_ids must reference valid Assays
+    applies_to: [DataFile]
+    field: assay_ids
+    reference: Assay.identifier
+
+  # Uniqueness constraints
+  - name: identifier_uniqueness
+    description: Entity identifiers must be unique within parent scope
+    applies_to: [BiologicalMaterial, ObservationUnit, ObservedVariable, Event, Environment, Sample, Factor, DataFile, Experiment]
+    field: identifier
+    unique_within: parent
+
+  # Date format
   - name: date_format
     description: Dates must be ISO 8601 format (YYYY-MM-DD)
     applies_to: all
@@ -280,22 +274,10 @@ validation_rules:
     field: end_date
     pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
 
-  - name: submission_date_format
-    description: Submission date must be ISO 8601 format (YYYY-MM-DD)
-    applies_to: [Investigation, Study]
-    field: submission_date
-    pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
-
-  - name: public_release_date_format
-    description: Public release date must be ISO 8601 format (YYYY-MM-DD)
-    applies_to: [Investigation, Study]
-    field: public_release_date
-    pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
-
 entities:
 
   # ============================================================================
-  # SHARED CORE - Common to ISA and MIAPPE
+  # SHARED CORE - Common to ISA and MIAPPE (6 entities)
   # ============================================================================
 
   Investigation:
@@ -303,13 +285,6 @@ entities:
     description: >
       Top-level container representing a research project or experiment.
       Contains one or more studies and overall project metadata.
-    example:
-      identifier: INV-PLANT-OMICS-2024
-      title: Integrated Phenomics and Genomics of Drought Response
-      description: Multi-omics study combining field phenotyping with transcriptomics
-      submission_date: "2024-03-15"
-      public_release_date: "2024-09-01"
-      license: https://creativecommons.org/licenses/by/4.0/
     fields:
       - name: identifier
         type: string
@@ -354,26 +329,17 @@ entities:
         description: URL to the license document.
         ontology_term: PPEO:hasLicense
 
-      - name: associated_publications
-        type: list
-        items: string
-        required: false
-        description: DOIs or URLs to associated publications (simple list).
-        ontology_term: PPEO:hasAssociatedPublication
-
       - name: contacts
         type: list
         items: Person
         required: false
         description: People associated with the investigation.
-        ontology_term: isaterms:person
 
       - name: publications
         type: list
         items: Publication
         required: false
-        description: Structured publication references (ISA style).
-        ontology_term: isaterms:publication
+        description: Publications associated with the investigation.
 
       - name: ontology_source_references
         type: list
@@ -386,25 +352,13 @@ entities:
         items: Study
         required: false
         description: Studies within this investigation.
-        ontology_term: isaterms:study
 
   Study:
     ontology_term: isaterms:study
     description: >
-      Central experimental unit containing information on subjects under study,
-      their characteristics, treatments, and experimental design. In MIAPPE context,
-      represents a single experiment at a specific location and time.
-    example:
-      identifier: STU-FIELD-2024
-      title: Field Drought Trial Summer 2024
-      description: Randomized complete block design testing 50 wheat cultivars
-      start_date: "2024-05-01"
-      end_date: "2024-09-30"
-      experimental_site_name: Wageningen Campus Field Station
-      latitude: 51.9851
-      longitude: 5.6631
-      growth_facility_type: field
-      experimental_design_type: RCBD
+      Central experimental unit containing shared definitions and entity pools.
+      Contains one or more Experiments which represent specific trials/executions.
+      Study OWNS the shared entities; Experiments REFERENCE them.
     fields:
       - name: identifier
         type: string
@@ -413,6 +367,12 @@ entities:
         ontology_term: isaterms:identifier
         constraints:
           pattern: "^[A-Za-z0-9_-]+$"
+
+      - name: investigation_id
+        type: string
+        required: true
+        description: Reference to the parent Investigation.
+        ontology_term: PPEO:belongsToInvestigation
 
       - name: title
         type: string
@@ -438,25 +398,150 @@ entities:
         description: Date of public release.
         ontology_term: isaterms:release_date
 
-      - name: start_date
-        type: datetime
-        required: false
-        description: Study start date/time.
-        ontology_term: PPEO:hasStartDateTime
-
-      - name: end_date
-        type: datetime
-        required: false
-        description: Study end date/time.
-        ontology_term: PPEO:hasEndDateTime
-
       - name: contact_institution
         type: string
         required: false
         description: Institution responsible for the study.
         ontology_term: PPEO:hasContactInstitution
 
-      # Location fields (MIAPPE)
+      # Experimental design (shared across experiments)
+      - name: experimental_design_type
+        type: string
+        required: false
+        description: Type of experimental design (e.g., RCBD, split-plot).
+        ontology_term: PPEO:hasExperimentalDesign
+
+      - name: experimental_design_description
+        type: string
+        required: false
+        description: Description of the experimental design.
+
+      - name: observation_unit_level_hierarchy
+        type: list
+        items: string
+        required: false
+        description: Hierarchy of observation levels (block, plot, plant).
+        ontology_term: PPEO:hasObservationLevelHierarchy
+
+      # Design descriptors (ISA)
+      - name: design_descriptors
+        type: list
+        items: OntologyAnnotation
+        required: false
+        description: Classifications based on experimental design (ISA style).
+        ontology_term: isaterms:study_design
+
+      # People and publications
+      - name: contacts
+        type: list
+        items: Person
+        required: false
+        description: People involved in the study.
+
+      - name: publications
+        type: list
+        items: Publication
+        required: false
+        description: Publications associated with the study.
+
+      # Shared definitions (owned by Study)
+      - name: factors
+        type: list
+        items: Factor
+        required: false
+        description: Experimental factors (shared across experiments).
+
+      - name: protocols
+        type: list
+        items: Protocol
+        required: false
+        description: Protocols used (shared across experiments).
+
+      - name: observed_variables
+        type: list
+        items: ObservedVariable
+        required: false
+        description: Variables being measured (shared definitions).
+
+      # Entity pools (owned by Study, referenced by Experiments)
+      - name: biological_materials
+        type: list
+        items: BiologicalMaterial
+        required: false
+        description: Plant materials/germplasm pool.
+
+      - name: sources
+        type: list
+        items: Source
+        required: false
+        description: Source materials pool.
+
+      - name: observation_units
+        type: list
+        items: ObservationUnit
+        required: false
+        description: Observation units pool (plots, plants).
+
+      - name: samples
+        type: list
+        items: Sample
+        required: false
+        description: Samples pool (can be used by multiple experiments).
+
+      - name: data_files
+        type: list
+        items: DataFile
+        required: false
+        description: Data files associated with the study.
+
+      # Experiments (specific trials/executions)
+      - name: experiments
+        type: list
+        items: Experiment
+        required: false
+        description: Specific trials or experimental executions.
+
+  Experiment:
+    ontology_term: PPEO:study
+    description: >
+      A specific trial or experimental execution within a Study. Has its own
+      location, timeframe, events, and environmental conditions. References
+      entities from the parent Study's pools (observation_units, samples).
+    fields:
+      - name: identifier
+        type: string
+        required: true
+        description: Unique identifier for the experiment.
+        ontology_term: PPEO:hasIdentifier
+        constraints:
+          pattern: "^[A-Za-z0-9_-]+$"
+
+      - name: name
+        type: string
+        required: true
+        description: Name of the experiment.
+        ontology_term: PPEO:hasName
+
+      - name: description
+        type: string
+        required: false
+        description: Description of this specific experiment.
+        ontology_term: PPEO:hasDescription
+
+      # Timeframe
+      - name: start_date
+        type: datetime
+        required: false
+        description: Experiment start date/time.
+        ontology_term: PPEO:hasStartDateTime
+
+      - name: end_date
+        type: datetime
+        required: false
+        description: Experiment end date/time.
+        ontology_term: PPEO:hasEndDateTime
+
+      # Location
       - name: experimental_site_name
         type: string
         required: false
@@ -487,18 +572,6 @@ entities:
         description: Altitude in meters above sea level.
         ontology_term: PPEO:hasAltitude
 
-      # Experimental design (MIAPPE)
-      - name: experimental_design_type
-        type: string
-        required: false
-        description: Type of experimental design (e.g., RCBD, split-plot).
-        ontology_term: PPEO:hasExperimentalDesign
-
-      - name: experimental_design_description
-        type: string
-        required: false
-        description: Description of the experimental design.
-
       - name: growth_facility_type
         type: string
         required: false
@@ -508,138 +581,85 @@ entities:
       - name: cultural_practices
         type: string
         required: false
-        description: Cultural practices applied (fertilization, irrigation).
+        description: Cultural practices applied in this experiment.
         ontology_term: PPEO:hasCulturalPractices
 
-      - name: observation_unit_level_hierarchy
+      # References to Study's entity pools
+      - name: observation_unit_ids
         type: list
         items: string
         required: false
-        description: Hierarchy of observation levels (block, plot, plant).
-        ontology_term: PPEO:hasObservationLevelHierarchy
+        description: IDs of observation units used (references Study's pool).
 
-      # Design descriptors (ISA)
-      - name: design_descriptors
+      - name: sample_ids
         type: list
-        items: OntologyAnnotation
+        items: string
         required: false
-        description: Classifications based on experimental design (ISA style).
-        ontology_term: isaterms:study_design
+        description: IDs of samples used (references Study's pool).
 
-      # Shared nested entities
-      - name: contacts
+      - name: biological_material_ids
         type: list
-        items: Person
+        items: string
         required: false
-        description: People involved in the study.
+        description: IDs of biological materials used (references Study's pool).
 
-      - name: factors
-        type: list
-        items: Factor
-        required: false
-        description: Experimental factors (independent variables).
-        ontology_term: isaterms:factor
-
-      - name: data_files
-        type: list
-        items: DataFile
-        required: false
-        description: Data files associated with the study.
-
-      # ISA-specific nested entities
-      - name: protocols
-        type: list
-        items: Protocol
-        required: false
-        description: Protocols used in the study (ISA).
-
-      - name: assays
-        type: list
-        items: Assay
-        required: false
-        description: Assays/measurements performed (ISA).
-
-      - name: sources
-        type: list
-        items: Source
-        required: false
-        description: Source materials (ISA).
-
-      - name: samples
-        type: list
-        items: Sample
-        required: false
-        description: Sample materials.
-
-      # MIAPPE-specific nested entities
-      - name: biological_materials
-        type: list
-        items: BiologicalMaterial
-        required: false
-        description: Plant materials/germplasm used (MIAPPE).
-
-      - name: observation_units
-        type: list
-        items: ObservationUnit
-        required: false
-        description: Units being observed - plots, plants (MIAPPE).
-
-      - name: observed_variables
-        type: list
-        items: ObservedVariable
-        required: false
-        description: Variables being measured - trait/method/scale (MIAPPE).
-
+      # Owned by Experiment (time/location specific)
       - name: events
         type: list
         items: Event
         required: false
-        description: Discrete occurrences during the study (MIAPPE).
+        description: Discrete occurrences during this experiment.
 
       - name: environments
         type: list
         items: Environment
         required: false
-        description: Environmental conditions recorded (MIAPPE).
+        description: Environmental conditions recorded in this experiment.
+
+      - name: assays
+        type: list
+        items: Assay
+        required: false
+        description: Assays/measurements performed in this experiment.
+
+      - name: process_sequence
+        type: list
+        items: Process
+        required: false
+        description: Process workflow for this experiment.
 
   Person:
     ontology_term: isaterms:person
-    description: A person/contact associated with an investigation or study.
-    example:
-      name: Dr. Maria van der Berg
-      last_name: van der Berg
-      first_name: Maria
-      email: m.vanderberg@wur.nl
-      affiliation: Wageningen University and Research
-      role: Principal Investigator
-      orcid: 0000-0001-2345-6789
+    description: >
+      A person/contact associated with an investigation or study.
+      Uses unified name handling with given_name/family_name.
     fields:
-      # MIAPPE style (single name field)
-      - name: name
+      # Name fields first
+      - name: family_name
         type: string
-        required: false
-        description: Full name of the person (MIAPPE style).
-        ontology_term: PPEO:hasName
-
-      # ISA style (split name fields)
-      - name: last_name
-        type: string
-        required: false
-        description: Last/family name (ISA style).
+        required: true
+        description: Family/last name.
         ontology_term: isaterms:last_name
 
-      - name: first_name
+      - name: given_name
         type: string
         required: false
-        description: First/given name (ISA style).
+        description: Given/first name.
         ontology_term: isaterms:first_name
+
+      - name: full_name
+        type: string
+        required: false
+        description: Full name (can be provided or computed from given_name + family_name).
+        ontology_term: PPEO:hasName
 
       - name: mid_initials
         type: string
         required: false
-        description: Middle initials (ISA style).
+        description: Middle initials.
         ontology_term: isaterms:mid_initials
 
+      # Contact information
       - name: email
         type: string
         required: false
@@ -659,17 +679,17 @@ entities:
         description: Organization affiliation.
         ontology_term: isaterms:affiliation
 
-      - name: role
+      - name: address
         type: string
         required: false
-        description: Role in the investigation/study (MIAPPE style).
-        ontology_term: PPEO:hasRole
+        description: Postal address.
+        ontology_term: isaterms:address
 
       - name: roles
         type: list
         items: OntologyAnnotation
         required: false
-        description: Roles with ontology terms (ISA style).
+        description: Roles with ontology terms.
 
       - name: orcid
         type: string
@@ -679,105 +699,69 @@ entities:
         constraints:
           pattern: "^[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X]$"
 
-      - name: address
+      # Reference fields (auto-filled from context)
+      - name: investigation_id
         type: string
         required: false
-        description: Postal address.
-        ontology_term: isaterms:address
+        description: Reference to the parent Investigation.
+        ontology_term: PPEO:belongsToInvestigation
 
-  Sample:
-    ontology_term: isaterms:sample
-    description: >
-      Material collected from a subject or observation unit. In ISA, samples
-      derive from sources through processes. In MIAPPE, samples derive from
-      observation units.
-    example:
-      identifier: SAM-LEAF-001
-      name: Flag leaf sample plot A1
-      observation_unit_id: OU-PLOT-A1
-      plant_structural_development_stage: flowering
-      plant_anatomical_entity: flag leaf
-      collection_date: "2024-07-15"
+      - name: study_id
+        type: string
+        required: false
+        description: Reference to the parent Study.
+        ontology_term: PPEO:belongsToStudy
+
+  Publication:
+    ontology_term: isaterms:publication
+    description: A structured publication reference.
     fields:
-      - name: identifier
-        type: string
-        required: false
-        description: Unique identifier for the sample.
-        ontology_term: PPEO:hasIdentifier
-
-      - name: name
+      - name: title
         type: string
         required: true
-        description: Name/reference for the sample.
-        ontology_term: isaterms:name
+        description: Publication title.
+        ontology_term: isaterms:title
 
-      - name: observation_unit_id
+      - name: doi
         type: string
         required: false
-        description: Reference to source observation unit (MIAPPE).
-        ontology_term: PPEO:derivesFrom
+        description: Digital Object Identifier.
+        ontology_term: isaterms:doi
 
-      - name: plant_structural_development_stage
+      - name: pubmed_id
         type: string
         required: false
-        description: Development stage when collected (MIAPPE).
-        ontology_term: PPEO:hasPlantStructureDevelopmentStage
+        description: PubMed ID.
+        ontology_term: isaterms:pubmed_identifier
 
-      - name: plant_anatomical_entity
+      - name: author_list
         type: string
         required: false
-        description: Plant part sampled (MIAPPE).
-        ontology_term: PPEO:hasPlantAnatomicalEntity
+        description: Comma-separated author list.
+        ontology_term: isaterms:author
 
-      - name: collection_date
-        type: datetime
+      - name: status
+        type: entity
+        items: OntologyAnnotation
         required: false
-        description: When collected.
-        ontology_term: PPEO:hasCollectionDate
-
-      - name: characteristics
-        type: list
-        items: Characteristic
-        required: false
-        description: Material property qualifiers (ISA).
-        ontology_term: isaterms:characteristic
-
-      - name: factor_values
-        type: list
-        items: FactorValue
-        required: false
-        description: Factor values applied to this sample.
-        ontology_term: isaterms:factor_value
-
-      - name: derives_from
-        type: list
-        items: Source
-        required: false
-        description: Source materials this sample derives from (ISA).
-
-      - name: external_references
-        type: list
-        items: string
-        required: false
-        description: External identifiers (BioSamples, ENA).
-        ontology_term: PPEO:hasExternalIdentifier
+        description: Publication status (submitted, published).
+        ontology_term: isaterms:publication_status
 
   Factor:
     ontology_term: isaterms:factor
-    description: >
-      An independent variable manipulated by the experimentalist. Called
-      StudyFactor in ISA, Factor/ExperimentalFactor in MIAPPE.
-    example:
-      identifier: FAC-IRRIGATION
-      name: Irrigation Treatment
-      description: Water stress treatment levels
-      factor_type: treatment
+    description: An independent variable manipulated by the experimentalist.
     fields:
       - name: identifier
         type: string
         required: false
         description: Unique identifier for the factor.
         ontology_term: PPEO:hasIdentifier
+
+      - name: study_id
+        type: string
+        required: true
+        description: Reference to the parent Study.
+        ontology_term: PPEO:belongsToStudy
 
       - name: name
         type: string
@@ -794,14 +778,14 @@ entities:
       - name: factor_type
         type: string
         required: false
-        description: Type (treatment, genotype, environment) - MIAPPE style.
+        description: Type (treatment, genotype, environment).
         ontology_term: PPEO:hasType
 
       - name: factor_type_ontology
         type: entity
         items: OntologyAnnotation
         required: false
-        description: Factor type with ontology annotation (ISA style).
+        description: Factor type with ontology annotation.
 
       - name: values
         type: list
@@ -813,10 +797,6 @@ entities:
   FactorValue:
     ontology_term: isaterms:factor_value
     description: A specific value or level of a factor.
-    example:
-      identifier: FV-DROUGHT
-      value: Drought stress
-      description: 50% reduction in irrigation from flowering
     fields:
       - name: identifier
         type: string
@@ -828,13 +808,7 @@ entities:
         type: entity
         items: Factor
         required: false
-        description: Reference to parent factor (ISA style).
-
-      - name: factor_id
-        type: string
-        required: false
-        description: Reference to parent factor ID (MIAPPE style).
-        ontology_term: PPEO:isModalityOf
+        description: Reference to parent factor.
 
       - name: value
         type: string
@@ -851,85 +825,37 @@ entities:
         type: entity
         items: OntologyAnnotation
         required: false
-        description: Unit for numeric values (ISA style).
+        description: Unit for numeric values.
         ontology_term: isaterms:unit
 
-  DataFile:
-    ontology_term: isaterms:file
-    description: A data file associated with a study or assay.
-    example:
-      identifier: DF-PHENOTYPES-001
-      filename: phenotype_measurements.csv
-      name: Phenotype measurements
-      link: https://doi.org/10.5281/zenodo.1234567
-      file_type: text/csv
-    fields:
-      - name: identifier
-        type: string
-        required: false
-        description: Unique identifier (MIAPPE style).
-        ontology_term: PPEO:hasIdentifier
-
-      - name: filename
-        type: string
-        required: true
-        description: Filename or reference.
-
-      - name: name
-        type: string
-        required: false
-        description: Human-readable name (MIAPPE style).
-        ontology_term: PPEO:hasName
-
-      - name: label
-        type: string
-        required: false
-        description: Data file type label (ISA style - Raw Data File, etc.).
-
-      - name: link
-        type: uri
-        required: false
-        description: URL or path to file.
-        ontology_term: PPEO:hasDigitalLocation
-
-      - name: description
-        type: string
-        required: false
-        description: Description of contents.
-        ontology_term: PPEO:hasDescription
-
-      - name: version
-        type: string
-        required: false
-        description: File version.
-        ontology_term: PPEO:hasVersion
-
-      - name: file_type
-        type: string
-        required: false
-        description: MIME type or format.
-        ontology_term: PPEO:hasType
-
   # ============================================================================
-  # ISA EXTENSIONS - Assay workflows, protocols, sample processing
+  # ISA EXTENSIONS - Assay workflows, protocols, sample processing (9 entities)
   # ============================================================================
 
   Assay:
     ontology_term: isaterms:assay
     description: >
       A test performed on material producing qualitative or quantitative
-      measurements. Links measurement type and technology to data outputs.
-      ISA-specific; MIAPPE uses ObservedVariable instead.
-    example:
-      filename: a_transcriptome.txt
-      measurement_type: transcription profiling
-      technology_type: RNA-seq
-      technology_platform: Illumina NovaSeq 6000
+      measurements. Defines measurement technology and links to data outputs.
     fields:
-      - name: filename
+      - name: identifier
         type: string
         required: true
-        description: Name of the Assay file (a_*.txt).
+        description: Unique identifier for the assay.
+        ontology_term: PPEO:hasIdentifier
+        constraints:
+          pattern: "^[A-Za-z0-9_-]+$"
+
+      - name: study_id
+        type: string
+        required: true
+        description: Reference to the parent Study.
+        ontology_term: PPEO:belongsToStudy
+
+      - name: filename
+        type: string
+        required: false
+        description: Name of the Assay file (a_*.txt) for ISA-Tab export.
 
       - name: measurement_type
         type: entity
@@ -950,17 +876,18 @@ entities:
         required: false
         description: Manufacturer and platform name.
 
-      - name: samples
+      # References to Study's pools
+      - name: sample_ids
         type: list
-        items: Sample
+        items: string
         required: false
-        description: Samples used in the assay.
+        description: IDs of samples used (references Study's sample pool).
 
-      - name: data_files
+      - name: data_file_ids
         type: list
-        items: DataFile
+        items: string
         required: false
-        description: Data files generated by the assay.
+        description: IDs of data files generated (references Study's data_files pool).
 
       - name: process_sequence
         type: list
@@ -971,12 +898,13 @@ entities:
   Protocol:
     ontology_term: isaterms:protocol
     description: An experimental procedure used in the study.
-    example:
-      name: RNA Extraction Protocol
-      protocol_type: nucleic acid extraction
-      description: Total RNA extraction using TRIzol reagent
-      version: "2.1"
     fields:
+      - name: study_id
+        type: string
+        required: true
+        description: Reference to the parent Study.
+        ontology_term: PPEO:belongsToStudy
+
       - name: name
         type: string
         required: true
@@ -1029,76 +957,12 @@ entities:
         description: Name of the protocol parameter.
         ontology_term: isaterms:parameter
 
-  Source:
-    ontology_term: isaterms:source
-    description: >
-      Original biological material before any processing (ISA).
-      Similar to BiologicalMaterial in MIAPPE but without germplasm-specific fields.
-    example:
-      name: Wheat plant plot A1
-      organism: Triticum aestivum
-    fields:
-      - name: name
-        type: string
-        required: true
-        description: Name/reference for the source.
-        ontology_term: isaterms:name
-
-      - name: characteristics
-        type: list
-        items: Characteristic
-        required: false
-        description: Material properties (organism, strain, etc.).
-        ontology_term: isaterms:characteristic
-
-  Extract:
-    ontology_term: isaterms:extract
-    description: Material extracted from samples (DNA, RNA, protein).
-    fields:
-      - name: name
-        type: string
-        required: true
-        description: Name/reference for the extract.
-        ontology_term: isaterms:name
-
-      - name: characteristics
-        type: list
-        items: Characteristic
-        required: false
-        description: Extract properties.
-
-      - name: derives_from
-        type: list
-        items: Sample
-        required: false
-        description: Samples this extract derives from.
-
-  LabeledExtract:
-    ontology_term: isaterms:labeled_extract
-    description: Labeled material for detection (fluorescent tags, etc.).
-    fields:
-      - name: name
-        type: string
-        required: true
-        description: Name/reference.
-        ontology_term: isaterms:name
-
-      - name: label
-        type: entity
-        items: OntologyAnnotation
-        required: false
-        description: The label applied.
-        ontology_term: isaterms:label
-
-      - name: derives_from
-        type: list
-        items: Extract
-        required: false
-        description: Extracts this derives from.
-
   Process:
     ontology_term: isaterms:process
-    description: A node in the experimental workflow graph linking materials through protocols.
+    description: >
+      A node in the experimental workflow graph. Links input materials to
+      output materials through protocol execution. Represents material
+      transformation (Source -> Sample -> Extract).
     fields:
       - name: name
         type: string
@@ -1164,125 +1028,162 @@ entities:
         description: Unit for numeric values.
         ontology_term: isaterms:unit
 
-  Characteristic:
-    ontology_term: isaterms:characteristic
-    description: A characteristic qualifying material properties.
+  Source:
+    ontology_term: isaterms:source
+    description: >
+      Original biological material before any processing.
+      Generic starting material in ISA workflow (not germplasm-specific).
     fields:
-      - name: category
-        type: entity
-        items: OntologyAnnotation
-        required: true
-        description: Characteristic category (organism, strain, etc.).
-
-      - name: value
-        type: string
-        required: false
-        description: The characteristic value.
-        ontology_term: isaterms:characteristic_value
-
-      - name: unit
-        type: entity
-        items: OntologyAnnotation
-        required: false
-        description: Unit for numeric values.
-        ontology_term: isaterms:unit
-
-  Publication:
-    ontology_term: isaterms:publication
-    description: A structured publication reference (ISA style).
-    fields:
-      - name: pubmed_id
-        type: string
-        required: false
-        description: PubMed ID.
-        ontology_term: isaterms:pubmed_identifier
-
-      - name: doi
-        type: string
-        required: false
-        description: Digital Object Identifier.
-        ontology_term: isaterms:doi
-
-      - name: author_list
-        type: string
-        required: false
-        description: Comma-separated author list.
-        ontology_term: isaterms:author
-
-      - name: title
+      - name: study_id
         type: string
         required: true
-        description: Publication title.
-        ontology_term: isaterms:title
+        description: Reference to the parent Study.
+        ontology_term: PPEO:belongsToStudy
 
-      - name: status
-        type: entity
-        items: OntologyAnnotation
-        required: false
-        description: Publication status (submitted, published).
-        ontology_term: isaterms:publication_status
-
-  OntologyAnnotation:
-    ontology_term: isaterms:information
-    description: An ontology term annotation.
-    fields:
-      - name: term
+      - name: name
         type: string
         required: true
-        description: Term from ontology or controlled vocabulary.
+        description: Name/reference for the source.
+        ontology_term: isaterms:name
 
-      - name: term_source
-        type: entity
-        items: OntologySource
+      - name: characteristics
+        type: list
+        items: Characteristic
         required: false
-        description: Reference to OntologySource.
+        description: Material properties (organism, strain, etc.).
+        ontology_term: isaterms:characteristic
 
-      - name: term_accession
+  Sample:
+    ontology_term: isaterms:sample
+    description: >
+      Material in an experimental workflow. In ISA context, represents a node
+      in the material graph derived from Source. In MIAPPE context, represents
+      sub-plant material collected from an ObservationUnit.
+    fields:
+      - name: identifier
         type: string
         required: false
-        description: URI or accession number.
+        description: Unique identifier for the sample.
+        ontology_term: PPEO:hasIdentifier
 
-  OntologySource:
-    ontology_term: isaterms:information
-    description: Reference to an ontology source.
+      - name: study_id
+        type: string
+        required: true
+        description: Reference to the parent Study.
+        ontology_term: PPEO:belongsToStudy
+
+      - name: name
+        type: string
+        required: true
+        description: Name/reference for the sample.
+        ontology_term: isaterms:name
+
+      - name: observation_unit_id
+        type: string
+        required: false
+        description: Reference to source observation unit (MIAPPE context).
+        ontology_term: PPEO:derivesFrom
+
+      - name: plant_structural_development_stage
+        type: string
+        required: false
+        description: Development stage when collected (MIAPPE context).
+        ontology_term: PPEO:hasPlantStructureDevelopmentStage
+
+      - name: plant_anatomical_entity
+        type: string
+        required: false
+        description: Plant part sampled (MIAPPE context).
+        ontology_term: PPEO:hasPlantAnatomicalEntity
+
+      - name: collection_date
+        type: datetime
+        required: false
+        description: When collected.
+        ontology_term: PPEO:hasCollectionDate
+
+      - name: characteristics
+        type: list
+        items: Characteristic
+        required: false
+        description: Material property qualifiers (ISA context).
+        ontology_term: isaterms:characteristic
+
+      - name: factor_values
+        type: list
+        items: FactorValue
+        required: false
+        description: Factor values applied to this sample.
+        ontology_term: isaterms:factor_value
+
+      - name: derives_from
+        type: list
+        items: Source
+        required: false
+        description: Source materials this sample derives from (ISA context).
+
+      - name: external_references
+        type: list
+        items: string
+        required: false
+        description: External identifiers (BioSamples, ENA).
+        ontology_term: PPEO:hasExternalIdentifier
+
+  Extract:
+    ontology_term: isaterms:extract
+    description: Material extracted from samples (DNA, RNA, protein).
     fields:
       - name: name
         type: string
         required: true
-        description: Ontology name.
+        description: Name/reference for the extract.
         ontology_term: isaterms:name
 
-      - name: file
-        type: string
+      - name: characteristics
+        type: list
+        items: Characteristic
         required: false
-        description: Filename or URI of ontology.
+        description: Extract properties.
 
-      - name: version
-        type: string
+      - name: derives_from
+        type: list
+        items: Sample
         required: false
-        description: Ontology version.
+        description: Samples this extract derives from.
 
-      - name: description
+  LabeledExtract:
+    ontology_term: isaterms:labeled_extract
+    description: Labeled material for detection (fluorescent tags, etc.).
+    fields:
+      - name: name
         type: string
+        required: true
+        description: Name/reference.
+        ontology_term: isaterms:name
+
+      - name: label
+        type: entity
+        items: OntologyAnnotation
         required: false
-        description: Description of the ontology.
+        description: The label applied.
+        ontology_term: isaterms:label
+
+      - name: derives_from
+        type: list
+        items: Extract
+        required: false
+        description: Extracts this derives from.
 
   # ============================================================================
-  # MIAPPE EXTENSIONS - Plant material, observation units, field trials
+  # MIAPPE EXTENSIONS - Plant material, observation units, field trials (5 entities)
   # ============================================================================
 
   BiologicalMaterial:
     ontology_term: PPEO:biological_material
     description: >
-      Plant material (germplasm) used in a study. MIAPPE-specific extension
-      with accession tracking, taxonomic info, and collection site coordinates.
-    example:
-      identifier: BM-WHEAT-001
-      organism: Triticum aestivum
-      genus: Triticum
-      species: aestivum
-      infraspecific_name: cv. Apache
-      accession_number: PI-123456
+      Plant material (germplasm) used in a study. Contains domain-specific
+      fields for taxonomy, accession tracking, and collection site coordinates.
+      Distinct from ISA Source which is a generic material container.
     fields:
       - name: identifier
         type: string
@@ -1291,6 +1192,12 @@ entities:
         ontology_term: PPEO:hasIdentifier
         constraints:
           pattern: "^[A-Za-z0-9_-]+$"
+
+      - name: study_id
+        type: string
+        required: true
+        description: Reference to the parent Study.
+        ontology_term: PPEO:belongsToStudy
 
       - name: organism
         type: string
@@ -1372,14 +1279,8 @@ entities:
   ObservationUnit:
     ontology_term: PPEO:observation_unit
     description: >
-      The experimental object on which observations are made. MIAPPE-specific;
-      represents plots, plants, pots, etc. No direct ISA equivalent.
-    example:
-      identifier: OU-PLOT-A1
-      observation_unit_type: plot
-      biological_material_id: BM-WHEAT-001
-      observation_unit_block: A
-      observation_unit_replicate: "1"
+      The experimental object on which observations are made.
+      Represents plots, plants, pots, etc. No direct ISA equivalent.
     fields:
       - name: identifier
         type: string
@@ -1388,6 +1289,12 @@ entities:
         ontology_term: PPEO:hasIdentifier
         constraints:
           pattern: "^[A-Za-z0-9_-]+$"
+
+      - name: study_id
+        type: string
+        required: true
+        description: Reference to the parent Study.
+        ontology_term: PPEO:belongsToStudy
 
       - name: observation_unit_type
         type: string
@@ -1455,20 +1362,19 @@ entities:
     ontology_term: PPEO:observed_variable
     description: >
       A phenotypic or environmental variable measured, defined as trait + method
-      + scale. MIAPPE-specific; ISA uses Assay with measurement_type instead.
-    example:
-      identifier: VAR-PLANTHEIGHT
-      name: Plant Height
-      trait: plant height
-      trait_accession_number: CO_321:0000020
-      method: Ruler measurement from soil to highest point
-      scale: cm
+      + scale. Distinct from ISA Assay which defines measurement technology.
     fields:
       - name: identifier
         type: string
         required: true
         description: Unique identifier.
         ontology_term: PPEO:hasIdentifier
+
+      - name: study_id
+        type: string
+        required: true
+        description: Reference to the parent Study.
+        ontology_term: PPEO:belongsToStudy
 
       - name: name
         type: string
@@ -1529,19 +1435,21 @@ entities:
   Event:
     ontology_term: PPEO:event
     description: >
-      A discrete occurrence during a study (sowing, harvest, treatment
-      application). MIAPPE-specific; ISA uses Process instead.
-    example:
-      identifier: EVT-SOWING-001
-      event_type: Sowing
-      date: "2024-05-01"
-      description: Seeds sown at 300 seeds per square meter
+      A discrete timestamped occurrence during a study (sowing, harvest,
+      treatment application). Distinct from ISA Process which represents
+      material transformation nodes in a workflow graph.
     fields:
       - name: identifier
         type: string
         required: true
         description: Unique identifier.
         ontology_term: PPEO:hasIdentifier
+
+      - name: study_id
+        type: string
+        required: true
+        description: Reference to the parent Study.
+        ontology_term: PPEO:belongsToStudy
 
       - name: event_type
         type: string
@@ -1582,17 +1490,18 @@ entities:
   Environment:
     ontology_term: PPEO:environment
     description: Environmental conditions recorded during a study.
-    example:
-      identifier: ENV-TEMP-001
-      parameter: Air temperature
-      value: "22.5"
-      unit: degrees Celsius
     fields:
       - name: identifier
         type: string
         required: true
         description: Unique identifier.
         ontology_term: PPEO:hasIdentifier
+
+      - name: study_id
+        type: string
+        required: true
+        description: Reference to the parent Study.
+        ontology_term: PPEO:belongsToStudy
 
       - name: parameter
         type: string
@@ -1626,14 +1535,85 @@ entities:
         required: false
         description: Additional description.
 
+  # ============================================================================
+  # SHARED ANNOTATIONS (3 entities)
+  # ============================================================================
+
+  OntologyAnnotation:
+    ontology_term: isaterms:information
+    description: An ontology term annotation.
+    fields:
+      - name: term
+        type: string
+        required: true
+        description: Term from ontology or controlled vocabulary.
+
+      - name: term_source
+        type: entity
+        items: OntologySource
+        required: false
+        description: Reference to OntologySource.
+
+      - name: term_accession
+        type: string
+        required: false
+        description: URI or accession number.
+
+  OntologySource:
+    ontology_term: isaterms:information
+    description: Reference to an ontology source.
+    fields:
+      - name: name
+        type: string
+        required: true
+        description: Ontology name.
+        ontology_term: isaterms:name
+
+      - name: file
+        type: string
+        required: false
+        description: Filename or URI of ontology.
+
+      - name: version
+        type: string
+        required: false
+        description: Ontology version.
+
+      - name: description
+        type: string
+        required: false
+        description: Description of the ontology.
+
+  Characteristic:
+    ontology_term: isaterms:characteristic
+    description: A characteristic qualifying material properties.
+    fields:
+      - name: category
+        type: entity
+        items: OntologyAnnotation
+        required: true
+        description: Characteristic category (organism, strain, etc.).
+
+      - name: value
+        type: string
+        required: false
+        description: The characteristic value.
+        ontology_term: isaterms:characteristic_value
+
+      - name: unit
+        type: entity
+        items: OntologyAnnotation
+        required: false
+        description: Unit for numeric values.
+        ontology_term: isaterms:unit
+
+  # ============================================================================
+  # MIAPPE SUPPORT (1 entity)
+  # ============================================================================
+
   MaterialSource:
     ontology_term: PPEO:material_source
     description: Source of biological material (genebank, institution).
-    example:
-      identifier: SRC-CGNGENEBANK
-      name: Centre for Genetic Resources Netherlands
-      institute_code: NLD037
-      country: Netherlands
     fields:
       - name: identifier
         type: string
@@ -1684,3 +1664,124 @@ entities:
         constraints:
           minimum: -180
           maximum: 180
+
+  # ============================================================================
+  # SHARED DATA (1 entity)
+  # ============================================================================
+
+  DataFile:
+    ontology_term: isaterms:file
+    description: >
+      A data file that can be generated at any point in the workflow.
+      Lives in Study's data_files pool with source references indicating
+      what generated it (environment sensors, events, samples, assays, etc.).
+    fields:
+      - name: identifier
+        type: string
+        required: true
+        description: Unique identifier.
+        ontology_term: PPEO:hasIdentifier
+        constraints:
+          pattern: "^[A-Za-z0-9_-]+$"
+
+      - name: study_id
+        type: string
+        required: true
+        description: Reference to the parent Study.
+        ontology_term: PPEO:belongsToStudy
+
+      - name: filename
+        type: string
+        required: true
+        description: Filename or reference.
+
+      - name: name
+        type: string
+        required: false
+        description: Human-readable name.
+        ontology_term: PPEO:hasName
+
+      - name: description
+        type: string
+        required: false
+        description: Description of contents.
+        ontology_term: PPEO:hasDescription
+
+      - name: file_type
+        type: string
+        required: false
+        description: MIME type or format.
+        ontology_term: PPEO:hasType
+
+      - name: link
+        type: uri
+        required: false
+        description: URL or path to file.
+        ontology_term: PPEO:hasDigitalLocation
+
+      - name: version
+        type: string
+        required: false
+        description: File version.
+        ontology_term: PPEO:hasVersion
+
+      - name: label
+        type: string
+        required: false
+        description: Data file type label (Raw Data File, Derived Data File, etc.).
+
+      # Source references - what generated this file
+      - name: source_type
+        type: string
+        required: false
+        description: >
+          Type of source that generated this file. One of: environment, event,
+          observation_unit, sample, assay, process, sensor, pipeline.
+
+      - name: experiment_ids
+        type: list
+        items: string
+        required: false
+        description: IDs of experiments this file relates to.
+
+      - name: environment_ids
+        type: list
+        items: string
+        required: false
+        description: IDs of environment records that generated this file.
+
+      - name: event_ids
+        type: list
+        items: string
+        required: false
+        description: IDs of events that generated this file.
+
+      - name: observation_unit_ids
+        type: list
+        items: string
+        required: false
+        description: IDs of observation units this file contains data for.
+
+      - name: sample_ids
+        type: list
+        items: string
+        required: false
+        description: IDs of samples this file relates to.
+
+      - name: assay_ids
+        type: list
+        items: string
+        required: false
+        description: IDs of assays that generated this file.
+
+      - name: process_ids
+        type: list
+        items: string
+        required: false
+        description: IDs of processes that generated this file.
+
+      - name: derived_from
+        type: list
+        items: string
+        required: false
+        description: IDs of other DataFiles this file was derived from.

@@ -255,6 +255,18 @@ body::before {
     border-color: rgba(26, 58, 47, 0.2);
 }
 
+.btn-outline-secondary {
+    background: transparent;
+    color: var(--clr-moss);
+    border: 1px solid var(--clr-moss);
+    text-decoration: none;
+}
+
+.btn-outline-secondary:hover:not(:disabled) {
+    background: var(--clr-moss);
+    color: white;
+}
+
 .btn-danger {
     background: var(--clr-error);
     color: white;
@@ -1204,6 +1216,23 @@ body::before {
     background: var(--clr-success-bg);
 }
 
+/* Read-only cells (auto-filled parent references) */
+.editable-cell.readonly-cell {
+    cursor: default;
+    background: var(--clr-paper);
+}
+
+.editable-cell.readonly-cell .cell-display {
+    color: var(--clr-ink-light);
+    font-style: italic;
+}
+
+.editable-cell.readonly-cell .cell-input {
+    background: var(--clr-paper);
+    color: var(--clr-ink-light);
+    cursor: not-allowed;
+}
+
 /* Bulk edit toolbar */
 .bulk-edit-toolbar {
     display: flex;
@@ -1460,4 +1489,94 @@ body::before {
 
 .lookup-modal-error {
     color: var(--clr-error);
+}
+
+/* ============================================
+   INLINE TABLES
+   ============================================ */
+
+.inline-table-section {
+    background: var(--clr-paper);
+    border: 1px solid var(--clr-parchment);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-md);
+    overflow: hidden;
+}
+
+.inline-table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-sm) var(--space-md);
+    background: var(--clr-parchment);
+    cursor: pointer;
+    user-select: none;
+}
+
+.inline-table-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    flex: 1;
+}
+
+.inline-table-title h4 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--clr-ink);
+}
+
+.inline-table-icon {
+    font-size: 0.75rem;
+    color: var(--clr-ink-light);
+    transition: transform 0.2s ease;
+}
+
+.inline-table-section.collapsed .inline-table-icon {
+    transform: rotate(-90deg);
+}
+
+.inline-table-count {
+    font-size: 0.875rem;
+    color: var(--clr-ink-light);
+}
+
+.inline-table-content {
+    max-height: 600px;
+    overflow: auto;
+    transition: max-height 0.3s ease;
+}
+
+.inline-table-section.collapsed .inline-table-content {
+    max-height: 0;
+    overflow: hidden;
+}
+
+.inline-data-table {
+    margin: 0;
+    border-radius: 0;
+}
+
+.inline-data-table th,
+.inline-data-table td {
+    padding: var(--space-xs) var(--space-sm);
+    font-size: 0.875rem;
+}
+
+.inline-data-table thead th {
+    background: var(--clr-ivory);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.inline-data-table .row-actions {
+    white-space: nowrap;
+}
+
+.inline-data-table .row-actions .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
 }
