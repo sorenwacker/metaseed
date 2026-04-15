@@ -6,6 +6,7 @@
             <button type="button" class="lookup-modal-close" onclick="closeLookupModal()" title="Close">&times;</button>
         </div>
         <div class="lookup-modal-body">
+            <div id="lookup-modal-selected" class="lookup-modal-selected" data-testid="lookup-modal-selected"></div>
             <div class="lookup-modal-controls">
                 <input type="text"
                        id="lookup-modal-search"
@@ -13,21 +14,13 @@
                        placeholder="Search..."
                        autocomplete="off"
                        data-testid="lookup-modal-search">
-                <label class="lookup-modal-multiselect-toggle">
-                    <input type="checkbox" id="lookup-modal-multiselect" data-testid="lookup-modal-multiselect">
-                    Multi-select
-                </label>
             </div>
             <div id="lookup-modal-results" class="lookup-modal-results" data-testid="lookup-modal-results">
                 <div class="lookup-modal-loading">Loading...</div>
             </div>
-            <div id="lookup-modal-selection" class="lookup-modal-selection hidden">
-                <span id="lookup-modal-selection-count">0 selected</span>
-            </div>
         </div>
-        <div id="lookup-modal-footer" class="lookup-modal-footer hidden">
-            <button type="button" class="btn btn-secondary" onclick="closeLookupModal()">Cancel</button>
-            <button type="button" class="btn btn-primary" onclick="confirmMultiSelect()" data-testid="lookup-modal-confirm">Confirm Selection</button>
+        <div class="lookup-modal-footer">
+            <button type="button" class="btn btn-primary" onclick="closeLookupModal()">Done</button>
         </div>
     </div>
 </div>

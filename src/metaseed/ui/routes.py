@@ -110,6 +110,21 @@ def create_app(state: AppState | None = None) -> FastAPI:
 
     templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
+    # Add custom filter for formatting display values
+    def format_display(value: Any) -> str:
+        """Format a value for display in table cells."""
+        if value is None:
+            return ""
+        if isinstance(value, list):
+            # Filter out empty values and join
+            return ", ".join(str(v) for v in value if v)
+        # Handle string representation of empty list
+        if isinstance(value, str) and value.strip() in ("[]", ""):
+            return ""
+        return str(value)
+
+    templates.env.filters["display"] = format_display
+
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
     def get_state() -> AppState:

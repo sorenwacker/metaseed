@@ -6,12 +6,12 @@
         {% set constraints = column_constraints.get(col, {}) if column_constraints else {} %}
         {% set ref_info = reference_fields.get(col, {}) if reference_fields else {} %}
         {% set show_lookup = ref_info and not is_parent_id %}
-        <span class="cell-display" data-testid="cell-display-{{ field_name }}-{{ row._idx }}-{{ col }}">{{ row.get(col, '') }}</span>
+        <span class="cell-display" data-testid="cell-display-{{ field_name }}-{{ row._idx }}-{{ col }}">{{ row.get(col, '')|display }}</span>
         <div class="cell-input-wrapper{% if show_lookup %} has-lookup{% endif %}">
             <input type="text"
                    class="form-input cell-input{% if show_lookup %} lookup-input{% endif %}"
                    name="{{ col }}"
-                   value="{{ row.get(col, '') }}"
+                   value="{{ row.get(col, '')|display }}"
                    {% if is_parent_id %}
                    readonly
                    title="Auto-filled from parent"

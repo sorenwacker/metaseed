@@ -1485,11 +1485,10 @@ body::before {
 }
 
 .lookup-modal-item {
-    padding: var(--space-md);
-    cursor: pointer;
+    padding: var(--space-sm) var(--space-md);
     display: flex;
-    flex-direction: column;
-    gap: 2px;
+    align-items: center;
+    gap: var(--space-sm);
     border-bottom: 1px solid var(--clr-paper);
     transition: background var(--transition-fast);
 }
@@ -1510,6 +1509,7 @@ body::before {
 .lookup-modal-item-label {
     font-size: 0.875rem;
     color: var(--clr-ink-light);
+    margin-left: var(--space-xs);
 }
 
 .lookup-modal-loading,
@@ -1594,6 +1594,76 @@ body::before {
 }
 
 .lookup-modal-footer.hidden {
+    display: none;
+}
+
+/* Selected items as chips */
+.lookup-modal-selected {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+    padding: 0 var(--space-md);
+    margin-bottom: var(--space-sm);
+    min-height: 0;
+}
+
+.lookup-modal-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    background: var(--clr-sky);
+    color: var(--clr-ink);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-sm);
+}
+
+.lookup-modal-chip-remove {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border: none;
+    background: var(--clr-ink);
+    color: var(--clr-paper);
+    border-radius: 50%;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.lookup-modal-chip-remove:hover {
+    background: var(--clr-rust);
+}
+
+/* Add button on result items */
+.lookup-modal-item-add {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    background: var(--clr-moss);
+    color: var(--clr-paper);
+    border-radius: 50%;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.lookup-modal-item-add:hover {
+    background: var(--clr-forest);
+}
+
+.lookup-modal-item-add.hidden {
     display: none;
 }
 

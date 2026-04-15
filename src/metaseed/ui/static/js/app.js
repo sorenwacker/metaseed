@@ -743,13 +743,12 @@ function escapeHtml(text) {
 }
 
 // ============================================
-// Lookup Modal with Multi-select
+// Lookup Modal
 // ============================================
 
 var lookupModalInput = null;
 var lookupModalEntityType = null;
 var lookupModalSelectedValues = new Set();
-var lookupModalMultiSelectEnabled = false;
 
 // Open lookup modal
 function openLookupModal(entityType, inputId) {
@@ -759,44 +758,30 @@ function openLookupModal(entityType, inputId) {
     lookupModalInput = input;
     lookupModalEntityType = entityType;
     lookupModalSelectedValues.clear();
-    lookupModalMultiSelectEnabled = false;
 
     var modal = document.getElementById('lookup-modal');
     var entityTypeSpan = document.getElementById('lookup-modal-entity-type');
     var searchInput = document.getElementById('lookup-modal-search');
     var resultsDiv = document.getElementById('lookup-modal-results');
-    var multiSelectCheckbox = document.getElementById('lookup-modal-multiselect');
-    var footer = document.getElementById('lookup-modal-footer');
-    var selectionDiv = document.getElementById('lookup-modal-selection');
 
     entityTypeSpan.textContent = entityType;
     searchInput.value = '';
     resultsDiv.innerHTML = '<div class="lookup-modal-loading">Loading...</div>';
-    multiSelectCheckbox.checked = false;
-    footer.classList.add('hidden');
-    selectionDiv.classList.add('hidden');
 
-    // Parse existing values if multi-select
+    // Parse existing values (filter out empty strings and empty list notation)
     var existingValue = input.value.trim();
     if (existingValue) {
         existingValue.split(',').forEach(function(v) {
             var trimmed = v.trim();
-            if (trimmed) lookupModalSelectedValues.add(trimmed);
+            if (trimmed && trimmed !== '[]') lookupModalSelectedValues.add(trimmed);
         });
     }
 
     modal.classList.remove('hidden');
     searchInput.focus();
 
-    // Set up multi-select toggle
-    multiSelectCheckbox.onchange = function() {
-        lookupModalMultiSelectEnabled = this.checked;
-        footer.classList.toggle('hidden', !this.checked);
-        selectionDiv.classList.toggle('hidden', !this.checked);
-        updateSelectionCount();
-        // Re-render results with checkboxes
-        loadModalResults(entityType, searchInput.value);
-    };
+    // Render selected items
+    renderSelectedItems();
 
     // Load all entities of this type
     loadModalResults(entityType, '');
@@ -815,6 +800,74 @@ function closeLookupModal() {
     lookupModalEntityType = null;
 }
 
+// Render selected items with remove buttons
+function renderSelectedItems() {
+    var selectedDiv = document.getElementById('lookup-modal-selected');
+    if (!selectedDiv) return;
+
+    if (lookupModalSelectedValues.size === 0) {
+        selectedDiv.innerHTML = '';
+        return;
+    }
+
+    var html = '';
+    lookupModalSelectedValues.forEach(function(value) {
+        html += '<span class="lookup-modal-chip">' +
+            escapeHtml(value) +
+            '<button type="button" class="lookup-modal-chip-remove" data-value="' + escapeHtml(value) + '" title="Remove">-</button>' +
+            '</span>';
+    });
+    selectedDiv.innerHTML = html;
+
+    // Add remove handlers
+    selectedDiv.querySelectorAll('.lookup-modal-chip-remove').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            removeSelectedValue(this.dataset.value);
+        });
+    });
+}
+
+// Update the input field with current selections
+function updateLookupInput() {
+    if (!lookupModalInput) return;
+
+    var values = Array.from(lookupModalSelectedValues);
+    var valueStr = values.join(', ');
+
+    lookupModalInput.value = valueStr;
+    lookupModalInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+    // Update display if in editable cell
+    var cell = lookupModalInput.closest('.editable-cell');
+    if (cell) {
+        var display = cell.querySelector('.cell-display');
+        if (display) {
+            display.textContent = valueStr;
+        }
+    }
+}
+
+// Add a value to selection
+function addSelectedValue(value) {
+    if (lookupModalSelectedValues.has(value)) return;
+    lookupModalSelectedValues.add(value);
+    renderSelectedItems();
+    updateLookupInput();
+    // Re-render results to update + button state
+    var searchInput = document.getElementById('lookup-modal-search');
+    loadModalResults(lookupModalEntityType, searchInput ? searchInput.value : '');
+}
+
+// Remove a value from selection
+function removeSelectedValue(value) {
+    lookupModalSelectedValues.delete(value);
+    renderSelectedItems();
+    updateLookupInput();
+    // Re-render results to update + button state
+    var searchInput = document.getElementById('lookup-modal-search');
+    loadModalResults(lookupModalEntityType, searchInput ? searchInput.value : '');
+}
+
 // Load results into modal
 function loadModalResults(entityType, query) {
     var resultsDiv = document.getElementById('lookup-modal-results');
@@ -825,7 +878,7 @@ function loadModalResults(entityType, query) {
         })
         .then(function(data) {
             if (!data.results || data.results.length === 0) {
-                resultsDiv.innerHTML = '<div class="lookup-modal-empty">No ' + escapeHtml(entityType) + ' items found. Create some first.</div>';
+                resultsDiv.innerHTML = '';
                 return;
             }
 
@@ -835,33 +888,18 @@ function loadModalResults(entityType, query) {
                 item.className = 'lookup-modal-item';
                 item.dataset.value = result.value;
 
-                if (lookupModalMultiSelectEnabled) {
-                    // Multi-select mode: show checkbox
-                    var isSelected = lookupModalSelectedValues.has(result.value);
-                    item.innerHTML = '<label class="lookup-modal-item-checkbox">' +
-                        '<input type="checkbox" ' + (isSelected ? 'checked' : '') + ' data-value="' + escapeHtml(result.value) + '">' +
-                        '<span class="lookup-modal-item-value">' + escapeHtml(result.value) + '</span>' +
-                        (result.label !== result.value ? '<span class="lookup-modal-item-label">' + escapeHtml(result.label) + '</span>' : '') +
-                        '</label>';
+                var isSelected = lookupModalSelectedValues.has(result.value);
 
-                    var checkbox = item.querySelector('input[type="checkbox"]');
-                    checkbox.addEventListener('change', function() {
-                        if (this.checked) {
-                            lookupModalSelectedValues.add(result.value);
-                        } else {
-                            lookupModalSelectedValues.delete(result.value);
-                        }
-                        updateSelectionCount();
-                    });
-                } else {
-                    // Single-select mode: click to select
-                    item.innerHTML = '<span class="lookup-modal-item-value">' + escapeHtml(result.value) + '</span>' +
-                                    (result.label !== result.value ? '<span class="lookup-modal-item-label">' + escapeHtml(result.label) + '</span>' : '');
+                item.innerHTML =
+                    '<span class="lookup-modal-item-value">' + escapeHtml(result.value) + '</span>' +
+                    (result.label !== result.value ? '<span class="lookup-modal-item-label">' + escapeHtml(result.label) + '</span>' : '') +
+                    '<button type="button" class="lookup-modal-item-add' + (isSelected ? ' hidden' : '') + '" title="Add">+</button>';
 
-                    item.addEventListener('click', function() {
-                        selectModalValue(result.value);
-                    });
-                }
+                var addBtn = item.querySelector('.lookup-modal-item-add');
+                addBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    addSelectedValue(result.value);
+                });
 
                 resultsDiv.appendChild(item);
             });
@@ -870,53 +908,6 @@ function loadModalResults(entityType, query) {
             console.error('Modal lookup error:', error);
             resultsDiv.innerHTML = '<div class="lookup-modal-error">Error loading results</div>';
         });
-}
-
-// Update selection count display
-function updateSelectionCount() {
-    var countSpan = document.getElementById('lookup-modal-selection-count');
-    if (countSpan) {
-        var count = lookupModalSelectedValues.size;
-        countSpan.textContent = count + ' selected';
-    }
-}
-
-// Confirm multi-select and close modal
-function confirmMultiSelect() {
-    if (lookupModalInput) {
-        var values = Array.from(lookupModalSelectedValues);
-        var valueStr = values.join(', ');
-        lookupModalInput.value = valueStr;
-        lookupModalInput.dispatchEvent(new Event('change', { bubbles: true }));
-
-        // Update display if in editable cell
-        var cell = lookupModalInput.closest('.editable-cell');
-        if (cell) {
-            var display = cell.querySelector('.cell-display');
-            if (display) {
-                display.textContent = valueStr;
-            }
-        }
-    }
-    closeLookupModal();
-}
-
-// Select value from modal
-function selectModalValue(value) {
-    if (lookupModalInput) {
-        lookupModalInput.value = value;
-        lookupModalInput.dispatchEvent(new Event('change', { bubbles: true }));
-
-        // Update display if in editable cell
-        var cell = lookupModalInput.closest('.editable-cell');
-        if (cell) {
-            var display = cell.querySelector('.cell-display');
-            if (display) {
-                display.textContent = value;
-            }
-        }
-    }
-    closeLookupModal();
 }
 
 // Handle lookup button clicks
