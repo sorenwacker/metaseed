@@ -132,13 +132,13 @@ studies:
         factor_type: abiotic treatment
         values:
           - unique_id: FV-WELL-WATERED
-            factor_id: FAC-WATER-REGIME
+            factor_name: FAC-WATER-REGIME
             value: Well-watered
             description: >
               Full irrigation maintaining soil moisture at 70-80% field capacity
               throughout the growing season.
           - unique_id: FV-DROUGHT-STRESS
-            factor_id: FAC-WATER-REGIME
+            factor_name: FAC-WATER-REGIME
             value: Drought stress
             description: >
               Irrigation withheld from BBCH 61 (beginning of flowering) until
@@ -213,7 +213,7 @@ studies:
         observation_level_code: P1
         factor_values:
           - unique_id: FV-OU-B1-P1-WW
-            factor_id: FAC-WATER-REGIME
+            factor_name: FAC-WATER-REGIME
             value: Well-watered
             description: Control treatment
         samples:
@@ -237,7 +237,7 @@ studies:
         observation_level_code: P2
         factor_values:
           - unique_id: FV-OU-B1-P2-DS
-            factor_id: FAC-WATER-REGIME
+            factor_name: FAC-WATER-REGIME
             value: Drought stress
             description: Stress treatment
 
@@ -254,7 +254,7 @@ studies:
         observation_level_code: P3
         factor_values:
           - unique_id: FV-OU-B1-P3-WW
-            factor_id: FAC-WATER-REGIME
+            factor_name: FAC-WATER-REGIME
             value: Well-watered
             description: Control treatment
 
@@ -271,7 +271,7 @@ studies:
         observation_level_code: P4
         factor_values:
           - unique_id: FV-OU-B1-P4-DS
-            factor_id: FAC-WATER-REGIME
+            factor_name: FAC-WATER-REGIME
             value: Drought stress
             description: Stress treatment
 
@@ -288,7 +288,7 @@ studies:
         observation_level_code: P5
         factor_values:
           - unique_id: FV-OU-B1-P5-WW
-            factor_id: FAC-WATER-REGIME
+            factor_name: FAC-WATER-REGIME
             value: Well-watered
             description: Control treatment
 
@@ -305,7 +305,7 @@ studies:
         observation_level_code: P6
         factor_values:
           - unique_id: FV-OU-B1-P6-DS
-            factor_id: FAC-WATER-REGIME
+            factor_name: FAC-WATER-REGIME
             value: Drought stress
             description: Stress treatment
 

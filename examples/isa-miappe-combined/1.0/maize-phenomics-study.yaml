@@ -214,12 +214,12 @@ studies:
         factor_type: chemical compound
         values:
           - identifier: FV-HIGH-N
-            factor_id: FAC-NITROGEN
+            factor_name: FAC-NITROGEN
             value: High nitrogen
             description: 15 mM NH4NO3 in nutrient solution
 
           - identifier: FV-LOW-N
-            factor_id: FAC-NITROGEN
+            factor_name: FAC-NITROGEN
             value: Low nitrogen
             description: 1.5 mM NH4NO3 in nutrient solution
 
@@ -230,19 +230,19 @@ studies:
         factor_type: genetic factor
         values:
           - identifier: FV-B73
-            factor_id: FAC-GENOTYPE
+            factor_name: FAC-GENOTYPE
             value: B73
 
           - identifier: FV-Mo17
-            factor_id: FAC-GENOTYPE
+            factor_name: FAC-GENOTYPE
             value: Mo17
 
           - identifier: FV-W22
-            factor_id: FAC-GENOTYPE
+            factor_name: FAC-GENOTYPE
             value: W22
 
           - identifier: FV-PH207
-            factor_id: FAC-GENOTYPE
+            factor_name: FAC-GENOTYPE
             value: PH207
 
     observed_variables:
@@ -302,10 +302,10 @@ studies:
         entry_type: test
         factor_values:
           - identifier: FV-B73-HN-R1-N
-            factor_id: FAC-NITROGEN
+            factor_name: FAC-NITROGEN
             value: High nitrogen
           - identifier: FV-B73-HN-R1-G
-            factor_id: FAC-GENOTYPE
+            factor_name: FAC-GENOTYPE
             value: B73
         samples:
           - identifier: SAM-B73-HN-R1-LEAF
@@ -327,10 +327,10 @@ studies:
         entry_type: test
         factor_values:
           - identifier: FV-B73-LN-R1-N
-            factor_id: FAC-NITROGEN
+            factor_name: FAC-NITROGEN
             value: Low nitrogen
           - identifier: FV-B73-LN-R1-G
-            factor_id: FAC-GENOTYPE
+            factor_name: FAC-GENOTYPE
             value: B73
 
       - identifier: OU-Mo17-HN-R1
@@ -343,10 +343,10 @@ studies:
         entry_type: test
         factor_values:
           - identifier: FV-Mo17-HN-R1-N
-            factor_id: FAC-NITROGEN
+            factor_name: FAC-NITROGEN
             value: High nitrogen
           - identifier: FV-Mo17-HN-R1-G
-            factor_id: FAC-GENOTYPE
+            factor_name: FAC-GENOTYPE
             value: Mo17
 
       - identifier: OU-Mo17-LN-R1
@@ -359,7 +359,7 @@ studies:
         entry_type: test
         factor_values:
           - identifier: FV-Mo17-LN-R1-N
-            factor_id: FAC-NITROGEN
+            factor_name: FAC-NITROGEN
             value: Low nitrogen
 
     events:
