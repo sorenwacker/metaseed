@@ -112,6 +112,7 @@ erDiagram
 
     Study {
         string unique_id PK
+        string investigation_id FK
         string title
         string description
         datetime start_date
@@ -131,6 +132,8 @@ erDiagram
     }
 
     Person {
+        string investigation_id FK
+        string study_id FK
         string name PK
         string email
         string institution
@@ -140,6 +143,7 @@ erDiagram
 
     BiologicalMaterial {
         string unique_id PK
+        string study_id FK
         string organism
         string genus
         string species
@@ -156,6 +160,7 @@ erDiagram
 
     ObservationUnit {
         string unique_id PK
+        string study_id FK
         string observation_unit_type
         string biological_material_id FK
         string spatial_distribution_type
@@ -172,6 +177,7 @@ erDiagram
 
     ObservedVariable {
         string unique_id PK
+        string study_id FK
         string name
         string trait
         string trait_accession_number
@@ -188,6 +194,7 @@ erDiagram
 
     Factor {
         string unique_id PK
+        string study_id FK
         string name
         string description
         string factor_type
@@ -202,6 +209,7 @@ erDiagram
 
     Event {
         string unique_id PK
+        string study_id FK
         string event_type
         datetime date
         datetime end_date
@@ -212,6 +220,7 @@ erDiagram
 
     Environment {
         string unique_id PK
+        string study_id FK
         string parameter
         string parameter_accession_number
         string value
@@ -232,6 +241,7 @@ erDiagram
 
     DataFile {
         string unique_id PK
+        string study_id FK
         string name
         uri link
         string description
@@ -241,6 +251,7 @@ erDiagram
 
     Location {
         string unique_id PK
+        string study_id FK
         string name
         string abbreviation
         string country
@@ -295,13 +306,57 @@ erDiagram
 
 **Environmental context**: Event entities track things that happen during the experiment (planting, irrigation, harvest). Environment entities describe growth conditions (temperature, humidity, light).
 
+## Entity Linking
+
+Every nested entity includes a **parent reference field** that links it to its container. This enables:
+
+- Round-trip Excel export/import without losing relationships
+- Flat tabular representation for spreadsheet workflows
+- Cross-entity validation and referential integrity
+
+| Entity | Parent Field | Description |
+|--------|--------------|-------------|
+| Study | `investigation_id` | Links to parent Investigation |
+| Person | `investigation_id` or `study_id` | Links to Investigation (as contact) or Study (as personnel) |
+| BiologicalMaterial | `study_id` | Links to parent Study |
+| ObservationUnit | `study_id` | Links to parent Study |
+| ObservedVariable | `study_id` | Links to parent Study |
+| Factor | `study_id` | Links to parent Study |
+| FactorValue | `factor_id` | Links to parent Factor |
+| Event | `study_id` | Links to parent Study |
+| Environment | `study_id` | Links to parent Study |
+| DataFile | `study_id` | Links to parent Study |
+| Location | `study_id` | Links to parent Study |
+| Sample | `observation_unit_id` | Links to parent ObservationUnit |
+
 ## Usage
 
 ```python
 from metaseed import miappe
 
 m = miappe()
+
+# Create Investigation
 inv = m.Investigation(unique_id="INV001", title="Drought study")
-material = m.BiologicalMaterial(unique_id="BM001", organism="Zea mays")
-obs_unit = m.ObservationUnit(unique_id="OU001", observation_unit_type="plant")
+
+# Create Study linked to Investigation
+study = m.Study(
+    unique_id="STU001",
+    investigation_id="INV001",
+    title="Field trial 2024"
+)
+
+# Create BiologicalMaterial linked to Study
+material = m.BiologicalMaterial(
+    unique_id="BM001",
+    study_id="STU001",
+    organism="Zea mays"
+)
+
+# Create ObservationUnit linked to Study
+obs_unit = m.ObservationUnit(
+    unique_id="OU001",
+    study_id="STU001",
+    observation_unit_type="plant"
+)
 ```
