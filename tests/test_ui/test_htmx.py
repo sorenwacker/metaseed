@@ -351,8 +351,8 @@ class TestAppState:
             identifier="INV-001",
             title="Test Investigation",
             studies=[
-                {"identifier": "STU-001", "title": "Study One"},
-                {"identifier": "STU-002", "title": "Study Two"},
+                {"identifier": "STU-001", "title": "Study One", "investigation_id": "INV-001"},
+                {"identifier": "STU-002", "title": "Study Two", "investigation_id": "INV-001"},
             ],
         )
         state.add_node("Investigation", instance)

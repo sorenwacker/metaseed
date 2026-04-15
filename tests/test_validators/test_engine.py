@@ -82,7 +82,9 @@ class TestValidateFunction:
             "unique_id": "INV001",
             "title": "Test Investigation",
             "contacts": [{"name": "Test Contact"}],
-            "studies": [{"unique_id": "STU001", "title": "Test Study"}],
+            "studies": [
+                {"unique_id": "STU001", "title": "Test Study", "investigation_id": "INV001"}
+            ],
         }
         errors = validate(data, "investigation", version="1.1")
         assert len(errors) == 0
@@ -125,7 +127,7 @@ class TestValidateFunction:
             unique_id="INV001",
             title="Test",
             contacts=[Person(name="Test Contact")],
-            studies=[Study(unique_id="STU001", title="Test Study")],
+            studies=[Study(unique_id="STU001", title="Test Study", investigation_id="INV001")],
         )
 
         # Entity type is auto-detected from model class name
@@ -148,6 +150,7 @@ class TestValidateFunction:
                 Study(
                     unique_id="STU001",
                     title="Study",
+                    investigation_id="INV001",
                     start_date=datetime.date(2024, 12, 31),
                     end_date=datetime.date(2024, 1, 1),  # End before start
                 ),
@@ -177,6 +180,7 @@ class TestValidateFunction:
                 Study(
                     unique_id="STU001",
                     title="Study",
+                    investigation_id="INV001",
                     start_date=datetime.date(2024, 12, 31),
                     end_date=datetime.date(2024, 1, 1),  # Invalid dates
                 ),

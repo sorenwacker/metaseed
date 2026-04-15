@@ -302,7 +302,7 @@ class TestFormatTableRows:
     def test_format_model_items(self):
         """Format Pydantic model items."""
         facade = ProfileFacade("miappe")
-        study = facade.Study(unique_id="STU-001", title="Test Study")
+        study = facade.Study(unique_id="STU-001", title="Test Study", investigation_id="INV-001")
         items = [study]
 
         rows = format_table_rows(items)

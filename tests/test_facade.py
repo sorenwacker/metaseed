@@ -443,18 +443,22 @@ class TestCombinedFacade:
         """Create MIAPPE-specific entity from isa-miappe-combined profile."""
         bm = combined_facade.BiologicalMaterial(
             identifier="BM-001",
+            study_id="STU-001",
             organism="Zea mays",
         )
 
         assert bm.identifier == "BM-001"
+        assert bm.study_id == "STU-001"
         assert bm.organism == "Zea mays"
 
     def test_combined_create_isa_entity(self, combined_facade: ProfileFacade) -> None:
         """Create ISA-specific entity from isa-miappe-combined profile."""
         prot = combined_facade.Protocol(
+            study_id="STU-001",
             name="Test Protocol",
             protocol_type="sample collection",
         )
 
+        assert prot.study_id == "STU-001"
         assert prot.name == "Test Protocol"
         assert prot.protocol_type == "sample collection"

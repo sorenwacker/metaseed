@@ -161,15 +161,16 @@ def get_element_text(driver, testid: str) -> str:
     return element.text
 
 
-def start_new_investigation(driver, profile: str = "miappe"):
+def start_new_investigation(driver, profile: str = "miappe", version: str = "1.1"):
     """Start creating a new Investigation by clicking button and selecting profile.
 
     Args:
         driver: Selenium WebDriver
         profile: Profile to select ("miappe", "isa", or "isa-miappe-combined")
+        version: Profile version to select (default "1.1" for miappe)
     """
     click_button(driver, "btn-new-investigation")
-    click_button(driver, f"profile-{profile}")
+    click_button(driver, f"profile-{profile}-v{version}")
 
 
 def fill_all_study_fields(driver, row_idx: int = 0):
