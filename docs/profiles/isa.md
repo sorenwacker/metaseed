@@ -60,6 +60,7 @@ flowchart TB
     STU --> PROT
     STU --> SRC
     STU --> SAM
+    STU --> EXT
     STU --> SF
     STU --> PROC
     STU -.->|contacts| PER
@@ -298,6 +299,7 @@ erDiagram
     Study ||--o{ Protocol : protocols
     Study ||--o{ Source : sources
     Study ||--o{ Sample : samples
+    Study ||--o{ Extract : other_materials
     Study ||--o{ StudyFactor : factors
     Study ||--o{ Process : process_sequence
     Study ||--o{ Person : contacts
