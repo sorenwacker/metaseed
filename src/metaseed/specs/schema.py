@@ -61,6 +61,8 @@ class FieldSpec(BaseModel):
         ontology_term: Reference to ontology term (e.g., MIAPPE:DM-1).
         constraints: Validation constraints.
         items: For list type, the entity type of list items.
+        parent_ref: Parent entity reference in format "Entity.field" (e.g., "Study.identifier").
+            Fields with parent_ref are auto-filled from parent context and hidden in nested forms.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -72,6 +74,7 @@ class FieldSpec(BaseModel):
     ontology_term: str | None = None
     constraints: Constraints | None = None
     items: str | None = None
+    parent_ref: str | None = None
 
 
 class EntitySpec(BaseModel):

@@ -224,11 +224,14 @@ def build_inline_tables(
             entity_type=nested_type,
         )
 
-        # Get parent ID fields (fields that should be auto-filled and read-only)
+        # Get parent ID fields (fields that reference parent entity)
         parent_id_fields = get_parent_id_fields(ref_fields, entity_type)
 
+        # Filter out parent ID fields from display columns (relationship is implied by nesting)
+        display_columns = [c for c in col_info["columns"] if c not in parent_id_fields]
+
         inline_tables[field_name] = {
-            "columns": col_info["columns"],
+            "columns": display_columns,
             "rows": rows,
             "column_types": col_info["column_types"],
             "column_constraints": col_info["column_constraints"],
@@ -275,13 +278,11 @@ def format_table_rows(items: list) -> list[dict]:
 
 
 def get_reference_fields(profile: str, version: str, entity_type: str) -> dict[str, dict]:
-    """Get all reference fields for an entity type by parsing YAML validation rules.
+    """Get all reference fields for an entity type.
 
-    Reference rules are defined in the spec like:
-        - name: sample_observation_unit_reference
-          applies_to: [Sample]
-          field: observation_unit_id
-          reference: ObservationUnit.unique_id
+    Checks two sources:
+    1. Field definitions with parent_ref attribute (e.g., parent_ref: Study.identifier)
+    2. Validation rules with reference attribute (legacy)
 
     Args:
         profile: Profile name (e.g., "miappe").
@@ -291,9 +292,9 @@ def get_reference_fields(profile: str, version: str, entity_type: str) -> dict[s
     Returns:
         Dictionary mapping field names to their reference info:
         {
-            "observation_unit_id": {
-                "target_entity": "ObservationUnit",
-                "target_field": "unique_id"
+            "study_id": {
+                "target_entity": "Study",
+                "target_field": "identifier"
             },
             ...
         }
@@ -305,6 +306,20 @@ def get_reference_fields(profile: str, version: str, entity_type: str) -> dict[s
         return {}
 
     reference_fields = {}
+
+    # Check field definitions for parent_ref attribute
+    entity_spec = spec.entities.get(entity_type)
+    if entity_spec:
+        for field in entity_spec.fields:
+            if hasattr(field, "parent_ref") and field.parent_ref:
+                parts = field.parent_ref.split(".")
+                if len(parts) == 2:
+                    reference_fields[field.name] = {
+                        "target_entity": parts[0],
+                        "target_field": parts[1],
+                    }
+
+    # Also check validation rules (for backwards compatibility)
     for rule in spec.validation_rules:
         if not rule.reference or not rule.field:
             continue
@@ -405,13 +420,13 @@ def collect_entities_by_type(state: AppState, facade: ProfileFacade) -> dict[str
 
         # Try common ID field names
         for id_field in ["unique_id", "identifier", "name", "title"]:
-            if id_field in data and data[id_field]:
+            if data.get(id_field):
                 identifier = str(data[id_field])
                 break
 
         # Try to build a label from multiple fields
         for label_field in ["title", "name", "description", "unique_id", "identifier"]:
-            if label_field in data and data[label_field]:
+            if data.get(label_field):
                 label = str(data[label_field])
                 break
 
@@ -433,7 +448,7 @@ def collect_entities_by_type(state: AppState, facade: ProfileFacade) -> dict[str
             return
 
         for field_name, nested_type in helper.nested_fields.items():
-            if field_name in data and data[field_name]:
+            if data.get(field_name):
                 nested_items = data[field_name]
                 if isinstance(nested_items, list):
                     for item in nested_items:
@@ -506,7 +521,7 @@ def build_breadcrumb(state: AppState) -> list[dict]:
             item = items[ctx.row_idx]
             if isinstance(item, dict):
                 for key in ["title", "name", "unique_id", "identifier"]:
-                    if key in item and item[key]:
+                    if item.get(key):
                         item_label = str(item[key])
                         break
 

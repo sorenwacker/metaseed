@@ -77,6 +77,28 @@ fields:
 | `ontology_term` | no | Ontology reference |
 | `items` | no | Element type for `list` or `entity` types |
 | `constraints` | no | Validation constraints |
+| `parent_ref` | no | Parent entity reference (see below) |
+
+## Parent Reference Fields
+
+Fields that reference a parent entity can be marked with `parent_ref`. These fields are:
+
+- Auto-filled based on parent context when editing nested entities
+- Hidden from nested forms (since the relationship is implicit in the nesting)
+- Visible only in flat exports (Excel, CSV) where nesting is lost
+
+```yaml
+fields:
+  - name: study_id
+    type: string
+    required: true
+    parent_ref: Study.identifier
+    description: Reference to the parent Study
+```
+
+The format is `EntityType.field_name` where:
+- `EntityType` is the parent entity type (e.g., `Study`, `Investigation`)
+- `field_name` is the field used as identifier (e.g., `identifier`, `unique_id`)
 
 ## Field Types
 
