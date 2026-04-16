@@ -362,6 +362,8 @@ erDiagram
 
     Process ||--o| Protocol : executes_protocol
     Process ||--o{ ParameterValue : parameter_values
+    Process }o--o{ Source : inputs
+    Process }o--o{ Sample : outputs
     Process ||--o{ Comment : comments
 
     DataFile ||--o{ Sample : generated_from
