@@ -203,61 +203,73 @@ studies:
             value: ICE1 overexpressor
 
     # Process sequence links sources to samples via protocol execution
-    # Per ISA-JSON: inputs/outputs are references to materials declared above
+    # Per ISA-JSON: inputs/outputs reference materials declared at Study level
     process_sequence:
       - name: sample_collection_Col0_0h_Rep1
         executes_protocol:
           name: Plant growth protocol
           study_id: STU-ARAB-COLD-01
         inputs:
-          - Arabidopsis_Col0_seeds
+          - name: Arabidopsis_Col0_seeds
+            study_id: STU-ARAB-COLD-01
         outputs:
-          - Col0_Control_0h_Rep1
+          - name: Col0_Control_0h_Rep1
+            study_id: STU-ARAB-COLD-01
 
       - name: sample_collection_Col0_0h_Rep2
         executes_protocol:
           name: Plant growth protocol
           study_id: STU-ARAB-COLD-01
         inputs:
-          - Arabidopsis_Col0_seeds
+          - name: Arabidopsis_Col0_seeds
+            study_id: STU-ARAB-COLD-01
         outputs:
-          - Col0_Control_0h_Rep2
+          - name: Col0_Control_0h_Rep2
+            study_id: STU-ARAB-COLD-01
 
       - name: sample_collection_Col0_24h_Rep1
         executes_protocol:
           name: Cold treatment protocol
           study_id: STU-ARAB-COLD-01
         inputs:
-          - Arabidopsis_Col0_seeds
+          - name: Arabidopsis_Col0_seeds
+            study_id: STU-ARAB-COLD-01
         outputs:
-          - Col0_Cold_24h_Rep1
+          - name: Col0_Cold_24h_Rep1
+            study_id: STU-ARAB-COLD-01
 
       - name: sample_collection_Col0_24h_Rep2
         executes_protocol:
           name: Cold treatment protocol
           study_id: STU-ARAB-COLD-01
         inputs:
-          - Arabidopsis_Col0_seeds
+          - name: Arabidopsis_Col0_seeds
+            study_id: STU-ARAB-COLD-01
         outputs:
-          - Col0_Cold_24h_Rep2
+          - name: Col0_Cold_24h_Rep2
+            study_id: STU-ARAB-COLD-01
 
       - name: sample_collection_Col0_7d_Rep1
         executes_protocol:
           name: Cold treatment protocol
           study_id: STU-ARAB-COLD-01
         inputs:
-          - Arabidopsis_Col0_seeds
+          - name: Arabidopsis_Col0_seeds
+            study_id: STU-ARAB-COLD-01
         outputs:
-          - Col0_Cold_7d_Rep1
+          - name: Col0_Cold_7d_Rep1
+            study_id: STU-ARAB-COLD-01
 
       - name: sample_collection_ICE1_24h_Rep1
         executes_protocol:
           name: Cold treatment protocol
           study_id: STU-ARAB-COLD-01
         inputs:
-          - Arabidopsis_ICE1_seeds
+          - name: Arabidopsis_ICE1_seeds
+            study_id: STU-ARAB-COLD-01
         outputs:
-          - ICE1_Cold_24h_Rep1
+          - name: ICE1_Cold_24h_Rep1
+            study_id: STU-ARAB-COLD-01
 
     assays:
       - study_id: STU-ARAB-COLD-01

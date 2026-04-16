@@ -874,20 +874,18 @@ entities:
 
       - name: inputs
         type: list
-        items: string
+        items: Source
         required: false
         description: >
-          Input materials for this process. References to Source, Sample, or Material
-          by name. Per ISA spec, inputs can be sources (for sample collection),
-          samples (for extraction), or other materials (for further processing).
+          Input materials for this process. Per ISA spec, inputs can be sources
+          (for sample collection), samples (for extraction), or other materials.
 
       - name: outputs
         type: list
-        items: string
+        items: Sample
         required: false
         description: >
-          Output materials from this process. References to Sample, Extract,
-          LabeledExtract, or DataFile by name. Per ISA spec, a process transforms
+          Output materials from this process. Per ISA spec, a process transforms
           inputs into outputs through protocol execution.
 
       - name: comments
