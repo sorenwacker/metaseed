@@ -164,11 +164,15 @@ flowchart TB
 |----------|----------|
 | **Core** | Investigation, Study, Assay, Person, Publication |
 | **Protocols** | Protocol, ProtocolParameter |
-| **Material Flow** | Source, Sample, Extract, LabeledExtract, Characteristic |
-| **Process Graph** | Process, ParameterValue |
+| **Material Flow** | Source, Sample, OtherMaterial (Extract/LabeledExtract), Characteristic |
+| **Process Graph** | Process, ParameterValue, MaterialRef |
 | **Factors** | StudyFactor, FactorValue |
 | **Ontology** | OntologyAnnotation, OntologySource, Comment |
 | **Output** | DataFile |
+
+**Note on OtherMaterial**: Per ISA-JSON spec, Extract and Labeled Extract materials are stored in `assay.other_materials` with a `type` field discriminating between them. This differs from Study-level materials (Source, Sample) which have dedicated fields.
+
+**Note on MaterialRef**: Process inputs/outputs reference materials by name and type using MaterialRef entities, enabling graph traversal without special-casing.
 
 ## Entity-Relationship Diagram
 
