@@ -329,6 +329,18 @@ Every nested entity includes a **parent reference field** that links it to its c
 | Location | `study_id` | Links to parent Study |
 | Sample | `observation_unit_id` | Links to parent ObservationUnit |
 
+## References
+
+Official MIAPPE specifications and resources:
+
+| Resource | URL |
+|----------|-----|
+| MIAPPE Specification | <https://www.miappe.org/> |
+| MIAPPE v1.1 Checklist | <https://github.com/MIAPPE/MIAPPE/tree/master/MIAPPE_Checklist-Data-Model-v1.1> |
+| MIAPPE GitHub | <https://github.com/MIAPPE/MIAPPE> |
+| BrAPI (implements MIAPPE) | <https://brapi.org/> |
+| Plant Phenotyping Network | <https://emphasis.plant-phenotyping.eu/> |
+
 ## Usage
 
 ```python

@@ -103,3 +103,10 @@ A MIAPPE experiment defines ObservationUnits (the things being measured - plants
 **MIAPPE** lacks process-level provenance. Molecular workflows (extraction, labeling, sequencing) cannot be captured. Protocol documentation is informal compared to ISA's structured ProtocolParameter system. The format is plant-specific by design (BiologicalMaterial assumes organism/genus/species). No OntologySource management reduces semantic rigor. No Assay concept exists to group measurements by technology.
 
 **Both** formats cannot represent experiments that combine phenotyping and molecular assays within a single coherent model.
+
+## References
+
+| Standard | Specification | GitHub |
+|----------|---------------|--------|
+| ISA | <https://isa-specs.readthedocs.io/> | <https://github.com/ISA-tools/isa-api> |
+| MIAPPE | <https://www.miappe.org/> | <https://github.com/MIAPPE/MIAPPE> |

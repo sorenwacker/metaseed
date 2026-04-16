@@ -1,5 +1,5 @@
 # ISA v1.0 Example: Arabidopsis Metabolomics Study
-# A complete example demonstrating all ISA entity types
+# A complete example demonstrating ISA entity types with proper nesting
 
 identifier: ISA-2024-ARAB-001
 title: Metabolomic profiling of Arabidopsis thaliana under cold stress
@@ -40,10 +40,6 @@ ontology_source_references:
     file: http://www.ebi.ac.uk/efo/efo.owl
     version: "3.50.0"
     description: Experimental Factor Ontology
-  - name: NCIT
-    file: http://purl.obolibrary.org/obo/ncit.owl
-    version: "23.04d"
-    description: NCI Thesaurus
   - name: PO
     file: http://purl.obolibrary.org/obo/po.owl
     version: "2023-06-22"
@@ -52,12 +48,6 @@ ontology_source_references:
     file: http://purl.obolibrary.org/obo/chebi.owl
     version: "230"
     description: Chemical Entities of Biological Interest
-
-comments:
-  - name: Created With
-    value: MetaSeed v1.0
-  - name: Last Modified Date
-    value: "2024-02-20"
 
 studies:
   - identifier: STU-ARAB-COLD-01
@@ -70,337 +60,249 @@ studies:
     public_release_date: "2024-08-01"
     filename: s_cold_acclimation.txt
 
-    contacts:
-      - study_id: STU-ARAB-COLD-01
-        last_name: Chen
-        first_name: Wei
-        email: w.chen@biolab.edu
-        affiliation: Department of Plant Biology
-        roles:
-          - laboratory technician
-
     protocols:
       - study_id: STU-ARAB-COLD-01
         name: Plant growth protocol
         protocol_type: growth protocol
         description: >
-          Arabidopsis seeds were surface sterilized and stratified at 4C for 3 days.
-          Plants were grown on 1/2 MS medium in growth chambers at 22C, 16h light/8h dark,
-          100 umol/m2/s for 3 weeks before treatment.
-        uri: https://protocols.io/view/arabidopsis-growth-protocol-123
+          Arabidopsis seeds surface sterilized and stratified at 4C for 3 days.
+          Plants grown on 1/2 MS medium in growth chambers at 22C, 16h/8h light/dark.
+        uri: https://protocols.io/view/arabidopsis-growth-123
         version: "1.0"
-        parameters:
-          - name: temperature
-            parameter_name: growth temperature
-          - name: light_intensity
-            parameter_name: light intensity
 
       - study_id: STU-ARAB-COLD-01
         name: Cold treatment protocol
         protocol_type: treatment protocol
         description: >
-          Three-week-old plants were transferred to 4C growth chamber with same light
-          conditions. Control plants remained at 22C. Samples collected at 0h, 6h, 24h,
-          3d, and 7d after transfer.
-        version: "1.0"
-        parameters:
-          - name: treatment_temperature
-            parameter_name: treatment temperature
-          - name: treatment_duration
-            parameter_name: treatment duration
-
-      - study_id: STU-ARAB-COLD-01
-        name: Sample collection protocol
-        protocol_type: sample collection
-        description: >
-          Rosette leaves were harvested, immediately frozen in liquid nitrogen,
-          and stored at -80C. Three biological replicates per condition per time point.
+          Three-week-old plants transferred to 4C growth chamber. Control plants
+          remained at 22C. Samples collected at 0h, 24h, and 7d after transfer.
         version: "1.0"
 
       - study_id: STU-ARAB-COLD-01
         name: Metabolite extraction protocol
         protocol_type: extraction
         description: >
-          Frozen tissue (100mg) was extracted with 1ml methanol:water (80:20 v/v)
-          containing internal standards. Samples were homogenized, centrifuged at
-          14000g for 10 min at 4C, and supernatant collected.
+          Frozen tissue (100mg) extracted with 1ml methanol:water (80:20).
+          Samples homogenized, centrifuged 14000g 10min at 4C.
         version: "1.0"
-        parameters:
-          - name: solvent_ratio
-            parameter_name: extraction solvent ratio
-          - name: sample_mass
-            parameter_name: sample mass
 
       - study_id: STU-ARAB-COLD-01
         name: LC-MS analysis protocol
         protocol_type: mass spectrometry
         description: >
-          Untargeted metabolomics using Thermo Q Exactive Plus. HILIC chromatography
-          with Waters BEH Amide column. Full scan MS1 at 70000 resolution, data-dependent
-          MS2 at 17500 resolution.
+          Untargeted metabolomics using Thermo Q Exactive Plus. HILIC column.
+          Full scan MS1 70000 resolution, data-dependent MS2 17500 resolution.
         version: "1.0"
-        parameters:
-          - name: ionization_mode
-            parameter_name: ionization mode
-          - name: scan_range
-            parameter_name: mass scan range
-
-      - study_id: STU-ARAB-COLD-01
-        name: Labeling protocol
-        protocol_type: labeling
-        description: >
-          Internal standards mixture containing 13C-labeled amino acids and
-          deuterated lipid standards was added before extraction.
-        version: "1.0"
-
-    sources:
-      - study_id: STU-ARAB-COLD-01
-        name: Arabidopsis_Col0_seed
-        characteristics:
-          - category: organism
-            value: Arabidopsis thaliana
-          - category: ecotype
-            value: Columbia-0
-          - category: seed lot
-            value: NASC-N1092
-
-      - study_id: STU-ARAB-COLD-01
-        name: Arabidopsis_ICE1_seed
-        characteristics:
-          - category: organism
-            value: Arabidopsis thaliana
-          - category: ecotype
-            value: ICE1 overexpressor
-          - category: genotype
-            value: 35S::ICE1
-
-    samples:
-      - study_id: STU-ARAB-COLD-01
-        name: Sample_Col0_Ctrl_0h_R1
-        derives_from:
-          - Arabidopsis_Col0_seed
-        characteristics:
-          - category: treatment
-            value: control
-          - category: timepoint
-            value: 0h
-          - category: replicate
-            value: "1"
-
-      - study_id: STU-ARAB-COLD-01
-        name: Sample_Col0_Ctrl_0h_R2
-        derives_from:
-          - Arabidopsis_Col0_seed
-        characteristics:
-          - category: treatment
-            value: control
-          - category: timepoint
-            value: 0h
-          - category: replicate
-            value: "2"
-
-      - study_id: STU-ARAB-COLD-01
-        name: Sample_Col0_Cold_24h_R1
-        derives_from:
-          - Arabidopsis_Col0_seed
-        characteristics:
-          - category: treatment
-            value: cold
-          - category: timepoint
-            value: 24h
-          - category: replicate
-            value: "1"
-
-      - study_id: STU-ARAB-COLD-01
-        name: Sample_Col0_Cold_24h_R2
-        derives_from:
-          - Arabidopsis_Col0_seed
-        characteristics:
-          - category: treatment
-            value: cold
-          - category: timepoint
-            value: 24h
-          - category: replicate
-            value: "2"
-
-      - study_id: STU-ARAB-COLD-01
-        name: Sample_ICE1_Cold_24h_R1
-        derives_from:
-          - Arabidopsis_ICE1_seed
-        characteristics:
-          - category: treatment
-            value: cold
-          - category: timepoint
-            value: 24h
-          - category: replicate
-            value: "1"
-
-    extracts:
-      - study_id: STU-ARAB-COLD-01
-        name: Extract_Col0_Ctrl_0h_R1
-        derives_from:
-          - Sample_Col0_Ctrl_0h_R1
-        characteristics:
-          - category: extraction method
-            value: methanol:water extraction
-
-      - study_id: STU-ARAB-COLD-01
-        name: Extract_Col0_Ctrl_0h_R2
-        derives_from:
-          - Sample_Col0_Ctrl_0h_R2
-
-      - study_id: STU-ARAB-COLD-01
-        name: Extract_Col0_Cold_24h_R1
-        derives_from:
-          - Sample_Col0_Cold_24h_R1
-
-      - study_id: STU-ARAB-COLD-01
-        name: Extract_Col0_Cold_24h_R2
-        derives_from:
-          - Sample_Col0_Cold_24h_R2
-
-      - study_id: STU-ARAB-COLD-01
-        name: Extract_ICE1_Cold_24h_R1
-        derives_from:
-          - Sample_ICE1_Cold_24h_R1
-
-    labeled_extracts:
-      - study_id: STU-ARAB-COLD-01
-        name: LabeledExtract_Col0_Ctrl_0h_R1
-        derives_from:
-          - Extract_Col0_Ctrl_0h_R1
-        label: 13C internal standard
-
-      - study_id: STU-ARAB-COLD-01
-        name: LabeledExtract_Col0_Cold_24h_R1
-        derives_from:
-          - Extract_Col0_Cold_24h_R1
-        label: 13C internal standard
 
     factors:
       - study_id: STU-ARAB-COLD-01
-        name: temperature
+        name: Temperature
         factor_type: environmental factor
 
       - study_id: STU-ARAB-COLD-01
-        name: time
+        name: Time point
         factor_type: temporal factor
 
-    processes:
+    sources:
       - study_id: STU-ARAB-COLD-01
-        name: growth_process_Col0
-        executes_protocol: Plant growth protocol
-        performer: Wei Chen
-        date: "2024-01-15"
-        inputs:
-          - Arabidopsis_Col0_seed
-        outputs:
-          - Sample_Col0_Ctrl_0h_R1
-          - Sample_Col0_Ctrl_0h_R2
-        parameter_values:
-          - category: growth temperature
-            value: "22"
-            unit: degree Celsius
-          - category: light intensity
-            value: "100"
-            unit: umol/m2/s
+        name: Arabidopsis_Col0_seeds
+        characteristics:
+          - category: Organism
+            value: Arabidopsis thaliana
+          - category: Ecotype
+            value: Columbia-0
+          - category: Seed source
+            value: NASC N1092
 
       - study_id: STU-ARAB-COLD-01
-        name: cold_treatment_process
-        executes_protocol: Cold treatment protocol
-        performer: Wei Chen
-        date: "2024-02-05"
-        inputs:
-          - Sample_Col0_Ctrl_0h_R1
-        outputs:
-          - Sample_Col0_Cold_24h_R1
-        parameter_values:
-          - category: treatment temperature
-            value: "4"
-            unit: degree Celsius
-          - category: treatment duration
-            value: "24"
-            unit: hours
+        name: Arabidopsis_ICE1_seeds
+        characteristics:
+          - category: Organism
+            value: Arabidopsis thaliana
+          - category: Genotype
+            value: 35S::ICE1 overexpressor
+
+    # Per ISA-JSON spec: All samples MUST be declared at Study level
+    samples:
+      - study_id: STU-ARAB-COLD-01
+        name: Col0_Control_0h_Rep1
+        derives_from:
+          - name: Arabidopsis_Col0_seeds
+            study_id: STU-ARAB-COLD-01
+        characteristics:
+          - category: Treatment
+            value: Control 22C
+          - category: Time point
+            value: 0 hours
+          - category: Replicate
+            value: "1"
 
       - study_id: STU-ARAB-COLD-01
-        name: extraction_process_R1
-        executes_protocol: Metabolite extraction protocol
-        performer: Wei Chen
-        date: "2024-02-06"
-        inputs:
-          - Sample_Col0_Cold_24h_R1
-        outputs:
-          - Extract_Col0_Cold_24h_R1
-        parameter_values:
-          - category: sample mass
-            value: "100"
-            unit: mg
-          - category: extraction solvent ratio
-            value: "80:20 MeOH:H2O"
+        name: Col0_Control_0h_Rep2
+        derives_from:
+          - name: Arabidopsis_Col0_seeds
+            study_id: STU-ARAB-COLD-01
+        characteristics:
+          - category: Treatment
+            value: Control 22C
+          - category: Time point
+            value: 0 hours
+          - category: Replicate
+            value: "2"
 
       - study_id: STU-ARAB-COLD-01
-        name: labeling_process_R1
-        executes_protocol: Labeling protocol
-        performer: Wei Chen
-        date: "2024-02-06"
-        inputs:
-          - Extract_Col0_Cold_24h_R1
-        outputs:
-          - LabeledExtract_Col0_Cold_24h_R1
+        name: Col0_Cold_24h_Rep1
+        derives_from:
+          - name: Arabidopsis_Col0_seeds
+            study_id: STU-ARAB-COLD-01
+        characteristics:
+          - category: Treatment
+            value: Cold 4C
+          - category: Time point
+            value: 24 hours
+          - category: Replicate
+            value: "1"
 
       - study_id: STU-ARAB-COLD-01
-        name: ms_acquisition_R1
-        executes_protocol: LC-MS analysis protocol
-        performer: Emily Johnson
-        date: "2024-02-10"
+        name: Col0_Cold_24h_Rep2
+        derives_from:
+          - name: Arabidopsis_Col0_seeds
+            study_id: STU-ARAB-COLD-01
+        characteristics:
+          - category: Treatment
+            value: Cold 4C
+          - category: Time point
+            value: 24 hours
+          - category: Replicate
+            value: "2"
+
+      - study_id: STU-ARAB-COLD-01
+        name: Col0_Cold_7d_Rep1
+        derives_from:
+          - name: Arabidopsis_Col0_seeds
+            study_id: STU-ARAB-COLD-01
+        characteristics:
+          - category: Treatment
+            value: Cold 4C
+          - category: Time point
+            value: 7 days
+          - category: Replicate
+            value: "1"
+
+      - study_id: STU-ARAB-COLD-01
+        name: ICE1_Cold_24h_Rep1
+        derives_from:
+          - name: Arabidopsis_ICE1_seeds
+            study_id: STU-ARAB-COLD-01
+        characteristics:
+          - category: Treatment
+            value: Cold 4C
+          - category: Time point
+            value: 24 hours
+          - category: Genotype
+            value: ICE1 overexpressor
+
+    # Process sequence links sources to samples via protocol execution
+    # Per ISA-JSON: inputs/outputs are references to materials declared above
+    process_sequence:
+      - name: sample_collection_Col0_0h_Rep1
+        executes_protocol:
+          name: Plant growth protocol
+          study_id: STU-ARAB-COLD-01
         inputs:
-          - LabeledExtract_Col0_Cold_24h_R1
+          - Arabidopsis_Col0_seeds
         outputs:
-          - raw_data_Col0_Cold_24h_R1
-        parameter_values:
-          - category: ionization mode
-            value: positive
-          - category: mass scan range
-            value: "70-1000"
-            unit: m/z
+          - Col0_Control_0h_Rep1
+
+      - name: sample_collection_Col0_0h_Rep2
+        executes_protocol:
+          name: Plant growth protocol
+          study_id: STU-ARAB-COLD-01
+        inputs:
+          - Arabidopsis_Col0_seeds
+        outputs:
+          - Col0_Control_0h_Rep2
+
+      - name: sample_collection_Col0_24h_Rep1
+        executes_protocol:
+          name: Cold treatment protocol
+          study_id: STU-ARAB-COLD-01
+        inputs:
+          - Arabidopsis_Col0_seeds
+        outputs:
+          - Col0_Cold_24h_Rep1
+
+      - name: sample_collection_Col0_24h_Rep2
+        executes_protocol:
+          name: Cold treatment protocol
+          study_id: STU-ARAB-COLD-01
+        inputs:
+          - Arabidopsis_Col0_seeds
+        outputs:
+          - Col0_Cold_24h_Rep2
+
+      - name: sample_collection_Col0_7d_Rep1
+        executes_protocol:
+          name: Cold treatment protocol
+          study_id: STU-ARAB-COLD-01
+        inputs:
+          - Arabidopsis_Col0_seeds
+        outputs:
+          - Col0_Cold_7d_Rep1
+
+      - name: sample_collection_ICE1_24h_Rep1
+        executes_protocol:
+          name: Cold treatment protocol
+          study_id: STU-ARAB-COLD-01
+        inputs:
+          - Arabidopsis_ICE1_seeds
+        outputs:
+          - ICE1_Cold_24h_Rep1
 
     assays:
       - study_id: STU-ARAB-COLD-01
-        filename: a_metabolome_lcms.txt
+        filename: a_metabolome_lcms_pos.txt
         measurement_type: metabolite profiling
         technology_type: mass spectrometry
         technology_platform: Thermo Q Exactive Plus
+        # Assay references samples declared at Study level
+        samples:
+          - name: Col0_Control_0h_Rep1
+            study_id: STU-ARAB-COLD-01
+          - name: Col0_Control_0h_Rep2
+            study_id: STU-ARAB-COLD-01
+          - name: Col0_Cold_24h_Rep1
+            study_id: STU-ARAB-COLD-01
+          - name: Col0_Cold_7d_Rep1
+            study_id: STU-ARAB-COLD-01
         data_files:
-          - assay_id: a_metabolome_lcms
-            filename: raw_data_Col0_Cold_24h_R1.raw
-            name: Raw MS data replicate 1
-            file_type: Thermo RAW
-          - assay_id: a_metabolome_lcms
-            filename: processed_data.mzML
-            name: Processed MS data
-            file_type: mzML
-
-    data_files:
-      - study_id: STU-ARAB-COLD-01
-        filename: metabolite_annotations.csv
-        name: Metabolite annotation table
-        file_type: text/csv
-        description: Annotated metabolites with m/z, RT, and compound identifications
+          - assay_id: a_metabolome_lcms_pos
+            filename: Col0_Control_0h_Rep1_pos.raw
+            label: Raw Data File
+          - assay_id: a_metabolome_lcms_pos
+            filename: Col0_Control_0h_Rep2_pos.raw
+            label: Raw Data File
+          - assay_id: a_metabolome_lcms_pos
+            filename: Col0_Cold_24h_Rep1_pos.raw
+            label: Raw Data File
+          - assay_id: a_metabolome_lcms_pos
+            filename: processed_pos_mode.mzML
+            label: Derived Spectral Data File
 
       - study_id: STU-ARAB-COLD-01
-        filename: peak_intensities.csv
-        name: Peak intensity matrix
-        file_type: text/csv
-        description: Normalized peak intensities for all samples
-
-      - study_id: STU-ARAB-COLD-01
-        filename: statistical_analysis.xlsx
-        name: Statistical analysis results
-        file_type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
-        description: Differential metabolite analysis results
-
-    comments:
-      - name: Study Design Type
-        value: time series design
-      - name: Metabolomics Workbench ID
-        value: ST002345
+        filename: a_metabolome_lcms_neg.txt
+        measurement_type: metabolite profiling
+        technology_type: mass spectrometry
+        technology_platform: Thermo Q Exactive Plus
+        samples:
+          - name: Col0_Control_0h_Rep1
+            study_id: STU-ARAB-COLD-01
+          - name: Col0_Cold_24h_Rep2
+            study_id: STU-ARAB-COLD-01
+        data_files:
+          - assay_id: a_metabolome_lcms_neg
+            filename: Col0_Control_0h_Rep1_neg.raw
+            label: Raw Data File
+          - assay_id: a_metabolome_lcms_neg
+            filename: processed_neg_mode.mzML
+            label: Derived Spectral Data File

@@ -78,6 +78,30 @@ validation_rules:
     field: studies
     min_items: 1
 
+  - name: study_has_sources
+    description: Study must have at least one source material
+    applies_to: [Study]
+    field: sources
+    min_items: 1
+
+  - name: study_has_process_sequence
+    description: Study must have at least one process in the sequence
+    applies_to: [Study]
+    field: process_sequence
+    min_items: 1
+
+  - name: study_has_protocols
+    description: Study must have at least one protocol
+    applies_to: [Study]
+    field: protocols
+    min_items: 1
+
+  - name: assay_has_samples
+    description: Assay must have at least one sample
+    applies_to: [Assay]
+    field: samples
+    min_items: 1
+
   # Protocol reference
   - name: process_protocol_reference
     description: Process executes_protocol must reference valid Protocol
@@ -259,13 +283,19 @@ entities:
         type: list
         items: Source
         required: false
-        description: Source materials in the study
+        description: Source materials in the study (all sources must be declared here)
 
       - name: samples
         type: list
         items: Sample
         required: false
-        description: Sample materials in the study
+        description: Sample materials in the study (all samples must be declared here)
+
+      - name: other_materials
+        type: list
+        items: Extract
+        required: false
+        description: Other materials (extracts, labeled extracts) in the study
 
       - name: process_sequence
         type: list
@@ -846,13 +876,19 @@ entities:
         type: list
         items: string
         required: false
-        description: References to input materials/data
+        description: >
+          Input materials for this process. References to Source, Sample, or Material
+          by name. Per ISA spec, inputs can be sources (for sample collection),
+          samples (for extraction), or other materials (for further processing).
 
       - name: outputs
         type: list
         items: string
         required: false
-        description: References to output materials/data
+        description: >
+          Output materials from this process. References to Sample, Extract,
+          LabeledExtract, or DataFile by name. Per ISA spec, a process transforms
+          inputs into outputs through protocol execution.
 
       - name: comments
         type: list

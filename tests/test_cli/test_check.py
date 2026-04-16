@@ -62,7 +62,10 @@ title: Test Investigation
 description: A test
 contacts:
   - name: Test Person
-studies: []
+studies:
+  - unique_id: STU001
+    investigation_id: INV001
+    title: Test Study
 """
         (tmp_path / "investigation.yaml").write_text(content)
 
@@ -83,7 +86,10 @@ title: Test Investigation
 description: A test
 contacts:
   - name: Test Person
-studies: []
+studies:
+  - unique_id: STU001
+    investigation_id: INV001
+    title: Test Study
 """
         file_path = tmp_path / "investigation.yaml"
         file_path.write_text(content)
@@ -113,7 +119,10 @@ title: Test Investigation
 description: A test
 contacts:
   - name: Test Person
-studies: []
+studies:
+  - unique_id: STU001
+    investigation_id: INV001
+    title: Test Study
 """
         file_path = tmp_path / "investigation.yaml"
         file_path.write_text(content)
@@ -131,7 +140,10 @@ title: Test Investigation
 description: A test
 contacts:
   - name: Test Person
-studies: []
+studies:
+  - unique_id: STU001
+    investigation_id: INV001
+    title: Test Study
 """
         file_path = tmp_path / "investigation.yaml"
         file_path.write_text(content)
@@ -200,7 +212,10 @@ title: Test Investigation
 description: A test
 contacts:
   - name: Test Person
-studies: []
+studies:
+  - unique_id: STU001
+    investigation_id: INV001
+    title: Test Study
 """
         file_path = tmp_path / "investigation.yaml"
         file_path.write_text(content)

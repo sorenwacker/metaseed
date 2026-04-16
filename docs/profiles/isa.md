@@ -73,9 +73,11 @@ flowchart TB
     ASS --> PROC
     ASS -.->|samples| SAM
 
-    %% Process relationships
+    %% Process relationships (connect sources to samples)
     PROC --> PV
     PROC -.->|executes_protocol| PROT
+    PROC -.->|inputs| SRC
+    PROC -.->|outputs| SAM
 
     %% Material derivation chain
     SAM -.->|derives_from| SRC
@@ -379,6 +381,36 @@ erDiagram
 **Protocol-driven**: Every Process references a Protocol that describes how the transformation was performed, including parameters and their values. This ensures reproducibility.
 
 **Ontology annotations**: Fields can be annotated with OntologyAnnotation to provide semantic meaning using controlled vocabularies from OntologySource references.
+
+## The Experimental Graph
+
+ISA models experiments as a directed acyclic graph where **Process** nodes connect materials:
+
+```
+Source → Process → Sample → Process → Extract → Process → LabeledExtract → Process → DataFile
+```
+
+Key points:
+
+- **All Sources and Samples MUST be declared at Study level** in `study.sources` and `study.samples`
+- **Sample.derivesFrom** provides direct linkage from sample to source(s)
+- **Process.inputs** references Sources or Samples by name
+- **Process.outputs** references Samples or other materials by name
+- **Process.executes_protocol** links to the Protocol describing the method
+
+The process sequence captures the workflow and provenance, while samples maintain a direct `derivesFrom` reference to their source materials.
+
+## References
+
+Official ISA specifications and resources:
+
+| Resource | URL |
+|----------|-----|
+| ISA Model Specification | <https://isa-specs.readthedocs.io/en/latest/isamodel.html> |
+| ISA-JSON Format | <https://isa-specs.readthedocs.io/en/latest/isajson.html> |
+| ISA-Tab Format | <https://isa-specs.readthedocs.io/en/latest/isatab.html> |
+| ISA Tools (Python) | <https://github.com/ISA-tools/isa-api> |
+| ISA Commons | <https://www.isacommons.org/> |
 
 ## Usage
 
