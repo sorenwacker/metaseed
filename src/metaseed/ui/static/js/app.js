@@ -1310,13 +1310,9 @@ function toggleGraphLayout() {
     if (btn) btn.textContent = currentGraphLayout === 'physics' ? 'Hierarchical' : 'Physics';
 
     if (graphNetwork && graphData) {
-        var options = getGraphOptions(currentGraphLayout);
-        graphNetwork.setOptions(options);
-
-        // When switching to physics, force re-stabilization
-        if (currentGraphLayout === 'physics') {
-            graphNetwork.stabilize(100);
-        }
+        // Recreate the network to ensure clean layout switch
+        var container = document.getElementById('graph-view');
+        graphNetwork = new vis.Network(container, graphData, getGraphOptions(currentGraphLayout));
     }
 }
 
