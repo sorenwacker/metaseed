@@ -1068,11 +1068,7 @@ function getGraphOptions(layout) {
                     damping: 0.4,
                     avoidOverlap: 1
                 },
-                stabilization: {
-                    enabled: true,
-                    iterations: 200,
-                    updateInterval: 25
-                }
+                stabilization: false
             }
         });
     }
@@ -1167,8 +1163,8 @@ function renderGraph(data) {
 
     graphNetwork = new vis.Network(container, graphData, getGraphOptions(currentGraphLayout));
 
-    // Stop physics after stabilization for better performance
-    graphNetwork.once('stabilizationIterationsDone', function() {
+    // Stop physics after graph stabilizes naturally (low energy)
+    graphNetwork.on('stabilized', function() {
         graphNetwork.setOptions({ physics: { enabled: false } });
     });
 }
