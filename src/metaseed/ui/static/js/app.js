@@ -931,3 +931,400 @@ document.addEventListener('keydown', function(e) {
         }
     }
 });
+
+// ============================================
+// Entity Graph Visualization
+// ============================================
+
+var graphNetwork = null;
+var graphData = null;
+var currentGraphLayout = 'physics';
+var allGraphNodes = [];
+var allGraphEdges = [];
+var visibleGroups = new Set();
+
+// Entity type to display mapping (assigned dynamically)
+var entityDisplayMap = {};
+
+// Distinct colors for entity types
+var GRAPH_COLORS = [
+    '#3b82f6', '#10b981', '#ec4899', '#f59e0b', '#14b8a6',
+    '#84cc16', '#f43f5e', '#a855f7', '#6366f1', '#06b6d4',
+    '#0ea5e9', '#22d3ee', '#92400e', '#fb923c', '#fbbf24'
+];
+
+// Distinct shapes for entity types (all show label below, not inside)
+var GRAPH_SHAPES = [
+    'diamond', 'hexagon', 'dot', 'square', 'triangle',
+    'star', 'triangleDown'
+];
+
+// Base theme colors
+var GRAPH_THEME = {
+    background: '#faf8f5',
+    text: '#2c3e35',
+    edge: '#87a878',
+    edgeHighlight: '#4a7c59'
+};
+
+// Assign display properties to entity types as they appear
+function assignEntityDisplay(entityTypes) {
+    entityDisplayMap = {};
+    var types = Array.from(entityTypes);
+    types.forEach(function(type, index) {
+        entityDisplayMap[type] = {
+            color: GRAPH_COLORS[index % GRAPH_COLORS.length],
+            shape: GRAPH_SHAPES[index % GRAPH_SHAPES.length],
+            order: index
+        };
+    });
+}
+
+// Get display for an entity type
+function getEntityDisplay(entityType) {
+    return entityDisplayMap[entityType] || { color: '#78716c', shape: 'dot', order: 99 };
+}
+
+// Build groups from assigned display settings
+function buildGraphGroups() {
+    var groups = {};
+    for (var entityType in entityDisplayMap) {
+        var display = entityDisplayMap[entityType];
+        groups[entityType] = {
+            color: display.color,
+            shape: display.shape
+            // Size is set per-node based on edge count
+        };
+    }
+    return groups;
+}
+
+// Get graph options based on layout type
+function getGraphOptions(layout) {
+    var baseOptions = {
+        groups: buildGraphGroups(),
+        nodes: {
+            shape: 'dot',
+            size: 18,
+            font: {
+                size: 13,
+                color: GRAPH_THEME.text,
+                face: 'system-ui, -apple-system, sans-serif'
+            },
+            borderWidth: 2,
+            shadow: {
+                enabled: true,
+                color: 'rgba(0,0,0,0.15)',
+                size: 8,
+                x: 2,
+                y: 2
+            }
+        },
+        edges: {
+            arrows: { to: { enabled: true, scaleFactor: 0.5 } },
+            font: { size: 10, color: GRAPH_THEME.text, face: 'system-ui, sans-serif', strokeWidth: 0 },
+            color: { color: GRAPH_THEME.edge, highlight: GRAPH_THEME.edgeHighlight, hover: GRAPH_THEME.edgeHighlight },
+            smooth: { type: 'cubicBezier', roundness: 0.4 },
+            width: 1.5
+        },
+        interaction: {
+            hover: true,
+            tooltipDelay: 150,
+            zoomView: true,
+            dragView: true,
+            dragNodes: true
+        },
+        layout: { randomSeed: 42 }
+    };
+
+    if (layout === 'hierarchical') {
+        return Object.assign({}, baseOptions, {
+            layout: {
+                hierarchical: {
+                    enabled: true,
+                    direction: 'UD',
+                    sortMethod: 'directed',
+                    levelSeparation: 120,
+                    nodeSpacing: 180,
+                    treeSpacing: 200
+                }
+            },
+            physics: { enabled: false }
+        });
+    } else {
+        var spacing = parseInt(document.getElementById('graph-spacing')?.value || 100);
+        var repulsion = parseInt(document.getElementById('graph-repulsion')?.value || -500);
+        var gravity = parseFloat(document.getElementById('graph-gravity')?.value || 0.01);
+
+        return Object.assign({}, baseOptions, {
+            physics: {
+                enabled: true,
+                solver: 'forceAtlas2Based',
+                forceAtlas2Based: {
+                    gravitationalConstant: repulsion,
+                    centralGravity: gravity,
+                    springLength: spacing,
+                    springConstant: 0.02,
+                    damping: 0.4,
+                    avoidOverlap: 1
+                },
+                stabilization: {
+                    enabled: true,
+                    iterations: 200,
+                    updateInterval: 25
+                }
+            }
+        });
+    }
+}
+
+function toggleGraph() {
+    var container = document.getElementById('graph-container');
+    var main = document.getElementById('main');
+    var btn = document.getElementById('graph-toggle');
+
+    if (container.classList.contains('hidden')) {
+        container.classList.remove('hidden');
+        main.classList.add('hidden');
+        btn.textContent = 'Show List';
+        loadGraph();
+    } else {
+        container.classList.add('hidden');
+        main.classList.remove('hidden');
+        btn.textContent = 'Show Graph';
+    }
+}
+
+function loadGraph() {
+    var graphView = document.getElementById('graph-view');
+    if (graphView) {
+        graphView.innerHTML = '<div class="graph-loading">Loading graph...</div>';
+    }
+
+    fetch('/api/graph')
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            if (!data.nodes || data.nodes.length === 0) {
+                if (graphView) {
+                    graphView.innerHTML = '<div class="graph-empty">No entities to display. Create an entity to see it in the graph.</div>';
+                }
+                return;
+            }
+
+            // Store original data for filtering
+            allGraphNodes = data.nodes.slice();
+            allGraphEdges = data.edges.slice();
+
+            // Collect unique entity types and assign colors/shapes
+            var entityTypes = new Set();
+            allGraphNodes.forEach(function(n) { entityTypes.add(n.group); });
+            assignEntityDisplay(entityTypes);
+
+            // Initialize visible groups
+            visibleGroups.clear();
+            allGraphNodes.forEach(function(n) { visibleGroups.add(n.group); });
+
+            // Count edges per node for sizing
+            var edgeCount = {};
+            data.edges.forEach(function(edge) {
+                edgeCount[edge.from] = (edgeCount[edge.from] || 0) + 1;
+                edgeCount[edge.to] = (edgeCount[edge.to] || 0) + 1;
+            });
+
+            // Apply colors, shapes, and sizes to nodes (size based on edge count)
+            var minSize = 12, maxSize = 30;
+            var maxEdges = Math.max.apply(null, Object.values(edgeCount).concat([1]));
+            data.nodes.forEach(function(node) {
+                var display = getEntityDisplay(node.group);
+                node.color = display.color;
+                node.shape = display.shape;
+                var edges = edgeCount[node.id] || 0;
+                node.size = minSize + (edges / maxEdges) * (maxSize - minSize);
+            });
+
+            renderGraph(data);
+            renderGraphLegend(data);
+        })
+        .catch(function(error) {
+            console.error('Error loading graph:', error);
+            if (graphView) {
+                graphView.innerHTML = '<div class="graph-error">Failed to load graph</div>';
+            }
+        });
+}
+
+function renderGraph(data) {
+    var container = document.getElementById('graph-view');
+    if (!container) return;
+
+    container.innerHTML = '';
+    container.style.background = GRAPH_THEME.background;
+
+    graphData = {
+        nodes: new vis.DataSet(data.nodes),
+        edges: new vis.DataSet(data.edges)
+    };
+
+    graphNetwork = new vis.Network(container, graphData, getGraphOptions(currentGraphLayout));
+
+    // Stop physics after stabilization for better performance
+    graphNetwork.once('stabilizationIterationsDone', function() {
+        graphNetwork.setOptions({ physics: { enabled: false } });
+    });
+}
+
+function renderGraphLegend(data) {
+    var legendContainer = document.getElementById('graph-legend');
+    if (!legendContainer) return;
+
+    var types = {};
+    data.nodes.forEach(function(node) {
+        if (node.group) {
+            if (!types[node.group]) {
+                var display = getEntityDisplay(node.group);
+                types[node.group] = {
+                    color: display.color,
+                    shape: display.shape,
+                    order: display.order,
+                    count: 0
+                };
+            }
+            types[node.group].count++;
+        }
+    });
+
+    // Sort by assigned order
+    var sortedTypes = Object.keys(types).sort(function(a, b) {
+        return types[a].order - types[b].order;
+    });
+
+    var html = '';
+    sortedTypes.forEach(function(type) {
+        var info = types[type];
+        var isVisible = visibleGroups.has(type);
+        var itemClass = 'graph-legend-item' + (isVisible ? '' : ' legend-hidden');
+        html += '<label class="' + itemClass + '" data-type="' + type + '">';
+        html += '<input type="checkbox" ' + (isVisible ? 'checked' : '') + ' onchange="toggleNodeType(\'' + type + '\')">';
+        html += '<span class="graph-legend-shape graph-shape-' + info.shape + '" style="background-color: ' + info.color + '; border-color: ' + info.color + '"></span>';
+        html += '<span class="graph-legend-label">' + type + ' (' + info.count + ')</span>';
+        html += '</label>';
+    });
+
+    legendContainer.innerHTML = html;
+}
+
+function toggleNodeType(group) {
+    if (visibleGroups.has(group)) {
+        visibleGroups.delete(group);
+    } else {
+        visibleGroups.add(group);
+    }
+    filterGraph();
+    // Update legend item appearance
+    var item = document.querySelector('.graph-legend-item[data-type="' + group + '"]');
+    if (item) {
+        item.classList.toggle('legend-hidden', !visibleGroups.has(group));
+    }
+}
+
+function filterGraph() {
+    if (!graphData || !allGraphNodes.length) return;
+
+    var visibleNodeIds = new Set();
+    var filteredNodes = allGraphNodes.filter(function(n) {
+        if (visibleGroups.has(n.group)) {
+            visibleNodeIds.add(n.id);
+            return true;
+        }
+        return false;
+    });
+
+    var filteredEdges = allGraphEdges.filter(function(e) {
+        return visibleNodeIds.has(e.from) && visibleNodeIds.has(e.to);
+    });
+
+    // Apply colors from spec
+    filteredNodes.forEach(function(n) {
+        n.color = getEntityDisplay(n.group).color;
+    });
+
+    graphData.nodes.clear();
+    graphData.nodes.add(filteredNodes);
+    graphData.edges.clear();
+    graphData.edges.add(filteredEdges);
+
+    if (graphNetwork) {
+        graphNetwork.fit({ animation: { duration: 300 } });
+    }
+}
+
+function toggleGraphLayout() {
+    currentGraphLayout = currentGraphLayout === 'physics' ? 'hierarchical' : 'physics';
+    var btn = document.getElementById('graph-layout-btn');
+    if (btn) btn.textContent = currentGraphLayout === 'physics' ? 'Hierarchical' : 'Physics';
+
+    if (graphNetwork && graphData) {
+        graphNetwork.setOptions(getGraphOptions(currentGraphLayout));
+    }
+}
+
+function updateGraphPhysics() {
+    if (!graphNetwork || currentGraphLayout !== 'physics') return;
+
+    var spacing = parseInt(document.getElementById('graph-spacing')?.value || 100);
+    var repulsion = parseInt(document.getElementById('graph-repulsion')?.value || -500);
+    var gravity = parseFloat(document.getElementById('graph-gravity')?.value || 0.01);
+
+    graphNetwork.setOptions({
+        physics: {
+            enabled: true,
+            forceAtlas2Based: {
+                springLength: spacing,
+                gravitationalConstant: repulsion,
+                centralGravity: gravity
+            }
+        }
+    });
+
+    // Perturb nodes to trigger re-layout
+    var positions = graphNetwork.getPositions();
+    var updates = [];
+    for (var id in positions) {
+        updates.push({
+            id: id,
+            x: positions[id].x + (Math.random() - 0.5) * 10,
+            y: positions[id].y + (Math.random() - 0.5) * 10
+        });
+    }
+    graphData.nodes.update(updates);
+
+    // Stop after stabilized
+    graphNetwork.once('stabilized', function() {
+        graphNetwork.setOptions({ physics: { enabled: false } });
+    });
+}
+
+function updateGraphEdgeWidth() {
+    if (!graphNetwork || !graphData) return;
+    var width = parseFloat(document.getElementById('graph-edge-width')?.value || 1.5);
+    var edges = graphData.edges.get();
+    edges.forEach(function(edge) {
+        graphData.edges.update({ id: edge.id, width: width });
+    });
+}
+
+function fitGraph() {
+    if (graphNetwork) {
+        graphNetwork.fit({ animation: { duration: 500, easingFunction: 'easeInOutQuad' } });
+    }
+}
+
+// Watch for theme changes (reload graph to ensure proper display)
+if (window.matchMedia) {
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() {
+        if (graphNetwork && graphData) {
+            document.getElementById('graph-view').style.background = GRAPH_THEME.background;
+            loadGraph();
+        }
+    });
+}
