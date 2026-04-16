@@ -109,6 +109,61 @@ validation_rules:
     field: executes_protocol
     reference: Protocol.name
 
+  # Parent reference fields (auto-filled from context)
+  - name: person_investigation_reference
+    description: Person investigation_id references parent Investigation
+    applies_to: [Person]
+    field: investigation_id
+    reference: Investigation.identifier
+
+  - name: person_study_reference
+    description: Person study_id references parent Study
+    applies_to: [Person]
+    field: study_id
+    reference: Study.identifier
+
+  - name: study_investigation_reference
+    description: Study investigation_id references parent Investigation
+    applies_to: [Study]
+    field: investigation_id
+    reference: Investigation.identifier
+
+  - name: protocol_study_reference
+    description: Protocol study_id references parent Study
+    applies_to: [Protocol]
+    field: study_id
+    reference: Study.identifier
+
+  - name: source_study_reference
+    description: Source study_id references parent Study
+    applies_to: [Source]
+    field: study_id
+    reference: Study.identifier
+
+  - name: sample_study_reference
+    description: Sample study_id references parent Study
+    applies_to: [Sample]
+    field: study_id
+    reference: Study.identifier
+
+  - name: assay_study_reference
+    description: Assay study_id references parent Study
+    applies_to: [Assay]
+    field: study_id
+    reference: Study.identifier
+
+  - name: factor_study_reference
+    description: StudyFactor study_id references parent Study
+    applies_to: [StudyFactor]
+    field: study_id
+    reference: Study.identifier
+
+  - name: datafile_assay_reference
+    description: DataFile assay_id references parent Assay
+    applies_to: [DataFile]
+    field: assay_id
+    reference: Assay.filename
+
   # Date format
   - name: date_format
     description: Dates must be ISO 8601 format (YYYY-MM-DD)

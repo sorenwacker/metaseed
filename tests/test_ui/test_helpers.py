@@ -394,3 +394,36 @@ class TestGetFieldData:
         assert "type" in field
         assert "required" in field
         assert "description" in field
+
+
+class TestParentIdFields:
+    """Tests for parent ID field detection."""
+
+    def test_person_investigation_id_detected(self) -> None:
+        """Person.investigation_id should be detected as parent ref field."""
+        from metaseed.ui.helpers import get_parent_id_fields, get_reference_fields
+
+        ref_fields = get_reference_fields("isa", "1.0", "Person")
+        parent_fields = get_parent_id_fields(ref_fields, "Investigation")
+
+        assert "investigation_id" in parent_fields
+        assert parent_fields["investigation_id"] == "identifier"
+
+    def test_person_study_id_detected(self) -> None:
+        """Person.study_id should be detected as parent ref field."""
+        from metaseed.ui.helpers import get_parent_id_fields, get_reference_fields
+
+        ref_fields = get_reference_fields("isa", "1.0", "Person")
+        parent_fields = get_parent_id_fields(ref_fields, "Study")
+
+        assert "study_id" in parent_fields
+        assert parent_fields["study_id"] == "identifier"
+
+    def test_sample_study_id_detected(self) -> None:
+        """Sample.study_id should be detected as parent ref field."""
+        from metaseed.ui.helpers import get_parent_id_fields, get_reference_fields
+
+        ref_fields = get_reference_fields("isa", "1.0", "Sample")
+        parent_fields = get_parent_id_fields(ref_fields, "Study")
+
+        assert "study_id" in parent_fields
