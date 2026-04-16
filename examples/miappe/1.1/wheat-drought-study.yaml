@@ -66,6 +66,12 @@ studies:
         email: a.mueller@plant-research.edu
         institution: Institute for Plant Sciences
         role: Field Technician
+      - study_id: STU-2024-WHEAT-FT01
+        name: Klaus Richter
+        email: k.richter@plant-research.edu
+        institution: Institute for Plant Sciences
+        role: Data Manager
+        orcid: "0000-0003-4567-8901"
 
     geographic_location:
       unique_id: LOC-EXP-FARM-SOUTH
@@ -92,6 +98,9 @@ studies:
         biological_material_description: >
           High-yielding winter wheat variety with moderate drought tolerance.
           Released 2015, widely grown in Central Europe.
+        external_references:
+          - "EURISCO:DEU146-JULIUS"
+          - "GRIN:PI-654321"
         material_source:
           unique_id: MS-SAATZUCHT-01
           name: Saatzucht GmbH
@@ -112,6 +121,15 @@ studies:
         biological_material_description: >
           Winter wheat variety known for high protein content and
           good drought tolerance. Released 2012.
+        external_references:
+          - "EURISCO:DEU146-TOBAK"
+        material_source:
+          unique_id: MS-SAATZUCHT-02
+          name: KWS SAAT SE
+          description: Major European seed company
+          institute_code: DEU002
+          country: Germany
+          address: Grimsehlstr. 31, 37574 Einbeck
 
       - unique_id: BM-WHEAT-BENCHMARK
         study_id: STU-2024-WHEAT-FT01
@@ -123,6 +141,8 @@ studies:
         biological_material_description: >
           Modern high-yielding variety with limited drought tolerance.
           Used as susceptible control.
+        external_references:
+          - "EURISCO:DEU146-BENCHMARK"
 
     factors:
       - unique_id: FAC-WATER-REGIME
@@ -132,13 +152,13 @@ studies:
         factor_type: abiotic treatment
         values:
           - unique_id: FV-WELL-WATERED
-            factor_name: FAC-WATER-REGIME
+            factor_id: FAC-WATER-REGIME
             value: Well-watered
             description: >
               Full irrigation maintaining soil moisture at 70-80% field capacity
               throughout the growing season.
           - unique_id: FV-DROUGHT-STRESS
-            factor_name: FAC-WATER-REGIME
+            factor_id: FAC-WATER-REGIME
             value: Drought stress
             description: >
               Irrigation withheld from BBCH 61 (beginning of flowering) until
@@ -199,6 +219,31 @@ studies:
         scale_accession_number: CO_321:0000931
         scale_description: Percentage dry matter basis
 
+      - unique_id: VAR-FLOWERING-DATE
+        study_id: STU-2024-WHEAT-FT01
+        name: Flowering date
+        trait: Days to flowering
+        trait_accession_number: CO_321:0000030
+        trait_description: Number of days from sowing to BBCH 65 (full flowering)
+        method: Visual observation
+        method_accession_number: CO_321:0000730
+        method_description: Date recorded when 50% of spikes show extruded anthers
+        scale: days
+        scale_description: Days after sowing
+
+      - unique_id: VAR-CHLOROPHYLL
+        study_id: STU-2024-WHEAT-FT01
+        name: Chlorophyll content
+        trait: Leaf chlorophyll content
+        trait_accession_number: CO_321:0000400
+        trait_description: Relative chlorophyll content of flag leaf
+        method: SPAD meter
+        method_accession_number: CO_321:0000731
+        method_description: SPAD-502 chlorophyll meter, average of 5 readings per plot
+        scale: SPAD units
+        scale_description: Dimensionless SPAD units, range 0-80
+
+    # Block 1: Plots 1-6
     observation_units:
       - unique_id: OU-B1-P1
         study_id: STU-2024-WHEAT-FT01
@@ -210,10 +255,12 @@ studies:
         observation_unit_replicate: "1"
         entry_type: test
         observation_level: plot
-        observation_level_code: P1
+        observation_level_code: B1-P1
+        external_references:
+          - "BrAPI:OU-B1-P1-2024"
         factor_values:
           - unique_id: FV-OU-B1-P1-WW
-            factor_name: FAC-WATER-REGIME
+            factor_id: FAC-WATER-REGIME
             value: Well-watered
             description: Control treatment
         samples:
@@ -223,6 +270,14 @@ studies:
             plant_anatomical_entity: grain
             collection_date: "2024-07-18T10:30:00"
             description: Grain sample for quality analysis
+            external_references:
+              - "BioSamples:SAMEA00001"
+          - unique_id: SAM-B1-P1-LEAF
+            observation_unit_id: OU-B1-P1
+            plant_structural_development_stage: BBCH 65
+            plant_anatomical_entity: flag leaf
+            collection_date: "2024-06-01T09:00:00"
+            description: Flag leaf sample for chlorophyll and stress markers
 
       - unique_id: OU-B1-P2
         study_id: STU-2024-WHEAT-FT01
@@ -234,12 +289,25 @@ studies:
         observation_unit_replicate: "1"
         entry_type: test
         observation_level: plot
-        observation_level_code: P2
+        observation_level_code: B1-P2
         factor_values:
           - unique_id: FV-OU-B1-P2-DS
-            factor_name: FAC-WATER-REGIME
+            factor_id: FAC-WATER-REGIME
             value: Drought stress
             description: Stress treatment
+        samples:
+          - unique_id: SAM-B1-P2-GRAIN
+            observation_unit_id: OU-B1-P2
+            plant_structural_development_stage: BBCH 92
+            plant_anatomical_entity: grain
+            collection_date: "2024-07-18T11:00:00"
+            description: Grain sample for quality analysis
+          - unique_id: SAM-B1-P2-LEAF
+            observation_unit_id: OU-B1-P2
+            plant_structural_development_stage: BBCH 65
+            plant_anatomical_entity: flag leaf
+            collection_date: "2024-06-01T09:30:00"
+            description: Flag leaf sample for chlorophyll and stress markers
 
       - unique_id: OU-B1-P3
         study_id: STU-2024-WHEAT-FT01
@@ -251,12 +319,19 @@ studies:
         observation_unit_replicate: "1"
         entry_type: test
         observation_level: plot
-        observation_level_code: P3
+        observation_level_code: B1-P3
         factor_values:
           - unique_id: FV-OU-B1-P3-WW
-            factor_name: FAC-WATER-REGIME
+            factor_id: FAC-WATER-REGIME
             value: Well-watered
             description: Control treatment
+        samples:
+          - unique_id: SAM-B1-P3-GRAIN
+            observation_unit_id: OU-B1-P3
+            plant_structural_development_stage: BBCH 92
+            plant_anatomical_entity: grain
+            collection_date: "2024-07-18T11:30:00"
+            description: Grain sample for quality analysis
 
       - unique_id: OU-B1-P4
         study_id: STU-2024-WHEAT-FT01
@@ -268,12 +343,19 @@ studies:
         observation_unit_replicate: "1"
         entry_type: test
         observation_level: plot
-        observation_level_code: P4
+        observation_level_code: B1-P4
         factor_values:
           - unique_id: FV-OU-B1-P4-DS
-            factor_name: FAC-WATER-REGIME
+            factor_id: FAC-WATER-REGIME
             value: Drought stress
             description: Stress treatment
+        samples:
+          - unique_id: SAM-B1-P4-GRAIN
+            observation_unit_id: OU-B1-P4
+            plant_structural_development_stage: BBCH 92
+            plant_anatomical_entity: grain
+            collection_date: "2024-07-18T12:00:00"
+            description: Grain sample for quality analysis
 
       - unique_id: OU-B1-P5
         study_id: STU-2024-WHEAT-FT01
@@ -285,12 +367,19 @@ studies:
         observation_unit_replicate: "1"
         entry_type: test
         observation_level: plot
-        observation_level_code: P5
+        observation_level_code: B1-P5
         factor_values:
           - unique_id: FV-OU-B1-P5-WW
-            factor_name: FAC-WATER-REGIME
+            factor_id: FAC-WATER-REGIME
             value: Well-watered
             description: Control treatment
+        samples:
+          - unique_id: SAM-B1-P5-GRAIN
+            observation_unit_id: OU-B1-P5
+            plant_structural_development_stage: BBCH 92
+            plant_anatomical_entity: grain
+            collection_date: "2024-07-18T12:30:00"
+            description: Grain sample for quality analysis
 
       - unique_id: OU-B1-P6
         study_id: STU-2024-WHEAT-FT01
@@ -302,12 +391,333 @@ studies:
         observation_unit_replicate: "1"
         entry_type: test
         observation_level: plot
-        observation_level_code: P6
+        observation_level_code: B1-P6
         factor_values:
           - unique_id: FV-OU-B1-P6-DS
-            factor_name: FAC-WATER-REGIME
+            factor_id: FAC-WATER-REGIME
             value: Drought stress
             description: Stress treatment
+        samples:
+          - unique_id: SAM-B1-P6-GRAIN
+            observation_unit_id: OU-B1-P6
+            plant_structural_development_stage: BBCH 92
+            plant_anatomical_entity: grain
+            collection_date: "2024-07-18T13:00:00"
+            description: Grain sample for quality analysis
+
+      # Block 2: Plots 7-12
+      - unique_id: OU-B2-P1
+        study_id: STU-2024-WHEAT-FT01
+        observation_unit_type: plot
+        biological_material_id: BM-WHEAT-JULIUS
+        spatial_distribution_type: grid
+        spatial_distribution: "row:2,col:1"
+        observation_unit_block: "2"
+        observation_unit_replicate: "2"
+        entry_type: test
+        observation_level: plot
+        observation_level_code: B2-P1
+        factor_values:
+          - unique_id: FV-OU-B2-P1-WW
+            factor_id: FAC-WATER-REGIME
+            value: Well-watered
+            description: Control treatment
+        samples:
+          - unique_id: SAM-B2-P1-GRAIN
+            observation_unit_id: OU-B2-P1
+            plant_structural_development_stage: BBCH 92
+            plant_anatomical_entity: grain
+            collection_date: "2024-07-18T14:00:00"
+            description: Grain sample for quality analysis
+
+      - unique_id: OU-B2-P2
+        study_id: STU-2024-WHEAT-FT01
+        observation_unit_type: plot
+        biological_material_id: BM-WHEAT-JULIUS
+        spatial_distribution_type: grid
+        spatial_distribution: "row:2,col:2"
+        observation_unit_block: "2"
+        observation_unit_replicate: "2"
+        entry_type: test
+        observation_level: plot
+        observation_level_code: B2-P2
+        factor_values:
+          - unique_id: FV-OU-B2-P2-DS
+            factor_id: FAC-WATER-REGIME
+            value: Drought stress
+            description: Stress treatment
+        samples:
+          - unique_id: SAM-B2-P2-GRAIN
+            observation_unit_id: OU-B2-P2
+            plant_structural_development_stage: BBCH 92
+            plant_anatomical_entity: grain
+            collection_date: "2024-07-18T14:30:00"
+            description: Grain sample for quality analysis
+          - unique_id: SAM-B2-P2-LEAF
+            observation_unit_id: OU-B2-P2
+            plant_structural_development_stage: BBCH 65
+            plant_anatomical_entity: flag leaf
+            collection_date: "2024-06-01T10:00:00"
+            description: Flag leaf sample for stress marker analysis
+
+      - unique_id: OU-B2-P3
+        study_id: STU-2024-WHEAT-FT01
+        observation_unit_type: plot
+        biological_material_id: BM-WHEAT-TOBAK
+        spatial_distribution_type: grid
+        spatial_distribution: "row:2,col:3"
+        observation_unit_block: "2"
+        observation_unit_replicate: "2"
+        entry_type: test
+        observation_level: plot
+        observation_level_code: B2-P3
+        factor_values:
+          - unique_id: FV-OU-B2-P3-WW
+            factor_id: FAC-WATER-REGIME
+            value: Well-watered
+            description: Control treatment
+        samples:
+          - unique_id: SAM-B2-P3-GRAIN
+            observation_unit_id: OU-B2-P3
+            plant_structural_development_stage: BBCH 92
+            plant_anatomical_entity: grain
+            collection_date: "2024-07-18T15:00:00"
+            description: Grain sample for quality analysis
+
+      - unique_id: OU-B2-P4
+        study_id: STU-2024-WHEAT-FT01
+        observation_unit_type: plot
+        biological_material_id: BM-WHEAT-TOBAK
+        spatial_distribution_type: grid
+        spatial_distribution: "row:2,col:4"
+        observation_unit_block: "2"
+        observation_unit_replicate: "2"
+        entry_type: test
+        observation_level: plot
+        observation_level_code: B2-P4
+        factor_values:
+          - unique_id: FV-OU-B2-P4-DS
+            factor_id: FAC-WATER-REGIME
+            value: Drought stress
+            description: Stress treatment
+        samples:
+          - unique_id: SAM-B2-P4-GRAIN
+            observation_unit_id: OU-B2-P4
+            plant_structural_development_stage: BBCH 92
+            plant_anatomical_entity: grain
+            collection_date: "2024-07-18T15:30:00"
+            description: Grain sample for quality analysis
+
+      - unique_id: OU-B2-P5
+        study_id: STU-2024-WHEAT-FT01
+        observation_unit_type: plot
+        biological_material_id: BM-WHEAT-BENCHMARK
+        spatial_distribution_type: grid
+        spatial_distribution: "row:2,col:5"
+        observation_unit_block: "2"
+        observation_unit_replicate: "2"
+        entry_type: test
+        observation_level: plot
+        observation_level_code: B2-P5
+        factor_values:
+          - unique_id: FV-OU-B2-P5-WW
+            factor_id: FAC-WATER-REGIME
+            value: Well-watered
+            description: Control treatment
+        samples:
+          - unique_id: SAM-B2-P5-GRAIN
+            observation_unit_id: OU-B2-P5
+            plant_structural_development_stage: BBCH 92
+            plant_anatomical_entity: grain
+            collection_date: "2024-07-18T16:00:00"
+            description: Grain sample for quality analysis
+
+      - unique_id: OU-B2-P6
+        study_id: STU-2024-WHEAT-FT01
+        observation_unit_type: plot
+        biological_material_id: BM-WHEAT-BENCHMARK
+        spatial_distribution_type: grid
+        spatial_distribution: "row:2,col:6"
+        observation_unit_block: "2"
+        observation_unit_replicate: "2"
+        entry_type: test
+        observation_level: plot
+        observation_level_code: B2-P6
+        factor_values:
+          - unique_id: FV-OU-B2-P6-DS
+            factor_id: FAC-WATER-REGIME
+            value: Drought stress
+            description: Stress treatment
+        samples:
+          - unique_id: SAM-B2-P6-GRAIN
+            observation_unit_id: OU-B2-P6
+            plant_structural_development_stage: BBCH 92
+            plant_anatomical_entity: grain
+            collection_date: "2024-07-18T16:30:00"
+            description: Grain sample for quality analysis
+
+      # Block 3: Plots 13-18
+      - unique_id: OU-B3-P1
+        study_id: STU-2024-WHEAT-FT01
+        observation_unit_type: plot
+        biological_material_id: BM-WHEAT-JULIUS
+        spatial_distribution_type: grid
+        spatial_distribution: "row:3,col:1"
+        observation_unit_block: "3"
+        observation_unit_replicate: "3"
+        entry_type: test
+        observation_level: plot
+        observation_level_code: B3-P1
+        factor_values:
+          - unique_id: FV-OU-B3-P1-WW
+            factor_id: FAC-WATER-REGIME
+            value: Well-watered
+            description: Control treatment
+        samples:
+          - unique_id: SAM-B3-P1-GRAIN
+            observation_unit_id: OU-B3-P1
+            plant_structural_development_stage: BBCH 92
+            plant_anatomical_entity: grain
+            collection_date: "2024-07-19T08:00:00"
+            description: Grain sample for quality analysis
+
+      - unique_id: OU-B3-P2
+        study_id: STU-2024-WHEAT-FT01
+        observation_unit_type: plot
+        biological_material_id: BM-WHEAT-JULIUS
+        spatial_distribution_type: grid
+        spatial_distribution: "row:3,col:2"
+        observation_unit_block: "3"
+        observation_unit_replicate: "3"
+        entry_type: test
+        observation_level: plot
+        observation_level_code: B3-P2
+        factor_values:
+          - unique_id: FV-OU-B3-P2-DS
+            factor_id: FAC-WATER-REGIME
+            value: Drought stress
+            description: Stress treatment
+        samples:
+          - unique_id: SAM-B3-P2-GRAIN
+            observation_unit_id: OU-B3-P2
+            plant_structural_development_stage: BBCH 92
+            plant_anatomical_entity: grain
+            collection_date: "2024-07-19T08:30:00"
+            description: Grain sample for quality analysis
+          - unique_id: SAM-B3-P2-LEAF
+            observation_unit_id: OU-B3-P2
+            plant_structural_development_stage: BBCH 65
+            plant_anatomical_entity: flag leaf
+            collection_date: "2024-06-01T10:30:00"
+            description: Flag leaf sample for stress marker analysis
+
+      - unique_id: OU-B3-P3
+        study_id: STU-2024-WHEAT-FT01
+        observation_unit_type: plot
+        biological_material_id: BM-WHEAT-TOBAK
+        spatial_distribution_type: grid
+        spatial_distribution: "row:3,col:3"
+        observation_unit_block: "3"
+        observation_unit_replicate: "3"
+        entry_type: test
+        observation_level: plot
+        observation_level_code: B3-P3
+        factor_values:
+          - unique_id: FV-OU-B3-P3-WW
+            factor_id: FAC-WATER-REGIME
+            value: Well-watered
+            description: Control treatment
+        samples:
+          - unique_id: SAM-B3-P3-GRAIN
+            observation_unit_id: OU-B3-P3
+            plant_structural_development_stage: BBCH 92
+            plant_anatomical_entity: grain
+            collection_date: "2024-07-19T09:00:00"
+            description: Grain sample for quality analysis
+
+      - unique_id: OU-B3-P4
+        study_id: STU-2024-WHEAT-FT01
+        observation_unit_type: plot
+        biological_material_id: BM-WHEAT-TOBAK
+        spatial_distribution_type: grid
+        spatial_distribution: "row:3,col:4"
+        observation_unit_block: "3"
+        observation_unit_replicate: "3"
+        entry_type: test
+        observation_level: plot
+        observation_level_code: B3-P4
+        factor_values:
+          - unique_id: FV-OU-B3-P4-DS
+            factor_id: FAC-WATER-REGIME
+            value: Drought stress
+            description: Stress treatment
+        samples:
+          - unique_id: SAM-B3-P4-GRAIN
+            observation_unit_id: OU-B3-P4
+            plant_structural_development_stage: BBCH 92
+            plant_anatomical_entity: grain
+            collection_date: "2024-07-19T09:30:00"
+            description: Grain sample for quality analysis
+          - unique_id: SAM-B3-P4-LEAF
+            observation_unit_id: OU-B3-P4
+            plant_structural_development_stage: BBCH 65
+            plant_anatomical_entity: flag leaf
+            collection_date: "2024-06-01T11:00:00"
+            description: Flag leaf sample for stress marker analysis
+
+      - unique_id: OU-B3-P5
+        study_id: STU-2024-WHEAT-FT01
+        observation_unit_type: plot
+        biological_material_id: BM-WHEAT-BENCHMARK
+        spatial_distribution_type: grid
+        spatial_distribution: "row:3,col:5"
+        observation_unit_block: "3"
+        observation_unit_replicate: "3"
+        entry_type: test
+        observation_level: plot
+        observation_level_code: B3-P5
+        factor_values:
+          - unique_id: FV-OU-B3-P5-WW
+            factor_id: FAC-WATER-REGIME
+            value: Well-watered
+            description: Control treatment
+        samples:
+          - unique_id: SAM-B3-P5-GRAIN
+            observation_unit_id: OU-B3-P5
+            plant_structural_development_stage: BBCH 92
+            plant_anatomical_entity: grain
+            collection_date: "2024-07-19T10:00:00"
+            description: Grain sample for quality analysis
+
+      - unique_id: OU-B3-P6
+        study_id: STU-2024-WHEAT-FT01
+        observation_unit_type: plot
+        biological_material_id: BM-WHEAT-BENCHMARK
+        spatial_distribution_type: grid
+        spatial_distribution: "row:3,col:6"
+        observation_unit_block: "3"
+        observation_unit_replicate: "3"
+        entry_type: test
+        observation_level: plot
+        observation_level_code: B3-P6
+        factor_values:
+          - unique_id: FV-OU-B3-P6-DS
+            factor_id: FAC-WATER-REGIME
+            value: Drought stress
+            description: Stress treatment
+        samples:
+          - unique_id: SAM-B3-P6-GRAIN
+            observation_unit_id: OU-B3-P6
+            plant_structural_development_stage: BBCH 92
+            plant_anatomical_entity: grain
+            collection_date: "2024-07-19T10:30:00"
+            description: Grain sample for quality analysis
+          - unique_id: SAM-B3-P6-LEAF
+            observation_unit_id: OU-B3-P6
+            plant_structural_development_stage: BBCH 65
+            plant_anatomical_entity: flag leaf
+            collection_date: "2024-06-01T11:30:00"
+            description: Flag leaf sample for stress marker analysis
 
     events:
       - unique_id: EVT-SOWING
@@ -338,6 +748,13 @@ studies:
         description: Third N application, 60 kg N/ha as urea
         event_accession_number: AGRO:00000006
 
+      - unique_id: EVT-FUNGICIDE
+        study_id: STU-2024-WHEAT-FT01
+        event_type: Fungicide application
+        date: "2024-05-10T07:00:00"
+        description: Preventive fungicide application (Epoxiconazole 125 g/L) at BBCH 37
+        event_accession_number: AGRO:00000012
+
       - unique_id: EVT-DROUGHT-START
         study_id: STU-2024-WHEAT-FT01
         event_type: Treatment application
@@ -347,6 +764,12 @@ studies:
           - OU-B1-P2
           - OU-B1-P4
           - OU-B1-P6
+          - OU-B2-P2
+          - OU-B2-P4
+          - OU-B2-P6
+          - OU-B3-P2
+          - OU-B3-P4
+          - OU-B3-P6
 
       - unique_id: EVT-DROUGHT-END
         study_id: STU-2024-WHEAT-FT01
@@ -357,6 +780,20 @@ studies:
           - OU-B1-P2
           - OU-B1-P4
           - OU-B1-P6
+          - OU-B2-P2
+          - OU-B2-P4
+          - OU-B2-P6
+          - OU-B3-P2
+          - OU-B3-P4
+          - OU-B3-P6
+
+      - unique_id: EVT-LEAF-SAMPLING
+        study_id: STU-2024-WHEAT-FT01
+        event_type: Sampling
+        date: "2024-06-01T09:00:00"
+        end_date: "2024-06-01T12:00:00"
+        description: Flag leaf sampling for chlorophyll and stress marker analysis
+        event_accession_number: AGRO:00000009
 
       - unique_id: EVT-HARVEST
         study_id: STU-2024-WHEAT-FT01
@@ -385,6 +822,15 @@ studies:
         date: "2024-06-01T00:00:00"
         description: Mean air temperature for June 2024
 
+      - unique_id: ENV-TEMP-JUL
+        study_id: STU-2024-WHEAT-FT01
+        parameter: Air temperature
+        parameter_accession_number: ENVO:09200001
+        value: "23.8"
+        unit: degree Celsius
+        date: "2024-07-01T00:00:00"
+        description: Mean air temperature for July 2024
+
       - unique_id: ENV-PRECIP-MAY
         study_id: STU-2024-WHEAT-FT01
         parameter: Precipitation
@@ -403,6 +849,15 @@ studies:
         date: "2024-06-01T00:00:00"
         description: Total precipitation for June 2024
 
+      - unique_id: ENV-PRECIP-JUL
+        study_id: STU-2024-WHEAT-FT01
+        parameter: Precipitation
+        parameter_accession_number: ENVO:09200002
+        value: "38"
+        unit: mm
+        date: "2024-07-01T00:00:00"
+        description: Total precipitation for July 2024
+
       - unique_id: ENV-SOIL-TYPE
         study_id: STU-2024-WHEAT-FT01
         parameter: Soil type
@@ -416,6 +871,23 @@ studies:
         parameter_accession_number: ENVO:09200003
         value: "6.8"
         description: Soil pH measured before sowing
+
+      - unique_id: ENV-SOIL-ORGANIC
+        study_id: STU-2024-WHEAT-FT01
+        parameter: Soil organic matter
+        parameter_accession_number: ENVO:09200004
+        value: "2.3"
+        unit: "%"
+        description: Soil organic matter content
+
+      - unique_id: ENV-PAR-JUN
+        study_id: STU-2024-WHEAT-FT01
+        parameter: Photosynthetically active radiation
+        parameter_accession_number: ENVO:09200005
+        value: "1850"
+        unit: umol/m2/s
+        date: "2024-06-15T12:00:00"
+        description: Peak PAR during flowering period
 
     data_files:
       - unique_id: DF-PHENOTYPE-DATA
@@ -441,3 +913,27 @@ studies:
         description: Weekly soil moisture readings from TDR sensors
         version: "1.0"
         file_type: text/csv
+
+      - unique_id: DF-LEAF-ANALYSIS
+        study_id: STU-2024-WHEAT-FT01
+        name: Leaf biochemistry data
+        link: https://example.com/data/STU-2024-WHEAT-FT01/leaf_analysis.csv
+        description: Chlorophyll content and stress marker measurements from flag leaf samples
+        version: "1.0"
+        file_type: text/csv
+
+      - unique_id: DF-QUALITY-DATA
+        study_id: STU-2024-WHEAT-FT01
+        name: Grain quality measurements
+        link: https://example.com/data/STU-2024-WHEAT-FT01/grain_quality.csv
+        description: NIR spectroscopy results for protein, moisture, and starch content
+        version: "1.0"
+        file_type: text/csv
+
+      - unique_id: DF-FIELD-MAP
+        study_id: STU-2024-WHEAT-FT01
+        name: Field layout map
+        link: https://example.com/data/STU-2024-WHEAT-FT01/field_layout.pdf
+        description: Detailed map showing plot positions and treatment assignments
+        version: "1.0"
+        file_type: application/pdf

@@ -953,10 +953,9 @@ var GRAPH_COLORS = [
     '#0ea5e9', '#22d3ee', '#92400e', '#fb923c', '#fbbf24'
 ];
 
-// Distinct shapes for entity types (all show label below, not inside)
+// Shapes for entity types - vis.js shape names
 var GRAPH_SHAPES = [
-    'diamond', 'hexagon', 'dot', 'square', 'triangle',
-    'star', 'triangleDown'
+    'dot', 'square', 'diamond', 'triangle', 'triangleDown', 'star', 'hexagon'
 ];
 
 // Base theme colors
@@ -978,6 +977,54 @@ function assignEntityDisplay(entityTypes) {
             order: index
         };
     });
+}
+
+// Generate SVG for legend shape matching vis.js shapes
+function getLegendShapeSvg(shape, color) {
+    var size = 14;
+    var half = size / 2;
+    var svg = '<svg width="' + size + '" height="' + size + '" style="vertical-align: middle; margin-right: 4px;">';
+
+    switch (shape) {
+        case 'dot':
+            svg += '<circle cx="' + half + '" cy="' + half + '" r="' + (half - 1) + '" fill="' + color + '"/>';
+            break;
+        case 'square':
+            svg += '<rect x="1" y="1" width="' + (size - 2) + '" height="' + (size - 2) + '" fill="' + color + '"/>';
+            break;
+        case 'diamond':
+            svg += '<polygon points="' + half + ',1 ' + (size - 1) + ',' + half + ' ' + half + ',' + (size - 1) + ' 1,' + half + '" fill="' + color + '"/>';
+            break;
+        case 'triangle':
+            svg += '<polygon points="' + half + ',1 ' + (size - 1) + ',' + (size - 1) + ' 1,' + (size - 1) + '" fill="' + color + '"/>';
+            break;
+        case 'triangleDown':
+            svg += '<polygon points="1,1 ' + (size - 1) + ',1 ' + half + ',' + (size - 1) + '" fill="' + color + '"/>';
+            break;
+        case 'star':
+            var points = [];
+            for (var i = 0; i < 5; i++) {
+                var outerAngle = (i * 72 - 90) * Math.PI / 180;
+                var innerAngle = ((i * 72) + 36 - 90) * Math.PI / 180;
+                points.push((half + (half - 1) * Math.cos(outerAngle)) + ',' + (half + (half - 1) * Math.sin(outerAngle)));
+                points.push((half + (half - 1) * 0.4 * Math.cos(innerAngle)) + ',' + (half + (half - 1) * 0.4 * Math.sin(innerAngle)));
+            }
+            svg += '<polygon points="' + points.join(' ') + '" fill="' + color + '"/>';
+            break;
+        case 'hexagon':
+            var hexPoints = [];
+            for (var j = 0; j < 6; j++) {
+                var angle = (j * 60 - 90) * Math.PI / 180;
+                hexPoints.push((half + (half - 1) * Math.cos(angle)) + ',' + (half + (half - 1) * Math.sin(angle)));
+            }
+            svg += '<polygon points="' + hexPoints.join(' ') + '" fill="' + color + '"/>';
+            break;
+        default:
+            svg += '<circle cx="' + half + '" cy="' + half + '" r="' + (half - 1) + '" fill="' + color + '"/>';
+    }
+
+    svg += '</svg>';
+    return svg;
 }
 
 // Get display for an entity type
@@ -1004,7 +1051,7 @@ function getGraphOptions(layout) {
     var baseOptions = {
         groups: buildGraphGroups(),
         nodes: {
-            shape: 'dot',
+            // Shape is set per-node or per-group, not globally
             size: 18,
             font: {
                 size: 13,
@@ -1057,6 +1104,10 @@ function getGraphOptions(layout) {
         var gravity = parseFloat(document.getElementById('graph-gravity')?.value || 0.01);
 
         return Object.assign({}, baseOptions, {
+            layout: {
+                randomSeed: 42,
+                hierarchical: { enabled: false }
+            },
             physics: {
                 enabled: true,
                 solver: 'forceAtlas2Based',
@@ -1162,11 +1213,6 @@ function renderGraph(data) {
     };
 
     graphNetwork = new vis.Network(container, graphData, getGraphOptions(currentGraphLayout));
-
-    // Stop physics after graph stabilizes naturally (low energy)
-    graphNetwork.on('stabilized', function() {
-        graphNetwork.setOptions({ physics: { enabled: false } });
-    });
 }
 
 function renderGraphLegend(data) {
@@ -1201,7 +1247,7 @@ function renderGraphLegend(data) {
         var itemClass = 'graph-legend-item' + (isVisible ? '' : ' legend-hidden');
         html += '<label class="' + itemClass + '" data-type="' + type + '">';
         html += '<input type="checkbox" ' + (isVisible ? 'checked' : '') + ' onchange="toggleNodeType(\'' + type + '\')">';
-        html += '<span class="graph-legend-shape graph-shape-' + info.shape + '" style="background-color: ' + info.color + '; border-color: ' + info.color + '"></span>';
+        html += getLegendShapeSvg(info.shape, info.color);
         html += '<span class="graph-legend-label">' + type + ' (' + info.count + ')</span>';
         html += '</label>';
     });
@@ -1250,6 +1296,10 @@ function filterGraph() {
     graphData.edges.add(filteredEdges);
 
     if (graphNetwork) {
+        if (currentGraphLayout === 'physics') {
+            // Re-enable physics to let graph re-equilibrate
+            graphNetwork.setOptions({ physics: { enabled: true } });
+        }
         graphNetwork.fit({ animation: { duration: 300 } });
     }
 }
@@ -1260,7 +1310,13 @@ function toggleGraphLayout() {
     if (btn) btn.textContent = currentGraphLayout === 'physics' ? 'Hierarchical' : 'Physics';
 
     if (graphNetwork && graphData) {
-        graphNetwork.setOptions(getGraphOptions(currentGraphLayout));
+        var options = getGraphOptions(currentGraphLayout);
+        graphNetwork.setOptions(options);
+
+        // When switching to physics, force re-stabilization
+        if (currentGraphLayout === 'physics') {
+            graphNetwork.stabilize(100);
+        }
     }
 }
 

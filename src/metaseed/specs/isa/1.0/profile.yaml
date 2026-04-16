@@ -918,25 +918,37 @@ entities:
 
       - name: inputs
         type: list
-        items: string
+        items: MaterialRef
         required: false
         description: >
-          Input material references for this process. Can reference sources,
-          samples, or other materials by name.
+          Input materials for this process (sources, samples, or other materials).
 
       - name: outputs
         type: list
-        items: string
+        items: MaterialRef
         required: false
         description: >
-          Output material references from this process. Can reference samples,
-          extracts, labeled extracts, or data files by name.
+          Output materials from this process (samples, extracts, or data files).
 
       - name: comments
         type: list
         items: Comment
         required: false
         description: Comments associated with the process
+
+  MaterialRef:
+    ontology_term: isaterms:material
+    description: Reference to a material (Source, Sample, Extract, etc.) in a process
+    fields:
+      - name: name
+        type: string
+        required: true
+        description: Name of the referenced material
+
+      - name: type
+        type: string
+        required: false
+        description: Type of material (Source, Sample, Extract, LabeledExtract, DataFile)
 
   DataFile:
     ontology_term: isaterms:file

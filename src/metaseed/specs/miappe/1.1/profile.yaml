@@ -136,12 +136,6 @@ validation_rules:
     field: study_id
     reference: Study.unique_id
 
-  - name: sample_study_reference
-    description: Sample study_id must reference valid Study
-    applies_to: [Sample]
-    field: study_id
-    reference: Study.unique_id
-
   - name: datafile_study_reference
     description: DataFile study_id must reference valid Study
     applies_to: [DataFile]

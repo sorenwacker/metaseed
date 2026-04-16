@@ -203,61 +203,72 @@ studies:
             value: ICE1 overexpressor
 
     # Process sequence links sources to samples via protocol execution
-    # Inputs/outputs are string references to materials declared at Study level
     process_sequence:
       - name: sample_collection_Col0_0h_Rep1
         executes_protocol:
           name: Plant growth protocol
           study_id: STU-ARAB-COLD-01
         inputs:
-          - Arabidopsis_Col0_seeds
+          - name: Arabidopsis_Col0_seeds
+            type: Source
         outputs:
-          - Col0_Control_0h_Rep1
+          - name: Col0_Control_0h_Rep1
+            type: Sample
 
       - name: sample_collection_Col0_0h_Rep2
         executes_protocol:
           name: Plant growth protocol
           study_id: STU-ARAB-COLD-01
         inputs:
-          - Arabidopsis_Col0_seeds
+          - name: Arabidopsis_Col0_seeds
+            type: Source
         outputs:
-          - Col0_Control_0h_Rep2
+          - name: Col0_Control_0h_Rep2
+            type: Sample
 
       - name: sample_collection_Col0_24h_Rep1
         executes_protocol:
           name: Cold treatment protocol
           study_id: STU-ARAB-COLD-01
         inputs:
-          - Arabidopsis_Col0_seeds
+          - name: Arabidopsis_Col0_seeds
+            type: Source
         outputs:
-          - Col0_Cold_24h_Rep1
+          - name: Col0_Cold_24h_Rep1
+            type: Sample
 
       - name: sample_collection_Col0_24h_Rep2
         executes_protocol:
           name: Cold treatment protocol
           study_id: STU-ARAB-COLD-01
         inputs:
-          - Arabidopsis_Col0_seeds
+          - name: Arabidopsis_Col0_seeds
+            type: Source
         outputs:
-          - Col0_Cold_24h_Rep2
+          - name: Col0_Cold_24h_Rep2
+            type: Sample
 
       - name: sample_collection_Col0_7d_Rep1
         executes_protocol:
           name: Cold treatment protocol
           study_id: STU-ARAB-COLD-01
         inputs:
-          - Arabidopsis_Col0_seeds
+          - name: Arabidopsis_Col0_seeds
+            type: Source
         outputs:
-          - Col0_Cold_7d_Rep1
+          - name: Col0_Cold_7d_Rep1
+            type: Sample
 
       - name: sample_collection_ICE1_24h_Rep1
         executes_protocol:
           name: Cold treatment protocol
           study_id: STU-ARAB-COLD-01
         inputs:
-          - Arabidopsis_ICE1_seeds
+          - name: Arabidopsis_ICE1_seeds
+            type: Source
         outputs:
-          - ICE1_Cold_24h_Rep1
+          - name: ICE1_Cold_24h_Rep1
+            type: Sample
 
     assays:
       - study_id: STU-ARAB-COLD-01
@@ -359,36 +370,44 @@ studies:
               name: Metabolite extraction protocol
               study_id: STU-ARAB-COLD-01
             inputs:
-              - Col0_Control_0h_Rep1
+              - name: Col0_Control_0h_Rep1
+                type: Sample
             outputs:
-              - Extract_Col0_Control_0h_Rep1
+              - name: Extract_Col0_Control_0h_Rep1
+                type: Extract
 
           - name: extraction_Col0_Control_0h_Rep2
             executes_protocol:
               name: Metabolite extraction protocol
               study_id: STU-ARAB-COLD-01
             inputs:
-              - Col0_Control_0h_Rep2
+              - name: Col0_Control_0h_Rep2
+                type: Sample
             outputs:
-              - Extract_Col0_Control_0h_Rep2
+              - name: Extract_Col0_Control_0h_Rep2
+                type: Extract
 
           - name: lcms_analysis_Col0_Control_0h_Rep1
             executes_protocol:
               name: LC-MS analysis protocol
               study_id: STU-ARAB-COLD-01
             inputs:
-              - LabeledExtract_Col0_Control_0h_Rep1
+              - name: LabeledExtract_Col0_Control_0h_Rep1
+                type: LabeledExtract
             outputs:
-              - Col0_Control_0h_Rep1_pos.raw
+              - name: Col0_Control_0h_Rep1_pos.raw
+                type: DataFile
 
           - name: lcms_analysis_Col0_Control_0h_Rep2
             executes_protocol:
               name: LC-MS analysis protocol
               study_id: STU-ARAB-COLD-01
             inputs:
-              - LabeledExtract_Col0_Control_0h_Rep2
+              - name: LabeledExtract_Col0_Control_0h_Rep2
+                type: LabeledExtract
             outputs:
-              - Col0_Control_0h_Rep2_pos.raw
+              - name: Col0_Control_0h_Rep2_pos.raw
+                type: DataFile
 
       - study_id: STU-ARAB-COLD-01
         filename: a_metabolome_lcms_neg.txt
