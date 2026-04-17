@@ -215,6 +215,57 @@ class TestEntityReferenceRule:
         assert "SRC-INVALID" in errors[0].message
 
 
+class TestListCardinalityRule:
+    """Tests for ListCardinalityRule."""
+
+    def test_min_items_satisfied(self) -> None:
+        """List meeting min_items passes."""
+        from metaseed.validators.rules import ListCardinalityRule
+
+        rule = ListCardinalityRule(field="samples", min_items=1)
+        data = {"samples": [{"name": "S1"}]}
+        errors = rule.validate(data)
+        assert len(errors) == 0
+
+    def test_min_items_violated(self) -> None:
+        """Empty list violates min_items."""
+        from metaseed.validators.rules import ListCardinalityRule
+
+        rule = ListCardinalityRule(field="samples", min_items=1)
+        data = {"samples": []}
+        errors = rule.validate(data)
+        assert len(errors) == 1
+        assert "at least 1" in errors[0].message
+
+    def test_min_items_none_treated_as_empty(self) -> None:
+        """None field treated as empty list for min_items."""
+        from metaseed.validators.rules import ListCardinalityRule
+
+        rule = ListCardinalityRule(field="samples", min_items=1)
+        data = {"samples": None}
+        errors = rule.validate(data)
+        assert len(errors) == 1
+
+    def test_max_items_satisfied(self) -> None:
+        """List within max_items passes."""
+        from metaseed.validators.rules import ListCardinalityRule
+
+        rule = ListCardinalityRule(field="samples", max_items=2)
+        data = {"samples": [{"name": "S1"}, {"name": "S2"}]}
+        errors = rule.validate(data)
+        assert len(errors) == 0
+
+    def test_max_items_violated(self) -> None:
+        """List exceeding max_items fails."""
+        from metaseed.validators.rules import ListCardinalityRule
+
+        rule = ListCardinalityRule(field="samples", max_items=2)
+        data = {"samples": [{"name": "S1"}, {"name": "S2"}, {"name": "S3"}]}
+        errors = rule.validate(data)
+        assert len(errors) == 1
+        assert "at most 2" in errors[0].message
+
+
 class TestConditionalRule:
     """Tests for ConditionalRule."""
 

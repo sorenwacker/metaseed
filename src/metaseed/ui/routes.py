@@ -216,8 +216,12 @@ def create_app(state: AppState | None = None) -> FastAPI:
         state.facade = None
         facade = state.get_or_create_facade()
 
-        # Determine root entity type (Investigation for most profiles)
-        root_entity = "Investigation"
+        # Determine root entity type from spec
+        from metaseed.specs.loader import SpecLoader
+
+        loader = SpecLoader(profile=profile_name)
+        spec = loader.load_profile(version, profile_name)
+        root_entity = spec.root_entity or "Investigation"
 
         # Create entity instance from example data
         try:
@@ -235,7 +239,7 @@ def create_app(state: AppState | None = None) -> FastAPI:
         # Populate current_nested_items from the instance
         helper = getattr(facade, root_entity)
         for field_name in helper.nested_fields:
-            if field_name in example_data and example_data[field_name]:
+            if example_data.get(field_name):
                 items = example_data[field_name]
                 if isinstance(items, list):
                     state.current_nested_items[field_name] = list(items)
@@ -361,7 +365,7 @@ def create_app(state: AppState | None = None) -> FastAPI:
         # Only load nested items from entity if we don't have any pending edits
         if not state.current_nested_items:
             for field_name in helper.nested_fields:
-                if field_name in values and values[field_name]:
+                if values.get(field_name):
                     items = values[field_name]
                     if isinstance(items, list):
                         state.current_nested_items[field_name] = [
@@ -431,7 +435,7 @@ def create_app(state: AppState | None = None) -> FastAPI:
             if hasattr(instance, "model_dump"):
                 data = instance.model_dump(exclude_none=True)
                 for field_name in helper.nested_fields:
-                    if field_name in data and data[field_name]:
+                    if data.get(field_name):
                         items = data[field_name]
                         if isinstance(items, list):
                             state.current_nested_items[field_name] = [
@@ -498,7 +502,7 @@ def create_app(state: AppState | None = None) -> FastAPI:
             if hasattr(instance, "model_dump"):
                 data = instance.model_dump(exclude_none=True)
                 for field_name in helper.nested_fields:
-                    if field_name in data and data[field_name]:
+                    if data.get(field_name):
                         items = data[field_name]
                         if isinstance(items, list):
                             state.current_nested_items[field_name] = [
@@ -586,6 +590,10 @@ def create_app(state: AppState | None = None) -> FastAPI:
             entity_type=nested_entity_type,
         )
 
+        # Get parent ID fields (hidden from display, used for serialization only)
+        parent_id_fields = get_parent_id_fields(reference_fields, entity_type)
+        display_columns = [c for c in col_info["columns"] if c not in parent_id_fields]
+
         rows = []
         for i, item in enumerate(items):
             if hasattr(item, "model_dump"):
@@ -603,7 +611,7 @@ def create_app(state: AppState | None = None) -> FastAPI:
             {
                 "field_name": field_name,
                 "entity_type": nested_entity_type,
-                "columns": col_info["columns"],
+                "columns": display_columns,
                 "column_types": col_info["column_types"],
                 "column_constraints": col_info["column_constraints"],
                 "required_columns": col_info["required_columns"],
@@ -625,7 +633,7 @@ def create_app(state: AppState | None = None) -> FastAPI:
         state = get_state()
         facade = state.get_or_create_facade()
 
-        items_store, items = get_items_store(state, parent_entity_type, field_name)
+        _, items = get_items_store(state, parent_entity_type, field_name)
 
         parent_helper = getattr(facade, parent_entity_type, None)
         entity_type = parent_helper.nested_fields.get(field_name) if parent_helper else None
@@ -689,12 +697,15 @@ def create_app(state: AppState | None = None) -> FastAPI:
 
         template_name = "partials/inline_table_row.html" if is_inline else "partials/table_row.html"
 
+        # Filter out parent ID fields from display (data kept for serialization)
+        display_columns = [c for c in col_info["columns"] if c not in parent_id_fields]
+
         return templates.TemplateResponse(
             request,
             template_name,
             {
                 "row": new_row,
-                "columns": col_info["columns"],
+                "columns": display_columns,
                 "column_types": col_info["column_types"],
                 "column_constraints": col_info["column_constraints"],
                 "reference_fields": reference_fields,
@@ -782,6 +793,15 @@ def create_app(state: AppState | None = None) -> FastAPI:
         nested_entity_type = helper.nested_fields.get(field_name)
         col_info = get_table_column_info(facade, nested_entity_type)
 
+        # Get reference fields and filter out parent ID fields from display
+        reference_fields = get_reference_fields(
+            profile=state.profile,
+            version=facade.version,
+            entity_type=nested_entity_type,
+        )
+        parent_id_fields = get_parent_id_fields(reference_fields, parent_entity_type)
+        display_columns = [c for c in col_info["columns"] if c not in parent_id_fields]
+
         rows = []
         for i, item in enumerate(items):
             if hasattr(item, "model_dump"):
@@ -799,7 +819,7 @@ def create_app(state: AppState | None = None) -> FastAPI:
             {
                 "field_name": field_name,
                 "entity_type": nested_entity_type,
-                "columns": col_info["columns"],
+                "columns": display_columns,
                 "column_types": col_info["column_types"],
                 "column_constraints": col_info["column_constraints"],
                 "required_columns": col_info["required_columns"],
@@ -931,6 +951,20 @@ def create_app(state: AppState | None = None) -> FastAPI:
 
         return JSONResponse(content=ref_fields)
 
+    @app.get("/api/graph")
+    async def get_graph() -> JSONResponse:
+        """Return graph data for visualization.
+
+        Builds nodes and edges from the entity tree for vis.js network graph.
+
+        Returns:
+            JSON with 'nodes' and 'edges' lists.
+        """
+        from metaseed.ui.services.graph import build_graph
+
+        state = get_state()
+        return JSONResponse(content=build_graph(state))
+
     # -------------------------------------------------------------------------
     # Nested form routes
     # -------------------------------------------------------------------------
@@ -991,7 +1025,7 @@ def create_app(state: AppState | None = None) -> FastAPI:
 
             if nested_helper:
                 for nested_field in nested_helper.nested_fields:
-                    if nested_field in item_data and item_data[nested_field]:
+                    if item_data.get(nested_field):
                         nested_items = item_data[nested_field]
                         if isinstance(nested_items, list):
                             context.nested_items[nested_field] = [
@@ -1085,13 +1119,23 @@ def create_app(state: AppState | None = None) -> FastAPI:
             if state.nested_edit_stack:
                 state.nested_edit_stack.pop()
 
+            # Filter out parent ID fields from display
+            all_columns = get_table_columns(facade, nested_entity_type)
+            reference_fields = get_reference_fields(
+                profile=state.profile,
+                version=facade.version,
+                entity_type=nested_entity_type,
+            )
+            parent_id_fields = get_parent_id_fields(reference_fields, parent_type)
+            display_columns = [c for c in all_columns if c not in parent_id_fields]
+
             return templates.TemplateResponse(
                 request,
                 "partials/table.html",
                 {
                     "field_name": field_name,
                     "entity_type": nested_entity_type,
-                    "columns": get_table_columns(facade, nested_entity_type),
+                    "columns": display_columns,
                     "rows": format_table_rows(items),
                     "parent_entity_type": parent_type,
                     "editing_node_id": state.editing_node_id,
@@ -1161,7 +1205,7 @@ def create_app(state: AppState | None = None) -> FastAPI:
                 return
 
             for field_name, nested_type in helper.nested_fields.items():
-                if field_name in data and data[field_name]:
+                if data.get(field_name):
                     nested_items = data[field_name]
                     if isinstance(nested_items, list):
                         for item in nested_items:
@@ -1235,7 +1279,7 @@ def create_app(state: AppState | None = None) -> FastAPI:
             root_node = root_nodes[0]
             if hasattr(root_node.instance, "model_dump"):
                 root_data = root_node.instance.model_dump()
-                if "unique_id" in root_data and root_data["unique_id"]:
+                if root_data.get("unique_id"):
                     # Sanitize the ID for filename
                     entity_id = str(root_data["unique_id"]).replace("/", "-").replace(":", "-")[:30]
 

@@ -12,6 +12,7 @@ from metaseed.validators.rules import (
     ConditionalRule,
     CoordinatePairRule,
     DateRangeRule,
+    ListCardinalityRule,
     RequiredFieldsRule,
     UniqueIdPatternRule,
 )
@@ -83,7 +84,12 @@ def _create_rule_from_spec(rule_spec: ValidationRuleSpec) -> ValidationRule | No
         return None  # Handled by Pydantic Literal types
 
     if (rule_spec.min_items is not None or rule_spec.max_items is not None) and rule_spec.field:
-        return None  # Handled by Pydantic min_length/max_length on lists
+        return ListCardinalityRule(
+            field=rule_spec.field,
+            min_items=rule_spec.min_items,
+            max_items=rule_spec.max_items,
+            rule_name=rule_spec.name,
+        )
 
     # Conditional rules
     if rule_spec.condition:
@@ -114,11 +120,10 @@ def _create_rule_from_spec(rule_spec: ValidationRuleSpec) -> ValidationRule | No
                         start_field=parts[1],
                         end_field=parts[0],
                     )
-                else:
-                    return DateRangeRule(
-                        start_field=parts[0],
-                        end_field=parts[1],
-                    )
+                return DateRangeRule(
+                    start_field=parts[0],
+                    end_field=parts[1],
+                )
 
         # General conditional rule
         return ConditionalRule(

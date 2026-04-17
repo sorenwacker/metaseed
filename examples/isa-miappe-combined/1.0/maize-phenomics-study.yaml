@@ -81,10 +81,8 @@ studies:
         version: "2.0"
         uri: https://protocols.io/view/maize-greenhouse-growth-456
         parameters:
-          - name: germination_temp
-            parameter_name: germination temperature
-          - name: pot_volume
-            parameter_name: pot volume
+          - parameter_name: germination temperature
+          - parameter_name: pot volume
 
       - study_id: STU-MAIZE-N-2024
         name: RGB imaging protocol
@@ -94,10 +92,8 @@ studies:
           top view and two side views at 90 degree rotation. Resolution 4096x3000 pixels.
         version: "1.5"
         parameters:
-          - name: image_resolution
-            parameter_name: image resolution
-          - name: imaging_frequency
-            parameter_name: imaging frequency
+          - parameter_name: image resolution
+          - parameter_name: imaging frequency
 
       - study_id: STU-MAIZE-N-2024
         name: Nitrogen treatment protocol
@@ -214,12 +210,12 @@ studies:
         factor_type: chemical compound
         values:
           - identifier: FV-HIGH-N
-            factor_name: FAC-NITROGEN
+            factor_id: FAC-NITROGEN
             value: High nitrogen
             description: 15 mM NH4NO3 in nutrient solution
 
           - identifier: FV-LOW-N
-            factor_name: FAC-NITROGEN
+            factor_id: FAC-NITROGEN
             value: Low nitrogen
             description: 1.5 mM NH4NO3 in nutrient solution
 
@@ -230,19 +226,19 @@ studies:
         factor_type: genetic factor
         values:
           - identifier: FV-B73
-            factor_name: FAC-GENOTYPE
+            factor_id: FAC-GENOTYPE
             value: B73
 
           - identifier: FV-Mo17
-            factor_name: FAC-GENOTYPE
+            factor_id: FAC-GENOTYPE
             value: Mo17
 
           - identifier: FV-W22
-            factor_name: FAC-GENOTYPE
+            factor_id: FAC-GENOTYPE
             value: W22
 
           - identifier: FV-PH207
-            factor_name: FAC-GENOTYPE
+            factor_id: FAC-GENOTYPE
             value: PH207
 
     observed_variables:
@@ -295,17 +291,16 @@ studies:
         study_id: STU-MAIZE-N-2024
         observation_unit_type: pot
         biological_material_id: BM-B73
-        spatial_distribution_type: grid
         spatial_distribution: "lane:1,position:1"
         observation_unit_block: "1"
         observation_unit_replicate: "1"
         entry_type: test
         factor_values:
           - identifier: FV-B73-HN-R1-N
-            factor_name: FAC-NITROGEN
+            factor_id: FAC-NITROGEN
             value: High nitrogen
           - identifier: FV-B73-HN-R1-G
-            factor_name: FAC-GENOTYPE
+            factor_id: FAC-GENOTYPE
             value: B73
         samples:
           - identifier: SAM-B73-HN-R1-LEAF
@@ -315,7 +310,6 @@ studies:
             plant_anatomical_entity: leaf
             collection_date: "2024-05-15T10:00:00"
             plant_structural_development_stage: V12
-            description: Youngest fully expanded leaf for N analysis
 
       - identifier: OU-B73-LN-R1
         study_id: STU-MAIZE-N-2024
@@ -327,10 +321,10 @@ studies:
         entry_type: test
         factor_values:
           - identifier: FV-B73-LN-R1-N
-            factor_name: FAC-NITROGEN
+            factor_id: FAC-NITROGEN
             value: Low nitrogen
           - identifier: FV-B73-LN-R1-G
-            factor_name: FAC-GENOTYPE
+            factor_id: FAC-GENOTYPE
             value: B73
 
       - identifier: OU-Mo17-HN-R1
@@ -343,10 +337,10 @@ studies:
         entry_type: test
         factor_values:
           - identifier: FV-Mo17-HN-R1-N
-            factor_name: FAC-NITROGEN
+            factor_id: FAC-NITROGEN
             value: High nitrogen
           - identifier: FV-Mo17-HN-R1-G
-            factor_name: FAC-GENOTYPE
+            factor_id: FAC-GENOTYPE
             value: Mo17
 
       - identifier: OU-Mo17-LN-R1
@@ -359,7 +353,7 @@ studies:
         entry_type: test
         factor_values:
           - identifier: FV-Mo17-LN-R1-N
-            factor_name: FAC-NITROGEN
+            factor_id: FAC-NITROGEN
             value: Low nitrogen
 
     events:
@@ -437,67 +431,6 @@ studies:
         value: "60"
         unit: "%"
         description: Target relative humidity
-
-    processes:
-      - study_id: STU-MAIZE-N-2024
-        name: germination_B73
-        executes_protocol: Plant growth protocol
-        performer: Sung Kim
-        date: "2024-03-01"
-        inputs:
-          - B73_seed_lot_2024
-        outputs:
-          - OU-B73-HN-R1
-          - OU-B73-LN-R1
-        parameter_values:
-          - category: germination temperature
-            value: "28"
-            unit: degree Celsius
-          - category: pot volume
-            value: "5"
-            unit: liters
-
-      - study_id: STU-MAIZE-N-2024
-        name: imaging_daily
-        executes_protocol: RGB imaging protocol
-        performer: Automated system
-        date: "2024-03-15"
-        inputs:
-          - OU-B73-HN-R1
-          - OU-B73-LN-R1
-          - OU-Mo17-HN-R1
-          - OU-Mo17-LN-R1
-        outputs:
-          - image_data_2024-03-15
-        parameter_values:
-          - category: image resolution
-            value: "4096x3000"
-            unit: pixels
-          - category: imaging frequency
-            value: "daily"
-
-      - study_id: STU-MAIZE-N-2024
-        name: harvest_B73_HN_R1
-        executes_protocol: Harvest protocol
-        performer: Anna Mueller
-        date: "2024-05-15"
-        inputs:
-          - OU-B73-HN-R1
-        outputs:
-          - B73_HN_R1_leaf
-
-    assays:
-      - study_id: STU-MAIZE-N-2024
-        filename: a_rgb_phenotyping.txt
-        measurement_type: phenotyping
-        technology_type: digital imaging
-        technology_platform: LemnaTec Scanalyzer 3D
-
-      - study_id: STU-MAIZE-N-2024
-        filename: a_nitrogen_analysis.txt
-        measurement_type: elemental analysis
-        technology_type: combustion analysis
-        technology_platform: LECO TruSpec CN
 
     data_files:
       - identifier: DF-PHENOTYPES

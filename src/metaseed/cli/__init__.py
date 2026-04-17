@@ -123,8 +123,7 @@ def validate(
         for error in errors:
             typer.echo(f"  - {error.field}: {error.message}")
         raise typer.Exit(EXIT_VALIDATION_ERROR)
-    else:
-        echo_success(f"Validation passed. File is valid {entity} ({profile} v{version}).")
+    echo_success(f"Validation passed. File is valid {entity} ({profile} v{version}).")
 
 
 @app.command()
@@ -562,12 +561,12 @@ def _export_example_to_excel(data: dict, output: Path) -> None:
     add_sheet("Investigation", [root_record])
 
     # Contacts/Persons at investigation level
-    if "contacts" in data and data["contacts"]:
+    if data.get("contacts"):
         records = [flatten_entity(c) for c in data["contacts"]]
         add_sheet("Person", records)
 
     # Studies
-    if "studies" in data and data["studies"]:
+    if data.get("studies"):
         study_records = []
         all_persons = []
         all_locations = []
@@ -590,7 +589,7 @@ def _export_example_to_excel(data: dict, output: Path) -> None:
             # Nested entities within study
             if "persons" in study:
                 all_persons.extend(flatten_entity(p) for p in study["persons"])
-            if "geographic_location" in study and study["geographic_location"]:
+            if study.get("geographic_location"):
                 loc = study["geographic_location"]
                 if isinstance(loc, dict):
                     all_locations.append(flatten_entity(loc))
