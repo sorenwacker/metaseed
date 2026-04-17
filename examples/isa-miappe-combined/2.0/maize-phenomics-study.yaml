@@ -91,12 +91,9 @@ studies:
         version: "2.0"
         uri: https://protocols.io/view/maize-greenhouse-growth-456
         parameters:
-          - name: germination_temp
-            parameter_name: germination temperature
-          - name: pot_volume
-            parameter_name: pot volume
-          - name: substrate
-            parameter_name: growth substrate
+          - parameter_name: germination temperature
+          - parameter_name: pot volume
+          - parameter_name: growth substrate
 
       - study_id: STU-MAIZE-N-2024
         name: RGB imaging protocol
@@ -106,12 +103,9 @@ studies:
           top view and two side views at 90 degree rotation. Resolution 4096x3000 pixels.
         version: "1.5"
         parameters:
-          - name: image_resolution
-            parameter_name: image resolution
-          - name: imaging_frequency
-            parameter_name: imaging frequency
-          - name: camera_model
-            parameter_name: camera model
+          - parameter_name: image resolution
+          - parameter_name: imaging frequency
+          - parameter_name: camera model
 
       - study_id: STU-MAIZE-N-2024
         name: Nitrogen treatment protocol
@@ -221,25 +215,6 @@ studies:
             value: leaf
           - category: treatment
             value: low nitrogen
-
-    extracts:
-      - study_id: STU-MAIZE-N-2024
-        name: B73_HN_R1_leaf_ground
-        derives_from:
-          - B73_HN_R1_leaf
-        characteristics:
-          - category: preparation
-            value: dried and ground
-
-      - study_id: STU-MAIZE-N-2024
-        name: B73_LN_R1_leaf_ground
-        derives_from:
-          - B73_LN_R1_leaf
-
-      - study_id: STU-MAIZE-N-2024
-        name: Mo17_HN_R1_leaf_ground
-        derives_from:
-          - Mo17_HN_R1_leaf
 
     biological_materials:
       - identifier: BM-B73
@@ -570,86 +545,6 @@ studies:
             value: "60"
             unit: "%"
             description: Target relative humidity
-
-    processes:
-      - study_id: STU-MAIZE-N-2024
-        name: germination_process
-        executes_protocol: Plant growth protocol
-        performer: Sung Kim
-        date: "2024-03-01"
-        inputs:
-          - B73_seed_lot_2024
-          - Mo17_seed_lot_2024
-          - W22_seed_lot_2024
-          - PH207_seed_lot_2024
-        outputs:
-          - OU-B73-HN-R1
-          - OU-B73-LN-R1
-          - OU-Mo17-HN-R1
-          - OU-Mo17-LN-R1
-          - OU-W22-HN-R1
-          - OU-PH207-HN-R1
-        parameter_values:
-          - category: germination temperature
-            value: "28"
-            unit: degree Celsius
-          - category: pot volume
-            value: "5"
-            unit: liters
-          - category: growth substrate
-            value: perlite:vermiculite 1:1
-
-      - study_id: STU-MAIZE-N-2024
-        name: imaging_daily
-        executes_protocol: RGB imaging protocol
-        performer: Automated system
-        date: "2024-03-15"
-        inputs:
-          - OU-B73-HN-R1
-          - OU-B73-LN-R1
-          - OU-Mo17-HN-R1
-          - OU-Mo17-LN-R1
-        outputs:
-          - image_data_2024-03-15
-        parameter_values:
-          - category: image resolution
-            value: "4096x3000"
-            unit: pixels
-          - category: camera model
-            value: Basler acA4096-30gc
-
-      - study_id: STU-MAIZE-N-2024
-        name: harvest_B73_HN_R1
-        executes_protocol: Harvest protocol
-        performer: Anna Mueller
-        date: "2024-05-15"
-        inputs:
-          - OU-B73-HN-R1
-        outputs:
-          - B73_HN_R1_leaf
-
-      - study_id: STU-MAIZE-N-2024
-        name: grinding_B73_HN_R1
-        executes_protocol: Elemental analysis protocol
-        performer: Lab technician
-        date: "2024-05-20"
-        inputs:
-          - B73_HN_R1_leaf
-        outputs:
-          - B73_HN_R1_leaf_ground
-
-    assays:
-      - study_id: STU-MAIZE-N-2024
-        filename: a_rgb_phenotyping.txt
-        measurement_type: phenotyping
-        technology_type: digital imaging
-        technology_platform: LemnaTec Scanalyzer 3D
-
-      - study_id: STU-MAIZE-N-2024
-        filename: a_nitrogen_analysis.txt
-        measurement_type: elemental analysis
-        technology_type: combustion analysis
-        technology_platform: LECO TruSpec CN
 
     data_files:
       - identifier: DF-PHENOTYPES

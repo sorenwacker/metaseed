@@ -5,7 +5,6 @@ This module provides the public API for accessing models from various profiles
 """
 
 import re
-from typing import TYPE_CHECKING
 
 from pydantic import BaseModel
 
@@ -16,10 +15,7 @@ from metaseed.models.registry import (
     get_global_registry,
 )
 from metaseed.models.types import OntologyTerm
-from metaseed.specs.loader import SpecLoader, SpecLoadError
-
-if TYPE_CHECKING:
-    pass
+from metaseed.specs.loader import SpecLoader
 
 __all__ = [
     "ModelNotFoundError",
@@ -90,12 +86,9 @@ def get_model(name: str, version: str = "1.1", profile: str = "miappe") -> type[
 
     # Load spec and create model
     loader = SpecLoader(profile=profile)
-    try:
-        # Convert CamelCase to snake_case for file lookup
-        entity_name = _to_snake_case(name)
-        spec = loader.load_entity(entity_name, version)
-    except SpecLoadError:
-        raise
+    # Convert CamelCase to snake_case for file lookup
+    entity_name = _to_snake_case(name)
+    spec = loader.load_entity(entity_name, version)
 
     model = create_model_from_spec(spec)
     registry.register(normalized_name, cache_version, model)

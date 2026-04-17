@@ -1756,3 +1756,166 @@ body::before {
     padding: 0.25rem 0.5rem;
     font-size: 0.75rem;
 }
+
+/* ============================================
+   GRAPH VISUALIZATION
+   ============================================ */
+
+.graph-container {
+    height: calc(100vh - 80px);
+    background: var(--clr-paper);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.graph-container.hidden {
+    display: none;
+}
+
+.graph-controls {
+    padding: var(--space-sm) var(--space-lg);
+    background: var(--clr-ivory);
+    border-bottom: 1px solid var(--clr-parchment);
+    display: flex;
+    gap: var(--space-lg);
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.graph-control-label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    font-size: 0.75rem;
+    color: var(--clr-ink-light);
+    cursor: default;
+}
+
+.graph-control-label input[type="range"] {
+    width: 80px;
+    accent-color: var(--clr-moss);
+    cursor: pointer;
+}
+
+.graph-view {
+    flex: 1;
+    min-height: 500px;
+    background: var(--clr-ivory);
+    border: 1px solid var(--clr-parchment);
+    border-radius: var(--radius-md);
+    margin: var(--space-sm) var(--space-lg) var(--space-lg);
+}
+
+.graph-empty,
+.graph-loading,
+.graph-error {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--clr-ink-light);
+    font-size: 1rem;
+    text-align: center;
+    padding: var(--space-xl);
+}
+
+.graph-error {
+    color: var(--clr-danger, #dc2626);
+}
+
+.graph-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm) var(--space-md);
+    padding: 0 var(--space-lg);
+    margin-bottom: var(--space-xs);
+    font-size: 0.75rem;
+}
+
+.graph-legend:empty {
+    display: none;
+}
+
+.graph-legend-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    transition: opacity 0.15s;
+}
+
+.graph-legend-item:hover {
+    background: var(--clr-parchment);
+}
+
+.graph-legend-item.legend-hidden {
+    opacity: 0.4;
+}
+
+.graph-legend-item input[type="checkbox"] {
+    cursor: pointer;
+    accent-color: var(--clr-moss);
+    margin: 0;
+}
+
+.graph-legend-shape {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+    border: 2px solid;
+}
+
+/* Shape variants for legend */
+.graph-shape-dot {
+    border-radius: 50%;
+}
+
+.graph-shape-square {
+    border-radius: 2px;
+}
+
+.graph-shape-diamond {
+    width: 10px;
+    height: 10px;
+    transform: rotate(45deg);
+    border-radius: 2px;
+}
+
+.graph-shape-triangle {
+    width: 0;
+    height: 0;
+    background: transparent !important;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-bottom: 12px solid;
+}
+
+.graph-shape-triangleDown {
+    width: 0;
+    height: 0;
+    background: transparent !important;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 12px solid;
+}
+
+.graph-shape-star {
+    width: 12px;
+    height: 12px;
+    clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+}
+
+.graph-shape-hexagon {
+    width: 12px;
+    height: 12px;
+    clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+}
+
+.graph-legend-label {
+    font-size: 0.7rem;
+    color: var(--clr-ink);
+    white-space: nowrap;
+}

@@ -251,19 +251,18 @@ class EntityReferenceRule(ValidationRule):
                                 rule=self.name,
                             )
                         )
-        else:
-            # Validate single reference
-            if isinstance(value, dict):
-                ref_id = value.get(self.reference_id_field)
-                if ref_id and ref_id not in self.available_ids:
-                    errors.append(
-                        ValidationError(
-                            field=self.field,
-                            message=f"Reference '{ref_id}' not found in "
-                            f"available {self.reference_id_field}s",
-                            rule=self.name,
-                        )
+        # Validate single reference
+        elif isinstance(value, dict):
+            ref_id = value.get(self.reference_id_field)
+            if ref_id and ref_id not in self.available_ids:
+                errors.append(
+                    ValidationError(
+                        field=self.field,
+                        message=f"Reference '{ref_id}' not found in "
+                        f"available {self.reference_id_field}s",
+                        rule=self.name,
                     )
+                )
 
         return errors
 
@@ -381,6 +380,85 @@ class ConditionalRule(ValidationRule):
         return []
 
 
+class ListCardinalityRule(ValidationRule):
+    """Validates list field cardinality (min/max items).
+
+    Attributes:
+        field: Name of the list field.
+        min_items: Minimum number of items required (None = no minimum).
+        max_items: Maximum number of items allowed (None = no maximum).
+        rule_name: Name for this specific rule instance.
+    """
+
+    def __init__(
+        self: Self,
+        field: str,
+        min_items: int | None = None,
+        max_items: int | None = None,
+        rule_name: str = "list_cardinality",
+    ) -> None:
+        """Initialize the rule.
+
+        Args:
+            field: Name of the list field.
+            min_items: Minimum number of items required.
+            max_items: Maximum number of items allowed.
+            rule_name: Name for this rule instance.
+        """
+        self.field = field
+        self.min_items = min_items
+        self.max_items = max_items
+        self.rule_name = rule_name
+
+    @property
+    def name(self: Self) -> str:
+        """Return the rule name."""
+        return self.rule_name
+
+    def validate(self: Self, data: dict[str, Any]) -> list[ValidationError]:
+        """Validate list cardinality.
+
+        Args:
+            data: Dictionary containing the list field.
+
+        Returns:
+            List of errors if cardinality constraints violated.
+        """
+        value = data.get(self.field)
+        errors: list[ValidationError] = []
+
+        # Treat None or missing as empty list for min_items check
+        if value is None:
+            value = []
+
+        if not isinstance(value, list):
+            return errors
+
+        count = len(value)
+
+        if self.min_items is not None and count < self.min_items:
+            errors.append(
+                ValidationError(
+                    field=self.field,
+                    message=f"'{self.field}' must have at least {self.min_items} item(s), "
+                    f"but has {count}",
+                    rule=self.name,
+                )
+            )
+
+        if self.max_items is not None and count > self.max_items:
+            errors.append(
+                ValidationError(
+                    field=self.field,
+                    message=f"'{self.field}' must have at most {self.max_items} item(s), "
+                    f"but has {count}",
+                    rule=self.name,
+                )
+            )
+
+        return errors
+
+
 class CoordinatePairRule(ValidationRule):
     """Validates that latitude and longitude are provided together.
 
@@ -448,6 +526,7 @@ __all__ = [
     "CoordinatePairRule",
     "DateRangeRule",
     "EntityReferenceRule",
+    "ListCardinalityRule",
     "RequiredFieldsRule",
     "UniqueIdPatternRule",
     "ValidationError",

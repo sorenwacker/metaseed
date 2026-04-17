@@ -39,7 +39,7 @@ class TreeNode:
         if hasattr(instance, "model_dump"):
             data = instance.model_dump()
             for key in ["title", "name", "unique_id", "identifier", "filename"]:
-                if key in data and data[key]:
+                if data.get(key):
                     label = str(data[key])
                     break
         if not label:
@@ -142,7 +142,7 @@ class AppState:
             if hasattr(instance, "model_dump"):
                 data = instance.model_dump()
                 for key in ["title", "name", "unique_id", "identifier", "filename"]:
-                    if key in data and data[key]:
+                    if data.get(key):
                         node.label = str(data[key])
                         break
         return node
@@ -200,7 +200,7 @@ class AppState:
                     label = None
                     if nested_helper:
                         for field in ["title", "name", "unique_id", "identifier"]:
-                            if field in item_data and item_data[field]:
+                            if item_data.get(field):
                                 label = str(item_data[field])
                                 break
                     if not label:

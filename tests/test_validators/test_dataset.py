@@ -184,7 +184,11 @@ title: Test Investigation
 description: A test
 contacts:
   - name: Test Person
-studies: []
+studies:
+  - unique_id: STU001
+    investigation_id: INV001
+    title: Test Study
+    start_date: "2024-01-01"
 """
         (tmp_path / "investigation.yaml").write_text(inv_content)
 

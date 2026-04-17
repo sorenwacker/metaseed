@@ -14,7 +14,7 @@ from isatools import isajson, isatab
 from isatools.model import Investigation as ISAInvestigation
 from isatools.model import Study as ISAStudy
 
-__all__ = ["ImportResult", "ISAImporter"]
+__all__ = ["ISAImporter", "ImportResult"]
 
 
 @dataclass

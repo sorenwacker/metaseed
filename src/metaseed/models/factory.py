@@ -7,15 +7,12 @@ models from YAML specifications.
 from __future__ import annotations
 
 import datetime
-from typing import TYPE_CHECKING, Annotated, Any, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import AnyUrl, BaseModel, ConfigDict, Field, create_model, model_validator
 
 from metaseed.models.types import OntologyTerm
 from metaseed.specs.schema import EntitySpec, FieldSpec, FieldType
-
-if TYPE_CHECKING:
-    pass
 
 # Registry for resolving entity types during deserialization
 # Keys are "profile:version:name" to support multiple profiles

@@ -313,7 +313,7 @@ class DatasetValidator:
 
         # Validate against spec rules
         try:
-            engine = create_engine_for_entity(entity_type, self.version)
+            engine = create_engine_for_entity(entity_type, self.version, self.profile)
             for error in engine.validate(data):
                 field_path = f"{path}.{error.field}" if path else error.field
                 errors.append(
