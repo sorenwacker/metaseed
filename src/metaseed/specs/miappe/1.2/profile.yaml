@@ -1,0 +1,1799 @@
+# MIAPPE v1.2 Specification
+# Minimum Information About Plant Phenotyping Experiments
+# Single source of truth for all entity definitions
+#
+# Changes from v1.1:
+# - Added trait decomposition fields (trait_entity, trait_characteristic) to ObservedVariable
+# - Added material source detail fields to BiologicalMaterial
+# - Added method_reference to ObservedVariable for BrAPI compatibility
+# - Added BrAPI-compatible codenames for all fields
+
+version: "1.2"
+name: miappe
+display_name: MIAPPE
+description: "Minimum Information About Plant Phenotyping Experiments v1.2. Enhanced BrAPI compatibility and trait decomposition."
+root_entity: Investigation
+ontology: PPEO
+
+# Validation rules applied across entities
+validation_rules:
+  - name: date_range
+    description: End date must not be before start date
+    applies_to: [Study]
+    condition: end_date >= start_date
+
+  - name: event_date_range
+    description: Event end date must not be before event date
+    applies_to: [Event]
+    condition: end_date >= date
+
+  - name: unique_id_pattern
+    description: Unique IDs must contain only alphanumeric characters, underscores, and hyphens
+    applies_to: all
+    field: unique_id
+    pattern: "^[A-Za-z0-9_-]+$"
+
+  # Coordinate constraints
+  - name: coordinate_pair
+    description: Latitude and longitude must be provided together
+    applies_to: [Study, BiologicalMaterial, MaterialSource]
+    condition: (latitude AND longitude) OR (NOT latitude AND NOT longitude)
+
+  - name: latitude_range
+    description: Latitude must be between -90 and 90 degrees
+    applies_to: [Study, BiologicalMaterial, MaterialSource]
+    field: latitude
+    minimum: -90
+    maximum: 90
+
+  - name: longitude_range
+    description: Longitude must be between -180 and 180 degrees
+    applies_to: [Study, BiologicalMaterial, MaterialSource]
+    field: longitude
+    minimum: -180
+    maximum: 180
+
+  - name: biological_material_coordinate_pair
+    description: BiologicalMaterial collection coordinates must be provided together
+    applies_to: [BiologicalMaterial]
+    condition: (biological_material_latitude AND biological_material_longitude) OR (NOT biological_material_latitude AND NOT biological_material_longitude)
+
+  # Material source coordinate constraints (new in 1.2)
+  - name: material_source_coordinate_pair
+    description: Material source coordinates must be provided together
+    applies_to: [BiologicalMaterial]
+    condition: (material_source_latitude AND material_source_longitude) OR (NOT material_source_latitude AND NOT material_source_longitude)
+
+  # Person validation
+  - name: email_format
+    description: Email must be valid format
+    applies_to: [Person]
+    field: email
+    pattern: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+
+  # ObservedVariable consistency
+  - name: observed_variable_trait_consistency
+    description: If trait_accession_number provided, trait must also be provided
+    applies_to: [ObservedVariable]
+    condition: (NOT trait_accession_number) OR (trait AND trait_accession_number)
+
+  - name: observed_variable_method_consistency
+    description: If method_accession_number provided, method must also be provided
+    applies_to: [ObservedVariable]
+    condition: (NOT method_accession_number) OR (method AND method_accession_number)
+
+  - name: observed_variable_scale_consistency
+    description: If scale_accession_number provided, scale must also be provided
+    applies_to: [ObservedVariable]
+    condition: (NOT scale_accession_number) OR (scale AND scale_accession_number)
+
+  # Trait decomposition consistency (new in 1.2)
+  - name: trait_entity_consistency
+    description: If trait_entity_accession_number provided, trait_entity must also be provided
+    applies_to: [ObservedVariable]
+    condition: (NOT trait_entity_accession_number) OR (trait_entity AND trait_entity_accession_number)
+
+  - name: trait_characteristic_consistency
+    description: If trait_characteristic_accession_number provided, trait_characteristic must also be provided
+    applies_to: [ObservedVariable]
+    condition: (NOT trait_characteristic_accession_number) OR (trait_characteristic AND trait_characteristic_accession_number)
+
+  - name: observation_unit_spatial_pair
+    description: Spatial x and y references must be provided together
+    applies_to: [ObservationUnit]
+    condition: (observation_unit_x_ref AND observation_unit_y_ref) OR (NOT observation_unit_x_ref AND NOT observation_unit_y_ref)
+
+  # Vocabulary constraints
+  - name: observation_unit_type_vocabulary
+    description: Observation unit type must be valid
+    applies_to: [ObservationUnit]
+    field: observation_unit_type
+    enum: [plant, plot, pot, block, row, column, sub-plot, sample]
+
+  - name: entry_type_vocabulary
+    description: Entry type must be valid
+    applies_to: [ObservationUnit]
+    field: entry_type
+    enum: [test, check, filler]
+
+  - name: growth_facility_type_vocabulary
+    description: Growth facility type must be valid
+    applies_to: [Study]
+    field: growth_facility_type
+    enum: [field, greenhouse, growth chamber, phytotron, open top chamber, glasshouse]
+
+  # Reference integrity - study_id references
+  - name: biological_material_study_reference
+    description: BiologicalMaterial study_id must reference valid Study
+    applies_to: [BiologicalMaterial]
+    field: study_id
+    reference: Study.unique_id
+
+  - name: observation_unit_study_reference
+    description: ObservationUnit study_id must reference valid Study
+    applies_to: [ObservationUnit]
+    field: study_id
+    reference: Study.unique_id
+
+  - name: observed_variable_study_reference
+    description: ObservedVariable study_id must reference valid Study
+    applies_to: [ObservedVariable]
+    field: study_id
+    reference: Study.unique_id
+
+  - name: factor_study_reference
+    description: Factor study_id must reference valid Study
+    applies_to: [Factor]
+    field: study_id
+    reference: Study.unique_id
+
+  - name: event_study_reference
+    description: Event study_id must reference valid Study
+    applies_to: [Event]
+    field: study_id
+    reference: Study.unique_id
+
+  - name: environment_study_reference
+    description: Environment study_id must reference valid Study
+    applies_to: [Environment]
+    field: study_id
+    reference: Study.unique_id
+
+  - name: datafile_study_reference
+    description: DataFile study_id must reference valid Study
+    applies_to: [DataFile]
+    field: study_id
+    reference: Study.unique_id
+
+  - name: location_study_reference
+    description: Location study_id must reference valid Study
+    applies_to: [Location]
+    field: study_id
+    reference: Study.unique_id
+
+  - name: person_study_reference
+    description: Person study_id must reference valid Study
+    applies_to: [Person]
+    field: study_id
+    reference: Study.unique_id
+
+  - name: person_investigation_reference
+    description: Person investigation_id must reference valid Investigation
+    applies_to: [Person]
+    field: investigation_id
+    reference: Investigation.unique_id
+
+  # Reference integrity - other references
+  - name: sample_observation_unit_reference
+    description: Sample observation_unit_id must reference valid ObservationUnit
+    applies_to: [Sample]
+    field: observation_unit_id
+    reference: ObservationUnit.unique_id
+
+  - name: observation_unit_biological_material_reference
+    description: ObservationUnit biological_material_id must reference valid BiologicalMaterial
+    applies_to: [ObservationUnit]
+    field: biological_material_id
+    reference: BiologicalMaterial.unique_id
+
+  - name: event_observation_units_reference
+    description: Event observation_unit_ids must reference valid ObservationUnits
+    applies_to: [Event]
+    field: observation_unit_ids
+    reference: ObservationUnit.unique_id
+
+  # Uniqueness constraints
+  - name: unique_id_uniqueness
+    description: Entity unique_ids must be unique within parent scope
+    applies_to: [BiologicalMaterial, ObservationUnit, ObservedVariable, Event, Environment, Sample, Factor, DataFile]
+    field: unique_id
+    unique_within: parent
+
+  # URI format validations
+  - name: license_uri_format
+    description: License must be a valid URI
+    applies_to: [Investigation]
+    field: license
+    pattern: "^https?://.*$"
+
+  - name: datafile_link_format
+    description: DataFile link must be a valid URI
+    applies_to: [DataFile]
+    field: link
+    pattern: "^https?://.*$|^s3://.*$|^ftp://.*$"
+
+  # Altitude range
+  - name: altitude_range
+    description: Altitude must be reasonable (-500 to 9000 meters)
+    applies_to: [Study]
+    field: altitude
+    minimum: -500
+    maximum: 9000
+
+  # Cardinality constraints
+  - name: investigation_has_studies
+    description: Investigation must have at least one study
+    applies_to: [Investigation]
+    field: studies
+    min_items: 1
+
+  - name: investigation_has_contacts
+    description: Investigation must have at least one contact
+    applies_to: [Investigation]
+    field: contacts
+    min_items: 1
+
+
+  # ObservedVariable completeness
+  - name: observed_variable_trait_required
+    description: ObservedVariable must have trait or trait_accession_number
+    applies_to: [ObservedVariable]
+    condition: trait OR trait_accession_number
+
+  - name: observed_variable_method_required
+    description: ObservedVariable must have method or method_accession_number
+    applies_to: [ObservedVariable]
+    condition: method OR method_accession_number
+
+  - name: observed_variable_scale_required
+    description: ObservedVariable must have scale or scale_accession_number
+    applies_to: [ObservedVariable]
+    condition: scale OR scale_accession_number
+
+  # ISO date format
+  - name: date_format
+    description: Dates must be ISO 8601 format (YYYY-MM-DD)
+    applies_to: all
+    field: start_date
+    pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+
+  - name: end_date_format
+    description: End dates must be ISO 8601 format (YYYY-MM-DD)
+    applies_to: all
+    field: end_date
+    pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+
+  - name: submission_date_format
+    description: Submission date must be ISO 8601 format (YYYY-MM-DD)
+    applies_to: [Investigation, Study]
+    field: submission_date
+    pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+
+  - name: public_release_date_format
+    description: Public release date must be ISO 8601 format (YYYY-MM-DD)
+    applies_to: [Investigation, Study]
+    field: public_release_date
+    pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+
+# Entity definitions
+entities:
+
+  Investigation:
+    ontology_term: PPEO:investigation
+    description: >
+      A MIAPPE investigation represents a phenotyping project or experiment.
+      An investigation contains one or more studies and metadata about the
+      overall project, including submission information and licensing.
+    example:
+      unique_id: INV-DROUGHT-2024
+      title: Drought Tolerance in European Wheat Cultivars
+      description: Multi-year field study assessing drought response across 50 wheat varieties under controlled water deficit conditions
+      submission_date: "2024-03-15"
+      public_release_date: "2024-06-01"
+      license: https://creativecommons.org/licenses/by/4.0/
+      miappe_version: "1.2"
+      associated_publications:
+        - https://doi.org/10.1234/example.2024.001
+        - https://doi.org/10.1234/example.2024.002
+    fields:
+      - name: unique_id
+        codename: investigationDbId
+        type: string
+        required: true
+        description: Unique identifier for the investigation.
+        ontology_term: PPEO:hasIdentifier
+        constraints:
+          pattern: "^[A-Za-z0-9_-]+$"
+          min_length: 1
+          max_length: 100
+
+      - name: title
+        codename: investigationName
+        type: string
+        required: true
+        description: Human-readable title of the investigation.
+        ontology_term: PPEO:hasName
+        constraints:
+          min_length: 1
+          max_length: 255
+
+      - name: description
+        codename: investigationDescription
+        type: string
+        required: false
+        description: Detailed description of the investigation.
+        ontology_term: PPEO:hasDescription
+
+      - name: submission_date
+        codename: submissionDate
+        type: date
+        required: false
+        description: "Date submitted to archive. Format: ISO 8601 (YYYY-MM-DD)."
+        ontology_term: PPEO:hasSubmissionDate
+
+      - name: public_release_date
+        codename: publicReleaseDate
+        type: date
+        required: false
+        description: "Date of public release. Format: ISO 8601 (YYYY-MM-DD)."
+        ontology_term: PPEO:hasPublicReleaseDate
+
+      - name: license
+        codename: license
+        type: uri
+        required: false
+        description: URL to the license document.
+        ontology_term: PPEO:hasLicense
+
+      - name: miappe_version
+        codename: miappeVersion
+        type: string
+        required: false
+        description: Version of MIAPPE standard used.
+        ontology_term: PPEO:hasMIAPPEVersion
+        constraints:
+          pattern: "^[0-9]+\\.[0-9]+$"
+
+      - name: associated_publications
+        codename: publications
+        type: list
+        items: string
+        required: false
+        description: DOIs or URLs to associated publications.
+        ontology_term: PPEO:hasAssociatedPublication
+
+      - name: contacts
+        codename: contacts
+        type: list
+        items: Person
+        required: false
+        description: Persons associated with the investigation.
+        ontology_term: PPEO:hasPersonWithRole
+
+      - name: studies
+        codename: studies
+        type: list
+        items: Study
+        required: false
+        description: Studies within this investigation.
+        ontology_term: PPEO:hasPart
+
+  Study:
+    ontology_term: PPEO:study
+    description: >
+      A study represents a single experiment within an investigation.
+    example:
+      unique_id: STU-FIELD-2024
+      title: Field Trial Summer 2024
+      description: Randomized complete block design with 3 replicates testing 50 wheat cultivars
+      start_date: "2024-05-01"
+      end_date: "2024-09-30"
+      contact_institution: Wageningen University and Research
+      experimental_site_name: Wageningen Campus Field Station
+      latitude: 51.9851
+      longitude: 5.6631
+      altitude: 15.0
+      growth_facility_type: field
+      experimental_design_type: RCBD
+      experimental_design_description: Randomized complete block design with 3 blocks, 50 genotypes per block
+      observation_unit_level_hierarchy:
+        - block
+        - plot
+        - plant
+      observation_unit_description: Individual plots of 2x3 meters containing 6 rows of wheat
+      cultural_practices: Standard fertilization at 150 kg N/ha, no irrigation after flowering stage
+      map_of_experimental_design: https://example.org/study/STU-FIELD-2024/design.pdf
+    fields:
+      - name: unique_id
+        codename: studyDbId
+        type: string
+        required: true
+        description: Unique identifier for the study.
+        ontology_term: PPEO:hasIdentifier
+        constraints:
+          pattern: "^[A-Za-z0-9_-]+$"
+          min_length: 1
+          max_length: 100
+
+      - name: investigation_id
+        codename: trialDbId
+        type: string
+        required: true
+        description: Reference to the parent Investigation.
+        ontology_term: PPEO:belongsToInvestigation
+
+      - name: title
+        codename: studyName
+        type: string
+        required: true
+        description: Human-readable title of the study.
+        ontology_term: PPEO:hasName
+        constraints:
+          min_length: 1
+          max_length: 255
+
+      - name: description
+        codename: studyDescription
+        type: string
+        required: false
+        description: Detailed description of the study.
+        ontology_term: PPEO:hasDescription
+
+      - name: start_date
+        codename: startDate
+        type: datetime
+        required: false
+        description: "Start date/time. Format: ISO 8601."
+        ontology_term: PPEO:hasStartDateTime
+
+      - name: end_date
+        codename: endDate
+        type: datetime
+        required: false
+        description: "End date/time. Format: ISO 8601."
+        ontology_term: PPEO:hasEndDateTime
+
+      - name: contact_institution
+        codename: contactInstitution
+        type: string
+        required: false
+        description: Institution responsible for the study.
+        ontology_term: PPEO:hasContactInstitution
+
+      - name: geographic_location
+        codename: location
+        type: entity
+        items: Location
+        required: false
+        description: Geographic location of the study.
+        ontology_term: PPEO:hasLocation
+
+      - name: experimental_site_name
+        codename: locationName
+        type: string
+        required: false
+        description: Name of the experimental site.
+        ontology_term: PPEO:hasName
+
+      - name: latitude
+        codename: latitude
+        type: float
+        required: false
+        description: Latitude in decimal degrees (WGS84).
+        ontology_term: PPEO:hasLatitude
+        constraints:
+          minimum: -90
+          maximum: 90
+
+      - name: longitude
+        codename: longitude
+        type: float
+        required: false
+        description: Longitude in decimal degrees (WGS84).
+        ontology_term: PPEO:hasLongitude
+        constraints:
+          minimum: -180
+          maximum: 180
+
+      - name: altitude
+        codename: altitude
+        type: float
+        required: false
+        description: Altitude in meters above sea level.
+        ontology_term: PPEO:hasAltitude
+
+      - name: experimental_design_type
+        codename: experimentalDesignType
+        type: string
+        required: false
+        description: Type of experimental design.
+        ontology_term: PPEO:hasExperimentalDesign
+
+      - name: experimental_design_description
+        codename: experimentalDesignDescription
+        type: string
+        required: false
+        description: Description of the experimental design.
+        ontology_term: PPEO:hasDescription
+
+      - name: observation_unit_level_hierarchy
+        codename: observationLevels
+        type: list
+        items: string
+        required: false
+        description: Hierarchy of observation unit levels.
+        ontology_term: PPEO:hasObservationLevelHierarchy
+
+      - name: observation_unit_description
+        codename: observationUnitDescription
+        type: string
+        required: false
+        description: Description of observation units.
+        ontology_term: PPEO:hasObservationUnitDescription
+
+      - name: growth_facility_type
+        codename: growthFacility
+        type: string
+        required: false
+        description: Type of growth facility.
+        ontology_term: PPEO:hasType
+
+      - name: cultural_practices
+        codename: culturalPractices
+        type: string
+        required: false
+        description: Cultural practices applied.
+        ontology_term: PPEO:hasCulturalPractices
+
+      - name: map_of_experimental_design
+        codename: documentationURL
+        type: uri
+        required: false
+        description: URL to experimental design map.
+        ontology_term: PPEO:hasExperimentalDesignMap
+
+      - name: persons
+        codename: contacts
+        type: list
+        items: Person
+        required: false
+        description: Persons involved in the study.
+        ontology_term: PPEO:hasPersonWithRole
+
+      - name: data_files
+        codename: dataFiles
+        type: list
+        items: DataFile
+        required: false
+        description: Data files associated with the study.
+        ontology_term: PPEO:hasDataFile
+
+      - name: biological_materials
+        codename: germplasm
+        type: list
+        items: BiologicalMaterial
+        required: false
+        description: Biological materials used.
+        ontology_term: PPEO:hasBiologicalMaterial
+
+      - name: observation_units
+        codename: observationUnits
+        type: list
+        items: ObservationUnit
+        required: false
+        description: Observation units in the study.
+        ontology_term: PPEO:hasPart
+
+      - name: observed_variables
+        codename: observationVariables
+        type: list
+        items: ObservedVariable
+        required: false
+        description: Variables observed.
+        ontology_term: PPEO:hasVariable
+
+      - name: factors
+        codename: experimentalFactors
+        type: list
+        items: Factor
+        required: false
+        description: Experimental factors.
+        ontology_term: PPEO:hasFactor
+
+      - name: events
+        codename: events
+        type: list
+        items: Event
+        required: false
+        description: Events during the study.
+        ontology_term: PPEO:hasEvent
+
+      - name: environments
+        codename: environmentParameters
+        type: list
+        items: Environment
+        required: false
+        description: Environmental conditions.
+        ontology_term: PPEO:hasEnvironment
+
+  Person:
+    ontology_term: PPEO:person
+    description: A person involved in an investigation or study.
+    example:
+      name: Dr. Maria van der Berg
+      email: m.vanderberg@wur.nl
+      institution: Wageningen University and Research
+      role: Principal Investigator
+      orcid: 0000-0001-2345-6789
+      investigation_id: INV-WHEAT-2024
+    fields:
+      - name: name
+        codename: name
+        type: string
+        required: true
+        description: Full name of the person.
+        ontology_term: PPEO:hasName
+        constraints:
+          min_length: 1
+          max_length: 255
+
+      - name: email
+        codename: email
+        type: string
+        required: false
+        description: Email address.
+        ontology_term: PPEO:hasEmailContact
+        constraints:
+          pattern: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+
+      - name: institution
+        codename: instituteName
+        type: string
+        required: false
+        description: Affiliation or institution.
+        ontology_term: PPEO:hasAffiliation
+
+      - name: role
+        codename: type
+        type: string
+        required: false
+        description: Role in the investigation or study.
+        ontology_term: PPEO:hasRole
+
+      - name: orcid
+        codename: orcid
+        type: string
+        required: false
+        description: "ORCID identifier (format: XXXX-XXXX-XXXX-XXXX)."
+        ontology_term: PPEO:hasIdentifier
+        constraints:
+          pattern: "^[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X]$"
+
+      # Reference fields (auto-filled from context)
+      - name: investigation_id
+        codename: trialDbId
+        type: string
+        required: false
+        description: Reference to parent Investigation (for investigation contacts).
+        ontology_term: PPEO:belongsToInvestigation
+
+      - name: study_id
+        codename: studyDbId
+        type: string
+        required: false
+        description: Reference to parent Study (for study personnel).
+        ontology_term: PPEO:belongsToStudy
+
+  BiologicalMaterial:
+    ontology_term: PPEO:biological_material
+    description: Biological material (germplasm) used in a study.
+    example:
+      unique_id: BM-WHEAT-001
+      study_id: STU-FIELD-2024
+      organism: Triticum aestivum
+      genus: Triticum
+      species: aestivum
+      infraspecific_name: cv. Apache
+      accession_number: PI-123456
+      biological_material_description: Winter wheat cultivar adapted to European conditions with moderate drought tolerance
+      biological_material_latitude: 48.8566
+      biological_material_longitude: 2.3522
+      biological_material_altitude: 35.0
+      biological_material_coordinates_uncertainty: 100m
+      biological_material_preprocessing: Seeds vernalized at 4C for 8 weeks
+      material_source_doi: https://doi.org/10.5281/zenodo.1234567
+      material_source_accession_number: GRIN-12345
+      material_source_accession_name: Apache Winter Wheat
+      material_source_institute_code: NLD037
+      material_source_institute_name: Centre for Genetic Resources Netherlands
+      external_references:
+        - GRIN:PI123456
+        - EBI:12345
+    fields:
+      - name: unique_id
+        codename: germplasmDbId
+        type: string
+        required: true
+        description: Unique identifier for the biological material.
+        ontology_term: PPEO:hasIdentifier
+        constraints:
+          pattern: "^[A-Za-z0-9_-]+$"
+          min_length: 1
+          max_length: 100
+
+      - name: study_id
+        codename: studyDbId
+        type: string
+        required: true
+        description: Reference to the parent Study.
+        ontology_term: PPEO:belongsToStudy
+
+      - name: organism
+        codename: species
+        type: string
+        required: false
+        description: Scientific name (genus and species).
+
+      - name: genus
+        codename: genus
+        type: string
+        required: false
+        description: Genus of the organism.
+        ontology_term: PPEO:hasGenus
+
+      - name: species
+        codename: speciesName
+        type: string
+        required: false
+        description: Species epithet.
+        ontology_term: PPEO:hasSpecies
+
+      - name: infraspecific_name
+        codename: subtaxa
+        type: string
+        required: false
+        description: Subspecies, variety, or cultivar.
+        ontology_term: PPEO:hasInfraspecificName
+
+      - name: material_source
+        codename: seedSource
+        type: entity
+        items: MaterialSource
+        required: false
+        description: Reference to material source.
+        ontology_term: PPEO:hasMaterialSource
+
+      - name: accession_number
+        codename: accessionNumber
+        type: string
+        required: false
+        description: Genebank accession number.
+        ontology_term: PPEO:hasGermplasmAccessionNumber
+
+      - name: biological_material_description
+        codename: germplasmName
+        type: string
+        required: false
+        description: Description of the biological material.
+        ontology_term: PPEO:hasDescription
+
+      - name: biological_material_latitude
+        codename: originLatitude
+        type: float
+        required: false
+        description: Latitude of collection site.
+        ontology_term: PPEO:hasLatitude
+        constraints:
+          minimum: -90
+          maximum: 90
+
+      - name: biological_material_longitude
+        codename: originLongitude
+        type: float
+        required: false
+        description: Longitude of collection site.
+        ontology_term: PPEO:hasLongitude
+        constraints:
+          minimum: -180
+          maximum: 180
+
+      - name: biological_material_altitude
+        codename: originAltitude
+        type: float
+        required: false
+        description: Altitude of collection site.
+        ontology_term: PPEO:hasAltitude
+
+      - name: biological_material_coordinates_uncertainty
+        codename: coordinateUncertainty
+        type: string
+        required: false
+        description: Coordinate uncertainty.
+        ontology_term: PPEO:hasUncertainty
+
+      - name: biological_material_preprocessing
+        codename: seedSourceDescription
+        type: string
+        required: false
+        description: Preprocessing applied.
+        ontology_term: PPEO:hasPreprocessing
+
+      # New in MIAPPE 1.2: Material source detail fields
+      - name: material_source_doi
+        codename: seedSourceDOI
+        type: uri
+        required: false
+        description: DOI of the material source.
+        ontology_term: PPEO:hasExternalIdentifier
+
+      - name: material_source_accession_number
+        codename: sourceAccessionNumber
+        type: string
+        required: false
+        description: Accession number at the source institute.
+        ontology_term: PPEO:hasGermplasmAccessionNumber
+
+      - name: material_source_accession_name
+        codename: sourceAccessionName
+        type: string
+        required: false
+        description: Accession name at the source institute.
+        ontology_term: PPEO:hasName
+
+      - name: material_source_institute_code
+        codename: instituteCode
+        type: string
+        required: false
+        description: FAO WIEWS institute code of the source.
+        ontology_term: PPEO:hasInstituteCode
+
+      - name: material_source_institute_name
+        codename: instituteName
+        type: string
+        required: false
+        description: Name of the source institute.
+        ontology_term: PPEO:hasName
+
+      - name: material_source_other_ids
+        codename: externalReferences
+        type: list
+        items: string
+        required: false
+        description: Other identifiers at the source institute.
+        ontology_term: PPEO:hasExternalIdentifier
+
+      - name: material_source_latitude
+        codename: sourceLatitude
+        type: float
+        required: false
+        description: Latitude of the source institute.
+        ontology_term: PPEO:hasLatitude
+        constraints:
+          minimum: -90
+          maximum: 90
+
+      - name: material_source_longitude
+        codename: sourceLongitude
+        type: float
+        required: false
+        description: Longitude of the source institute.
+        ontology_term: PPEO:hasLongitude
+        constraints:
+          minimum: -180
+          maximum: 180
+
+      - name: external_references
+        codename: germplasmPUI
+        type: list
+        items: string
+        required: false
+        description: External database identifiers.
+        ontology_term: PPEO:hasExternalIdentifier
+
+  ObservationUnit:
+    ontology_term: PPEO:observation_unit
+    description: Smallest unit on which observations are made.
+    example:
+      unique_id: OU-PLOT-001
+      study_id: STU-FIELD-2024
+      observation_unit_type: plot
+      biological_material_id: BM-WHEAT-001
+      spatial_distribution_type: grid
+      spatial_distribution: Block A, Row 1, Column 1
+      observation_unit_x_ref: "1"
+      observation_unit_y_ref: "1"
+      observation_unit_block: A
+      observation_unit_replicate: "1"
+      entry_type: test
+      observation_level: plot
+      observation_level_code: A-1-1
+      external_references:
+        - BrAPI:OU123456
+    fields:
+      - name: unique_id
+        codename: observationUnitDbId
+        type: string
+        required: true
+        description: Unique identifier for the observation unit.
+        ontology_term: PPEO:hasIdentifier
+        constraints:
+          pattern: "^[A-Za-z0-9_-]+$"
+          min_length: 1
+          max_length: 100
+
+      - name: study_id
+        codename: studyDbId
+        type: string
+        required: true
+        description: Reference to the parent Study.
+        ontology_term: PPEO:belongsToStudy
+
+      - name: observation_unit_type
+        codename: observationLevelName
+        type: string
+        required: false
+        description: Type (plant, plot, pot, etc.).
+        ontology_term: PPEO:hasObservationLevel
+
+      - name: biological_material_id
+        codename: germplasmDbId
+        type: string
+        required: false
+        description: Reference to biological material.
+        ontology_term: PPEO:hasBiologicalMaterial
+
+      - name: spatial_distribution_type
+        codename: positionCoordinateType
+        type: string
+        required: false
+        description: Type of spatial distribution.
+        ontology_term: PPEO:hasSpatialDistributionType
+
+      - name: spatial_distribution
+        codename: positionCoordinateDescription
+        type: string
+        required: false
+        description: Spatial position information.
+        ontology_term: PPEO:hasSpatialDistribution
+
+      - name: observation_unit_x_ref
+        codename: positionCoordinateX
+        type: string
+        required: false
+        description: X coordinate or column.
+        ontology_term: PPEO:hasSpatialDistribution
+
+      - name: observation_unit_y_ref
+        codename: positionCoordinateY
+        type: string
+        required: false
+        description: Y coordinate or row.
+        ontology_term: PPEO:hasSpatialDistribution
+
+      - name: observation_unit_block
+        codename: blockNumber
+        type: string
+        required: false
+        description: Block identifier.
+        ontology_term: PPEO:hasSpatialDistribution
+
+      - name: observation_unit_replicate
+        codename: replicate
+        type: string
+        required: false
+        description: Replicate number.
+        ontology_term: PPEO:hasEntryNumber
+
+      - name: entry_type
+        codename: entryType
+        type: string
+        required: false
+        description: Entry type (test, check, filler).
+        ontology_term: PPEO:hasEntryType
+
+      - name: observation_level
+        codename: observationLevel
+        type: string
+        required: false
+        description: Level in hierarchy.
+        ontology_term: PPEO:hasObservationLevel
+
+      - name: observation_level_code
+        codename: observationLevelCode
+        type: string
+        required: false
+        description: Code at observation level.
+        ontology_term: PPEO:hasIdentifier
+
+      - name: factor_values
+        codename: treatments
+        type: list
+        items: FactorValue
+        required: false
+        description: Factor values applied.
+        ontology_term: PPEO:hasFactorValue
+
+      - name: samples
+        codename: samples
+        type: list
+        items: Sample
+        required: false
+        description: Samples from this unit.
+        ontology_term: PPEO:hasPart
+
+      - name: external_references
+        codename: externalReferences
+        type: list
+        items: string
+        required: false
+        description: External identifiers.
+        ontology_term: PPEO:hasExternalIdentifier
+
+  ObservedVariable:
+    ontology_term: PPEO:observed_variable
+    description: Trait + Method + Scale combination for measurements.
+    example:
+      unique_id: VAR-PLANTHEIGHT
+      study_id: STU-FIELD-2024
+      name: Plant Height
+      trait: plant height
+      trait_accession_number: CO_321:0000020
+      trait_description: The height of the plant from soil surface to the tip of the main stem
+      trait_entity: whole plant
+      trait_entity_accession_number: PO:0000003
+      trait_characteristic: height
+      trait_characteristic_accession_number: PATO:0000119
+      method: Ruler measurement from soil to highest point
+      method_accession_number: CO_321:0000025
+      method_description: Manual measurement using a graduated ruler
+      method_reference: https://cropontology.org/term/CO_321:0000025
+      scale: cm
+      scale_accession_number: UO:0000015
+      scale_description: Continuous numeric scale in centimeters
+      time_scale: days after sowing
+      reference: https://cropontology.org/term/CO_321:0000020
+    fields:
+      - name: unique_id
+        codename: observationVariableDbId
+        type: string
+        required: true
+        description: Unique identifier.
+        ontology_term: PPEO:hasIdentifier
+        constraints:
+          pattern: "^[A-Za-z0-9_-]+$"
+          min_length: 1
+          max_length: 100
+
+      - name: study_id
+        codename: studyDbId
+        type: string
+        required: true
+        description: Reference to the parent Study.
+        ontology_term: PPEO:belongsToStudy
+
+      - name: name
+        codename: observationVariableName
+        type: string
+        required: true
+        description: Human-readable name.
+        ontology_term: PPEO:hasName
+        constraints:
+          min_length: 1
+          max_length: 255
+
+      - name: trait
+        codename: traitName
+        type: string
+        required: false
+        description: The trait being measured.
+        ontology_term: PPEO:hasTrait
+
+      - name: trait_accession_number
+        codename: traitDbId
+        type: string
+        required: false
+        description: Trait ontology accession.
+        ontology_term: PPEO:hasExternalIdentifier
+
+      - name: trait_description
+        codename: traitDescription
+        type: string
+        required: false
+        description: Description of the trait.
+        ontology_term: PPEO:hasDescription
+
+      # New in MIAPPE 1.2: Trait decomposition fields
+      - name: trait_entity
+        codename: traitEntity
+        type: string
+        required: false
+        description: The entity (plant part or whole) on which trait is observed.
+        ontology_term: PPEO:hasEntity
+
+      - name: trait_entity_accession_number
+        codename: traitEntityDbId
+        type: string
+        required: false
+        description: Ontology accession for the trait entity (e.g., PO term).
+        ontology_term: PPEO:hasExternalIdentifier
+
+      - name: trait_characteristic
+        codename: traitAttribute
+        type: string
+        required: false
+        description: The characteristic being measured on the entity (e.g., length, color).
+        ontology_term: PPEO:hasAttribute
+
+      - name: trait_characteristic_accession_number
+        codename: traitAttributeDbId
+        type: string
+        required: false
+        description: Ontology accession for the characteristic (e.g., PATO term).
+        ontology_term: PPEO:hasExternalIdentifier
+
+      - name: method
+        codename: methodName
+        type: string
+        required: false
+        description: Measurement method.
+        ontology_term: PPEO:hasMethod
+
+      - name: method_accession_number
+        codename: methodDbId
+        type: string
+        required: false
+        description: Method ontology accession.
+        ontology_term: PPEO:hasExternalIdentifier
+
+      - name: method_description
+        codename: methodDescription
+        type: string
+        required: false
+        description: Description of the method.
+        ontology_term: PPEO:hasDescription
+
+      # New in MIAPPE 1.2: Method reference
+      - name: method_reference
+        codename: methodReference
+        type: uri
+        required: false
+        description: URI reference to the method definition.
+        ontology_term: PPEO:hasExternalIdentifier
+
+      - name: scale
+        codename: scaleName
+        type: string
+        required: false
+        description: Scale or unit of measurement.
+        ontology_term: PPEO:hasScale
+
+      - name: scale_accession_number
+        codename: scaleDbId
+        type: string
+        required: false
+        description: Scale ontology accession.
+        ontology_term: PPEO:hasExternalIdentifier
+
+      - name: scale_description
+        codename: scaleDescription
+        type: string
+        required: false
+        description: Description of the scale.
+        ontology_term: PPEO:hasDescription
+
+      - name: time_scale
+        codename: growthStage
+        type: string
+        required: false
+        description: Time scale for observations.
+        ontology_term: PPEO:hasTimeScale
+
+      - name: reference
+        codename: documentationURL
+        type: uri
+        required: false
+        description: URI to variable definition.
+        ontology_term: PPEO:hasExternalIdentifier
+
+  Factor:
+    ontology_term: PPEO:factor
+    description: Experimental factor (controlled variable).
+    example:
+      unique_id: FAC-IRRIGATION
+      study_id: STU-FIELD-2024
+      name: Irrigation Treatment
+      description: Water stress treatment levels applied during reproductive growth stage
+      factor_type: treatment
+    fields:
+      - name: unique_id
+        codename: factorDbId
+        type: string
+        required: true
+        description: Unique identifier.
+        ontology_term: PPEO:hasIdentifier
+        constraints:
+          pattern: "^[A-Za-z0-9_-]+$"
+          min_length: 1
+          max_length: 100
+
+      - name: study_id
+        codename: studyDbId
+        type: string
+        required: true
+        description: Reference to the parent Study.
+        ontology_term: PPEO:belongsToStudy
+
+      - name: name
+        codename: factorName
+        type: string
+        required: true
+        description: Name of the factor.
+        ontology_term: PPEO:hasName
+        constraints:
+          min_length: 1
+          max_length: 255
+
+      - name: description
+        codename: factorDescription
+        type: string
+        required: false
+        description: Description of the factor.
+        ontology_term: PPEO:hasDescription
+
+      - name: factor_type
+        codename: factorType
+        type: string
+        required: false
+        description: Type (treatment, genotype, environment).
+        ontology_term: PPEO:hasType
+
+      - name: values
+        codename: factorValues
+        type: list
+        items: FactorValue
+        required: false
+        description: Possible values for this factor.
+        ontology_term: PPEO:hasModality
+
+  FactorValue:
+    ontology_term: PPEO:factor_value
+    description: A specific value or level of a factor.
+    example:
+      unique_id: FV-DROUGHT
+      factor_id: FAC-IRRIGATION
+      value: Drought stress
+      description: 50% reduction in irrigation from flowering stage until harvest
+    fields:
+      - name: unique_id
+        codename: factorValueDbId
+        type: string
+        required: true
+        description: Unique identifier.
+        ontology_term: PPEO:hasIdentifier
+        constraints:
+          pattern: "^[A-Za-z0-9_-]+$"
+          min_length: 1
+          max_length: 100
+
+      - name: factor_id
+        codename: factorDbId
+        type: string
+        required: false
+        description: Reference to parent factor.
+        ontology_term: PPEO:isModalityOf
+
+      - name: value
+        codename: value
+        type: string
+        required: true
+        description: The actual value or level.
+        ontology_term: PPEO:hasName
+        constraints:
+          min_length: 1
+
+      - name: description
+        codename: description
+        type: string
+        required: false
+        description: Description of this value.
+        ontology_term: PPEO:hasDescription
+
+  Event:
+    ontology_term: PPEO:event
+    description: A discrete occurrence during a study.
+    example:
+      unique_id: EVT-SOWING-001
+      study_id: STU-FIELD-2024
+      event_type: Sowing
+      date: "2024-05-01"
+      end_date: "2024-05-03"
+      description: Seeds sown at 300 seeds per square meter using mechanical drill seeder
+      observation_unit_ids:
+        - OU-PLOT-001
+        - OU-PLOT-002
+      event_accession_number: CO_715:0000007
+    fields:
+      - name: unique_id
+        codename: eventDbId
+        type: string
+        required: true
+        description: Unique identifier.
+        ontology_term: PPEO:hasIdentifier
+        constraints:
+          pattern: "^[A-Za-z0-9_-]+$"
+          min_length: 1
+          max_length: 100
+
+      - name: study_id
+        codename: studyDbId
+        type: string
+        required: true
+        description: Reference to the parent Study.
+        ontology_term: PPEO:belongsToStudy
+
+      - name: event_type
+        codename: eventType
+        type: string
+        required: true
+        description: Type of event.
+        ontology_term: PPEO:hasType
+        constraints:
+          min_length: 1
+          max_length: 255
+
+      - name: date
+        codename: date
+        type: datetime
+        required: false
+        description: When the event occurred.
+        ontology_term: PPEO:hasDateTime
+
+      - name: end_date
+        codename: endDate
+        type: datetime
+        required: false
+        description: End date if event spans a period.
+        ontology_term: PPEO:hasEndDateTime
+
+      - name: description
+        codename: eventDescription
+        type: string
+        required: false
+        description: Description of the event.
+        ontology_term: PPEO:hasDescription
+
+      - name: observation_unit_ids
+        codename: observationUnitDbIds
+        type: list
+        items: string
+        required: false
+        description: Observation units affected.
+        ontology_term: PPEO:hasObservedSubject
+
+      - name: event_accession_number
+        codename: eventTypeDbId
+        type: string
+        required: false
+        description: Event type ontology accession.
+        ontology_term: PPEO:hasExternalIdentifier
+
+  Environment:
+    ontology_term: PPEO:environment
+    description: Environmental conditions recorded during a study.
+    example:
+      unique_id: ENV-TEMP-001
+      study_id: STU-FIELD-2024
+      parameter: Air temperature
+      parameter_accession_number: ENVO:09200001
+      value: "22.5"
+      unit: degrees Celsius
+      date: "2024-07-15"
+      description: Average daily temperature during flowering period measured at 2m height
+    fields:
+      - name: unique_id
+        codename: environmentParameterDbId
+        type: string
+        required: true
+        description: Unique identifier.
+        ontology_term: PPEO:hasIdentifier
+        constraints:
+          pattern: "^[A-Za-z0-9_-]+$"
+          min_length: 1
+          max_length: 100
+
+      - name: study_id
+        codename: studyDbId
+        type: string
+        required: true
+        description: Reference to the parent Study.
+        ontology_term: PPEO:belongsToStudy
+
+      - name: parameter
+        codename: parameterName
+        type: string
+        required: true
+        description: Environmental parameter name.
+        ontology_term: PPEO:hasEnvironmentParameter
+        constraints:
+          min_length: 1
+          max_length: 255
+
+      - name: parameter_accession_number
+        codename: parameterPUI
+        type: string
+        required: false
+        description: Parameter ontology accession.
+        ontology_term: PPEO:hasExternalIdentifier
+
+      - name: value
+        codename: value
+        type: string
+        required: false
+        description: Value of the parameter.
+        ontology_term: PPEO:hasValue
+
+      - name: unit
+        codename: unit
+        type: string
+        required: false
+        description: Unit of measurement.
+
+      - name: date
+        codename: date
+        type: datetime
+        required: false
+        description: When recorded.
+        ontology_term: PPEO:hasDateTime
+
+      - name: description
+        codename: description
+        type: string
+        required: false
+        description: Additional description.
+        ontology_term: PPEO:hasDescription
+
+  Sample:
+    ontology_term: PPEO:sample
+    description: A sample derived from an observation unit.
+    example:
+      unique_id: SAM-LEAF-001
+      observation_unit_id: OU-PLOT-001
+      plant_structural_development_stage: flowering
+      plant_anatomical_entity: flag leaf
+      collection_date: "2024-07-15"
+      description: Flag leaf sample collected for RNA extraction and transcriptome analysis
+      external_references:
+        - BioSamples:SAMEA123456
+        - ENA:ERS123456
+    fields:
+      - name: unique_id
+        codename: sampleDbId
+        type: string
+        required: true
+        description: Unique identifier.
+        ontology_term: PPEO:hasIdentifier
+        constraints:
+          pattern: "^[A-Za-z0-9_-]+$"
+          min_length: 1
+          max_length: 100
+
+      - name: observation_unit_id
+        codename: observationUnitDbId
+        type: string
+        required: false
+        description: Source observation unit.
+        ontology_term: PPEO:derivesFrom
+
+      - name: plant_structural_development_stage
+        codename: sampleTimestamp
+        type: string
+        required: false
+        description: Development stage when collected.
+        ontology_term: PPEO:hasPlantStructureDevelopmentStage
+
+      - name: plant_anatomical_entity
+        codename: tissueType
+        type: string
+        required: false
+        description: Plant part sampled.
+        ontology_term: PPEO:hasPlantAnatomicalEntity
+
+      - name: collection_date
+        codename: collectionDate
+        type: datetime
+        required: false
+        description: When collected.
+        ontology_term: PPEO:hasCollectionDate
+
+      - name: description
+        codename: sampleDescription
+        type: string
+        required: false
+        description: Description of the sample.
+        ontology_term: PPEO:hasDescription
+
+      - name: external_references
+        codename: externalReferences
+        type: list
+        items: string
+        required: false
+        description: External identifiers.
+        ontology_term: PPEO:hasExternalIdentifier
+
+  DataFile:
+    ontology_term: PPEO:data_file
+    description: A data file associated with a study.
+    example:
+      unique_id: DF-PHENOTYPES-001
+      study_id: STU-FIELD-2024
+      name: phenotype_measurements.csv
+      link: https://doi.org/10.5281/zenodo.1234567
+      description: Raw phenotype measurements for all plots including plant height, flowering time, and yield
+      version: "1.0"
+      file_type: text/csv
+    fields:
+      - name: unique_id
+        codename: dataFileDbId
+        type: string
+        required: true
+        description: Unique identifier.
+        ontology_term: PPEO:hasIdentifier
+        constraints:
+          pattern: "^[A-Za-z0-9_-]+$"
+          min_length: 1
+          max_length: 100
+
+      - name: study_id
+        codename: studyDbId
+        type: string
+        required: true
+        description: Reference to the parent Study.
+        ontology_term: PPEO:belongsToStudy
+
+      - name: name
+        codename: dataFileName
+        type: string
+        required: true
+        description: Filename or name.
+        ontology_term: PPEO:hasName
+        constraints:
+          min_length: 1
+          max_length: 255
+
+      - name: link
+        codename: url
+        type: uri
+        required: false
+        description: URL or path to file.
+        ontology_term: PPEO:hasDigitalLocation
+
+      - name: description
+        codename: dataFileDescription
+        type: string
+        required: false
+        description: Description of contents.
+        ontology_term: PPEO:hasDescription
+
+      - name: version
+        codename: fileVersion
+        type: string
+        required: false
+        description: File version.
+        ontology_term: PPEO:hasVersion
+
+      - name: file_type
+        codename: fileType
+        type: string
+        required: false
+        description: File format.
+        ontology_term: PPEO:hasType
+
+  Location:
+    ontology_term: PPEO:location
+    description: A geographic location.
+    example:
+      unique_id: LOC-WUR
+      study_id: STU-FIELD-2024
+      name: Wageningen Campus Field Station
+      abbreviation: WUR-FS
+      country: Netherlands
+      country_code: NLD
+      latitude: 51.9851
+      longitude: 5.6631
+      altitude: 15.0
+      description: Experimental field station with clay soil, temperate maritime climate
+      address: Droevendaalsesteeg 1, 6708 PB Wageningen, Netherlands
+      location_type: field
+    fields:
+      - name: unique_id
+        codename: locationDbId
+        type: string
+        required: true
+        description: Unique identifier.
+        ontology_term: PPEO:hasIdentifier
+        constraints:
+          pattern: "^[A-Za-z0-9_-]+$"
+          min_length: 1
+          max_length: 100
+
+      - name: study_id
+        codename: studyDbId
+        type: string
+        required: true
+        description: Reference to the parent Study.
+        ontology_term: PPEO:belongsToStudy
+
+      - name: name
+        codename: locationName
+        type: string
+        required: true
+        description: Name of the location.
+        ontology_term: PPEO:hasName
+        constraints:
+          min_length: 1
+          max_length: 255
+
+      - name: abbreviation
+        codename: abbreviation
+        type: string
+        required: false
+        description: Short code.
+        ontology_term: PPEO:hasAbbreviation
+        constraints:
+          max_length: 20
+
+      - name: country
+        codename: countryName
+        type: string
+        required: false
+        description: Country name.
+        ontology_term: PPEO:hasCountry
+
+      - name: country_code
+        codename: countryCode
+        type: string
+        required: false
+        description: ISO 3166-1 alpha-3 code.
+        ontology_term: PPEO:hasCountryCode
+        constraints:
+          pattern: "^[A-Z]{3}$"
+
+      - name: latitude
+        codename: latitude
+        type: float
+        required: false
+        description: Latitude (WGS84).
+        ontology_term: PPEO:hasLatitude
+        constraints:
+          minimum: -90
+          maximum: 90
+
+      - name: longitude
+        codename: longitude
+        type: float
+        required: false
+        description: Longitude (WGS84).
+        ontology_term: PPEO:hasLongitude
+        constraints:
+          minimum: -180
+          maximum: 180
+
+      - name: altitude
+        codename: altitude
+        type: float
+        required: false
+        description: Altitude in meters.
+        ontology_term: PPEO:hasAltitude
+
+      - name: description
+        codename: locationDescription
+        type: string
+        required: false
+        description: Description.
+        ontology_term: PPEO:hasDescription
+
+      - name: address
+        codename: address
+        type: string
+        required: false
+        description: Full address.
+        ontology_term: PPEO:hasAddress
+
+      - name: location_type
+        codename: locationType
+        type: string
+        required: false
+        description: Type (field, greenhouse, etc.).
+        ontology_term: PPEO:hasType
+
+  MaterialSource:
+    ontology_term: PPEO:material_source
+    description: Source of biological material (genebank, institution).
+    example:
+      unique_id: SRC-CGNGENEBANK
+      name: Centre for Genetic Resources Netherlands
+      description: Dutch national genebank for plant genetic resources, part of WUR
+      institute_code: NLD037
+      country: Netherlands
+      address: Droevendaalsesteeg 1, 6708 PB Wageningen, Netherlands
+      latitude: 51.9851
+      longitude: 5.6631
+    fields:
+      - name: unique_id
+        codename: seedSourceDbId
+        type: string
+        required: true
+        description: Unique identifier.
+        ontology_term: PPEO:hasIdentifier
+        constraints:
+          pattern: "^[A-Za-z0-9_-]+$"
+          min_length: 1
+          max_length: 100
+
+      - name: name
+        codename: seedSourceName
+        type: string
+        required: true
+        description: Name of the source.
+        ontology_term: PPEO:hasName
+        constraints:
+          min_length: 1
+          max_length: 255
+
+      - name: description
+        codename: seedSourceDescription
+        type: string
+        required: false
+        description: Description.
+        ontology_term: PPEO:hasDescription
+
+      - name: institute_code
+        codename: instituteCode
+        type: string
+        required: false
+        description: FAO WIEWS institute code.
+        ontology_term: PPEO:hasInstituteCode
+
+      - name: country
+        codename: countryOfOrigin
+        type: string
+        required: false
+        description: Country.
+        ontology_term: PPEO:hasCountry
+
+      - name: address
+        codename: address
+        type: string
+        required: false
+        description: Address.
+        ontology_term: PPEO:hasAddress
+
+      - name: latitude
+        codename: latitude
+        type: float
+        required: false
+        description: Latitude.
+        ontology_term: PPEO:hasLatitude
+        constraints:
+          minimum: -90
+          maximum: 90
+
+      - name: longitude
+        codename: longitude
+        type: float
+        required: false
+        description: Longitude.
+        ontology_term: PPEO:hasLongitude
+        constraints:
+          minimum: -180
+          maximum: 180

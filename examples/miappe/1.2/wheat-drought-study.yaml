@@ -1,0 +1,536 @@
+# MIAPPE v1.2 Example: Wheat Drought Stress Field Trial
+# Demonstrates new MIAPPE 1.2 features:
+# - Trait decomposition (trait_entity, trait_characteristic)
+# - Material source detail fields
+# - Method references
+# - BrAPI-compatible codenames
+
+unique_id: INV-2024-WHEAT-001
+title: Impact of drought stress on wheat yield and quality traits
+description: >
+  Multi-year field trial investigating the effects of controlled drought stress
+  on winter wheat (Triticum aestivum) yield components and grain quality parameters.
+  Three wheat varieties with contrasting drought tolerance were evaluated under
+  well-watered and water-limited conditions.
+submission_date: "2024-03-15"
+public_release_date: "2025-01-01"
+license: https://creativecommons.org/licenses/by/4.0/
+miappe_version: "1.2"
+associated_publications:
+  - "doi:10.1234/example.2024.001"
+  - "doi:10.1234/example.2024.002"
+
+contacts:
+  - investigation_id: INV-2024-WHEAT-001
+    name: Dr. Maria Schmidt
+    email: m.schmidt@plant-research.edu
+    institution: Institute for Plant Sciences
+    role: Principal Investigator
+    orcid: "0000-0001-2345-6789"
+  - investigation_id: INV-2024-WHEAT-001
+    name: Dr. Thomas Weber
+    email: t.weber@plant-research.edu
+    institution: Institute for Plant Sciences
+    role: Co-Investigator
+    orcid: "0000-0002-3456-7890"
+
+studies:
+  - unique_id: STU-2024-WHEAT-FT01
+    investigation_id: INV-2024-WHEAT-001
+    title: Wheat drought stress field trial 2024
+    description: >
+      Randomized complete block design with three replications evaluating
+      drought stress effects on wheat performance at the Experimental Farm.
+    start_date: "2023-10-15T08:00:00"
+    end_date: "2024-07-20T18:00:00"
+    contact_institution: Institute for Plant Sciences
+    experimental_site_name: Experimental Farm South
+    latitude: 48.1351
+    longitude: 11.5820
+    altitude: 520.0
+    experimental_design_type: Randomized Complete Block Design
+    experimental_design_description: >
+      3 varieties x 2 treatments x 3 blocks = 18 plots.
+      Each plot is 6m x 1.5m with 6 rows at 25cm spacing.
+    observation_unit_level_hierarchy:
+      - block
+      - plot
+      - plant
+    observation_unit_description: Individual plots of 9 m2
+    growth_facility_type: field
+    cultural_practices: >
+      Standard winter wheat cultivation. Sowing density 350 seeds/m2.
+      Fertilization: 180 kg N/ha split in three applications.
+      Fungicide treatment according to regional recommendations.
+    map_of_experimental_design: https://example.com/maps/STU-2024-WHEAT-FT01.pdf
+
+    persons:
+      - study_id: STU-2024-WHEAT-FT01
+        name: Anna Mueller
+        email: a.mueller@plant-research.edu
+        institution: Institute for Plant Sciences
+        role: Field Technician
+      - study_id: STU-2024-WHEAT-FT01
+        name: Klaus Richter
+        email: k.richter@plant-research.edu
+        institution: Institute for Plant Sciences
+        role: Data Manager
+        orcid: "0000-0003-4567-8901"
+
+    geographic_location:
+      unique_id: LOC-EXP-FARM-SOUTH
+      study_id: STU-2024-WHEAT-FT01
+      name: Experimental Farm South
+      abbreviation: EFS
+      country: Germany
+      country_code: DEU
+      latitude: 48.1351
+      longitude: 11.5820
+      altitude: 520.0
+      description: University experimental farm, loamy soil, temperate climate
+      address: Feldweg 1, 85354 Freising, Germany
+      location_type: field
+
+    # BiologicalMaterial with new MIAPPE 1.2 material source fields
+    biological_materials:
+      - unique_id: BM-WHEAT-JULIUS
+        study_id: STU-2024-WHEAT-FT01
+        organism: Triticum aestivum
+        genus: Triticum
+        species: aestivum
+        infraspecific_name: Julius
+        accession_number: GBIS-DE-2015-001
+        biological_material_description: >
+          High-yielding winter wheat variety with moderate drought tolerance.
+          Released 2015, widely grown in Central Europe.
+        # New in MIAPPE 1.2: Material source detail fields
+        material_source_doi: https://doi.org/10.5281/zenodo.7654321
+        material_source_accession_number: GENEBANK-JUL-2015
+        material_source_accession_name: Julius Winter Wheat Elite Line
+        material_source_institute_code: DEU001
+        material_source_institute_name: Saatzucht GmbH
+        material_source_other_ids:
+          - "EURISCO:DEU146-JULIUS"
+          - "GRIN:PI-654321"
+        material_source_latitude: 52.3759
+        material_source_longitude: 9.7320
+        external_references:
+          - "EURISCO:DEU146-JULIUS"
+          - "GRIN:PI-654321"
+        material_source:
+          unique_id: MS-SAATZUCHT-01
+          name: Saatzucht GmbH
+          description: Commercial seed supplier
+          institute_code: DEU001
+          country: Germany
+          address: Saatgutweg 10, 30159 Hannover
+          latitude: 52.3759
+          longitude: 9.7320
+
+      - unique_id: BM-WHEAT-TOBAK
+        study_id: STU-2024-WHEAT-FT01
+        organism: Triticum aestivum
+        genus: Triticum
+        species: aestivum
+        infraspecific_name: Tobak
+        accession_number: GBIS-DE-2012-042
+        biological_material_description: >
+          Winter wheat variety known for high protein content and
+          good drought tolerance. Released 2012.
+        material_source_doi: https://doi.org/10.5281/zenodo.7654322
+        material_source_accession_number: KWS-TOB-2012
+        material_source_accession_name: Tobak Premium Wheat
+        material_source_institute_code: DEU002
+        material_source_institute_name: KWS SAAT SE
+        external_references:
+          - "EURISCO:DEU146-TOBAK"
+        material_source:
+          unique_id: MS-SAATZUCHT-02
+          name: KWS SAAT SE
+          description: Major European seed company
+          institute_code: DEU002
+          country: Germany
+          address: Grimsehlstr. 31, 37574 Einbeck
+
+      - unique_id: BM-WHEAT-BENCHMARK
+        study_id: STU-2024-WHEAT-FT01
+        organism: Triticum aestivum
+        genus: Triticum
+        species: aestivum
+        infraspecific_name: Benchmark
+        accession_number: GBIS-DE-2018-015
+        biological_material_description: >
+          Modern high-yielding variety with limited drought tolerance.
+          Used as susceptible control.
+        material_source_accession_number: IPK-BM-2018
+        material_source_institute_code: DEU146
+        material_source_institute_name: IPK Gatersleben
+        external_references:
+          - "EURISCO:DEU146-BENCHMARK"
+
+    factors:
+      - unique_id: FAC-WATER-REGIME
+        study_id: STU-2024-WHEAT-FT01
+        name: Water regime
+        description: Irrigation treatment applied during grain filling stage
+        factor_type: abiotic treatment
+        values:
+          - unique_id: FV-WELL-WATERED
+            factor_id: FAC-WATER-REGIME
+            value: Well-watered
+            description: >
+              Full irrigation maintaining soil moisture at 70-80% field capacity
+              throughout the growing season.
+          - unique_id: FV-DROUGHT-STRESS
+            factor_id: FAC-WATER-REGIME
+            value: Drought stress
+            description: >
+              Irrigation withheld from BBCH 61 (beginning of flowering) until
+              BBCH 77 (late milk stage), reducing soil moisture to 30-40% FC.
+
+    # ObservedVariable with new MIAPPE 1.2 trait decomposition fields
+    observed_variables:
+      - unique_id: VAR-PLANT-HEIGHT
+        study_id: STU-2024-WHEAT-FT01
+        name: Plant height at maturity
+        trait: Plant height
+        trait_accession_number: CO_321:0000994
+        trait_description: Height of the main stem from soil surface to tip of spike
+        # New in MIAPPE 1.2: Trait decomposition
+        trait_entity: whole plant
+        trait_entity_accession_number: PO:0000003
+        trait_characteristic: height
+        trait_characteristic_accession_number: PATO:0000119
+        method: Ruler measurement
+        method_accession_number: CO_321:0000859
+        method_description: Measured with a ruler from ground level to spike tip
+        # New in MIAPPE 1.2: Method reference
+        method_reference: https://cropontology.org/term/CO_321:0000859
+        scale: cm
+        scale_accession_number: UO:0000015
+        scale_description: Centimeters, range 0-200
+        time_scale: At BBCH 92 (grain hard)
+
+      - unique_id: VAR-GRAIN-YIELD
+        study_id: STU-2024-WHEAT-FT01
+        name: Grain yield
+        trait: Grain yield per plot
+        trait_accession_number: CO_321:0000198
+        trait_description: Total grain weight per plot, adjusted to 14% moisture
+        trait_entity: grain
+        trait_entity_accession_number: PO:0009010
+        trait_characteristic: mass
+        trait_characteristic_accession_number: PATO:0000125
+        method: Combine harvest and weighing
+        method_accession_number: CO_321:0000725
+        method_description: Plot combine harvest, cleaned and weighed
+        method_reference: https://cropontology.org/term/CO_321:0000725
+        scale: kg/ha
+        scale_accession_number: UO:0010053
+        scale_description: Kilograms per hectare
+        time_scale: At harvest maturity
+
+      - unique_id: VAR-TKW
+        study_id: STU-2024-WHEAT-FT01
+        name: Thousand kernel weight
+        trait: Thousand kernel weight
+        trait_accession_number: CO_321:0000336
+        trait_description: Weight of 1000 grains at 14% moisture content
+        trait_entity: grain
+        trait_entity_accession_number: PO:0009010
+        trait_characteristic: mass
+        trait_characteristic_accession_number: PATO:0000125
+        method: Seed counter and balance
+        method_accession_number: CO_321:0000726
+        method_description: Counted 1000 seeds using automatic counter, weighed on precision balance
+        method_reference: https://cropontology.org/term/CO_321:0000726
+        scale: g
+        scale_accession_number: UO:0000021
+        scale_description: Grams
+
+      - unique_id: VAR-PROTEIN
+        study_id: STU-2024-WHEAT-FT01
+        name: Grain protein content
+        trait: Grain protein content
+        trait_accession_number: CO_321:0000270
+        trait_description: Total nitrogen content multiplied by 5.7
+        trait_entity: grain
+        trait_entity_accession_number: PO:0009010
+        trait_characteristic: protein content
+        trait_characteristic_accession_number: PATO:0001025
+        method: NIR spectroscopy
+        method_accession_number: CO_321:0000727
+        method_description: Near-infrared reflectance spectroscopy on whole grain
+        method_reference: https://cropontology.org/term/CO_321:0000727
+        scale: "%"
+        scale_accession_number: UO:0000187
+        scale_description: Percentage dry matter basis
+
+      - unique_id: VAR-CHLOROPHYLL
+        study_id: STU-2024-WHEAT-FT01
+        name: Chlorophyll content
+        trait: Leaf chlorophyll content
+        trait_accession_number: CO_321:0000400
+        trait_description: Relative chlorophyll content of flag leaf
+        trait_entity: flag leaf
+        trait_entity_accession_number: PO:0020104
+        trait_characteristic: pigment content
+        trait_characteristic_accession_number: PATO:0001540
+        method: SPAD meter
+        method_accession_number: CO_321:0000731
+        method_description: SPAD-502 chlorophyll meter, average of 5 readings per plot
+        method_reference: https://www.konicaminolta.com/instruments/download/instruction_manual/
+        scale: SPAD units
+        scale_description: Dimensionless SPAD units, range 0-80
+
+    # Representative observation units (reduced set for example clarity)
+    observation_units:
+      # Block 1: Control plots
+      - unique_id: OU-B1-P1
+        study_id: STU-2024-WHEAT-FT01
+        observation_unit_type: plot
+        biological_material_id: BM-WHEAT-JULIUS
+        spatial_distribution_type: grid
+        spatial_distribution: "row:1,col:1"
+        observation_unit_block: "1"
+        observation_unit_replicate: "1"
+        entry_type: test
+        observation_level: plot
+        observation_level_code: B1-P1
+        external_references:
+          - "BrAPI:OU-B1-P1-2024"
+        factor_values:
+          - unique_id: FV-OU-B1-P1-WW
+            factor_id: FAC-WATER-REGIME
+            value: Well-watered
+            description: Control treatment
+        samples:
+          - unique_id: SAM-B1-P1-GRAIN
+            observation_unit_id: OU-B1-P1
+            plant_structural_development_stage: BBCH 92
+            plant_anatomical_entity: grain
+            collection_date: "2024-07-18T10:30:00"
+            description: Grain sample for quality analysis
+            external_references:
+              - "BioSamples:SAMEA00001"
+          - unique_id: SAM-B1-P1-LEAF
+            observation_unit_id: OU-B1-P1
+            plant_structural_development_stage: BBCH 65
+            plant_anatomical_entity: flag leaf
+            collection_date: "2024-06-01T09:00:00"
+            description: Flag leaf sample for chlorophyll and stress markers
+
+      # Block 1: Stress plot
+      - unique_id: OU-B1-P2
+        study_id: STU-2024-WHEAT-FT01
+        observation_unit_type: plot
+        biological_material_id: BM-WHEAT-JULIUS
+        spatial_distribution_type: grid
+        spatial_distribution: "row:1,col:2"
+        observation_unit_block: "1"
+        observation_unit_replicate: "1"
+        entry_type: test
+        observation_level: plot
+        observation_level_code: B1-P2
+        factor_values:
+          - unique_id: FV-OU-B1-P2-DS
+            factor_id: FAC-WATER-REGIME
+            value: Drought stress
+            description: Stress treatment
+        samples:
+          - unique_id: SAM-B1-P2-GRAIN
+            observation_unit_id: OU-B1-P2
+            plant_structural_development_stage: BBCH 92
+            plant_anatomical_entity: grain
+            collection_date: "2024-07-18T11:00:00"
+            description: Grain sample for quality analysis
+          - unique_id: SAM-B1-P2-LEAF
+            observation_unit_id: OU-B1-P2
+            plant_structural_development_stage: BBCH 65
+            plant_anatomical_entity: flag leaf
+            collection_date: "2024-06-01T09:30:00"
+            description: Flag leaf sample for stress marker analysis
+
+      # Additional genotype: Tobak
+      - unique_id: OU-B1-P3
+        study_id: STU-2024-WHEAT-FT01
+        observation_unit_type: plot
+        biological_material_id: BM-WHEAT-TOBAK
+        spatial_distribution_type: grid
+        spatial_distribution: "row:1,col:3"
+        observation_unit_block: "1"
+        observation_unit_replicate: "1"
+        entry_type: test
+        observation_level: plot
+        observation_level_code: B1-P3
+        factor_values:
+          - unique_id: FV-OU-B1-P3-WW
+            factor_id: FAC-WATER-REGIME
+            value: Well-watered
+            description: Control treatment
+        samples:
+          - unique_id: SAM-B1-P3-GRAIN
+            observation_unit_id: OU-B1-P3
+            plant_structural_development_stage: BBCH 92
+            plant_anatomical_entity: grain
+            collection_date: "2024-07-18T11:30:00"
+            description: Grain sample for quality analysis
+
+      - unique_id: OU-B1-P4
+        study_id: STU-2024-WHEAT-FT01
+        observation_unit_type: plot
+        biological_material_id: BM-WHEAT-TOBAK
+        spatial_distribution_type: grid
+        spatial_distribution: "row:1,col:4"
+        observation_unit_block: "1"
+        observation_unit_replicate: "1"
+        entry_type: test
+        observation_level: plot
+        observation_level_code: B1-P4
+        factor_values:
+          - unique_id: FV-OU-B1-P4-DS
+            factor_id: FAC-WATER-REGIME
+            value: Drought stress
+            description: Stress treatment
+        samples:
+          - unique_id: SAM-B1-P4-GRAIN
+            observation_unit_id: OU-B1-P4
+            plant_structural_development_stage: BBCH 92
+            plant_anatomical_entity: grain
+            collection_date: "2024-07-18T12:00:00"
+            description: Grain sample for quality analysis
+
+      # Susceptible control: Benchmark
+      - unique_id: OU-B1-P5
+        study_id: STU-2024-WHEAT-FT01
+        observation_unit_type: plot
+        biological_material_id: BM-WHEAT-BENCHMARK
+        spatial_distribution_type: grid
+        spatial_distribution: "row:1,col:5"
+        observation_unit_block: "1"
+        observation_unit_replicate: "1"
+        entry_type: test
+        observation_level: plot
+        observation_level_code: B1-P5
+        factor_values:
+          - unique_id: FV-OU-B1-P5-WW
+            factor_id: FAC-WATER-REGIME
+            value: Well-watered
+            description: Control treatment
+        samples:
+          - unique_id: SAM-B1-P5-GRAIN
+            observation_unit_id: OU-B1-P5
+            plant_structural_development_stage: BBCH 92
+            plant_anatomical_entity: grain
+            collection_date: "2024-07-18T12:30:00"
+            description: Grain sample for quality analysis
+
+      - unique_id: OU-B1-P6
+        study_id: STU-2024-WHEAT-FT01
+        observation_unit_type: plot
+        biological_material_id: BM-WHEAT-BENCHMARK
+        spatial_distribution_type: grid
+        spatial_distribution: "row:1,col:6"
+        observation_unit_block: "1"
+        observation_unit_replicate: "1"
+        entry_type: test
+        observation_level: plot
+        observation_level_code: B1-P6
+        factor_values:
+          - unique_id: FV-OU-B1-P6-DS
+            factor_id: FAC-WATER-REGIME
+            value: Drought stress
+            description: Stress treatment
+        samples:
+          - unique_id: SAM-B1-P6-GRAIN
+            observation_unit_id: OU-B1-P6
+            plant_structural_development_stage: BBCH 92
+            plant_anatomical_entity: grain
+            collection_date: "2024-07-18T13:00:00"
+            description: Grain sample for quality analysis
+
+    events:
+      - unique_id: EVT-SOWING
+        study_id: STU-2024-WHEAT-FT01
+        event_type: Sowing
+        date: "2023-10-15T09:00:00"
+        description: Sowing with plot drill at 350 seeds/m2
+        event_accession_number: AGRO:00000007
+
+      - unique_id: EVT-FERT-1
+        study_id: STU-2024-WHEAT-FT01
+        event_type: Fertilization
+        date: "2024-03-01T08:00:00"
+        description: First N application, 60 kg N/ha as calcium ammonium nitrate
+        event_accession_number: AGRO:00000006
+
+      - unique_id: EVT-DROUGHT-START
+        study_id: STU-2024-WHEAT-FT01
+        event_type: Treatment application
+        date: "2024-05-25T00:00:00"
+        description: Start of drought stress treatment - irrigation withheld from stress plots
+        observation_unit_ids:
+          - OU-B1-P2
+          - OU-B1-P4
+          - OU-B1-P6
+
+      - unique_id: EVT-DROUGHT-END
+        study_id: STU-2024-WHEAT-FT01
+        event_type: Treatment application
+        date: "2024-06-25T00:00:00"
+        description: End of drought stress treatment - normal irrigation resumed
+        observation_unit_ids:
+          - OU-B1-P2
+          - OU-B1-P4
+          - OU-B1-P6
+
+      - unique_id: EVT-HARVEST
+        study_id: STU-2024-WHEAT-FT01
+        event_type: Harvest
+        date: "2024-07-18T08:00:00"
+        end_date: "2024-07-20T18:00:00"
+        description: Plot combine harvest at grain maturity
+        event_accession_number: AGRO:00000008
+
+    environments:
+      - unique_id: ENV-TEMP-JUN
+        study_id: STU-2024-WHEAT-FT01
+        parameter: Air temperature
+        parameter_accession_number: ENVO:09200001
+        value: "21.3"
+        unit: degree Celsius
+        date: "2024-06-01T00:00:00"
+        description: Mean air temperature for June 2024
+
+      - unique_id: ENV-PRECIP-JUN
+        study_id: STU-2024-WHEAT-FT01
+        parameter: Precipitation
+        parameter_accession_number: ENVO:09200002
+        value: "45"
+        unit: mm
+        date: "2024-06-01T00:00:00"
+        description: Total precipitation for June 2024
+
+      - unique_id: ENV-SOIL-TYPE
+        study_id: STU-2024-WHEAT-FT01
+        parameter: Soil type
+        parameter_accession_number: ENVO:00002258
+        value: Loamy sand
+        description: Dominant soil type in the experimental field
+
+    data_files:
+      - unique_id: DF-PHENOTYPE-DATA
+        study_id: STU-2024-WHEAT-FT01
+        name: Phenotype observations
+        link: https://example.com/data/STU-2024-WHEAT-FT01/phenotypes.csv
+        description: All phenotypic measurements including yield, plant height, and quality traits
+        version: "1.0"
+        file_type: text/csv
+
+      - unique_id: DF-WEATHER-DATA
+        study_id: STU-2024-WHEAT-FT01
+        name: Weather station data
+        link: https://example.com/data/STU-2024-WHEAT-FT01/weather.csv
+        description: Daily weather data from on-site station
+        version: "1.0"
+        file_type: text/csv
