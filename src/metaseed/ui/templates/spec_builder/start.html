@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spec Builder - Metaseed</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%234a7c59' rx='20' width='100' height='100'/></svg>">
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <link rel="stylesheet" href="/static/css/style.css?v=37">
+</head>
+<body hx-headers='{"X-Requested-With": "XMLHttpRequest"}'>
+    <div class="layout">
+        <header class="header">
+            <h1 class="header-title">
+                <a href="/" style="color: inherit; text-decoration: none;">Metaseed</a>
+                <span style="opacity: 0.5; margin: 0 0.5rem;">/</span>
+                <span>Spec Builder</span>
+            </h1>
+            <div class="header-actions">
+                <a href="/" class="btn btn-header">Back to Editor</a>
+            </div>
+        </header>
+
+        <main class="main">
+            <div class="spec-builder-start">
+                <div class="welcome">
+                    <h2>Create a Metadata Specification</h2>
+                    <p>Build a custom specification from scratch or start with an existing template.</p>
+                </div>
+
+                <div class="start-options">
+                    <a href="/spec-builder/new" class="start-option">
+                        <div class="start-option-icon">+</div>
+                        <h3>Start from Scratch</h3>
+                        <p>Create a new empty specification with your own entities and fields.</p>
+                    </a>
+
+                    <div class="start-option start-option-clone">
+                        <div class="start-option-icon">~</div>
+                        <h3>Clone Existing</h3>
+                        <p>Start with an existing specification as a template.</p>
+
+                        {% if templates %}
+                        <div class="template-list">
+                            {% for template in templates %}
+                            <div class="template-item">
+                                <div class="template-info">
+                                    <span class="template-name">{{ template.display_name }}</span>
+                                    <span class="template-desc">{{ template.description[:60] }}{% if template.description|length > 60 %}...{% endif %}</span>
+                                </div>
+                                <div class="template-versions">
+                                    {% for version in template.versions %}
+                                    <a href="/spec-builder/clone/{{ template.name }}/{{ version }}"
+                                       class="btn btn-sm btn-outline-secondary">
+                                        v{{ version }}
+                                    </a>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <p class="text-muted">No templates available.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/js/app.js?v=30"></script>
+</body>
+</html>

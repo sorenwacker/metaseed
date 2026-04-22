@@ -1,0 +1,9 @@
+{% if success %}
+<div class="notification notification-success">
+    Saved to {{ path }}
+</div>
+{% elif error %}
+<div class="notification notification-error">
+    {{ error }}
+</div>
+{% endif %}

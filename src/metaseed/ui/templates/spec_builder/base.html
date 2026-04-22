@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spec Builder - Metaseed</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%234a7c59' rx='20' width='100' height='100'/></svg>">
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
+    <link rel="stylesheet" href="/static/css/style.css?v=37">
+</head>
+<body hx-headers='{"X-Requested-With": "XMLHttpRequest"}'>
+    <div class="layout">
+        <header class="header">
+            <h1 class="header-title">
+                <a href="/" style="color: inherit; text-decoration: none;">Metaseed</a>
+                <span class="header-sep">/</span>
+                <span>Spec Builder</span>
+                {% if spec.name %}
+                <span class="header-sep">/</span>
+                <span class="spec-name">{{ spec.name }}</span>
+                {% endif %}
+                {% if has_unsaved_changes %}
+                <span class="unsaved-indicator" title="Unsaved changes">*</span>
+                {% endif %}
+            </h1>
+            <div class="header-actions">
+                {% if template_source %}
+                <span class="template-badge">
+                    Cloned from {{ template_source[0] }} v{{ template_source[1] }}
+                </span>
+                {% endif %}
+                <button class="btn btn-header" onclick="autoLayout()">
+                    Auto Layout
+                </button>
+                <button class="btn btn-header"
+                        hx-get="/spec-builder/preview"
+                        hx-target="#preview-content"
+                        hx-swap="innerHTML"
+                        onclick="showPreview()">
+                    Preview YAML
+                </button>
+                <a href="/spec-builder/export" class="btn btn-header" download>
+                    Export
+                </a>
+                <button class="btn btn-header btn-save"
+                        hx-post="/spec-builder/save"
+                        hx-target="#notification-container"
+                        hx-swap="beforeend">
+                    Save
+                </button>
+                <span class="header-divider"></span>
+                <a href="/spec-builder/reset" class="btn btn-header"
+                   onclick="return confirm('Start over? Any unsaved changes will be lost.')">
+                    Start Over
+                </a>
+                <a href="/" class="btn btn-header">Back</a>
+            </div>
+        </header>
+
+        <div class="erd-layout">
+            <!-- Left: Sidebar with tabs -->
+            <aside class="erd-sidebar">
+                <!-- Toolbox - always visible at top -->
+                <div class="erd-toolbox">
+                    <div class="toolbox-item" draggable="true" ondragstart="dragNewEntity(event)">
+                        <span class="toolbox-icon">+</span>
+                        <span>New Entity</span>
+                    </div>
+                </div>
+
+                <!-- Tab Navigation -->
+                <div class="sidebar-tabs">
+                    <button class="sidebar-tab active" onclick="switchTab('profile')" id="tab-profile">
+                        Profile
+                    </button>
+                    <button class="sidebar-tab" onclick="switchTab('rules')" id="tab-rules">
+                        Rules
+                        <span class="tab-badge">{{ spec.validation_rules|length }}</span>
+                    </button>
+                </div>
+
+                <!-- Tab Content -->
+                <div class="sidebar-tab-content">
+                    <div class="tab-panel active" id="panel-profile">
+                        <div id="profile-metadata-panel"
+                             hx-get="/spec-builder/profile-metadata"
+                             hx-trigger="load"
+                             hx-swap="innerHTML">
+                            Loading...
+                        </div>
+                    </div>
+
+                    <div class="tab-panel" id="panel-rules">
+                        <div id="validation-rules-panel"
+                             hx-get="/spec-builder/validation-rules"
+                             hx-trigger="load"
+                             hx-swap="innerHTML">
+                            Loading...
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Center: ERD Canvas -->
+            <main class="erd-canvas-container">
+                <div class="erd-canvas-toolbar">
+                    <span class="canvas-info">
+                        <strong>{{ spec.entities|length }}</strong> entities
+                    </span>
+                    <div class="canvas-controls">
+                        <button class="btn btn-sm btn-primary" onclick="startAddRelationship()" title="Draw a line between entities to add relationship">
+                            + Relationship
+                        </button>
+                        <span class="toolbar-divider"></span>
+                        <button class="btn btn-sm btn-secondary" onclick="zoomIn()">+</button>
+                        <button class="btn btn-sm btn-secondary" onclick="zoomOut()">-</button>
+                        <button class="btn btn-sm btn-secondary" onclick="fitGraph()">Fit</button>
+                    </div>
+                </div>
+                <div class="erd-canvas-wrapper">
+                    <div id="erd-canvas"
+                         ondrop="dropNewEntity(event)"
+                         ondragover="event.preventDefault()"
+                         ondblclick="addEntityAtPosition(event)">
+                    </div>
+                </div>
+                <div class="canvas-legend">
+                    <span class="legend-item"><span class="legend-dot root"></span> Root Entity</span>
+                    <span class="legend-item"><span class="legend-dot entity"></span> Entity</span>
+                    <span class="legend-item"><span class="legend-line"></span> Relationship</span>
+                </div>
+            </main>
+
+            <!-- Right: Entity Editor Panel -->
+            <aside class="erd-editor-panel" id="editor-panel">
+                <div class="editor-panel-header">
+                    <h3 id="editor-title">Entity Editor</h3>
+                    <button class="btn-close" onclick="closeEditorPanel()">&times;</button>
+                </div>
+                <div class="editor-panel-content" id="editor-content">
+                    <div class="editor-placeholder">
+                        <p>Click an entity to edit its fields</p>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Preview Overlay -->
+            <div class="preview-overlay hidden" id="preview-overlay" onclick="hidePreview(event)">
+                <div class="preview-modal">
+                    <div class="preview-modal-header">
+                        <h3>YAML Preview</h3>
+                        <div class="preview-actions">
+                            <a href="/spec-builder/export" class="btn btn-sm btn-secondary" download>Download</a>
+                            <button class="btn-close" onclick="hidePreview()">&times;</button>
+                        </div>
+                    </div>
+                    <div class="preview-modal-content" id="preview-content">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="notification-container" class="notification-container"></div>
+
+    <!-- Add Entity Modal -->
+    <div class="modal-overlay hidden" id="add-entity-modal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3>Add Entity</h3>
+                <button class="btn-close" onclick="hideAddEntityModal()">&times;</button>
+            </div>
+            <form hx-post="/spec-builder/entity"
+                  hx-target="#editor-content"
+                  hx-swap="innerHTML"
+                  onsubmit="onEntityAdded()">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">Entity Name <span class="required">*</span></label>
+                        <input type="text"
+                               name="name"
+                               id="new-entity-name"
+                               class="form-input"
+                               placeholder="MyEntity"
+                               pattern="[A-Z][A-Za-z0-9_]*"
+                               required
+                               autofocus>
+                        <span class="form-help">PascalCase (e.g., BiologicalMaterial)</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="hideAddEntityModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Entity</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Validation Rule Modal -->
+    <div class="modal-overlay hidden" id="validation-rule-modal">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-header">
+                <h3 id="rule-modal-title">Edit Validation Rule</h3>
+                <button class="btn-close" onclick="hideRuleModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="rule-modal-content">
+                <!-- Rule form loaded via HTMX -->
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js?v=30"></script>
+    <script>
+        // ERD Data - convert spec to serializable format
+        const entities = {
+            {% for name, entity in spec.entities.items() %}
+            "{{ name }}": {
+                "ontology_term": {{ entity.ontology_term | tojson if entity.ontology_term else 'null' }},
+                "description": {{ entity.description | tojson if entity.description else '""' }},
+                "fields": [
+                    {% for field in entity.fields %}
+                    {
+                        "name": "{{ field.name }}",
+                        "type": "{{ field.type }}",
+                        "required": {{ 'true' if field.required else 'false' }},
+                        "items": {{ field.items | tojson if field.items else 'null' }}
+                    }{% if not loop.last %},{% endif %}
+                    {% endfor %}
+                ]
+            }{% if not loop.last %},{% endif %}
+            {% endfor %}
+        };
+        const rootEntity = "{{ spec.root_entity }}";
+        const fieldTypes = {{ field_types | tojson | safe }};
+
+        let network = null;
+        let nodes = null;
+        let edges = null;
+        let selectedNode = null;
+        let pendingPosition = null;
+        let initialScale = null;  // Store scale after initial fit
+
+        // Initialize ERD on load
+        document.addEventListener('DOMContentLoaded', initERD);
+        // Also try immediately in case DOMContentLoaded already fired
+        if (document.readyState !== 'loading') {
+            setTimeout(initERD, 50);
+        }
+
+        function initERD() {
+            // Don't reinitialize if already created
+            if (network) return;
+
+            const container = document.getElementById('erd-canvas');
+            if (!container) return;
+
+            const rect = container.getBoundingClientRect();
+            if (rect.height < 50) {
+                setTimeout(initERD, 200);
+                return;
+            }
+
+            const entityNames = Object.keys(entities);
+            if (entityNames.length === 0) {
+                container.innerHTML = '<div class="empty-canvas-message">Double-click to add an entity</div>';
+                return;
+            }
+
+            // Build nodes with table-like labels
+            const nodeData = [];
+            const edgeData = [];
+
+            entityNames.forEach(name => {
+                const entity = entities[name];
+                const isRoot = name === rootEntity;
+                const fields = entity.fields || [];
+
+                // Build multi-line label like a table
+                let label = `<b>${name}</b>`;
+                if (isRoot) label += ' [ROOT]';
+                label += '\n────────────────';
+
+                // Show all fields
+                fields.forEach(field => {
+                    const req = field.required ? '*' : ' ';
+                    const fk = ((field.type === 'entity' || field.type === 'list') && field.items) ? '→' : ' ';
+                    label += `\n${req}${fk} ${field.name}: ${field.type}`;
+                });
+                if (fields.length === 0) {
+                    label += '\n(no fields)';
+                }
+
+                // Calculate node size based on content
+                const nodeHeight = 40 + fields.length * 16;  // Header + fields
+                const nodeWidth = 200;
+
+                const nodeConfig = {
+                    id: name,
+                    label: label,
+                    shape: 'box',
+                    size: Math.max(nodeHeight, nodeWidth) / 2,
+                    mass: 1 + fields.length * 0.3,
+                    font: {
+                        face: 'monospace',
+                        size: 12,
+                        align: 'left',
+                        multi: 'html',
+                        color: isRoot ? '#fff' : '#2c3e35'
+                    },
+                    color: {
+                        background: isRoot ? '#4a7c59' : '#ffffff',
+                        border: isRoot ? '#2d5a4a' : '#4a7c59',
+                        highlight: { background: '#87a878', border: '#4a7c59' },
+                        hover: { background: isRoot ? '#5a8c69' : '#f5f2ed', border: '#4a7c59' }
+                    },
+                    borderWidth: 2,
+                    margin: 15,
+                    shadow: true
+                };
+
+
+                nodeData.push(nodeConfig);
+
+                // Build edges for relationships
+                fields.forEach(field => {
+                    if ((field.type === 'entity' || field.type === 'list') && field.items && entities[field.items]) {
+                        edgeData.push({
+                            from: name,
+                            to: field.items,
+                            label: field.name,
+                            arrows: { to: { enabled: true, type: field.type === 'list' ? 'arrow' : 'arrow' } },
+                            color: { color: '#4a7c59', highlight: '#2d5a4a' },
+                            font: { size: 11, color: '#5a6b62', background: 'white', strokeWidth: 0 },
+                            smooth: { type: 'cubicBezier', roundness: 0.4 },
+                            width: 2
+                        });
+                    }
+                });
+            });
+
+            nodes = new vis.DataSet(nodeData);
+            edges = new vis.DataSet(edgeData);
+
+            const options = {
+                layout: {
+                    improvedLayout: true,
+                    randomSeed: 42
+                },
+                physics: {
+                    enabled: true,
+                    solver: 'forceAtlas2Based',
+                    forceAtlas2Based: {
+                        gravitationalConstant: -100,
+                        centralGravity: 0.01,
+                        springLength: 200,
+                        springConstant: 0.08,
+                        damping: 0.5,
+                        avoidOverlap: 1
+                    },
+                    maxVelocity: 50,
+                    minVelocity: 0.1,
+                    stabilization: {
+                        enabled: true,
+                        iterations: 2000,
+                        updateInterval: 25
+                    }
+                },
+                interaction: {
+                    hover: true,
+                    zoomView: true,
+                    zoomSpeed: 0.5,
+                    dragView: true,
+                    dragNodes: true,
+                    navigationButtons: false,
+                    keyboard: {
+                        enabled: true,
+                        speed: { x: 10, y: 10, zoom: 0.05 }
+                    }
+                },
+                nodes: {
+                    shape: 'box',
+                    margin: 12,
+                    widthConstraint: {
+                        minimum: 180
+                    }
+                },
+                edges: {
+                    smooth: {
+                        type: 'cubicBezier',
+                        forceDirection: 'vertical',
+                        roundness: 0.4
+                    }
+                }
+            };
+
+            network = new vis.Network(container, { nodes, edges }, options);
+
+            // Event handlers
+            network.on('click', function(params) {
+                if (params.nodes.length > 0) {
+                    selectEntity(params.nodes[0]);
+                }
+            });
+
+            network.on('doubleClick', function(params) {
+                if (params.nodes.length === 0) {
+                    showAddEntityModal();
+                }
+            });
+
+            // After physics stabilizes, disable it to prevent any drift
+            network.once('stabilizationIterationsDone', () => {
+                network.setOptions({ physics: { enabled: false } });
+                network.fit({ animation: false });
+            });
+
+        }
+
+        function calculateLevels(entityNames) {
+            const levels = {};
+            const children = {};
+            const parents = {};
+
+            entityNames.forEach(name => {
+                children[name] = [];
+                parents[name] = [];
+            });
+
+            entityNames.forEach(name => {
+                const entity = entities[name];
+                (entity.fields || []).forEach(field => {
+                    if ((field.type === 'entity' || field.type === 'list') && field.items && entities[field.items]) {
+                        if (!children[name].includes(field.items)) children[name].push(field.items);
+                        if (!parents[field.items].includes(name)) parents[field.items].push(name);
+                    }
+                });
+            });
+
+            // Find roots
+            let roots = entityNames.filter(name => parents[name].length === 0);
+            if (rootEntity && entities[rootEntity]) {
+                roots = [rootEntity, ...roots.filter(r => r !== rootEntity)];
+            }
+            if (roots.length === 0) roots = [entityNames[0]];
+
+            // BFS
+            const visited = new Set();
+            const queue = roots.map(r => ({ name: r, level: 0 }));
+            roots.forEach(r => { levels[r] = 0; visited.add(r); });
+
+            while (queue.length > 0) {
+                const { name, level } = queue.shift();
+                children[name].forEach(child => {
+                    if (!visited.has(child)) {
+                        visited.add(child);
+                        levels[child] = level + 1;
+                        queue.push({ name: child, level: level + 1 });
+                    }
+                });
+            }
+
+            // Unvisited
+            let maxLevel = Math.max(0, ...Object.values(levels));
+            entityNames.forEach(name => {
+                if (levels[name] === undefined) levels[name] = ++maxLevel;
+            });
+
+            return levels;
+        }
+
+        function startAddRelationship() {
+            alert('To add a relationship:\n1. Click on the source entity\n2. Add a field of type "entity" or "list"\n3. Set the Items/Target to the target entity name');
+        }
+
+        function selectEntity(entityName) {
+            selectedNode = entityName;
+
+            if (network) {
+                network.selectNodes([entityName]);
+            }
+
+            // Open panel and load content
+            document.getElementById('editor-title').textContent = entityName;
+            document.getElementById('editor-panel').classList.add('open');
+            htmx.ajax('GET', `/spec-builder/entity/${entityName}`, {
+                target: '#editor-content',
+                swap: 'innerHTML'
+            });
+
+            // Center on the selected node - manual approach
+            if (network) {
+                const canvas = document.getElementById('erd-canvas');
+                const rect = canvas.getBoundingClientRect();
+                const pos = network.getPositions([entityName])[entityName];
+
+                if (pos) {
+                    const viewBefore = network.getViewPosition();
+                    const scaleBefore = network.getScale();
+                    const domPosBefore = network.canvasToDOM(pos);
+
+                    console.log('--- CLICK:', entityName, '---');
+                    console.log('Canvas size:', rect.width, 'x', rect.height);
+                    console.log('Node network pos:', pos.x.toFixed(1), pos.y.toFixed(1));
+                    console.log('View BEFORE:', viewBefore.x.toFixed(1), viewBefore.y.toFixed(1), 'scale:', scaleBefore.toFixed(3));
+                    console.log('Node DOM BEFORE:', domPosBefore.x.toFixed(1), domPosBefore.y.toFixed(1));
+
+                    network.moveTo({
+                        position: { x: pos.x, y: pos.y },
+                        scale: scaleBefore,
+                        animation: false
+                    });
+
+                    const viewAfter = network.getViewPosition();
+                    const scaleAfter = network.getScale();
+                    const domPosAfter = network.canvasToDOM(pos);
+
+                    console.log('View AFTER:', viewAfter.x.toFixed(1), viewAfter.y.toFixed(1), 'scale:', scaleAfter.toFixed(3));
+                    console.log('Node DOM AFTER:', domPosAfter.x.toFixed(1), domPosAfter.y.toFixed(1));
+                    console.log('Expected DOM center:', (rect.width/2).toFixed(1), (rect.height/2).toFixed(1));
+                }
+            }
+        }
+
+        function closeEditorPanel() {
+            document.getElementById('editor-panel').classList.remove('open');
+            if (network) network.unselectAll();
+            selectedNode = null;
+        }
+
+        function refreshGraph() {
+            // Reload the page to refresh graph with new data
+            htmx.ajax('GET', '/spec-builder', { target: 'body', swap: 'innerHTML' });
+        }
+
+        function autoLayout() {
+            if (!network) return;
+
+            const nodeIds = nodes.getIds();
+            const cols = Math.ceil(Math.sqrt(nodeIds.length));
+            const spacing = 200;
+
+            // Put root entity at top
+            let sorted = [...nodeIds];
+            if (rootEntity && sorted.includes(rootEntity)) {
+                sorted = [rootEntity, ...sorted.filter(n => n !== rootEntity)];
+            }
+
+            sorted.forEach((id, idx) => {
+                const col = idx % cols;
+                const row = Math.floor(idx / cols);
+                nodes.update({ id, x: col * spacing, y: row * spacing });
+            });
+
+            setTimeout(() => network.fit({ animation: true }), 100);
+        }
+
+        function zoomIn() {
+            if (network) {
+                const scale = network.getScale();
+                network.moveTo({ scale: scale * 1.15, animation: { duration: 200 } });
+            }
+        }
+
+        function zoomOut() {
+            if (network) {
+                const scale = network.getScale();
+                network.moveTo({ scale: scale / 1.15, animation: { duration: 200 } });
+            }
+        }
+
+        function fitGraph() {
+            if (network) {
+                network.fit({ animation: { duration: 300 } });
+            }
+        }
+
+        // Add entity
+        function showAddEntityModal() {
+            document.getElementById('add-entity-modal').classList.remove('hidden');
+            document.getElementById('new-entity-name').value = '';
+            document.getElementById('new-entity-name').focus();
+        }
+
+        function hideAddEntityModal() {
+            document.getElementById('add-entity-modal').classList.add('hidden');
+            pendingPosition = null;
+        }
+
+        function onEntityAdded() {
+            hideAddEntityModal();
+            // Graph will be refreshed by HTMX response
+            setTimeout(refreshGraph, 100);
+        }
+
+        function dragNewEntity(event) {
+            event.dataTransfer.setData('text/plain', 'new-entity');
+        }
+
+        function dropNewEntity(event) {
+            event.preventDefault();
+            if (event.dataTransfer.getData('text/plain') === 'new-entity') {
+                const rect = document.getElementById('erd-canvas').getBoundingClientRect();
+                pendingPosition = {
+                    x: event.clientX - rect.left,
+                    y: event.clientY - rect.top
+                };
+                showAddEntityModal();
+            }
+        }
+
+        function addEntityAtPosition(event) {
+            // Only if clicking on canvas background
+            if (event.target.id === 'erd-canvas' || event.target.tagName === 'CANVAS') {
+                pendingPosition = { x: event.offsetX, y: event.offsetY };
+                showAddEntityModal();
+            }
+        }
+
+        // Preview
+        function showPreview() {
+            document.getElementById('preview-overlay').classList.remove('hidden');
+        }
+
+        function hidePreview(event) {
+            if (!event || event.target.id === 'preview-overlay') {
+                document.getElementById('preview-overlay').classList.add('hidden');
+            }
+        }
+
+        // Listen for entity updates to refresh graph
+        document.body.addEventListener('htmx:afterSwap', function(event) {
+            if (event.detail.target.id === 'editor-content') {
+                // Entity was updated, could refresh edges here
+            }
+        });
+
+        // Sidebar tabs
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.sidebar-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById('tab-' + tabName).classList.add('active');
+
+            // Update panels
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            document.getElementById('panel-' + tabName).classList.add('active');
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                hideAddEntityModal();
+                hideRuleModal();
+                hidePreview();
+                closeEditorPanel();
+            }
+        });
+
+        // Validation Rule Modal
+        function showRuleModal(ruleIdx, ruleName) {
+            document.getElementById('rule-modal-title').textContent = ruleName ? `Edit: ${ruleName}` : 'Edit Validation Rule';
+            document.getElementById('validation-rule-modal').classList.remove('hidden');
+
+            // Load rule form into modal
+            htmx.ajax('GET', `/spec-builder/validation-rule/${ruleIdx}`, {
+                target: '#rule-modal-content',
+                swap: 'innerHTML'
+            });
+        }
+
+        function hideRuleModal() {
+            document.getElementById('validation-rule-modal').classList.add('hidden');
+            // Refresh the rules list
+            htmx.ajax('GET', '/spec-builder/validation-rules', {
+                target: '#validation-rules-panel',
+                swap: 'innerHTML'
+            });
+        }
+
+        // Listen for successful rule updates to close modal
+        document.body.addEventListener('htmx:afterSwap', function(event) {
+            if (event.detail.target.id === 'rule-modal-content') {
+                // Check if the response contains a success message (rule was saved)
+                const content = event.detail.target.innerHTML;
+                if (content.includes('rules-list-container')) {
+                    // Rule list was returned, meaning save succeeded
+                    hideRuleModal();
+                }
+            }
+        });
+    </script>
+</body>
+</html>

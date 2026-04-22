@@ -1,0 +1,145 @@
+<form hx-put="/spec-builder/validation-rule/{{ rule_idx }}"
+      hx-target="#validation-rules-panel"
+      hx-swap="innerHTML"
+      hx-on::after-request="hideRuleModal()"
+      class="rule-form rule-form-modal">
+
+    <div class="rule-form-grid">
+        <div class="form-group">
+            <label class="form-label">Name <span class="required">*</span></label>
+            <input type="text"
+                   name="name"
+                   class="form-input"
+                   value="{{ rule.name }}"
+                   required>
+        </div>
+
+        <div class="form-group span-2">
+            <label class="form-label">Description</label>
+            <input type="text"
+                   name="description"
+                   class="form-input"
+                   value="{{ rule.description or '' }}"
+                   placeholder="What this rule validates...">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Applies To</label>
+            <input type="text"
+                   name="applies_to"
+                   class="form-input"
+                   value="{% if rule.applies_to == 'all' %}all{% elif rule.applies_to is string %}{{ rule.applies_to }}{% else %}{{ rule.applies_to|join(', ') }}{% endif %}"
+                   placeholder="all or Entity1, Entity2"
+                   list="entities-datalist">
+            <datalist id="entities-datalist">
+                <option value="all">
+                {% for ename in entities %}
+                <option value="{{ ename }}">
+                {% endfor %}
+            </datalist>
+            <span class="form-help">"all" or comma-separated entity names</span>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Field</label>
+            <input type="text"
+                   name="field"
+                   class="form-input"
+                   value="{{ rule.field or '' }}"
+                   placeholder="field_name">
+        </div>
+
+        <div class="form-group span-2">
+            <label class="form-label">Condition</label>
+            <input type="text"
+                   name="condition"
+                   class="form-input"
+                   value="{{ rule.condition or '' }}"
+                   placeholder="end_date >= start_date">
+            <span class="form-help">Logical expression using field names</span>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Pattern</label>
+            <input type="text"
+                   name="pattern"
+                   class="form-input"
+                   value="{{ rule.pattern or '' }}"
+                   placeholder="^[A-Za-z]+$">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Minimum</label>
+            <input type="number"
+                   name="minimum"
+                   class="form-input"
+                   step="any"
+                   value="{{ rule.minimum if rule.minimum is not none else '' }}">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Maximum</label>
+            <input type="number"
+                   name="maximum"
+                   class="form-input"
+                   step="any"
+                   value="{{ rule.maximum if rule.maximum is not none else '' }}">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Reference</label>
+            <input type="text"
+                   name="reference"
+                   class="form-input"
+                   value="{{ rule.reference or '' }}"
+                   placeholder="Entity.field">
+            <span class="form-help">Entity.field for integrity checks</span>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Unique Within</label>
+            <input type="text"
+                   name="unique_within"
+                   class="form-input"
+                   value="{{ rule.unique_within or '' }}"
+                   placeholder="parent">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Min Items</label>
+            <input type="number"
+                   name="min_items"
+                   class="form-input"
+                   min="0"
+                   value="{{ rule.min_items if rule.min_items is not none else '' }}">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Max Items</label>
+            <input type="number"
+                   name="max_items"
+                   class="form-input"
+                   min="0"
+                   value="{{ rule.max_items if rule.max_items is not none else '' }}">
+        </div>
+
+        <div class="form-group span-2">
+            <label class="form-label">Enum Values (one per line)</label>
+            <textarea name="enum_values"
+                      class="form-input"
+                      rows="2"
+                      placeholder="value1&#10;value2">{% if rule.enum %}{{ rule.enum|join('\n') }}{% endif %}</textarea>
+        </div>
+    </div>
+
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">
+            Save Rule
+        </button>
+        <button type="button"
+                class="btn btn-secondary"
+                onclick="hideRuleModal()">
+            Cancel
+        </button>
+    </div>
+</form>

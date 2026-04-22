@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any, Self
 
 if TYPE_CHECKING:
     from metaseed.facade import ProfileFacade
+    from metaseed.ui.spec_builder_state import SpecBuilderState
 
 
 def _get_default_profile() -> str:
@@ -87,6 +88,7 @@ class AppState:
     editing_node_id: str | None = None
     current_nested_items: dict[str, list] = field(default_factory=dict)
     nested_edit_stack: list[NestedEditContext] = field(default_factory=list)  # Navigation stack
+    spec_builder: SpecBuilderState | None = None  # Spec Builder state
 
     def get_or_create_facade(self: Self) -> ProfileFacade:
         """Get existing facade or create new one."""

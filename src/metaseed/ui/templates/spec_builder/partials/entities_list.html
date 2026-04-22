@@ -1,0 +1,51 @@
+{% if error %}
+<div class="form-error">{{ error }}</div>
+{% endif %}
+
+<div class="entity-list-container">
+    {% for name, entity in entities.items() %}
+    <div class="entity-list-item {% if name == editing_entity %}active{% endif %}"
+         hx-get="/spec-builder/entity/{{ name }}"
+         hx-target="#editor-panel"
+         hx-swap="innerHTML">
+        <div class="entity-list-item-info">
+            <span class="entity-name">{{ name }}</span>
+            {% if name == root_entity %}
+            <span class="entity-badge root-badge">root</span>
+            {% endif %}
+            <span class="entity-field-count">{{ entity.fields|length }} fields</span>
+        </div>
+        <button class="btn-icon danger"
+                hx-delete="/spec-builder/entity/{{ name }}"
+                hx-target="#entities-panel"
+                hx-swap="innerHTML"
+                hx-confirm="Delete entity '{{ name }}'? This cannot be undone."
+                onclick="event.stopPropagation();">
+            x
+        </button>
+    </div>
+    {% else %}
+    <div class="empty-list">
+        <p>No entities yet. Add one below.</p>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Add entity form -->
+<form hx-post="/spec-builder/entity"
+      hx-target="#editor-panel"
+      hx-swap="innerHTML"
+      class="add-entity-form">
+    <div class="add-form-row">
+        <input type="text"
+               name="name"
+               class="form-input"
+               placeholder="NewEntity"
+               required
+               pattern="[A-Z][A-Za-z0-9_]*">
+        <button type="submit" class="btn btn-primary btn-sm">
+            + Add
+        </button>
+    </div>
+    <span class="form-help">PascalCase, e.g., BiologicalMaterial</span>
+</form>

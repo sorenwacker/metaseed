@@ -1,0 +1,154 @@
+<div class="field-edit-form">
+    <form hx-put="/spec-builder/entity/{{ entity_name }}/field/{{ field_idx }}"
+          hx-target="#editor-content"
+          hx-swap="innerHTML">
+
+        <div class="field-form-row">
+            <div class="form-group">
+                <label class="form-label">Name</label>
+                <input type="text"
+                       name="name"
+                       class="form-input"
+                       value="{{ field.name }}"
+                       required
+                       pattern="[a-z_][a-z0-9_]*">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Type</label>
+                <select name="field_type" class="form-input">
+                    {% for ft in field_types %}
+                    <option value="{{ ft }}" {% if field.type == ft %}selected{% endif %}>{{ ft }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group form-group-checkbox">
+                <label class="form-checkbox">
+                    <input type="checkbox"
+                           name="required"
+                           value="true"
+                           {% if field.required %}checked{% endif %}>
+                    Required
+                </label>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Description</label>
+            <textarea name="description"
+                      class="form-input"
+                      rows="2">{{ field.description or '' }}</textarea>
+        </div>
+
+        <div class="field-form-row">
+            <div class="form-group">
+                <label class="form-label">Items/Target</label>
+                <input type="text"
+                       name="items"
+                       class="form-input"
+                       value="{{ field.items or '' }}"
+                       placeholder="EntityName"
+                       list="entity-list">
+                <datalist id="entity-list">
+                    {% for ename in spec.entities.keys() %}
+                    <option value="{{ ename }}">
+                    {% endfor %}
+                </datalist>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Codename</label>
+                <input type="text"
+                       name="codename"
+                       class="form-input"
+                       value="{{ field.codename or '' }}"
+                       placeholder="camelCase">
+            </div>
+        </div>
+
+        <details class="field-advanced">
+            <summary>Advanced</summary>
+            <div class="field-advanced-content">
+                <div class="field-form-row">
+                    <div class="form-group">
+                        <label class="form-label">Ontology</label>
+                        <input type="text"
+                               name="ontology_term"
+                               class="form-input"
+                               value="{{ field.ontology_term or '' }}"
+                               placeholder="MIAPPE:DM-1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Parent Ref</label>
+                        <input type="text"
+                               name="parent_ref"
+                               class="form-input"
+                               value="{{ field.parent_ref or '' }}"
+                               placeholder="Entity.field">
+                    </div>
+                </div>
+
+                <div class="field-form-row">
+                    <div class="form-group">
+                        <label class="form-label">Pattern</label>
+                        <input type="text"
+                               name="pattern"
+                               class="form-input"
+                               value="{{ field.constraints.pattern if field.constraints else '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Min</label>
+                        <input type="number"
+                               name="minimum"
+                               class="form-input"
+                               step="any"
+                               value="{{ field.constraints.minimum if field.constraints and field.constraints.minimum is not none else '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Max</label>
+                        <input type="number"
+                               name="maximum"
+                               class="form-input"
+                               step="any"
+                               value="{{ field.constraints.maximum if field.constraints and field.constraints.maximum is not none else '' }}">
+                    </div>
+                </div>
+
+                <div class="field-form-row">
+                    <div class="form-group">
+                        <label class="form-label">Min Length</label>
+                        <input type="number"
+                               name="min_length"
+                               class="form-input"
+                               min="0"
+                               value="{{ field.constraints.min_length if field.constraints and field.constraints.min_length else '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Max Length</label>
+                        <input type="number"
+                               name="max_length"
+                               class="form-input"
+                               min="0"
+                               value="{{ field.constraints.max_length if field.constraints and field.constraints.max_length else '' }}">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Enum (one per line)</label>
+                    <textarea name="enum_values"
+                              class="form-input"
+                              rows="2">{% if field.constraints and field.constraints.enum %}{{ field.constraints.enum|join('\n') }}{% endif %}</textarea>
+                </div>
+            </div>
+        </details>
+
+        <div class="field-form-actions">
+            <button type="submit" class="btn btn-primary btn-sm">Save Field</button>
+            <button type="button"
+                    class="btn btn-secondary btn-sm"
+                    hx-get="/spec-builder/entity/{{ entity_name }}"
+                    hx-target="#editor-content"
+                    hx-swap="innerHTML">
+                Cancel
+            </button>
+        </div>
+    </form>
+</div>

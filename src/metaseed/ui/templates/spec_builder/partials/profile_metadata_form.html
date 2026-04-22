@@ -1,0 +1,48 @@
+<form hx-post="/spec-builder/profile-metadata"
+      hx-target="#profile-metadata-panel"
+      hx-swap="innerHTML"
+      class="metadata-form compact-form">
+
+    {% if success %}
+    <div class="form-success">Saved</div>
+    {% endif %}
+
+    <div class="form-row-2">
+        <div class="form-group compact">
+            <label class="form-label">Name <span class="required">*</span></label>
+            <input type="text" name="name" class="form-input" value="{{ spec.name or '' }}" placeholder="my-profile" required>
+        </div>
+        <div class="form-group compact">
+            <label class="form-label">Version <span class="required">*</span></label>
+            <input type="text" name="version" class="form-input" value="{{ spec.version or '1.0' }}" placeholder="1.0" required>
+        </div>
+    </div>
+
+    <div class="form-group compact">
+        <label class="form-label">Display Name</label>
+        <input type="text" name="display_name" class="form-input" value="{{ spec.display_name or '' }}" placeholder="My Profile">
+    </div>
+
+    <div class="form-row-2">
+        <div class="form-group compact">
+            <label class="form-label">Root Entity</label>
+            <input type="text" name="root_entity" class="form-input" value="{{ spec.root_entity or '' }}" placeholder="Investigation" list="entity-names">
+            <datalist id="entity-names">
+                {% for name in spec.entities.keys() %}
+                <option value="{{ name }}">
+                {% endfor %}
+            </datalist>
+        </div>
+        <div class="form-group compact">
+            <label class="form-label">Ontology</label>
+            <input type="text" name="ontology" class="form-input" value="{{ spec.ontology or '' }}" placeholder="PPEO">
+        </div>
+    </div>
+
+    <div class="form-group compact">
+        <label class="form-label">Description</label>
+        <textarea name="description" class="form-input" rows="2" placeholder="Description...">{{ spec.description or '' }}</textarea>
+    </div>
+
+    <button type="submit" class="btn btn-primary btn-sm btn-full">Update</button>
+</form>

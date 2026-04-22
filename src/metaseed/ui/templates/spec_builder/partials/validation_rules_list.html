@@ -1,0 +1,55 @@
+{% if error %}
+<div class="form-error">{{ error }}</div>
+{% endif %}
+{% if success %}
+<div class="form-success">Rule updated</div>
+{% endif %}
+
+<div class="rules-list-container">
+    {% for rule in rules %}
+    <div class="rule-list-item {% if loop.index0 == editing_rule_idx %}active{% endif %}"
+         onclick="showRuleModal({{ loop.index0 }}, '{{ rule.name }}')">
+        <div class="rule-list-item-info">
+            <span class="rule-name">{{ rule.name }}</span>
+            <span class="rule-applies">
+                {% if rule.applies_to == 'all' %}
+                all entities
+                {% elif rule.applies_to is string %}
+                {{ rule.applies_to }}
+                {% else %}
+                {{ rule.applies_to|join(', ') }}
+                {% endif %}
+            </span>
+        </div>
+        <button class="btn-icon danger"
+                hx-delete="/spec-builder/validation-rule/{{ loop.index0 }}"
+                hx-target="#validation-rules-panel"
+                hx-swap="innerHTML"
+                hx-confirm="Delete rule '{{ rule.name }}'?"
+                onclick="event.stopPropagation();">
+            x
+        </button>
+    </div>
+    {% else %}
+    <div class="empty-list">
+        <p>No validation rules. Add one below.</p>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Add rule form -->
+<form hx-post="/spec-builder/validation-rule"
+      hx-target="#validation-rules-panel"
+      hx-swap="innerHTML"
+      class="add-rule-form">
+    <div class="add-form-row">
+        <input type="text"
+               name="name"
+               class="form-input"
+               placeholder="rule_name"
+               required>
+        <button type="submit" class="btn btn-primary btn-sm">
+            + Add
+        </button>
+    </div>
+</form>
