@@ -92,7 +92,7 @@ entities:
       - name: modified
         codename: "dcterms:modified"
         type: datetime
-        required: false
+        required: true
         description: Date and time the record was last modified (ISO 8601)
 
       - name: fdo_type
