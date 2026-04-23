@@ -86,6 +86,21 @@ class FieldSpec(BaseModel):
     unique_within: str | None = None
     reference: str | None = None
 
+    def is_nested(self: Self) -> bool:
+        """Check if this field represents a nested entity.
+
+        A field is nested if it's a single entity reference or a list
+        of entity references (not primitive types).
+
+        Returns:
+            True if this field contains nested entities, False otherwise.
+        """
+        if self.type == FieldType.ENTITY:
+            return True
+        if self.type == FieldType.LIST and self.items:
+            return self.items not in ("string", "int", "float", "bool")
+        return False
+
 
 class EntitySpec(BaseModel):
     """Specification for a MIAPPE entity.

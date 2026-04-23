@@ -8,7 +8,13 @@ import re
 
 from pydantic import BaseModel
 
-from metaseed.models.factory import create_model_from_spec, set_model_context, set_model_loader
+from metaseed.models.factory import (
+    ModelContext,
+    create_model_from_spec,
+    get_global_context,
+    set_model_context,
+    set_model_loader,
+)
 from metaseed.models.registry import (
     ModelNotFoundError,
     ModelRegistry,
@@ -18,10 +24,12 @@ from metaseed.models.types import OntologyTerm
 from metaseed.specs.loader import SpecLoader
 
 __all__ = [
+    "ModelContext",
     "ModelNotFoundError",
     "ModelRegistry",
     "OntologyTerm",
     "create_model_from_spec",
+    "get_global_context",
     "get_global_registry",
     "get_model",
 ]

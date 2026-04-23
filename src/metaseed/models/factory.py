@@ -6,65 +6,163 @@ models from YAML specifications.
 
 from __future__ import annotations
 
+import contextlib
 import datetime
-from typing import Annotated, Any, Literal
+from typing import TYPE_CHECKING, Annotated, Any, Literal, Self
 
 from pydantic import AnyUrl, BaseModel, ConfigDict, Field, create_model, model_validator
 
 from metaseed.models.types import OntologyTerm
 from metaseed.specs.schema import EntitySpec, FieldSpec, FieldType
 
-# Registry for resolving entity types during deserialization
-# Keys are "profile:version:name" to support multiple profiles
-_MODEL_REGISTRY: dict[str, type[BaseModel]] = {}
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
-# Current profile context for nested entity resolution
-_CURRENT_PROFILE: str = "miappe"
-_CURRENT_VERSION: str = "1.1"
 
-# Lazy loader function (set by __init__.py to avoid circular imports)
-_MODEL_LOADER: Any = None
+class ModelContext:
+    """Context for model resolution during deserialization.
+
+    Encapsulates the profile context and model registry used when
+    resolving nested entity types during model creation and validation.
+
+    Attributes:
+        profile: Current profile name (e.g., "miappe", "isa").
+        version: Current profile version (e.g., "1.1").
+    """
+
+    def __init__(self, profile: str = "miappe", version: str = "1.1") -> None:
+        """Initialize the model context.
+
+        Args:
+            profile: Profile name.
+            version: Profile version.
+        """
+        self._profile = profile
+        self._version = version
+        self._models: dict[str, type[BaseModel]] = {}
+        self._loader: Callable[[str, str, str], type[BaseModel]] | None = None
+
+    @property
+    def profile(self: Self) -> str:
+        """Current profile name."""
+        return self._profile
+
+    @property
+    def version(self: Self) -> str:
+        """Current profile version."""
+        return self._version
+
+    def set_context(self: Self, profile: str, version: str) -> None:
+        """Set the current profile context.
+
+        Args:
+            profile: Profile name.
+            version: Profile version.
+        """
+        self._profile = profile
+        self._version = version
+
+    def set_loader(self: Self, loader: Callable[[str, str, str], type[BaseModel]]) -> None:
+        """Set the model loader function.
+
+        Args:
+            loader: Function to load models on demand. Takes (name, version, profile).
+        """
+        self._loader = loader
+
+    def register(
+        self: Self, name: str, model: type[BaseModel], profile: str = "", version: str = ""
+    ) -> None:
+        """Register a model for nested entity resolution.
+
+        Args:
+            name: Model name.
+            model: Model class.
+            profile: Profile name (uses current if empty).
+            version: Profile version (uses current if empty).
+        """
+        p = profile or self._profile
+        v = version or self._version
+        key = f"{p}:{v}:{name}"
+        self._models[key] = model
+
+    def get(self: Self, name: str) -> type[BaseModel] | None:
+        """Get a registered model by name using current profile context.
+
+        If the model is not in the registry but a loader is available,
+        attempt to load it on demand.
+
+        Args:
+            name: Model name.
+
+        Returns:
+            Model class or None if not found.
+        """
+        key = f"{self._profile}:{self._version}:{name}"
+        model = self._models.get(key)
+
+        if model is None and self._loader is not None:
+            with contextlib.suppress(Exception):
+                model = self._loader(name, self._version, self._profile)
+
+        return model
+
+
+# Global context instance - required for model validation which happens
+# at deserialization time and needs access to the context
+_global_context = ModelContext()
+
+
+def get_global_context() -> ModelContext:
+    """Get the global model context.
+
+    Returns:
+        The global ModelContext instance.
+    """
+    return _global_context
 
 
 def set_model_loader(loader: Any) -> None:
-    """Set the model loader function for lazy loading nested entities."""
-    global _MODEL_LOADER
-    _MODEL_LOADER = loader
+    """Set the model loader function for lazy loading nested entities.
+
+    Args:
+        loader: Function to load models on demand.
+    """
+    _global_context.set_loader(loader)
 
 
 def set_model_context(profile: str, version: str) -> None:
-    """Set the current profile context for nested entity resolution."""
-    global _CURRENT_PROFILE, _CURRENT_VERSION
-    _CURRENT_PROFILE = profile
-    _CURRENT_VERSION = version
+    """Set the current profile context for nested entity resolution.
+
+    Args:
+        profile: Profile name.
+        version: Profile version.
+    """
+    _global_context.set_context(profile, version)
 
 
 def register_model(name: str, model: type[BaseModel], profile: str = "", version: str = "") -> None:
-    """Register a model for nested entity resolution."""
-    # Use provided profile/version or fall back to current context
-    p = profile or _CURRENT_PROFILE
-    v = version or _CURRENT_VERSION
-    key = f"{p}:{v}:{name}"
-    _MODEL_REGISTRY[key] = model
+    """Register a model for nested entity resolution.
+
+    Args:
+        name: Model name.
+        model: Model class.
+        profile: Profile name (uses current if empty).
+        version: Profile version (uses current if empty).
+    """
+    _global_context.register(name, model, profile, version)
 
 
 def get_registered_model(name: str) -> type[BaseModel] | None:
     """Get a registered model by name using current profile context.
 
-    If the model is not in the registry but a loader is available,
-    attempt to load it on demand.
+    Args:
+        name: Model name.
+
+    Returns:
+        Model class or None if not found.
     """
-    key = f"{_CURRENT_PROFILE}:{_CURRENT_VERSION}:{name}"
-    model = _MODEL_REGISTRY.get(key)
-
-    if model is None and _MODEL_LOADER is not None:
-        # Try to load the model on demand (silently fail if not found)
-        import contextlib
-
-        with contextlib.suppress(Exception):
-            model = _MODEL_LOADER(name, version=_CURRENT_VERSION, profile=_CURRENT_PROFILE)
-
-    return model
+    return _global_context.get(name)
 
 
 class MIAPPEBaseModel(BaseModel):
@@ -86,7 +184,6 @@ class MIAPPEBaseModel(BaseModel):
         if not isinstance(data, dict):
             return data
 
-        # Get field metadata from class
         entity_fields = getattr(cls, "__entity_fields__", {})
 
         for field_name, entity_type in entity_fields.items():
@@ -99,7 +196,6 @@ class MIAPPEBaseModel(BaseModel):
             if model_class is None:
                 continue
 
-            # Handle list of entities
             if isinstance(value, list):
                 converted = []
                 for item in value:
@@ -108,14 +204,12 @@ class MIAPPEBaseModel(BaseModel):
                     else:
                         converted.append(item)
                 data[field_name] = converted
-            # Handle single entity
             elif isinstance(value, dict):
                 data[field_name] = model_class.model_validate(value)
 
         return data
 
 
-# Type mapping from spec types to Python types
 TYPE_MAP: dict[FieldType, type] = {
     FieldType.STRING: str,
     FieldType.INTEGER: int,
@@ -126,7 +220,7 @@ TYPE_MAP: dict[FieldType, type] = {
     FieldType.URI: AnyUrl,
     FieldType.ONTOLOGY_TERM: OntologyTerm,
     FieldType.LIST: list,
-    FieldType.ENTITY: Any,  # Reference to another entity
+    FieldType.ENTITY: Any,
 }
 
 
@@ -141,17 +235,10 @@ def _build_field_type(field: FieldSpec) -> type:
     """
     base_type = TYPE_MAP.get(field.type, str)
 
-    # Handle list types
     if field.type == FieldType.LIST:
-        # For now, treat all list items as Any since we don't have
-        # the referenced model available during creation
-        # In future phases, this could resolve to actual model types
         return list[Any]
 
-    # Handle entity references
     if field.type == FieldType.ENTITY:
-        # For now, treat as Any since we don't have the referenced model
-        # available during creation. Could resolve to actual model types later.
         return Any
 
     return base_type
@@ -175,7 +262,6 @@ def _build_field_constraints(field: FieldSpec) -> dict[str, Any]:
     if constraints is None:
         return kwargs
 
-    # String constraints
     if constraints.pattern:
         kwargs["pattern"] = constraints.pattern
     if constraints.min_length is not None:
@@ -183,7 +269,6 @@ def _build_field_constraints(field: FieldSpec) -> dict[str, Any]:
     if constraints.max_length is not None:
         kwargs["max_length"] = constraints.max_length
 
-    # Numeric constraints
     if constraints.minimum is not None:
         kwargs["ge"] = constraints.minimum
     if constraints.maximum is not None:
@@ -201,7 +286,6 @@ def _build_enum_type(enum_values: list[str]) -> type:
     Returns:
         A Literal type constraining values to the given list.
     """
-    # Create Literal type from the enum values
     return Literal[tuple(enum_values)]  # type: ignore[misc]
 
 
@@ -217,16 +301,13 @@ def _create_field_definition(field: FieldSpec) -> tuple[type, Any]:
     python_type = _build_field_type(field)
     constraints = _build_field_constraints(field)
 
-    # Check if field has enum constraint - use Literal type instead
     if field.constraints and field.constraints.enum:
         python_type = _build_enum_type(field.constraints.enum)
 
-    # List fields default to empty list for easier use
     if field.type == FieldType.LIST:
         constraints["default_factory"] = list
         return (Annotated[python_type, Field(**constraints)], ...)
 
-    # Entity references are optional by default
     if field.type == FieldType.ENTITY:
         annotated_type = (
             Annotated[python_type, Field(**constraints)] if constraints else python_type
@@ -238,11 +319,9 @@ def _create_field_definition(field: FieldSpec) -> tuple[type, Any]:
     annotated_type = Annotated[python_type, Field(**constraints)] if constraints else python_type
 
     if field.required:
-        # Required field with no default
         if constraints:
             return (annotated_type, ...)
         return (python_type, ...)
-    # Optional field defaults to None
     return (annotated_type | None, None)
 
 
@@ -269,9 +348,7 @@ def create_model_from_spec(spec: EntitySpec) -> type:
     for field in spec.fields:
         field_definitions[field.name] = _create_field_definition(field)
 
-        # Track fields that reference other entities for deserialization
         if field.type == FieldType.LIST and field.items:
-            # Don't track primitive list types
             if field.items not in ("string", "int", "float", "bool"):
                 entity_fields[field.name] = field.items
         elif field.type == FieldType.ENTITY and field.items:
@@ -283,10 +360,8 @@ def create_model_from_spec(spec: EntitySpec) -> type:
         **field_definitions,
     )
 
-    # Store entity field metadata for nested deserialization
     model.__entity_fields__ = entity_fields  # type: ignore[attr-defined]
 
-    # Register model for resolution by other models
     register_model(spec.name, model)
 
     return model

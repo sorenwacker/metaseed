@@ -39,7 +39,17 @@ def get_field_data(helper: Any) -> list[dict]:
 
 
 def is_nested_field(field: dict) -> bool:
-    """Check if a field represents a nested entity (list of entities or single entity)."""
+    """Check if a field dict represents a nested entity (list of entities or single entity).
+
+    This function operates on field dicts from get_field_data(). For FieldSpec
+    objects, use the is_nested() method directly.
+
+    Args:
+        field: Field dict with 'type' and optionally 'items' keys.
+
+    Returns:
+        True if the field contains nested entities, False otherwise.
+    """
     if field["type"] == "entity":
         return True
     if field["type"] == "list":

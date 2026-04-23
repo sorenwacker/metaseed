@@ -6,7 +6,8 @@ Tests use FastAPI TestClient to verify route behavior.
 import pytest
 from fastapi.testclient import TestClient
 
-from metaseed.ui.routes import AppState, create_app
+from metaseed.ui.app import create_app
+from metaseed.ui.state import AppState
 
 
 @pytest.fixture
@@ -131,7 +132,7 @@ class TestEditEntity:
         """Edit form shows existing values."""
         # After create, we get the edit form with the created data
         state = client_with_entity.app.state.ui_state
-        node_id = list(state.nodes_by_id.keys())[0]
+        node_id = next(iter(state.nodes_by_id.keys()))
 
         response = client_with_entity.get(f"/form/Investigation/{node_id}")
         assert response.status_code == 200
@@ -160,7 +161,7 @@ class TestDeleteEntity:
 
         state = client.app.state.ui_state
         assert len(state.nodes_by_id) == 1
-        node_id = list(state.nodes_by_id.keys())[0]
+        node_id = next(iter(state.nodes_by_id.keys()))
 
         delete_response = client.delete(f"/entity/{node_id}")
         assert delete_response.status_code == 200
@@ -644,7 +645,7 @@ class TestUpdateEntity:
     def test_update_entity_success(self, client_with_entity):
         """Update entity with valid data succeeds."""
         state = client_with_entity.app.state.ui_state
-        node_id = list(state.nodes_by_id.keys())[0]
+        node_id = next(iter(state.nodes_by_id.keys()))
 
         response = client_with_entity.put(
             f"/entity/{node_id}",
@@ -665,7 +666,7 @@ class TestUpdateEntity:
     def test_update_entity_with_nested(self, client_with_entity):
         """Update entity merges nested items."""
         state = client_with_entity.app.state.ui_state
-        node_id = list(state.nodes_by_id.keys())[0]
+        node_id = next(iter(state.nodes_by_id.keys()))
         state.current_nested_items["studies"] = [{"unique_id": "STU-001", "title": "Test Study"}]
 
         response = client_with_entity.put(
@@ -677,7 +678,7 @@ class TestUpdateEntity:
     def test_update_entity_validation_error(self, client_with_entity):
         """Update entity with invalid data shows validation error."""
         state = client_with_entity.app.state.ui_state
-        node_id = list(state.nodes_by_id.keys())[0]
+        node_id = next(iter(state.nodes_by_id.keys()))
 
         response = client_with_entity.put(
             f"/entity/{node_id}",
@@ -749,7 +750,7 @@ class TestEditFormEdgeCases:
     def test_edit_form_loads_nested_items(self, client_with_entity):
         """Edit form loads existing nested items into state."""
         state = client_with_entity.app.state.ui_state
-        node_id = list(state.nodes_by_id.keys())[0]
+        node_id = next(iter(state.nodes_by_id.keys()))
 
         # Add nested items via state (avoids profile-specific validation)
         # First get the form to set up editing context
@@ -767,7 +768,7 @@ class TestEditFormEdgeCases:
     def test_edit_form_preserves_pending_edits(self, client_with_entity):
         """Edit form preserves pending nested item edits."""
         state = client_with_entity.app.state.ui_state
-        node_id = list(state.nodes_by_id.keys())[0]
+        node_id = next(iter(state.nodes_by_id.keys()))
 
         # Set pending edits
         state.current_nested_items = {"studies": [{"title": "Pending Edit"}]}
@@ -780,7 +781,7 @@ class TestEditFormEdgeCases:
     def test_edit_form_unknown_entity_type(self, client_with_entity):
         """Edit form with mismatched entity type returns 404."""
         state = client_with_entity.app.state.ui_state
-        node_id = list(state.nodes_by_id.keys())[0]
+        node_id = next(iter(state.nodes_by_id.keys()))
 
         response = client_with_entity.get(f"/form/UnknownEntity/{node_id}")
         assert response.status_code == 404
