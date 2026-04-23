@@ -1248,7 +1248,8 @@ def create_app(state: AppState | None = None) -> FastAPI:
 
             ws = wb.create_sheet(entity_type)
             nested_fields = set(helper.nested_fields.keys())
-            columns = [f for f in helper.all_fields if f not in nested_fields]
+            # Include all fields - nested fields will show counts
+            columns = helper.all_fields
 
             ws.append(columns)
 
@@ -1258,13 +1259,24 @@ def create_app(state: AppState | None = None) -> FastAPI:
                 row = []
                 for col in columns:
                     value = entity_data.get(col, "")
-                    if isinstance(value, list):
+                    if col in nested_fields:
+                        # Show count for nested fields
+                        if isinstance(value, list):
+                            value = len(value)
+                        elif value:
+                            value = 1
+                        else:
+                            value = 0
+                    elif isinstance(value, list):
                         if value and not isinstance(value[0], dict):
                             value = ", ".join(str(v) for v in value)
                         else:
-                            value = f"[{len(value)} items]"
+                            value = len(value)
                     elif isinstance(value, dict):
                         value = "[object]"
+                    elif not isinstance(value, str | int | float | bool | type(None)):
+                        # Convert Pydantic types like AnyUrl to string
+                        value = str(value)
                     row.append(value)
                 ws.append(row)
 

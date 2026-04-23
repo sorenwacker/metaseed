@@ -1,0 +1,1707 @@
+# DiSSCo Digital Specimen Profile v0.4
+# Distributed System of Scientific Collections - FAIR Digital Object specification
+# Based on https://schemas.dissco.tech/schemas/fdo-type/digital-specimen/latest/
+
+version: "0.4"
+name: dissco
+display_name: DiSSCo Digital Specimen
+description: >
+  FAIR Digital Object specification for natural science collection specimens.
+  Supports biodiversity informatics with Darwin Core terms and DiSSCo extensions.
+root_entity: DigitalSpecimen
+ontology: dwc
+
+validation_rules:
+  - name: doi_format
+    description: DOI identifiers must follow standard format
+    applies_to: [DigitalSpecimen]
+    field: identifier
+    pattern: "^https://doi\\.org/.*$"
+
+  - name: ror_or_wikidata_org
+    description: Organisation ID must be ROR or Wikidata identifier
+    applies_to: [DigitalSpecimen]
+    field: organisation_id
+    pattern: "^https://ror\\.org/.*$|^https://www\\.wikidata\\.org/wiki/Q.*$"
+
+  - name: mids_level_range
+    description: MIDS level must be 0-3
+    applies_to: [DigitalSpecimen]
+    field: mids_level
+    minimum: 0
+    maximum: 3
+
+  - name: scientific_name_required
+    description: TaxonIdentification must have scientific name
+    applies_to: [TaxonIdentification]
+    field: scientific_name
+    condition: required
+
+entities:
+  DigitalSpecimen:
+    ontology_term: ods:DigitalSpecimen
+    description: >
+      A FAIR Digital Object representing a physical specimen in a natural science collection.
+      Contains administrative metadata, taxonomic identifications, collection events, and linked data.
+    fields:
+      # Core identifiers
+      - name: id
+        codename: "@id"
+        type: string
+        required: true
+        description: DOI-format unique identifier for the digital specimen
+        constraints:
+          pattern: "^https://doi\\.org/.*$"
+
+      - name: type
+        codename: "@type"
+        type: string
+        required: true
+        description: Type of the digital object
+        constraints:
+          enum: ["ods:DigitalSpecimen"]
+
+      - name: identifier
+        codename: "dcterms:identifier"
+        type: string
+        required: true
+        description: DOI identifier matching the @id
+
+      - name: version
+        codename: "ods:version"
+        type: integer
+        required: true
+        description: Version number of the digital specimen record
+        constraints:
+          minimum: 1
+
+      - name: status
+        codename: "ods:status"
+        type: string
+        required: false
+        description: Status of the digital specimen
+        constraints:
+          enum: ["Draft", "Active", "Tombstone"]
+
+      - name: created
+        codename: "dcterms:created"
+        type: datetime
+        required: true
+        description: Date and time the record was created (ISO 8601)
+
+      - name: modified
+        codename: "dcterms:modified"
+        type: datetime
+        required: false
+        description: Date and time the record was last modified (ISO 8601)
+
+      - name: fdo_type
+        codename: "ods:fdoType"
+        type: string
+        required: true
+        description: DOI reference to the FDO type definition
+
+      - name: mids_level
+        codename: "ods:midsLevel"
+        type: integer
+        required: true
+        description: Minimum Information about a Digital Specimen level (0-3)
+        constraints:
+          minimum: 0
+          maximum: 3
+
+      # Physical specimen identifiers
+      - name: normalised_physical_specimen_id
+        codename: "ods:normalisedPhysicalSpecimenID"
+        type: string
+        required: true
+        description: Normalised unique identifier for the physical specimen
+
+      - name: physical_specimen_id
+        codename: "ods:physicalSpecimenID"
+        type: string
+        required: true
+        description: Main identifier for the physical specimen
+
+      - name: physical_specimen_id_type
+        codename: "ods:physicalSpecimenIDType"
+        type: string
+        required: true
+        description: Type of the physical specimen identifier
+        constraints:
+          enum: ["Resolvable", "Global", "Local"]
+
+      # Source and organisation
+      - name: source_system_id
+        codename: "ods:sourceSystemID"
+        type: uri
+        required: true
+        description: Handle URL of the source system
+
+      - name: source_system_name
+        codename: "ods:sourceSystemName"
+        type: string
+        required: false
+        description: Name of the source system
+
+      - name: organisation_id
+        codename: "ods:organisationID"
+        type: string
+        required: true
+        description: ROR or Wikidata identifier for the holding organisation
+
+      - name: organisation_code
+        codename: "ods:organisationCode"
+        type: string
+        required: false
+        description: Code for the holding organisation
+
+      - name: organisation_name
+        codename: "ods:organisationName"
+        type: string
+        required: false
+        description: Name of the holding organisation
+
+      - name: owner_organisation_code
+        codename: "ods:ownerOrganisationCode"
+        type: string
+        required: false
+        description: Code for the owning organisation
+
+      # Collection information
+      - name: collection_code
+        codename: "dwc:collectionCode"
+        type: string
+        required: false
+        description: Collection code within the organisation
+
+      - name: collection_id
+        codename: "dwc:collectionID"
+        type: uri
+        required: false
+        description: Globally unique identifier for the collection
+
+      # Classification
+      - name: topic_origin
+        codename: "ods:topicOrigin"
+        type: string
+        required: false
+        description: Origin classification of the specimen
+        constraints:
+          enum: ["Natural", "Human-made", "Mixed origin", "Unclassified"]
+
+      - name: topic_domain
+        codename: "ods:topicDomain"
+        type: string
+        required: false
+        description: Domain classification of the specimen
+        constraints:
+          enum: ["Life", "Environment", "Earth System", "Extraterrestrial", "Cultural Artefacts", "Archive Material", "Unclassified"]
+
+      - name: topic_discipline
+        codename: "ods:topicDiscipline"
+        type: string
+        required: false
+        description: Discipline classification of the specimen
+        constraints:
+          enum: ["Anthropology", "Botany", "Astrogeology", "Geology", "Microbiology", "Palaeontology", "Zoology", "Ecology", "Other Biodiversity", "Other Geodiversity", "Unclassified"]
+
+      - name: topic_category
+        codename: "ods:topicCategory"
+        type: string
+        required: false
+        description: Detailed category classification
+
+      # Specimen details
+      - name: specimen_name
+        codename: "ods:specimenName"
+        type: string
+        required: false
+        description: Human-readable name for the specimen
+
+      - name: basis_of_record
+        codename: "dwc:basisOfRecord"
+        type: string
+        required: false
+        description: Nature of the specimen record
+
+      - name: living_or_preserved
+        codename: "ods:livingOrPreserved"
+        type: string
+        required: false
+        description: Whether the specimen is living or preserved
+        constraints:
+          enum: ["Living", "Preserved"]
+
+      - name: preparations
+        codename: "dwc:preparations"
+        type: string
+        required: false
+        description: Preparation methods applied to the specimen
+
+      - name: disposition
+        codename: "dwc:disposition"
+        type: string
+        required: false
+        description: Current state of the specimen in the collection
+
+      - name: is_marked_as_type
+        codename: "ods:isMarkedAsType"
+        type: boolean
+        required: false
+        description: Whether the specimen is marked as a nomenclatural type
+
+      - name: is_known_to_contain_media
+        codename: "ods:isKnownToContainMedia"
+        type: boolean
+        required: false
+        description: Whether digital media exists for this specimen
+
+      # Organism details
+      - name: organism_id
+        codename: "dwc:organismID"
+        type: uri
+        required: false
+        description: Identifier for the organism
+
+      - name: organism_name
+        codename: "dwc:organismName"
+        type: string
+        required: false
+        description: Name or label for the organism
+
+      - name: organism_scope
+        codename: "dwc:organismScope"
+        type: string
+        required: false
+        description: Scope of the organism (colony, pack, etc.)
+
+      - name: organism_quantity
+        codename: "dwc:organismQuantity"
+        type: string
+        required: false
+        description: Number of organisms represented
+
+      - name: organism_quantity_type
+        codename: "dwc:organismQuantityType"
+        type: string
+        required: false
+        description: Type of quantity measurement
+
+      - name: organism_remarks
+        codename: "dwc:organismRemarks"
+        type: string
+        required: false
+        description: Comments about the organism
+
+      # Data and rights
+      - name: license
+        codename: "dcterms:license"
+        type: uri
+        required: false
+        description: Rights documentation for the record
+
+      - name: access_rights
+        codename: "dcterms:accessRights"
+        type: string
+        required: false
+        description: Access rights information
+
+      - name: rights_holder
+        codename: "dcterms:rightsHolder"
+        type: string
+        required: false
+        description: Rights holder for the record
+
+      - name: information_withheld
+        codename: "dwc:informationWithheld"
+        type: string
+        required: false
+        description: Description of information withheld
+
+      - name: data_generalizations
+        codename: "dwc:dataGeneralizations"
+        type: string
+        required: false
+        description: Description of data modifications
+
+      - name: verbatim_label
+        codename: "dwc:verbatimLabel"
+        type: string
+        required: false
+        description: Original label transcription
+
+      - name: dynamic_properties
+        codename: "dwc:dynamicProperties"
+        type: string
+        required: false
+        description: JSON-encoded additional properties
+
+      - name: metadata_languages
+        codename: "ods:metadataLanguages"
+        type: list
+        items: string
+        required: false
+        description: Languages used in the metadata
+
+      - name: dataset_name
+        codename: "dwc:datasetName"
+        type: string
+        required: false
+        description: Name of the dataset
+
+      - name: dataset_id
+        codename: "dwc:datasetID"
+        type: string
+        required: false
+        description: UUID identifier for the dataset
+
+      # Nested entities
+      - name: identifications
+        codename: "ods:hasIdentifications"
+        type: list
+        items: Identification
+        required: false
+        description: Taxonomic identifications of the specimen
+
+      - name: events
+        codename: "ods:hasEvents"
+        type: list
+        items: Event
+        required: false
+        description: Events associated with the specimen (collecting, etc.)
+
+      - name: agents
+        codename: "ods:hasAgents"
+        type: list
+        items: Agent
+        required: false
+        description: People and organisations associated with the specimen
+
+      - name: assertions
+        codename: "ods:hasAssertions"
+        type: list
+        items: Assertion
+        required: false
+        description: Measurements, facts, and assertions about the specimen
+
+      - name: citations
+        codename: "ods:hasCitations"
+        type: list
+        items: Citation
+        required: false
+        description: Publication citations mentioning the specimen
+
+      - name: identifiers
+        codename: "ods:hasIdentifiers"
+        type: list
+        items: Identifier
+        required: false
+        description: Additional identifiers for the specimen
+
+      - name: entity_relationships
+        codename: "ods:hasEntityRelationships"
+        type: list
+        items: EntityRelationship
+        required: false
+        description: Relationships to other entities
+
+      - name: specimen_parts
+        codename: "ods:hasSpecimenParts"
+        type: list
+        items: SpecimenPart
+        required: false
+        description: Parts of the specimen
+
+      - name: chronometric_ages
+        codename: "ods:hasChronometricAges"
+        type: list
+        items: ChronometricAge
+        required: false
+        description: Age determinations for the specimen
+
+  Identification:
+    ontology_term: ods:Identification
+    description: A taxonomic identification of the specimen
+    fields:
+      - name: id
+        codename: "@id"
+        type: string
+        required: false
+        description: Identifier for the identification
+
+      - name: type
+        codename: "@type"
+        type: string
+        required: true
+        description: Type of the object
+        constraints:
+          enum: ["ods:Identification"]
+
+      - name: identification_id
+        codename: "dwc:identificationID"
+        type: string
+        required: false
+        description: Identifier for the identification
+
+      - name: identification_type
+        codename: "ods:identificationType"
+        type: string
+        required: false
+        description: Type of identification
+        constraints:
+          enum: ["TaxonIdentification"]
+
+      - name: verbatim_identification
+        codename: "dwc:verbatimIdentification"
+        type: string
+        required: false
+        description: Original identification string
+
+      - name: type_status
+        codename: "dwc:typeStatus"
+        type: string
+        required: false
+        description: Nomenclatural type status
+
+      - name: date_identified
+        codename: "dwc:dateIdentified"
+        type: string
+        required: false
+        description: Date the identification was made
+
+      - name: is_verified_identification
+        codename: "ods:isVerifiedIdentification"
+        type: boolean
+        required: true
+        description: Whether this is the accepted identification
+
+      - name: identification_remarks
+        codename: "dwc:identificationRemarks"
+        type: string
+        required: false
+        description: Comments about the identification
+
+      - name: identification_qualifier
+        codename: "dwc:identificationQualifier"
+        type: string
+        required: false
+        description: Uncertainty qualifier (cf., aff., etc.)
+
+      - name: agents
+        codename: "ods:hasAgents"
+        type: list
+        items: Agent
+        required: false
+        description: Agents who made the identification
+
+      - name: citations
+        codename: "ods:hasCitations"
+        type: list
+        items: Citation
+        required: false
+        description: Citations supporting the identification
+
+      - name: taxon_identifications
+        codename: "ods:hasTaxonIdentifications"
+        type: list
+        items: TaxonIdentification
+        required: false
+        description: Taxonomic details of the identification
+
+  TaxonIdentification:
+    ontology_term: ods:TaxonIdentification
+    description: Taxonomic classification details
+    fields:
+      - name: id
+        codename: "@id"
+        type: string
+        required: false
+        description: Identifier for the taxon identification
+
+      - name: type
+        codename: "@type"
+        type: string
+        required: true
+        description: Type of the object
+        constraints:
+          enum: ["ods:TaxonIdentification"]
+
+      - name: taxon_id
+        codename: "dwc:taxonID"
+        type: string
+        required: false
+        description: Identifier for the taxon
+
+      - name: scientific_name
+        codename: "dwc:scientificName"
+        type: string
+        required: true
+        description: Full scientific name with authorship
+
+      - name: scientific_name_id
+        codename: "dwc:scientificNameID"
+        type: string
+        required: false
+        description: Identifier for the nomenclatural details
+
+      - name: scientific_name_authorship
+        codename: "dwc:scientificNameAuthorship"
+        type: string
+        required: false
+        description: Authorship information
+
+      - name: name_published_in_year
+        codename: "dwc:namePublishedInYear"
+        type: string
+        required: false
+        description: Year the name was published
+
+      - name: taxon_rank
+        codename: "dwc:taxonRank"
+        type: string
+        required: false
+        description: Taxonomic rank
+
+      - name: verbatim_taxon_rank
+        codename: "dwc:verbatimTaxonRank"
+        type: string
+        required: false
+        description: Original rank as recorded
+
+      - name: taxon_remarks
+        codename: "dwc:taxonRemarks"
+        type: string
+        required: false
+        description: Comments about the taxon
+
+      - name: kingdom
+        codename: "dwc:kingdom"
+        type: string
+        required: false
+        description: Kingdom classification
+
+      - name: phylum
+        codename: "dwc:phylum"
+        type: string
+        required: false
+        description: Phylum or division
+
+      - name: class_name
+        codename: "dwc:class"
+        type: string
+        required: false
+        description: Class classification
+
+      - name: order_name
+        codename: "dwc:order"
+        type: string
+        required: false
+        description: Order classification
+
+      - name: family
+        codename: "dwc:family"
+        type: string
+        required: false
+        description: Family classification
+
+      - name: subfamily
+        codename: "dwc:subfamily"
+        type: string
+        required: false
+        description: Subfamily classification
+
+      - name: genus
+        codename: "dwc:genus"
+        type: string
+        required: false
+        description: Genus classification
+
+      - name: subgenus
+        codename: "dwc:subgenus"
+        type: string
+        required: false
+        description: Subgenus classification
+
+      - name: specific_epithet
+        codename: "dwc:specificEpithet"
+        type: string
+        required: false
+        description: Species epithet
+
+      - name: infraspecific_epithet
+        codename: "dwc:infraspecificEpithet"
+        type: string
+        required: false
+        description: Infraspecific epithet
+
+      - name: cultivar_epithet
+        codename: "dwc:cultivarEpithet"
+        type: string
+        required: false
+        description: Cultivar name
+
+      - name: taxonomic_status
+        codename: "dwc:taxonomicStatus"
+        type: string
+        required: false
+        description: Status of the scientific name
+
+      - name: nomenclatural_code
+        codename: "dwc:nomenclaturalCode"
+        type: string
+        required: false
+        description: Nomenclatural code governing the name
+
+      - name: nomenclatural_status
+        codename: "dwc:nomenclaturalStatus"
+        type: string
+        required: false
+        description: Nomenclatural status
+
+      - name: vernacular_name
+        codename: "dwc:vernacularName"
+        type: string
+        required: false
+        description: Common or vernacular name
+
+      - name: accepted_name_usage
+        codename: "dwc:acceptedNameUsage"
+        type: string
+        required: false
+        description: Currently accepted name
+
+      - name: accepted_name_usage_id
+        codename: "dwc:acceptedNameUsageID"
+        type: string
+        required: false
+        description: Identifier for accepted name
+
+  Event:
+    ontology_term: ods:Event
+    description: An event in the history of the specimen (collecting, etc.)
+    fields:
+      - name: id
+        codename: "@id"
+        type: string
+        required: false
+        description: Identifier for the event
+
+      - name: type
+        codename: "@type"
+        type: string
+        required: true
+        description: Type of the object
+        constraints:
+          enum: ["ods:Event"]
+
+      - name: event_type
+        codename: "dwc:eventType"
+        type: string
+        required: false
+        description: Nature of the event
+
+      - name: field_number
+        codename: "dwc:fieldNumber"
+        type: string
+        required: false
+        description: Field identifier for the event
+
+      - name: event_date
+        codename: "dwc:eventDate"
+        type: string
+        required: false
+        description: Date or interval of the event
+
+      - name: event_time
+        codename: "dwc:eventTime"
+        type: string
+        required: false
+        description: Time of the event
+
+      - name: verbatim_event_date
+        codename: "dwc:verbatimEventDate"
+        type: string
+        required: false
+        description: Original date representation
+
+      - name: year
+        codename: "dwc:year"
+        type: integer
+        required: false
+        description: Four-digit year
+
+      - name: month
+        codename: "dwc:month"
+        type: integer
+        required: false
+        description: Month (1-12)
+        constraints:
+          minimum: 1
+          maximum: 12
+
+      - name: day
+        codename: "dwc:day"
+        type: integer
+        required: false
+        description: Day of month (1-31)
+        constraints:
+          minimum: 1
+          maximum: 31
+
+      - name: start_day_of_year
+        codename: "dwc:startDayOfYear"
+        type: integer
+        required: false
+        description: Earliest day of year (1-366)
+        constraints:
+          minimum: 1
+          maximum: 366
+
+      - name: end_day_of_year
+        codename: "dwc:endDayOfYear"
+        type: integer
+        required: false
+        description: Latest day of year (1-366)
+        constraints:
+          minimum: 1
+          maximum: 366
+
+      - name: habitat
+        codename: "dwc:habitat"
+        type: string
+        required: false
+        description: Habitat description
+
+      - name: behavior
+        codename: "dwc:behavior"
+        type: string
+        required: false
+        description: Behavior at time of event
+
+      - name: sex
+        codename: "dwc:sex"
+        type: string
+        required: false
+        description: Sex of the organism
+
+      - name: life_stage
+        codename: "dwc:lifeStage"
+        type: string
+        required: false
+        description: Life stage at time of event
+
+      - name: reproductive_condition
+        codename: "dwc:reproductiveCondition"
+        type: string
+        required: false
+        description: Reproductive condition
+
+      - name: caste
+        codename: "dwc:caste"
+        type: string
+        required: false
+        description: Caste for eusocial species
+
+      - name: vitality
+        codename: "dwc:vitality"
+        type: string
+        required: false
+        description: Whether alive or dead at collection
+
+      - name: establishment_means
+        codename: "dwc:establishmentMeans"
+        type: string
+        required: false
+        description: How the organism came to be at location
+
+      - name: pathway
+        codename: "dwc:pathway"
+        type: string
+        required: false
+        description: Process by which organism arrived
+
+      - name: degree_of_establishment
+        codename: "dwc:degreeOfEstablishment"
+        type: string
+        required: false
+        description: Degree organism survives at location
+
+      - name: sampling_protocol
+        codename: "dwc:samplingProtocol"
+        type: string
+        required: false
+        description: Sampling methods used
+
+      - name: sampling_effort
+        codename: "dwc:samplingEffort"
+        type: string
+        required: false
+        description: Effort expended during event
+
+      - name: sample_size_value
+        codename: "dwc:sampleSizeValue"
+        type: float
+        required: false
+        description: Numeric sample size
+
+      - name: sample_size_unit
+        codename: "dwc:sampleSizeUnit"
+        type: string
+        required: false
+        description: Unit of sample size
+
+      - name: field_notes
+        codename: "dwc:fieldNotes"
+        type: string
+        required: false
+        description: Field notes reference
+
+      - name: event_remarks
+        codename: "dwc:eventRemarks"
+        type: string
+        required: false
+        description: Comments about the event
+
+      - name: location
+        codename: "ods:hasLocation"
+        type: entity
+        items: Location
+        required: false
+        description: Location where the event occurred
+
+      - name: agents
+        codename: "ods:hasAgents"
+        type: list
+        items: Agent
+        required: false
+        description: Agents involved in the event
+
+      - name: assertions
+        codename: "ods:hasAssertions"
+        type: list
+        items: Assertion
+        required: false
+        description: Assertions about the event
+
+  Location:
+    ontology_term: ods:Location
+    description: Geographic location information
+    fields:
+      - name: id
+        codename: "@id"
+        type: string
+        required: false
+        description: Identifier for the location
+
+      - name: type
+        codename: "@type"
+        type: string
+        required: true
+        description: Type of the object
+        constraints:
+          enum: ["ods:Location"]
+
+      - name: location_id
+        codename: "dwc:locationID"
+        type: string
+        required: false
+        description: Identifier for the location
+
+      - name: higher_geography_id
+        codename: "dwc:higherGeographyID"
+        type: string
+        required: false
+        description: Identifier for higher geography
+
+      - name: higher_geography
+        codename: "dwc:higherGeography"
+        type: string
+        required: false
+        description: Higher geography hierarchy
+
+      - name: continent
+        codename: "dwc:continent"
+        type: string
+        required: false
+        description: Continent name
+
+      - name: water_body
+        codename: "dwc:waterBody"
+        type: string
+        required: false
+        description: Water body name
+
+      - name: island_group
+        codename: "dwc:islandGroup"
+        type: string
+        required: false
+        description: Island group name
+
+      - name: island
+        codename: "dwc:island"
+        type: string
+        required: false
+        description: Island name
+
+      - name: country
+        codename: "dwc:country"
+        type: string
+        required: false
+        description: Country name
+
+      - name: country_code
+        codename: "dwc:countryCode"
+        type: string
+        required: false
+        description: ISO country code
+
+      - name: state_province
+        codename: "dwc:stateProvince"
+        type: string
+        required: false
+        description: State or province
+
+      - name: county
+        codename: "dwc:county"
+        type: string
+        required: false
+        description: County or equivalent
+
+      - name: municipality
+        codename: "dwc:municipality"
+        type: string
+        required: false
+        description: Municipality
+
+      - name: locality
+        codename: "dwc:locality"
+        type: string
+        required: false
+        description: Specific locality description
+
+      - name: verbatim_locality
+        codename: "dwc:verbatimLocality"
+        type: string
+        required: false
+        description: Original locality text
+
+      - name: minimum_elevation_in_meters
+        codename: "dwc:minimumElevationInMeters"
+        type: float
+        required: false
+        description: Minimum elevation (meters)
+
+      - name: maximum_elevation_in_meters
+        codename: "dwc:maximumElevationInMeters"
+        type: float
+        required: false
+        description: Maximum elevation (meters)
+
+      - name: verbatim_elevation
+        codename: "dwc:verbatimElevation"
+        type: string
+        required: false
+        description: Original elevation text
+
+      - name: minimum_depth_in_meters
+        codename: "dwc:minimumDepthInMeters"
+        type: float
+        required: false
+        description: Minimum depth (meters)
+
+      - name: maximum_depth_in_meters
+        codename: "dwc:maximumDepthInMeters"
+        type: float
+        required: false
+        description: Maximum depth (meters)
+
+      - name: verbatim_depth
+        codename: "dwc:verbatimDepth"
+        type: string
+        required: false
+        description: Original depth text
+
+      - name: vertical_datum
+        codename: "dwc:verticalDatum"
+        type: string
+        required: false
+        description: Vertical datum reference
+
+      - name: location_according_to
+        codename: "dwc:locationAccordingTo"
+        type: string
+        required: false
+        description: Source of location information
+
+      - name: location_remarks
+        codename: "dwc:locationRemarks"
+        type: string
+        required: false
+        description: Comments about the location
+
+      - name: georeference
+        codename: "ods:hasGeoreference"
+        type: entity
+        items: Georeference
+        required: false
+        description: Geographic coordinates
+
+  Georeference:
+    ontology_term: ods:Georeference
+    description: Geographic coordinate information
+    fields:
+      - name: id
+        codename: "@id"
+        type: string
+        required: false
+        description: Identifier for the georeference
+
+      - name: type
+        codename: "@type"
+        type: string
+        required: true
+        description: Type of the object
+        constraints:
+          enum: ["ods:Georeference"]
+
+      - name: decimal_latitude
+        codename: "dwc:decimalLatitude"
+        type: float
+        required: false
+        description: Latitude in decimal degrees
+        constraints:
+          minimum: -90
+          maximum: 90
+
+      - name: decimal_longitude
+        codename: "dwc:decimalLongitude"
+        type: float
+        required: false
+        description: Longitude in decimal degrees
+        constraints:
+          minimum: -180
+          maximum: 180
+
+      - name: geodetic_datum
+        codename: "dwc:geodeticDatum"
+        type: string
+        required: false
+        description: Geodetic datum (e.g., WGS84)
+
+      - name: coordinate_uncertainty_in_meters
+        codename: "dwc:coordinateUncertaintyInMeters"
+        type: float
+        required: false
+        description: Uncertainty radius in meters
+
+      - name: coordinate_precision
+        codename: "dwc:coordinatePrecision"
+        type: float
+        required: false
+        description: Decimal precision of coordinates
+
+      - name: point_radius_spatial_fit
+        codename: "dwc:pointRadiusSpatialFit"
+        type: float
+        required: false
+        description: Ratio of point-radius area to actual area
+
+      - name: verbatim_coordinates
+        codename: "dwc:verbatimCoordinates"
+        type: string
+        required: false
+        description: Original coordinate text
+
+      - name: verbatim_latitude
+        codename: "dwc:verbatimLatitude"
+        type: string
+        required: false
+        description: Original latitude text
+
+      - name: verbatim_longitude
+        codename: "dwc:verbatimLongitude"
+        type: string
+        required: false
+        description: Original longitude text
+
+      - name: verbatim_coordinate_system
+        codename: "dwc:verbatimCoordinateSystem"
+        type: string
+        required: false
+        description: Original coordinate system
+
+      - name: verbatim_srs
+        codename: "dwc:verbatimSRS"
+        type: string
+        required: false
+        description: Original spatial reference system
+
+      - name: footprint_wkt
+        codename: "dwc:footprintWKT"
+        type: string
+        required: false
+        description: Well-Known Text representation
+
+      - name: footprint_srs
+        codename: "dwc:footprintSRS"
+        type: string
+        required: false
+        description: SRS for footprint WKT
+
+      - name: footprint_spatial_fit
+        codename: "dwc:footprintSpatialFit"
+        type: float
+        required: false
+        description: Ratio of footprint area to actual area
+
+      - name: georeferenced_by
+        codename: "dwc:georeferencedBy"
+        type: string
+        required: false
+        description: Who georeferenced
+
+      - name: georeferenced_date
+        codename: "dwc:georeferencedDate"
+        type: string
+        required: false
+        description: When georeferenced
+
+      - name: georeference_protocol
+        codename: "dwc:georeferenceProtocol"
+        type: string
+        required: false
+        description: Protocol used
+
+      - name: georeference_sources
+        codename: "dwc:georeferenceSources"
+        type: string
+        required: false
+        description: Sources used
+
+      - name: georeference_remarks
+        codename: "dwc:georeferenceRemarks"
+        type: string
+        required: false
+        description: Comments about georeference
+
+  Agent:
+    ontology_term: ods:Agent
+    description: A person, organisation, or software agent
+    fields:
+      - name: id
+        codename: "@id"
+        type: string
+        required: false
+        description: Identifier for the agent
+
+      - name: type
+        codename: "@type"
+        type: string
+        required: true
+        description: Type of agent
+        constraints:
+          enum: ["schema:Person", "schema:Organization", "schema:SoftwareApplication", "prov:Person", "prov:SoftwareAgent"]
+
+      - name: agent_identifier
+        codename: "schema:identifier"
+        type: string
+        required: false
+        description: Primary identifier (ORCID, ROR, etc.)
+
+      - name: name
+        codename: "schema:name"
+        type: string
+        required: false
+        description: Full name of the agent
+
+      - name: email
+        codename: "schema:email"
+        type: string
+        required: false
+        description: Email address
+
+      - name: url
+        codename: "schema:url"
+        type: uri
+        required: false
+        description: URL for the agent
+
+      - name: roles
+        codename: "ods:hasRoles"
+        type: list
+        items: AgentRole
+        required: false
+        description: Roles of this agent
+
+      - name: identifiers
+        codename: "ods:hasIdentifiers"
+        type: list
+        items: Identifier
+        required: false
+        description: Additional identifiers
+
+  AgentRole:
+    ontology_term: schema:Role
+    description: A role played by an agent
+    fields:
+      - name: id
+        codename: "@id"
+        type: string
+        required: false
+        description: Identifier for the role
+
+      - name: type
+        codename: "@type"
+        type: string
+        required: true
+        description: Type of the object
+        constraints:
+          enum: ["schema:Role"]
+
+      - name: role_name
+        codename: "schema:roleName"
+        type: string
+        required: true
+        description: Name of the role
+
+      - name: start_date
+        codename: "schema:startDate"
+        type: string
+        required: false
+        description: When the role began
+
+      - name: end_date
+        codename: "schema:endDate"
+        type: string
+        required: false
+        description: When the role ended
+
+      - name: position
+        codename: "schema:position"
+        type: integer
+        required: false
+        description: Order of importance
+
+  Assertion:
+    ontology_term: ods:Assertion
+    description: A measurement, fact, or assertion
+    fields:
+      - name: id
+        codename: "@id"
+        type: string
+        required: false
+        description: Identifier for the assertion
+
+      - name: type
+        codename: "@type"
+        type: string
+        required: true
+        description: Type of the object
+        constraints:
+          enum: ["ods:Assertion"]
+
+      - name: measurement_id
+        codename: "dwc:measurementID"
+        type: string
+        required: false
+        description: Identifier for the measurement
+
+      - name: parent_measurement_id
+        codename: "dwc:parentMeasurementID"
+        type: string
+        required: false
+        description: Parent measurement identifier
+
+      - name: measurement_type
+        codename: "dwc:measurementType"
+        type: string
+        required: false
+        description: Nature of the assertion
+
+      - name: measurement_value
+        codename: "dwc:measurementValue"
+        type: string
+        required: false
+        description: Value of the assertion
+
+      - name: measurement_accuracy
+        codename: "dwc:measurementAccuracy"
+        type: string
+        required: false
+        description: Accuracy description
+
+      - name: measurement_unit
+        codename: "dwc:measurementUnit"
+        type: string
+        required: false
+        description: Unit of measurement
+
+      - name: measurement_determined_date
+        codename: "dwc:measurementDeterminedDate"
+        type: string
+        required: false
+        description: Date of measurement
+
+      - name: measurement_method
+        codename: "dwc:measurementMethod"
+        type: string
+        required: false
+        description: Method used
+
+      - name: measurement_remarks
+        codename: "dwc:measurementRemarks"
+        type: string
+        required: false
+        description: Comments
+
+      - name: agents
+        codename: "ods:hasAgents"
+        type: list
+        items: Agent
+        required: false
+        description: Agents who made the assertion
+
+      - name: citations
+        codename: "ods:hasCitations"
+        type: list
+        items: Citation
+        required: false
+        description: Supporting citations
+
+  Citation:
+    ontology_term: ods:Citation
+    description: A bibliographic citation
+    fields:
+      - name: id
+        codename: "@id"
+        type: string
+        required: false
+        description: Identifier (DOI, ISBN, etc.)
+
+      - name: type
+        codename: "@type"
+        type: string
+        required: true
+        description: Type of the object
+        constraints:
+          enum: ["ods:Citation"]
+
+      - name: citation_identifier
+        codename: "dcterms:identifier"
+        type: string
+        required: false
+        description: Identifier for the citation
+
+      - name: citation_type
+        codename: "dcterms:type"
+        type: string
+        required: false
+        description: Type of citation
+
+      - name: title
+        codename: "dcterms:title"
+        type: string
+        required: false
+        description: Title of the publication
+
+      - name: date
+        codename: "dcterms:date"
+        type: string
+        required: false
+        description: Publication date
+
+      - name: description
+        codename: "dcterms:description"
+        type: string
+        required: false
+        description: Abstract or remarks
+
+      - name: bibliographic_citation
+        codename: "dcterms:bibliographicCitation"
+        type: string
+        required: true
+        description: Full bibliographic reference
+
+      - name: page_number
+        codename: "ods:pageNumber"
+        type: string
+        required: false
+        description: Page number reference
+
+      - name: is_peer_reviewed
+        codename: "ods:isPeerReviewed"
+        type: boolean
+        required: false
+        description: Whether peer reviewed
+
+      - name: agents
+        codename: "ods:hasAgents"
+        type: list
+        items: Agent
+        required: false
+        description: Authors
+
+  Identifier:
+    ontology_term: ods:Identifier
+    description: An identifier for an object
+    fields:
+      - name: id
+        codename: "@id"
+        type: string
+        required: false
+        description: Identifier for the identifier object
+
+      - name: type
+        codename: "@type"
+        type: string
+        required: true
+        description: Type of the object
+        constraints:
+          enum: ["ods:Identifier"]
+
+      - name: title
+        codename: "dcterms:title"
+        type: string
+        required: true
+        description: Name for the identifier
+
+      - name: identifier_type
+        codename: "dcterms:type"
+        type: string
+        required: false
+        description: Type of identifier
+        constraints:
+          enum: ["ARK", "arXiv", "bibcode", "DOI", "EAN13", "EISSN", "Handle", "IGSN", "ISBN", "ISSN", "ISTC", "LISSN", "LSID", "PMID", "PURL", "UPC", "URL", "URN", "w3id", "UUID", "Other", "Locally unique identifier"]
+
+      - name: identifier_value
+        codename: "dcterms:identifier"
+        type: string
+        required: true
+        description: The identifier value
+
+      - name: is_part_of_label
+        codename: "ods:isPartOfLabel"
+        type: boolean
+        required: false
+        description: Whether on physical label
+
+      - name: gupri_level
+        codename: "ods:gupriLevel"
+        type: string
+        required: false
+        description: Persistence level
+        constraints:
+          enum: ["LocallyUniqueStable", "GloballyUniqueStable", "GloballyUniqueStableResolvable", "GloballyUniqueStablePersistentResolvable", "GloballyUniqueStablePersistentResolvableFDOCompliant"]
+
+      - name: identifier_status
+        codename: "ods:identifierStatus"
+        type: string
+        required: false
+        description: Status of the identifier
+        constraints:
+          enum: ["Preferred", "Alternative", "Superseded"]
+
+  EntityRelationship:
+    ontology_term: ods:EntityRelationship
+    description: A relationship to another entity
+    fields:
+      - name: id
+        codename: "@id"
+        type: string
+        required: false
+        description: Identifier for the relationship
+
+      - name: type
+        codename: "@type"
+        type: string
+        required: true
+        description: Type of the object
+        constraints:
+          enum: ["ods:EntityRelationship"]
+
+      - name: relationship_type
+        codename: "dwc:relationshipOfResource"
+        type: string
+        required: false
+        description: Type of relationship
+
+      - name: related_resource_id
+        codename: "dwc:relatedResourceID"
+        type: string
+        required: false
+        description: Identifier of related resource
+
+      - name: relationship_remarks
+        codename: "dwc:relationshipRemarks"
+        type: string
+        required: false
+        description: Comments about the relationship
+
+  SpecimenPart:
+    ontology_term: ods:SpecimenPart
+    description: A part of a specimen
+    fields:
+      - name: id
+        codename: "@id"
+        type: string
+        required: false
+        description: Identifier for the specimen part
+
+      - name: type
+        codename: "@type"
+        type: string
+        required: true
+        description: Type of the object
+        constraints:
+          enum: ["ods:SpecimenPart"]
+
+      - name: part_name
+        codename: "ods:partName"
+        type: string
+        required: false
+        description: Name of the part
+
+      - name: part_type
+        codename: "ods:partType"
+        type: string
+        required: false
+        description: Type of part
+
+      - name: preparations
+        codename: "dwc:preparations"
+        type: string
+        required: false
+        description: Preparation methods
+
+      - name: disposition
+        codename: "dwc:disposition"
+        type: string
+        required: false
+        description: Current state
+
+      - name: part_remarks
+        codename: "ods:partRemarks"
+        type: string
+        required: false
+        description: Comments about the part
+
+  ChronometricAge:
+    ontology_term: ods:ChronometricAge
+    description: Age determination for a specimen
+    fields:
+      - name: id
+        codename: "@id"
+        type: string
+        required: false
+        description: Identifier for the age determination
+
+      - name: type
+        codename: "@type"
+        type: string
+        required: true
+        description: Type of the object
+        constraints:
+          enum: ["ods:ChronometricAge"]
+
+      - name: chronometric_age_id
+        codename: "chrono:chronometricAgeID"
+        type: string
+        required: false
+        description: Identifier for the age
+
+      - name: verbatim_chronometric_age
+        codename: "chrono:verbatimChronometricAge"
+        type: string
+        required: false
+        description: Original age text
+
+      - name: chronometric_age_protocol
+        codename: "chrono:chronometricAgeProtocol"
+        type: string
+        required: false
+        description: Dating method used
+
+      - name: uncalibrated_chronometric_age
+        codename: "chrono:uncalibratedChronometricAge"
+        type: string
+        required: false
+        description: Raw dating result
+
+      - name: chronometric_age_conversion_protocol
+        codename: "chrono:chronometricAgeConversionProtocol"
+        type: string
+        required: false
+        description: Calibration method
+
+      - name: earliest_chronometric_age
+        codename: "chrono:earliestChronometricAge"
+        type: string
+        required: false
+        description: Earliest age estimate
+
+      - name: earliest_chronometric_age_reference_system
+        codename: "chrono:earliestChronometricAgeReferenceSystem"
+        type: string
+        required: false
+        description: Reference system for earliest age
+
+      - name: latest_chronometric_age
+        codename: "chrono:latestChronometricAge"
+        type: string
+        required: false
+        description: Latest age estimate
+
+      - name: latest_chronometric_age_reference_system
+        codename: "chrono:latestChronometricAgeReferenceSystem"
+        type: string
+        required: false
+        description: Reference system for latest age
+
+      - name: chronometric_age_uncertainty_in_years
+        codename: "chrono:chronometricAgeUncertaintyInYears"
+        type: integer
+        required: false
+        description: Uncertainty in years
+
+      - name: chronometric_age_uncertainty_method
+        codename: "chrono:chronometricAgeUncertaintyMethod"
+        type: string
+        required: false
+        description: How uncertainty was determined
+
+      - name: material_dated
+        codename: "chrono:materialDated"
+        type: string
+        required: false
+        description: Material that was dated
+
+      - name: material_dated_id
+        codename: "chrono:materialDatedID"
+        type: string
+        required: false
+        description: Identifier for dated material
+
+      - name: chronometric_age_determined_by
+        codename: "chrono:chronometricAgeDeterminedBy"
+        type: string
+        required: false
+        description: Who determined the age
+
+      - name: chronometric_age_determined_date
+        codename: "chrono:chronometricAgeDeterminedDate"
+        type: string
+        required: false
+        description: When age was determined
+
+      - name: chronometric_age_references
+        codename: "chrono:chronometricAgeReferences"
+        type: string
+        required: false
+        description: References for the dating
+
+      - name: chronometric_age_remarks
+        codename: "chrono:chronometricAgeRemarks"
+        type: string
+        required: false
+        description: Comments about the age

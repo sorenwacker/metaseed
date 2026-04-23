@@ -10,6 +10,12 @@ description: >
 submission_date: "2024-02-20"
 public_release_date: "2025-02-20"
 
+comments:
+  - name: Created With
+    value: Metaseed ISA Generator
+  - name: Study Type
+    value: Metabolomics time course
+
 contacts:
   - last_name: Johnson
     first_name: Emily
@@ -93,6 +99,35 @@ studies:
           Untargeted metabolomics using Thermo Q Exactive Plus. HILIC column.
           Full scan MS1 70000 resolution, data-dependent MS2 17500 resolution.
         version: "1.0"
+
+    characteristic_categories:
+      - term: Organism
+        term_source:
+          name: NCBITAXON
+        term_accession: "http://purl.obolibrary.org/obo/NCBITAXON_1"
+      - term: Ecotype
+        term_source:
+          name: PO
+      - term: Treatment
+        term_source:
+          name: EFO
+      - term: Time point
+        term_source:
+          name: EFO
+
+    unit_categories:
+      - term: hour
+        term_source:
+          name: UO
+        term_accession: UO:0000032
+      - term: day
+        term_source:
+          name: UO
+        term_accession: UO:0000033
+      - term: degree Celsius
+        term_source:
+          name: UO
+        term_accession: UO:0000027
 
     factors:
       - study_id: STU-ARAB-COLD-01
@@ -202,12 +237,20 @@ studies:
           - category: Genotype
             value: ICE1 overexpressor
 
+    comments:
+      - name: Study Status
+        value: Complete
+      - name: Analysis Platform
+        value: LC-MS/MS
+
     # Process sequence links sources to samples via protocol execution
     process_sequence:
       - name: sample_collection_Col0_0h_Rep1
         executes_protocol:
           name: Plant growth protocol
           study_id: STU-ARAB-COLD-01
+        performer: Wei Chen
+        date: "2024-01-15"
         inputs:
           - name: Arabidopsis_Col0_seeds
             type: Source
@@ -219,6 +262,8 @@ studies:
         executes_protocol:
           name: Plant growth protocol
           study_id: STU-ARAB-COLD-01
+        performer: Wei Chen
+        date: "2024-01-15"
         inputs:
           - name: Arabidopsis_Col0_seeds
             type: Source
@@ -230,6 +275,8 @@ studies:
         executes_protocol:
           name: Cold treatment protocol
           study_id: STU-ARAB-COLD-01
+        performer: Wei Chen
+        date: "2024-01-16"
         inputs:
           - name: Arabidopsis_Col0_seeds
             type: Source
@@ -241,6 +288,8 @@ studies:
         executes_protocol:
           name: Cold treatment protocol
           study_id: STU-ARAB-COLD-01
+        performer: Wei Chen
+        date: "2024-01-16"
         inputs:
           - name: Arabidopsis_Col0_seeds
             type: Source
@@ -252,6 +301,8 @@ studies:
         executes_protocol:
           name: Cold treatment protocol
           study_id: STU-ARAB-COLD-01
+        performer: Wei Chen
+        date: "2024-01-22"
         inputs:
           - name: Arabidopsis_Col0_seeds
             type: Source
@@ -263,6 +314,8 @@ studies:
         executes_protocol:
           name: Cold treatment protocol
           study_id: STU-ARAB-COLD-01
+        performer: Wei Chen
+        date: "2024-01-16"
         inputs:
           - name: Arabidopsis_ICE1_seeds
             type: Source
@@ -363,12 +416,34 @@ studies:
             filename: processed_pos_mode.mzML
             label: Derived Spectral Data File
 
+        characteristic_categories:
+          - term: Extraction method
+            term_source:
+              name: EFO
+          - term: Label
+            term_source:
+              name: EFO
+
+        unit_categories:
+          - term: microgram per milliliter
+            term_source:
+              name: UO
+            term_accession: UO:0000274
+
+        comments:
+          - name: Acquisition Mode
+            value: Positive ESI
+          - name: Instrument Settings
+            value: See protocol
+
         # Assay-level process sequence for extraction and analysis
         process_sequence:
           - name: extraction_Col0_Control_0h_Rep1
             executes_protocol:
               name: Metabolite extraction protocol
               study_id: STU-ARAB-COLD-01
+            performer: Emily Johnson
+            date: "2024-02-01"
             inputs:
               - name: Col0_Control_0h_Rep1
                 type: Sample
@@ -380,6 +455,8 @@ studies:
             executes_protocol:
               name: Metabolite extraction protocol
               study_id: STU-ARAB-COLD-01
+            performer: Emily Johnson
+            date: "2024-02-01"
             inputs:
               - name: Col0_Control_0h_Rep2
                 type: Sample
@@ -391,6 +468,8 @@ studies:
             executes_protocol:
               name: LC-MS analysis protocol
               study_id: STU-ARAB-COLD-01
+            performer: Emily Johnson
+            date: "2024-02-05"
             inputs:
               - name: LabeledExtract_Col0_Control_0h_Rep1
                 type: LabeledExtract
@@ -402,6 +481,8 @@ studies:
             executes_protocol:
               name: LC-MS analysis protocol
               study_id: STU-ARAB-COLD-01
+            performer: Emily Johnson
+            date: "2024-02-05"
             inputs:
               - name: LabeledExtract_Col0_Control_0h_Rep2
                 type: LabeledExtract
