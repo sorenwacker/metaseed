@@ -14,7 +14,7 @@ from metaseed.specs.schema import (
     ProfileSpec,
     ValidationRuleSpec,
 )
-from metaseed.ui.routes import AppState, create_app
+from metaseed.ui.app import create_app
 from metaseed.ui.spec_builder_helpers import (
     clone_spec,
     create_empty_spec,
@@ -24,6 +24,7 @@ from metaseed.ui.spec_builder_helpers import (
     validate_field_name,
 )
 from metaseed.ui.spec_builder_state import SpecBuilderState
+from metaseed.ui.state import AppState
 
 
 @pytest.fixture

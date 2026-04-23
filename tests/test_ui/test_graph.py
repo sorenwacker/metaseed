@@ -3,7 +3,7 @@
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from metaseed.ui.routes import create_app
+from metaseed.ui.app import create_app
 from metaseed.ui.services.graph import build_graph, truncate
 from metaseed.ui.state import AppState
 

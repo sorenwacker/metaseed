@@ -8,7 +8,8 @@ import json
 import pytest
 from fastapi.testclient import TestClient
 
-from metaseed.ui.routes import AppState, create_app
+from metaseed.ui.app import create_app
+from metaseed.ui.state import AppState
 
 
 @pytest.fixture

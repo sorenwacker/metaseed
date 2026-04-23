@@ -6,8 +6,8 @@ Tests the autocomplete API and reference field detection.
 import pytest
 from fastapi.testclient import TestClient
 
+from metaseed.ui.app import create_app
 from metaseed.ui.helpers import collect_entities_by_type, get_reference_fields
-from metaseed.ui.routes import create_app
 from metaseed.ui.state import AppState
 
 

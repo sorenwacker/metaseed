@@ -125,6 +125,54 @@ class TestFieldSpec:
         assert field.type == FieldType.LIST
         assert field.items == "Study"
 
+    def test_is_nested_entity_type(self) -> None:
+        """Entity type fields are nested."""
+        field = FieldSpec(
+            name="location",
+            type=FieldType.ENTITY,
+            description="Location entity",
+            items="Location",
+        )
+        assert field.is_nested() is True
+
+    def test_is_nested_list_of_entities(self) -> None:
+        """List of entities is nested."""
+        field = FieldSpec(
+            name="studies",
+            type=FieldType.LIST,
+            description="List of studies",
+            items="Study",
+        )
+        assert field.is_nested() is True
+
+    def test_is_nested_list_of_strings_not_nested(self) -> None:
+        """List of strings is not nested."""
+        field = FieldSpec(
+            name="tags",
+            type=FieldType.LIST,
+            description="List of tags",
+            items="string",
+        )
+        assert field.is_nested() is False
+
+    def test_is_nested_string_type_not_nested(self) -> None:
+        """String type is not nested."""
+        field = FieldSpec(
+            name="title",
+            type=FieldType.STRING,
+            description="Title",
+        )
+        assert field.is_nested() is False
+
+    def test_is_nested_list_without_items_not_nested(self) -> None:
+        """List without items spec is not nested."""
+        field = FieldSpec(
+            name="items",
+            type=FieldType.LIST,
+            description="Generic list",
+        )
+        assert field.is_nested() is False
+
     def test_missing_name_raises(self) -> None:
         """Missing name raises ValidationError."""
         with pytest.raises(ValidationError):
