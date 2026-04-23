@@ -420,6 +420,13 @@ entities:
         required: false
         description: Age determinations for the specimen
 
+      - name: tombstone_metadata
+        codename: "ods:hasTombstoneMetadata"
+        type: entity
+        items: TombstoneMetadata
+        required: false
+        description: Metadata about tombstoned (deleted) specimens
+
   Identification:
     ontology_term: ods:Identification
     description: A taxonomic identification of the specimen
@@ -1705,3 +1712,73 @@ entities:
         type: string
         required: false
         description: Comments about the age
+
+  TombstoneMetadata:
+    ontology_term: ods:Tombstone
+    description: Metadata about a tombstoned (deleted) digital object
+    fields:
+      - name: type
+        codename: "@type"
+        type: string
+        required: true
+        description: Type of the object
+        constraints:
+          enum: ["ods:Tombstone"]
+
+      - name: tombstone_date
+        codename: "ods:tombstoneDate"
+        type: datetime
+        required: true
+        description: Timestamp when the object was tombstoned
+
+      - name: tombstone_text
+        codename: "ods:tombstoneText"
+        type: string
+        required: true
+        description: Reason why the object was tombstoned
+
+      - name: agents
+        codename: "ods:hasAgents"
+        type: list
+        items: Agent
+        required: true
+        description: Agents who tombstoned the object
+
+      - name: related_pids
+        codename: "ods:hasRelatedPids"
+        type: list
+        items: RelatedPid
+        required: false
+        description: PIDs of related objects
+
+  RelatedPid:
+    ontology_term: ods:RelatedPid
+    description: A related persistent identifier for tombstoned objects
+    fields:
+      - name: type
+        codename: "@type"
+        type: string
+        required: true
+        description: Type of the object
+        constraints:
+          enum: ["ods:RelatedPid"]
+
+      - name: identifier
+        codename: "dcterms:identifier"
+        type: string
+        required: false
+        description: PID for Annotation, DigitalMedia, or DigitalSpecimen
+
+      - name: schema_identifier
+        codename: "schema:identifier"
+        type: string
+        required: false
+        description: PID for DataMapping, SourceSystem, or MachineAnnotationService
+
+      - name: relationship_type
+        codename: "ods:relationshipType"
+        type: string
+        required: true
+        description: Type of relationship to the tombstoned object
+        constraints:
+          enum: ["RelatedTo", "IsDuplicateOf", "IsReplacedWith"]
