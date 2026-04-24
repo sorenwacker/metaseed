@@ -28,6 +28,9 @@ class FieldType(StrEnum):
     ENTITY = "entity"  # Reference to another entity (single object)
 
 
+PRIMITIVE_TYPES: frozenset[str] = frozenset({"string", "int", "float", "bool"})
+
+
 class Constraints(BaseModel):
     """Field constraints for validation.
 
@@ -98,7 +101,7 @@ class FieldSpec(BaseModel):
         if self.type == FieldType.ENTITY:
             return True
         if self.type == FieldType.LIST and self.items:
-            return self.items not in ("string", "int", "float", "bool")
+            return self.items not in PRIMITIVE_TYPES
         return False
 
 

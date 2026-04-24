@@ -6,6 +6,7 @@ validation formatting, and breadcrumb navigation.
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from fastapi.responses import HTMLResponse
@@ -14,11 +15,87 @@ from pydantic import ValidationError
 from starlette.requests import Request
 
 from metaseed.specs.loader import SpecLoader
+from metaseed.specs.schema import PRIMITIVE_TYPES
 
 if TYPE_CHECKING:
     from metaseed.facade import ProfileFacade
 
     from .state import AppState
+
+
+@dataclass
+class FormContext:
+    """Context for rendering entity forms.
+
+    Encapsulates the common data needed to render entity forms,
+    reducing parameter counts in rendering functions.
+    """
+
+    entity_type: str
+    helper: Any
+    values: dict
+    node_id: str | None = None
+    auto_fields: set[str] = field(default_factory=set)
+    inline_tables: dict[str, dict] = field(default_factory=dict)
+
+    @property
+    def is_edit(self) -> bool:
+        """Whether this is an edit form (vs create)."""
+        return self.node_id is not None
+
+    @property
+    def description(self) -> str:
+        """Entity description from helper."""
+        return self.helper.description if self.helper else ""
+
+    @property
+    def ontology_term(self) -> str:
+        """Ontology term from helper."""
+        return self.helper.ontology_term if self.helper else ""
+
+    def get_fields(self) -> list[dict]:
+        """Get all field data for this entity."""
+        return get_field_data(self.helper) if self.helper else []
+
+    def get_required_fields(self) -> list[dict]:
+        """Get required fields only."""
+        return filter_fields(self.get_fields(), required=True)
+
+    def get_optional_fields(self) -> list[dict]:
+        """Get optional non-nested fields."""
+        return filter_fields(self.get_fields(), required=False, exclude_nested=True)
+
+    def get_nested_fields(self) -> list[dict]:
+        """Get nested entity fields only."""
+        return filter_fields(self.get_fields(), nested_only=True)
+
+
+def filter_fields(
+    fields: list[dict],
+    *,
+    required: bool | None = None,
+    exclude_nested: bool = False,
+    nested_only: bool = False,
+) -> list[dict]:
+    """Filter field list by criteria.
+
+    Args:
+        fields: List of field dicts from get_field_data().
+        required: If True, only required fields. If False, only optional.
+        exclude_nested: If True, exclude nested entity fields.
+        nested_only: If True, only include nested entity fields.
+
+    Returns:
+        Filtered list of fields.
+    """
+    result = fields
+    if required is not None:
+        result = [f for f in result if f["required"] == required]
+    if exclude_nested:
+        result = [f for f in result if not is_nested_field(f)]
+    if nested_only:
+        result = [f for f in result if is_nested_field(f)]
+    return result
 
 
 def get_field_data(helper: Any) -> list[dict]:
@@ -54,7 +131,7 @@ def is_nested_field(field: dict) -> bool:
         return True
     if field["type"] == "list":
         items = field.get("items")
-        if items and items not in ("string", "int", "float", "bool"):
+        if items and items not in PRIMITIVE_TYPES:
             return True
     return False
 
@@ -112,6 +189,95 @@ def format_validation_errors(e: ValidationError) -> str:
         friendly_messages.append(f"{field}: {msg}")
 
     return "; ".join(friendly_messages)
+
+
+def to_dict(item: Any, exclude_none: bool = True) -> dict | None:
+    """Convert an item to a plain dictionary.
+
+    Handles Pydantic models, dicts, and other types consistently.
+
+    Args:
+        item: Item to convert (Pydantic model, dict, or other).
+        exclude_none: Whether to exclude None values from model_dump.
+
+    Returns:
+        Dictionary representation, or None if item cannot be converted.
+    """
+    if hasattr(item, "model_dump"):
+        return item.model_dump(exclude_none=exclude_none)
+    if isinstance(item, dict):
+        return item.copy()
+    return None
+
+
+def walk_nested_entities(
+    data: dict,
+    entity_type: str,
+    facade: Any,
+) -> list[tuple[str, dict]]:
+    """Walk nested entities recursively, yielding (type, data) tuples.
+
+    Traverses nested entity fields and collects all nested items
+    with their types. Useful for collecting entities by type.
+
+    Args:
+        data: Root entity data dictionary.
+        entity_type: Type of the root entity.
+        facade: Profile facade for accessing entity helpers.
+
+    Returns:
+        List of (entity_type, data_dict) tuples for all nested entities.
+    """
+    results: list[tuple[str, dict]] = []
+
+    def _walk(current_data: dict, current_type: str) -> None:
+        helper = getattr(facade, current_type, None)
+        if not helper:
+            return
+
+        for field_name, nested_type in helper.nested_fields.items():
+            nested_items = current_data.get(field_name)
+            if not nested_items or not isinstance(nested_items, list):
+                continue
+
+            for item in nested_items:
+                item_data = to_dict(item)
+                if item_data:
+                    results.append((nested_type, item_data))
+                    _walk(item_data, nested_type)
+
+    _walk(data, entity_type)
+    return results
+
+
+def extract_nested_items(instance: Any, helper: Any) -> dict[str, list[dict]]:
+    """Extract nested items from an instance as dictionaries.
+
+    Converts nested Pydantic models or dicts in an instance to a dictionary
+    mapping field names to lists of plain dicts.
+
+    Args:
+        instance: Pydantic model instance with potential nested items.
+        helper: EntityHelper with nested_fields information.
+
+    Returns:
+        Dictionary mapping nested field names to lists of item dicts.
+    """
+    result: dict[str, list[dict]] = {}
+
+    if not hasattr(instance, "model_dump"):
+        return result
+
+    data = instance.model_dump(exclude_none=True)
+    for field_name in helper.nested_fields:
+        if data.get(field_name):
+            items = data[field_name]
+            if isinstance(items, list):
+                result[field_name] = [
+                    item.model_dump() if hasattr(item, "model_dump") else item for item in items
+                ]
+
+    return result
 
 
 def error_response(request: Request, templates: Jinja2Templates, message: str) -> HTMLResponse:
@@ -216,16 +382,7 @@ def build_inline_tables(
         items = source.get(field_name, [])
 
         # Format rows
-        rows = []
-        for i, item in enumerate(items):
-            if hasattr(item, "model_dump"):
-                row = item.model_dump(exclude_none=True)
-            elif isinstance(item, dict):
-                row = item.copy()
-            else:
-                row = {"value": str(item)}
-            row["_idx"] = i
-            rows.append(row)
+        rows = format_table_rows(items)
 
         # Get reference fields
         ref_fields = get_reference_fields(
@@ -419,80 +576,57 @@ def collect_entities_by_type(state: AppState, facade: ProfileFacade) -> dict[str
     """
     entities_by_type: dict[str, list[dict]] = {}
 
-    def add_entity(entity_type: str, data: dict) -> None:
-        """Add an entity to the collection."""
-        if entity_type not in entities_by_type:
-            entities_by_type[entity_type] = []
-
-        # Extract identifier and label for display
+    def _extract_label(data: dict) -> tuple[str, str]:
+        """Extract identifier and label from entity data."""
         identifier = ""
         label = ""
 
-        # Try common ID field names
         for id_field in ["unique_id", "identifier", "name", "title"]:
             if data.get(id_field):
                 identifier = str(data[id_field])
                 break
 
-        # Try to build a label from multiple fields
         for label_field in ["title", "name", "description", "unique_id", "identifier"]:
             if data.get(label_field):
                 label = str(data[label_field])
                 break
 
-        if not label:
-            label = identifier
+        return identifier, label or identifier
 
-        entities_by_type[entity_type].append(
-            {
-                "value": identifier,
-                "label": label,
-                "data": data,
-            }
-        )
+    def add_entity(entity_type: str, data: dict) -> None:
+        """Add an entity to the collection."""
+        if entity_type not in entities_by_type:
+            entities_by_type[entity_type] = []
 
-    def extract_nested(data: dict, entity_type: str) -> None:
-        """Recursively extract nested entities."""
-        helper = getattr(facade, entity_type, None)
-        if not helper:
-            return
+        identifier, label = _extract_label(data)
+        entities_by_type[entity_type].append({"value": identifier, "label": label, "data": data})
 
-        for field_name, nested_type in helper.nested_fields.items():
-            if data.get(field_name):
-                nested_items = data[field_name]
-                if isinstance(nested_items, list):
-                    for item in nested_items:
-                        if hasattr(item, "model_dump"):
-                            item_data = item.model_dump(exclude_none=True)
-                        elif isinstance(item, dict):
-                            item_data = item.copy()
-                        else:
-                            continue
-                        add_entity(nested_type, item_data)
-                        extract_nested(item_data, nested_type)
-
-    # Process root nodes
+    # Process root nodes and their nested entities
     for node in state.nodes_by_id.values():
-        if hasattr(node.instance, "model_dump"):
-            data = node.instance.model_dump(exclude_none=True)
-        else:
-            data = {}
+        data = to_dict(node.instance) or {}
         add_entity(node.entity_type, data)
-        extract_nested(data, node.entity_type)
+
+        # Add all nested entities using shared walker
+        for nested_type, nested_data in walk_nested_entities(data, node.entity_type, facade):
+            add_entity(nested_type, nested_data)
 
     # Process current_nested_items (in-progress edits)
-    for field_name, items in state.current_nested_items.items():
-        # Try to determine the entity type from context
-        if state.editing_node_id:
-            editing_node = state.nodes_by_id.get(state.editing_node_id)
-            if editing_node:
-                helper = getattr(facade, editing_node.entity_type, None)
-                if helper and field_name in helper.nested_fields:
-                    nested_type = helper.nested_fields[field_name]
-                    for item in items:
-                        if isinstance(item, dict):
-                            add_entity(nested_type, item)
-                            extract_nested(item, nested_type)
+    if state.editing_node_id:
+        editing_node = state.nodes_by_id.get(state.editing_node_id)
+        if editing_node:
+            helper = getattr(facade, editing_node.entity_type, None)
+            if helper:
+                for field_name, items in state.current_nested_items.items():
+                    if field_name in helper.nested_fields:
+                        nested_type = helper.nested_fields[field_name]
+                        for item in items:
+                            item_data = to_dict(item) if not isinstance(item, dict) else item
+                            if item_data:
+                                add_entity(nested_type, item_data)
+                                for sub_type, sub_data in walk_nested_entities(
+                                    item_data, nested_type, facade
+                                ):
+                                    add_entity(sub_type, sub_data)
 
     return entities_by_type
 

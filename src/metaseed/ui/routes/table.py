@@ -6,7 +6,7 @@ Provides routes for viewing and editing nested entity tables.
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from fastapi import HTTPException
 from fastapi.responses import HTMLResponse
@@ -16,6 +16,7 @@ from starlette.requests import Request
 from ..helpers import (
     build_breadcrumb,
     error_response,
+    format_table_rows,
     get_items_store,
     get_parent_id_fields,
     get_reference_fields,
@@ -23,13 +24,17 @@ from ..helpers import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from fastapi import FastAPI
+
+    from ..state import AppState
 
 
 def register_table_routes(
     app: FastAPI,
     templates: Jinja2Templates,
-    get_state: Any,
+    get_state: Callable[[], AppState],
 ) -> None:
     """Register table routes on the FastAPI app.
 
@@ -74,16 +79,7 @@ def register_table_routes(
         parent_id_fields = get_parent_id_fields(reference_fields, entity_type)
         display_columns = [c for c in col_info["columns"] if c not in parent_id_fields]
 
-        rows = []
-        for i, item in enumerate(items):
-            if hasattr(item, "model_dump"):
-                row = item.model_dump(exclude_none=True)
-            elif isinstance(item, dict):
-                row = item.copy()
-            else:
-                row = {"value": str(item)}
-            row["_idx"] = i
-            rows.append(row)
+        rows = format_table_rows(items)
 
         return templates.TemplateResponse(
             request,
@@ -269,16 +265,7 @@ def register_table_routes(
         parent_id_fields = get_parent_id_fields(reference_fields, parent_entity_type)
         display_columns = [c for c in col_info["columns"] if c not in parent_id_fields]
 
-        rows = []
-        for i, item in enumerate(items):
-            if hasattr(item, "model_dump"):
-                row = item.model_dump(exclude_none=True)
-            elif isinstance(item, dict):
-                row = item.copy()
-            else:
-                row = {"value": str(item)}
-            row["_idx"] = i
-            rows.append(row)
+        rows = format_table_rows(items)
 
         response = templates.TemplateResponse(
             request,
