@@ -1,6 +1,6 @@
 [project]
 name = "metaseed"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Tools for creating, editing, and validating experimental metadata following MIAPPE standards"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -50,8 +50,17 @@ docs = [
 metaseed = "metaseed.cli:app"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.version.raw-options]
+local_scheme = "no-local-version"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "src/metaseed/_version.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/metaseed"]

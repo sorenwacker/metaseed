@@ -23,7 +23,10 @@ from metaseed.specs import SpecLoader
 from metaseed.storage import JsonStorage, YamlStorage
 from metaseed.validators import validate
 
-__version__ = "0.1.0"
+try:
+    from metaseed._version import __version__
+except ImportError:
+    __version__ = "0.0.0+unknown"
 
 __all__ = [
     "JsonStorage",
