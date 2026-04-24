@@ -5,7 +5,7 @@ Provides JSON API endpoints for lookups and graph data.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from fastapi import Query
 from fastapi.responses import JSONResponse
@@ -13,12 +13,16 @@ from fastapi.responses import JSONResponse
 from ..helpers import collect_entities_by_type, get_reference_fields
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from fastapi import FastAPI
+
+    from ..state import AppState
 
 
 def register_api_routes(
     app: FastAPI,
-    get_state: Any,
+    get_state: Callable[[], AppState],
 ) -> None:
     """Register API routes on the FastAPI app.
 

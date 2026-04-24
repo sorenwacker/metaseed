@@ -12,7 +12,7 @@ from pydantic import BaseModel
 
 from metaseed.models import get_model
 from metaseed.specs.loader import SpecLoader
-from metaseed.specs.schema import EntitySpec, FieldSpec, FieldType
+from metaseed.specs.schema import PRIMITIVE_TYPES, EntitySpec, FieldSpec, FieldType
 
 
 class EntityHelper:
@@ -80,7 +80,7 @@ class EntityHelper:
         nested = {}
         for f in self._spec.fields:
             if f.type == FieldType.LIST and f.items:
-                if f.items not in ("string", "int", "float", "bool"):
+                if f.items not in PRIMITIVE_TYPES:
                     nested[f.name] = f.items
             elif f.type == FieldType.ENTITY and f.items:
                 nested[f.name] = f.items

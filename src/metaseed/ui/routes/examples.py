@@ -6,7 +6,7 @@ Provides routes for loading example data into the application.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import yaml
 from fastapi import HTTPException
@@ -17,7 +17,11 @@ from metaseed.profiles import ProfileFactory
 from metaseed.specs.loader import SpecLoader
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from fastapi import FastAPI
+
+    from ..state import AppState
 
 UI_DIR = Path(__file__).parent.parent
 EXAMPLES_DIR = UI_DIR.parent.parent.parent / "examples"
@@ -25,7 +29,7 @@ EXAMPLES_DIR = UI_DIR.parent.parent.parent / "examples"
 
 def register_example_routes(
     app: FastAPI,
-    get_state: Any,
+    get_state: Callable[[], AppState],
 ) -> None:
     """Register example loading routes on the FastAPI app.
 

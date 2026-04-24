@@ -6,9 +6,8 @@ Provides routes for exporting to Excel and importing ISA data.
 from __future__ import annotations
 
 import tempfile
-from io import BytesIO
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from fastapi import File, UploadFile
 from fastapi.responses import HTMLResponse, StreamingResponse
@@ -17,15 +16,20 @@ from pydantic import ValidationError
 from starlette.requests import Request
 
 from ..helpers import error_response
+from ..services.export import export_to_bytes, generate_filename
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from fastapi import FastAPI
+
+    from ..state import AppState
 
 
 def register_export_routes(
     app: FastAPI,
     templates: Jinja2Templates,  # noqa: ARG001
-    get_state: Any,
+    get_state: Callable[[], AppState],
 ) -> None:
     """Register export routes on the FastAPI app.
 
@@ -38,105 +42,11 @@ def register_export_routes(
     @app.get("/export")
     async def export_excel(_request: Request) -> StreamingResponse:
         """Export current entity data to Excel file."""
-        from datetime import datetime
-
-        from openpyxl import Workbook
-
         state = get_state()
-        facade = state.get_or_create_facade()
 
-        wb = Workbook()
-        wb.remove(wb.active)
+        output = export_to_bytes(state)
+        filename = generate_filename(state)
 
-        entities_by_type: dict[str, list[dict]] = {}
-
-        def extract_nested_entities(data: dict, entity_type: str) -> None:
-            helper = getattr(facade, entity_type, None)
-            if not helper:
-                return
-
-            for field_name, nested_type in helper.nested_fields.items():
-                if data.get(field_name):
-                    nested_items = data[field_name]
-                    if isinstance(nested_items, list):
-                        for item in nested_items:
-                            if hasattr(item, "model_dump"):
-                                item_data = item.model_dump(exclude_none=True)
-                            elif isinstance(item, dict):
-                                item_data = item.copy()
-                            else:
-                                continue
-
-                            if nested_type not in entities_by_type:
-                                entities_by_type[nested_type] = []
-                            entities_by_type[nested_type].append(item_data)
-                            extract_nested_entities(item_data, nested_type)
-
-        for node in state.nodes_by_id.values():
-            entity_type = node.entity_type
-            if entity_type not in entities_by_type:
-                entities_by_type[entity_type] = []
-
-            if hasattr(node.instance, "model_dump"):
-                data = node.instance.model_dump(exclude_none=True)
-            else:
-                data = {}
-
-            entities_by_type[entity_type].append(data)
-            extract_nested_entities(data, entity_type)
-
-        for entity_type in facade.entities:
-            helper = getattr(facade, entity_type, None)
-            if not helper:
-                continue
-
-            ws = wb.create_sheet(entity_type)
-            nested_fields = set(helper.nested_fields.keys())
-            columns = helper.all_fields
-
-            ws.append(columns)
-
-            entities = entities_by_type.get(entity_type, [])
-            for entity_data in entities:
-                row = []
-                for col in columns:
-                    value = entity_data.get(col, "")
-                    if col in nested_fields:
-                        if isinstance(value, list):
-                            value = len(value)
-                        elif value:
-                            value = 1
-                        else:
-                            value = 0
-                    elif isinstance(value, list):
-                        if value and not isinstance(value[0], dict):
-                            value = ", ".join(str(v) for v in value)
-                        else:
-                            value = len(value)
-                    elif isinstance(value, dict):
-                        value = "[object]"
-                    elif not isinstance(value, str | int | float | bool | type(None)):
-                        value = str(value)
-                    row.append(value)
-                ws.append(row)
-
-        output = BytesIO()
-        wb.save(output)
-        output.seek(0)
-
-        date_str = datetime.now().strftime("%y%m%d")
-        version_str = facade.version.replace(".", "-")
-
-        entity_id = "export"
-        root_nodes = [n for n in state.nodes_by_id.values() if n.parent_id is None]
-        if root_nodes:
-            root_node = root_nodes[0]
-            if hasattr(root_node.instance, "model_dump"):
-                root_data = root_node.instance.model_dump()
-                if root_data.get("unique_id"):
-                    entity_id = str(root_data["unique_id"]).replace("/", "-").replace(":", "-")[:30]
-
-        filename = f"{date_str}-{state.profile}-{version_str}-{entity_id}.xlsx"
         return StreamingResponse(
             output,
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -147,7 +57,7 @@ def register_export_routes(
 def register_import_routes(
     app: FastAPI,
     templates: Jinja2Templates,
-    get_state: Any,
+    get_state: Callable[[], AppState],
 ) -> None:
     """Register import routes on the FastAPI app.
 

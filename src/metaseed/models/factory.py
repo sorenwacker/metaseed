@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Annotated, Any, Literal, Self
 from pydantic import AnyUrl, BaseModel, ConfigDict, Field, create_model, model_validator
 
 from metaseed.models.types import OntologyTerm
-from metaseed.specs.schema import EntitySpec, FieldSpec, FieldType
+from metaseed.specs.schema import PRIMITIVE_TYPES, EntitySpec, FieldSpec, FieldType
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -349,7 +349,7 @@ def create_model_from_spec(spec: EntitySpec) -> type:
         field_definitions[field.name] = _create_field_definition(field)
 
         if field.type == FieldType.LIST and field.items:
-            if field.items not in ("string", "int", "float", "bool"):
+            if field.items not in PRIMITIVE_TYPES:
                 entity_fields[field.name] = field.items
         elif field.type == FieldType.ENTITY and field.items:
             entity_fields[field.name] = field.items

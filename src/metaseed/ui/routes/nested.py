@@ -6,7 +6,7 @@ Provides routes for editing nested entities within forms.
 from __future__ import annotations
 
 import contextlib
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from fastapi import HTTPException
 from fastapi.responses import HTMLResponse
@@ -16,24 +16,28 @@ from starlette.requests import Request
 from ..helpers import (
     build_breadcrumb,
     build_inline_tables,
+    filter_fields,
     format_table_rows,
     get_field_data,
     get_items_store,
     get_parent_id_fields,
     get_reference_fields,
     get_table_columns,
-    is_nested_field,
 )
 from ..state import NestedEditContext
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from fastapi import FastAPI
+
+    from ..state import AppState
 
 
 def register_nested_routes(
     app: FastAPI,
     templates: Jinja2Templates,
-    get_state: Any,
+    get_state: Callable[[], AppState],
 ) -> None:
     """Register nested entity routes on the FastAPI app.
 
@@ -132,11 +136,9 @@ def register_nested_routes(
                 "row_idx": idx,
                 "description": nested_helper.description if nested_helper else "",
                 "ontology_term": nested_helper.ontology_term if nested_helper else "",
-                "required_fields": [f for f in fields if f["required"]],
-                "optional_fields": [
-                    f for f in fields if not f["required"] and not is_nested_field(f)
-                ],
-                "nested_fields": [f for f in fields if is_nested_field(f)],
+                "required_fields": filter_fields(fields, required=True),
+                "optional_fields": filter_fields(fields, required=False, exclude_nested=True),
+                "nested_fields": filter_fields(fields, nested_only=True),
                 "values": values,
                 "auto_fields": set(),
                 "editing_node_id": state.editing_node_id,
@@ -238,11 +240,9 @@ def register_nested_routes(
                 "row_idx": idx,
                 "description": nested_helper.description if nested_helper else "",
                 "ontology_term": nested_helper.ontology_term if nested_helper else "",
-                "required_fields": [f for f in fields if f["required"]],
-                "optional_fields": [
-                    f for f in fields if not f["required"] and not is_nested_field(f)
-                ],
-                "nested_fields": [f for f in fields if is_nested_field(f)],
+                "required_fields": filter_fields(fields, required=True),
+                "optional_fields": filter_fields(fields, required=False, exclude_nested=True),
+                "nested_fields": filter_fields(fields, nested_only=True),
                 "values": values,
                 "auto_fields": set(),
                 "editing_node_id": state.editing_node_id,

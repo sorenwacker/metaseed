@@ -18,14 +18,18 @@ from metaseed.profiles import ProfileFactory
 from metaseed.specs.loader import SpecLoader
 
 from ..helpers import (
+    FormContext,
     build_inline_tables,
     collect_form_values,
+    extract_nested_items,
+    filter_fields,
     format_validation_errors,
     get_field_data,
-    is_nested_field,
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from fastapi import FastAPI
 
     from metaseed.facade import ProfileFacade
@@ -84,7 +88,7 @@ def get_profile_display_info(factory: ProfileFactory) -> list[dict]:
 def register_core_routes(
     app: FastAPI,
     templates: Jinja2Templates,
-    get_state: Any,
+    get_state: Callable[[], AppState],
 ) -> None:
     """Register core routes on the FastAPI app.
 
@@ -145,7 +149,7 @@ def register_core_routes(
 def register_form_routes(
     app: FastAPI,
     templates: Jinja2Templates,
-    get_state: Any,
+    get_state: Callable[[], AppState],
 ) -> None:
     """Register entity form routes on the FastAPI app.
 
@@ -208,11 +212,9 @@ def register_form_routes(
                 "node_id": None,
                 "description": helper.description,
                 "ontology_term": helper.ontology_term,
-                "required_fields": [f for f in fields if f["required"]],
-                "optional_fields": [
-                    f for f in fields if not f["required"] and not is_nested_field(f)
-                ],
-                "nested_fields": [f for f in fields if is_nested_field(f)],
+                "required_fields": filter_fields(fields, required=True),
+                "optional_fields": filter_fields(fields, required=False, exclude_nested=True),
+                "nested_fields": filter_fields(fields, nested_only=True),
                 "values": auto_values,
                 "auto_fields": set(auto_values.keys()),
                 "current_profile": state.profile,
@@ -250,15 +252,8 @@ def register_form_routes(
             if items:
                 values[field_name] = items
 
-        if not state.current_nested_items:
-            for field_name in helper.nested_fields:
-                if values.get(field_name):
-                    items = values[field_name]
-                    if isinstance(items, list):
-                        state.current_nested_items[field_name] = [
-                            item.model_dump() if hasattr(item, "model_dump") else item
-                            for item in items
-                        ]
+        if not state.current_nested_items and node.instance:
+            state.current_nested_items = extract_nested_items(node.instance, helper)
 
         auto_fields = set()
         if "miappe_version" in helper.all_fields:
@@ -276,11 +271,9 @@ def register_form_routes(
                 "node_id": node_id,
                 "description": helper.description,
                 "ontology_term": helper.ontology_term,
-                "required_fields": [f for f in fields if f["required"]],
-                "optional_fields": [
-                    f for f in fields if not f["required"] and not is_nested_field(f)
-                ],
-                "nested_fields": [f for f in fields if is_nested_field(f)],
+                "required_fields": filter_fields(fields, required=True),
+                "optional_fields": filter_fields(fields, required=False, exclude_nested=True),
+                "nested_fields": filter_fields(fields, nested_only=True),
                 "values": values,
                 "auto_fields": auto_fields,
                 "inline_tables": inline_tables,
@@ -291,7 +284,7 @@ def register_form_routes(
 def register_entity_crud_routes(
     app: FastAPI,
     templates: Jinja2Templates,
-    get_state: Any,
+    get_state: Callable[[], AppState],
 ) -> None:
     """Register entity CRUD routes on the FastAPI app.
 
@@ -326,17 +319,7 @@ def register_entity_crud_routes(
             node = state.add_node(entity_type, instance)
             state.editing_node_id = node.id
 
-            state.current_nested_items = {}
-            if hasattr(instance, "model_dump"):
-                data = instance.model_dump(exclude_none=True)
-                for field_name in helper.nested_fields:
-                    if data.get(field_name):
-                        items = data[field_name]
-                        if isinstance(items, list):
-                            state.current_nested_items[field_name] = [
-                                item.model_dump() if hasattr(item, "model_dump") else item
-                                for item in items
-                            ]
+            state.current_nested_items = extract_nested_items(instance, helper)
 
             return render_entity_form(
                 request,
@@ -390,17 +373,7 @@ def register_entity_crud_routes(
             instance = helper.create(**values)
             state.update_node(node_id, instance)
 
-            state.current_nested_items = {}
-            if hasattr(instance, "model_dump"):
-                data = instance.model_dump(exclude_none=True)
-                for field_name in helper.nested_fields:
-                    if data.get(field_name):
-                        items = data[field_name]
-                        if isinstance(items, list):
-                            state.current_nested_items[field_name] = [
-                                item.model_dump() if hasattr(item, "model_dump") else item
-                                for item in items
-                            ]
+            state.current_nested_items = extract_nested_items(instance, helper)
 
             return render_entity_form(
                 request,
@@ -445,6 +418,46 @@ def register_entity_crud_routes(
         )
 
 
+def _build_form_context(
+    helper: Any,
+    entity_type: str,
+    values: dict,
+    node_id: str | None,
+    facade: ProfileFacade,
+    state: AppState | None = None,
+) -> FormContext:
+    """Build a FormContext with auto-populated fields.
+
+    Args:
+        helper: Entity helper from facade.
+        entity_type: Entity type name.
+        values: Form values dict.
+        node_id: Node ID if editing, None if creating.
+        facade: Profile facade.
+        state: App state for inline tables.
+
+    Returns:
+        Populated FormContext instance.
+    """
+    auto_fields = set()
+    if "miappe_version" in helper.all_fields:
+        values["miappe_version"] = facade.version
+        auto_fields.add("miappe_version")
+
+    inline_tables = {}
+    if state:
+        inline_tables = build_inline_tables(state, facade, entity_type)
+
+    return FormContext(
+        entity_type=entity_type,
+        helper=helper,
+        values=values,
+        node_id=node_id,
+        auto_fields=auto_fields,
+        inline_tables=inline_tables,
+    )
+
+
 def render_entity_form(
     request: Request,
     templates: Jinja2Templates,
@@ -457,34 +470,25 @@ def render_entity_form(
     state: AppState | None = None,
 ) -> HTMLResponse:
     """Render entity form after successful create/update."""
-    fields = get_field_data(helper)
     values = instance.model_dump(exclude_none=True) if hasattr(instance, "model_dump") else {}
-
-    auto_fields = set()
-    if "miappe_version" in helper.all_fields:
-        values["miappe_version"] = facade.version
-        auto_fields.add("miappe_version")
-
-    inline_tables = {}
-    if state:
-        inline_tables = build_inline_tables(state, facade, entity_type)
+    ctx = _build_form_context(helper, entity_type, values, node_id, facade, state)
 
     response = templates.TemplateResponse(
         request,
         "partials/form.html",
         {
-            "entity_type": entity_type,
-            "is_edit": True,
-            "node_id": node_id,
-            "description": helper.description,
-            "ontology_term": helper.ontology_term,
-            "required_fields": [f for f in fields if f["required"]],
-            "optional_fields": [f for f in fields if not f["required"] and not is_nested_field(f)],
-            "nested_fields": [f for f in fields if is_nested_field(f)],
-            "values": values,
-            "auto_fields": auto_fields,
+            "entity_type": ctx.entity_type,
+            "is_edit": ctx.is_edit,
+            "node_id": ctx.node_id,
+            "description": ctx.description,
+            "ontology_term": ctx.ontology_term,
+            "required_fields": ctx.get_required_fields(),
+            "optional_fields": ctx.get_optional_fields(),
+            "nested_fields": ctx.get_nested_fields(),
+            "values": ctx.values,
+            "auto_fields": ctx.auto_fields,
             "success_message": success_message,
-            "inline_tables": inline_tables,
+            "inline_tables": ctx.inline_tables,
         },
     )
     response.headers["HX-Trigger"] = (
@@ -505,27 +509,22 @@ def render_form_with_errors(
 ) -> HTMLResponse:
     """Render form with validation errors."""
     errors = format_validation_errors(error)
-    fields = get_field_data(helper)
-
-    auto_fields = set()
-    if "miappe_version" in helper.all_fields:
-        values["miappe_version"] = facade.version
-        auto_fields.add("miappe_version")
+    ctx = _build_form_context(helper, entity_type, values, node_id, facade)
 
     return templates.TemplateResponse(
         request,
         "partials/form.html",
         {
-            "entity_type": entity_type,
-            "is_edit": node_id is not None,
-            "node_id": node_id,
-            "description": helper.description,
-            "ontology_term": helper.ontology_term,
-            "required_fields": [f for f in fields if f["required"]],
-            "optional_fields": [f for f in fields if not f["required"] and not is_nested_field(f)],
-            "nested_fields": [f for f in fields if is_nested_field(f)],
-            "values": values,
-            "auto_fields": auto_fields,
+            "entity_type": ctx.entity_type,
+            "is_edit": ctx.is_edit,
+            "node_id": ctx.node_id,
+            "description": ctx.description,
+            "ontology_term": ctx.ontology_term,
+            "required_fields": ctx.get_required_fields(),
+            "optional_fields": ctx.get_optional_fields(),
+            "nested_fields": ctx.get_nested_fields(),
+            "values": ctx.values,
+            "auto_fields": ctx.auto_fields,
             "error_message": f"Validation error: {errors}",
         },
     )

@@ -5,7 +5,7 @@ Provides routes for validating form data against profile specs.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -17,13 +17,17 @@ from metaseed.validators import validate as validate_data
 from ..helpers import collect_form_values
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from fastapi import FastAPI
+
+    from ..state import AppState
 
 
 def register_validation_routes(
     app: FastAPI,
     templates: Jinja2Templates,
-    get_state: Any,
+    get_state: Callable[[], AppState],
 ) -> None:
     """Register validation routes on the FastAPI app.
 
