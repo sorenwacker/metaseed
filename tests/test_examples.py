@@ -95,7 +95,7 @@ class TestExampleFilesHaveRequiredFields:
             data = yaml.safe_load(f)
 
         # Check for common identifier field names (varies by profile)
-        identifier_fields = ["unique_id", "identifier", "id", "occurrenceID"]
+        identifier_fields = ["unique_id", "identifier", "id", "occurrenceID", "alias"]
         has_identifier = any(field in data and data[field] for field in identifier_fields)
         assert has_identifier, f"Example {example_file.name} missing identifier field"
 

@@ -1,0 +1,1222 @@
+# ENA v1.0 Specification
+# European Nucleotide Archive Metadata Model
+# Based on SRA XML schemas and ENA submission guidelines
+#
+# References:
+# - https://ena-docs.readthedocs.io/en/latest/submit/general-guide/metadata.html
+# - https://github.com/enasequence/webin-xml
+
+version: "1.0"
+name: ena
+display_name: ENA
+description: "European Nucleotide Archive metadata model for nucleotide sequence data submission and archiving."
+root_entity: Study
+ontology: SRA
+
+validation_rules:
+  # Accession format validations
+  - name: study_accession_format
+    description: Study accession must be PRJEB or ERP format
+    applies_to: [Study]
+    field: accession
+    pattern: "^(PRJEB[0-9]+|ERP[0-9]{6,})$"
+
+  - name: sample_accession_format
+    description: Sample accession must be ERS or SAMEA format
+    applies_to: [Sample]
+    field: accession
+    pattern: "^(ERS[0-9]{6,}|SAMEA[0-9]+)$"
+
+  - name: experiment_accession_format
+    description: Experiment accession must be ERX format
+    applies_to: [Experiment]
+    field: accession
+    pattern: "^ERX[0-9]{6,}$"
+
+  - name: run_accession_format
+    description: Run accession must be ERR format
+    applies_to: [Run]
+    field: accession
+    pattern: "^ERR[0-9]{6,}$"
+
+  - name: analysis_accession_format
+    description: Analysis accession must be ERZ format
+    applies_to: [Analysis]
+    field: accession
+    pattern: "^ERZ[0-9]{6,}$"
+
+  # Taxon ID validation
+  - name: taxon_id_positive
+    description: Taxon ID must be a positive integer
+    applies_to: [Sample]
+    field: taxon_id
+    minimum: 1
+
+  # Checksum validation
+  - name: md5_checksum_format
+    description: MD5 checksum must be 32 hexadecimal characters
+    applies_to: [File]
+    field: checksum
+    pattern: "^[a-fA-F0-9]{32}$"
+
+  # Library vocabulary constraints
+  - name: library_strategy_vocabulary
+    description: Library strategy must be a valid controlled vocabulary term
+    applies_to: [Experiment]
+    field: library_strategy
+    enum:
+      - WGS
+      - WGA
+      - WXS
+      - RNA-Seq
+      - ssRNA-seq
+      - snRNA-seq
+      - miRNA-Seq
+      - ncRNA-Seq
+      - FL-cDNA
+      - EST
+      - Hi-C
+      - ATAC-seq
+      - WCS
+      - RAD-Seq
+      - CLONE
+      - POOLCLONE
+      - AMPLICON
+      - CLONEEND
+      - FINISHING
+      - ChIP-Seq
+      - MNase-Seq
+      - DNase-Hypersensitivity
+      - Bisulfite-Seq
+      - CTS
+      - MRE-Seq
+      - MeDIP-Seq
+      - MBD-Seq
+      - Tn-Seq
+      - VALIDATION
+      - FAIRE-seq
+      - SELEX
+      - RIP-Seq
+      - ChIA-PET
+      - Synthetic-Long-Read
+      - Targeted-Capture
+      - Tethered Chromatin Conformation Capture
+      - NOMe-Seq
+      - ChM-Seq
+      - GBS
+      - Ribo-Seq
+      - OTHER
+
+  - name: library_source_vocabulary
+    description: Library source must be a valid controlled vocabulary term
+    applies_to: [Experiment]
+    field: library_source
+    enum:
+      - GENOMIC
+      - GENOMIC SINGLE CELL
+      - TRANSCRIPTOMIC
+      - TRANSCRIPTOMIC SINGLE CELL
+      - METAGENOMIC
+      - METATRANSCRIPTOMIC
+      - SYNTHETIC
+      - VIRAL RNA
+      - OTHER
+
+  - name: library_selection_vocabulary
+    description: Library selection must be a valid controlled vocabulary term
+    applies_to: [Experiment]
+    field: library_selection
+    enum:
+      - RANDOM
+      - PCR
+      - RANDOM PCR
+      - RT-PCR
+      - HMPR
+      - MF
+      - repeat fractionation
+      - size fractionation
+      - MSLL
+      - cDNA
+      - cDNA_randomPriming
+      - cDNA_oligo_dT
+      - PolyA
+      - Oligo-dT
+      - Inverse rRNA
+      - Inverse rRNA selection
+      - ChIP
+      - ChIP-Seq
+      - MNase
+      - DNase
+      - Hybrid Selection
+      - Reduced Representation
+      - Restriction Digest
+      - 5-methylcytidine antibody
+      - MBD2 protein methyl-CpG binding domain
+      - CAGE
+      - RACE
+      - MDA
+      - padlock probes capture method
+      - unspecified
+      - other
+
+  - name: platform_vocabulary
+    description: Sequencing platform must be a valid controlled vocabulary term
+    applies_to: [Experiment]
+    field: platform
+    enum:
+      - LS454
+      - ILLUMINA
+      - HELICOS
+      - ABI_SOLID
+      - COMPLETE_GENOMICS
+      - BGISEQ
+      - OXFORD_NANOPORE
+      - PACBIO_SMRT
+      - ION_TORRENT
+      - CAPILLARY
+      - DNBSEQ
+      - ELEMENT
+      - ULTIMA
+      - VELA_DIAGNOSTICS
+      - GENAPSYS
+      - GENEMIND
+      - TAPESTRI
+
+  - name: file_type_vocabulary
+    description: File type must be a valid controlled vocabulary term
+    applies_to: [File]
+    field: filetype
+    enum:
+      - fastq
+      - bam
+      - cram
+      - sff
+      - srf
+      - fasta
+      - tab
+      - agp
+      - chromosome_list
+      - flatfile
+      - info
+      - manifest
+      - unlocalised_list
+      - OxfordNanopore_native
+
+  # Reference integrity
+  - name: experiment_study_reference
+    description: Experiment must reference a valid Study
+    applies_to: [Experiment]
+    field: study_ref
+    reference: Study.alias
+
+  - name: experiment_sample_reference
+    description: Experiment must reference a valid Sample
+    applies_to: [Experiment]
+    field: sample_ref
+    reference: Sample.alias
+
+  - name: run_experiment_reference
+    description: Run must reference a valid Experiment
+    applies_to: [Run]
+    field: experiment_ref
+    reference: Experiment.alias
+
+  - name: analysis_study_reference
+    description: Analysis must reference a valid Study
+    applies_to: [Analysis]
+    field: study_ref
+    reference: Study.alias
+
+  # Coordinate constraints
+  - name: latitude_range
+    description: Latitude must be between -90 and 90 degrees
+    applies_to: [Sample]
+    field: lat_lon_latitude
+    minimum: -90
+    maximum: 90
+
+  - name: longitude_range
+    description: Longitude must be between -180 and 180 degrees
+    applies_to: [Sample]
+    field: lat_lon_longitude
+    minimum: -180
+    maximum: 180
+
+  # Cardinality constraints
+  - name: run_has_files
+    description: Run must have at least one file
+    applies_to: [Run]
+    field: files
+    min_items: 1
+
+  - name: experiment_has_library
+    description: Experiment must have library descriptor
+    applies_to: [Experiment]
+    condition: library_strategy AND library_source AND library_selection
+
+entities:
+
+  Study:
+    ontology_term: SRA:study
+    description: >
+      A study (project) groups together data submitted to the archive and controls
+      its release date. A study accession is typically used when citing data
+      submitted to ENA. All data and metadata associated with a study are made
+      public together when the study is released.
+    example:
+      alias: my-study-001
+      accession: PRJEB12345
+      title: Whole genome sequencing of Arabidopsis thaliana ecotypes
+      description: This study aims to identify genomic variation across 100 Arabidopsis thaliana ecotypes collected from different geographic regions
+      study_type: Whole Genome Sequencing
+    fields:
+      - name: alias
+        codename: alias
+        type: string
+        required: true
+        description: Unique submitter-assigned identifier for the study.
+        ontology_term: SRA:alias
+        constraints:
+          min_length: 1
+          max_length: 255
+
+      - name: accession
+        codename: accession
+        type: string
+        required: false
+        description: ENA-assigned accession number (PRJEB or ERP format).
+        ontology_term: SRA:accession
+
+      - name: center_name
+        codename: center_name
+        type: string
+        required: false
+        description: Submitting center or institution name.
+        ontology_term: SRA:center_name
+
+      - name: broker_name
+        codename: broker_name
+        type: string
+        required: false
+        description: Name of the broker submitting on behalf of the center.
+        ontology_term: SRA:broker_name
+
+      - name: title
+        codename: TITLE
+        type: string
+        required: true
+        description: Short descriptive title for the study.
+        ontology_term: SRA:title
+        constraints:
+          min_length: 1
+          max_length: 4000
+
+      - name: description
+        codename: DESCRIPTION
+        type: string
+        required: true
+        description: Detailed abstract describing the study objectives and scope.
+        ontology_term: SRA:description
+
+      - name: study_type
+        codename: existing_study_type
+        type: string
+        required: false
+        description: Type of study (e.g., Whole Genome Sequencing, Metagenomics).
+        ontology_term: SRA:study_type
+
+      - name: pubmed_ids
+        codename: PUBMED_ID
+        type: list
+        items: string
+        required: false
+        description: PubMed identifiers for associated publications.
+        ontology_term: SRA:pubmed_id
+
+      - name: project_links
+        codename: PROJECT_LINKS
+        type: list
+        items: ProjectLink
+        required: false
+        description: External links associated with the project.
+        ontology_term: SRA:project_link
+
+      - name: samples
+        codename: samples
+        type: list
+        items: Sample
+        required: false
+        description: Samples associated with this study.
+        ontology_term: SRA:has_sample
+
+      - name: experiments
+        codename: experiments
+        type: list
+        items: Experiment
+        required: false
+        description: Experiments associated with this study.
+        ontology_term: SRA:has_experiment
+
+      - name: analyses
+        codename: analyses
+        type: list
+        items: Analysis
+        required: false
+        description: Analyses associated with this study.
+        ontology_term: SRA:has_analysis
+
+  Sample:
+    ontology_term: SRA:sample
+    description: >
+      A sample contains information about the sequenced source material.
+      Samples are associated with checklists which define the fields used
+      to annotate the samples. Samples are always associated with a taxon.
+    example:
+      alias: sample-arabidopsis-001
+      accession: ERS123456
+      title: Arabidopsis thaliana Col-0 leaf tissue
+      taxon_id: 3702
+      scientific_name: Arabidopsis thaliana
+      collection_date: "2024-06-15"
+      geographic_location_country: Germany
+      tissue_type: leaf
+    fields:
+      - name: alias
+        codename: alias
+        type: string
+        required: true
+        description: Unique submitter-assigned identifier for the sample.
+        ontology_term: SRA:alias
+        constraints:
+          min_length: 1
+          max_length: 255
+
+      - name: accession
+        codename: accession
+        type: string
+        required: false
+        description: ENA-assigned accession number (ERS or SAMEA format).
+        ontology_term: SRA:accession
+
+      - name: center_name
+        codename: center_name
+        type: string
+        required: false
+        description: Submitting center or institution name.
+        ontology_term: SRA:center_name
+
+      - name: title
+        codename: TITLE
+        type: string
+        required: true
+        description: Short descriptive title for the sample.
+        ontology_term: SRA:title
+        constraints:
+          min_length: 1
+          max_length: 4000
+
+      - name: taxon_id
+        codename: TAXON_ID
+        type: integer
+        required: true
+        description: NCBI taxonomy identifier for the organism.
+        ontology_term: SRA:taxon_id
+        constraints:
+          minimum: 1
+
+      - name: scientific_name
+        codename: SCIENTIFIC_NAME
+        type: string
+        required: false
+        description: Scientific name of the organism (auto-populated from taxon_id).
+        ontology_term: SRA:scientific_name
+
+      - name: common_name
+        codename: COMMON_NAME
+        type: string
+        required: false
+        description: Common name of the organism.
+        ontology_term: SRA:common_name
+
+      - name: description
+        codename: DESCRIPTION
+        type: string
+        required: false
+        description: Detailed description of the sample.
+        ontology_term: SRA:description
+
+      - name: checklist
+        codename: ENA-CHECKLIST
+        type: string
+        required: false
+        description: ENA checklist identifier (e.g., ERC000011 for default).
+        ontology_term: SRA:checklist
+        constraints:
+          pattern: "^ERC[0-9]{6}$"
+
+      # Sample attributes from ENA default checklist (ERC000011)
+      - name: collection_date
+        codename: collection_date
+        type: string
+        required: true
+        description: Date of sample collection (ISO 8601 format or missing value term).
+        ontology_term: SRA:collection_date
+
+      - name: geographic_location_country
+        codename: geographic location (country and/or sea)
+        type: string
+        required: true
+        description: Country or sea where the sample was collected (INSDC country list).
+        ontology_term: SRA:geo_loc_name
+
+      - name: geographic_location_region
+        codename: geographic location (region and locality)
+        type: string
+        required: false
+        description: Region and locality within the country.
+        ontology_term: SRA:geo_loc_name
+
+      - name: lat_lon
+        codename: lat_lon
+        type: string
+        required: false
+        description: Geographic coordinates (latitude longitude in decimal degrees).
+        ontology_term: SRA:lat_lon
+
+      - name: lat_lon_latitude
+        codename: latitude
+        type: float
+        required: false
+        description: Latitude component of coordinates (decimal degrees).
+        ontology_term: SRA:latitude
+        constraints:
+          minimum: -90
+          maximum: 90
+
+      - name: lat_lon_longitude
+        codename: longitude
+        type: float
+        required: false
+        description: Longitude component of coordinates (decimal degrees).
+        ontology_term: SRA:longitude
+        constraints:
+          minimum: -180
+          maximum: 180
+
+      - name: isolation_source
+        codename: isolation_source
+        type: string
+        required: false
+        description: Physical, environmental, or organismal source of the sample.
+        ontology_term: SRA:isolation_source
+
+      - name: collected_by
+        codename: collected_by
+        type: string
+        required: false
+        description: Name of person or institute who collected the sample.
+        ontology_term: SRA:collected_by
+
+      - name: identified_by
+        codename: identified_by
+        type: string
+        required: false
+        description: Name of person or institute who identified the sample.
+        ontology_term: SRA:identified_by
+
+      - name: environmental_sample
+        codename: environmental_sample
+        type: boolean
+        required: false
+        description: Whether this is an environmental sample.
+        ontology_term: SRA:environmental_sample
+
+      # Organism characteristics
+      - name: strain
+        codename: strain
+        type: string
+        required: false
+        description: Microbial or eukaryotic strain name.
+        ontology_term: SRA:strain
+
+      - name: isolate
+        codename: isolate
+        type: string
+        required: false
+        description: Individual isolate identifier.
+        ontology_term: SRA:isolate
+
+      - name: cultivar
+        codename: cultivar
+        type: string
+        required: false
+        description: Cultivar name for plants.
+        ontology_term: SRA:cultivar
+
+      - name: ecotype
+        codename: ecotype
+        type: string
+        required: false
+        description: Ecotype name for plants.
+        ontology_term: SRA:ecotype
+
+      - name: variety
+        codename: variety
+        type: string
+        required: false
+        description: Variety name.
+        ontology_term: SRA:variety
+
+      - name: sub_species
+        codename: sub_species
+        type: string
+        required: false
+        description: Subspecies name.
+        ontology_term: SRA:sub_species
+
+      - name: sex
+        codename: sex
+        type: string
+        required: false
+        description: Sex of the organism.
+        ontology_term: SRA:sex
+
+      - name: mating_type
+        codename: mating_type
+        type: string
+        required: false
+        description: Mating type for applicable organisms.
+        ontology_term: SRA:mating_type
+
+      - name: cell_type
+        codename: cell_type
+        type: string
+        required: false
+        description: Cell type from which the sample was derived.
+        ontology_term: SRA:cell_type
+
+      - name: dev_stage
+        codename: dev_stage
+        type: string
+        required: false
+        description: Developmental stage of the organism.
+        ontology_term: SRA:dev_stage
+
+      - name: tissue_type
+        codename: tissue_type
+        type: string
+        required: false
+        description: Tissue type of the sample.
+        ontology_term: SRA:tissue_type
+
+      - name: cell_line
+        codename: cell_line
+        type: string
+        required: false
+        description: Cell line identifier.
+        ontology_term: SRA:cell_line
+
+      - name: culture_collection
+        codename: culture_collection
+        type: string
+        required: false
+        description: Culture collection identifier.
+        ontology_term: SRA:culture_collection
+
+      - name: specimen_voucher
+        codename: specimen_voucher
+        type: string
+        required: false
+        description: Reference to physical specimen voucher.
+        ontology_term: SRA:specimen_voucher
+
+      - name: bio_material
+        codename: bio_material
+        type: string
+        required: false
+        description: Identifier for biological material.
+        ontology_term: SRA:bio_material
+
+      # Host information
+      - name: host
+        codename: host
+        type: string
+        required: false
+        description: Scientific name of the host organism.
+        ontology_term: SRA:host
+
+      - name: lab_host
+        codename: lab_host
+        type: string
+        required: false
+        description: Laboratory host used for propagation.
+        ontology_term: SRA:lab_host
+
+      - name: sample_attributes
+        codename: SAMPLE_ATTRIBUTES
+        type: list
+        items: SampleAttribute
+        required: false
+        description: Additional custom attributes for the sample.
+        ontology_term: SRA:sample_attribute
+
+  Experiment:
+    ontology_term: SRA:experiment
+    description: >
+      An experiment contains information about a sequencing experiment including
+      library and instrument details. An experiment references a study and one
+      or more samples.
+    example:
+      alias: experiment-wgs-001
+      accession: ERX123456
+      title: Whole genome sequencing of Arabidopsis thaliana Col-0
+      study_ref: my-study-001
+      sample_ref: sample-arabidopsis-001
+      library_name: LIB-001
+      library_strategy: WGS
+      library_source: GENOMIC
+      library_selection: RANDOM
+      library_layout: PAIRED
+      platform: ILLUMINA
+      instrument_model: Illumina NovaSeq 6000
+    fields:
+      - name: alias
+        codename: alias
+        type: string
+        required: true
+        description: Unique submitter-assigned identifier for the experiment.
+        ontology_term: SRA:alias
+        constraints:
+          min_length: 1
+          max_length: 255
+
+      - name: accession
+        codename: accession
+        type: string
+        required: false
+        description: ENA-assigned accession number (ERX format).
+        ontology_term: SRA:accession
+
+      - name: center_name
+        codename: center_name
+        type: string
+        required: false
+        description: Submitting center or institution name.
+        ontology_term: SRA:center_name
+
+      - name: title
+        codename: TITLE
+        type: string
+        required: false
+        description: Short descriptive title for the experiment.
+        ontology_term: SRA:title
+        constraints:
+          max_length: 4000
+
+      - name: study_ref
+        codename: STUDY_REF
+        type: string
+        required: true
+        description: Reference to the parent study (alias or accession).
+        ontology_term: SRA:study_ref
+        reference: Study.alias
+
+      - name: sample_ref
+        codename: SAMPLE_REF
+        type: string
+        required: true
+        description: Reference to the sample (alias or accession).
+        ontology_term: SRA:sample_ref
+        reference: Sample.alias
+
+      - name: design_description
+        codename: DESIGN_DESCRIPTION
+        type: string
+        required: false
+        description: Description of the experimental design.
+        ontology_term: SRA:design_description
+
+      # Library descriptor
+      - name: library_name
+        codename: LIBRARY_NAME
+        type: string
+        required: false
+        description: Name of the sequencing library.
+        ontology_term: SRA:library_name
+
+      - name: library_strategy
+        codename: LIBRARY_STRATEGY
+        type: string
+        required: true
+        description: Sequencing strategy (e.g., WGS, RNA-Seq, ChIP-Seq).
+        ontology_term: SRA:library_strategy
+
+      - name: library_source
+        codename: LIBRARY_SOURCE
+        type: string
+        required: true
+        description: Source material type (e.g., GENOMIC, TRANSCRIPTOMIC).
+        ontology_term: SRA:library_source
+
+      - name: library_selection
+        codename: LIBRARY_SELECTION
+        type: string
+        required: true
+        description: Library selection method (e.g., RANDOM, PCR, PolyA).
+        ontology_term: SRA:library_selection
+
+      - name: library_layout
+        codename: LIBRARY_LAYOUT
+        type: string
+        required: true
+        description: Library layout (SINGLE or PAIRED).
+        ontology_term: SRA:library_layout
+        constraints:
+          enum:
+            - SINGLE
+            - PAIRED
+
+      - name: insert_size
+        codename: NOMINAL_LENGTH
+        type: integer
+        required: false
+        description: Average insert size for paired-end libraries.
+        ontology_term: SRA:nominal_length
+        constraints:
+          minimum: 0
+
+      - name: insert_size_stddev
+        codename: NOMINAL_SDEV
+        type: float
+        required: false
+        description: Standard deviation of insert size.
+        ontology_term: SRA:nominal_sdev
+        constraints:
+          minimum: 0
+
+      - name: library_construction_protocol
+        codename: LIBRARY_CONSTRUCTION_PROTOCOL
+        type: string
+        required: false
+        description: Description of library construction protocol.
+        ontology_term: SRA:library_construction_protocol
+
+      # Platform
+      - name: platform
+        codename: PLATFORM
+        type: string
+        required: true
+        description: Sequencing platform (e.g., ILLUMINA, OXFORD_NANOPORE).
+        ontology_term: SRA:platform
+
+      - name: instrument_model
+        codename: INSTRUMENT_MODEL
+        type: string
+        required: true
+        description: Specific instrument model used.
+        ontology_term: SRA:instrument_model
+
+      - name: experiment_attributes
+        codename: EXPERIMENT_ATTRIBUTES
+        type: list
+        items: ExperimentAttribute
+        required: false
+        description: Additional custom attributes for the experiment.
+        ontology_term: SRA:experiment_attribute
+
+      - name: runs
+        codename: runs
+        type: list
+        items: Run
+        required: false
+        description: Runs associated with this experiment.
+        ontology_term: SRA:has_run
+
+  Run:
+    ontology_term: SRA:run
+    description: >
+      A run is part of an experiment and refers to data files containing
+      sequence reads. Each run contains one or more files with associated
+      checksums for data integrity verification.
+    example:
+      alias: run-001
+      accession: ERR123456
+      experiment_ref: experiment-wgs-001
+      run_date: "2024-06-20"
+    fields:
+      - name: alias
+        codename: alias
+        type: string
+        required: true
+        description: Unique submitter-assigned identifier for the run.
+        ontology_term: SRA:alias
+        constraints:
+          min_length: 1
+          max_length: 255
+
+      - name: accession
+        codename: accession
+        type: string
+        required: false
+        description: ENA-assigned accession number (ERR format).
+        ontology_term: SRA:accession
+
+      - name: center_name
+        codename: center_name
+        type: string
+        required: false
+        description: Submitting center or institution name.
+        ontology_term: SRA:center_name
+
+      - name: experiment_ref
+        codename: EXPERIMENT_REF
+        type: string
+        required: true
+        description: Reference to the parent experiment (alias or accession).
+        ontology_term: SRA:experiment_ref
+        reference: Experiment.alias
+
+      - name: run_date
+        codename: run_date
+        type: date
+        required: false
+        description: Date when the sequencing run was performed.
+        ontology_term: SRA:run_date
+
+      - name: run_center
+        codename: run_center
+        type: string
+        required: false
+        description: Center where the run was performed.
+        ontology_term: SRA:run_center
+
+      - name: files
+        codename: FILES
+        type: list
+        items: File
+        required: true
+        description: Data files associated with this run.
+        ontology_term: SRA:has_file
+
+      - name: run_attributes
+        codename: RUN_ATTRIBUTES
+        type: list
+        items: RunAttribute
+        required: false
+        description: Additional custom attributes for the run.
+        ontology_term: SRA:run_attribute
+
+  Analysis:
+    ontology_term: SRA:analysis
+    description: >
+      An analysis contains secondary analysis results derived from sequence
+      reads, such as genome assemblies, variant calls, or annotations.
+    example:
+      alias: analysis-assembly-001
+      accession: ERZ123456
+      title: Arabidopsis thaliana Col-0 genome assembly
+      study_ref: my-study-001
+      analysis_type: SEQUENCE_ASSEMBLY
+      description: De novo assembly of Arabidopsis thaliana Col-0 using long reads
+    fields:
+      - name: alias
+        codename: alias
+        type: string
+        required: true
+        description: Unique submitter-assigned identifier for the analysis.
+        ontology_term: SRA:alias
+        constraints:
+          min_length: 1
+          max_length: 255
+
+      - name: accession
+        codename: accession
+        type: string
+        required: false
+        description: ENA-assigned accession number (ERZ format).
+        ontology_term: SRA:accession
+
+      - name: center_name
+        codename: center_name
+        type: string
+        required: false
+        description: Submitting center or institution name.
+        ontology_term: SRA:center_name
+
+      - name: title
+        codename: TITLE
+        type: string
+        required: true
+        description: Short descriptive title for the analysis.
+        ontology_term: SRA:title
+        constraints:
+          min_length: 1
+          max_length: 4000
+
+      - name: description
+        codename: DESCRIPTION
+        type: string
+        required: false
+        description: Detailed description of the analysis.
+        ontology_term: SRA:description
+
+      - name: study_ref
+        codename: STUDY_REF
+        type: string
+        required: true
+        description: Reference to the parent study (alias or accession).
+        ontology_term: SRA:study_ref
+        reference: Study.alias
+
+      - name: sample_refs
+        codename: SAMPLE_REF
+        type: list
+        items: string
+        required: false
+        description: References to samples used in the analysis.
+        ontology_term: SRA:sample_ref
+
+      - name: experiment_refs
+        codename: EXPERIMENT_REF
+        type: list
+        items: string
+        required: false
+        description: References to experiments used in the analysis.
+        ontology_term: SRA:experiment_ref
+
+      - name: run_refs
+        codename: RUN_REF
+        type: list
+        items: string
+        required: false
+        description: References to runs used in the analysis.
+        ontology_term: SRA:run_ref
+
+      - name: analysis_refs
+        codename: ANALYSIS_REF
+        type: list
+        items: string
+        required: false
+        description: References to other analyses used as input.
+        ontology_term: SRA:analysis_ref
+
+      - name: analysis_type
+        codename: ANALYSIS_TYPE
+        type: string
+        required: true
+        description: Type of analysis performed.
+        ontology_term: SRA:analysis_type
+        constraints:
+          enum:
+            - REFERENCE_ALIGNMENT
+            - SEQUENCE_VARIATION
+            - SEQUENCE_ASSEMBLY
+            - SEQUENCE_ANNOTATION
+            - REFERENCE_SEQUENCE
+            - SAMPLE_PHENOTYPE
+            - PROCESSED_READS
+            - GENOME_MAP
+            - AMR_ANTIBIOGRAM
+            - PATHOGEN_ANALYSIS
+            - TRANSCRIPTOME_ASSEMBLY
+
+      - name: files
+        codename: FILES
+        type: list
+        items: File
+        required: true
+        description: Files associated with this analysis.
+        ontology_term: SRA:has_file
+
+      - name: analysis_attributes
+        codename: ANALYSIS_ATTRIBUTES
+        type: list
+        items: AnalysisAttribute
+        required: false
+        description: Additional custom attributes for the analysis.
+        ontology_term: SRA:analysis_attribute
+
+  File:
+    ontology_term: SRA:file
+    description: >
+      A data file associated with a run or analysis, including filename,
+      type, and checksum for integrity verification.
+    example:
+      filename: sample_R1.fastq.gz
+      filetype: fastq
+      checksum_method: MD5
+      checksum: d41d8cd98f00b204e9800998ecf8427e
+    fields:
+      - name: filename
+        codename: filename
+        type: string
+        required: true
+        description: Name of the file (may include subdirectory path).
+        ontology_term: SRA:filename
+        constraints:
+          min_length: 1
+          max_length: 1000
+
+      - name: filetype
+        codename: filetype
+        type: string
+        required: true
+        description: File format type.
+        ontology_term: SRA:filetype
+
+      - name: checksum_method
+        codename: checksum_method
+        type: string
+        required: true
+        description: Checksum algorithm used (typically MD5).
+        ontology_term: SRA:checksum_method
+        constraints:
+          enum:
+            - MD5
+            - SHA-256
+
+      - name: checksum
+        codename: checksum
+        type: string
+        required: true
+        description: Checksum value for file integrity verification.
+        ontology_term: SRA:checksum
+
+      - name: read_type
+        codename: READ_TYPE
+        type: string
+        required: false
+        description: Read type for multi-file submissions (e.g., paired, index).
+        ontology_term: SRA:read_type
+
+      - name: assembly_ref
+        codename: assembly
+        type: string
+        required: false
+        description: Reference assembly accession for aligned files.
+        ontology_term: SRA:assembly
+
+  SampleAttribute:
+    ontology_term: SRA:sample_attribute
+    description: A custom attribute (tag-value pair) for a sample.
+    example:
+      tag: treatment
+      value: drought stress
+    fields:
+      - name: tag
+        codename: TAG
+        type: string
+        required: true
+        description: Attribute name.
+        ontology_term: SRA:tag
+        constraints:
+          min_length: 1
+          max_length: 255
+
+      - name: value
+        codename: VALUE
+        type: string
+        required: true
+        description: Attribute value.
+        ontology_term: SRA:value
+
+      - name: units
+        codename: UNITS
+        type: string
+        required: false
+        description: Units of measurement if applicable.
+        ontology_term: SRA:units
+
+  ExperimentAttribute:
+    ontology_term: SRA:experiment_attribute
+    description: A custom attribute (tag-value pair) for an experiment.
+    fields:
+      - name: tag
+        codename: TAG
+        type: string
+        required: true
+        description: Attribute name.
+        ontology_term: SRA:tag
+        constraints:
+          min_length: 1
+          max_length: 255
+
+      - name: value
+        codename: VALUE
+        type: string
+        required: true
+        description: Attribute value.
+        ontology_term: SRA:value
+
+  RunAttribute:
+    ontology_term: SRA:run_attribute
+    description: A custom attribute (tag-value pair) for a run.
+    fields:
+      - name: tag
+        codename: TAG
+        type: string
+        required: true
+        description: Attribute name.
+        ontology_term: SRA:tag
+        constraints:
+          min_length: 1
+          max_length: 255
+
+      - name: value
+        codename: VALUE
+        type: string
+        required: true
+        description: Attribute value.
+        ontology_term: SRA:value
+
+  AnalysisAttribute:
+    ontology_term: SRA:analysis_attribute
+    description: A custom attribute (tag-value pair) for an analysis.
+    fields:
+      - name: tag
+        codename: TAG
+        type: string
+        required: true
+        description: Attribute name.
+        ontology_term: SRA:tag
+        constraints:
+          min_length: 1
+          max_length: 255
+
+      - name: value
+        codename: VALUE
+        type: string
+        required: true
+        description: Attribute value.
+        ontology_term: SRA:value
+
+  ProjectLink:
+    ontology_term: SRA:project_link
+    description: An external link associated with a project/study.
+    example:
+      db: PUBMED
+      id: "12345678"
+    fields:
+      - name: db
+        codename: DB
+        type: string
+        required: true
+        description: External database name (e.g., PUBMED, DOI).
+        ontology_term: SRA:db
+        constraints:
+          min_length: 1
+          max_length: 255
+
+      - name: id
+        codename: ID
+        type: string
+        required: true
+        description: Identifier in the external database.
+        ontology_term: SRA:id
+
+      - name: label
+        codename: LABEL
+        type: string
+        required: false
+        description: Human-readable label for the link.
+        ontology_term: SRA:label

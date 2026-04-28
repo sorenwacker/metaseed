@@ -1,0 +1,389 @@
+# ENA v1.0 Example: Arabidopsis Drought Stress RNA-Seq Study
+# Demonstrates ENA metadata model for a typical RNA-Seq experiment
+# including samples, experiments, runs with paired-end files, and analysis
+
+alias: PRJEB-ARABIDOPSIS-DROUGHT-2024
+title: Transcriptomic response of Arabidopsis thaliana to drought stress
+description: >
+  RNA-Seq analysis of Arabidopsis thaliana Col-0 and Ler ecotypes under
+  progressive drought stress. Leaf tissue was sampled at three time points
+  (0h, 24h, 72h after water withdrawal) to characterize the transcriptomic
+  response to dehydration. This study identifies differentially expressed
+  genes and regulatory networks involved in drought tolerance mechanisms.
+study_type: Transcriptome Analysis
+center_name: Plant Genomics Institute
+pubmed_ids:
+  - "38123456"
+
+project_links:
+  - db: PUBMED
+    id: "38123456"
+    label: Associated publication
+  - db: DOI
+    id: "10.1234/plantgenomics.2024.001"
+    label: Data descriptor
+
+samples:
+  # Col-0 ecotype samples
+  - alias: SAMEA-COL0-0H-REP1
+    title: Arabidopsis Col-0 control (0h) replicate 1
+    taxon_id: 3702
+    scientific_name: Arabidopsis thaliana
+    common_name: thale cress
+    description: >
+      Leaf tissue from Arabidopsis thaliana Col-0 ecotype, well-watered
+      control condition, biological replicate 1
+    checklist: ERC000011
+    collection_date: "2024-03-15"
+    geographic_location_country: Germany
+    geographic_location_region: Bavaria, Munich
+    lat_lon: "48.1351 11.5820"
+    lat_lon_latitude: 48.1351
+    lat_lon_longitude: 11.5820
+    collected_by: Dr. Maria Schmidt
+    ecotype: Col-0
+    tissue_type: rosette leaf
+    dev_stage: 4-week-old rosette
+    cell_type: mixed leaf cells
+    sample_attributes:
+      - tag: treatment
+        value: well-watered control
+      - tag: time_point
+        value: "0"
+        units: hours
+      - tag: biological_replicate
+        value: "1"
+      - tag: growth_condition
+        value: 22C, 16h light/8h dark, 60% humidity
+
+  - alias: SAMEA-COL0-0H-REP2
+    title: Arabidopsis Col-0 control (0h) replicate 2
+    taxon_id: 3702
+    scientific_name: Arabidopsis thaliana
+    collection_date: "2024-03-15"
+    geographic_location_country: Germany
+    ecotype: Col-0
+    tissue_type: rosette leaf
+    dev_stage: 4-week-old rosette
+    sample_attributes:
+      - tag: treatment
+        value: well-watered control
+      - tag: time_point
+        value: "0"
+        units: hours
+      - tag: biological_replicate
+        value: "2"
+
+  - alias: SAMEA-COL0-24H-REP1
+    title: Arabidopsis Col-0 drought 24h replicate 1
+    taxon_id: 3702
+    scientific_name: Arabidopsis thaliana
+    collection_date: "2024-03-16"
+    geographic_location_country: Germany
+    ecotype: Col-0
+    tissue_type: rosette leaf
+    dev_stage: 4-week-old rosette
+    sample_attributes:
+      - tag: treatment
+        value: drought stress
+      - tag: time_point
+        value: "24"
+        units: hours
+      - tag: biological_replicate
+        value: "1"
+      - tag: soil_water_content
+        value: "35"
+        units: percent
+
+  - alias: SAMEA-COL0-72H-REP1
+    title: Arabidopsis Col-0 drought 72h replicate 1
+    taxon_id: 3702
+    scientific_name: Arabidopsis thaliana
+    collection_date: "2024-03-18"
+    geographic_location_country: Germany
+    ecotype: Col-0
+    tissue_type: rosette leaf
+    dev_stage: 4-week-old rosette
+    sample_attributes:
+      - tag: treatment
+        value: severe drought stress
+      - tag: time_point
+        value: "72"
+        units: hours
+      - tag: biological_replicate
+        value: "1"
+      - tag: soil_water_content
+        value: "15"
+        units: percent
+      - tag: leaf_relative_water_content
+        value: "65"
+        units: percent
+
+  # Ler ecotype samples
+  - alias: SAMEA-LER-0H-REP1
+    title: Arabidopsis Ler control (0h) replicate 1
+    taxon_id: 3702
+    scientific_name: Arabidopsis thaliana
+    collection_date: "2024-03-15"
+    geographic_location_country: Germany
+    ecotype: Landsberg erecta
+    tissue_type: rosette leaf
+    dev_stage: 4-week-old rosette
+    sample_attributes:
+      - tag: treatment
+        value: well-watered control
+      - tag: time_point
+        value: "0"
+        units: hours
+      - tag: biological_replicate
+        value: "1"
+
+  - alias: SAMEA-LER-72H-REP1
+    title: Arabidopsis Ler drought 72h replicate 1
+    taxon_id: 3702
+    scientific_name: Arabidopsis thaliana
+    collection_date: "2024-03-18"
+    geographic_location_country: Germany
+    ecotype: Landsberg erecta
+    tissue_type: rosette leaf
+    dev_stage: 4-week-old rosette
+    sample_attributes:
+      - tag: treatment
+        value: severe drought stress
+      - tag: time_point
+        value: "72"
+        units: hours
+      - tag: biological_replicate
+        value: "1"
+
+experiments:
+  - alias: ERX-COL0-0H-REP1
+    title: RNA-Seq of Col-0 control (0h) replicate 1
+    study_ref: PRJEB-ARABIDOPSIS-DROUGHT-2024
+    sample_ref: SAMEA-COL0-0H-REP1
+    design_description: >
+      Total RNA extracted using RNeasy Plant Mini Kit (Qiagen).
+      mRNA enrichment by poly-A selection. Library prepared using
+      Illumina TruSeq Stranded mRNA kit.
+    library_name: LIB-COL0-0H-R1
+    library_strategy: RNA-Seq
+    library_source: TRANSCRIPTOMIC
+    library_selection: PolyA
+    library_layout: PAIRED
+    insert_size: 300
+    insert_size_stddev: 50.0
+    library_construction_protocol: >
+      1. Total RNA extraction (RNeasy Plant Mini Kit)
+      2. DNase treatment and quality control (RIN > 8.0)
+      3. mRNA enrichment by poly-A selection
+      4. cDNA synthesis and adapter ligation (TruSeq Stranded mRNA)
+      5. PCR amplification (12 cycles)
+      6. Size selection (300bp insert)
+    platform: ILLUMINA
+    instrument_model: Illumina NovaSeq 6000
+    experiment_attributes:
+      - tag: rna_integrity_number
+        value: "9.2"
+      - tag: library_concentration
+        value: "15.3"
+      - tag: library_concentration_units
+        value: nM
+    runs:
+      - alias: ERR-COL0-0H-REP1
+        experiment_ref: ERX-COL0-0H-REP1
+        run_date: "2024-04-01"
+        run_center: Plant Genomics Sequencing Facility
+        files:
+          - filename: COL0_0H_REP1_R1.fastq.gz
+            filetype: fastq
+            checksum_method: MD5
+            checksum: a1b2c3d4e5f6789012345678abcdef01
+            read_type: forward
+          - filename: COL0_0H_REP1_R2.fastq.gz
+            filetype: fastq
+            checksum_method: MD5
+            checksum: b2c3d4e5f6789012345678abcdef02a1
+            read_type: reverse
+        run_attributes:
+          - tag: read_count
+            value: "45000000"
+          - tag: base_count
+            value: "13500000000"
+
+  - alias: ERX-COL0-0H-REP2
+    title: RNA-Seq of Col-0 control (0h) replicate 2
+    study_ref: PRJEB-ARABIDOPSIS-DROUGHT-2024
+    sample_ref: SAMEA-COL0-0H-REP2
+    library_name: LIB-COL0-0H-R2
+    library_strategy: RNA-Seq
+    library_source: TRANSCRIPTOMIC
+    library_selection: PolyA
+    library_layout: PAIRED
+    insert_size: 300
+    platform: ILLUMINA
+    instrument_model: Illumina NovaSeq 6000
+    runs:
+      - alias: ERR-COL0-0H-REP2
+        experiment_ref: ERX-COL0-0H-REP2
+        run_date: "2024-04-01"
+        files:
+          - filename: COL0_0H_REP2_R1.fastq.gz
+            filetype: fastq
+            checksum_method: MD5
+            checksum: c3d4e5f6789012345678abcdef03b2c1
+          - filename: COL0_0H_REP2_R2.fastq.gz
+            filetype: fastq
+            checksum_method: MD5
+            checksum: d4e5f6789012345678abcdef04c3d2e1
+
+  - alias: ERX-COL0-24H-REP1
+    title: RNA-Seq of Col-0 drought 24h replicate 1
+    study_ref: PRJEB-ARABIDOPSIS-DROUGHT-2024
+    sample_ref: SAMEA-COL0-24H-REP1
+    library_name: LIB-COL0-24H-R1
+    library_strategy: RNA-Seq
+    library_source: TRANSCRIPTOMIC
+    library_selection: PolyA
+    library_layout: PAIRED
+    insert_size: 300
+    platform: ILLUMINA
+    instrument_model: Illumina NovaSeq 6000
+    runs:
+      - alias: ERR-COL0-24H-REP1
+        experiment_ref: ERX-COL0-24H-REP1
+        run_date: "2024-04-01"
+        files:
+          - filename: COL0_24H_REP1_R1.fastq.gz
+            filetype: fastq
+            checksum_method: MD5
+            checksum: e5f6789012345678abcdef05d4e3f2g1
+          - filename: COL0_24H_REP1_R2.fastq.gz
+            filetype: fastq
+            checksum_method: MD5
+            checksum: f6789012345678abcdef06e5f4g3h2i1
+
+  - alias: ERX-COL0-72H-REP1
+    title: RNA-Seq of Col-0 drought 72h replicate 1
+    study_ref: PRJEB-ARABIDOPSIS-DROUGHT-2024
+    sample_ref: SAMEA-COL0-72H-REP1
+    library_name: LIB-COL0-72H-R1
+    library_strategy: RNA-Seq
+    library_source: TRANSCRIPTOMIC
+    library_selection: PolyA
+    library_layout: PAIRED
+    insert_size: 300
+    platform: ILLUMINA
+    instrument_model: Illumina NovaSeq 6000
+    runs:
+      - alias: ERR-COL0-72H-REP1
+        experiment_ref: ERX-COL0-72H-REP1
+        run_date: "2024-04-01"
+        files:
+          - filename: COL0_72H_REP1_R1.fastq.gz
+            filetype: fastq
+            checksum_method: MD5
+            checksum: 789012345678abcdef07f6g5h4i3j2k1
+          - filename: COL0_72H_REP1_R2.fastq.gz
+            filetype: fastq
+            checksum_method: MD5
+            checksum: 89012345678abcdef08g7h6i5j4k3l2m1
+
+  - alias: ERX-LER-0H-REP1
+    title: RNA-Seq of Ler control (0h) replicate 1
+    study_ref: PRJEB-ARABIDOPSIS-DROUGHT-2024
+    sample_ref: SAMEA-LER-0H-REP1
+    library_name: LIB-LER-0H-R1
+    library_strategy: RNA-Seq
+    library_source: TRANSCRIPTOMIC
+    library_selection: PolyA
+    library_layout: PAIRED
+    insert_size: 300
+    platform: ILLUMINA
+    instrument_model: Illumina NovaSeq 6000
+    runs:
+      - alias: ERR-LER-0H-REP1
+        experiment_ref: ERX-LER-0H-REP1
+        run_date: "2024-04-02"
+        files:
+          - filename: LER_0H_REP1_R1.fastq.gz
+            filetype: fastq
+            checksum_method: MD5
+            checksum: 9012345678abcdef09h8i7j6k5l4m3n2
+          - filename: LER_0H_REP1_R2.fastq.gz
+            filetype: fastq
+            checksum_method: MD5
+            checksum: 012345678abcdef0ai9j8k7l6m5n4o3p2
+
+  - alias: ERX-LER-72H-REP1
+    title: RNA-Seq of Ler drought 72h replicate 1
+    study_ref: PRJEB-ARABIDOPSIS-DROUGHT-2024
+    sample_ref: SAMEA-LER-72H-REP1
+    library_name: LIB-LER-72H-R1
+    library_strategy: RNA-Seq
+    library_source: TRANSCRIPTOMIC
+    library_selection: PolyA
+    library_layout: PAIRED
+    insert_size: 300
+    platform: ILLUMINA
+    instrument_model: Illumina NovaSeq 6000
+    runs:
+      - alias: ERR-LER-72H-REP1
+        experiment_ref: ERX-LER-72H-REP1
+        run_date: "2024-04-02"
+        files:
+          - filename: LER_72H_REP1_R1.fastq.gz
+            filetype: fastq
+            checksum_method: MD5
+            checksum: 12345678abcdef0bj0k9l8m7n6o5p4q3
+          - filename: LER_72H_REP1_R2.fastq.gz
+            filetype: fastq
+            checksum_method: MD5
+            checksum: 2345678abcdef0ck1l0m9n8o7p6q5r4s3
+
+analyses:
+  - alias: ERZ-DROUGHT-DESEQ2
+    title: Differential expression analysis of drought response
+    description: >
+      DESeq2 analysis comparing gene expression between control and drought
+      conditions at each time point, and between Col-0 and Ler ecotypes.
+      Genes with adjusted p-value < 0.05 and |log2FC| > 1 considered significant.
+    study_ref: PRJEB-ARABIDOPSIS-DROUGHT-2024
+    sample_refs:
+      - SAMEA-COL0-0H-REP1
+      - SAMEA-COL0-0H-REP2
+      - SAMEA-COL0-24H-REP1
+      - SAMEA-COL0-72H-REP1
+      - SAMEA-LER-0H-REP1
+      - SAMEA-LER-72H-REP1
+    run_refs:
+      - ERR-COL0-0H-REP1
+      - ERR-COL0-0H-REP2
+      - ERR-COL0-24H-REP1
+      - ERR-COL0-72H-REP1
+      - ERR-LER-0H-REP1
+      - ERR-LER-72H-REP1
+    analysis_type: PROCESSED_READS
+    files:
+      - filename: counts_matrix.tsv.gz
+        filetype: tab
+        checksum_method: MD5
+        checksum: 345678abcdef0dl2m1n0o9p8q7r6s5t4
+      - filename: deseq2_results_col0_drought_vs_control.tsv.gz
+        filetype: tab
+        checksum_method: MD5
+        checksum: 45678abcdef0em3n2o1p0q9r8s7t6u5v4
+      - filename: deseq2_results_ler_drought_vs_control.tsv.gz
+        filetype: tab
+        checksum_method: MD5
+        checksum: 5678abcdef0fn4o3p2q1r0s9t8u7v6w5x4
+    analysis_attributes:
+      - tag: analysis_software
+        value: DESeq2 v1.40.0
+      - tag: reference_genome
+        value: TAIR10
+      - tag: alignment_software
+        value: STAR v2.7.10b
+      - tag: quantification_method
+        value: featureCounts v2.0.3
+      - tag: normalization_method
+        value: median of ratios (DESeq2)
