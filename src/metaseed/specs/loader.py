@@ -8,6 +8,10 @@ Directory structure:
         <profile-name>/
             <version>/
                 profile.yaml
+
+User-defined specs are stored in:
+    - Linux/macOS: ~/.local/share/metaseed/specs/
+    - Windows: %LOCALAPPDATA%/metaseed/specs/
 """
 
 from pathlib import Path
@@ -16,6 +20,7 @@ from typing import Self
 import yaml
 from pydantic import ValidationError
 
+from metaseed.paths import get_builtin_specs_dir, get_user_specs_dir
 from metaseed.specs.schema import EntitySpec, ProfileSpec
 
 
@@ -29,6 +34,10 @@ class SpecLoader:
     Supports multiple profiles organized in directories:
         specs/<profile>/<version>/profile.yaml
 
+    Searches in order:
+        1. User specs directory (~/.local/share/metaseed/specs/)
+        2. Built-in specs directory (package specs/)
+
     Example:
         specs/miappe/1.1/profile.yaml
         specs/darwin-core/1.0/profile.yaml
@@ -40,12 +49,15 @@ class SpecLoader:
         Args:
             profile: Profile name (e.g., "miappe", "isa"). Defaults to "miappe".
         """
-        self._specs_dir = Path(__file__).parent
+        self._builtin_specs_dir = get_builtin_specs_dir()
+        self._user_specs_dir = get_user_specs_dir()
         self._profile_cache: dict[str, ProfileSpec] = {}
         self._default_profile = profile.lower()
 
     def _find_profile_file(self: Self, version: str, profile: str | None = None) -> Path | None:
         """Find profile file for a version.
+
+        Searches user specs first, then built-in specs.
 
         Args:
             version: Version string (e.g., "1.1").
@@ -56,10 +68,11 @@ class SpecLoader:
         """
         profile = (profile or self._default_profile).lower()
 
-        # New structure: specs/<profile>/<version>/profile.yaml
-        profile_path = self._specs_dir / profile / version / "profile.yaml"
-        if profile_path.exists():
-            return profile_path
+        # Search user specs first, then built-in
+        for specs_dir in [self._user_specs_dir, self._builtin_specs_dir]:
+            profile_path = specs_dir / profile / version / "profile.yaml"
+            if profile_path.exists():
+                return profile_path
 
         return None
 
@@ -221,6 +234,8 @@ class SpecLoader:
     def list_versions(self: Self, profile: str | None = None) -> list[str]:
         """List available versions for a profile.
 
+        Searches both user and built-in specs directories.
+
         Args:
             profile: Profile name (e.g., "miappe", "isa"). Uses default if None.
 
@@ -228,35 +243,41 @@ class SpecLoader:
             List of version strings (e.g., ["1.1"]).
         """
         profile_name = (profile or self._default_profile).lower()
-        versions = []
+        versions = set()
 
-        # Look for version directories under profile folder
-        profile_dir = self._specs_dir / profile_name
-        if profile_dir.exists() and profile_dir.is_dir():
-            for version_dir in sorted(profile_dir.iterdir()):
-                if version_dir.is_dir() and (version_dir / "profile.yaml").exists():
-                    versions.append(version_dir.name)
+        # Search both user and built-in specs
+        for specs_dir in [self._user_specs_dir, self._builtin_specs_dir]:
+            profile_dir = specs_dir / profile_name
+            if profile_dir.exists() and profile_dir.is_dir():
+                for version_dir in profile_dir.iterdir():
+                    if version_dir.is_dir() and (version_dir / "profile.yaml").exists():
+                        versions.add(version_dir.name)
 
-        return versions
+        return sorted(versions)
 
     def list_profiles(self: Self) -> list[str]:
         """List available profiles.
 
+        Searches both user and built-in specs directories.
+
         Returns:
             List of profile names (e.g., ["miappe", "isa", "darwin-core"]).
         """
-        profiles = []
+        profiles = set()
 
-        # Find all directories that contain at least one version with profile.yaml
-        for item in sorted(self._specs_dir.iterdir()):
-            if item.is_dir() and not item.name.startswith("_"):
-                # Check if any subdirectory has a profile.yaml
-                for version_dir in item.iterdir():
-                    if version_dir.is_dir() and (version_dir / "profile.yaml").exists():
-                        profiles.append(item.name)
-                        break
+        # Search both user and built-in specs
+        for specs_dir in [self._user_specs_dir, self._builtin_specs_dir]:
+            if not specs_dir.exists():
+                continue
+            for item in specs_dir.iterdir():
+                if item.is_dir() and not item.name.startswith("_"):
+                    # Check if any subdirectory has a profile.yaml
+                    for version_dir in item.iterdir():
+                        if version_dir.is_dir() and (version_dir / "profile.yaml").exists():
+                            profiles.add(item.name)
+                            break
 
-        return profiles
+        return sorted(profiles)
 
     def get_profile_path(
         self: Self, version: str = "1.1", profile: str | None = None
@@ -271,3 +292,61 @@ class SpecLoader:
             Path to profile file or None.
         """
         return self._find_profile_file(version, profile)
+
+    def is_user_defined(self: Self, profile: str, version: str | None = None) -> bool:
+        """Check if a profile (or specific version) is user-defined.
+
+        Args:
+            profile: Profile name.
+            version: Optional version to check. If None, checks if any version is user-defined.
+
+        Returns:
+            True if the profile/version exists in user specs directory.
+        """
+        profile = profile.lower()
+        profile_dir = self._user_specs_dir / profile
+
+        if not profile_dir.exists():
+            return False
+
+        if version:
+            return (profile_dir / version / "profile.yaml").exists()
+
+        # Check if any version exists in user specs
+        for version_dir in profile_dir.iterdir():
+            if version_dir.is_dir() and (version_dir / "profile.yaml").exists():
+                return True
+
+        return False
+
+    def get_user_specs_dir(self: Self) -> Path:
+        """Get the user specs directory path.
+
+        Returns:
+            Path to user specs directory.
+        """
+        return self._user_specs_dir
+
+    def save_user_profile(self: Self, profile: str, version: str, content: str) -> Path:
+        """Save a profile to the user specs directory.
+
+        Args:
+            profile: Profile name.
+            version: Version string.
+            content: YAML content to save.
+
+        Returns:
+            Path to the saved profile file.
+        """
+        profile = profile.lower()
+        profile_dir = self._user_specs_dir / profile / version
+        profile_dir.mkdir(parents=True, exist_ok=True)
+
+        profile_path = profile_dir / "profile.yaml"
+        profile_path.write_text(content, encoding="utf-8")
+
+        # Clear cache to pick up new profile
+        cache_key = self._cache_key(version, profile)
+        self._profile_cache.pop(cache_key, None)
+
+        return profile_path

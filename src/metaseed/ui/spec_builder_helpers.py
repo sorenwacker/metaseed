@@ -105,13 +105,16 @@ def spec_to_dict(spec: ProfileSpec) -> dict:
 def get_custom_specs_dir() -> Path:
     """Get the directory for saving custom specs.
 
-    Creates the directory if it doesn't exist.
+    User-defined specs are stored in:
+    - Linux/macOS: ~/.local/share/metaseed/specs/
+    - Windows: %LOCALAPPDATA%/metaseed/specs/
 
     Returns:
-        Path to the custom specs directory.
+        Path to the user specs directory (created if needed).
     """
-    specs_dir = Path(__file__).parent.parent / "specs"
-    return specs_dir
+    from metaseed.paths import get_user_specs_dir
+
+    return get_user_specs_dir()
 
 
 def save_spec(spec: ProfileSpec, name: str | None = None) -> Path:
