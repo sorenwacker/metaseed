@@ -183,7 +183,7 @@
             <form hx-post="/spec-builder/entity"
                   hx-target="#editor-content"
                   hx-swap="innerHTML"
-                  onsubmit="onEntityAdded()">
+                  hx-on::after-request="onEntityAdded()">
                 <div class="modal-body">
                     <div class="form-group">
                         <label class="form-label">Entity Name <span class="required">*</span></label>
@@ -244,6 +244,6 @@
         let rootEntity = {{ spec.root_entity | tojson | safe }};
         const fieldTypes = {{ field_types | tojson | safe }};
     </script>
-    <script src="/static/js/spec-builder.js?v=5"></script>
+    <script src="/static/js/spec-builder.js?v=6"></script>
 </body>
 </html>
