@@ -333,7 +333,60 @@ function closeEditorPanel() {
 // =============================================================================
 
 function refreshGraph() {
-    htmx.ajax('GET', '/spec-builder', { target: 'body', swap: 'innerHTML' });
+    // Fetch updated entity data and rebuild graph
+    fetch('/spec-builder/graph-data')
+        .then(response => response.json())
+        .then(data => {
+            // Update global entities object
+            Object.keys(entities).forEach(key => delete entities[key]);
+            Object.assign(entities, data.entities);
+
+            // Rebuild the graph
+            rebuildGraph();
+        })
+        .catch(err => {
+            // Fallback to full page reload
+            console.error('Graph refresh failed, reloading page:', err);
+            htmx.ajax('GET', '/spec-builder', { target: 'body', swap: 'innerHTML' });
+        });
+}
+
+function rebuildGraph() {
+    const container = document.getElementById('erd-canvas');
+    if (!container) return;
+
+    const entityNames = Object.keys(entities);
+
+    if (entityNames.length === 0) {
+        // Clear the network and show empty message
+        if (network) {
+            network.destroy();
+            network = null;
+        }
+        container.innerHTML = '<div class="empty-canvas-message">Double-click to add an entity</div>';
+        return;
+    }
+
+    // Clear empty message if present
+    const emptyMsg = container.querySelector('.empty-canvas-message');
+    if (emptyMsg) {
+        emptyMsg.remove();
+    }
+
+    const { nodeData, edgeData } = buildGraphData(entityNames);
+
+    if (network) {
+        // Update existing network
+        nodes.clear();
+        edges.clear();
+        nodes.add(nodeData);
+        edges.add(edgeData);
+        setTimeout(() => network.fit({ animation: true }), 100);
+    } else {
+        // Create new network
+        createNetwork(container, nodeData, edgeData);
+        attachNetworkEventHandlers();
+    }
 }
 
 function autoLayout() {

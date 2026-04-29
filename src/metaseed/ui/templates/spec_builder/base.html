@@ -67,7 +67,7 @@
             <aside class="erd-sidebar">
                 <!-- Toolbox - always visible at top -->
                 <div class="erd-toolbox">
-                    <div class="toolbox-item" draggable="true" ondragstart="dragNewEntity(event)">
+                    <div class="toolbox-item" draggable="true" ondragstart="dragNewEntity(event)" title="Drag to canvas or double-click canvas to add">
                         <span class="toolbox-icon">+</span>
                         <span>New Entity</span>
                     </div>
@@ -244,6 +244,6 @@
         const rootEntity = {{ spec.root_entity | tojson | safe }};
         const fieldTypes = {{ field_types | tojson | safe }};
     </script>
-    <script src="/static/js/spec-builder.js?v=2"></script>
+    <script src="/static/js/spec-builder.js?v=3"></script>
 </body>
 </html>

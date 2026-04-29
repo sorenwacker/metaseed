@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 
 from metaseed.specs.schema import (
@@ -760,6 +760,41 @@ def create_spec_builder_router(templates: Jinja2Templates, get_state: callable) 
                 "editing_rule_idx": None,
                 "entities": list(builder.spec.entities.keys()),
             },
+        )
+
+    # -------------------------------------------------------------------------
+    # Graph data for dynamic refresh
+    # -------------------------------------------------------------------------
+
+    @router.get("/graph-data", response_class=JSONResponse)
+    async def get_graph_data() -> JSONResponse:
+        """Get entity data for graph refresh."""
+        builder = get_builder_state()
+        if builder.spec is None:
+            return JSONResponse({"entities": {}, "root_entity": None})
+
+        entities_data = {}
+        for name, entity in builder.spec.entities.items():
+            entities_data[name] = {
+                "ontology_term": entity.ontology_term,
+                "description": entity.description or "",
+                "fields": [
+                    {
+                        "name": f.name,
+                        "type": f.type.value if hasattr(f.type, "value") else str(f.type),
+                        "required": f.required,
+                        "items": f.items,
+                        "reference": f.reference,
+                    }
+                    for f in entity.fields
+                ],
+            }
+
+        return JSONResponse(
+            {
+                "entities": entities_data,
+                "root_entity": builder.spec.root_entity,
+            }
         )
 
     # -------------------------------------------------------------------------
