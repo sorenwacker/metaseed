@@ -839,6 +839,21 @@ def create_spec_builder_router(templates: Jinja2Templates, get_state: callable) 
         if builder.spec is None:
             raise HTTPException(status_code=400, detail="No spec in progress")
 
+        # Apply any included metadata from the form
+        form_data = await request.form()
+        if form_data.get("name"):
+            builder.spec.name = form_data.get("name", "").strip()
+        if form_data.get("version"):
+            builder.spec.version = form_data.get("version", "").strip()
+        if form_data.get("display_name"):
+            builder.spec.display_name = form_data.get("display_name", "").strip()
+        if form_data.get("description"):
+            builder.spec.description = form_data.get("description", "").strip()
+        if form_data.get("root_entity"):
+            builder.spec.root_entity = form_data.get("root_entity", "").strip()
+        if form_data.get("ontology"):
+            builder.spec.ontology = form_data.get("ontology", "").strip()
+
         if not builder.spec.name:
             return templates.TemplateResponse(
                 request,

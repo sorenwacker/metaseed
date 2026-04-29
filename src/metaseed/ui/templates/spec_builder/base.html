@@ -49,6 +49,7 @@
                 </a>
                 <button class="btn btn-header btn-save"
                         hx-post="/spec-builder/save"
+                        hx-include="[name='name'],[name='version'],[name='display_name'],[name='description'],[name='root_entity'],[name='ontology']"
                         hx-target="#notification-container"
                         hx-swap="beforeend">
                     Save
