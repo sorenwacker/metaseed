@@ -60,7 +60,7 @@ ui:
 	uv run metaseed ui
 
 dev:
-	uv run python -m uvicorn metaseed.ui.routes:app --host 127.0.0.1 --port 8080 --reload
+	uv run python -m uvicorn metaseed.ui.app:app --host 127.0.0.1 --port 8765 --reload
 
 clean:
 	rm -rf .pytest_cache .coverage htmlcov site build dist *.egg-info

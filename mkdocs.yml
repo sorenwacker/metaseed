@@ -49,6 +49,8 @@ nav:
   - Getting Started:
       - Installation: getting-started/installation.md
       - Quick Start: getting-started/quickstart.md
+  - Guides:
+      - Spec Builder: guides/spec-builder.md
   - Profiles:
       - ISA: profiles/isa.md
       - MIAPPE: profiles/miappe.md
