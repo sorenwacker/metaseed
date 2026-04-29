@@ -269,6 +269,7 @@ def register_form_routes(
                 "entity_type": entity_type,
                 "is_edit": True,
                 "node_id": node_id,
+                "node_label": node.label,
                 "description": helper.description,
                 "ontology_term": helper.ontology_term,
                 "required_fields": filter_fields(fields, required=True),
@@ -375,6 +376,20 @@ def register_entity_crud_routes(
 
             state.current_nested_items = extract_nested_items(instance, helper)
 
+            action = form_data.get("_action", "")
+            if action == "back":
+                return templates.TemplateResponse(
+                    request,
+                    "index.html",
+                    {
+                        "tree_nodes": state.get_tree_for_display(),
+                        "notification": {
+                            "type": "success",
+                            "message": f"Saved {entity_type}: {node.label}",
+                        },
+                    },
+                )
+
             return render_entity_form(
                 request,
                 templates,
@@ -473,6 +488,10 @@ def render_entity_form(
     values = instance.model_dump(exclude_none=True) if hasattr(instance, "model_dump") else {}
     ctx = _build_form_context(helper, entity_type, values, node_id, facade, state)
 
+    node_label = ""
+    if state and node_id and node_id in state.nodes_by_id:
+        node_label = state.nodes_by_id[node_id].label
+
     response = templates.TemplateResponse(
         request,
         "partials/form.html",
@@ -480,6 +499,7 @@ def render_entity_form(
             "entity_type": ctx.entity_type,
             "is_edit": ctx.is_edit,
             "node_id": ctx.node_id,
+            "node_label": node_label,
             "description": ctx.description,
             "ontology_term": ctx.ontology_term,
             "required_fields": ctx.get_required_fields(),

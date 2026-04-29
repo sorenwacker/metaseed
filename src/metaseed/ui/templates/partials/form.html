@@ -1,4 +1,18 @@
 <div class="card">
+    {% if is_edit %}
+    <nav class="breadcrumb" data-testid="breadcrumb">
+        <span class="breadcrumb-item">
+            <a href="#"
+               hx-get="/"
+               hx-target="#main"
+               hx-swap="innerHTML"
+               hx-select="#main > *">Entities</a>
+        </span>
+        <span class="breadcrumb-sep">&gt;</span>
+        <span class="breadcrumb-item active">{{ entity_type }}{% if node_label %}: {{ node_label }}{% endif %}</span>
+    </nav>
+    {% endif %}
+
     <div style="display: flex; justify-content: space-between; align-items: flex-start;">
         <h2 class="card-title">
             {% if is_edit %}Edit{% else %}New{% endif %} {{ entity_type }}
@@ -95,10 +109,17 @@
         </div>
         {% endif %}
 
+        <input type="hidden" name="_action" id="form-action" value="">
+
         <div class="form-actions">
             {% if is_edit %}
-            <button type="submit" class="btn btn-primary" data-testid="btn-update">
-                Update
+            <button type="submit" class="btn btn-primary" data-testid="btn-update"
+                    onclick="document.getElementById('form-action').value=''">
+                Save
+            </button>
+            <button type="submit" class="btn btn-secondary" data-testid="btn-save-back"
+                    onclick="document.getElementById('form-action').value='back'">
+                Save & Back
             </button>
             <button type="button" class="btn btn-secondary"
                     hx-post="/validate"
