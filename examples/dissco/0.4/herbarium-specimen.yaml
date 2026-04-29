@@ -1,0 +1,97 @@
+# DiSSCo Digital Specimen Example - Herbarium specimen
+# Based on DiSSCo FAIR Digital Object specification v0.4
+
+id: https://doi.org/10.22/XXX-XXX-XXX
+type: ods:DigitalSpecimen
+identifier: https://doi.org/10.22/XXX-XXX-XXX
+version: 1
+status: Active
+created: "2024-03-15T10:30:00Z"
+modified: "2024-03-15T10:30:00Z"
+fdo_type: https://doi.org/10.15468/1a2b3c
+mids_level: 2
+
+# Physical specimen identifiers
+normalised_physical_specimen_id: https://herbarium.example.org/specimens/WAG.1234567
+physical_specimen_id: WAG.1234567
+physical_specimen_id_type: Local
+
+# Source and organisation
+source_system_id: https://hdl.handle.net/20.5000.1025/ABC-DEF-GHI
+source_system_name: Naturalis Biodiversity Center Collection Management System
+organisation_id: https://ror.org/0566bfb96
+organisation_code: L
+organisation_name: Naturalis Biodiversity Center
+
+# Collection information
+collection_code: WAG
+collection_id: https://www.gbif.org/grscicoll/collection/12345678-1234-1234-1234-123456789012
+
+# Classification
+topic_origin: Natural
+topic_domain: Life
+topic_discipline: Botany
+
+# Specimen details
+specimen_name: Quercus robur L.
+basis_of_record: PreservedSpecimen
+living_or_preserved: Preserved
+preparations: dried, pressed
+is_marked_as_type: false
+is_known_to_contain_media: true
+
+# Data and rights
+license: https://creativecommons.org/licenses/by/4.0/
+rights_holder: Naturalis Biodiversity Center
+
+# Taxonomic identification
+identifications:
+  - type: ods:Identification
+    identification_type: TaxonIdentification
+    is_verified_identification: true
+    date_identified: "2023-06-15"
+    taxon_identifications:
+      - type: ods:TaxonIdentification
+        scientific_name: Quercus robur L.
+        scientific_name_authorship: L.
+        taxon_rank: species
+        kingdom: Plantae
+        phylum: Tracheophyta
+        class_name: Magnoliopsida
+        order_name: Fagales
+        family: Fagaceae
+        genus: Quercus
+        specific_epithet: robur
+        vernacular_name: English oak
+
+# Collection event
+events:
+  - type: ods:Event
+    event_type: Collecting
+    event_date: "1985-07-20"
+    year: 1985
+    month: 7
+    day: 20
+    habitat: Mixed deciduous forest on sandy soil
+    location:
+      type: ods:Location
+      country: Netherlands
+      country_code: NL
+      state_province: Gelderland
+      locality: Veluwe, near Apeldoorn
+      georeference:
+        type: ods:Georeference
+        decimal_latitude: 52.2112
+        decimal_longitude: 5.9699
+        geodetic_datum: WGS84
+        coordinate_uncertainty_in_meters: 100
+
+# Agents
+agents:
+  - type: schema:Person
+    agent_identifier: https://orcid.org/0000-0001-2345-6789
+    name: Dr. Jan de Botanist
+    roles:
+      - type: schema:Role
+        role_name: collector
+        position: 1

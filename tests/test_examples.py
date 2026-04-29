@@ -48,6 +48,19 @@ def get_root_entity(profile: str, version: str) -> str:
     return spec.root_entity or "Investigation"
 
 
+def load_example_data(example_file: Path) -> dict:
+    """Load and parse a YAML example file.
+
+    Args:
+        example_file: Path to the YAML file.
+
+    Returns:
+        Parsed YAML data as a dictionary.
+    """
+    with open(example_file, encoding="utf-8") as f:
+        return yaml.safe_load(f)
+
+
 class TestExampleFilesLoad:
     """Tests that all example files can be loaded and validated."""
 
@@ -60,14 +73,8 @@ class TestExampleFilesLoad:
         self, profile: str, version: str, example_file: Path
     ) -> None:
         """Each example file should load as a valid root entity model."""
-        # Load the YAML file
-        with open(example_file, encoding="utf-8") as f:
-            data = yaml.safe_load(f)
-
-        # Get the root entity type for this profile
+        data = load_example_data(example_file)
         root_entity = get_root_entity(profile, version)
-
-        # Get the model for this profile/version
         Model = get_model(root_entity, version, profile=profile)
 
         # This should not raise a validation error
@@ -77,7 +84,6 @@ class TestExampleFilesLoad:
         assert instance is not None
         if hasattr(instance, "model_dump"):
             dumped = instance.model_dump(exclude_none=True)
-            # Should have at least one field populated
             assert len(dumped) > 0
 
 
@@ -91,11 +97,17 @@ class TestExampleFilesHaveRequiredFields:
     )
     def test_example_has_identifier(self, profile: str, version: str, example_file: Path) -> None:
         """Each example should have a unique identifier field."""
-        with open(example_file, encoding="utf-8") as f:
-            data = yaml.safe_load(f)
-
-        # Check for common identifier field names (varies by profile)
-        identifier_fields = ["unique_id", "identifier", "id", "occurrenceID", "alias"]
+        data = load_example_data(example_file)
+        identifier_fields = [
+            "unique_id",
+            "identifier",
+            "id",
+            "occurrenceID",
+            "alias",
+            "internal_study_id",
+            "study_id",
+            "investigation_id",
+        ]
         has_identifier = any(field in data and data[field] for field in identifier_fields)
         assert has_identifier, f"Example {example_file.name} missing identifier field"
 
@@ -105,12 +117,15 @@ class TestExampleFilesHaveRequiredFields:
         ids=lambda x: str(x) if isinstance(x, Path) else x,
     )
     def test_example_has_title(self, profile: str, version: str, example_file: Path) -> None:
-        """Each example should have a title field (except darwin-core)."""
+        """Each example should have a title field (except darwin-core and ena)."""
         # darwin-core uses Occurrence as root which doesn't have title
-        if profile == "darwin-core":
-            pytest.skip("darwin-core Occurrence doesn't have a title field")
+        # ena uses Study as root which doesn't have title (uses alias)
+        # dissco uses DigitalSpecimen which uses specimen_name instead
+        # cropxr profiles use study_title or investigation_title
+        if profile in ("darwin-core", "ena", "dissco"):
+            pytest.skip(f"{profile} root entity doesn't have a standard title field")
 
-        with open(example_file, encoding="utf-8") as f:
-            data = yaml.safe_load(f)
-
-        assert data.get("title"), f"Example {example_file.name} missing title"
+        data = load_example_data(example_file)
+        title_fields = ["title", "study_title", "investigation_title"]
+        has_title = any(field in data and data[field] for field in title_fields)
+        assert has_title, f"Example {example_file.name} missing title field"

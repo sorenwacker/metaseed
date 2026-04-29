@@ -1,0 +1,771 @@
+name: cropxr-phenotyping
+display_name: CropXR Phenotyping
+version: 0.0.5
+description: CropXR Phenotyping metadata schema for CropXR consortium.
+root_entity: Investigation
+entities:
+  Investigation:
+    description: An Investigation is a research programme with a defined aim.
+    fields:
+    - name: investigation_id
+      type: string
+      required: false
+      description: Identifier comprising the unique name of the institution/database hosting the submission of the investigation
+        data, and the accession number of the investigation in that institution.
+    - name: investigation_title
+      type: string
+      required: false
+      description: Human-readable string summarising the investigation.
+    - name: investigation_description
+      type: string
+      required: false
+      description: Human-readable text describing the investigation in more detail.
+    - name: submission_date
+      type: string
+      required: false
+      description: Date of submission of the dataset presently being described to a host repository.
+    - name: public_release_date
+      type: string
+      required: false
+      description: Date of first public release of the dataset presently being described.
+    - name: license
+      type: string
+      required: false
+      description: License for the reuse of the data associated with this investigation. The Creative Commons licenses cover
+        most use cases and are recommended.
+    - name: MIAPPE_version
+      type: float
+      required: false
+      description: The version of MIAPPE used
+    - name: associated_publication
+      type: string
+      required: false
+      description: An identifier for a literature publication where the investigation is described. Use of DOIs is recommended.
+    - name: studies
+      type: list
+      items: Study
+      required: false
+      description: Studies in this investigation
+    - name: persons
+      type: list
+      items: Person
+      required: false
+      description: Persons associated with this investigation
+  Study:
+    description: A study comprises a series of assays (or measurements) of one or more types, undertaken to answer a particular
+      biological question.
+    fields:
+    - name: study_id
+      type: string
+      required: false
+      description: Unique identifier comprising the name or identifier for the institution/database hosting the submission
+        of the study data, and the identifier of the study in that institution.
+    - name: study_title
+      type: string
+      required: false
+      description: Human-readable text summarising the study
+    - name: study_description
+      type: string
+      required: false
+      description: Human-readable text describing the study
+    - name: study_start_date
+      type: date
+      required: false
+      description: Date when the experiment started
+    - name: study_end_date
+      type: date
+      required: false
+      description: Date when the experiment ended
+    - name: institution
+      type: string
+      required: false
+      description: Name and address of the institution responsible for the study.
+    - name: country
+      type: string
+      required: false
+      description: The country where the experiment took place, preferably as a 3-letter code.
+      constraints:
+        enum:
+        - AFG
+        - ALB
+        - DZA
+        - ASM
+        - AND
+        - AGO
+        - AIA
+        - ATA
+        - ATG
+        - ARG
+        - ARM
+        - ABW
+        - AUS
+        - AUT
+        - AZE
+        - BHS
+        - BHR
+        - BGD
+        - BRB
+        - BLR
+        - BEL
+        - BLZ
+        - BEN
+        - BMU
+        - BTN
+        - BOL
+        - BES
+        - BIH
+        - BWA
+        - BVT
+        - BRA
+        - IOT
+        - BRN
+        - BGR
+        - BFA
+        - BDI
+        - CPV
+        - KHM
+        - CMR
+        - CAN
+        - CYM
+        - CAF
+        - TCD
+        - CHL
+        - CHN
+        - CXR
+        - CCK
+        - COL
+        - COM
+        - COD
+        - COG
+        - COK
+        - CRI
+        - HRV
+        - CUB
+        - CUW
+        - CYP
+        - CZE
+        - CIV
+        - DNK
+        - DJI
+        - DMA
+        - DOM
+        - ECU
+        - EGY
+        - SLV
+        - GNQ
+        - ERI
+        - EST
+        - SWZ
+        - ETH
+        - FLK
+        - FRO
+        - FJI
+        - FIN
+        - FRA
+        - GUF
+        - PYF
+        - ATF
+        - GAB
+        - GMB
+        - GEO
+        - DEU
+        - GHA
+        - GIB
+        - GRC
+        - GRL
+        - GRD
+        - GLP
+        - GUM
+        - GTM
+        - GGY
+        - GIN
+        - GNB
+        - GUY
+        - HTI
+        - HMD
+        - VAT
+        - HND
+        - HKG
+        - HUN
+        - ISL
+        - IND
+        - IDN
+        - IRN
+        - IRQ
+        - IRL
+        - IMN
+        - ISR
+        - ITA
+        - JAM
+        - JPN
+        - JEY
+        - JOR
+        - KAZ
+        - KEN
+        - KIR
+        - PRK
+        - KOR
+        - KWT
+        - KGZ
+        - LAO
+        - LVA
+        - LBN
+        - LSO
+        - LBR
+        - LBY
+        - LIE
+        - LTU
+        - LUX
+        - MAC
+        - MDG
+        - MWI
+        - MYS
+        - MDV
+        - MLI
+        - MLT
+        - MHL
+        - MTQ
+        - MRT
+        - MUS
+        - MYT
+        - MEX
+        - FSM
+        - MDA
+        - MCO
+        - MNG
+        - MNE
+        - MSR
+        - MAR
+        - MOZ
+        - MMR
+        - NAM
+        - NRU
+        - NPL
+        - NLD
+        - NCL
+        - NZL
+        - NIC
+        - NER
+        - NGA
+        - NIU
+        - NFK
+        - MNP
+        - NOR
+        - OMN
+        - PAK
+        - PLW
+        - PSE
+        - PAN
+        - PNG
+        - PRY
+        - PER
+        - PHL
+        - PCN
+        - POL
+        - PRT
+        - PRI
+        - QAT
+        - MKD
+        - ROU
+        - RUS
+        - RWA
+        - REU
+        - BLM
+        - SHN
+        - KNA
+        - LCA
+        - MAF
+        - SPM
+        - VCT
+        - WSM
+        - SMR
+        - STP
+        - SAU
+        - SEN
+        - SRB
+        - SYC
+        - SLE
+        - SGP
+        - SXM
+        - SVK
+        - SVN
+        - SLB
+        - SOM
+        - ZAF
+        - SGS
+        - SSD
+        - ESP
+        - LKA
+        - SDN
+        - SUR
+        - SJM
+        - SWE
+        - CHE
+        - SYR
+        - TWN
+        - TJK
+        - TZA
+        - THA
+        - TLS
+        - TGO
+        - TKL
+        - TON
+        - TTO
+        - TUN
+        - TUR
+        - TKM
+        - TCA
+        - TUV
+        - UGA
+        - UKR
+        - ARE
+        - GBR
+        - UMI
+        - USA
+        - URY
+        - UZB
+        - VUT
+        - VEN
+        - VNM
+        - VGB
+        - VIR
+        - WLF
+        - ESH
+        - YEM
+        - ZMB
+        - ZWE
+        - ALA
+    - name: experimental_site_name
+      type: string
+      required: false
+      description: The name of the natural site, experimental field, greenhouse, phenotyping facility, etc. where the experiment
+        took place.
+    - name: experimental_design_description
+      type: string
+      required: false
+      description: Short description of the experimental design, possibly including statistical design. In specific cases,
+        e.g. legacy datasets or data computed from several studies, the experimental design can be "unknown"/"NA", "aggregated/reduced
+        data", or simply 'none'.
+    - name: experimental_design_type
+      type: string
+      required: false
+      description: Type of experimental  design of the study, in the form of an accession number from the Crop Ontology.
+    - name: observation_unit_level_hierarchy
+      type: string
+      required: false
+      description: Hierarchy of the different levels of repetitions between each others
+    - name: observation_unit_description
+      type: string
+      required: false
+      description: General description of the observation units in the study.
+    - name: growth_facility_description
+      type: string
+      required: false
+      description: Short description of the facility in which the study was carried out.
+    - name: growth_facility
+      type: string
+      required: false
+      description: Type of growth facility in which the study was carried out, in the form of an accession number from the
+        Crop Ontology.
+    - name: cultural_practices
+      type: string
+      required: false
+      description: General description of the cultural practices of the study.
+    - name: experimental_design_map
+      type: uri
+      required: false
+      description: Representation of the experimental design.
+    - name: biological_materials
+      type: list
+      items: BiologicalMaterial
+      required: false
+      description: Biological materials used in this study
+    - name: observation_units
+      type: list
+      items: ObservationUnit
+      required: false
+      description: Observation units in this study
+    - name: experimental_factors
+      type: list
+      items: ExperimentalFactor
+      required: false
+      description: Experimental factors in this study
+    - name: environments
+      type: list
+      items: Environment
+      required: false
+      description: Environment parameters for this study
+    - name: events
+      type: list
+      items: Event
+      required: false
+      description: Events in this study
+    - name: observed_variables
+      type: list
+      items: ObservedVariable
+      required: false
+      description: Variables observed in this study
+    - name: data_files
+      type: list
+      items: DataFile
+      required: false
+      description: Data files associated with this study
+  Person:
+    description: ''
+    fields:
+    - name: study_id
+      type: string
+      required: false
+      description: Unique identifier comprising the name or identifier for the institution/database hosting the submission
+        of the study data, and the identifier of the study in that institution.
+    - name: person_name
+      type: string
+      required: false
+      description: The name of the person (either full name or as used in scientific publications)
+    - name: person_email
+      type: string
+      required: false
+      description: The electronic mail address of the person.
+    - name: person_id
+      type: string
+      required: false
+      description: An identifier for the data submitter. If that submitter is an individual, ORCID identifiers are recommended.
+    - name: person_role
+      type: string
+      required: false
+      description: Type of contribution of the person to the investigation
+    - name: person_affiliation
+      type: string
+      required: false
+      description: The institution the person belongs to
+  DataFile:
+    description: A file or digital object holding observation data recorded during one or more assays of the study, typically
+      in tabular form. Multiple data files may be provided per study, and each file can include observations for several observation
+      units and several observed variables.
+    fields:
+    - name: study_id
+      type: string
+      required: false
+      description: Unique identifier comprising the name or identifier for the institution/database hosting the submission
+        of the study data, and the identifier of the study in that institution.
+    - name: data_file_link
+      type: uri
+      required: false
+      description: Link to the data file (or digital object) in a public database or in a persistent institutional repository;
+        or identifier of the data file when submitted together with the MIAPPE or CropXR submission.
+    - name: data_file_description
+      type: string
+      required: false
+      description: Description of the format of the data file. May be a standard file format name, or a description of organization
+        of the data in a tabular file.
+    - name: data_file_version
+      type: float
+      required: false
+      description: The version of the dataset (the actual data).
+    - name: observed_variable_ids
+      type: string
+      required: false
+      description: A list of variable ids of the observed variables within the data file.
+    - name: observation_unit_ids
+      type: string
+      required: false
+      description: A list of observation unit ids or sample ids for which there is data in the data file.
+  BiologicalMaterial:
+    description: The biological material being studied (e.g. plants grown from a certain bag or seed, or plants grown in a
+      particular field). The original source of that material (e.g., the seeds or the original plant cloned) is called the
+      material source, which, when held by a material repository, should have its stock identified.
+    fields:
+    - name: study_id
+      type: string
+      required: false
+      description: Unique identifier comprising the name or identifier for the institution/database hosting the submission
+        of the study data, and the identifier of the study in that institution.
+    - name: biological_material_id
+      type: string
+      required: false
+      description: Code used to identify the biological material in the data file. Should be unique within the Investigation.
+        Can correspond to experimental plant ID, seed lot ID, etc… This material identification is different from a BiosampleID
+        which corresponds to Observation Unit or Samples sections below.
+    - name: organism
+      type: string
+      required: false
+      description: "An identifier for the organism at the species level. Use of the NCBI taxon ID is recommended. \nhttps://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?mode=Root"
+    - name: genus
+      type: string
+      required: false
+      description: Genus name for the organism under study, according to standard scientific nomenclature.
+    - name: species
+      type: string
+      required: false
+      description: 'Species name (formally: specific epithet) for the organism under study, according to standard scientific
+        nomenclature.'
+    - name: infraspecific_name
+      type: string
+      required: false
+      description: 'Name of any subtaxa level, including variety, crossing name, etc. It can be used to store any additional
+        taxonomic identifier. Either free text description or key-value pair list format (the key is the name of the rank
+        and the value is the value of  the rank). Ranks can be among the following terms: subspecies, cultivar, variety, subvariety,
+        convariety, group, subgroup, hybrid, line, form, subform. For MCPD compliance, the following abbreviations are allowed:
+        ‘subsp.’ (subspecies); ‘convar.’ (convariety); ‘var.’ (variety); ‘f.’ (form); ‘Group’ (cultivar group). An infraspecific
+        name is the scientific name for any taxon below the rank of species.the name of an infraspecific taxon is a combination
+        of the name of a species and an infraspecific epithet, separated by a connecting term that denotes the rank of the
+        taxon. An example of an infraspecific name is Astrophytum myriostigma subvar. glabrum, glabrum is the infraspecific
+        epithet.'
+    - name: biological_material_latitude
+      type: float
+      required: false
+      description: Latitude of the studied biological material
+    - name: biological_material_longitude
+      type: float
+      required: false
+      description: Longitude of the studied biological material
+    - name: biological_material_altitude
+      type: string
+      required: false
+      description: Altitude of the studied biological material, provided in metres (m).
+    - name: biological_material_preprocessing
+      type: string
+      required: false
+      description: Description of any process or treatment applied uniformly to the biological material, prior to the study
+        itself. Can be provided as free text or as an accession number from a suitable controlled vocabulary.
+    - name: material_source_id
+      type: string
+      required: false
+      description: 'An identifier for the source of the biological material, in the form of a key-value pair comprising the
+        name/identifier of the repository from which the material was sourced plus the accession number of the repository
+        for that material. Where an accession number has not been assigned, but the material has been derived from the crossing
+        of known accessions, the material can be defined as follows: "mother_accession X father_accession", or, if father
+        is unknown, as "mother_accession X UNKNOWN". For in situ material, the region of provenance may be used when an accession
+        is not available.'
+    - name: material_source_doi
+      type: string
+      required: false
+      description: Digital Object Identifier (DOI) of the material source
+    - name: material_source_description
+      type: string
+      required: false
+      description: Description of the material source
+  Environment:
+    description: An Environmental factor is a parameter that was kept constant throughout the study and did not change between
+      observation units or assays. An Environment characteristic that vary over time, i.e.  an environmental variable, should
+      be recorded as an Observed Variable.
+    fields:
+    - name: study_id
+      type: string
+      required: false
+      description: Unique identifier comprising the name or identifier for the institution/database hosting the submission
+        of the study data, and the identifier of the study in that institution.
+    - name: environment_parameter
+      type: string
+      required: false
+      description: Name of the environment parameter constant within the experiment.
+    - name: environment_parameter_value
+      type: string
+      required: false
+      description: Value of the environment parameter (defined above) constant within the experiment.
+  ExperimentalFactor:
+    description: The Plant Experimental Condition Ontology describes the treatments, growing conditions, and/or study types
+      used in various types of plant biology experiments.
+    fields:
+    - name: study_id
+      type: string
+      required: false
+      description: Unique identifier comprising the name or identifier for the institution/database hosting the submission
+        of the study data, and the identifier of the study in that institution.
+    - name: experiment_factor_type
+      type: string
+      required: false
+      description: Name/Acronym of the experimental factor.
+    - name: experiment_factor_description
+      type: string
+      required: false
+      description: Free text description of the experimental factor. This includes all relevant treatments planification and
+        protocol planned for all the plants targeted by a given experimental factor.
+    - name: experiment_factor_values
+      type: string
+      required: false
+      description: List of possible values for the factor.
+  ObservationUnit:
+    description: Observation units are objects that are subject to instances of observation and measurement. An observation
+      unit comprises one or more plants, and/or their environment. There can be pure environment observation units with no
+      plants.
+    fields:
+    - name: study_id
+      type: string
+      required: false
+      description: Unique identifier comprising the name or identifier for the institution/database hosting the submission
+        of the study data, and the identifier of the study in that institution.
+    - name: biological_material_id
+      type: string
+      required: false
+      description: Code used to identify the biological material in the data file. Should be unique within the Investigation.
+        Can correspond to experimental plant ID, seed lot ID, etc… This material identification is different from a BiosampleID
+        which corresponds to Observation Unit or Samples sections below.
+    - name: observation_unit_id
+      type: string
+      required: false
+      description: Identifier used to identify the observation unit in data files containing the values observed or measured
+        on that unit. Must be locally unique.
+    - name: observation_unit_type
+      type: string
+      required: false
+      description: 'Type of observation unit in textual form, usually one of the following: study, block, sub-block, plot,
+        sub-plot, pot, plant. Use of other observation unit types is possible but not recommended.'
+    - name: external_id
+      type: string
+      required: false
+      description: Identifier for the observation unit in a persistent repository, comprises the name of the repository and
+        the identifier of the observation unit therein. The EBI Biosamples repository can be used. URI are recommended when
+        possible.
+    - name: spatial_distribution
+      type: string
+      required: false
+      description: Type and value of a spatial coordinate (georeference or relative) or level of observation (plot 45, subblock
+        7, block 2) provided as a key-value pair of the form type:value. Levels of observation must be consistent with those
+        listed in the Study section.
+    - name: observation_unit_factor_value
+      type: string
+      required: false
+      description: List of values for each factor applied to the observation unit.
+    - name: samples
+      type: list
+      items: Sample
+      required: false
+      description: Samples taken from this observation unit
+  Event:
+    description: An event is a application of a treatment to all your  plant trays/plots (observation unit) like transplanting,
+      pest control, nutrients.
+    fields:
+    - name: study_id
+      type: string
+      required: false
+      description: Unique identifier comprising the name or identifier for the institution/database hosting the submission
+        of the study data, and the identifier of the study in that institution.
+    - name: observation_unit_id
+      type: string
+      required: false
+      description: Identifier used to identify the observation unit in data files containing the values observed or measured
+        on that unit. Must be locally unique.
+    - name: event_type
+      type: string
+      required: false
+      description: Short name of the event.
+    - name: event_accession_number
+      type: string
+      required: false
+      description: Accession number of the event type in a suitable controlled vocabulary (Crop Ontology).
+    - name: event_description
+      type: string
+      required: false
+      description: Description of the event, including details such as amount applied and possibly duration of the event.
+    - name: event_date
+      type: date
+      required: false
+      description: Date of the event.
+  Sample:
+    description: A sample is a portion of plant tissue harvested, non-harvested or extracted from an observation unit for
+      the purpose of sub-plant observations and/or molecular studies. A sample must be used when there is a physical sample
+      that needs to be stored and traced. Otherwise, observations made at the sub-plant level should be recorded as plant
+      level observations using the observed variables to characterize the object of the observation (e.g. Berry sugar content,
+      Fruit weight, Grain Protein content, Leaf 1 width, Leaf 2 width, Leaf 2 length).
+    fields:
+    - name: study_id
+      type: string
+      required: false
+      description: Unique identifier comprising the name or identifier for the institution/database hosting the submission
+        of the study data, and the identifier of the study in that institution.
+    - name: observation_unit_id
+      type: string
+      required: false
+      description: Identifier used to identify the observation unit in data files containing the values observed or measured
+        on that unit. Must be locally unique.
+    - name: sample_id
+      type: string
+      required: false
+      description: Unique identifier for the sample.
+    - name: plant_structure_development_stage
+      type: string
+      required: false
+      description: The stage in the life of a plant structure during which the sample was taken, in the form of an accession
+        number to a suitable controlled vocabulary (Plant Ontology, BBCH scale)
+    - name: plant_anatomical_entity
+      type: string
+      required: false
+      description: A description of  the plant part (e.g. leaf) or the plant product (e.g. resin) from which the sample was
+        taken, in the form of an accession number to a suitable controlled vocabulary (Plant Ontology).
+    - name: sample_description
+      type: string
+      required: false
+      description: Any information not captured by the other sample fields, including quantification, sample treatments and
+        processing.
+    - name: collection_date
+      type: date
+      required: false
+      description: The date and time when the sample was collected / harvested
+    - name: external_id
+      type: string
+      required: false
+      description: Identifier for the observation unit in a persistent repository, comprises the name of the repository and
+        the identifier of the observation unit therein. The EBI Biosamples repository can be used. URI are recommended when
+        possible.
+  ObservedVariable:
+    description: A variable consists of a trait, a method to measure the trait and a scale expressing the measurement.
+    fields:
+    - name: study_id
+      type: string
+      required: false
+      description: Unique identifier comprising the name or identifier for the institution/database hosting the submission
+        of the study data, and the identifier of the study in that institution.
+    - name: variable_id
+      type: string
+      required: false
+      description: 'Code used to identify the variable in the data file. We recommend using a variable definition from the
+        Crop Ontology where possible. Otherwise, the Crop Ontology naming convention is recommended: <trait abbreviation>_<method
+        abbreviation>_<scale abbreviation>). A variable ID must be unique within a given investigation.'
+    - name: variable_name
+      type: string
+      required: false
+      description: Name of the variable.
+    - name: variable_accession_number
+      type: string
+      required: false
+      description: Accession number of the variable in the Crop Ontology
+    - name: trait
+      type: string
+      required: false
+      description: Name of the (plant or environmental) trait under observation
+    - name: trait_accession_number
+      type: string
+      required: false
+      description: Accession number of the trait in a suitable controlled vocabulary (Crop Ontology, Trait Ontology).
+    - name: method
+      type: string
+      required: false
+      description: Name of the method of observation
+    - name: method_accession_number
+      type: string
+      required: false
+      description: Accession number of the method in a suitable controlled vocabulary (Crop Ontology, Trait Ontology).
+    - name: method_description
+      type: string
+      required: false
+      description: Textual description of the method, which may extend a method defined in an external reference with specific
+        parameters, e.g. growth stage, inoculation precise organ (leaf number)
+    - name: reference_method
+      type: uri
+      required: false
+      description: URI/DOI of reference describing the method.
+    - name: scale
+      type: string
+      required: false
+      description: Name of the scale associated with the variable
+    - name: scale_accession_number
+      type: string
+      required: false
+      description: Accession number of the scale in a suitable controlled vocabulary (Crop Ontology).
+    - name: time_scale
+      type: string
+      required: false
+      description: Name of the scale or unit of time with which observations of this type were recorded in the data file (for
+        time series studies).
+validation_rules: []

@@ -1,0 +1,1197 @@
+name: cropxr-sequencing
+display_name: CropXR Sequencing
+version: 0.0.7
+description: CropXR Sequencing metadata schema for CropXR consortium.
+root_entity: Study
+entities:
+  Study:
+    description: A study comprises a series of assays (or measurements) of one or more types, undertaken to answer a particular
+      biological question.
+    fields:
+    - name: study_id
+      type: string
+      required: false
+      description: Unique identifier for a study. This is used to link studies to an investigation. Provided after registration.
+        Also called study label.
+    - name: internal_study_id
+      type: string
+      required: true
+      description: Internal study id for own annotation.
+    - name: study_title
+      type: string
+      required: true
+      description: Human-readable text summarising the study
+    - name: study_description
+      type: string
+      required: true
+      description: Briefly describes the goals, purpose, and scope of the study. this need not be listed if it can be inherited
+        from a referenced publication.
+    - name: study_start_date
+      type: date
+      required: true
+      description: Date that the study is registered at CropXR.
+    - name: study_end_date
+      type: date
+      required: false
+      description: Date that the study is registered at CropXR as completed.
+    - name: country
+      type: string
+      required: true
+      description: The country where the experiment took place, either as a full name or preferably as a 3-letter code.
+      constraints:
+        enum:
+        - AFG
+        - ALB
+        - DZA
+        - ASM
+        - AND
+        - AGO
+        - AIA
+        - ATA
+        - ATG
+        - ARG
+        - ARM
+        - ABW
+        - AUS
+        - AUT
+        - AZE
+        - BHS
+        - BHR
+        - BGD
+        - BRB
+        - BLR
+        - BEL
+        - BLZ
+        - BEN
+        - BMU
+        - BTN
+        - BOL
+        - BES
+        - BIH
+        - BWA
+        - BVT
+        - BRA
+        - IOT
+        - BRN
+        - BGR
+        - BFA
+        - BDI
+        - CPV
+        - KHM
+        - CMR
+        - CAN
+        - CYM
+        - CAF
+        - TCD
+        - CHL
+        - CHN
+        - CXR
+        - CCK
+        - COL
+        - COM
+        - COD
+        - COG
+        - COK
+        - CRI
+        - HRV
+        - CUB
+        - CUW
+        - CYP
+        - CZE
+        - CIV
+        - DNK
+        - DJI
+        - DMA
+        - DOM
+        - ECU
+        - EGY
+        - SLV
+        - GNQ
+        - ERI
+        - EST
+        - SWZ
+        - ETH
+        - FLK
+        - FRO
+        - FJI
+        - FIN
+        - FRA
+        - GUF
+        - PYF
+        - ATF
+        - GAB
+        - GMB
+        - GEO
+        - DEU
+        - GHA
+        - GIB
+        - GRC
+        - GRL
+        - GRD
+        - GLP
+        - GUM
+        - GTM
+        - GGY
+        - GIN
+        - GNB
+        - GUY
+        - HTI
+        - HMD
+        - VAT
+        - HND
+        - HKG
+        - HUN
+        - ISL
+        - IND
+        - IDN
+        - IRN
+        - IRQ
+        - IRL
+        - IMN
+        - ISR
+        - ITA
+        - JAM
+        - JPN
+        - JEY
+        - JOR
+        - KAZ
+        - KEN
+        - KIR
+        - PRK
+        - KOR
+        - KWT
+        - KGZ
+        - LAO
+        - LVA
+        - LBN
+        - LSO
+        - LBR
+        - LBY
+        - LIE
+        - LTU
+        - LUX
+        - MAC
+        - MDG
+        - MWI
+        - MYS
+        - MDV
+        - MLI
+        - MLT
+        - MHL
+        - MTQ
+        - MRT
+        - MUS
+        - MYT
+        - MEX
+        - FSM
+        - MDA
+        - MCO
+        - MNG
+        - MNE
+        - MSR
+        - MAR
+        - MOZ
+        - MMR
+        - NAM
+        - NRU
+        - NPL
+        - NLD
+        - NCL
+        - NZL
+        - NIC
+        - NER
+        - NGA
+        - NIU
+        - NFK
+        - MNP
+        - NOR
+        - OMN
+        - PAK
+        - PLW
+        - PSE
+        - PAN
+        - PNG
+        - PRY
+        - PER
+        - PHL
+        - PCN
+        - POL
+        - PRT
+        - PRI
+        - QAT
+        - MKD
+        - ROU
+        - RUS
+        - RWA
+        - REU
+        - BLM
+        - SHN
+        - KNA
+        - LCA
+        - MAF
+        - SPM
+        - VCT
+        - WSM
+        - SMR
+        - STP
+        - SAU
+        - SEN
+        - SRB
+        - SYC
+        - SLE
+        - SGP
+        - SXM
+        - SVK
+        - SVN
+        - SLB
+        - SOM
+        - ZAF
+        - SGS
+        - SSD
+        - ESP
+        - LKA
+        - SDN
+        - SUR
+        - SJM
+        - SWE
+        - CHE
+        - SYR
+        - TWN
+        - TJK
+        - TZA
+        - THA
+        - TLS
+        - TGO
+        - TKL
+        - TON
+        - TTO
+        - TUN
+        - TUR
+        - TKM
+        - TCA
+        - TUV
+        - UGA
+        - UKR
+        - ARE
+        - GBR
+        - UMI
+        - USA
+        - URY
+        - UZB
+        - VUT
+        - VEN
+        - VNM
+        - VGB
+        - VIR
+        - WLF
+        - ESH
+        - YEM
+        - ZMB
+        - ZWE
+        - ALA
+    - name: investigation_id
+      type: string
+      required: true
+      description: Identifies the parent investigation.
+    - name: ena_study_id
+      type: string
+      required: false
+      description: ENA study ID obtained during the data submission to ENA; not to be filled at the start
+    - name: study_type
+      type: string
+      required: true
+      description: The study_type presents a controlled vocabulary for expressing the overall purpose of the study.
+      constraints:
+        enum:
+        - Whole Genome Sequencing
+        - Metagenomics
+        - Transcriptome Analysis
+        - Resequencing
+        - Epigenetics
+        - Synthetic Genomics
+        - Forensic or Paleo-genomics
+        - Gene Regulation Study
+        - Cancer Genomics
+        - Population Genomics
+        - RNASeq
+        - Exome Sequencing
+        - Pooled Clone Sequencing
+        - Transcriptome Sequencing
+        - Other
+    - name: experiments
+      type: list
+      items: Experiment
+      required: false
+      description: Experiments in this study
+    - name: samples
+      type: list
+      items: Sample
+      required: false
+      description: Samples in this study
+    - name: persons
+      type: list
+      items: Person
+      required: false
+      description: Persons associated with this study
+  Experiment:
+    description: An 'experiment' object serves as a metadata record encapsulating essential details about a sequencing assay
+      ('experiment' in ENA terms), sequencing type, and relevant parameters. This information enhances the interpretation
+      and contextual understanding of nucleotide sequences submitted to the archive.
+    fields:
+    - name: internal_experiment_id
+      type: string
+      required: false
+      description: Unique identifier for each experiment. This is used to link runs to experiments. This can be the same as
+        the sample id if only a single assay is performed per sample. At multiple assays, use this id to submit for assay.
+    - name: study_id
+      type: string
+      required: true
+      description: Identifies the parent study.
+    - name: lab_internal_sample_id
+      type: integer
+      required: false
+      description: Internal sample ID, to link the experiment to the sample. This is the name under which the sample is submitted
+        for sequencing.
+    - name: phenotyping_lab_internal_sample_id
+      type: string
+      required: false
+      description: Internal sample ID from phenotyping experiment, if the sample was both phenotyped and sequenced.
+    - name: design_description
+      type: string
+      required: false
+      description: Goal and setup of the individual library including library was constructed.
+    - name: library_strategy
+      type: string
+      required: false
+      description: Sequencing technique intended for this library.
+      constraints:
+        enum:
+        - WGS
+        - WGA
+        - WXS
+        - RNA-Seq
+        - ssRNA-seq
+        - snRNA-seq
+        - miRNA-Seq
+        - ncRNA-Seq
+        - FL-cDNA
+        - EST
+        - Hi-C
+        - ATAC-seq
+        - WCS
+        - RAD-Seq
+        - CLONE
+        - POOLCLONE
+        - AMPLICON
+        - CLONEEND
+        - FINISHING
+        - ChIP-Seq
+        - MNase-Seq
+        - DNase-Hypersensitivity
+        - Bisulfite-Seq
+        - CTS
+        - MRE-Seq
+        - MeDIP-Seq
+        - MBD-Seq
+        - Tn-Seq
+        - VALIDATION
+        - FAIRE-seq
+        - SELEX
+        - RIP-Seq
+        - ChIA-PET
+        - Synthetic-Long-Read
+        - Targeted-Capture
+        - Tethered Chromatin Conformation Capture
+        - NOMe-Seq
+        - ChM-Seq
+        - GBS
+        - Ribo-Seq
+        - OTHER
+    - name: library_source
+      type: string
+      required: false
+      description: The library_source specifies the type of source material that is being sequenced
+      constraints:
+        enum:
+        - GENOMIC
+        - GENOMIC SINGLE CELL
+        - TRANSCRIPTOMIC
+        - TRANSCRIPTOMIC SINGLE CELL
+        - METAGENOMIC
+        - METATRANSCRIPTOMIC
+        - SYNTHETIC
+        - VIRAL RNA
+        - OTHER
+    - name: library_selection
+      type: string
+      required: false
+      description: Method used to enrich the target in the sequence library preparation
+      constraints:
+        enum:
+        - RANDOM
+        - PCR
+        - RANDOM PCR
+        - RT-PCR
+        - HMPR
+        - MF
+        - repeat fractionation
+        - size fractionation
+        - MSLL
+        - cDNA
+        - cDNA_randomPriming
+        - cDNA_oligo_dT
+        - PolyA
+        - Oligo-dT
+        - Inverse rRNA
+        - Inverse rRNA selection
+        - ChIP
+        - ChIP-Seq
+        - MNase
+        - DNase
+        - Hybrid Selection
+        - Reduced Representation
+        - Restriction Digest
+        - 5-methylcytidine antibody
+        - MBD2 protein methyl-CpG binding domain
+        - CAGE
+        - RACE
+        - MDA
+        - padlock probes capture method
+        - other
+        - unspecified
+    - name: library_layout
+      type: string
+      required: false
+      description: Library_layout specifies whether to expect single, paired, or other configuration of reads. in the case
+        of paired reads, information about the relative distance and orientation is specified.
+      constraints:
+        enum:
+        - paired-end unstranded
+        - paired-end firststrand
+        - paired-end secondstrand
+        - single-end unstranded
+        - single-end firststrand
+        - single-end secondstrand
+    - name: insert_size
+      type: string
+      required: false
+      description: Insert size for paired reads
+    - name: library_construction_protocol
+      type: string
+      required: false
+      description: Free form text describing the protocol by which the sequencing library was constructed.
+    - name: platform
+      type: string
+      required: false
+      description: The platform record selects which sequencing platform and platform-specific runtime parameters. this will
+        be determined by the center. optional if 'instrument_model' is provided.
+      constraints:
+        enum:
+        - LS454
+        - ILLUMINA
+        - HELICOS
+        - ABI_SOLID
+        - COMPLETE_GENOMICS
+        - BGISEQ
+        - OXFORD_NANOPORE
+        - PACBIO_SMRT
+        - ION_TORRENT
+        - CAPILLARY
+        - DNBSEQ
+        - ELEMENT
+        - ULTIMA
+        - VELA_DIAGNOSTICS
+        - GENAPSYS
+        - GENEMIND
+        - TAPESTRI
+    - name: instrument_model
+      type: string
+      required: false
+      description: Model of the sequencing instrument.
+      constraints:
+        enum:
+        - 454 GS
+        - 454 GS 20
+        - 454 GS FLX
+        - 454 GS FLX Titanium
+        - 454 GS FLX+
+        - 454 GS Junior
+        - AB 310 Genetic Analyzer
+        - AB 3130 Genetic Analyzer
+        - AB 3130xL Genetic Analyzer
+        - AB 3500 Genetic Analyzer
+        - AB 3500xL Genetic Analyzer
+        - AB 3730 Genetic Analyzer
+        - AB 3730xL Genetic Analyzer
+        - AB 5500 Genetic Analyzer
+        - AB 5500xl Genetic Analyzer
+        - AB 5500xl-W Genetic Analysis System
+        - AB SOLiD 3 Plus System
+        - AB SOLiD 4 System
+        - AB SOLiD 4hq System
+        - AB SOLiD PI System
+        - AB SOLiD System
+        - AB SOLiD System 2.0
+        - AB SOLiD System 3.0
+        - BGISEQ-50
+        - BGISEQ-500
+        - Complete Genomics
+        - DNBSEQ-G400
+        - DNBSEQ-G400 FAST
+        - DNBSEQ-G50
+        - DNBSEQ-T10x4RS
+        - DNBSEQ-T7
+        - Element AVITI
+        - FASTASeq 300
+        - GENIUS
+        - GS111
+        - Genapsys Sequencer
+        - GenoCare 1600
+        - GenoLab M
+        - GridION
+        - Helicos HeliScope
+        - HiSeq X Five
+        - HiSeq X Ten
+        - Illumina Genome Analyzer
+        - Illumina Genome Analyzer II
+        - Illumina Genome Analyzer IIx
+        - Illumina HiScanSQ
+        - Illumina HiSeq 1000
+        - Illumina HiSeq 1500
+        - Illumina HiSeq 2000
+        - Illumina HiSeq 2500
+        - Illumina HiSeq 3000
+        - Illumina HiSeq 4000
+        - Illumina HiSeq X
+        - Illumina MiSeq
+        - Illumina MiniSeq
+        - Illumina NovaSeq 6000
+        - Illumina NovaSeq X
+        - Illumina NovaSeq X Plus
+        - Illumina iSeq 100
+        - Ion GeneStudio S5
+        - Ion GeneStudio S5 Plus
+        - Ion GeneStudio S5 Prime
+        - Ion Torrent Genexus
+        - Ion Torrent PGM
+        - Ion Torrent Proton
+        - Ion Torrent S5
+        - Ion Torrent S5 XL
+        - MGISEQ-2000RS
+        - MinION
+        - NextSeq 1000
+        - NextSeq 2000
+        - NextSeq 500
+        - NextSeq 550
+        - Onso
+        - PacBio RS
+        - PacBio RS II
+        - PromethION
+        - Revio
+        - Sentosa SQ301
+        - Sequel
+        - Sequel II
+        - Sequel IIe
+        - Tapestri
+        - UG 100
+        - unspecified
+    - name: runs
+      type: list
+      items: Run
+      required: false
+      description: Sequencing runs for this experiment
+  Run:
+    description: A run contains a group of reads generated for a particular experiment
+    fields:
+    - name: run_id
+      type: string
+      required: false
+      description: Unique identifier for each run, from ENA, to be filled in by bioinformatician when the data are uploaded
+        to ENA
+    - name: internal_experiment_id
+      type: string
+      required: false
+      description: Used to link run to experiment.
+    - name: data_file_link
+      type: string
+      required: false
+      description: The name or relative pathname of a run data file, to be filled in by bioinformatician who processes the
+        data
+    - name: data_file_description
+      type: string
+      required: true
+      description: Description of the format of the data file. May be a standard file format name, or a description of organization
+        of the data in a tabular file.
+    - name: data_file_format
+      type: string
+      required: false
+      description: The run data file model.
+      constraints:
+        enum:
+        - sra
+        - srf
+        - sff
+        - fastq
+        - fasta
+        - tab
+        - 454_native
+        - 454_native_seq
+        - 454_native_qual
+        - Helicos_native
+        - Illumina_native
+        - Illumina_native_seq
+        - Illumina_native_prb
+        - Illumina_native_int
+        - Illumina_native_qseq
+        - Illumina_native_scarf
+        - SOLiD_native
+        - SOLiD_native_csfasta
+        - SOLiD_native_qual
+        - PacBio_HDF5
+        - bam
+        - cram
+        - CompleteGenomics_native
+        - OxfordNanopore_native
+    - name: md5_checksum
+      type: string
+      required: true
+      description: md5 checksum string per file; to be filled in by the bioinformatician
+  Sample:
+    description: A Sample defines an isolate of sequenceable material upon which sequencing experiments can be based. The
+      Sample object may be a surrogate for taxonomy accession or an anonymized individual identifier. Or, it may fully specify
+      provenance and isolation method of the starting material.
+    fields:
+    - name: lab_internal_sample_id
+      type: integer
+      required: false
+      description: string of alphanumeric characters unique in the experiment and convenient to use in the lab
+    - name: sample_title
+      type: string
+      required: true
+      description: Short text that can be used to call out sample records in search results or in displays.
+    - name: collection_date
+      type: date
+      required: true
+      description: The date the sample was collected with the intention of sequencing.
+    - name: plant_structure_ontology
+      type: string
+      required: true
+      description: Ontology term for plant structure. Find at https://browser.planteome.org/amigo/term/PO:0025007, http://purl.obolibrary.org/obo/PO_0025131
+    - name: plant_structure
+      type: string
+      required: true
+      description: Name of plant structure that the sample was obtained from. Description of the plant_structure_ontology.
+    - name: taxon_id
+      type: string
+      required: true
+      description: 'Ncbi taxonomy identifier. this is appropriate for individual organisms and some environmental samples.
+        Find at https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi '
+    - name: species_name
+      type: string
+      required: true
+      description: Scientific Latin name of the species, excluding the names of people who gave the name to the species.
+    - name: plant_developmental_stage_text
+      type: string
+      required: true
+      description: Description of the developmental stage
+    - name: plant_developmental_stage_ontology
+      type: string
+      required: true
+      description: Ontology term that describes developmental stage
+    - name: country
+      type: string
+      required: true
+      description: The geographical origin of where the sample was collected from, with the intention of sequencing; this
+        is not the place of origin of the genotype; 3-letter code (ISO 3166)
+      constraints:
+        enum:
+        - AFG
+        - ALB
+        - DZA
+        - ASM
+        - AND
+        - AGO
+        - AIA
+        - ATA
+        - ATG
+        - ARG
+        - ARM
+        - ABW
+        - AUS
+        - AUT
+        - AZE
+        - BHS
+        - BHR
+        - BGD
+        - BRB
+        - BLR
+        - BEL
+        - BLZ
+        - BEN
+        - BMU
+        - BTN
+        - BOL
+        - BES
+        - BIH
+        - BWA
+        - BVT
+        - BRA
+        - IOT
+        - BRN
+        - BGR
+        - BFA
+        - BDI
+        - CPV
+        - KHM
+        - CMR
+        - CAN
+        - CYM
+        - CAF
+        - TCD
+        - CHL
+        - CHN
+        - CXR
+        - CCK
+        - COL
+        - COM
+        - COD
+        - COG
+        - COK
+        - CRI
+        - HRV
+        - CUB
+        - CUW
+        - CYP
+        - CZE
+        - CIV
+        - DNK
+        - DJI
+        - DMA
+        - DOM
+        - ECU
+        - EGY
+        - SLV
+        - GNQ
+        - ERI
+        - EST
+        - SWZ
+        - ETH
+        - FLK
+        - FRO
+        - FJI
+        - FIN
+        - FRA
+        - GUF
+        - PYF
+        - ATF
+        - GAB
+        - GMB
+        - GEO
+        - DEU
+        - GHA
+        - GIB
+        - GRC
+        - GRL
+        - GRD
+        - GLP
+        - GUM
+        - GTM
+        - GGY
+        - GIN
+        - GNB
+        - GUY
+        - HTI
+        - HMD
+        - VAT
+        - HND
+        - HKG
+        - HUN
+        - ISL
+        - IND
+        - IDN
+        - IRN
+        - IRQ
+        - IRL
+        - IMN
+        - ISR
+        - ITA
+        - JAM
+        - JPN
+        - JEY
+        - JOR
+        - KAZ
+        - KEN
+        - KIR
+        - PRK
+        - KOR
+        - KWT
+        - KGZ
+        - LAO
+        - LVA
+        - LBN
+        - LSO
+        - LBR
+        - LBY
+        - LIE
+        - LTU
+        - LUX
+        - MAC
+        - MDG
+        - MWI
+        - MYS
+        - MDV
+        - MLI
+        - MLT
+        - MHL
+        - MTQ
+        - MRT
+        - MUS
+        - MYT
+        - MEX
+        - FSM
+        - MDA
+        - MCO
+        - MNG
+        - MNE
+        - MSR
+        - MAR
+        - MOZ
+        - MMR
+        - NAM
+        - NRU
+        - NPL
+        - NLD
+        - NCL
+        - NZL
+        - NIC
+        - NER
+        - NGA
+        - NIU
+        - NFK
+        - MNP
+        - NOR
+        - OMN
+        - PAK
+        - PLW
+        - PSE
+        - PAN
+        - PNG
+        - PRY
+        - PER
+        - PHL
+        - PCN
+        - POL
+        - PRT
+        - PRI
+        - QAT
+        - MKD
+        - ROU
+        - RUS
+        - RWA
+        - REU
+        - BLM
+        - SHN
+        - KNA
+        - LCA
+        - MAF
+        - SPM
+        - VCT
+        - WSM
+        - SMR
+        - STP
+        - SAU
+        - SEN
+        - SRB
+        - SYC
+        - SLE
+        - SGP
+        - SXM
+        - SVK
+        - SVN
+        - SLB
+        - SOM
+        - ZAF
+        - SGS
+        - SSD
+        - ESP
+        - LKA
+        - SDN
+        - SUR
+        - SJM
+        - SWE
+        - CHE
+        - SYR
+        - TWN
+        - TJK
+        - TZA
+        - THA
+        - TLS
+        - TGO
+        - TKL
+        - TON
+        - TTO
+        - TUN
+        - TUR
+        - TKM
+        - TCA
+        - TUV
+        - UGA
+        - UKR
+        - ARE
+        - GBR
+        - UMI
+        - USA
+        - URY
+        - UZB
+        - VUT
+        - VEN
+        - VNM
+        - VGB
+        - VIR
+        - WLF
+        - ESH
+        - YEM
+        - ZMB
+        - ZWE
+        - ALA
+    - name: latitude
+      type: float
+      required: true
+      description: The geographical origin of the sample as defined by latitude.
+    - name: longitude
+      type: float
+      required: true
+      description: The geographical origin of the sample as defined by longitude.
+    - name: altitude
+      type: string
+      required: false
+      description: Altitude of the sample origin location, provided in metres (m). Can be found at https://en-gb.topographic-map.com/
+    - name: age
+      type: float
+      required: true
+      description: Age of the plant from the start of germination in days. Age of subject at the time of sample collection
+    - name: genotype
+      type: string
+      required: true
+      description: Name or code for genotype of plant in a genebank
+    - name: genebank
+      type: string
+      required: true
+      description: Name of the genebank
+    - name: ecotype
+      type: string
+      required: true
+      description: A population within a given species displaying genetically based, phenotypic traits that reflect adaptation
+        to a local habitat.
+    - name: cultivar
+      type: string
+      required: true
+      description: Cultivar (cultivated variety) of plant from which sample was obtained
+    - name: sex
+      type: string
+      required: true
+      description: Sex of the plant under study
+    - name: seed_batch_id
+      type: list
+      required: true
+      description: ID of the seed batch often used for crop plants, where genotyping is not feasible for research purposes;
+        one genotype might have multiple seed batch IDs
+      items: string
+    - name: growth_conditions
+      type: string
+      required: true
+      description: Description of growth conditions before the treatment
+    - name: growth_facility
+      type: list
+      required: true
+      description: Type of facility where the sampled plant was grown.
+      items: string
+    - name: growth_medium
+      type: string
+      required: true
+      description: Substrate on which the plants are grown, before the treatment
+      constraints:
+        enum:
+        - soil
+        - aeroponic
+        - hydroponic
+        - in vitro solid culture medium
+        - in vitro liquid culture medium
+    - name: growth_light_regimen
+      type: list
+      required: true
+      description: Information about treatment involving an exposure to light, this includes both light intensity and quality.
+        Photoperiod day/night in hours, before the treatment
+      items: string
+    - name: growth_temperature_day
+      type: list
+      required: true
+      description: Growth temperature during the light phase, before the treatment; in degrees Celsius
+      items: string
+    - name: growth_temperature_night
+      type: list
+      required: true
+      description: Growth temperature during the dark phase, before the treatment; in degrees Celsius
+      items: string
+    - name: growth_light_intensity
+      type: list
+      required: true
+      description: Approximate light intensity, before the treatment; in micromol/sec/m2
+      items: string
+    - name: growth_light_rfr_ratio
+      type: list
+      required: true
+      description: Ratio of red and far red irradiation in the light spectrum, before the treatment
+      items: string
+    - name: treatment
+      type: list
+      required: true
+      description: Short description of treatment
+      items: string
+    - name: treatment_ontology
+      type: list
+      required: true
+      description: Ontology term for treatment as deposited on Planteome
+      items: string
+    - name: treatment_growth_medium
+      type: list
+      required: true
+      description: Substrate on which the plants are grown during the treatment
+      items: string
+    - name: treatment_light_regimen
+      type: list
+      required: true
+      description: Photoperiod day/night in hours during the treatment (day_night)
+      items: string
+    - name: treatment_temperature_day
+      type: list
+      required: true
+      description: Growth temperature during the light phase during the treatment; in degrees Celsius
+      items: string
+    - name: treatment_temperature_night
+      type: list
+      required: true
+      description: Growth temperature during the dark phase during the treatment; in degrees Celsius
+      items: string
+    - name: treatment_light_intensity
+      type: list
+      required: true
+      description: Approximate light intensity, duirng the treatment; in micromol/sec/m2
+      items: string
+    - name: treatment_light_rfr_ratio
+      type: list
+      required: true
+      description: Ratio of red and far red irradiation in the light spectrum during the treatment
+      items: string
+    - name: treatment_time_duration
+      type: list
+      required: true
+      description: Time of treatment (use "minute", "hour", "day" as singular, not plural)
+      items: string
+    - name: treatment_time_of_day
+      type: list
+      required: true
+      description: Time of treatment of day. Use either Zeitgeber time or local time.
+      items: string
+    - name: treatment_chemical
+      type: list
+      required: true
+      description: Description of the chemical treatment
+      items: string
+    - name: treatment_chemical_cas_id
+      type: list
+      required: true
+      description: CAS ID for the chemical
+      items: string
+    - name: experimental_group
+      type: string
+      required: true
+      description: Short description of the sample type in the experimental design (control, treatment, mock)
+      constraints:
+        enum:
+        - control
+        - treatment
+        - mock
+    - name: biochemical_extraction_date
+      type: date
+      required: true
+      description: Date of the extraction of molecules for sequencing
+    - name: sequencing_submission_date
+      type: date
+      required: true
+      description: Date of submission for sequencing
+    - name: replacement_sample
+      type: string
+      required: false
+      description: In case the sample name is incorrect, provide the correct sample ID here (Global CropXR Sample ID)
+    - name: remarks
+      type: string
+      required: false
+      description: Other notes about the sample
+  Investigation:
+    description: Investigations are research programmes with defined aims. It is a collection of studies.
+    fields:
+    - name: investigation_id
+      type: string
+      required: false
+      description: Identifier comprising the unique name of the institution/database hosting the submission of the investigation
+        data, and the accession number of the investigation in that institution. Provided after registration. Also called
+        investigation label.
+    - name: investigation_title
+      type: string
+      required: false
+      description: Human-readable string summarising the investigation.
+    - name: investigation_description
+      type: string
+      required: false
+      description: Human-readable text describing the investigation in more detail
+    - name: studies
+      type: list
+      items: Study
+      required: false
+      description: Studies in this investigation
+  Person:
+    description: A human involved in the investigation or specifically any of its studies.
+    fields:
+    - name: person_name
+      type: string
+      required: true
+      description: The name of the person (the first name followed by the last name, either full name, or as used in scientific
+        publications)
+    - name: person_email
+      type: string
+      required: false
+      description: The electronic mail address of the person.
+    - name: person_id
+      type: string
+      required: false
+      description: An identifier for the data submitter. If that submitter is an individual, ORCID identifiers are recommended.
+    - name: person_role
+      type: list
+      required: true
+      description: Type of contribution of the person to the investigation
+      items: string
+    - name: person_affiliation
+      type: list
+      required: true
+      description: The institution the person belongs to. Institution should be listed in the institution section.
+      items: string
+  Institution:
+    description: Information about the institution
+    fields:
+    - name: organisation
+      type: list
+      required: true
+      description: Name and address of the institution(s). At multiple list the main institution first.
+      items: string
+    - name: type
+      type: list
+      required: true
+      description: ''
+      items: string
+      constraints:
+        enum:
+        - University
+        - Company
+        - Other
+validation_rules: []

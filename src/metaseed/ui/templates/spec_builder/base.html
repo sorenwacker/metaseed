@@ -8,7 +8,7 @@
     <link rel="icon" type="image/png" sizes="128x128" href="/static/images/metaseed-icon-128.png">
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
     <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
-    <link rel="stylesheet" href="/static/css/style.css?v=46">
+    <link rel="stylesheet" href="/static/css/style.css?v=48">
 </head>
 <body hx-headers='{"X-Requested-With": "XMLHttpRequest"}'>
     <div class="layout">
@@ -31,6 +31,9 @@
                     Cloned from {{ template_source[0] }} v{{ template_source[1] }}
                 </span>
                 {% endif %}
+                <button id="sidebar-toggle-btn" class="btn btn-header" onclick="toggleSidebar()" title="Hide sidebar (Ctrl+B)">
+                    Hide Sidebar
+                </button>
                 <button class="btn btn-header" onclick="autoLayout()">
                     Auto Layout
                 </button>
@@ -111,6 +114,9 @@
                         <button class="btn btn-sm btn-secondary" onclick="zoomIn()">+</button>
                         <button class="btn btn-sm btn-secondary" onclick="zoomOut()">-</button>
                         <button class="btn btn-sm btn-secondary" onclick="fitGraph()">Fit</button>
+                        <span class="toolbar-divider"></span>
+                        <span id="hidden-count-badge" class="hidden-badge hidden"></span>
+                        <button class="btn btn-sm btn-secondary" onclick="showAllEntities()" title="Show all hidden entities">Show All</button>
                     </div>
                 </div>
                 <div class="erd-canvas-wrapper">
@@ -124,6 +130,14 @@
                     <span class="legend-item"><span class="legend-dot root"></span> Root Entity</span>
                     <span class="legend-item"><span class="legend-dot entity"></span> Entity</span>
                     <span class="legend-item"><span class="legend-line"></span> Relationship</span>
+                    <span class="legend-item legend-hint">Right-click to hide</span>
+                </div>
+
+                <!-- Context Menu for nodes -->
+                <div id="node-context-menu" class="context-menu hidden">
+                    <div class="context-menu-header" id="ctx-node-name"></div>
+                    <button id="ctx-hide-btn" class="context-menu-item" onclick="hideEntity()">Hide</button>
+                    <button id="ctx-show-btn" class="context-menu-item" onclick="showEntity()">Show</button>
                 </div>
             </main>
 
@@ -207,439 +221,29 @@
 
     <script src="/static/js/app.js?v=30"></script>
     <script>
-        // ERD Data - convert spec to serializable format
+        // ERD Data - injected from server template
         const entities = {
             {% for name, entity in spec.entities.items() %}
             "{{ name }}": {
-                "ontology_term": {{ entity.ontology_term | tojson if entity.ontology_term else 'null' }},
-                "description": {{ entity.description | tojson if entity.description else '""' }},
+                "ontology_term": {{ entity.ontology_term | tojson | safe if entity.ontology_term else 'null' }},
+                "description": {{ (entity.description or "") | tojson | safe }},
                 "fields": [
                     {% for field in entity.fields %}
                     {
-                        "name": "{{ field.name }}",
-                        "type": "{{ field.type }}",
+                        "name": {{ field.name | tojson | safe }},
+                        "type": {{ field.type | tojson | safe }},
                         "required": {{ 'true' if field.required else 'false' }},
-                        "items": {{ field.items | tojson if field.items else 'null' }},
-                        "reference": {{ field.reference | tojson if field.reference else 'null' }}
+                        "items": {{ field.items | tojson | safe if field.items else 'null' }},
+                        "reference": {{ field.reference | tojson | safe if field.reference else 'null' }}
                     }{% if not loop.last %},{% endif %}
                     {% endfor %}
                 ]
             }{% if not loop.last %},{% endif %}
             {% endfor %}
         };
-        const rootEntity = "{{ spec.root_entity }}";
+        const rootEntity = {{ spec.root_entity | tojson | safe }};
         const fieldTypes = {{ field_types | tojson | safe }};
-
-        let network = null;
-        let nodes = null;
-        let edges = null;
-        let selectedNode = null;
-        let pendingPosition = null;
-        let initialScale = null;  // Store scale after initial fit
-
-        // Initialize ERD on load
-        document.addEventListener('DOMContentLoaded', initERD);
-        // Also try immediately in case DOMContentLoaded already fired
-        if (document.readyState !== 'loading') {
-            setTimeout(initERD, 50);
-        }
-
-        function initERD() {
-            // Don't reinitialize if already created
-            if (network) return;
-
-            const container = document.getElementById('erd-canvas');
-            if (!container) return;
-
-            const rect = container.getBoundingClientRect();
-            if (rect.height < 50) {
-                setTimeout(initERD, 200);
-                return;
-            }
-
-            const entityNames = Object.keys(entities);
-            if (entityNames.length === 0) {
-                container.innerHTML = '<div class="empty-canvas-message">Double-click to add an entity</div>';
-                return;
-            }
-
-            // Build nodes with table-like labels
-            const nodeData = [];
-            const edgeData = [];
-
-            entityNames.forEach(name => {
-                const entity = entities[name];
-                const isRoot = name === rootEntity;
-                const fields = entity.fields || [];
-
-                // Build multi-line label like a table
-                let label = `<b>${name}</b>`;
-                if (isRoot) label += ' [ROOT]';
-                label += '\n────────────────';
-
-                // Show all fields
-                fields.forEach(field => {
-                    const req = field.required ? '*' : ' ';
-                    const fk = ((field.type === 'entity' || field.type === 'list') && field.items) ? '→' : ' ';
-                    label += `\n${req}${fk} ${field.name}: ${field.type}`;
-                });
-                if (fields.length === 0) {
-                    label += '\n(no fields)';
-                }
-
-                // Calculate node size based on content
-                const nodeHeight = 40 + fields.length * 16;  // Header + fields
-                const nodeWidth = 200;
-
-                const nodeConfig = {
-                    id: name,
-                    label: label,
-                    shape: 'box',
-                    size: Math.max(nodeHeight, nodeWidth) / 2,
-                    mass: 1 + fields.length * 0.3,
-                    font: {
-                        face: 'monospace',
-                        size: 12,
-                        align: 'left',
-                        multi: 'html',
-                        color: isRoot ? '#fff' : '#2c3e35'
-                    },
-                    color: {
-                        background: isRoot ? '#4a7c59' : '#ffffff',
-                        border: isRoot ? '#2d5a4a' : '#4a7c59',
-                        highlight: { background: '#87a878', border: '#4a7c59' },
-                        hover: { background: isRoot ? '#5a8c69' : '#f5f2ed', border: '#4a7c59' }
-                    },
-                    borderWidth: 2,
-                    margin: 15,
-                    shadow: true
-                };
-
-
-                nodeData.push(nodeConfig);
-
-                // Build edges for relationships
-                fields.forEach(field => {
-                    // Nested entity relationships (list or entity types)
-                    if ((field.type === 'entity' || field.type === 'list') && field.items && entities[field.items]) {
-                        edgeData.push({
-                            from: name,
-                            to: field.items,
-                            label: field.name,
-                            arrows: { to: { enabled: true, type: 'arrow' } },
-                            color: { color: '#4a7c59', highlight: '#2d5a4a' },
-                            font: { size: 11, color: '#5a6b62', background: 'white', strokeWidth: 0 },
-                            smooth: { type: 'cubicBezier', roundness: 0.4 },
-                            width: 2
-                        });
-                    }
-                    // Reference relationships (string fields that reference another entity)
-                    if (field.reference) {
-                        const refParts = field.reference.split('.');
-                        const targetEntity = refParts[0];
-                        if (entities[targetEntity]) {
-                            edgeData.push({
-                                from: name,
-                                to: targetEntity,
-                                label: field.name,
-                                arrows: { to: { enabled: true, type: 'arrow' } },
-                                color: { color: '#7c4a6b', highlight: '#5a2d4a' },  // Different color for references
-                                font: { size: 11, color: '#6b5a62', background: 'white', strokeWidth: 0 },
-                                smooth: { type: 'cubicBezier', roundness: 0.4 },
-                                width: 2,
-                                dashes: true  // Dashed line for references
-                            });
-                        }
-                    }
-                });
-            });
-
-            nodes = new vis.DataSet(nodeData);
-            edges = new vis.DataSet(edgeData);
-
-            const options = {
-                layout: {
-                    improvedLayout: true,
-                    randomSeed: 42
-                },
-                physics: {
-                    enabled: true,
-                    solver: 'forceAtlas2Based',
-                    forceAtlas2Based: {
-                        gravitationalConstant: -100,
-                        centralGravity: 0.01,
-                        springLength: 200,
-                        springConstant: 0.08,
-                        damping: 0.5,
-                        avoidOverlap: 1
-                    },
-                    maxVelocity: 50,
-                    minVelocity: 0.1,
-                    stabilization: {
-                        enabled: true,
-                        iterations: 2000,
-                        updateInterval: 25
-                    }
-                },
-                interaction: {
-                    hover: true,
-                    zoomView: true,
-                    zoomSpeed: 0.5,
-                    dragView: true,
-                    dragNodes: true,
-                    navigationButtons: false,
-                    keyboard: {
-                        enabled: true,
-                        speed: { x: 10, y: 10, zoom: 0.05 }
-                    }
-                },
-                nodes: {
-                    shape: 'box',
-                    margin: 12,
-                    widthConstraint: {
-                        minimum: 180
-                    }
-                },
-                edges: {
-                    smooth: {
-                        type: 'cubicBezier',
-                        forceDirection: 'vertical',
-                        roundness: 0.4
-                    }
-                }
-            };
-
-            network = new vis.Network(container, { nodes, edges }, options);
-
-            // Event handlers
-            network.on('click', function(params) {
-                if (params.nodes.length > 0) {
-                    selectEntity(params.nodes[0]);
-                }
-            });
-
-            network.on('doubleClick', function(params) {
-                if (params.nodes.length === 0) {
-                    showAddEntityModal();
-                }
-            });
-
-            // After physics stabilizes, disable it
-            network.once('stabilizationIterationsDone', () => {
-                network.setOptions({ physics: { enabled: false } });
-            });
-
-        }
-
-        function calculateLevels(entityNames) {
-            const levels = {};
-            const children = {};
-            const parents = {};
-
-            entityNames.forEach(name => {
-                children[name] = [];
-                parents[name] = [];
-            });
-
-            entityNames.forEach(name => {
-                const entity = entities[name];
-                (entity.fields || []).forEach(field => {
-                    if ((field.type === 'entity' || field.type === 'list') && field.items && entities[field.items]) {
-                        if (!children[name].includes(field.items)) children[name].push(field.items);
-                        if (!parents[field.items].includes(name)) parents[field.items].push(name);
-                    }
-                });
-            });
-
-            // Find roots
-            let roots = entityNames.filter(name => parents[name].length === 0);
-            if (rootEntity && entities[rootEntity]) {
-                roots = [rootEntity, ...roots.filter(r => r !== rootEntity)];
-            }
-            if (roots.length === 0) roots = [entityNames[0]];
-
-            // BFS
-            const visited = new Set();
-            const queue = roots.map(r => ({ name: r, level: 0 }));
-            roots.forEach(r => { levels[r] = 0; visited.add(r); });
-
-            while (queue.length > 0) {
-                const { name, level } = queue.shift();
-                children[name].forEach(child => {
-                    if (!visited.has(child)) {
-                        visited.add(child);
-                        levels[child] = level + 1;
-                        queue.push({ name: child, level: level + 1 });
-                    }
-                });
-            }
-
-            // Unvisited
-            let maxLevel = Math.max(0, ...Object.values(levels));
-            entityNames.forEach(name => {
-                if (levels[name] === undefined) levels[name] = ++maxLevel;
-            });
-
-            return levels;
-        }
-
-        function startAddRelationship() {
-            alert('To add a relationship:\n1. Click on the source entity\n2. Add a field of type "entity" or "list"\n3. Set the Items/Target to the target entity name');
-        }
-
-        function selectEntity(entityName) {
-            selectedNode = entityName;
-
-            // Open panel and load content
-            document.getElementById('editor-title').textContent = entityName;
-            document.getElementById('editor-panel').classList.add('open');
-            htmx.ajax('GET', `/spec-builder/entity/${entityName}`, {
-                target: '#editor-content',
-                swap: 'innerHTML'
-            });
-        }
-
-        function closeEditorPanel() {
-            document.getElementById('editor-panel').classList.remove('open');
-            if (network) network.unselectAll();
-            selectedNode = null;
-        }
-
-        function refreshGraph() {
-            // Reload the page to refresh graph with new data
-            htmx.ajax('GET', '/spec-builder', { target: 'body', swap: 'innerHTML' });
-        }
-
-        function autoLayout() {
-            if (!network) return;
-
-            const nodeIds = nodes.getIds();
-            const cols = Math.ceil(Math.sqrt(nodeIds.length));
-            const spacing = 200;
-
-            // Put root entity at top
-            let sorted = [...nodeIds];
-            if (rootEntity && sorted.includes(rootEntity)) {
-                sorted = [rootEntity, ...sorted.filter(n => n !== rootEntity)];
-            }
-
-            sorted.forEach((id, idx) => {
-                const col = idx % cols;
-                const row = Math.floor(idx / cols);
-                nodes.update({ id, x: col * spacing, y: row * spacing });
-            });
-
-            setTimeout(() => network.fit({ animation: true }), 100);
-        }
-
-        function zoomIn() {
-            if (network) {
-                const scale = network.getScale();
-                network.moveTo({ scale: scale * 1.15, animation: { duration: 200 } });
-            }
-        }
-
-        function zoomOut() {
-            if (network) {
-                const scale = network.getScale();
-                network.moveTo({ scale: scale / 1.15, animation: { duration: 200 } });
-            }
-        }
-
-        function fitGraph() {
-            if (network) {
-                network.fit({ animation: { duration: 300 } });
-            }
-        }
-
-        // Add entity
-        function showAddEntityModal() {
-            document.getElementById('add-entity-modal').classList.remove('hidden');
-            document.getElementById('new-entity-name').value = '';
-            document.getElementById('new-entity-name').focus();
-        }
-
-        function hideAddEntityModal() {
-            document.getElementById('add-entity-modal').classList.add('hidden');
-            pendingPosition = null;
-        }
-
-        function onEntityAdded() {
-            hideAddEntityModal();
-            // Graph will be refreshed by HTMX response
-            setTimeout(refreshGraph, 100);
-        }
-
-        function dragNewEntity(event) {
-            event.dataTransfer.setData('text/plain', 'new-entity');
-        }
-
-        function dropNewEntity(event) {
-            event.preventDefault();
-            if (event.dataTransfer.getData('text/plain') === 'new-entity') {
-                const rect = document.getElementById('erd-canvas').getBoundingClientRect();
-                pendingPosition = {
-                    x: event.clientX - rect.left,
-                    y: event.clientY - rect.top
-                };
-                showAddEntityModal();
-            }
-        }
-
-        function addEntityAtPosition(event) {
-            // Only if clicking on canvas background
-            if (event.target.id === 'erd-canvas' || event.target.tagName === 'CANVAS') {
-                pendingPosition = { x: event.offsetX, y: event.offsetY };
-                showAddEntityModal();
-            }
-        }
-
-        // Preview
-        function showPreview() {
-            document.getElementById('preview-overlay').classList.remove('hidden');
-        }
-
-        function hidePreview(event) {
-            if (!event || event.target.id === 'preview-overlay') {
-                document.getElementById('preview-overlay').classList.add('hidden');
-            }
-        }
-
-        // Listen for entity updates to refresh graph
-        document.body.addEventListener('htmx:afterSwap', function(event) {
-            if (event.detail.target.id === 'editor-content') {
-                // Entity was updated, could refresh edges here
-            }
-        });
-
-        // Validation Rule Modal
-        function showRuleModal(ruleIdx, ruleName) {
-            document.getElementById('rule-modal-title').textContent = ruleName ? `Edit: ${ruleName}` : 'Edit Rule';
-            document.getElementById('validation-rule-modal').classList.remove('hidden');
-
-            htmx.ajax('GET', `/spec-builder/validation-rule/${ruleIdx}`, {
-                target: '#rule-modal-content',
-                swap: 'innerHTML'
-            });
-        }
-
-        function hideRuleModal() {
-            document.getElementById('validation-rule-modal').classList.add('hidden');
-            htmx.ajax('GET', '/spec-builder/validation-rules', {
-                target: '#validation-rules-panel',
-                swap: 'innerHTML'
-            });
-        }
-
-        // Keyboard shortcuts
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                hideAddEntityModal();
-                hideRuleModal();
-                hidePreview();
-                closeEditorPanel();
-            }
-        });
     </script>
+    <script src="/static/js/spec-builder.js?v=2"></script>
 </body>
 </html>

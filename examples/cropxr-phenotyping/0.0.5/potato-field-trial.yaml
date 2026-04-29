@@ -1,0 +1,119 @@
+# CropXR Phenotyping Example - Potato field trial
+# Based on CropXR Phenotyping metadata schema v0.0.5 (MIAPPE-based)
+
+investigation_id: CROPXR-PHENO-INV-2024-001
+investigation_title: Potato drought tolerance field trial 2024
+investigation_description: >
+  Multi-year field trial evaluating drought tolerance phenotypes in a diverse panel
+  of potato cultivars under rain-fed and irrigated conditions in the Netherlands.
+submission_date: "2024-03-01"
+public_release_date: "2025-03-01"
+license: CC BY 4.0
+MIAPPE_version: 1.1
+
+studies:
+  - study_id: CROPXR-PHENO-STD-2024-001
+    study_title: Potato drought field trial - Wageningen 2024
+    study_description: >
+      Field experiment comparing yield and quality traits of 48 potato cultivars
+      under drought stress and well-watered control conditions.
+    study_start_date: "2024-04-15"
+    study_end_date: "2024-09-30"
+    institution: Wageningen University & Research, Droevendaalsesteeg 1, 6708 PB Wageningen
+    country: NLD
+    experimental_site_name: WUR Experimental Farm Unifarm
+    experimental_design_description: >
+      Randomized complete block design with 3 replicates per treatment.
+      Two irrigation treatments: rain-fed (drought) and supplemental irrigation (control).
+    experimental_design_type: CO_715:0000145
+    observation_unit_level_hierarchy: block>plot>plant
+    observation_unit_description: Individual potato plants in 3m x 1.5m plots
+    growth_facility_description: Open field experimental plots
+    growth_facility: CO_715:0000162
+    cultural_practices: >
+      Standard potato cultivation practices. Planting density 4 plants/m2.
+      Pre-emergence herbicide application. No fungicide treatment.
+
+    biological_materials:
+      - study_id: CROPXR-PHENO-STD-2024-001
+        biological_material_id: BM001
+        organism: "4113"
+        genus: Solanum
+        species: tuberosum
+        infraspecific_name: "cultivar: Agria"
+        material_source_id: CGN:Agria
+        material_source_description: Commercial cultivar from CGN genebank
+
+    observation_units:
+      - study_id: CROPXR-PHENO-STD-2024-001
+        biological_material_id: BM001
+        observation_unit_id: OU001
+        observation_unit_type: plot
+        spatial_distribution: "block:1, row:1, column:1"
+        observation_unit_factor_value: "irrigation:rain-fed"
+        samples:
+          - study_id: CROPXR-PHENO-STD-2024-001
+            observation_unit_id: OU001
+            sample_id: S001
+            plant_anatomical_entity: PO:0000003
+            sample_description: Leaf tissue for molecular analysis
+            collection_date: "2024-07-15"
+
+    experimental_factors:
+      - study_id: CROPXR-PHENO-STD-2024-001
+        experiment_factor_type: irrigation
+        experiment_factor_description: >
+          Irrigation treatment comparing rain-fed drought stress with
+          supplemental irrigation to maintain field capacity.
+        experiment_factor_values: "rain-fed, irrigated"
+
+    environments:
+      - study_id: CROPXR-PHENO-STD-2024-001
+        environment_parameter: soil type
+        environment_parameter_value: sandy loam
+      - study_id: CROPXR-PHENO-STD-2024-001
+        environment_parameter: planting density
+        environment_parameter_value: 4 plants/m2
+
+    events:
+      - study_id: CROPXR-PHENO-STD-2024-001
+        event_type: planting
+        event_accession_number: CO_715:0000007
+        event_description: Manual planting of pre-sprouted seed tubers
+        event_date: "2024-04-15"
+      - study_id: CROPXR-PHENO-STD-2024-001
+        event_type: harvest
+        event_accession_number: CO_715:0000008
+        event_description: Manual harvest of tubers
+        event_date: "2024-09-15"
+
+    observed_variables:
+      - study_id: CROPXR-PHENO-STD-2024-001
+        variable_id: TUBYLD_kg_plot
+        variable_name: Tuber yield per plot
+        trait: tuber yield
+        trait_accession_number: CO_330:0000127
+        method: weighing
+        method_description: Fresh weight of all tubers harvested per plot
+        scale: kilogram
+      - study_id: CROPXR-PHENO-STD-2024-001
+        variable_id: CANOPY_NDVI
+        variable_name: Canopy NDVI
+        trait: canopy greenness
+        method: multispectral imaging
+        method_description: NDVI calculated from drone-based multispectral imagery
+        scale: unitless ratio
+
+    data_files:
+      - study_id: CROPXR-PHENO-STD-2024-001
+        data_file_link: https://doi.org/10.5281/zenodo.1234567
+        data_file_description: Phenotypic measurements in CSV format
+        data_file_version: 1.0
+
+persons:
+  - study_id: CROPXR-PHENO-STD-2024-001
+    person_name: Dr. Jan Aardappel
+    person_email: jan.aardappel@wur.nl
+    person_id: https://orcid.org/0000-0003-1234-5678
+    person_role: Principal Investigator
+    person_affiliation: Wageningen University & Research
