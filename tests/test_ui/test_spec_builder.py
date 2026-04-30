@@ -15,6 +15,7 @@ from metaseed.specs.schema import (
     ValidationRuleSpec,
 )
 from metaseed.ui.app import create_app
+from metaseed.ui.spec_builder import SpecBuilderState
 from metaseed.ui.spec_builder_helpers import (
     clone_spec,
     create_empty_spec,
@@ -23,7 +24,6 @@ from metaseed.ui.spec_builder_helpers import (
     validate_entity_name,
     validate_field_name,
 )
-from metaseed.ui.spec_builder_state import SpecBuilderState
 from metaseed.ui.state import AppState
 
 
