@@ -33,6 +33,19 @@ def register_entity_routes(
         get_builder_state: Callable to get builder state.
     """
 
+    def _require_spec() -> SpecBuilderState:
+        """Get builder state, raising HTTPException if no spec in progress."""
+        builder = get_builder_state()
+        if builder.spec is None:
+            raise HTTPException(status_code=400, detail="No spec in progress")
+        return builder
+
+    def _require_entity(builder: SpecBuilderState, name: str) -> EntityDefSpec:
+        """Get entity by name, raising HTTPException if not found."""
+        if name not in builder.spec.entities:
+            raise HTTPException(status_code=404, detail=f"Entity '{name}' not found")
+        return builder.spec.entities[name]
+
     def _entity_list_response(
         request: Request, builder: SpecBuilderState, error: str | None = None
     ) -> HTMLResponse:
@@ -73,10 +86,7 @@ def register_entity_routes(
     @router.get("/entities", response_class=HTMLResponse)
     async def get_entities_list(request: Request) -> HTMLResponse:
         """Get the entities list panel."""
-        builder = get_builder_state()
-        if builder.spec is None:
-            raise HTTPException(status_code=400, detail="No spec in progress")
-
+        builder = _require_spec()
         return _entity_list_response(request, builder)
 
     @router.post("/entity", response_class=HTMLResponse)
@@ -85,10 +95,7 @@ def register_entity_routes(
         name: str = Form(...),
     ) -> HTMLResponse:
         """Add a new entity."""
-        builder = get_builder_state()
-        if builder.spec is None:
-            raise HTTPException(status_code=400, detail="No spec in progress")
-
+        builder = _require_spec()
         name = name.strip()
         error = validate_entity_name(name)
         if error:
@@ -115,13 +122,8 @@ def register_entity_routes(
     @router.get("/entity/{name}", response_class=HTMLResponse)
     async def get_entity(request: Request, name: str) -> HTMLResponse:
         """Get entity editor form."""
-        builder = get_builder_state()
-        if builder.spec is None:
-            raise HTTPException(status_code=400, detail="No spec in progress")
-
-        if name not in builder.spec.entities:
-            raise HTTPException(status_code=404, detail=f"Entity '{name}' not found")
-
+        builder = _require_spec()
+        _require_entity(builder, name)
         builder.editing_entity = name
         builder.editing_field_idx = None
 
@@ -136,14 +138,8 @@ def register_entity_routes(
         ontology_term: str = Form(""),
     ) -> HTMLResponse:
         """Update entity metadata, including rename."""
-        builder = get_builder_state()
-        if builder.spec is None:
-            raise HTTPException(status_code=400, detail="No spec in progress")
-
-        if name not in builder.spec.entities:
-            raise HTTPException(status_code=404, detail=f"Entity '{name}' not found")
-
-        entity = builder.spec.entities[name]
+        builder = _require_spec()
+        entity = _require_entity(builder, name)
         entity.description = description.strip()
         entity.ontology_term = ontology_term.strip() or None
 
@@ -185,13 +181,8 @@ def register_entity_routes(
     @router.delete("/entity/{name}", response_class=HTMLResponse)
     async def delete_entity(request: Request, name: str) -> HTMLResponse:
         """Delete an entity."""
-        builder = get_builder_state()
-        if builder.spec is None:
-            raise HTTPException(status_code=400, detail="No spec in progress")
-
-        if name not in builder.spec.entities:
-            raise HTTPException(status_code=404, detail=f"Entity '{name}' not found")
-
+        builder = _require_spec()
+        _require_entity(builder, name)
         del builder.spec.entities[name]
 
         # Clear editing state if we were editing this entity

@@ -31,6 +31,13 @@ def register_export_routes(
         get_builder_state: Callable to get builder state.
     """
 
+    def _require_spec() -> SpecBuilderState:
+        """Get builder state, raising HTTPException if no spec in progress."""
+        builder = get_builder_state()
+        if builder.spec is None:
+            raise HTTPException(status_code=400, detail="No spec in progress")
+        return builder
+
     @router.get("/graph-data", response_class=JSONResponse)
     async def get_graph_data() -> JSONResponse:
         """Get entity data for graph refresh."""
@@ -65,10 +72,7 @@ def register_export_routes(
     @router.get("/preview", response_class=HTMLResponse)
     async def preview_yaml(request: Request) -> HTMLResponse:
         """Get YAML preview of the current spec."""
-        builder = get_builder_state()
-        if builder.spec is None:
-            raise HTTPException(status_code=400, detail="No spec in progress")
-
+        builder = _require_spec()
         yaml_content = spec_to_yaml(builder.spec)
 
         return templates.TemplateResponse(
@@ -80,10 +84,7 @@ def register_export_routes(
     @router.get("/export")
     async def export_yaml(_request: Request) -> StreamingResponse:
         """Download the spec as a YAML file."""
-        builder = get_builder_state()
-        if builder.spec is None:
-            raise HTTPException(status_code=400, detail="No spec in progress")
-
+        builder = _require_spec()
         yaml_content = spec_to_yaml(builder.spec)
         filename = f"{builder.spec.name or 'profile'}.yaml"
 
@@ -96,9 +97,7 @@ def register_export_routes(
     @router.post("/save", response_class=HTMLResponse)
     async def save_to_filesystem(request: Request) -> HTMLResponse:
         """Save the spec to the specs directory."""
-        builder = get_builder_state()
-        if builder.spec is None:
-            raise HTTPException(status_code=400, detail="No spec in progress")
+        builder = _require_spec()
 
         # Apply any included metadata from the form
         form_data = await request.form()

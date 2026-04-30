@@ -87,6 +87,25 @@ def register_field_routes(
         get_builder_state: Callable to get builder state.
     """
 
+    def _require_spec() -> SpecBuilderState:
+        """Get builder state, raising HTTPException if no spec in progress."""
+        builder = get_builder_state()
+        if builder.spec is None:
+            raise HTTPException(status_code=400, detail="No spec in progress")
+        return builder
+
+    def _require_entity(builder: SpecBuilderState, name: str):
+        """Get entity by name, raising HTTPException if not found."""
+        if name not in builder.spec.entities:
+            raise HTTPException(status_code=404, detail=f"Entity '{name}' not found")
+        return builder.spec.entities[name]
+
+    def _require_field(entity, idx: int) -> FieldSpec:
+        """Get field by index, raising HTTPException if not found."""
+        if idx < 0 or idx >= len(entity.fields):
+            raise HTTPException(status_code=404, detail="Field not found")
+        return entity.fields[idx]
+
     def _entity_editor_response(
         request: Request,
         builder: SpecBuilderState,
@@ -118,13 +137,8 @@ def register_field_routes(
         items: str = Form(""),
     ) -> HTMLResponse:
         """Add a new field to an entity."""
-        builder = get_builder_state()
-        if builder.spec is None:
-            raise HTTPException(status_code=400, detail="No spec in progress")
-
-        if entity_name not in builder.spec.entities:
-            raise HTTPException(status_code=404, detail=f"Entity '{entity_name}' not found")
-
+        builder = _require_spec()
+        _require_entity(builder, entity_name)
         name = name.strip()
         error = validate_field_name(name)
         if error:
@@ -158,17 +172,9 @@ def register_field_routes(
     @router.get("/entity/{entity_name}/field/{idx}", response_class=HTMLResponse)
     async def get_field_form(request: Request, entity_name: str, idx: int) -> HTMLResponse:
         """Get field editor form."""
-        builder = get_builder_state()
-        if builder.spec is None:
-            raise HTTPException(status_code=400, detail="No spec in progress")
-
-        if entity_name not in builder.spec.entities:
-            raise HTTPException(status_code=404, detail=f"Entity '{entity_name}' not found")
-
-        entity = builder.spec.entities[entity_name]
-        if idx < 0 or idx >= len(entity.fields):
-            raise HTTPException(status_code=404, detail="Field not found")
-
+        builder = _require_spec()
+        entity = _require_entity(builder, entity_name)
+        _require_field(entity, idx)
         builder.editing_field_idx = idx
 
         return templates.TemplateResponse(
@@ -208,16 +214,9 @@ def register_field_routes(
         reference: str = Form(""),
     ) -> HTMLResponse:
         """Update a field."""
-        builder = get_builder_state()
-        if builder.spec is None:
-            raise HTTPException(status_code=400, detail="No spec in progress")
-
-        if entity_name not in builder.spec.entities:
-            raise HTTPException(status_code=404, detail=f"Entity '{entity_name}' not found")
-
-        entity = builder.spec.entities[entity_name]
-        if idx < 0 or idx >= len(entity.fields):
-            raise HTTPException(status_code=404, detail="Field not found")
+        builder = _require_spec()
+        entity = _require_entity(builder, entity_name)
+        _require_field(entity, idx)
 
         # Build update data and constraints
         update_data = FieldUpdateData(
@@ -263,17 +262,9 @@ def register_field_routes(
     @router.delete("/entity/{entity_name}/field/{idx}", response_class=HTMLResponse)
     async def delete_field(request: Request, entity_name: str, idx: int) -> HTMLResponse:
         """Delete a field from an entity."""
-        builder = get_builder_state()
-        if builder.spec is None:
-            raise HTTPException(status_code=400, detail="No spec in progress")
-
-        if entity_name not in builder.spec.entities:
-            raise HTTPException(status_code=404, detail=f"Entity '{entity_name}' not found")
-
-        entity = builder.spec.entities[entity_name]
-        if idx < 0 or idx >= len(entity.fields):
-            raise HTTPException(status_code=404, detail="Field not found")
-
+        builder = _require_spec()
+        entity = _require_entity(builder, entity_name)
+        _require_field(entity, idx)
         del entity.fields[idx]
         builder.editing_field_idx = None
         builder.mark_changed()

@@ -11,11 +11,60 @@ from typing import TYPE_CHECKING
 from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
 
 from metaseed.specs.schema import ValidationRuleSpec
 
 if TYPE_CHECKING:
     from .state import SpecBuilderState
+
+
+class RuleUpdateData(BaseModel):
+    """Data for updating a validation rule. Reduces parameter count."""
+
+    name: str
+    description: str = ""
+    applies_to: str = "all"
+    field: str = ""
+    condition: str = ""
+    pattern: str = ""
+    minimum: str = ""
+    maximum: str = ""
+    enum_values: str = ""
+    reference: str = ""
+    unique_within: str = ""
+    min_items: str = ""
+    max_items: str = ""
+
+    def parse_applies_to(self) -> str | list[str]:
+        """Parse applies_to into proper format."""
+        applies_to = self.applies_to.strip()
+        if applies_to == "all":
+            return "all"
+        values = [e.strip() for e in applies_to.split(",") if e.strip()]
+        if len(values) == 1:
+            return values[0]
+        return values
+
+    def apply_to_rule(self, rule: ValidationRuleSpec) -> None:
+        """Apply update data to a validation rule."""
+        rule.name = self.name.strip()
+        rule.description = self.description.strip()
+        rule.applies_to = self.parse_applies_to()
+        rule.field = self.field.strip() or None
+        rule.condition = self.condition.strip() or None
+        rule.pattern = self.pattern.strip() or None
+        rule.minimum = float(self.minimum) if self.minimum.strip() else None
+        rule.maximum = float(self.maximum) if self.maximum.strip() else None
+        rule.enum = (
+            [v.strip() for v in self.enum_values.split("\n") if v.strip()]
+            if self.enum_values.strip()
+            else None
+        )
+        rule.reference = self.reference.strip() or None
+        rule.unique_within = self.unique_within.strip() or None
+        rule.min_items = int(self.min_items) if self.min_items.strip() else None
+        rule.max_items = int(self.max_items) if self.max_items.strip() else None
 
 
 def register_rule_routes(
@@ -30,6 +79,19 @@ def register_rule_routes(
         templates: Jinja2Templates instance.
         get_builder_state: Callable to get builder state.
     """
+
+    def _require_spec() -> SpecBuilderState:
+        """Get builder state, raising HTTPException if no spec in progress."""
+        builder = get_builder_state()
+        if builder.spec is None:
+            raise HTTPException(status_code=400, detail="No spec in progress")
+        return builder
+
+    def _require_rule(builder: SpecBuilderState, idx: int) -> ValidationRuleSpec:
+        """Get rule by index, raising HTTPException if not found."""
+        if idx < 0 or idx >= len(builder.spec.validation_rules):
+            raise HTTPException(status_code=404, detail="Rule not found")
+        return builder.spec.validation_rules[idx]
 
     def _rules_list_response(
         request: Request,
@@ -50,13 +112,27 @@ def register_rule_routes(
             },
         )
 
+    def _rule_form_response(
+        request: Request,
+        builder: SpecBuilderState,
+        rule: ValidationRuleSpec,
+        idx: int,
+    ) -> HTMLResponse:
+        """Helper to return rule form template response."""
+        return templates.TemplateResponse(
+            request,
+            "spec_builder/partials/validation_rule_form.html",
+            {
+                "rule": rule,
+                "rule_idx": idx,
+                "entities": list(builder.spec.entities.keys()),
+            },
+        )
+
     @router.get("/validation-rules", response_class=HTMLResponse)
     async def get_validation_rules(request: Request) -> HTMLResponse:
         """Get validation rules list."""
-        builder = get_builder_state()
-        if builder.spec is None:
-            raise HTTPException(status_code=400, detail="No spec in progress")
-
+        builder = _require_spec()
         return _rules_list_response(request, builder)
 
     @router.post("/validation-rule", response_class=HTMLResponse)
@@ -65,9 +141,7 @@ def register_rule_routes(
         name: str = Form(...),
     ) -> HTMLResponse:
         """Add a new validation rule."""
-        builder = get_builder_state()
-        if builder.spec is None:
-            raise HTTPException(status_code=400, detail="No spec in progress")
+        builder = _require_spec()
 
         name = name.strip()
         if not name:
@@ -82,37 +156,15 @@ def register_rule_routes(
         builder.editing_rule_idx = len(builder.spec.validation_rules) - 1
         builder.mark_changed()
 
-        return templates.TemplateResponse(
-            request,
-            "spec_builder/partials/validation_rule_form.html",
-            {
-                "rule": new_rule,
-                "rule_idx": builder.editing_rule_idx,
-                "entities": list(builder.spec.entities.keys()),
-            },
-        )
+        return _rule_form_response(request, builder, new_rule, builder.editing_rule_idx)
 
     @router.get("/validation-rule/{idx}", response_class=HTMLResponse)
     async def get_validation_rule_form(request: Request, idx: int) -> HTMLResponse:
         """Get validation rule editor form."""
-        builder = get_builder_state()
-        if builder.spec is None:
-            raise HTTPException(status_code=400, detail="No spec in progress")
-
-        if idx < 0 or idx >= len(builder.spec.validation_rules):
-            raise HTTPException(status_code=404, detail="Rule not found")
-
+        builder = _require_spec()
+        rule = _require_rule(builder, idx)
         builder.editing_rule_idx = idx
-
-        return templates.TemplateResponse(
-            request,
-            "spec_builder/partials/validation_rule_form.html",
-            {
-                "rule": builder.spec.validation_rules[idx],
-                "rule_idx": idx,
-                "entities": list(builder.spec.entities.keys()),
-            },
-        )
+        return _rule_form_response(request, builder, rule, idx)
 
     @router.put("/validation-rule/{idx}", response_class=HTMLResponse)
     async def update_validation_rule(
@@ -133,42 +185,26 @@ def register_rule_routes(
         max_items: str = Form(""),
     ) -> HTMLResponse:
         """Update a validation rule."""
-        builder = get_builder_state()
-        if builder.spec is None:
-            raise HTTPException(status_code=400, detail="No spec in progress")
+        builder = _require_spec()
+        rule = _require_rule(builder, idx)
 
-        if idx < 0 or idx >= len(builder.spec.validation_rules):
-            raise HTTPException(status_code=404, detail="Rule not found")
-
-        rule = builder.spec.validation_rules[idx]
-
-        # Parse applies_to (can be "all" or comma-separated entity names)
-        applies_to = applies_to.strip()
-        applies_to_value: str | list[str]
-        if applies_to == "all":
-            applies_to_value = "all"
-        else:
-            applies_to_value = [e.strip() for e in applies_to.split(",") if e.strip()]
-            if len(applies_to_value) == 1:
-                applies_to_value = applies_to_value[0]
-
-        rule.name = name.strip()
-        rule.description = description.strip()
-        rule.applies_to = applies_to_value
-        rule.field = field.strip() or None
-        rule.condition = condition.strip() or None
-        rule.pattern = pattern.strip() or None
-        rule.minimum = float(minimum) if minimum.strip() else None
-        rule.maximum = float(maximum) if maximum.strip() else None
-        rule.enum = (
-            [v.strip() for v in enum_values.split("\n") if v.strip()]
-            if enum_values.strip()
-            else None
+        # Use RuleUpdateData to apply changes
+        update_data = RuleUpdateData(
+            name=name,
+            description=description,
+            applies_to=applies_to,
+            field=field,
+            condition=condition,
+            pattern=pattern,
+            minimum=minimum,
+            maximum=maximum,
+            enum_values=enum_values,
+            reference=reference,
+            unique_within=unique_within,
+            min_items=min_items,
+            max_items=max_items,
         )
-        rule.reference = reference.strip() or None
-        rule.unique_within = unique_within.strip() or None
-        rule.min_items = int(min_items) if min_items.strip() else None
-        rule.max_items = int(max_items) if max_items.strip() else None
+        update_data.apply_to_rule(rule)
 
         builder.editing_rule_idx = None
         builder.mark_changed()
@@ -178,12 +214,8 @@ def register_rule_routes(
     @router.delete("/validation-rule/{idx}", response_class=HTMLResponse)
     async def delete_validation_rule(request: Request, idx: int) -> HTMLResponse:
         """Delete a validation rule."""
-        builder = get_builder_state()
-        if builder.spec is None:
-            raise HTTPException(status_code=400, detail="No spec in progress")
-
-        if idx < 0 or idx >= len(builder.spec.validation_rules):
-            raise HTTPException(status_code=404, detail="Rule not found")
+        builder = _require_spec()
+        _require_rule(builder, idx)  # Validate idx exists
 
         del builder.spec.validation_rules[idx]
         builder.editing_rule_idx = None

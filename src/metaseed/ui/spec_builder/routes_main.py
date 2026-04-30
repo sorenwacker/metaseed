@@ -38,6 +38,13 @@ def register_main_routes(
         get_builder_state: Callable to get builder state.
     """
 
+    def _require_spec() -> SpecBuilderState:
+        """Get builder state, raising HTTPException if no spec in progress."""
+        builder = get_builder_state()
+        if builder.spec is None:
+            raise HTTPException(status_code=400, detail="No spec in progress")
+        return builder
+
     @router.get("", response_class=HTMLResponse)
     async def spec_builder_index(request: Request) -> HTMLResponse:
         """Render the spec builder main page."""
@@ -126,10 +133,7 @@ def register_main_routes(
     @router.get("/profile-metadata", response_class=HTMLResponse)
     async def get_profile_metadata_form(request: Request) -> HTMLResponse:
         """Get the profile metadata form."""
-        builder = get_builder_state()
-        if builder.spec is None:
-            raise HTTPException(status_code=400, detail="No spec in progress")
-
+        builder = _require_spec()
         return templates.TemplateResponse(
             request,
             "spec_builder/partials/profile_metadata_form.html",
@@ -141,11 +145,7 @@ def register_main_routes(
         request: Request,
     ) -> HTMLResponse:
         """Update profile metadata."""
-
-        builder = get_builder_state()
-        if builder.spec is None:
-            raise HTTPException(status_code=400, detail="No spec in progress")
-
+        builder = _require_spec()
         form_data = await request.form()
         builder.spec.name = form_data.get("name", "").strip()
         builder.spec.version = form_data.get("version", "").strip() or "1.0"
