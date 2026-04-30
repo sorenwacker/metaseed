@@ -69,7 +69,7 @@ def create_app(state: AppState | None = None) -> FastAPI:
         return app.state.ui_state
 
     # Mount spec builder routes
-    from .spec_builder_routes import create_spec_builder_router
+    from .spec_builder import create_spec_builder_router
 
     spec_builder_router = create_spec_builder_router(templates, get_state)
     app.include_router(spec_builder_router)

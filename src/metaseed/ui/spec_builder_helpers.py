@@ -150,54 +150,12 @@ def save_spec(spec: ProfileSpec, name: str | None = None) -> Path:
     return profile_path
 
 
-def list_available_templates() -> list[dict]:
-    """List built-in profiles that can be used as templates.
+def _list_specs(include_user_defined: bool, default_display_name_fn: callable) -> list[dict]:
+    """Common logic for listing specs.
 
-    Returns:
-        List of dicts with profile info: name, display_name, versions.
-    """
-    from metaseed.specs.loader import SpecLoader
-
-    loader = SpecLoader()
-    profiles = loader.list_profiles()
-
-    result = []
-    for profile_name in profiles:
-        # Skip user-defined profiles
-        if loader.is_user_defined(profile_name):
-            continue
-
-        versions = loader.list_versions(profile_name)
-        if not versions:
-            continue
-
-        # Get display info from latest version
-        try:
-            latest = versions[-1]
-            spec = loader.load_profile(version=latest, profile=profile_name)
-            result.append(
-                {
-                    "name": profile_name,
-                    "display_name": spec.display_name or profile_name.upper(),
-                    "description": spec.description or "",
-                    "versions": versions,
-                }
-            )
-        except Exception:
-            result.append(
-                {
-                    "name": profile_name,
-                    "display_name": profile_name.upper(),
-                    "description": "",
-                    "versions": versions,
-                }
-            )
-
-    return result
-
-
-def list_user_specs() -> list[dict]:
-    """List user-created specifications.
+    Args:
+        include_user_defined: If True, list user specs; if False, list built-in.
+        default_display_name_fn: Function to create default display name from profile name.
 
     Returns:
         List of dicts with spec info: name, display_name, versions.
@@ -209,8 +167,8 @@ def list_user_specs() -> list[dict]:
 
     result = []
     for profile_name in profiles:
-        # Only include user-defined profiles
-        if not loader.is_user_defined(profile_name):
+        is_user_defined = loader.is_user_defined(profile_name)
+        if is_user_defined != include_user_defined:
             continue
 
         versions = loader.list_versions(profile_name)
@@ -224,7 +182,7 @@ def list_user_specs() -> list[dict]:
             result.append(
                 {
                     "name": profile_name,
-                    "display_name": spec.display_name or profile_name,
+                    "display_name": spec.display_name or default_display_name_fn(profile_name),
                     "description": spec.description or "",
                     "versions": versions,
                 }
@@ -233,13 +191,37 @@ def list_user_specs() -> list[dict]:
             result.append(
                 {
                     "name": profile_name,
-                    "display_name": profile_name,
+                    "display_name": default_display_name_fn(profile_name),
                     "description": "",
                     "versions": versions,
                 }
             )
 
     return result
+
+
+def list_available_templates() -> list[dict]:
+    """List built-in profiles that can be used as templates.
+
+    Returns:
+        List of dicts with profile info: name, display_name, versions.
+    """
+    return _list_specs(
+        include_user_defined=False,
+        default_display_name_fn=lambda name: name.upper(),
+    )
+
+
+def list_user_specs() -> list[dict]:
+    """List user-created specifications.
+
+    Returns:
+        List of dicts with spec info: name, display_name, versions.
+    """
+    return _list_specs(
+        include_user_defined=True,
+        default_display_name_fn=lambda name: name,
+    )
 
 
 def delete_user_spec(name: str, version: str | None = None) -> bool:

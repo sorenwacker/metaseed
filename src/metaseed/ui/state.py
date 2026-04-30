@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any, Self
 
 if TYPE_CHECKING:
     from metaseed.facade import ProfileFacade
-    from metaseed.ui.spec_builder_state import SpecBuilderState
+    from metaseed.ui.spec_builder import SpecBuilderState
 
 
 def _get_default_profile() -> str:
