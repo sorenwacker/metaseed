@@ -1,0 +1,114 @@
+# CropXR Example - Tomato drought stress RNA-seq study
+# Based on CropXR combined metadata schema v1.0
+
+investigation_id: CROPXR-INV-2024-001
+investigation_title: Tomato drought tolerance transcriptomics
+investigation_description: >
+  Investigation into the molecular mechanisms of drought tolerance in tomato
+  using RNA-seq analysis.
+
+studies:
+  - study_id: CROPXR-SEQ-2024-001
+    internal_study_id: CROPXR-SEQ-2024-001
+    study_title: Transcriptomic response of tomato to drought stress
+    study_description: >
+      RNA-seq study investigating the molecular mechanisms underlying drought tolerance
+      in Solanum lycopersicum. Plants were subjected to controlled water deficit conditions
+      and leaf tissue was sampled at multiple time points for transcriptome analysis.
+    study_start_date: "2024-01-15"
+    country: NLD
+    study_type: RNASeq
+
+    experiments:
+      - internal_experiment_id: CROPXR-EXP-001
+        study_id: CROPXR-SEQ-2024-001
+        lab_internal_sample_id: 1
+        design_description: >
+          Strand-specific RNA-seq library preparation using TruSeq Stranded mRNA kit.
+          Libraries were prepared from 1ug total RNA per sample.
+        library_strategy: RNA-Seq
+        library_source: TRANSCRIPTOMIC
+        library_selection: PolyA
+        library_layout: paired-end firststrand
+        insert_size: "300"
+        library_construction_protocol: >
+          Total RNA was extracted using TRIzol reagent. mRNA was enriched using poly-A
+          selection. Libraries were prepared using Illumina TruSeq Stranded mRNA kit
+          following manufacturer's protocol.
+        platform: ILLUMINA
+        instrument_model: Illumina NovaSeq 6000
+        runs:
+          - internal_experiment_id: CROPXR-EXP-001
+            data_file_description: Paired-end FASTQ files from NovaSeq sequencing
+            data_file_format: fastq
+            md5_checksum: a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
+
+    observation_units:
+      - observation_unit_id: OU-TOMATO-001
+        observation_unit_type: plant
+        samples:
+          - sample_id: SAMPLE-001
+            lab_internal_sample_id: 1
+            sample_title: Tomato leaf sample - drought treatment 24h
+            collection_date: "2024-02-01"
+            plant_structure_ontology: PO:0025034
+            plant_anatomical_entity: leaf
+            taxon_id: "4081"
+            species_name: Solanum lycopersicum
+            plant_developmental_stage_text: Vegetative stage, 6-leaf stage
+            plant_developmental_stage_ontology: PO:0007112
+            country: NLD
+            latitude: 51.9851
+            longitude: 5.6637
+            age: 42
+            genotype: M82
+            genebank: TGRC
+            ecotype: cultivated
+            cultivar: M82
+            sex: hermaphrodite
+            seed_batch_id:
+              - TGRC-M82-2023-001
+            growth_conditions: >
+              Plants grown in climate-controlled greenhouse at 25C day/20C night,
+              16h photoperiod, 60% relative humidity.
+            growth_facility:
+              - greenhouse
+            growth_medium: soil
+            growth_light_regimen:
+              - "16_8"
+            growth_temperature_day: 25
+            growth_temperature_night: 20
+            growth_light_intensity: 400
+            growth_light_rfr_ratio: 1.2
+            treatment:
+              - drought stress
+            treatment_ontology:
+              - PECO:0007041
+            treatment_growth_medium:
+              - soil
+            treatment_light_regimen:
+              - "16_8"
+            treatment_temperature_day: 25
+            treatment_temperature_night: 20
+            treatment_light_intensity: 400
+            treatment_light_rfr_ratio: 1.2
+            treatment_time_duration:
+              - "24 hour"
+            treatment_time_of_day:
+              - "08:00"
+            treatment_chemical:
+              - none
+            treatment_chemical_cas_id:
+              - NA
+            experimental_group: treatment
+            biochemical_extraction_date: "2024-02-02"
+            sequencing_submission_date: "2024-02-15"
+
+persons:
+  - person_name: Dr. Jane Doe
+    person_email: jane.doe@example.org
+    person_id: https://orcid.org/0000-0000-0000-0001
+    person_role:
+      - Principal Investigator
+    person_affiliation:
+      - Wageningen University & Research

@@ -112,8 +112,10 @@ studies:
 
 persons:
   - study_id: CROPXR-PHENO-STD-2024-001
-    person_name: Dr. Jan Aardappel
-    person_email: jan.aardappel@wur.nl
-    person_id: https://orcid.org/0000-0003-1234-5678
-    person_role: Principal Investigator
-    person_affiliation: Wageningen University & Research
+    person_name: Dr. John Smith
+    person_email: john.smith@example.org
+    person_id: https://orcid.org/0000-0000-0000-0002
+    person_role:
+      - Principal Investigator
+    person_affiliation:
+      - Wageningen University & Research
