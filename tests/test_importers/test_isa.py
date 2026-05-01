@@ -6,6 +6,8 @@ import pytest
 
 from metaseed.importers import ISAImporter
 
+FIXTURES_DIR = Path(__file__).parent.parent / "fixtures" / "isa_examples"
+
 
 class TestISAImporter:
     """Tests for ISAImporter class."""
@@ -18,7 +20,7 @@ class TestISAImporter:
     @pytest.fixture
     def isa_json_path(self) -> Path:
         """Path to test ISA-JSON file."""
-        return Path("tests/fixtures/isa_examples/BII-I-1.json")
+        return FIXTURES_DIR / "BII-I-1.json"
 
     @pytest.fixture
     def isa_tab_path(self, tmp_path: Path) -> Path:
@@ -29,11 +31,10 @@ class TestISAImporter:
         tab_dir = tmp_path / "isatab"
         tab_dir.mkdir()
 
-        fixtures = Path("tests/fixtures/isa_examples")
-        shutil.copy(fixtures / "i_MTBLS1.txt", tab_dir / "i_Investigation.txt")
-        shutil.copy(fixtures / "s_MTBLS1.txt", tab_dir / "s_MTBLS1.txt")
+        shutil.copy(FIXTURES_DIR / "i_MTBLS1.txt", tab_dir / "i_Investigation.txt")
+        shutil.copy(FIXTURES_DIR / "s_MTBLS1.txt", tab_dir / "s_MTBLS1.txt")
         shutil.copy(
-            fixtures / "a_MTBLS1_metabolite_profiling.txt",
+            FIXTURES_DIR / "a_MTBLS1_metabolite_profiling.txt",
             tab_dir / "a_MTBLS1_metabolite_profiling_NMR_spectroscopy.txt",
         )
 
@@ -159,4 +160,4 @@ class TestISATabImport(TestISAImporter):
     def test_import_tab_not_directory_raises(self, importer: ISAImporter) -> None:
         """Importing non-directory raises NotADirectoryError."""
         with pytest.raises(NotADirectoryError):
-            importer.import_tab(Path("tests/fixtures/isa_examples/BII-I-1.json"))
+            importer.import_tab(FIXTURES_DIR / "BII-I-1.json")
