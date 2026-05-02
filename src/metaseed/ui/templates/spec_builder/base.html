@@ -8,7 +8,7 @@
     <link rel="icon" type="image/png" sizes="128x128" href="/static/images/metaseed-icon-128.png">
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
     <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
-    <link rel="stylesheet" href="/static/css/style.css?v=54">
+    <link rel="stylesheet" href="/static/css/style.css?v=57">
 </head>
 <body hx-headers='{"X-Requested-With": "XMLHttpRequest"}'>
     <div class="layout layout-fixed">
@@ -25,6 +25,11 @@
                 <span class="unsaved-indicator" title="Unsaved changes">*</span>
                 {% endif %}
             </h1>
+            <nav class="header-nav">
+                <a href="/" class="nav-btn" data-testid="nav-editor">Editor</a>
+                <a href="/spec-builder" class="nav-btn active" data-testid="nav-spec-builder">Spec Builder</a>
+                <a href="/merge/" class="nav-btn" data-testid="nav-compare">Compare</a>
+            </nav>
             <div class="header-actions">
                 {% if template_source %}
                 <span class="template-badge">
@@ -32,18 +37,19 @@
                 </span>
                 {% endif %}
                 <button id="sidebar-toggle-btn" class="btn btn-header" onclick="toggleSidebar()" title="Hide sidebar (Ctrl+B)">
-                    Hide Sidebar
+                    Sidebar
                 </button>
                 <button class="btn btn-header" onclick="autoLayout()">
-                    Auto Layout
+                    Layout
                 </button>
                 <button class="btn btn-header"
                         hx-get="/spec-builder/preview"
                         hx-target="#preview-content"
                         hx-swap="innerHTML"
                         onclick="showPreview()">
-                    Preview YAML
+                    Preview
                 </button>
+                <span class="header-divider"></span>
                 <a href="/spec-builder/export" class="btn btn-header" download>
                     Export
                 </a>
@@ -53,10 +59,8 @@
                 <span class="header-divider"></span>
                 <a href="/spec-builder/reset" class="btn btn-header"
                    onclick="return confirm('Start over? Any unsaved changes will be lost.')">
-                    Start Over
+                    Reset
                 </a>
-                <a href="/merge/" class="btn btn-header">Compare</a>
-                <a href="/" class="btn btn-header">Back</a>
             </div>
         </header>
 

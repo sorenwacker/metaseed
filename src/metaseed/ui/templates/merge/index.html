@@ -9,22 +9,22 @@
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
     <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
     <script src="/static/js/erd-common.js?v=1"></script>
-    <link rel="stylesheet" href="/static/css/style.css?v=56">
+    <link rel="stylesheet" href="/static/css/style.css?v=57">
 </head>
 <body hx-headers='{"X-Requested-With": "XMLHttpRequest"}'>
     <div class="layout layout-fixed">
         <header class="header">
             <h1 class="header-title">
                 <a href="/" style="color: inherit; text-decoration: none;"><img src="/static/images/metaseed-logo-light.svg" alt="Metaseed" class="header-logo"></a>
-                <span class="header-sep">/</span>
-                <span>Profile Comparison</span>
             </h1>
+            <nav class="header-nav">
+                <a href="/" class="nav-btn" data-testid="nav-editor">Editor</a>
+                <a href="/spec-builder" class="nav-btn" data-testid="nav-spec-builder">Spec Builder</a>
+                <a href="/merge/" class="nav-btn active" data-testid="nav-compare">Compare</a>
+            </nav>
             <div class="header-actions">
-                <button class="btn btn-header" onclick="autoLayout()">Auto Layout</button>
+                <button class="btn btn-header" onclick="autoLayout()">Layout</button>
                 <button class="btn btn-header" onclick="fitGraph()">Fit</button>
-                <span class="header-divider"></span>
-                <a href="/spec-builder" class="btn btn-header">Spec Builder</a>
-                <a href="/" class="btn btn-header">Back</a>
             </div>
         </header>
 

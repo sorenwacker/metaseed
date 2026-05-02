@@ -120,7 +120,7 @@ body::before {
     padding: var(--space-md) var(--space-xl);
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    gap: var(--space-md);
     position: sticky;
     top: 0;
     z-index: 100;
@@ -168,6 +168,7 @@ body::before {
     display: flex;
     align-items: center;
     gap: var(--space-sm);
+    margin-left: auto;
 }
 
 .btn-header {
@@ -207,6 +208,42 @@ body::before {
 
 .btn-file input[type="file"] {
     display: none;
+}
+
+/* Header Navigation */
+.header-nav {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: var(--space-lg);
+    padding: 4px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: var(--radius-md);
+}
+
+.nav-btn {
+    font-family: var(--font-body);
+    padding: 6px 14px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    text-decoration: none;
+}
+
+.nav-btn:hover {
+    color: var(--clr-ivory);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.nav-btn.active {
+    background: rgba(255, 255, 255, 0.15);
+    color: var(--clr-ivory);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 /* ============================================
