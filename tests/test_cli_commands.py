@@ -379,3 +379,175 @@ class TestHelpOptions:
         result = runner.invoke(app, ["import", "--help"])
         assert result.exit_code == 0
         assert "Import" in result.output
+
+    def test_compare_help(self):
+        """Compare --help shows usage."""
+        result = runner.invoke(app, ["compare", "--help"])
+        assert result.exit_code == 0
+        assert "Compare" in result.output
+
+    def test_merge_help(self):
+        """Merge --help shows usage."""
+        result = runner.invoke(app, ["merge", "--help"])
+        assert result.exit_code == 0
+        assert "Merge" in result.output
+
+
+class TestCompareCommand:
+    """Tests for the compare command."""
+
+    def test_compare_two_profiles(self):
+        """Compare two profiles outputs markdown."""
+        result = runner.invoke(app, ["compare", "miappe/1.1", "isa/1.0"])
+        assert result.exit_code == 0
+        assert "Profile Comparison Report" in result.output
+        assert "miappe/1.1" in result.output
+        assert "isa/1.0" in result.output
+
+    def test_compare_requires_two_profiles(self):
+        """Compare requires at least two profiles."""
+        result = runner.invoke(app, ["compare", "miappe/1.1"])
+        assert result.exit_code != 0
+
+    def test_compare_invalid_profile_format(self):
+        """Compare rejects invalid profile format."""
+        result = runner.invoke(app, ["compare", "invalid", "miappe/1.1"])
+        assert result.exit_code != 0
+
+    def test_compare_unknown_profile(self):
+        """Compare rejects unknown profiles."""
+        result = runner.invoke(app, ["compare", "unknown/1.0", "miappe/1.1"])
+        assert result.exit_code != 0
+
+    def test_compare_output_to_file(self, tmp_path):
+        """Compare writes to output file."""
+        output_file = tmp_path / "comparison.md"
+        result = runner.invoke(app, ["compare", "miappe/1.1", "isa/1.0", "-o", str(output_file)])
+        assert result.exit_code == 0
+        assert output_file.exists()
+        content = output_file.read_text()
+        assert "Profile Comparison Report" in content
+
+    def test_compare_csv_format(self, tmp_path):
+        """Compare outputs CSV format."""
+        output_file = tmp_path / "comparison.csv"
+        result = runner.invoke(
+            app, ["compare", "miappe/1.1", "isa/1.0", "-f", "csv", "-o", str(output_file)]
+        )
+        assert result.exit_code == 0
+        assert output_file.exists()
+        content = output_file.read_text()
+        assert "," in content  # CSV has commas
+
+    def test_compare_html_format(self, tmp_path):
+        """Compare outputs HTML format."""
+        output_file = tmp_path / "comparison.html"
+        result = runner.invoke(
+            app, ["compare", "miappe/1.1", "isa/1.0", "-f", "html", "-o", str(output_file)]
+        )
+        assert result.exit_code == 0
+        assert output_file.exists()
+        content = output_file.read_text()
+        assert "<html" in content or "<table" in content
+
+    def test_compare_multiple_profiles(self):
+        """Compare supports more than two profiles."""
+        result = runner.invoke(app, ["compare", "miappe/1.1", "isa/1.0", "jerm/1.0"])
+        assert result.exit_code == 0
+        assert "Profile Comparison Report" in result.output
+
+
+class TestMergeCommand:
+    """Tests for the merge command."""
+
+    def test_merge_two_profiles(self, tmp_path):
+        """Merge two profiles creates YAML output."""
+        output_file = tmp_path / "merged.yaml"
+        result = runner.invoke(app, ["merge", "miappe/1.1", "isa/1.0", "-o", str(output_file)])
+        assert result.exit_code == 0
+        assert output_file.exists()
+        assert "Merged profile written to" in result.output
+
+        # Verify it's valid YAML with expected structure
+        import yaml
+
+        content = yaml.safe_load(output_file.read_text())
+        assert "entities" in content
+        assert "version" in content
+
+    def test_merge_requires_two_profiles(self):
+        """Merge requires at least two profiles."""
+        result = runner.invoke(app, ["merge", "miappe/1.1"])
+        assert result.exit_code != 0
+
+    def test_merge_with_strategy(self, tmp_path):
+        """Merge accepts strategy option."""
+        output_file = tmp_path / "merged.yaml"
+        result = runner.invoke(
+            app,
+            [
+                "merge",
+                "miappe/1.1",
+                "isa/1.0",
+                "-s",
+                "most_restrictive",
+                "-o",
+                str(output_file),
+            ],
+        )
+        assert result.exit_code == 0
+        assert "most_restrictive" in result.output
+
+    def test_merge_with_custom_name(self, tmp_path):
+        """Merge accepts custom name option."""
+        output_file = tmp_path / "merged.yaml"
+        result = runner.invoke(
+            app,
+            ["merge", "miappe/1.1", "isa/1.0", "-n", "my-custom-profile", "-o", str(output_file)],
+        )
+        assert result.exit_code == 0
+
+        import yaml
+
+        content = yaml.safe_load(output_file.read_text())
+        assert content["name"] == "my-custom-profile"
+
+    def test_merge_with_custom_version(self, tmp_path):
+        """Merge accepts custom version option."""
+        output_file = tmp_path / "merged.yaml"
+        result = runner.invoke(
+            app,
+            ["merge", "miappe/1.1", "isa/1.0", "-v", "2.5", "-o", str(output_file)],
+        )
+        assert result.exit_code == 0
+
+        import yaml
+
+        content = yaml.safe_load(output_file.read_text())
+        assert content["version"] == "2.5"
+
+    def test_merge_invalid_strategy(self, tmp_path):
+        """Merge rejects invalid strategy."""
+        output_file = tmp_path / "merged.yaml"
+        result = runner.invoke(
+            app,
+            ["merge", "miappe/1.1", "isa/1.0", "-s", "invalid_strategy", "-o", str(output_file)],
+        )
+        assert result.exit_code != 0
+
+    def test_merge_prefer_strategy(self, tmp_path):
+        """Merge supports prefer_<profile> strategy."""
+        output_file = tmp_path / "merged.yaml"
+        result = runner.invoke(
+            app,
+            [
+                "merge",
+                "miappe/1.1",
+                "isa/1.0",
+                "-s",
+                "prefer_miappe/1.1",
+                "-o",
+                str(output_file),
+            ],
+        )
+        assert result.exit_code == 0

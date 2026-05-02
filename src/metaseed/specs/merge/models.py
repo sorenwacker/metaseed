@@ -270,7 +270,7 @@ class MergeResult:
         import yaml
 
         return yaml.dump(
-            self.merged_profile.model_dump(exclude_none=True),
+            self.merged_profile.model_dump(mode="json", exclude_none=True),
             default_flow_style=False,
             sort_keys=False,
             allow_unicode=True,
@@ -282,4 +282,4 @@ class MergeResult:
         Returns:
             Dictionary representation of the merged profile.
         """
-        return self.merged_profile.model_dump(exclude_none=True)
+        return self.merged_profile.model_dump(mode="json", exclude_none=True)
