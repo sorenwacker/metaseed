@@ -120,7 +120,7 @@ def _get_validation_rules_for_entity(
 
     # Get profile validation rules
     try:
-        profile_spec = loader._load_profile(version, profile)
+        profile_spec = loader.load_profile(version, profile)
         if profile_spec:
             for rule_spec in profile_spec.validation_rules:
                 if _rule_applies_to_entity(rule_spec.applies_to, entity_type):

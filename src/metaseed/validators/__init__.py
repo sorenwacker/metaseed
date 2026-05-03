@@ -4,6 +4,7 @@ This module provides validation rules and engine for validating
 MIAPPE-compliant metadata beyond basic type checking.
 """
 
+import logging
 import re
 from typing import Any
 
@@ -17,6 +18,8 @@ from metaseed.validators.rules import (
     RequiredFieldsRule,
     UniqueIdPatternRule,
 )
+
+logger = logging.getLogger(__name__)
 
 __all__ = [
     "DatasetValidationResult",
@@ -72,7 +75,9 @@ def _validate_nested(
     loader = SpecLoader(profile=profile)
     try:
         spec = loader.load_entity(entity, version)
-    except Exception:
+    except (FileNotFoundError, KeyError, ValueError) as e:
+        # Entity spec not found - return errors collected so far
+        logger.debug("Could not load entity spec %s: %s", entity, e)
         return errors
 
     for field in spec.fields:
@@ -85,7 +90,8 @@ def _validate_nested(
             item_entity = _to_snake_case(field.items)
             try:
                 loader.load_entity(item_entity, version)
-            except Exception:
+            except (FileNotFoundError, KeyError, ValueError):
+                # Not a known entity type, skip nested validation
                 continue
 
             # Validate each item in the list

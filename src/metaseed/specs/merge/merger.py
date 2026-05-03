@@ -4,6 +4,7 @@ This module provides functionality to merge multiple profile specifications
 with configurable conflict resolution strategies.
 """
 
+import logging
 from typing import Self
 
 from metaseed.specs.loader import SpecLoader
@@ -23,6 +24,8 @@ from .models import (
     MergeWarning,
 )
 from .strategies import MergeStrategy, get_strategy
+
+logger = logging.getLogger(__name__)
 
 
 class SpecMerger:
@@ -71,6 +74,13 @@ class SpecMerger:
         """
         if len(profiles) < 2:
             raise ValueError("At least 2 profiles required for merge")
+
+        logger.info(
+            "Merging %d profiles with strategy '%s': %s",
+            len(profiles),
+            strategy if isinstance(strategy, str) else strategy.name,
+            profiles,
+        )
 
         # Resolve strategy
         merge_strategy = get_strategy(strategy) if isinstance(strategy, str) else strategy
@@ -146,7 +156,7 @@ class SpecMerger:
             entities=merged_entities,
         )
 
-        return MergeResult(
+        result = MergeResult(
             merged_profile=merged_profile,
             source_profiles=profile_order,
             strategy_used=merge_strategy.name,
@@ -154,6 +164,15 @@ class SpecMerger:
             warnings=warnings,
             unresolved_conflicts=unresolved,
         )
+
+        logger.info(
+            "Merge complete: %d entities, %d warnings, %d unresolved conflicts",
+            len(merged_entities),
+            len(warnings),
+            len(unresolved),
+        )
+
+        return result
 
     def _build_resolution_map(
         self: Self, resolutions: list[ConflictResolution]

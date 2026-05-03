@@ -144,9 +144,9 @@ def build_graph(state: AppState) -> dict:
                 category = category.get("term", category.get("name", ""))
             if category and value:
                 return f"{category}: {value}"
-            elif category:
+            if category:
                 return str(category)
-            elif value:
+            if value:
                 return str(value)
 
         # Special handling for Person (ISA uses last_name/first_name)
@@ -155,9 +155,9 @@ def build_graph(state: AppState) -> dict:
             first = data.get("first_name", data.get("given_name", ""))
             if last and first:
                 return f"{first} {last}"
-            elif last:
+            if last:
                 return last
-            elif first:
+            if first:
                 return first
 
         # Try common label fields

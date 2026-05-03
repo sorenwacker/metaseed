@@ -7,6 +7,7 @@ This module assembles routes from domain-specific modules in the routes/ package
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +29,8 @@ from .routes import (
     register_validation_routes,
 )
 from .state import AppState
+
+logger = logging.getLogger(__name__)
 
 UI_DIR = Path(__file__).parent
 TEMPLATES_DIR = UI_DIR / "templates"
@@ -98,4 +101,8 @@ def run_ui(host: str = "127.0.0.1", port: int = 8080) -> None:
     """Run the Metaseed web interface."""
     import uvicorn
 
+    from metaseed.logging import configure_logging
+
+    configure_logging(level="INFO")
+    logger.info("Starting Metaseed UI at http://%s:%d", host, port)
     uvicorn.run(app, host=host, port=port)

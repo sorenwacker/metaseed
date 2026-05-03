@@ -165,6 +165,44 @@ def get_registered_model(name: str) -> type[BaseModel] | None:
     return _global_context.get(name)
 
 
+def _coerce_string_to_entity(value: str, model_class: type[BaseModel]) -> BaseModel | str:
+    """Coerce a string value to an entity model if appropriate.
+
+    Only coerces when the target model has a simple primary field pattern:
+    - OntologyAnnotation-like: has "term" field -> {"term": "value"}
+    - Comment-like: has "value" field -> {"value": "value"}
+
+    Does NOT coerce when the model has complex required fields (like study_id),
+    as these are likely string references that should remain as strings.
+
+    Args:
+        value: String value to potentially coerce.
+        model_class: Target model class.
+
+    Returns:
+        Model instance if coercion is appropriate, original string otherwise.
+    """
+    model_fields = model_class.model_fields
+
+    # Only coerce if the model has a simple primary field pattern
+    # These are annotation-like entities where a single string makes sense
+    simple_primary_fields = ["term", "value", "text"]
+
+    for field_name in simple_primary_fields:
+        if field_name in model_fields:
+            # Check if this is the only required field (simple entity)
+            required_fields = [name for name, info in model_fields.items() if info.is_required()]
+            if len(required_fields) <= 1:
+                try:
+                    return model_class.model_validate({field_name: value})
+                except Exception:
+                    # If validation fails, keep as string
+                    return value
+
+    # Don't coerce - likely a string reference (e.g., derives_from: ["source_name"])
+    return value
+
+
 class MIAPPEBaseModel(BaseModel):
     """Base model for all MIAPPE/ISA entities.
 
@@ -180,7 +218,13 @@ class MIAPPEBaseModel(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def _convert_nested_entities(cls, data: Any) -> Any:
-        """Convert nested dicts to their proper model types."""
+        """Convert nested dicts to their proper model types.
+
+        Also handles type coercion for common cases:
+        - Strings in list[OntologyAnnotation] are coerced to {"term": string}
+        - This allows simplified example data like roles: ["principal investigator"]
+          to work with schemas expecting list[OntologyAnnotation]
+        """
         if not isinstance(data, dict):
             return data
 
@@ -201,11 +245,18 @@ class MIAPPEBaseModel(BaseModel):
                 for item in value:
                     if isinstance(item, dict):
                         converted.append(model_class.model_validate(item))
+                    elif isinstance(item, str):
+                        # Coerce strings to objects for OntologyAnnotation-like entities
+                        # These typically have a "term" field as the primary identifier
+                        converted.append(_coerce_string_to_entity(item, model_class))
                     else:
                         converted.append(item)
                 data[field_name] = converted
             elif isinstance(value, dict):
                 data[field_name] = model_class.model_validate(value)
+            elif isinstance(value, str):
+                # Coerce single string to entity
+                data[field_name] = _coerce_string_to_entity(value, model_class)
 
         return data
 

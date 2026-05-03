@@ -394,7 +394,7 @@ def get_strategy(name: str, **_kwargs: Any) -> MergeStrategy:
         return PreferProfileStrategy(profile_id)
 
     raise ValueError(
-        f"Unknown strategy: {name}. " f"Available: {', '.join(strategies.keys())}, prefer_<profile>"
+        f"Unknown strategy: {name}. Available: {', '.join(strategies.keys())}, prefer_<profile>"
     )
 
 

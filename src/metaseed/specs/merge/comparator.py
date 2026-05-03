@@ -4,6 +4,7 @@ This module provides functionality to compare multiple profile specifications
 and identify differences in entities, fields, constraints, and metadata.
 """
 
+import logging
 from typing import Self
 
 from metaseed.specs.loader import SpecLoader
@@ -22,6 +23,8 @@ from .models import (
     EntityDiff,
     FieldDiff,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class SpecComparator:
@@ -55,6 +58,8 @@ class SpecComparator:
         if len(profiles) < 2:
             raise ValueError("At least 2 profiles required for comparison")
 
+        logger.info("Comparing %d profiles: %s", len(profiles), profiles)
+
         # Load all profiles
         profile_specs: dict[str, ProfileSpec] = {}
         profile_ids: list[str] = []
@@ -62,6 +67,7 @@ class SpecComparator:
         for profile_name, version in profiles:
             profile_id = f"{profile_name}/{version}"
             profile_ids.append(profile_id)
+            logger.debug("Loading profile: %s", profile_id)
             profile_specs[profile_id] = self._loader.load_profile(
                 version=version, profile=profile_name
             )
@@ -82,6 +88,13 @@ class SpecComparator:
 
         # Calculate statistics
         result.statistics = self._calculate_statistics(result)
+
+        logger.info(
+            "Comparison complete: %d entities (%d common, %d conflicts)",
+            result.statistics.total_entities,
+            result.statistics.common_entities,
+            result.statistics.conflicting_fields,
+        )
 
         return result
 
@@ -375,7 +388,7 @@ class SpecComparator:
             if len(unique) > 1:
                 diffs[attr] = values
 
-        return diffs if diffs else None
+        return diffs or None
 
     def _compare_validation_rules(
         self: Self, profile_specs: dict[str, ProfileSpec]

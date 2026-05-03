@@ -49,6 +49,7 @@ nav:
   - Guides:
       - Spec Builder: guides/spec-builder.md
       - Profile Comparison: guides/spec-merge.md
+      - Logging: guides/logging.md
   - Profiles:
       - ISA: profiles/isa.md
       - JERM: profiles/jerm.md

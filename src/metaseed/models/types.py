@@ -28,8 +28,7 @@ def _validate_ontology_term(value: str) -> str:
         raise ValueError("Ontology term cannot be empty")
     if not _ONTOLOGY_TERM_PATTERN.match(value):
         raise ValueError(
-            f"Invalid ontology term format: {value}. "
-            "Expected format: PREFIX:ID, PREFIX_ID, or URL"
+            f"Invalid ontology term format: {value}. Expected format: PREFIX:ID, PREFIX_ID, or URL"
         )
     return value
 

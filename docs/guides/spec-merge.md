@@ -189,3 +189,128 @@ Summary counts:
 - `total_fields`: Total unique fields
 - `common_fields`: Fields identical across profiles
 - `conflicting_fields`: Fields with conflicts
+
+## Profile Merging
+
+Metaseed also supports merging multiple profiles into a single combined profile.
+
+### CLI Usage
+
+```bash
+# Basic merge with default strategy (first_wins)
+metaseed merge miappe/1.1 isa/1.0 -o combined.yaml
+
+# Merge with most restrictive strategy
+metaseed merge miappe/1.1 cropxr-phenotyping/0.0.5 -s most_restrictive -o strict.yaml
+
+# Merge with custom name and version
+metaseed merge miappe/1.1 isa/1.0 -n miappe-extended -v 2.0 -o extended.yaml
+
+# Prefer a specific profile for conflicts
+metaseed merge miappe/1.1 isa/1.0 -s prefer_miappe/1.1 -o miappe-based.yaml
+```
+
+### Python API
+
+```python
+from metaseed.specs.merge import merge
+
+# Basic merge
+result = merge(
+    profiles=[("miappe", "1.1"), ("isa", "1.0")],
+    strategy="first_wins",
+    output_name="combined",
+    output_version="1.0",
+)
+
+# Export to YAML
+yaml_output = result.to_yaml()
+
+# Export to dict
+dict_output = result.to_dict()
+
+# Check for warnings
+for warning in result.warnings:
+    print(f"{warning.entity_name}.{warning.field_name}: {warning.message}")
+```
+
+### Merge Strategies
+
+| Strategy | Behavior |
+|----------|----------|
+| `first_wins` | Use first profile's value for conflicts |
+| `last_wins` | Use last profile's value for conflicts |
+| `most_restrictive` | `required=True` wins, tighter constraints |
+| `least_restrictive` | `required=False` wins, looser constraints |
+| `prefer_<profile>` | Always prefer specific profile (e.g., `prefer_miappe/1.1`) |
+
+### MergeResult
+
+Contains the merged profile and metadata:
+
+- `merged_profile`: The resulting `ProfileSpec`
+- `source_profiles`: List of profile identifiers merged
+- `strategy_used`: Name of the merge strategy applied
+- `resolutions_applied`: List of conflict resolutions
+- `warnings`: List of warnings generated
+- `has_unresolved_conflicts`: Whether conflicts remain
+
+### ConflictResolution
+
+Manual resolution for a specific conflict:
+
+- `entity_name`: Entity containing the conflict
+- `field_name`: Field with the conflict
+- `attribute`: Attribute in conflict (e.g., "required", "type")
+- `resolved_value`: Value to use for resolution
+- `source_profile`: Profile the value was taken from (or None if custom)
+
+### MergeWarning
+
+Warning generated during merge:
+
+- `entity_name`: Entity where warning occurred
+- `field_name`: Field where warning occurred
+- `message`: Warning message
+- `resolution_applied`: Description of automatic resolution
+
+## Strategy Functions
+
+```python
+from metaseed.specs.merge import list_strategies, get_strategy
+
+# List all available strategies
+strategies = list_strategies()
+# Returns: ['first_wins', 'last_wins', 'most_restrictive', 'least_restrictive', 'prefer_<profile>']
+
+# Get a specific strategy instance
+strategy = get_strategy("most_restrictive")
+```
+
+## Manual Conflict Resolution
+
+Override automatic conflict resolution with manual resolutions:
+
+```python
+from metaseed.specs.merge import merge, ConflictResolution
+
+# Define manual resolution
+resolution = ConflictResolution(
+    entity_name="Study",
+    field_name="title",
+    attribute="required",
+    resolved_value=True,
+    source_profile="miappe/1.1",
+)
+
+# Apply during merge
+result = merge(
+    profiles=[("miappe", "1.1"), ("isa", "1.0")],
+    strategy="first_wins",
+    manual_resolutions=[resolution],
+)
+
+# Check applied resolutions
+for res in result.resolutions_applied:
+    print(f"Resolved {res.entity_name}.{res.field_name}: {res.resolved_value}")
+```

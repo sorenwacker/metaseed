@@ -8,6 +8,26 @@ from dataclasses import dataclass
 from typing import Any, Self
 
 
+def has_value(data: dict[str, Any], field: str) -> bool:
+    """Check if a field has a non-empty value.
+
+    Args:
+        data: Dictionary to check.
+        field: Field name to check.
+
+    Returns:
+        True if the field exists and has a non-empty value.
+    """
+    value = data.get(field)
+    if value is None:
+        return False
+    if isinstance(value, str) and value == "":
+        return False
+    if isinstance(value, list) and len(value) == 0:
+        return False
+    return True
+
+
 @dataclass
 class ValidationError:
     """Represents a validation error.

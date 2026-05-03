@@ -197,15 +197,11 @@ class AppState:
                     else:
                         continue
 
-                    # Get label for nested item
+                    # Get label for nested item using EntityHelper.get_label()
                     nested_helper = getattr(facade, nested_type, None)
-                    label = None
                     if nested_helper:
-                        for field in ["title", "name", "unique_id", "identifier"]:
-                            if item_data.get(field):
-                                label = str(item_data[field])
-                                break
-                    if not label:
+                        label = nested_helper.get_label(item_data)
+                    else:
                         label = f"{nested_type} {i + 1}"
 
                     child = {

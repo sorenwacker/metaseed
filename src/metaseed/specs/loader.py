@@ -14,6 +14,7 @@ User-defined specs are stored in:
     - Windows: %LOCALAPPDATA%/metaseed/specs/
 """
 
+import logging
 from pathlib import Path
 from typing import Self
 
@@ -22,6 +23,8 @@ from pydantic import ValidationError
 
 from metaseed.paths import get_builtin_specs_dir, get_user_specs_dir
 from metaseed.specs.schema import EntitySpec, ProfileSpec
+
+logger = logging.getLogger(__name__)
 
 
 class SpecLoadError(Exception):
@@ -100,14 +103,20 @@ class SpecLoader:
             return None
 
         try:
+            logger.debug("Loading profile from %s", profile_path)
             content = profile_path.read_text(encoding="utf-8")
             data = yaml.safe_load(content)
             if data is None:
+                logger.warning("Empty profile file: %s", profile_path)
                 return None
             loaded_profile = ProfileSpec.model_validate(data)
             self._profile_cache[cache_key] = loaded_profile
+            logger.debug(
+                "Loaded profile %s with %d entities", cache_key, len(loaded_profile.entities)
+            )
             return loaded_profile
-        except (yaml.YAMLError, ValidationError):
+        except (yaml.YAMLError, ValidationError) as e:
+            logger.warning("Failed to load profile %s: %s", profile_path, e)
             return None
 
     def load(self: Self, path: Path) -> EntitySpec:

@@ -262,7 +262,7 @@ class DiffVisualizer:
 
                     # Check for entity references
                     target = None
-                    if spec.type.value == "entity" or spec.type.value == "list" and spec.items:
+                    if spec.type.value == "entity" or (spec.type.value == "list" and spec.items):
                         target = spec.items
 
                     if target and target.lower() in entity_node_ids:
@@ -429,7 +429,7 @@ class DiffVisualizer:
                     if spec is None:
                         continue
 
-                    target = spec.items if spec.items else None
+                    target = spec.items or None
                     if target and target.lower() in entity_names:
                         to_id = target.replace(" ", "_")
                         lines.append(f"    {from_id} -->|{field_diff.field_name}| {to_id}")

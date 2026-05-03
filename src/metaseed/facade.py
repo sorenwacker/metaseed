@@ -127,6 +127,61 @@ class EntityHelper:
                 return info
         raise KeyError(f"Field '{field_name}' not found in {self._name}")
 
+    def get_label(self: Self, instance: BaseModel | dict[str, Any]) -> str:
+        """Get a human-readable label for an entity instance.
+
+        Looks for common identifier fields in order of preference:
+        - title (for Investigation, Study)
+        - name (for Person, Factor)
+        - first_name + last_name (for Person)
+        - unique_id / identifier
+        - Falls back to entity name + first field value
+
+        Args:
+            instance: Entity instance (Pydantic model or dict).
+
+        Returns:
+            Human-readable label string.
+        """
+        if hasattr(instance, "model_dump"):
+            data = instance.model_dump()
+        elif isinstance(instance, dict):
+            data = instance
+        else:
+            return f"{self._name}"
+
+        # Try common label fields in order
+        label_fields = [
+            "title",
+            "name",
+            "display_name",
+            "unique_id",
+            "identifier",
+            "id",
+            "term",
+        ]
+
+        for field in label_fields:
+            if data.get(field):
+                return str(data[field])
+
+        # Special case: Person with first_name/last_name
+        if data.get("first_name") or data.get("last_name"):
+            parts = []
+            if data.get("first_name"):
+                parts.append(data["first_name"])
+            if data.get("last_name"):
+                parts.append(data["last_name"])
+            if parts:
+                return " ".join(parts)
+
+        # Fall back to first non-empty string field
+        for f in self._spec.fields:
+            if f.type == FieldType.STRING and data.get(f.name):
+                return str(data[f.name])[:50]
+
+        return f"{self._name}"
+
     def help(self: Self) -> None:
         """Print detailed help for this entity."""
         print(f"\n{'=' * 60}")
@@ -212,6 +267,11 @@ class EntityHelper:
 
         Returns:
             New entity instance.
+
+        Note:
+            Pydantic may modify nested dict values in-place during validation.
+            If you need to reuse the input data, make a deep copy first:
+            ``import copy; data = copy.deepcopy(original_data)``
 
         Example:
             >>> inv = profile.Investigation.create(

@@ -14,10 +14,13 @@ class TestVersionCommand:
 
     def test_version_shows_version(self) -> None:
         """Version command displays version."""
+        import re
+
         result = runner.invoke(app, ["version"])
         assert result.exit_code == 0
         assert "metaseed" in result.stdout
-        assert "0.1.0" in result.stdout
+        # Match version pattern: 0.1.0, 0.1.dev188, etc.
+        assert re.search(r"0\.\d+(\.\d+)?(\.dev\d+)?", result.stdout)
 
 
 class TestValidateCommand:

@@ -7,7 +7,7 @@ import datetime
 import re
 from typing import Any, Self
 
-from metaseed.validators.base import ValidationError, ValidationRule
+from metaseed.validators.base import ValidationError, ValidationRule, has_value
 
 
 class DateRangeRule(ValidationRule):
@@ -306,17 +306,6 @@ class ConditionalRule(ValidationRule):
         operators = {"AND", "OR", "NOT"}
         return [t for t in tokens if t not in operators]
 
-    def _has_value(self: Self, data: dict[str, Any], field: str) -> bool:
-        """Check if field has a non-empty value."""
-        value = data.get(field)
-        if value is None:
-            return False
-        if isinstance(value, str) and value == "":
-            return False
-        if isinstance(value, list) and len(value) == 0:
-            return False
-        return True
-
     def _evaluate(self: Self, condition: str, data: dict[str, Any]) -> bool:
         """Evaluate condition expression."""
         # Simple parser for common patterns
@@ -339,7 +328,7 @@ class ConditionalRule(ValidationRule):
 
         # Replace field names with TRUE/FALSE
         for field in self._fields:
-            has_val = "TRUE" if self._has_value(data, field) else "FALSE"
+            has_val = "TRUE" if has_value(data, field) else "FALSE"
             condition = re.sub(
                 rf"\bNOT\s+{re.escape(field)}\b",
                 "FALSE" if has_val == "TRUE" else "TRUE",
@@ -490,11 +479,6 @@ class CoordinatePairRule(ValidationRule):
         """Return the rule name."""
         return self.rule_name
 
-    def _has_value(self: Self, data: dict[str, Any], field: str) -> bool:
-        """Check if field has a non-empty value."""
-        value = data.get(field)
-        return value is not None and value != ""
-
     def validate(self: Self, data: dict[str, Any]) -> list[ValidationError]:
         """Validate lat/lon are both present or both absent.
 
@@ -504,8 +488,8 @@ class CoordinatePairRule(ValidationRule):
         Returns:
             List with error if only one coordinate provided.
         """
-        has_lat = self._has_value(data, self.lat_field)
-        has_lon = self._has_value(data, self.lon_field)
+        has_lat = has_value(data, self.lat_field)
+        has_lon = has_value(data, self.lon_field)
 
         if has_lat != has_lon:
             missing = self.lon_field if has_lat else self.lat_field
@@ -520,7 +504,6 @@ class CoordinatePairRule(ValidationRule):
         return []
 
 
-# Re-export ValidationError for convenience
 __all__ = [
     "ConditionalRule",
     "CoordinatePairRule",
@@ -529,6 +512,4 @@ __all__ = [
     "ListCardinalityRule",
     "RequiredFieldsRule",
     "UniqueIdPatternRule",
-    "ValidationError",
-    "ValidationRule",
 ]

@@ -24,7 +24,7 @@ from .state import SpecBuilderState
 if TYPE_CHECKING:
     from ..state import AppState
 
-__all__ = ["create_spec_builder_router", "SpecBuilderState"]
+__all__ = ["SpecBuilderState", "create_spec_builder_router"]
 
 
 def create_spec_builder_router(templates: Jinja2Templates, get_state: callable) -> APIRouter:

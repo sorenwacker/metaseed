@@ -191,6 +191,36 @@ class TestEntityHelper:
         assert "required" in repr_str
         assert "optional" in repr_str
 
+    def test_get_label_with_title(self, investigation_helper: EntityHelper) -> None:
+        """get_label returns title for Investigation."""
+        inv = investigation_helper.create(
+            unique_id="INV-001",
+            title="My Research Project",
+        )
+        label = investigation_helper.get_label(inv)
+        assert label == "My Research Project"
+
+    def test_get_label_with_dict(self, investigation_helper: EntityHelper) -> None:
+        """get_label works with dict input."""
+        data = {"unique_id": "INV-002", "title": "Dict Investigation"}
+        label = investigation_helper.get_label(data)
+        assert label == "Dict Investigation"
+
+    def test_get_label_falls_back_to_unique_id(self, investigation_helper: EntityHelper) -> None:
+        """get_label falls back to unique_id if no title."""
+        data = {"unique_id": "INV-003"}
+        label = investigation_helper.get_label(data)
+        assert label == "INV-003"
+
+    def test_get_label_person_name(self, miappe_facade: ProfileFacade) -> None:
+        """get_label combines first_name and last_name for Person."""
+        person_helper = miappe_facade.Person
+        person = person_helper.create(
+            name="Dr. Jane Smith",
+        )
+        label = person_helper.get_label(person)
+        assert label == "Dr. Jane Smith"
+
 
 class TestConvenienceFunctions:
     """Tests for miappe() and isa() convenience functions."""
@@ -461,4 +491,6 @@ class TestCombinedFacade:
 
         assert prot.study_id == "STU-001"
         assert prot.name == "Test Protocol"
-        assert prot.protocol_type == "sample collection"
+        # String is coerced to OntologyAnnotation with term field
+        assert hasattr(prot.protocol_type, "term")
+        assert prot.protocol_type.term == "sample collection"

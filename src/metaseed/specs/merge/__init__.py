@@ -136,34 +136,29 @@ def merge(
 
 
 __all__ = [
-    # Public API functions
-    "compare",
-    "merge",
-    # Core classes
-    "SpecComparator",
-    "SpecMerger",
-    "DiffVisualizer",
-    # Data models
+    "CSVReportGenerator",
     "ComparisonResult",
     "ComparisonStatistics",
     "ConflictResolution",
     "DiffType",
+    "DiffVisualizer",
     "EntityDiff",
     "FieldDiff",
-    "MergeResult",
-    "MergeWarning",
-    # Strategies
-    "MergeStrategy",
     "FirstWinsStrategy",
+    "HTMLReportGenerator",
     "LastWinsStrategy",
-    "MostRestrictiveStrategy",
     "LeastRestrictiveStrategy",
+    "MarkdownReportGenerator",
+    "MergeResult",
+    "MergeStrategy",
+    "MergeWarning",
+    "MostRestrictiveStrategy",
     "PreferProfileStrategy",
+    "ReportGenerator",
+    "SpecComparator",
+    "SpecMerger",
+    "compare",
     "get_strategy",
     "list_strategies",
-    # Report generators
-    "ReportGenerator",
-    "CSVReportGenerator",
-    "HTMLReportGenerator",
-    "MarkdownReportGenerator",
+    "merge",
 ]
