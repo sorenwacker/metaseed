@@ -12,7 +12,7 @@ import pytest
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions as EC  # noqa: N812
+from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
 from tests.test_ui.examples import INV_EXAMPLE
@@ -32,7 +32,7 @@ def server():
     cwd = Path(__file__).resolve().parent.parent.parent
 
     proc = subprocess.Popen(
-        ["uv", "run", "uvicorn", "metaseed.ui.app:app", "--port", "8082"],  # noqa: S603, S607
+        ["uv", "run", "uvicorn", "metaseed.ui.app:app", "--port", "8082"],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         cwd=cwd,
@@ -48,7 +48,7 @@ def server():
             sock.close()
             if result == 0:
                 break
-        except Exception:  # noqa: S110
+        except Exception:
             pass  # Keep trying until server starts
         time.sleep(0.5)
     else:
@@ -80,9 +80,9 @@ def browser(server):
     import urllib.request
 
     try:
-        req = urllib.request.Request(f"{BASE_URL}/reset", method="POST")  # noqa: S310
-        urllib.request.urlopen(req, timeout=5)  # noqa: S310
-    except Exception:  # noqa: S110
+        req = urllib.request.Request(f"{BASE_URL}/reset", method="POST")
+        urllib.request.urlopen(req, timeout=5)
+    except Exception:
         pass  # Server reset is best-effort
 
     yield driver
@@ -209,7 +209,7 @@ def expand_optional_fields(driver):
             driver.execute_script("arguments[0].click();", toggle)
             time.sleep(CLICK_DELAY)
             WebDriverWait(driver, 10).until(EC.visibility_of(content))
-    except Exception:  # noqa: S110
+    except Exception:
         pass  # Section may not be collapsible
 
 

@@ -78,7 +78,7 @@ def server():
 
 
 @pytest.fixture
-def browser(server):  # noqa: ARG001
+def browser(server):
     """Create a headless Chrome browser for testing."""
     _ = server  # Ensure server is running
     options = Options()
