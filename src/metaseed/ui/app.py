@@ -20,10 +20,10 @@ from .routes import (
     register_core_routes,
     register_entity_crud_routes,
     register_example_routes,
+    register_explore_routes,
     register_export_routes,
     register_form_routes,
     register_import_routes,
-    register_merge_routes,
     register_nested_routes,
     register_table_routes,
     register_validation_routes,
@@ -89,7 +89,7 @@ def create_app(state: AppState | None = None) -> FastAPI:
     register_validation_routes(app, templates, get_state)
     register_example_routes(app, get_state)
     register_api_routes(app, get_state)
-    register_merge_routes(app, templates, get_state)
+    register_explore_routes(app, templates, get_state)
 
     return app
 

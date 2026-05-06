@@ -1,4 +1,4 @@
-"""Routes for profile comparison and merge functionality."""
+"""Routes for profile exploration and comparison functionality."""
 
 from collections.abc import Callable
 
@@ -17,13 +17,13 @@ from metaseed.ui.spec_provider import SpecProvider
 from metaseed.ui.state import AppState
 
 
-def register_merge_routes(
+def register_explore_routes(
     app: FastAPI,
     templates: Jinja2Templates,
     _get_state: Callable[[], AppState],
     spec_provider: SpecProvider | None = None,
 ) -> None:
-    """Register merge-related routes.
+    """Register explore-related routes.
 
     Args:
         app: FastAPI application instance.
@@ -38,9 +38,9 @@ def register_merge_routes(
 
         spec_provider = FilesystemSpecProvider()
 
-    @app.get("/merge/", response_class=HTMLResponse)
-    async def merge_page(request: Request) -> HTMLResponse:
-        """Render the merge comparison page."""
+    @app.get("/explore/", response_class=HTMLResponse)
+    async def explore_page(request: Request) -> HTMLResponse:
+        """Render the explore comparison page."""
         profiles = await spec_provider.list_profiles()
 
         # Get versions and display names for each profile
@@ -55,7 +55,7 @@ def register_merge_routes(
 
         return templates.TemplateResponse(
             request,
-            "merge/index.html",
+            "explore/index.html",
             {
                 "profiles": profiles,
                 "profile_versions": profile_versions,
@@ -63,7 +63,7 @@ def register_merge_routes(
             },
         )
 
-    @app.post("/merge/compare")
+    @app.post("/explore/compare")
     async def compare_profiles(request: Request) -> JSONResponse:
         """Compare selected profiles and return results."""
         form = await request.form()
@@ -116,7 +116,7 @@ def register_merge_routes(
                 status_code=500,
             )
 
-    @app.get("/merge/graph/{profiles:path}")
+    @app.get("/explore/graph/{profiles:path}")
     async def get_diff_graph(profiles: str) -> JSONResponse:
         """Get diff visualization data for profiles.
 
@@ -150,7 +150,7 @@ def register_merge_routes(
                 status_code=500,
             )
 
-    @app.get("/merge/report/{format_type}/{profiles:path}")
+    @app.get("/explore/report/{format_type}/{profiles:path}")
     async def get_report(format_type: str, profiles: str) -> HTMLResponse:
         """Get comparison report in specified format.
 

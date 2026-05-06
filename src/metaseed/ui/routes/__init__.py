@@ -8,7 +8,7 @@ This package contains route handlers split by domain:
 - validation: Form validation
 - examples: Example loading
 - api: JSON API endpoints
-- merge: Profile comparison and merge
+- explore: Profile exploration and comparison
 """
 
 from .api import register_api_routes
@@ -21,8 +21,8 @@ from .core import (
     render_form_with_errors,
 )
 from .examples import register_example_routes
+from .explore import register_explore_routes
 from .import_export import register_export_routes, register_import_routes
-from .merge import register_merge_routes
 from .nested import register_nested_routes
 from .table import register_table_routes
 from .validation import register_validation_routes
@@ -36,7 +36,7 @@ __all__ = [
     "register_export_routes",
     "register_form_routes",
     "register_import_routes",
-    "register_merge_routes",
+    "register_explore_routes",
     "register_nested_routes",
     "register_table_routes",
     "register_validation_routes",

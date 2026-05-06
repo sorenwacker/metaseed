@@ -20,7 +20,7 @@
             <nav class="header-nav">
                 <a href="/" class="nav-btn" data-testid="nav-editor">Editor</a>
                 <a href="/spec-builder" class="nav-btn" data-testid="nav-spec-builder">Spec Builder</a>
-                <a href="/merge/" class="nav-btn active" data-testid="nav-explorer">Explorer</a>
+                <a href="/explore/" class="nav-btn active" data-testid="nav-explorer">Explorer</a>
             </nav>
             <div class="header-actions">
                 <button class="btn btn-header" onclick="autoLayout()">Layout</button>
@@ -323,7 +323,7 @@
                 const formData = new FormData();
                 profiles.forEach(p => formData.append('profiles', p));
 
-                const response = await fetch('/merge/compare', {
+                const response = await fetch('/explore/compare', {
                     method: 'POST',
                     body: formData
                 });
@@ -572,7 +572,7 @@
 
         function exportReport(format) {
             if (currentProfiles.length < 1) return;
-            window.open(`/merge/report/${format}/${currentProfiles.join(',')}`, '_blank');
+            window.open(`/explore/report/${format}/${currentProfiles.join(',')}`, '_blank');
         }
 
         // =============================================================================
