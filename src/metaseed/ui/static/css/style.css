@@ -221,6 +221,25 @@ body::before {
     border-radius: var(--radius-md);
 }
 
+/* Header Breadcrumb */
+.header-breadcrumb {
+    display: flex;
+    align-items: center;
+    margin-left: var(--space-md);
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.header-breadcrumb .header-sep {
+    opacity: 0.5;
+    margin: 0 0.5rem;
+}
+
+.header-breadcrumb .spec-name {
+    color: var(--clr-ivory);
+}
+
 .nav-btn {
     font-family: var(--font-body);
     padding: 6px 14px;

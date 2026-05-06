@@ -7,18 +7,22 @@
     <link rel="icon" type="image/svg+xml" href="/static/images/metaseed-icon.svg">
     <link rel="icon" type="image/png" sizes="128x128" href="/static/images/metaseed-icon-128.png">
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
-    <link rel="stylesheet" href="/static/css/style.css?v=54">
+    <link rel="stylesheet" href="/static/css/style.css?v=58">
 </head>
 <body hx-headers='{"X-Requested-With": "XMLHttpRequest"}'>
     <div class="layout">
         <header class="header">
             <h1 class="header-title">
                 <a href="/" style="color: inherit; text-decoration: none;"><img src="/static/images/metaseed-logo-light.svg" alt="Metaseed" class="header-logo"></a>
-                <span style="opacity: 0.5; margin: 0 0.5rem;">/</span>
-                <span>Spec Builder</span>
             </h1>
-            <div class="header-actions">
-                <a href="/" class="btn btn-header">Back to Editor</a>
+            <nav class="header-nav">
+                <a href="/" class="nav-btn" data-testid="nav-editor">Editor</a>
+                <a href="/spec-builder" class="nav-btn active" data-testid="nav-spec-builder">Spec Builder</a>
+                <a href="/merge/" class="nav-btn" data-testid="nav-explorer">Explorer</a>
+            </nav>
+            <div class="header-breadcrumb">
+                <span class="header-sep">/</span>
+                <span>Spec Builder</span>
             </div>
         </header>
 
