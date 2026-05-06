@@ -22,6 +22,7 @@ def register_explore_routes(
     templates: Jinja2Templates,
     _get_state: Callable[[], AppState],
     spec_provider: SpecProvider | None = None,
+    base_url: str = "",
 ) -> None:
     """Register explore-related routes.
 
@@ -31,6 +32,8 @@ def register_explore_routes(
         _get_state: Function to get app state (unused, kept for API consistency).
         spec_provider: Optional spec provider for accessing specifications.
             If not provided, uses FilesystemSpecProvider.
+        base_url: Base URL prefix for the application (e.g., "/hub").
+            Should not have a trailing slash. Defaults to empty string.
     """
     # If no provider, use default filesystem implementation
     if spec_provider is None:
@@ -60,6 +63,7 @@ def register_explore_routes(
                 "profiles": profiles,
                 "profile_versions": profile_versions,
                 "profile_display_names": profile_display_names,
+                "base_url": base_url,
             },
         )
 

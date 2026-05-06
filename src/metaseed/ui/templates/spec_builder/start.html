@@ -4,21 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Spec Builder - Metaseed</title>
-    <link rel="icon" type="image/svg+xml" href="/static/images/metaseed-icon.svg">
-    <link rel="icon" type="image/png" sizes="128x128" href="/static/images/metaseed-icon-128.png">
+    <link rel="icon" type="image/svg+xml" href="{{ base_url }}/static/images/metaseed-icon.svg">
+    <link rel="icon" type="image/png" sizes="128x128" href="{{ base_url }}/static/images/metaseed-icon-128.png">
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
-    <link rel="stylesheet" href="/static/css/style.css?v=58">
+    <link rel="stylesheet" href="{{ base_url }}/static/css/style.css?v=58">
 </head>
 <body hx-headers='{"X-Requested-With": "XMLHttpRequest"}'>
     <div class="layout">
         <header class="header">
             <h1 class="header-title">
-                <a href="/" style="color: inherit; text-decoration: none;"><img src="/static/images/metaseed-logo-light.svg" alt="Metaseed" class="header-logo"></a>
+                <a href="{{ base_url }}/" style="color: inherit; text-decoration: none;"><img src="{{ base_url }}/static/images/metaseed-logo-light.svg" alt="Metaseed" class="header-logo"></a>
             </h1>
             <nav class="header-nav">
-                <a href="/" class="nav-btn" data-testid="nav-editor">Editor</a>
-                <a href="/spec-builder" class="nav-btn active" data-testid="nav-spec-builder">Spec Builder</a>
-                <a href="/explore/" class="nav-btn" data-testid="nav-explorer">Explorer</a>
+                <a href="{{ base_url }}/" class="nav-btn" data-testid="nav-editor">Editor</a>
+                <a href="{{ base_url }}/spec-builder" class="nav-btn active" data-testid="nav-spec-builder">Spec Builder</a>
+                <a href="{{ base_url }}/explore/" class="nav-btn" data-testid="nav-explorer">Explorer</a>
             </nav>
             <div class="header-breadcrumb">
                 <span class="header-sep">/</span>
@@ -42,7 +42,7 @@
                             </div>
                             <div class="user-spec-actions">
                                 {% for version in spec.versions %}
-                                <a href="/spec-builder/clone/{{ spec.name }}/{{ version }}"
+                                <a href="{{ base_url }}/spec-builder/clone/{{ spec.name }}/{{ version }}"
                                    class="btn btn-sm btn-primary">
                                     Edit v{{ version }}
                                 </a>
@@ -65,7 +65,7 @@
                 </div>
 
                 <div class="start-options">
-                    <a href="/spec-builder/new" class="start-option">
+                    <a href="{{ base_url }}/spec-builder/new" class="start-option">
                         <div class="start-option-icon">+</div>
                         <h3>Start from Scratch</h3>
                         <p>Create a new empty specification with your own entities and fields.</p>
@@ -86,7 +86,7 @@
                                 </div>
                                 <div class="template-versions">
                                     {% for version in template.versions %}
-                                    <a href="/spec-builder/clone/{{ template.name }}/{{ version }}"
+                                    <a href="{{ base_url }}/spec-builder/clone/{{ template.name }}/{{ version }}"
                                        class="btn btn-sm btn-outline-secondary">
                                         v{{ version }}
                                     </a>
@@ -104,7 +104,7 @@
         </main>
     </div>
 
-    <script src="/static/js/app.js?v=30"></script>
+    <script src="{{ base_url }}/static/js/app.js?v=30"></script>
     <script>
         function deleteUserSpec(name, version) {
             if (!confirm(`Delete specification "${name}" v${version}? This cannot be undone.`)) {

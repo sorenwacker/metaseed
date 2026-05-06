@@ -29,6 +29,7 @@ def register_main_routes(
     templates: Jinja2Templates,
     get_builder_state: Callable[[], SpecBuilderState],
     persistence: SpecPersistence | None = None,
+    base_url: str = "",
 ) -> None:
     """Register main page routes.
 
@@ -38,6 +39,7 @@ def register_main_routes(
         get_builder_state: Callable to get builder state.
         persistence: Optional persistence interface. If not provided, uses
             FilesystemSpecPersistence for backward compatibility.
+        base_url: Base URL prefix for all links (no trailing slash).
     """
     if persistence is None:
         from metaseed.ui.spec_filesystem import FilesystemSpecPersistence
@@ -66,6 +68,7 @@ def register_main_routes(
                     "has_unsaved_changes": builder.has_unsaved_changes,
                     "template_source": builder.template_source,
                     "field_types": [t.value for t in FieldType],
+                    "base_url": base_url,
                 },
             )
 
@@ -74,7 +77,7 @@ def register_main_routes(
         return templates.TemplateResponse(
             request,
             "spec_builder/start.html",
-            {"templates": available_templates, "user_specs": user_specs},
+            {"templates": available_templates, "user_specs": user_specs, "base_url": base_url},
         )
 
     @router.get("/new", response_class=HTMLResponse)
@@ -94,6 +97,7 @@ def register_main_routes(
                 "has_unsaved_changes": False,
                 "template_source": None,
                 "field_types": [t.value for t in FieldType],
+                "base_url": base_url,
             },
         )
 
@@ -120,6 +124,7 @@ def register_main_routes(
                 "has_unsaved_changes": False,
                 "template_source": builder.template_source,
                 "field_types": [t.value for t in FieldType],
+                "base_url": base_url,
             },
         )
 
@@ -134,7 +139,7 @@ def register_main_routes(
         return templates.TemplateResponse(
             request,
             "spec_builder/start.html",
-            {"templates": available_templates, "user_specs": user_specs},
+            {"templates": available_templates, "user_specs": user_specs, "base_url": base_url},
         )
 
     @router.get("/profile-metadata", response_class=HTMLResponse)

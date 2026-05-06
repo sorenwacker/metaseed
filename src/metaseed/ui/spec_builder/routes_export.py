@@ -24,6 +24,7 @@ def register_export_routes(
     templates: Jinja2Templates,
     get_builder_state: Callable[[], SpecBuilderState],
     persistence: SpecPersistence | None = None,
+    _base_url: str = "",
 ) -> None:
     """Register export and save routes.
 

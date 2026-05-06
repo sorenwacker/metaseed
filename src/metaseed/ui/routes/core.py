@@ -89,6 +89,7 @@ def register_core_routes(
     app: FastAPI,
     templates: Jinja2Templates,
     get_state: Callable[[], AppState],
+    base_url: str = "",
 ) -> None:
     """Register core routes on the FastAPI app.
 
@@ -96,6 +97,8 @@ def register_core_routes(
         app: FastAPI application instance.
         templates: Jinja2Templates instance.
         get_state: Callable returning AppState.
+        base_url: Base URL prefix for the application (e.g., "/hub").
+            Should not have a trailing slash. Defaults to empty string.
     """
 
     @app.get("/", response_class=HTMLResponse)
@@ -120,6 +123,7 @@ def register_core_routes(
                 "tree_nodes": state.get_tree_data(),
                 "editing_node_id": state.editing_node_id,
                 "editing_node_type": editing_node.entity_type if editing_node else None,
+                "base_url": base_url,
             },
         )
 

@@ -4,27 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Metaseed</title>
-    <link rel="icon" type="image/svg+xml" href="/static/images/metaseed-icon.svg">
-    <link rel="icon" type="image/png" sizes="128x128" href="/static/images/metaseed-icon-128.png">
+    <link rel="icon" type="image/svg+xml" href="{{ base_url }}/static/images/metaseed-icon.svg">
+    <link rel="icon" type="image/png" sizes="128x128" href="{{ base_url }}/static/images/metaseed-icon-128.png">
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
     <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
-    <link rel="stylesheet" href="/static/css/style.css?v=58">
+    <link rel="stylesheet" href="{{ base_url }}/static/css/style.css?v=58">
 </head>
 <body hx-headers='{"X-Requested-With": "XMLHttpRequest"}'>
     <div class="layout">
         <header class="header">
             <h1 class="header-title">
-                <img src="/static/images/metaseed-logo-light.svg" alt="Metaseed" class="header-logo">
+                <img src="{{ base_url }}/static/images/metaseed-logo-light.svg" alt="Metaseed" class="header-logo">
             </h1>
             <nav class="header-nav">
-                <a href="/" class="nav-btn active" data-testid="nav-editor">Editor</a>
-                <a href="/spec-builder" class="nav-btn" data-testid="nav-spec-builder">Spec Builder</a>
-                <a href="/explore/" class="nav-btn" data-testid="nav-explorer">Explorer</a>
+                <a href="{{ base_url }}/" class="nav-btn active" data-testid="nav-editor">Editor</a>
+                <a href="{{ base_url }}/spec-builder" class="nav-btn" data-testid="nav-spec-builder">Spec Builder</a>
+                <a href="{{ base_url }}/explore/" class="nav-btn" data-testid="nav-explorer">Explorer</a>
             </nav>
             <div class="header-actions">
                 {% for entity_type in root_types %}
                 <button class="btn btn-header"
-                        hx-get="/form/{{ entity_type }}"
+                        hx-get="{{ base_url }}/form/{{ entity_type }}"
                         hx-target="#main"
                         hx-swap="innerHTML"
                         data-testid="btn-new-{{ entity_type|lower }}">
@@ -36,7 +36,7 @@
                     Import
                     <input type="file"
                            accept=".json"
-                           hx-post="/import"
+                           hx-post="{{ base_url }}/import"
                            hx-trigger="change"
                            hx-target="#notification-container"
                            hx-swap="beforeend"
@@ -44,7 +44,7 @@
                            name="file"
                            hidden>
                 </label>
-                <a href="/export" class="btn btn-header" data-testid="btn-export" download>
+                <a href="{{ base_url }}/export" class="btn btn-header" data-testid="btn-export" download>
                     Export
                 </a>
                 <span class="header-divider"></span>
@@ -90,6 +90,10 @@
 
     {% include "components/lookup_modal.html" %}
 
-    <script src="/static/js/app.js?v=30"></script>
+    <script>
+        // Base URL for API calls (passed from server)
+        const BASE_URL = "{{ base_url }}";
+    </script>
+    <script src="{{ base_url }}/static/js/app.js?v=30"></script>
 </body>
 </html>

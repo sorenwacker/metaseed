@@ -4,23 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Profile Comparison - Metaseed</title>
-    <link rel="icon" type="image/svg+xml" href="/static/images/metaseed-icon.svg">
-    <link rel="icon" type="image/png" sizes="128x128" href="/static/images/metaseed-icon-128.png">
+    <link rel="icon" type="image/svg+xml" href="{{ base_url }}/static/images/metaseed-icon.svg">
+    <link rel="icon" type="image/png" sizes="128x128" href="{{ base_url }}/static/images/metaseed-icon-128.png">
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
     <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
-    <script src="/static/js/erd-common.js?v=1"></script>
-    <link rel="stylesheet" href="/static/css/style.css?v=58">
+    <script src="{{ base_url }}/static/js/erd-common.js?v=1"></script>
+    <link rel="stylesheet" href="{{ base_url }}/static/css/style.css?v=58">
 </head>
 <body hx-headers='{"X-Requested-With": "XMLHttpRequest"}'>
     <div class="layout layout-fixed">
         <header class="header">
             <h1 class="header-title">
-                <a href="/" style="color: inherit; text-decoration: none;"><img src="/static/images/metaseed-logo-light.svg" alt="Metaseed" class="header-logo"></a>
+                <a href="{{ base_url }}/" style="color: inherit; text-decoration: none;"><img src="{{ base_url }}/static/images/metaseed-logo-light.svg" alt="Metaseed" class="header-logo"></a>
             </h1>
             <nav class="header-nav">
-                <a href="/" class="nav-btn" data-testid="nav-editor">Editor</a>
-                <a href="/spec-builder" class="nav-btn" data-testid="nav-spec-builder">Spec Builder</a>
-                <a href="/explore/" class="nav-btn active" data-testid="nav-explorer">Explorer</a>
+                <a href="{{ base_url }}/" class="nav-btn" data-testid="nav-editor">Editor</a>
+                <a href="{{ base_url }}/spec-builder" class="nav-btn" data-testid="nav-spec-builder">Spec Builder</a>
+                <a href="{{ base_url }}/explore/" class="nav-btn active" data-testid="nav-explorer">Explorer</a>
             </nav>
             <div class="header-actions">
                 <button class="btn btn-header" onclick="autoLayout()">Layout</button>
@@ -157,6 +157,11 @@
     <div id="notification-container" class="notification-container"></div>
 
     <script>
+        // =============================================================================
+        // Base URL for all API calls and navigation
+        // =============================================================================
+        const BASE_URL = '{{ base_url }}';
+
         // =============================================================================
         // Constants (matching spec-builder)
         // =============================================================================
@@ -323,7 +328,7 @@
                 const formData = new FormData();
                 profiles.forEach(p => formData.append('profiles', p));
 
-                const response = await fetch('/explore/compare', {
+                const response = await fetch(`${BASE_URL}/explore/compare`, {
                     method: 'POST',
                     body: formData
                 });
@@ -572,7 +577,7 @@
 
         function exportReport(format) {
             if (currentProfiles.length < 1) return;
-            window.open(`/explore/report/${format}/${currentProfiles.join(',')}`, '_blank');
+            window.open(`${BASE_URL}/explore/report/${format}/${currentProfiles.join(',')}`, '_blank');
         }
 
         // =============================================================================

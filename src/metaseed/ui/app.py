@@ -37,11 +37,13 @@ TEMPLATES_DIR = UI_DIR / "templates"
 STATIC_DIR = UI_DIR / "static"
 
 
-def create_app(state: AppState | None = None) -> FastAPI:
+def create_app(state: AppState | None = None, base_url: str = "") -> FastAPI:
     """Create the FastAPI application with HTMX routes.
 
     Args:
         state: Optional initial state. Creates new state if not provided.
+        base_url: Base URL prefix for the application (e.g., "/hub").
+            Should not have a trailing slash. Defaults to empty string.
 
     Returns:
         Configured FastAPI application.
@@ -52,6 +54,7 @@ def create_app(state: AppState | None = None) -> FastAPI:
         state = AppState()
 
     app.state.ui_state = state
+    app.state.base_url = base_url
 
     templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
@@ -72,14 +75,17 @@ def create_app(state: AppState | None = None) -> FastAPI:
     def get_state() -> AppState:
         return app.state.ui_state
 
+    def get_base_url() -> str:
+        return app.state.base_url
+
     # Mount spec builder routes
     from .spec_builder import create_spec_builder_router
 
-    spec_builder_router = create_spec_builder_router(templates, get_state)
+    spec_builder_router = create_spec_builder_router(templates, get_state, base_url=base_url)
     app.include_router(spec_builder_router)
 
     # Register all route modules
-    register_core_routes(app, templates, get_state)
+    register_core_routes(app, templates, get_state, base_url=base_url)
     register_form_routes(app, templates, get_state)
     register_entity_crud_routes(app, templates, get_state)
     register_table_routes(app, templates, get_state)
@@ -89,7 +95,7 @@ def create_app(state: AppState | None = None) -> FastAPI:
     register_validation_routes(app, templates, get_state)
     register_example_routes(app, get_state)
     register_api_routes(app, get_state)
-    register_explore_routes(app, templates, get_state)
+    register_explore_routes(app, templates, get_state, base_url=base_url)
 
     return app
 
