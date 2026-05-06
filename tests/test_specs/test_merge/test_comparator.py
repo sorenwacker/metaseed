@@ -13,10 +13,31 @@ class TestSpecComparator:
         """Create comparator instance."""
         return SpecComparator()
 
-    def test_compare_requires_at_least_two_profiles(self, comparator: SpecComparator) -> None:
-        """Comparison requires at least 2 profiles."""
-        with pytest.raises(ValueError, match="At least 2 profiles"):
-            comparator.compare([("miappe", "1.1")])
+    def test_compare_requires_at_least_one_profile(self, comparator: SpecComparator) -> None:
+        """Comparison requires at least 1 profile."""
+        with pytest.raises(ValueError, match="At least 1 profile"):
+            comparator.compare([])
+
+    def test_explore_single_profile(self, comparator: SpecComparator) -> None:
+        """Single profile returns explore result with all UNCHANGED status."""
+        result = comparator.compare([("miappe", "1.2")])
+
+        assert len(result.profiles) == 1
+        assert "miappe/1.2" in result.profiles
+        assert len(result.entity_diffs) > 0
+
+        # All entities should be UNCHANGED in explore mode
+        for ed in result.entity_diffs:
+            assert ed.diff_type == DiffType.UNCHANGED
+            # All fields should also be UNCHANGED
+            for fd in ed.field_diffs:
+                assert fd.diff_type == DiffType.UNCHANGED
+
+        # Statistics should show all as common (no diffs)
+        assert result.statistics.modified_entities == 0
+        assert result.statistics.conflicting_fields == 0
+        assert result.statistics.common_entities == result.statistics.total_entities
+        assert result.statistics.common_fields == result.statistics.total_fields
 
     def test_compare_miappe_versions(self, comparator: SpecComparator) -> None:
         """Compare two versions of MIAPPE."""

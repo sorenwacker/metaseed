@@ -43,20 +43,26 @@ class SpecComparator:
         self._loader = loader or SpecLoader()
 
     def compare(self: Self, profiles: list[tuple[str, str]]) -> ComparisonResult:
-        """Compare N profile specifications.
+        """Compare N profile specifications or explore a single profile.
 
         Args:
             profiles: List of (profile_name, version) tuples to compare.
                 Example: [("miappe", "1.1"), ("isa", "1.0")]
+                With a single profile, returns an "explore" result with all
+                entities/fields marked as UNCHANGED (structure visualization only).
 
         Returns:
             ComparisonResult with detailed differences.
 
         Raises:
-            ValueError: If fewer than 2 profiles provided.
+            ValueError: If no profiles provided.
         """
-        if len(profiles) < 2:
-            raise ValueError("At least 2 profiles required for comparison")
+        if len(profiles) < 1:
+            raise ValueError("At least 1 profile required")
+
+        # Single profile = explore mode (no comparison)
+        if len(profiles) == 1:
+            return self._explore_single(profiles[0])
 
         logger.info("Comparing %d profiles: %s", len(profiles), profiles)
 
@@ -97,6 +103,71 @@ class SpecComparator:
         )
 
         return result
+
+    def _explore_single(self: Self, profile: tuple[str, str]) -> ComparisonResult:
+        """Load single profile for exploration (no diff).
+
+        Args:
+            profile: Tuple of (profile_name, version).
+
+        Returns:
+            ComparisonResult with all entities/fields marked as UNCHANGED.
+        """
+        profile_name, version = profile
+        profile_id = f"{profile_name}/{version}"
+
+        logger.info("Exploring single profile: %s", profile_id)
+
+        spec = self._loader.load_profile(version=version, profile=profile_name)
+
+        # Create entity diffs with all UNCHANGED status
+        entity_diffs: list[EntityDiff] = []
+        for entity_name, entity_def in spec.entities.items():
+            field_diffs = [
+                FieldDiff(
+                    field_name=f.name,
+                    diff_type=DiffType.UNCHANGED,
+                    profiles={profile_id: f},
+                    attributes_changed=[],
+                    values={},
+                )
+                for f in entity_def.fields
+            ]
+            entity_diffs.append(
+                EntityDiff(
+                    entity_name=entity_name,
+                    diff_type=DiffType.UNCHANGED,
+                    profiles={profile_id: True},
+                    field_diffs=field_diffs,
+                    ontology_term_diff=False,
+                    description_diff=False,
+                )
+            )
+
+        # Calculate statistics for single profile
+        stats = ComparisonStatistics(
+            total_entities=len(entity_diffs),
+            common_entities=len(entity_diffs),
+            unique_entities=0,
+            modified_entities=0,
+            total_fields=sum(len(ed.field_diffs) for ed in entity_diffs),
+            common_fields=sum(len(ed.field_diffs) for ed in entity_diffs),
+            modified_fields=0,
+            conflicting_fields=0,
+        )
+
+        logger.info(
+            "Explore complete: %d entities, %d fields", stats.total_entities, stats.total_fields
+        )
+
+        return ComparisonResult(
+            profiles=[profile_id],
+            profile_specs={profile_id: spec},
+            entity_diffs=entity_diffs,
+            validation_rule_diffs={},
+            metadata_diffs={},
+            statistics=stats,
+        )
 
     def _compare_metadata(
         self: Self, profile_specs: dict[str, ProfileSpec]

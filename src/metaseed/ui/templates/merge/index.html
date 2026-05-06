@@ -20,7 +20,7 @@
             <nav class="header-nav">
                 <a href="/" class="nav-btn" data-testid="nav-editor">Editor</a>
                 <a href="/spec-builder" class="nav-btn" data-testid="nav-spec-builder">Spec Builder</a>
-                <a href="/merge/" class="nav-btn active" data-testid="nav-compare">Compare</a>
+                <a href="/merge/" class="nav-btn active" data-testid="nav-explore">Explore</a>
             </nav>
             <div class="header-actions">
                 <button class="btn btn-header" onclick="autoLayout()">Layout</button>
@@ -48,10 +48,10 @@
                         </div>
 
                         <div class="form-section">
-                            <label class="form-label">Compare Against</label>
+                            <label class="form-label">Compare Against <span style="font-weight: normal; color: #888;">(optional)</span></label>
                             <div class="profile-selector">
-                                <select id="compare-profile" class="form-select" onchange="updateVersions('compare')">
-                                    <option value="">Profile</option>
+                                <select id="compare-profile" class="form-select" onchange="updateVersions('compare'); updateButtonText();">
+                                    <option value="">None (Explore only)</option>
                                     {% for profile in profiles %}
                                     <option value="{{ profile }}">{{ profile_display_names[profile] }}</option>
                                     {% endfor %}
@@ -64,7 +64,7 @@
 
                         <div class="form-section">
                             <button type="button" class="btn btn-primary" onclick="runComparison()" id="compare-btn" style="width: 100%;">
-                                Compare
+                                Explore
                             </button>
                         </div>
 
@@ -101,7 +101,7 @@
             <main class="erd-canvas-container">
                 <div class="erd-canvas-toolbar">
                     <span class="canvas-info" id="canvas-info">
-                        Select profiles to compare
+                        Select a profile to explore or compare
                     </span>
                     <div class="canvas-controls">
                         <button class="btn btn-sm btn-secondary" onclick="zoomIn()">+</button>
@@ -112,7 +112,7 @@
                 <div class="erd-canvas-wrapper">
                     <div id="erd-canvas"></div>
                 </div>
-                <div class="canvas-legend">
+                <div class="canvas-legend" id="compare-legend">
                     <span class="legend-item"><span class="legend-dot unchanged"></span> Common</span>
                     <span class="legend-item"><span class="legend-dot added"></span> Added</span>
                     <span class="legend-item"><span class="legend-dot removed"></span> Removed</span>
@@ -122,6 +122,12 @@
                     <span class="legend-item"><code>~</code> Field modified</span>
                     <span class="legend-item"><code>!</code> Conflict</span>
                     <span class="legend-item"><code>*</code> Required</span>
+                </div>
+                <div class="canvas-legend" id="explore-legend" style="display: none;">
+                    <span class="legend-item"><span class="legend-dot entity"></span> Entity</span>
+                    <span class="legend-item"><span class="legend-line"></span> Relationship</span>
+                    <span class="legend-item"><code>*</code> Required</span>
+                    <span class="legend-item" style="margin-left: 12px;">Right-click to hide</span>
                 </div>
 
                 <!-- Context Menu for nodes -->
@@ -155,6 +161,17 @@
         // Constants (matching spec-builder)
         // =============================================================================
 
+        // Shared colors matching spec-builder (for explore mode)
+        const SPEC_BUILDER_COLORS = {
+            regular: {
+                background: '#ffffff',
+                border: '#4a7c59',
+                fontColor: '#2c3e35',
+                highlight: { background: '#87a878', border: '#4a7c59' },
+                hover: { background: '#f5f2ed', border: '#4a7c59' }
+            }
+        };
+
         const DIFF_COLORS = {
             unchanged: {
                 background: '#ffffff',
@@ -185,6 +202,9 @@
                 hover: { background: '#ffcdd2', border: '#d32f2f' }
             }
         };
+
+        // Track current mode
+        let exploreMode = false;
 
         const FONT_CONFIG = {
             face: 'monospace',
@@ -245,21 +265,38 @@
             const compareProfile = document.getElementById('compare-profile').value;
             const compareVersion = document.getElementById('compare-version').value;
 
+            // Base profile always required
             if (!baseProfile || !baseVersion) {
-                return { error: 'Select base profile and version' };
-            }
-            if (!compareProfile || !compareVersion) {
-                return { error: 'Select profile and version to compare against' };
+                return { error: 'Select a profile to explore' };
             }
 
             const base = `${baseProfile}/${baseVersion}`;
-            const compare = `${compareProfile}/${compareVersion}`;
 
-            if (base === compare) {
-                return { error: 'Select different profiles to compare' };
+            // Compare profile optional - if provided, validate it
+            if (compareProfile && compareVersion) {
+                const compare = `${compareProfile}/${compareVersion}`;
+                if (base === compare) {
+                    return { error: 'Select different profiles to compare' };
+                }
+                return { profiles: [base, compare], mode: 'compare' };
             }
 
-            return { profiles: [base, compare] };
+            // Single profile = explore mode
+            return { profiles: [base], mode: 'explore' };
+        }
+
+        function isExploreMode() {
+            const compareProfile = document.getElementById('compare-profile').value;
+            return !compareProfile;
+        }
+
+        function updateButtonText() {
+            const btn = document.getElementById('compare-btn');
+            if (isExploreMode()) {
+                btn.textContent = 'Explore';
+            } else {
+                btn.textContent = 'Compare';
+            }
         }
 
         // =============================================================================
@@ -275,9 +312,10 @@
             }
 
             const profiles = result.profiles;
+            exploreMode = (result.mode === 'explore');
             const btn = document.getElementById('compare-btn');
             btn.disabled = true;
-            btn.textContent = 'Comparing...';
+            btn.textContent = exploreMode ? 'Loading...' : 'Comparing...';
 
             currentProfiles = profiles;
 
@@ -302,26 +340,39 @@
                 hiddenEntities.clear();
                 initERD(data.graph);
                 document.getElementById('export-section').style.display = 'block';
-                document.getElementById('filter-section').style.display = 'block';
-                document.getElementById('canvas-info').innerHTML =
-                    `<strong>${data.statistics.total_entities}</strong> entities`;
 
-                // Update filter labels with profile names
-                const baseProfile = profiles[0].split('/')[0];
-                const compareProfile = profiles[1].split('/')[0];
-                document.getElementById('base-label').textContent = baseProfile;
-                document.getElementById('compare-label').textContent = compareProfile;
+                if (exploreMode) {
+                    // Explore mode: hide profile filters, show explore legend
+                    document.getElementById('filter-section').style.display = 'none';
+                    document.getElementById('compare-legend').style.display = 'none';
+                    document.getElementById('explore-legend').style.display = 'flex';
+                    document.getElementById('canvas-info').innerHTML =
+                        `Exploring <strong>${profiles[0]}</strong> - ${data.statistics.total_entities} entities, ${data.statistics.total_fields} fields`;
+                } else {
+                    // Compare mode: show profile filters and compare legend
+                    document.getElementById('filter-section').style.display = 'block';
+                    document.getElementById('compare-legend').style.display = 'flex';
+                    document.getElementById('explore-legend').style.display = 'none';
+                    document.getElementById('canvas-info').innerHTML =
+                        `<strong>${data.statistics.total_entities}</strong> entities`;
 
-                // Reset checkboxes
-                document.getElementById('show-base').checked = true;
-                document.getElementById('show-compare').checked = true;
-                document.getElementById('show-common').checked = true;
+                    // Update filter labels with profile names
+                    const baseProfile = profiles[0].split('/')[0];
+                    const compareProfile = profiles[1].split('/')[0];
+                    document.getElementById('base-label').textContent = baseProfile;
+                    document.getElementById('compare-label').textContent = compareProfile;
+
+                    // Reset checkboxes
+                    document.getElementById('show-base').checked = true;
+                    document.getElementById('show-compare').checked = true;
+                    document.getElementById('show-common').checked = true;
+                }
 
             } catch (error) {
                 showNotification('Error: ' + error.message, 'error');
             } finally {
                 btn.disabled = false;
-                btn.textContent = 'Compare Selected';
+                btn.textContent = exploreMode ? 'Explore' : 'Compare';
             }
         }
 
@@ -398,7 +449,8 @@
         function buildNodeConfig(node) {
             const fields = node.data.fields || [];
             const diffType = node.data.diff_type || 'unchanged';
-            const colors = DIFF_COLORS[diffType] || DIFF_COLORS.unchanged;
+            // In explore mode, use spec-builder styling; in compare mode, use diff colors
+            const colors = exploreMode ? SPEC_BUILDER_COLORS.regular : (DIFF_COLORS[diffType] || DIFF_COLORS.unchanged);
 
             // Build label like spec-builder
             const label = buildNodeLabel(node.label, fields);
@@ -437,14 +489,19 @@
                 const req = field.required ? '*' : ' ';
                 const fk = (field.type === 'entity' || field.type === 'list') && field.items ? '→' : ' ';
 
-                // Diff indicator: + added, - removed, ~ modified, ! conflict, (space) unchanged
-                let ind = ' ';
-                if (field.diff_type === 'conflict') ind = '!';
-                else if (field.diff_type === 'added') ind = '+';
-                else if (field.diff_type === 'removed') ind = '-';
-                else if (field.diff_type === 'modified') ind = '~';
+                if (exploreMode) {
+                    // Explore mode: no diff indicators (matches spec-builder)
+                    label += `\n${req}${fk} ${field.name}: ${field.type}`;
+                } else {
+                    // Compare mode: show diff indicators
+                    let ind = ' ';
+                    if (field.diff_type === 'conflict') ind = '!';
+                    else if (field.diff_type === 'added') ind = '+';
+                    else if (field.diff_type === 'removed') ind = '-';
+                    else if (field.diff_type === 'modified') ind = '~';
 
-                label += `\n${ind}${req}${fk} ${field.name}: ${field.type}`;
+                    label += `\n${ind}${req}${fk} ${field.name}: ${field.type}`;
+                }
             });
 
             return label;
@@ -514,7 +571,7 @@
         // =============================================================================
 
         function exportReport(format) {
-            if (currentProfiles.length < 2) return;
+            if (currentProfiles.length < 1) return;
             window.open(`/merge/report/${format}/${currentProfiles.join(',')}`, '_blank');
         }
 
@@ -523,7 +580,9 @@
         // =============================================================================
 
         function applyFilters() {
-            if (!originalGraphData || currentProfiles.length < 2) return;
+            if (!originalGraphData || currentProfiles.length < 1) return;
+            // Skip filtering in explore mode (only 1 profile)
+            if (currentProfiles.length < 2) return;
 
             const showBase = document.getElementById('show-base').checked;
             const showCompare = document.getElementById('show-compare').checked;

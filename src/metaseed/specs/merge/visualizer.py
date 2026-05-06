@@ -276,23 +276,29 @@ class DiffVisualizer:
         # Create edges with colors based on profile presence (base-relative)
         # First profile is the base/reference
         base_profile = all_profile_ids[0] if all_profile_ids else None
-        for (from_id, to_id, label), profiles in edge_profiles.items():
-            in_base = base_profile in profiles if base_profile else False
-            in_others = any(p in profiles for p in all_profile_ids[1:])
+        is_explore_mode = len(all_profile_ids) == 1
 
-            # Determine color based on base-relative presence
-            if in_base and in_others:
-                # Edge in both base and compare - unchanged (gray)
-                color = "#666666"
-            elif in_base and not in_others:
-                # Edge only in base - removed (red)
-                color = "#f44336"
-            elif not in_base and in_others:
-                # Edge only in compare - added (green)
-                color = "#4caf50"
+        for (from_id, to_id, label), profiles in edge_profiles.items():
+            if is_explore_mode:
+                # Explore mode: use spec-builder green for all edges
+                color = "#4a7c59"
             else:
-                # Shouldn't happen, but default to gray
-                color = "#666666"
+                in_base = base_profile in profiles if base_profile else False
+                in_others = any(p in profiles for p in all_profile_ids[1:])
+
+                # Determine color based on base-relative presence
+                if in_base and in_others:
+                    # Edge in both base and compare - unchanged (gray)
+                    color = "#666666"
+                elif in_base and not in_others:
+                    # Edge only in base - removed (red)
+                    color = "#f44336"
+                elif not in_base and in_others:
+                    # Edge only in compare - added (green)
+                    color = "#4caf50"
+                else:
+                    # Shouldn't happen, but default to gray
+                    color = "#666666"
 
             edges.append(
                 {

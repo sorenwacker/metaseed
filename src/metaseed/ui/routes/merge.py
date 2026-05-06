@@ -63,9 +63,9 @@ def register_merge_routes(
         form = await request.form()
         profile_specs = form.getlist("profiles")
 
-        if len(profile_specs) < 2:
+        if len(profile_specs) < 1:
             return JSONResponse(
-                {"error": "Select at least 2 profiles to compare"},
+                {"error": "Select at least 1 profile"},
                 status_code=400,
             )
 
@@ -119,9 +119,9 @@ def register_merge_routes(
         """
         profile_specs = profiles.split(",")
 
-        if len(profile_specs) < 2:
+        if len(profile_specs) < 1:
             return JSONResponse(
-                {"error": "At least 2 profiles required"},
+                {"error": "At least 1 profile required"},
                 status_code=400,
             )
 
