@@ -125,10 +125,10 @@ def register_api_routes(
         Returns:
             JSON with comparison results including statistics and entity diffs.
         """
-        if len(profiles) < 2:
+        if len(profiles) < 1:
             return JSONResponse(
                 status_code=400,
-                content={"error": "At least 2 profiles required for comparison"},
+                content={"error": "At least 1 profile required"},
             )
 
         try:
