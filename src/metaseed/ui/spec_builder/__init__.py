@@ -22,17 +22,24 @@ from .routes_rules import register_rule_routes
 from .state import SpecBuilderState
 
 if TYPE_CHECKING:
+    from ..spec_persistence import SpecPersistence
     from ..state import AppState
 
 __all__ = ["SpecBuilderState", "create_spec_builder_router"]
 
 
-def create_spec_builder_router(templates: Jinja2Templates, get_state: callable) -> APIRouter:
+def create_spec_builder_router(
+    templates: Jinja2Templates,
+    get_state: callable,
+    persistence: SpecPersistence | None = None,
+) -> APIRouter:
     """Create the spec builder router with all routes.
 
     Args:
         templates: Jinja2Templates instance.
         get_state: Callable to get AppState.
+        persistence: Optional persistence interface. If not provided, uses
+            FilesystemSpecPersistence for backward compatibility.
 
     Returns:
         Configured APIRouter with all spec builder routes.
@@ -47,10 +54,10 @@ def create_spec_builder_router(templates: Jinja2Templates, get_state: callable) 
         return state.spec_builder
 
     # Register all route groups
-    register_main_routes(router, templates, get_builder_state)
+    register_main_routes(router, templates, get_builder_state, persistence)
     register_entity_routes(router, templates, get_builder_state)
     register_field_routes(router, templates, get_builder_state)
     register_rule_routes(router, templates, get_builder_state)
-    register_export_routes(router, templates, get_builder_state)
+    register_export_routes(router, templates, get_builder_state, persistence)
 
     return router

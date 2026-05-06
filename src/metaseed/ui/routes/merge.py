@@ -6,7 +6,6 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
-from metaseed.specs.loader import SpecLoader
 from metaseed.specs.merge import (
     CSVReportGenerator,
     DiffVisualizer,
@@ -14,6 +13,7 @@ from metaseed.specs.merge import (
     MarkdownReportGenerator,
     compare,
 )
+from metaseed.ui.spec_provider import SpecProvider
 from metaseed.ui.state import AppState
 
 
@@ -21,6 +21,7 @@ def register_merge_routes(
     app: FastAPI,
     templates: Jinja2Templates,
     _get_state: Callable[[], AppState],
+    spec_provider: SpecProvider | None = None,
 ) -> None:
     """Register merge-related routes.
 
@@ -28,24 +29,29 @@ def register_merge_routes(
         app: FastAPI application instance.
         templates: Jinja2 templates instance.
         _get_state: Function to get app state (unused, kept for API consistency).
+        spec_provider: Optional spec provider for accessing specifications.
+            If not provided, uses FilesystemSpecProvider.
     """
+    # If no provider, use default filesystem implementation
+    if spec_provider is None:
+        from metaseed.ui.spec_filesystem import FilesystemSpecProvider
+
+        spec_provider = FilesystemSpecProvider()
 
     @app.get("/merge/", response_class=HTMLResponse)
     async def merge_page(request: Request) -> HTMLResponse:
         """Render the merge comparison page."""
-        loader = SpecLoader()
-        profiles = loader.list_profiles()
+        profiles = await spec_provider.list_profiles()
 
         # Get versions and display names for each profile
         profile_versions = {}
         profile_display_names = {}
         for profile in profiles:
-            versions = loader.list_versions(profile=profile)
+            versions = await spec_provider.list_versions(profile=profile)
             profile_versions[profile] = versions
-            # Load the latest version to get display name
-            if versions:
-                spec = loader.load_profile(version=versions[-1], profile=profile)
-                profile_display_names[profile] = spec.display_name or profile
+            # Get display name from provider
+            display_name = await spec_provider.get_display_name(profile)
+            profile_display_names[profile] = display_name
 
         return templates.TemplateResponse(
             request,

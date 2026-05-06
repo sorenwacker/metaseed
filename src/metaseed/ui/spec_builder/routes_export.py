@@ -12,9 +12,10 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, Response, StreamingResponse
 from fastapi.templating import Jinja2Templates
 
-from ..spec_builder_helpers import delete_user_spec, save_spec, spec_to_yaml
+from ..spec_builder_helpers import spec_to_yaml
 
 if TYPE_CHECKING:
+    from ..spec_persistence import SpecPersistence
     from .state import SpecBuilderState
 
 
@@ -22,6 +23,7 @@ def register_export_routes(
     router: APIRouter,
     templates: Jinja2Templates,
     get_builder_state: Callable[[], SpecBuilderState],
+    persistence: SpecPersistence | None = None,
 ) -> None:
     """Register export and save routes.
 
@@ -29,7 +31,13 @@ def register_export_routes(
         router: The APIRouter to add routes to.
         templates: Jinja2Templates instance.
         get_builder_state: Callable to get builder state.
+        persistence: Optional persistence interface. If not provided, uses
+            FilesystemSpecPersistence for backward compatibility.
     """
+    if persistence is None:
+        from metaseed.ui.spec_filesystem import FilesystemSpecPersistence
+
+        persistence = FilesystemSpecPersistence()
 
     def _require_spec() -> SpecBuilderState:
         """Get builder state, raising HTTPException if no spec in progress."""
@@ -122,7 +130,7 @@ def register_export_routes(
             )
 
         try:
-            saved_path = save_spec(builder.spec)
+            saved_path = await persistence.save(builder.spec)
             builder.mark_saved()
             return templates.TemplateResponse(
                 request,
@@ -140,7 +148,7 @@ def register_export_routes(
     async def delete_user_spec_route(_request: Request, name: str, version: str) -> Response:
         """Delete a user-created specification."""
         try:
-            deleted = delete_user_spec(name, version)
+            deleted = await persistence.delete(name, version)
             if deleted:
                 return Response(status_code=200)
             raise HTTPException(status_code=404, detail=f"Spec {name} v{version} not found")

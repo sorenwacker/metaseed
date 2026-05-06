@@ -17,11 +17,10 @@ from metaseed.specs.schema import FieldType
 from ..spec_builder_helpers import (
     clone_spec,
     create_empty_spec,
-    list_available_templates,
-    list_user_specs,
 )
 
 if TYPE_CHECKING:
+    from ..spec_persistence import SpecPersistence
     from .state import SpecBuilderState
 
 
@@ -29,6 +28,7 @@ def register_main_routes(
     router: APIRouter,
     templates: Jinja2Templates,
     get_builder_state: Callable[[], SpecBuilderState],
+    persistence: SpecPersistence | None = None,
 ) -> None:
     """Register main page routes.
 
@@ -36,7 +36,13 @@ def register_main_routes(
         router: The APIRouter to add routes to.
         templates: Jinja2Templates instance.
         get_builder_state: Callable to get builder state.
+        persistence: Optional persistence interface. If not provided, uses
+            FilesystemSpecPersistence for backward compatibility.
     """
+    if persistence is None:
+        from metaseed.ui.spec_filesystem import FilesystemSpecPersistence
+
+        persistence = FilesystemSpecPersistence()
 
     def _require_spec() -> SpecBuilderState:
         """Get builder state, raising HTTPException if no spec in progress."""
@@ -63,8 +69,8 @@ def register_main_routes(
                 },
             )
 
-        available_templates = list_available_templates()
-        user_specs = list_user_specs()
+        available_templates = await persistence.list_templates()
+        user_specs = await persistence.list_user_specs()
         return templates.TemplateResponse(
             request,
             "spec_builder/start.html",
@@ -123,11 +129,12 @@ def register_main_routes(
         builder = get_builder_state()
         builder.reset()
 
-        available_templates = list_available_templates()
+        available_templates = await persistence.list_templates()
+        user_specs = await persistence.list_user_specs()
         return templates.TemplateResponse(
             request,
             "spec_builder/start.html",
-            {"templates": available_templates},
+            {"templates": available_templates, "user_specs": user_specs},
         )
 
     @router.get("/profile-metadata", response_class=HTMLResponse)
