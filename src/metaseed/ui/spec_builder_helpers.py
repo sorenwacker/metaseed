@@ -130,14 +130,25 @@ def save_spec(spec: ProfileSpec, name: str | None = None) -> Path:
         Path to the saved profile.yaml file.
 
     Raises:
-        ValueError: If name is empty or invalid.
+        ValueError: If name is empty, invalid, or conflicts with a built-in spec.
     """
+    from metaseed.specs.loader import SpecLoader
+
     profile_name = (name or spec.name).lower().strip()
     if not profile_name:
         raise ValueError("Profile name cannot be empty")
 
     # Sanitize name for filesystem
     safe_name = "".join(c if c.isalnum() or c in "-_" else "-" for c in profile_name)
+
+    # Check if name conflicts with a built-in spec
+    loader = SpecLoader()
+    builtin_profiles = [p.lower() for p in loader.list_profiles() if not loader.is_user_defined(p)]
+    if safe_name in builtin_profiles:
+        raise ValueError(
+            f"Cannot save with name '{profile_name}' - conflicts with built-in spec. "
+            f"Please choose a different name."
+        )
 
     specs_dir = get_custom_specs_dir()
     version_dir = specs_dir / safe_name / spec.version
