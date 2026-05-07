@@ -222,6 +222,11 @@ experiments:
     insert_size: 300
     platform: ILLUMINA
     instrument_model: Illumina NovaSeq 6000
+    experiment_attributes:
+      - tag: rna_integrity_number
+        value: "9.0"
+      - tag: library_concentration
+        value: "14.8"
     runs:
       - alias: ERR-COL0-0H-REP2
         experiment_ref: ERX-COL0-0H-REP2
@@ -235,6 +240,11 @@ experiments:
             filetype: fastq
             checksum_method: MD5
             checksum: d4e5f6789012345678abcdef04c3d2e1
+        run_attributes:
+          - tag: read_count
+            value: "43000000"
+          - tag: base_count
+            value: "12900000000"
 
   - alias: ERX-COL0-24H-REP1
     title: RNA-Seq of Col-0 drought 24h replicate 1
@@ -248,6 +258,11 @@ experiments:
     insert_size: 300
     platform: ILLUMINA
     instrument_model: Illumina NovaSeq 6000
+    experiment_attributes:
+      - tag: rna_integrity_number
+        value: "8.8"
+      - tag: library_concentration
+        value: "13.5"
     runs:
       - alias: ERR-COL0-24H-REP1
         experiment_ref: ERX-COL0-24H-REP1
@@ -261,6 +276,11 @@ experiments:
             filetype: fastq
             checksum_method: MD5
             checksum: f6789012345678abcdef06e5f4g3h2i1
+        run_attributes:
+          - tag: read_count
+            value: "42000000"
+          - tag: base_count
+            value: "12600000000"
 
   - alias: ERX-COL0-72H-REP1
     title: RNA-Seq of Col-0 drought 72h replicate 1
@@ -274,6 +294,11 @@ experiments:
     insert_size: 300
     platform: ILLUMINA
     instrument_model: Illumina NovaSeq 6000
+    experiment_attributes:
+      - tag: rna_integrity_number
+        value: "8.5"
+      - tag: library_concentration
+        value: "12.2"
     runs:
       - alias: ERR-COL0-72H-REP1
         experiment_ref: ERX-COL0-72H-REP1
@@ -287,6 +312,11 @@ experiments:
             filetype: fastq
             checksum_method: MD5
             checksum: 89012345678abcdef08g7h6i5j4k3l2m1
+        run_attributes:
+          - tag: read_count
+            value: "40000000"
+          - tag: base_count
+            value: "12000000000"
 
   - alias: ERX-LER-0H-REP1
     title: RNA-Seq of Ler control (0h) replicate 1
@@ -300,6 +330,11 @@ experiments:
     insert_size: 300
     platform: ILLUMINA
     instrument_model: Illumina NovaSeq 6000
+    experiment_attributes:
+      - tag: rna_integrity_number
+        value: "9.1"
+      - tag: library_concentration
+        value: "14.5"
     runs:
       - alias: ERR-LER-0H-REP1
         experiment_ref: ERX-LER-0H-REP1
@@ -313,6 +348,11 @@ experiments:
             filetype: fastq
             checksum_method: MD5
             checksum: 012345678abcdef0ai9j8k7l6m5n4o3p2
+        run_attributes:
+          - tag: read_count
+            value: "44000000"
+          - tag: base_count
+            value: "13200000000"
 
   - alias: ERX-LER-72H-REP1
     title: RNA-Seq of Ler drought 72h replicate 1
@@ -326,6 +366,11 @@ experiments:
     insert_size: 300
     platform: ILLUMINA
     instrument_model: Illumina NovaSeq 6000
+    experiment_attributes:
+      - tag: rna_integrity_number
+        value: "8.7"
+      - tag: library_concentration
+        value: "13.0"
     runs:
       - alias: ERR-LER-72H-REP1
         experiment_ref: ERX-LER-72H-REP1
@@ -339,6 +384,11 @@ experiments:
             filetype: fastq
             checksum_method: MD5
             checksum: 2345678abcdef0ck1l0m9n8o7p6q5r4s3
+        run_attributes:
+          - tag: read_count
+            value: "41000000"
+          - tag: base_count
+            value: "12300000000"
 
 analyses:
   - alias: ERZ-DROUGHT-DESEQ2

@@ -1,20 +1,15 @@
 # ISA v1.0 Example: Arabidopsis Metabolomics Study
-# A complete example demonstrating ISA entity types with proper nesting
+# A minimal but complete example with all entity list fields populated
 
 identifier: ISA-2024-ARAB-001
 title: Metabolomic profiling of Arabidopsis thaliana under cold stress
-description: >
-  Investigation of metabolic changes in Arabidopsis thaliana Col-0 and
-  cold-tolerant accessions during cold acclimation using LC-MS based
-  untargeted metabolomics.
+description: Investigation of metabolic changes during cold acclimation
 submission_date: "2024-02-20"
 public_release_date: "2025-02-20"
 
 comments:
   - name: Created With
     value: Metaseed ISA Generator
-  - name: Study Type
-    value: Metabolomics time course
 
 contacts:
   - last_name: Johnson
@@ -22,128 +17,349 @@ contacts:
     mid_initials: R
     email: e.johnson@biolab.edu
     phone: "+1-555-123-4567"
+    fax: "+1-555-123-4568"
     affiliation: Department of Plant Biology
     address: 123 Science Drive, Boston, MA 02115
     roles:
       - term: principal investigator
-      - term: submitter
-  - last_name: Chen
-    first_name: Wei
-    email: w.chen@biolab.edu
-    affiliation: Department of Plant Biology
-    roles:
-      - term: laboratory technician
+        term_source:
+          name: NCIT
+          file: http://purl.obolibrary.org/obo/ncit.owl
+          version: "23.01"
+          description: NCI Thesaurus
+          comments:
+            - name: Source note
+              value: Role ontology
+        term_accession: "NCIT_C19924"
+        comments:
+          - name: Role note
+            value: Lead researcher
+    comments:
+      - name: ORCID
+        value: "0000-0001-2345-6789"
 
 publications:
   - pubmed_id: "12345678"
     doi: "10.1234/plant.metab.2024.001"
     author_list: "Johnson ER, Chen W, Smith JK"
-    title: Cold-induced metabolic reprogramming in Arabidopsis thaliana
+    title: Cold-induced metabolic reprogramming in Arabidopsis
     status:
       term: published
+      term_source:
+        name: EFO
+        file: http://www.ebi.ac.uk/efo/efo.owl
+        version: "3.50.0"
+        description: Experimental Factor Ontology
+        comments:
+          - name: Source note
+            value: Status ontology
+      term_accession: "EFO_0001796"
+      comments:
+        - name: Status note
+          value: Peer reviewed
+    comments:
+      - name: Publication type
+        value: Research article
 
 ontology_source_references:
   - name: EFO
     file: http://www.ebi.ac.uk/efo/efo.owl
     version: "3.50.0"
     description: Experimental Factor Ontology
-  - name: PO
-    file: http://purl.obolibrary.org/obo/po.owl
-    version: "2023-06-22"
-    description: Plant Ontology
-  - name: CHEBI
-    file: http://purl.obolibrary.org/obo/chebi.owl
-    version: "230"
-    description: Chemical Entities of Biological Interest
+    comments:
+      - name: Usage
+        value: Experimental factors
 
 studies:
   - identifier: STU-ARAB-COLD-01
     investigation_id: ISA-2024-ARAB-001
     title: Cold acclimation time course in Arabidopsis
-    description: >
-      Time course experiment tracking metabolic changes during 7 days of
-      cold acclimation at 4C compared to control conditions at 22C.
+    description: Time course tracking metabolic changes during cold acclimation
     submission_date: "2024-02-20"
     public_release_date: "2024-08-01"
     filename: s_cold_acclimation.txt
+
+    design_descriptors:
+      - term: time series design
+        term_source:
+          name: EFO
+          file: http://www.ebi.ac.uk/efo/efo.owl
+          version: "3.50.0"
+          description: Experimental Factor Ontology
+          comments:
+            - name: Source note
+              value: Design ontology
+        term_accession: "EFO_0001779"
+        comments:
+          - name: Design note
+            value: Multiple time points
+
+    publications:
+      - pubmed_id: "12345679"
+        doi: "10.1234/plant.metab.2024.002"
+        author_list: "Johnson ER, Chen W"
+        title: Methods for cold stress metabolomics
+        status:
+          term: submitted
+          term_source:
+            name: EFO
+            file: http://www.ebi.ac.uk/efo/efo.owl
+            version: "3.50.0"
+            description: Experimental Factor Ontology
+            comments:
+              - name: Source note
+                value: Status ontology
+          term_accession: "EFO_0001795"
+          comments:
+            - name: Status note
+              value: Under review
+        comments:
+          - name: Publication type
+            value: Methods paper
+
+    contacts:
+      - last_name: Chen
+        first_name: Wei
+        mid_initials: L
+        email: w.chen@biolab.edu
+        phone: "+1-555-123-4570"
+        fax: "+1-555-123-4571"
+        affiliation: Department of Plant Biology
+        address: 123 Science Drive, Boston, MA 02115
+        roles:
+          - term: technician
+            term_source:
+              name: NCIT
+              file: http://purl.obolibrary.org/obo/ncit.owl
+              version: "23.01"
+              description: NCI Thesaurus
+              comments:
+                - name: Source note
+                  value: Role ontology
+            term_accession: "NCIT_C25741"
+            comments:
+              - name: Role note
+                value: Lab support
+        comments:
+          - name: ORCID
+            value: "0000-0002-3456-7890"
 
     protocols:
       - study_id: STU-ARAB-COLD-01
         name: Plant growth protocol
         protocol_type:
           term: growth protocol
-        description: >
-          Arabidopsis seeds surface sterilized and stratified at 4C for 3 days.
-          Plants grown on 1/2 MS medium in growth chambers at 22C, 16h/8h light/dark.
+          term_source:
+            name: EFO
+            file: http://www.ebi.ac.uk/efo/efo.owl
+            version: "3.50.0"
+            description: Experimental Factor Ontology
+            comments:
+              - name: Source note
+                value: Protocol ontology
+          term_accession: "EFO_0003789"
+          comments:
+            - name: Type note
+              value: Standard growth
+        description: Arabidopsis grown on 1/2 MS medium at 22C
         uri: https://protocols.io/view/arabidopsis-growth-123
         version: "1.0"
-
-      - study_id: STU-ARAB-COLD-01
-        name: Cold treatment protocol
-        protocol_type:
-          term: treatment protocol
-        description: >
-          Three-week-old plants transferred to 4C growth chamber. Control plants
-          remained at 22C. Samples collected at 0h, 24h, and 7d after transfer.
-        version: "1.0"
+        parameters:
+          - parameter_name:
+              term: temperature
+              term_source:
+                name: EFO
+                file: http://www.ebi.ac.uk/efo/efo.owl
+                version: "3.50.0"
+                description: Experimental Factor Ontology
+                comments:
+                  - name: Source note
+                    value: Parameter ontology
+              term_accession: "EFO_0000721"
+              comments:
+                - name: Parameter note
+                  value: Growth temperature
+            comments:
+              - name: Value range
+                value: 20-24C
+        components:
+          - term: growth chamber
+            term_source:
+              name: EFO
+              file: http://www.ebi.ac.uk/efo/efo.owl
+              version: "3.50.0"
+              description: Experimental Factor Ontology
+              comments:
+                - name: Source note
+                  value: Equipment ontology
+            term_accession: "EFO_0000968"
+            comments:
+              - name: Component note
+                value: Climate-controlled
+        comments:
+          - name: Protocol source
+            value: protocols.io
 
       - study_id: STU-ARAB-COLD-01
         name: Metabolite extraction protocol
         protocol_type:
           term: extraction
-        description: >
-          Frozen tissue (100mg) extracted with 1ml methanol:water (80:20).
-          Samples homogenized, centrifuged 14000g 10min at 4C.
+          term_source:
+            name: EFO
+            file: http://www.ebi.ac.uk/efo/efo.owl
+            version: "3.50.0"
+            description: Experimental Factor Ontology
+            comments:
+              - name: Source note
+                value: Protocol ontology
+          term_accession: "EFO_0002944"
+          comments:
+            - name: Type note
+              value: Metabolite extraction
+        description: Methanol:water extraction of frozen tissue
+        uri: https://protocols.io/view/extraction-789
         version: "1.0"
+        parameters:
+          - parameter_name:
+              term: solvent
+              term_source:
+                name: CHEBI
+                file: http://purl.obolibrary.org/obo/chebi.owl
+                version: "230"
+                description: Chemical Entities of Biological Interest
+                comments:
+                  - name: Source note
+                    value: Chemical ontology
+              term_accession: "CHEBI_17790"
+              comments:
+                - name: Parameter note
+                  value: Extraction solvent
+            comments:
+              - name: Value
+                value: methanol:water 80:20
+        components:
+          - term: centrifuge
+            term_source:
+              name: EFO
+              file: http://www.ebi.ac.uk/efo/efo.owl
+              version: "3.50.0"
+              description: Experimental Factor Ontology
+              comments:
+                - name: Source note
+                  value: Equipment ontology
+            term_accession: "EFO_0000548"
+            comments:
+              - name: Component note
+                value: High-speed centrifuge
+        comments:
+          - name: Protocol source
+            value: protocols.io
 
       - study_id: STU-ARAB-COLD-01
         name: LC-MS analysis protocol
         protocol_type:
           term: mass spectrometry
-        description: >
-          Untargeted metabolomics using Thermo Q Exactive Plus. HILIC column.
-          Full scan MS1 70000 resolution, data-dependent MS2 17500 resolution.
+          term_source:
+            name: EFO
+            file: http://www.ebi.ac.uk/efo/efo.owl
+            version: "3.50.0"
+            description: Experimental Factor Ontology
+            comments:
+              - name: Source note
+                value: Protocol ontology
+          term_accession: "EFO_0002692"
+          comments:
+            - name: Type note
+              value: LC-MS/MS analysis
+        description: Untargeted metabolomics using Thermo Q Exactive Plus
+        uri: https://protocols.io/view/lcms-012
         version: "1.0"
+        parameters:
+          - parameter_name:
+              term: ionization mode
+              term_source:
+                name: MS
+                file: http://purl.obolibrary.org/obo/ms.owl
+                version: "4.1.0"
+                description: Mass Spectrometry Ontology
+                comments:
+                  - name: Source note
+                    value: MS ontology
+              term_accession: "MS_1000465"
+              comments:
+                - name: Parameter note
+                  value: ESI mode
+            comments:
+              - name: Value
+                value: positive and negative
+        components:
+          - term: mass spectrometer
+            term_source:
+              name: MS
+              file: http://purl.obolibrary.org/obo/ms.owl
+              version: "4.1.0"
+              description: Mass Spectrometry Ontology
+              comments:
+                - name: Source note
+                  value: MS ontology
+            term_accession: "MS_1000463"
+            comments:
+              - name: Component note
+                value: Q Exactive Plus
+        comments:
+          - name: Protocol source
+            value: Vendor method
 
     characteristic_categories:
       - term: Organism
         term_source:
           name: NCBITAXON
-        term_accession: "http://purl.obolibrary.org/obo/NCBITAXON_1"
-      - term: Ecotype
-        term_source:
-          name: PO
-      - term: Treatment
-        term_source:
-          name: EFO
-      - term: Time point
-        term_source:
-          name: EFO
+          file: http://purl.obolibrary.org/obo/ncbitaxon.owl
+          version: "2023-01"
+          description: NCBI Taxonomy
+          comments:
+            - name: Source note
+              value: Taxonomy ontology
+        term_accession: "NCBITAXON_1"
+        comments:
+          - name: Category note
+            value: Species identifier
 
     unit_categories:
       - term: hour
         term_source:
           name: UO
-        term_accession: UO:0000032
-      - term: day
-        term_source:
-          name: UO
-        term_accession: UO:0000033
-      - term: degree Celsius
-        term_source:
-          name: UO
-        term_accession: UO:0000027
+          file: http://purl.obolibrary.org/obo/uo.owl
+          version: "2023-01"
+          description: Units of Measurement Ontology
+          comments:
+            - name: Source note
+              value: Unit ontology
+        term_accession: "UO_0000032"
+        comments:
+          - name: Unit note
+            value: Time in hours
 
     factors:
       - study_id: STU-ARAB-COLD-01
         name: Temperature
         factor_type:
           term: environmental factor
-
-      - study_id: STU-ARAB-COLD-01
-        name: Time point
-        factor_type:
-          term: temporal factor
+          term_source:
+            name: EFO
+            file: http://www.ebi.ac.uk/efo/efo.owl
+            version: "3.50.0"
+            description: Experimental Factor Ontology
+            comments:
+              - name: Source note
+                value: Factor ontology
+          term_accession: "EFO_0000470"
+          comments:
+            - name: Factor note
+              value: Temperature treatment
+        comments:
+          - name: Factor description
+            value: Cold vs control
 
     sources:
       - study_id: STU-ARAB-COLD-01
@@ -151,129 +367,234 @@ studies:
         characteristics:
           - category:
               term: Organism
+              term_source:
+                name: NCBITAXON
+                file: http://purl.obolibrary.org/obo/ncbitaxon.owl
+                version: "2023-01"
+                description: NCBI Taxonomy
+                comments:
+                  - name: Source note
+                    value: Taxonomy ontology
+              term_accession: "NCBITAXON_3702"
+              comments:
+                - name: Category note
+                  value: Plant species
             value: Arabidopsis thaliana
-          - category:
-              term: Ecotype
-            value: Columbia-0
-          - category:
-              term: Seed source
+            comments:
+              - name: Char note
+                value: Species annotation
+        comments:
+          - name: Source note
             value: NASC N1092
 
-      - study_id: STU-ARAB-COLD-01
-        name: Arabidopsis_ICE1_seeds
-        characteristics:
-          - category:
-              term: Organism
-            value: Arabidopsis thaliana
-          - category:
-              term: Genotype
-            value: 35S::ICE1 overexpressor
-
-    # Per ISA-JSON spec: All samples MUST be declared at Study level
     samples:
       - study_id: STU-ARAB-COLD-01
         name: Col0_Control_0h_Rep1
         derives_from:
           - name: Arabidopsis_Col0_seeds
             study_id: STU-ARAB-COLD-01
+            characteristics:
+              - category:
+                  term: Organism
+                  term_source:
+                    name: NCBITAXON
+                    file: http://purl.obolibrary.org/obo/ncbitaxon.owl
+                    version: "2023-01"
+                    description: NCBI Taxonomy
+                    comments:
+                      - name: Source note
+                        value: Taxonomy ontology
+                  term_accession: "NCBITAXON_3702"
+                  comments:
+                    - name: Category note
+                      value: Plant species
+                value: Arabidopsis thaliana
+                comments:
+                  - name: Char note
+                    value: Species annotation
+            comments:
+              - name: Source note
+                value: Reference to seed stock
         characteristics:
           - category:
               term: Treatment
+              term_source:
+                name: EFO
+                file: http://www.ebi.ac.uk/efo/efo.owl
+                version: "3.50.0"
+                description: Experimental Factor Ontology
+                comments:
+                  - name: Source note
+                    value: Treatment ontology
+              term_accession: "EFO_0000727"
+              comments:
+                - name: Category note
+                  value: Treatment condition
             value: Control 22C
-          - category:
-              term: Time point
-            value: 0 hours
-          - category:
-              term: Replicate
-            value: "1"
+            comments:
+              - name: Char note
+                value: Control condition
+        factor_values:
+          - factor_name:
+              study_id: STU-ARAB-COLD-01
+              name: Temperature
+              factor_type:
+                term: environmental factor
+                term_source:
+                  name: EFO
+                  file: http://www.ebi.ac.uk/efo/efo.owl
+                  version: "3.50.0"
+                  description: Experimental Factor Ontology
+                  comments:
+                    - name: Source note
+                      value: Factor ontology
+                term_accession: "EFO_0000470"
+                comments:
+                  - name: Factor note
+                    value: Env factor
+              comments:
+                - name: Factor note
+                  value: Temperature factor
+            value: "22"
+            unit:
+              term: degree Celsius
+              term_source:
+                name: UO
+                file: http://purl.obolibrary.org/obo/uo.owl
+                version: "2023-01"
+                description: Units of Measurement Ontology
+                comments:
+                  - name: Source note
+                    value: Unit ontology
+              term_accession: "UO_0000027"
+              comments:
+                - name: Unit note
+                  value: Temperature unit
+            comments:
+              - name: Value note
+                value: Control temperature
+        comments:
+          - name: Sample note
+            value: Biological replicate 1
 
-      - study_id: STU-ARAB-COLD-01
-        name: Col0_Control_0h_Rep2
+    other_materials:
+      - name: StudyExtract_Col0
         derives_from:
-          - name: Arabidopsis_Col0_seeds
-            study_id: STU-ARAB-COLD-01
+          - study_id: STU-ARAB-COLD-01
+            name: Col0_Control_0h_Rep1
+            derives_from:
+              - name: Arabidopsis_Col0_seeds
+                study_id: STU-ARAB-COLD-01
+                characteristics:
+                  - category:
+                      term: Organism
+                      term_source:
+                        name: NCBITAXON
+                        file: http://purl.obolibrary.org/obo/ncbitaxon.owl
+                        version: "2023-01"
+                        description: NCBI Taxonomy
+                        comments:
+                          - name: Source note
+                            value: Taxonomy ontology
+                      term_accession: "NCBITAXON_3702"
+                      comments:
+                        - name: Category note
+                          value: Plant species
+                    value: Arabidopsis thaliana
+                    comments:
+                      - name: Char note
+                        value: Species
+                comments:
+                  - name: Source note
+                    value: Seed stock
+            characteristics:
+              - category:
+                  term: Treatment
+                  term_source:
+                    name: EFO
+                    file: http://www.ebi.ac.uk/efo/efo.owl
+                    version: "3.50.0"
+                    description: Experimental Factor Ontology
+                    comments:
+                      - name: Source note
+                        value: Treatment ontology
+                  term_accession: "EFO_0000727"
+                  comments:
+                    - name: Category note
+                      value: Treatment
+                value: Control 22C
+                comments:
+                  - name: Char note
+                    value: Control sample
+            factor_values:
+              - factor_name:
+                  study_id: STU-ARAB-COLD-01
+                  name: Temperature
+                  factor_type:
+                    term: environmental factor
+                    term_source:
+                      name: EFO
+                      file: http://www.ebi.ac.uk/efo/efo.owl
+                      version: "3.50.0"
+                      description: Experimental Factor Ontology
+                      comments:
+                        - name: Source note
+                          value: Factor ontology
+                    term_accession: "EFO_0000470"
+                    comments:
+                      - name: Factor note
+                        value: Env factor
+                  comments:
+                    - name: Factor note
+                      value: Temperature factor
+                value: "22"
+                unit:
+                  term: degree Celsius
+                  term_source:
+                    name: UO
+                    file: http://purl.obolibrary.org/obo/uo.owl
+                    version: "2023-01"
+                    description: Units of Measurement Ontology
+                    comments:
+                      - name: Source note
+                        value: Unit ontology
+                  term_accession: "UO_0000027"
+                  comments:
+                    - name: Unit note
+                      value: Temp unit
+                comments:
+                  - name: Value note
+                    value: Control temp
+            comments:
+              - name: Sample note
+                value: Derived from sample
         characteristics:
           - category:
-              term: Treatment
-            value: Control 22C
-          - category:
-              term: Time point
-            value: 0 hours
-          - category:
-              term: Replicate
-            value: "2"
-
-      - study_id: STU-ARAB-COLD-01
-        name: Col0_Cold_24h_Rep1
-        derives_from:
-          - name: Arabidopsis_Col0_seeds
-            study_id: STU-ARAB-COLD-01
-        characteristics:
-          - category:
-              term: Treatment
-            value: Cold 4C
-          - category:
-              term: Time point
-            value: 24 hours
-          - category:
-              term: Replicate
-            value: "1"
-
-      - study_id: STU-ARAB-COLD-01
-        name: Col0_Cold_24h_Rep2
-        derives_from:
-          - name: Arabidopsis_Col0_seeds
-            study_id: STU-ARAB-COLD-01
-        characteristics:
-          - category:
-              term: Treatment
-            value: Cold 4C
-          - category:
-              term: Time point
-            value: 24 hours
-          - category:
-              term: Replicate
-            value: "2"
-
-      - study_id: STU-ARAB-COLD-01
-        name: Col0_Cold_7d_Rep1
-        derives_from:
-          - name: Arabidopsis_Col0_seeds
-            study_id: STU-ARAB-COLD-01
-        characteristics:
-          - category:
-              term: Treatment
-            value: Cold 4C
-          - category:
-              term: Time point
-            value: 7 days
-          - category:
-              term: Replicate
-            value: "1"
-
-      - study_id: STU-ARAB-COLD-01
-        name: ICE1_Cold_24h_Rep1
-        derives_from:
-          - name: Arabidopsis_ICE1_seeds
-            study_id: STU-ARAB-COLD-01
-        characteristics:
-          - category:
-              term: Treatment
-            value: Cold 4C
-          - category:
-              term: Time point
-            value: 24 hours
-          - category:
-              term: Genotype
-            value: ICE1 overexpressor
+              term: Extraction method
+              term_source:
+                name: EFO
+                file: http://www.ebi.ac.uk/efo/efo.owl
+                version: "3.50.0"
+                description: Experimental Factor Ontology
+                comments:
+                  - name: Source note
+                    value: Extraction ontology
+              term_accession: "EFO_0002944"
+              comments:
+                - name: Category note
+                  value: Extraction technique
+            value: Methanol extraction
+            comments:
+              - name: Char note
+                value: Extraction method
+        comments:
+          - name: Material note
+            value: Study-level extract reference
 
     comments:
       - name: Study Status
         value: Complete
-      - name: Analysis Platform
-        value: LC-MS/MS
 
-    # Process sequence links sources to samples via protocol execution
     process_sequence:
       - name: sample_collection_Col0_0h_Rep1
         executes_protocol:
@@ -287,119 +608,108 @@ studies:
         outputs:
           - name: Col0_Control_0h_Rep1
             type: Sample
-
-      - name: sample_collection_Col0_0h_Rep2
-        executes_protocol:
-          name: Plant growth protocol
-          study_id: STU-ARAB-COLD-01
-        performer: Wei Chen
-        date: "2024-01-15"
-        inputs:
-          - name: Arabidopsis_Col0_seeds
-            type: Source
-        outputs:
-          - name: Col0_Control_0h_Rep2
-            type: Sample
-
-      - name: sample_collection_Col0_24h_Rep1
-        executes_protocol:
-          name: Cold treatment protocol
-          study_id: STU-ARAB-COLD-01
-        performer: Wei Chen
-        date: "2024-01-16"
-        inputs:
-          - name: Arabidopsis_Col0_seeds
-            type: Source
-        outputs:
-          - name: Col0_Cold_24h_Rep1
-            type: Sample
-
-      - name: sample_collection_Col0_24h_Rep2
-        executes_protocol:
-          name: Cold treatment protocol
-          study_id: STU-ARAB-COLD-01
-        performer: Wei Chen
-        date: "2024-01-16"
-        inputs:
-          - name: Arabidopsis_Col0_seeds
-            type: Source
-        outputs:
-          - name: Col0_Cold_24h_Rep2
-            type: Sample
-
-      - name: sample_collection_Col0_7d_Rep1
-        executes_protocol:
-          name: Cold treatment protocol
-          study_id: STU-ARAB-COLD-01
-        performer: Wei Chen
-        date: "2024-01-22"
-        inputs:
-          - name: Arabidopsis_Col0_seeds
-            type: Source
-        outputs:
-          - name: Col0_Cold_7d_Rep1
-            type: Sample
-
-      - name: sample_collection_ICE1_24h_Rep1
-        executes_protocol:
-          name: Cold treatment protocol
-          study_id: STU-ARAB-COLD-01
-        performer: Wei Chen
-        date: "2024-01-16"
-        inputs:
-          - name: Arabidopsis_ICE1_seeds
-            type: Source
-        outputs:
-          - name: ICE1_Cold_24h_Rep1
-            type: Sample
+        parameter_values:
+          - category:
+              parameter_name:
+                term: temperature
+                term_source:
+                  name: EFO
+                  file: http://www.ebi.ac.uk/efo/efo.owl
+                  version: "3.50.0"
+                  description: Experimental Factor Ontology
+                  comments:
+                    - name: Source note
+                      value: Parameter ontology
+                term_accession: "EFO_0000721"
+                comments:
+                  - name: Category note
+                    value: Growth temperature
+              comments:
+                - name: Param note
+                  value: Temperature parameter
+            value: "22"
+            unit:
+              term: degree Celsius
+              term_source:
+                name: UO
+                file: http://purl.obolibrary.org/obo/uo.owl
+                version: "2023-01"
+                description: Units of Measurement Ontology
+                comments:
+                  - name: Source note
+                    value: Unit ontology
+              term_accession: "UO_0000027"
+              comments:
+                - name: Unit note
+                  value: Temperature unit
+            comments:
+              - name: Value note
+                value: Growth temperature value
+        comments:
+          - name: Process note
+            value: Initial sample collection
 
     assays:
       - study_id: STU-ARAB-COLD-01
         filename: a_metabolome_lcms_pos.txt
         measurement_type:
           term: metabolite profiling
+          term_source:
+            name: OBI
+            file: http://purl.obolibrary.org/obo/obi.owl
+            version: "2023-01"
+            description: Ontology for Biomedical Investigations
+            comments:
+              - name: Source note
+                value: Measurement ontology
+          term_accession: "OBI_0000366"
+          comments:
+            - name: Measurement note
+              value: Untargeted metabolomics
         technology_type:
           term: mass spectrometry
+          term_source:
+            name: OBI
+            file: http://purl.obolibrary.org/obo/obi.owl
+            version: "2023-01"
+            description: Ontology for Biomedical Investigations
+            comments:
+              - name: Source note
+                value: Technology ontology
+          term_accession: "OBI_0000470"
+          comments:
+            - name: Technology note
+              value: LC-MS/MS
         technology_platform: Thermo Q Exactive Plus
-        # Assay references samples declared at Study level
         samples:
           - Col0_Control_0h_Rep1
-          - Col0_Control_0h_Rep2
-          - Col0_Cold_24h_Rep1
-          - Col0_Cold_7d_Rep1
 
-        # Other materials: Extracts and Labeled Extracts (per ISA-JSON spec)
         other_materials:
-          # Extracts derived from samples (derivation captured in process_sequence)
           - name: Extract_Col0_Control_0h_Rep1
             type: Extract Name
             characteristics:
               - category:
                   term: Extraction method
+                  term_source:
+                    name: EFO
+                    file: http://www.ebi.ac.uk/efo/efo.owl
+                    version: "3.50.0"
+                    description: Experimental Factor Ontology
+                    comments:
+                      - name: Source note
+                        value: Extraction ontology
+                  term_accession: "EFO_0002944"
+                  comments:
+                    - name: Category note
+                      value: Extraction technique
                 value: Methanol extraction
+                comments:
+                  - name: Char note
+                    value: Extraction method used
+            comments:
+              - name: Material note
+                value: Metabolite extract
 
-          - name: Extract_Col0_Control_0h_Rep2
-            type: Extract Name
-            characteristics:
-              - category:
-                  term: Extraction method
-                value: Methanol extraction
-
-          - name: Extract_Col0_Cold_24h_Rep1
-            type: Extract Name
-            characteristics:
-              - category:
-                  term: Extraction method
-                value: Methanol extraction
-
-          - name: Extract_Col0_Cold_7d_Rep1
-            type: Extract Name
-            characteristics:
-              - category:
-                  term: Extraction method
-                value: Methanol extraction
-
-          # Labeled extracts derive from extracts
           - name: LabeledExtract_Col0_Control_0h_Rep1
             type: Labeled Extract Name
             derives_from:
@@ -407,34 +717,25 @@ studies:
             characteristics:
               - category:
                   term: Label
+                  term_source:
+                    name: EFO
+                    file: http://www.ebi.ac.uk/efo/efo.owl
+                    version: "3.50.0"
+                    description: Experimental Factor Ontology
+                    comments:
+                      - name: Source note
+                        value: Label ontology
+                  term_accession: "EFO_0000563"
+                  comments:
+                    - name: Category note
+                      value: Sample label
                 value: none
-
-          - name: LabeledExtract_Col0_Control_0h_Rep2
-            type: Labeled Extract Name
-            derives_from:
-              - Extract_Col0_Control_0h_Rep2
-            characteristics:
-              - category:
-                  term: Label
-                value: none
-
-          - name: LabeledExtract_Col0_Cold_24h_Rep1
-            type: Labeled Extract Name
-            derives_from:
-              - Extract_Col0_Cold_24h_Rep1
-            characteristics:
-              - category:
-                  term: Label
-                value: none
-
-          - name: LabeledExtract_Col0_Cold_7d_Rep1
-            type: Labeled Extract Name
-            derives_from:
-              - Extract_Col0_Cold_7d_Rep1
-            characteristics:
-              - category:
-                  term: Label
-                value: none
+                comments:
+                  - name: Char note
+                    value: Unlabeled sample
+            comments:
+              - name: Material note
+                value: Unlabeled extract
 
         data_files:
           - assay_id: a_metabolome_lcms_pos
@@ -442,41 +743,133 @@ studies:
             label: Raw Data File
             derives_from:
               - LabeledExtract_Col0_Control_0h_Rep1
-          - assay_id: a_metabolome_lcms_pos
-            filename: Col0_Control_0h_Rep2_pos.raw
-            label: Raw Data File
-            derives_from:
-              - LabeledExtract_Col0_Control_0h_Rep2
-          - assay_id: a_metabolome_lcms_pos
-            filename: Col0_Cold_24h_Rep1_pos.raw
-            label: Raw Data File
-            derives_from:
-              - LabeledExtract_Col0_Cold_24h_Rep1
-          - assay_id: a_metabolome_lcms_pos
-            filename: processed_pos_mode.mzML
-            label: Derived Spectral Data File
+            generated_from:
+              - study_id: STU-ARAB-COLD-01
+                name: Col0_Control_0h_Rep1
+                derives_from:
+                  - name: Arabidopsis_Col0_seeds
+                    study_id: STU-ARAB-COLD-01
+                    characteristics:
+                      - category:
+                          term: Organism
+                          term_source:
+                            name: NCBITAXON
+                            file: http://purl.obolibrary.org/obo/ncbitaxon.owl
+                            version: "2023-01"
+                            description: NCBI Taxonomy
+                            comments:
+                              - name: Source note
+                                value: Taxonomy ontology
+                          term_accession: "NCBITAXON_3702"
+                          comments:
+                            - name: Category note
+                              value: Plant species
+                        value: Arabidopsis thaliana
+                        comments:
+                          - name: Char note
+                            value: Species
+                    comments:
+                      - name: Source note
+                        value: Seed stock
+                characteristics:
+                  - category:
+                      term: Treatment
+                      term_source:
+                        name: EFO
+                        file: http://www.ebi.ac.uk/efo/efo.owl
+                        version: "3.50.0"
+                        description: Experimental Factor Ontology
+                        comments:
+                          - name: Source note
+                            value: Treatment ontology
+                      term_accession: "EFO_0000727"
+                      comments:
+                        - name: Category note
+                          value: Treatment
+                    value: Control 22C
+                    comments:
+                      - name: Char note
+                        value: Control sample
+                factor_values:
+                  - factor_name:
+                      study_id: STU-ARAB-COLD-01
+                      name: Temperature
+                      factor_type:
+                        term: environmental factor
+                        term_source:
+                          name: EFO
+                          file: http://www.ebi.ac.uk/efo/efo.owl
+                          version: "3.50.0"
+                          description: Experimental Factor Ontology
+                          comments:
+                            - name: Source note
+                              value: Factor ontology
+                        term_accession: "EFO_0000470"
+                        comments:
+                          - name: Factor note
+                            value: Env factor
+                      comments:
+                        - name: Factor note
+                          value: Temperature factor
+                    value: "22"
+                    unit:
+                      term: degree Celsius
+                      term_source:
+                        name: UO
+                        file: http://purl.obolibrary.org/obo/uo.owl
+                        version: "2023-01"
+                        description: Units of Measurement Ontology
+                        comments:
+                          - name: Source note
+                            value: Unit ontology
+                      term_accession: "UO_0000027"
+                      comments:
+                        - name: Unit note
+                          value: Temp unit
+                    comments:
+                      - name: Value note
+                        value: Control temp
+                comments:
+                  - name: Sample note
+                    value: Control sample
+            comments:
+              - name: File note
+                value: Raw MS data
 
         characteristic_categories:
           - term: Extraction method
             term_source:
               name: EFO
-          - term: Label
-            term_source:
-              name: EFO
+              file: http://www.ebi.ac.uk/efo/efo.owl
+              version: "3.50.0"
+              description: Experimental Factor Ontology
+              comments:
+                - name: Source note
+                  value: Extraction ontology
+            term_accession: "EFO_0002944"
+            comments:
+              - name: Category note
+                value: Extraction technique
 
         unit_categories:
           - term: microgram per milliliter
             term_source:
               name: UO
-            term_accession: UO:0000274
+              file: http://purl.obolibrary.org/obo/uo.owl
+              version: "2023-01"
+              description: Units of Measurement Ontology
+              comments:
+                - name: Source note
+                  value: Unit ontology
+            term_accession: "UO_0000274"
+            comments:
+              - name: Unit note
+                value: Concentration unit
 
         comments:
           - name: Acquisition Mode
             value: Positive ESI
-          - name: Instrument Settings
-            value: See protocol
 
-        # Assay-level process sequence for extraction and analysis
         process_sequence:
           - name: extraction_Col0_Control_0h_Rep1
             executes_protocol:
@@ -490,19 +883,32 @@ studies:
             outputs:
               - name: Extract_Col0_Control_0h_Rep1
                 type: Extract
-
-          - name: extraction_Col0_Control_0h_Rep2
-            executes_protocol:
-              name: Metabolite extraction protocol
-              study_id: STU-ARAB-COLD-01
-            performer: Emily Johnson
-            date: "2024-02-01"
-            inputs:
-              - name: Col0_Control_0h_Rep2
-                type: Sample
-            outputs:
-              - name: Extract_Col0_Control_0h_Rep2
-                type: Extract
+            parameter_values:
+              - category:
+                  parameter_name:
+                    term: solvent
+                    term_source:
+                      name: CHEBI
+                      file: http://purl.obolibrary.org/obo/chebi.owl
+                      version: "230"
+                      description: Chemical Entities of Biological Interest
+                      comments:
+                        - name: Source note
+                          value: Chemical ontology
+                    term_accession: "CHEBI_17790"
+                    comments:
+                      - name: Category note
+                        value: Extraction solvent
+                  comments:
+                    - name: Param note
+                      value: Solvent parameter
+                value: methanol:water 80:20
+                comments:
+                  - name: Value note
+                    value: Methanol-water mixture
+            comments:
+              - name: Process note
+                value: Metabolite extraction
 
           - name: lcms_analysis_Col0_Control_0h_Rep1
             executes_protocol:
@@ -516,36 +922,29 @@ studies:
             outputs:
               - name: Col0_Control_0h_Rep1_pos.raw
                 type: DataFile
-
-          - name: lcms_analysis_Col0_Control_0h_Rep2
-            executes_protocol:
-              name: LC-MS analysis protocol
-              study_id: STU-ARAB-COLD-01
-            performer: Emily Johnson
-            date: "2024-02-05"
-            inputs:
-              - name: LabeledExtract_Col0_Control_0h_Rep2
-                type: LabeledExtract
-            outputs:
-              - name: Col0_Control_0h_Rep2_pos.raw
-                type: DataFile
-
-      - study_id: STU-ARAB-COLD-01
-        filename: a_metabolome_lcms_neg.txt
-        measurement_type:
-          term: metabolite profiling
-        technology_type:
-          term: mass spectrometry
-        technology_platform: Thermo Q Exactive Plus
-        samples:
-          - Col0_Control_0h_Rep1
-          - Col0_Cold_24h_Rep2
-        data_files:
-          - assay_id: a_metabolome_lcms_neg
-            filename: Col0_Control_0h_Rep1_neg.raw
-            label: Raw Data File
-            derives_from:
-              - LabeledExtract_Col0_Control_0h_Rep1
-          - assay_id: a_metabolome_lcms_neg
-            filename: processed_neg_mode.mzML
-            label: Derived Spectral Data File
+            parameter_values:
+              - category:
+                  parameter_name:
+                    term: ionization mode
+                    term_source:
+                      name: MS
+                      file: http://purl.obolibrary.org/obo/ms.owl
+                      version: "4.1.0"
+                      description: Mass Spectrometry Ontology
+                      comments:
+                        - name: Source note
+                          value: MS ontology
+                    term_accession: "MS_1000465"
+                    comments:
+                      - name: Category note
+                        value: ESI mode
+                  comments:
+                    - name: Param note
+                      value: Ionization parameter
+                value: positive
+                comments:
+                  - name: Value note
+                    value: Positive mode ESI
+            comments:
+              - name: Process note
+                value: LC-MS analysis

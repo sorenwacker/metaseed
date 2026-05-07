@@ -63,6 +63,38 @@ identifications:
         genus: Quercus
         specific_epithet: robur
         vernacular_name: English oak
+    agents:
+      - type: schema:Person
+        agent_identifier: https://orcid.org/0000-0002-3456-7890
+        name: Dr. Maria Taxonomist
+        roles:
+          - type: schema:Role
+            role_name: identifier
+            position: 1
+        identifiers:
+          - type: ods:Identifier
+            title: ORCID identifier
+            identifier_value: https://orcid.org/0000-0002-3456-7890
+            identifier_type: URL
+    citations:
+      - type: ods:Citation
+        citation_type: TaxonomicReference
+        description: "Flora Europaea Vol. 1 (1964)"
+        date: "1964"
+        bibliographic_citation: "Tutin TG et al. Flora Europaea"
+        agents:
+          - type: schema:Person
+            agent_identifier: https://viaf.org/12345
+            name: T.G. Tutin
+            roles:
+              - type: schema:Role
+                role_name: author
+                position: 1
+            identifiers:
+              - type: ods:Identifier
+                title: VIAF identifier
+                identifier_value: https://viaf.org/12345
+                identifier_type: URL
 
 # Collection event
 events:
@@ -85,6 +117,56 @@ events:
         decimal_longitude: 5.9699
         geodetic_datum: WGS84
         coordinate_uncertainty_in_meters: 100
+    agents:
+      - type: schema:Person
+        agent_identifier: https://orcid.org/0000-0001-2345-6789
+        name: Dr. Jan de Botanist
+        roles:
+          - type: schema:Role
+            role_name: collector
+            position: 1
+        identifiers:
+          - type: ods:Identifier
+            title: ORCID identifier
+            identifier_value: https://orcid.org/0000-0001-2345-6789
+            identifier_type: URL
+    assertions:
+      - type: ods:Assertion
+        measurement_type: CollectorNote
+        measurement_value: Specimen collected from edge of forest
+        measurement_determined_date: "1985-07-20"
+        agents:
+          - type: schema:Person
+            agent_identifier: https://orcid.org/0000-0001-2345-6789
+            name: Dr. Jan de Botanist
+            roles:
+              - type: schema:Role
+                role_name: assertor
+                position: 1
+            identifiers:
+              - type: ods:Identifier
+                title: ORCID identifier
+                identifier_value: https://orcid.org/0000-0001-2345-6789
+                identifier_type: URL
+        citations:
+          - type: ods:Citation
+            citation_type: FieldNote
+            description: "Field notebook entry 1985-07-20"
+            date: "1985"
+            bibliographic_citation: "de Botanist field notes"
+            agents:
+              - type: schema:Person
+                agent_identifier: https://orcid.org/0000-0001-2345-6789
+                name: Dr. Jan de Botanist
+                roles:
+                  - type: schema:Role
+                    role_name: author
+                    position: 1
+                identifiers:
+                  - type: ods:Identifier
+                    title: ORCID identifier
+                    identifier_value: https://orcid.org/0000-0001-2345-6789
+                    identifier_type: URL
 
 # Agents
 agents:
@@ -95,3 +177,90 @@ agents:
       - type: schema:Role
         role_name: collector
         position: 1
+    identifiers:
+      - type: ods:Identifier
+        title: ORCID identifier
+        identifier_value: https://orcid.org/0000-0001-2345-6789
+        identifier_type: URL
+
+# Root level entity lists
+assertions:
+  - type: ods:Assertion
+    measurement_type: QualityControl
+    measurement_value: Specimen verified against type material
+    measurement_determined_date: "2024-01-15"
+    agents:
+      - type: schema:Person
+        agent_identifier: https://orcid.org/0000-0003-4567-8901
+        name: Dr. Curator
+        roles:
+          - type: schema:Role
+            role_name: verifier
+            position: 1
+        identifiers:
+          - type: ods:Identifier
+            title: ORCID identifier
+            identifier_value: https://orcid.org/0000-0003-4567-8901
+            identifier_type: URL
+    citations:
+      - type: ods:Citation
+        citation_type: TypeSpecimen
+        description: "Type specimen WAG.0000001"
+        date: "1900"
+        bibliographic_citation: "Original type collection"
+        agents:
+          - type: schema:Person
+            agent_identifier: https://viaf.org/23456
+            name: C. Linnaeus
+            roles:
+              - type: schema:Role
+                role_name: author
+                position: 1
+            identifiers:
+              - type: ods:Identifier
+                title: VIAF identifier
+                identifier_value: https://viaf.org/23456
+                identifier_type: URL
+
+citations:
+  - type: ods:Citation
+    citation_type: Reference
+    description: "de Botanist J (1986) Oak flora of the Netherlands"
+    date: "1986"
+    bibliographic_citation: "Journal of Dutch Botany 45:123-145"
+    agents:
+      - type: schema:Person
+        agent_identifier: https://orcid.org/0000-0001-2345-6789
+        name: Dr. Jan de Botanist
+        roles:
+          - type: schema:Role
+            role_name: author
+            position: 1
+        identifiers:
+          - type: ods:Identifier
+            title: ORCID identifier
+            identifier_value: https://orcid.org/0000-0001-2345-6789
+            identifier_type: URL
+
+identifiers:
+  - type: ods:Identifier
+    title: Local specimen ID
+    identifier_value: WAG.1234567
+    identifier_type: Locally unique identifier
+
+entity_relationships:
+  - type: ods:EntityRelationship
+    relationship_type: derivedFrom
+    related_resource_id: WAG.1234566
+    relationship_remarks: Derived specimen from parent
+
+specimen_parts:
+  - type: ods:SpecimenPart
+    part_name: Leaf sample
+    part_type: leaf
+    preparations: dried, pressed
+
+chronometric_ages:
+  - type: ods:ChronometricAge
+    verbatim_chronometric_age: "Present"
+    chronometric_age_protocol: Historical record

@@ -113,6 +113,9 @@ def check_nested_completeness(
 ) -> list[str]:
     """Recursively check that nested entities have required fields populated.
 
+    Checks ALL nested entities (not just required fields) to ensure the example
+    is complete and usable.
+
     Args:
         data: The data to check (dict or list).
         profile: Profile name.
@@ -135,31 +138,53 @@ def check_nested_completeness(
         return errors  # Entity not found, skip validation
 
     if isinstance(data, dict):
-        # Check required fields
+        # First check required fields at this level
         for field in entity_spec.fields:
-            if not field.required or field.parent_ref:
+            if field.parent_ref:
+                continue  # Skip parent_ref fields (auto-filled)
+
+            field_path = f"{path}.{field.name}" if path else field.name
+            value = data.get(field.name)
+
+            # Check required fields are present
+            if field.required and (value is None or value == "" or value == []):
+                errors.append(f"Missing required field: {field_path}")
+
+        # Then recursively check ALL nested entities (required or not)
+        for field in entity_spec.fields:
+            if field.parent_ref:
                 continue
 
             field_path = f"{path}.{field.name}" if path else field.name
             value = data.get(field.name)
 
-            if value is None or value == "" or value == []:
-                errors.append(f"Missing required field: {field_path}")
-            elif field.type == FieldType.LIST and field.items:
-                # Check nested list items
-                if isinstance(value, list):
+            if value is None:
+                continue
+
+            if field.type == FieldType.LIST and field.items:
+                # Check if items is an entity type
+                try:
+                    loader.load_entity(field.items, version, profile)
+                    is_entity_list = True
+                except Exception:
+                    is_entity_list = False
+
+                if is_entity_list and isinstance(value, list):
                     for i, item in enumerate(value):
-                        item_path = f"{field_path}[{i}]"
-                        errors.extend(
-                            check_nested_completeness(
-                                item, profile, version, field.items, item_path
+                        if isinstance(item, dict):
+                            item_path = f"{field_path}[{i}]"
+                            errors.extend(
+                                check_nested_completeness(
+                                    item, profile, version, field.items, item_path
+                                )
                             )
-                        )
+
             elif field.type == FieldType.ENTITY and field.items:
                 # Check nested entity
-                errors.extend(
-                    check_nested_completeness(value, profile, version, field.items, field_path)
-                )
+                if isinstance(value, dict):
+                    errors.extend(
+                        check_nested_completeness(value, profile, version, field.items, field_path)
+                    )
 
     return errors
 
@@ -234,6 +259,75 @@ class TestExampleFilesHaveRequiredFields:
         assert has_title, f"Example {example_file.name} missing title field"
 
 
+def find_incomplete_entity_lists(
+    data: Any, profile: str, version: str, entity_name: str, path: str = ""
+) -> list[str]:
+    """Find entity list fields that are empty when they should be populated.
+
+    This catches cases where one assay has other_materials but another doesn't,
+    indicating an incomplete example. Skips reference fields (fields that link
+    to other entities by ID rather than embedding them).
+
+    Args:
+        data: The data to check.
+        profile: Profile name.
+        version: Profile version.
+        entity_name: Entity name for this data.
+        path: Current path for error messages.
+
+    Returns:
+        List of warnings for empty entity list fields.
+    """
+    warnings = []
+    if data is None or not isinstance(data, dict):
+        return warnings
+
+    loader = SpecLoader(profile=profile)
+
+    try:
+        entity_spec = loader.load_entity(entity_name, version, profile)
+    except Exception:
+        return warnings
+
+    for field in entity_spec.fields:
+        # Skip parent_ref fields and reference fields (links to other entities)
+        if field.parent_ref or field.reference:
+            continue
+
+        field_path = f"{path}.{field.name}" if path else field.name
+        value = data.get(field.name)
+
+        if field.type == FieldType.LIST and field.items:
+            # Check if items is an entity type
+            try:
+                loader.load_entity(field.items, version, profile)
+                is_entity_list = True
+            except Exception:
+                is_entity_list = False
+
+            if is_entity_list:
+                if value is None or value == []:
+                    # Empty entity list - this is a potential completeness issue
+                    warnings.append(f"Empty entity list: {field_path} (type: {field.items})")
+                elif isinstance(value, list):
+                    # Recurse into list items
+                    for i, item in enumerate(value):
+                        if isinstance(item, dict):
+                            item_path = f"{field_path}[{i}]"
+                            warnings.extend(
+                                find_incomplete_entity_lists(
+                                    item, profile, version, field.items, item_path
+                                )
+                            )
+
+        elif field.type == FieldType.ENTITY and field.items and isinstance(value, dict):
+            warnings.extend(
+                find_incomplete_entity_lists(value, profile, version, field.items, field_path)
+            )
+
+    return warnings
+
+
 class TestExampleFilesCompleteness:
     """Tests that example files have complete nested entity data."""
 
@@ -255,6 +349,31 @@ class TestExampleFilesCompleteness:
             error_msg += "\n".join(f"  - {e}" for e in errors[:10])  # Limit to first 10
             if len(errors) > 10:
                 error_msg += f"\n  ... and {len(errors) - 10} more"
+            pytest.fail(error_msg)
+
+    @pytest.mark.parametrize(
+        "profile,version,example_file",
+        get_all_example_files(),
+        ids=lambda x: str(x) if isinstance(x, Path) else x,
+    )
+    def test_example_entity_lists_populated(
+        self, profile: str, version: str, example_file: Path
+    ) -> None:
+        """Entity list fields in examples should be populated, not empty.
+
+        Examples should demonstrate complete usage of the spec. If an entity
+        has list fields that can contain other entities, those lists should
+        have data to serve as useful examples.
+        """
+        data = load_example_data(example_file)
+        root_entity = get_root_entity(profile, version)
+        warnings = find_incomplete_entity_lists(data, profile, version, root_entity)
+
+        if warnings:
+            error_msg = f"Example {example_file.name} has empty entity lists:\n"
+            error_msg += "\n".join(f"  - {w}" for w in warnings[:20])
+            if len(warnings) > 20:
+                error_msg += f"\n  ... and {len(warnings) - 20} more"
             pytest.fail(error_msg)
 
 
