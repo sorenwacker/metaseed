@@ -16,21 +16,22 @@ contacts:
     email: c.garcia@phenomics-center.org
     affiliation: International Phenomics Center
     roles:
-      - principal investigator
+      - term: principal investigator
 
   - last_name: Mueller
     first_name: Anna
     email: a.mueller@phenomics-center.org
     affiliation: International Phenomics Center
     roles:
-      - data curator
+      - term: data curator
 
 publications:
   - pubmed_id: "98765432"
     doi: "10.1234/maize.phenomics.2024.001"
     author_list: "Garcia C, Kim S, Mueller A"
     title: Automated phenotyping reveals nitrogen use efficiency traits in maize
-    status: submitted
+    status:
+      term: submitted
 
 ontology_source_references:
   - name: CO_322
@@ -68,12 +69,13 @@ studies:
         email: s.kim@phenomics-center.org
         affiliation: International Phenomics Center
         roles:
-          - data analyst
+          - term: data analyst
 
     protocols:
       - study_id: STU-MAIZE-N-2024
         name: Plant growth protocol
-        protocol_type: growth protocol
+        protocol_type:
+          term: growth protocol
         description: >
           Seeds germinated in wet paper for 3 days at 28C. Seedlings transplanted
           to 5L pots filled with perlite:vermiculite (1:1). Nutrient solution
@@ -81,23 +83,29 @@ studies:
         version: "2.0"
         uri: https://protocols.io/view/maize-greenhouse-growth-456
         parameters:
-          - parameter_name: germination temperature
-          - parameter_name: pot volume
+          - parameter_name:
+              term: germination temperature
+          - parameter_name:
+              term: pot volume
 
       - study_id: STU-MAIZE-N-2024
         name: RGB imaging protocol
-        protocol_type: data acquisition
+        protocol_type:
+          term: data acquisition
         description: >
           Daily RGB imaging using LemnaTec Scanalyzer 3D. Three images per plant:
           top view and two side views at 90 degree rotation. Resolution 4096x3000 pixels.
         version: "1.5"
         parameters:
-          - parameter_name: image resolution
-          - parameter_name: imaging frequency
+          - parameter_name:
+              term: image resolution
+          - parameter_name:
+              term: imaging frequency
 
       - study_id: STU-MAIZE-N-2024
         name: Nitrogen treatment protocol
-        protocol_type: treatment protocol
+        protocol_type:
+          term: treatment protocol
         description: >
           High nitrogen: 15 mM NH4NO3 in nutrient solution.
           Low nitrogen: 1.5 mM NH4NO3 in nutrient solution.
@@ -106,7 +114,8 @@ studies:
 
       - study_id: STU-MAIZE-N-2024
         name: Harvest protocol
-        protocol_type: sample collection
+        protocol_type:
+          term: sample collection
         description: >
           Plants harvested at V12 stage. Shoot and root biomass separated,
           dried at 70C for 72h, and weighed. Leaf samples collected for
@@ -117,46 +126,58 @@ studies:
       - study_id: STU-MAIZE-N-2024
         name: B73_seed_lot_2024
         characteristics:
-          - category: organism
+          - category:
+              term: organism
             value: Zea mays
-          - category: seed lot
+          - category:
+              term: seed lot
             value: B73-2024-01
 
       - study_id: STU-MAIZE-N-2024
         name: Mo17_seed_lot_2024
         characteristics:
-          - category: organism
+          - category:
+              term: organism
             value: Zea mays
-          - category: seed lot
+          - category:
+              term: seed lot
             value: Mo17-2024-01
 
     samples:
       - study_id: STU-MAIZE-N-2024
         name: B73_HN_R1_leaf
         derives_from:
-          - B73_seed_lot_2024
+          - name: B73_seed_lot_2024
+            study_id: STU-MAIZE-N-2024
         characteristics:
-          - category: tissue type
+          - category:
+              term: tissue type
             value: leaf
-          - category: developmental stage
+          - category:
+              term: developmental stage
             value: V12
 
       - study_id: STU-MAIZE-N-2024
         name: B73_LN_R1_leaf
         derives_from:
-          - B73_seed_lot_2024
+          - name: B73_seed_lot_2024
+            study_id: STU-MAIZE-N-2024
         characteristics:
-          - category: tissue type
+          - category:
+              term: tissue type
             value: leaf
-          - category: developmental stage
+          - category:
+              term: developmental stage
             value: V12
 
       - study_id: STU-MAIZE-N-2024
         name: Mo17_HN_R1_leaf
         derives_from:
-          - Mo17_seed_lot_2024
+          - name: Mo17_seed_lot_2024
+            study_id: STU-MAIZE-N-2024
         characteristics:
-          - category: tissue type
+          - category:
+              term: tissue type
             value: leaf
 
     biological_materials:

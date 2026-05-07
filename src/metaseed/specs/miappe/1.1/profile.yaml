@@ -362,6 +362,7 @@ entities:
       '
     example:
       unique_id: STU-FIELD-2024
+      investigation_id: INV-DROUGHT-2024
       title: Field Trial Summer 2024
       description: Randomized complete block design with 3 replicates testing 50 wheat cultivars
       start_date: '2024-05-01'

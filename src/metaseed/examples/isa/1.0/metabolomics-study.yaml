@@ -25,21 +25,22 @@ contacts:
     affiliation: Department of Plant Biology
     address: 123 Science Drive, Boston, MA 02115
     roles:
-      - principal investigator
-      - submitter
+      - term: principal investigator
+      - term: submitter
   - last_name: Chen
     first_name: Wei
     email: w.chen@biolab.edu
     affiliation: Department of Plant Biology
     roles:
-      - laboratory technician
+      - term: laboratory technician
 
 publications:
   - pubmed_id: "12345678"
     doi: "10.1234/plant.metab.2024.001"
     author_list: "Johnson ER, Chen W, Smith JK"
     title: Cold-induced metabolic reprogramming in Arabidopsis thaliana
-    status: published
+    status:
+      term: published
 
 ontology_source_references:
   - name: EFO
@@ -69,7 +70,8 @@ studies:
     protocols:
       - study_id: STU-ARAB-COLD-01
         name: Plant growth protocol
-        protocol_type: growth protocol
+        protocol_type:
+          term: growth protocol
         description: >
           Arabidopsis seeds surface sterilized and stratified at 4C for 3 days.
           Plants grown on 1/2 MS medium in growth chambers at 22C, 16h/8h light/dark.
@@ -78,7 +80,8 @@ studies:
 
       - study_id: STU-ARAB-COLD-01
         name: Cold treatment protocol
-        protocol_type: treatment protocol
+        protocol_type:
+          term: treatment protocol
         description: >
           Three-week-old plants transferred to 4C growth chamber. Control plants
           remained at 22C. Samples collected at 0h, 24h, and 7d after transfer.
@@ -86,7 +89,8 @@ studies:
 
       - study_id: STU-ARAB-COLD-01
         name: Metabolite extraction protocol
-        protocol_type: extraction
+        protocol_type:
+          term: extraction
         description: >
           Frozen tissue (100mg) extracted with 1ml methanol:water (80:20).
           Samples homogenized, centrifuged 14000g 10min at 4C.
@@ -94,7 +98,8 @@ studies:
 
       - study_id: STU-ARAB-COLD-01
         name: LC-MS analysis protocol
-        protocol_type: mass spectrometry
+        protocol_type:
+          term: mass spectrometry
         description: >
           Untargeted metabolomics using Thermo Q Exactive Plus. HILIC column.
           Full scan MS1 70000 resolution, data-dependent MS2 17500 resolution.
@@ -132,29 +137,36 @@ studies:
     factors:
       - study_id: STU-ARAB-COLD-01
         name: Temperature
-        factor_type: environmental factor
+        factor_type:
+          term: environmental factor
 
       - study_id: STU-ARAB-COLD-01
         name: Time point
-        factor_type: temporal factor
+        factor_type:
+          term: temporal factor
 
     sources:
       - study_id: STU-ARAB-COLD-01
         name: Arabidopsis_Col0_seeds
         characteristics:
-          - category: Organism
+          - category:
+              term: Organism
             value: Arabidopsis thaliana
-          - category: Ecotype
+          - category:
+              term: Ecotype
             value: Columbia-0
-          - category: Seed source
+          - category:
+              term: Seed source
             value: NASC N1092
 
       - study_id: STU-ARAB-COLD-01
         name: Arabidopsis_ICE1_seeds
         characteristics:
-          - category: Organism
+          - category:
+              term: Organism
             value: Arabidopsis thaliana
-          - category: Genotype
+          - category:
+              term: Genotype
             value: 35S::ICE1 overexpressor
 
     # Per ISA-JSON spec: All samples MUST be declared at Study level
@@ -165,11 +177,14 @@ studies:
           - name: Arabidopsis_Col0_seeds
             study_id: STU-ARAB-COLD-01
         characteristics:
-          - category: Treatment
+          - category:
+              term: Treatment
             value: Control 22C
-          - category: Time point
+          - category:
+              term: Time point
             value: 0 hours
-          - category: Replicate
+          - category:
+              term: Replicate
             value: "1"
 
       - study_id: STU-ARAB-COLD-01
@@ -178,11 +193,14 @@ studies:
           - name: Arabidopsis_Col0_seeds
             study_id: STU-ARAB-COLD-01
         characteristics:
-          - category: Treatment
+          - category:
+              term: Treatment
             value: Control 22C
-          - category: Time point
+          - category:
+              term: Time point
             value: 0 hours
-          - category: Replicate
+          - category:
+              term: Replicate
             value: "2"
 
       - study_id: STU-ARAB-COLD-01
@@ -191,11 +209,14 @@ studies:
           - name: Arabidopsis_Col0_seeds
             study_id: STU-ARAB-COLD-01
         characteristics:
-          - category: Treatment
+          - category:
+              term: Treatment
             value: Cold 4C
-          - category: Time point
+          - category:
+              term: Time point
             value: 24 hours
-          - category: Replicate
+          - category:
+              term: Replicate
             value: "1"
 
       - study_id: STU-ARAB-COLD-01
@@ -204,11 +225,14 @@ studies:
           - name: Arabidopsis_Col0_seeds
             study_id: STU-ARAB-COLD-01
         characteristics:
-          - category: Treatment
+          - category:
+              term: Treatment
             value: Cold 4C
-          - category: Time point
+          - category:
+              term: Time point
             value: 24 hours
-          - category: Replicate
+          - category:
+              term: Replicate
             value: "2"
 
       - study_id: STU-ARAB-COLD-01
@@ -217,11 +241,14 @@ studies:
           - name: Arabidopsis_Col0_seeds
             study_id: STU-ARAB-COLD-01
         characteristics:
-          - category: Treatment
+          - category:
+              term: Treatment
             value: Cold 4C
-          - category: Time point
+          - category:
+              term: Time point
             value: 7 days
-          - category: Replicate
+          - category:
+              term: Replicate
             value: "1"
 
       - study_id: STU-ARAB-COLD-01
@@ -230,11 +257,14 @@ studies:
           - name: Arabidopsis_ICE1_seeds
             study_id: STU-ARAB-COLD-01
         characteristics:
-          - category: Treatment
+          - category:
+              term: Treatment
             value: Cold 4C
-          - category: Time point
+          - category:
+              term: Time point
             value: 24 hours
-          - category: Genotype
+          - category:
+              term: Genotype
             value: ICE1 overexpressor
 
     comments:
@@ -326,8 +356,10 @@ studies:
     assays:
       - study_id: STU-ARAB-COLD-01
         filename: a_metabolome_lcms_pos.txt
-        measurement_type: metabolite profiling
-        technology_type: mass spectrometry
+        measurement_type:
+          term: metabolite profiling
+        technology_type:
+          term: mass spectrometry
         technology_platform: Thermo Q Exactive Plus
         # Assay references samples declared at Study level
         samples:
@@ -342,25 +374,29 @@ studies:
           - name: Extract_Col0_Control_0h_Rep1
             type: Extract Name
             characteristics:
-              - category: Extraction method
+              - category:
+                  term: Extraction method
                 value: Methanol extraction
 
           - name: Extract_Col0_Control_0h_Rep2
             type: Extract Name
             characteristics:
-              - category: Extraction method
+              - category:
+                  term: Extraction method
                 value: Methanol extraction
 
           - name: Extract_Col0_Cold_24h_Rep1
             type: Extract Name
             characteristics:
-              - category: Extraction method
+              - category:
+                  term: Extraction method
                 value: Methanol extraction
 
           - name: Extract_Col0_Cold_7d_Rep1
             type: Extract Name
             characteristics:
-              - category: Extraction method
+              - category:
+                  term: Extraction method
                 value: Methanol extraction
 
           # Labeled extracts derive from extracts
@@ -369,7 +405,8 @@ studies:
             derives_from:
               - Extract_Col0_Control_0h_Rep1
             characteristics:
-              - category: Label
+              - category:
+                  term: Label
                 value: none
 
           - name: LabeledExtract_Col0_Control_0h_Rep2
@@ -377,7 +414,8 @@ studies:
             derives_from:
               - Extract_Col0_Control_0h_Rep2
             characteristics:
-              - category: Label
+              - category:
+                  term: Label
                 value: none
 
           - name: LabeledExtract_Col0_Cold_24h_Rep1
@@ -385,7 +423,8 @@ studies:
             derives_from:
               - Extract_Col0_Cold_24h_Rep1
             characteristics:
-              - category: Label
+              - category:
+                  term: Label
                 value: none
 
           - name: LabeledExtract_Col0_Cold_7d_Rep1
@@ -393,7 +432,8 @@ studies:
             derives_from:
               - Extract_Col0_Cold_7d_Rep1
             characteristics:
-              - category: Label
+              - category:
+                  term: Label
                 value: none
 
         data_files:
@@ -492,8 +532,10 @@ studies:
 
       - study_id: STU-ARAB-COLD-01
         filename: a_metabolome_lcms_neg.txt
-        measurement_type: metabolite profiling
-        technology_type: mass spectrometry
+        measurement_type:
+          term: metabolite profiling
+        technology_type:
+          term: mass spectrometry
         technology_platform: Thermo Q Exactive Plus
         samples:
           - Col0_Control_0h_Rep1

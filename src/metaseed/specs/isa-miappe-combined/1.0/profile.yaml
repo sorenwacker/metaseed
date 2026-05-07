@@ -367,6 +367,7 @@ entities:
       '
     example:
       identifier: STU-FIELD-2024
+      investigation_id: INV-PLANT-OMICS-2024
       title: Field Drought Trial Summer 2024
       description: Randomized complete block design testing 50 wheat cultivars
       start_date: '2024-05-01'
@@ -630,6 +631,7 @@ entities:
       '
     example:
       identifier: SAM-LEAF-001
+      study_id: STU-FIELD-2024
       name: Flag leaf sample plot A1
       observation_unit_id: OU-PLOT-A1
       plant_structural_development_stage: flowering
@@ -703,6 +705,7 @@ entities:
       '
     example:
       identifier: FAC-IRRIGATION
+      study_id: STU-FIELD-2024
       name: Irrigation Treatment
       description: Water stress treatment levels
       factor_type: treatment
@@ -787,6 +790,7 @@ entities:
     description: A data file associated with a study or assay.
     example:
       identifier: DF-PHENOTYPES-001
+      study_id: STU-FIELD-2024
       filename: phenotype_measurements.csv
       name: Phenotype measurements
       link: https://doi.org/10.5281/zenodo.1234567
@@ -842,6 +846,7 @@ entities:
 
       '
     example:
+      study_id: STU-EXAMPLE-001
       filename: a_transcriptome.txt
       measurement_type: transcription profiling
       technology_type: RNA-seq
@@ -891,6 +896,7 @@ entities:
     ontology_term: isaterms:protocol
     description: An experimental procedure used in the study.
     example:
+      study_id: STU-EXAMPLE-001
       name: RNA Extraction Protocol
       protocol_type: nucleic acid extraction
       description: Total RNA extraction using TRIzol reagent
@@ -952,8 +958,8 @@ entities:
 
       '
     example:
+      study_id: STU-FIELD-2024
       name: Wheat plant plot A1
-      organism: Triticum aestivum
     fields:
     - name: study_id
       type: string
@@ -1165,6 +1171,7 @@ entities:
       '
     example:
       identifier: BM-WHEAT-001
+      study_id: STU-FIELD-2024
       organism: Triticum aestivum
       genus: Triticum
       species: aestivum
@@ -1256,6 +1263,7 @@ entities:
       '
     example:
       identifier: OU-PLOT-A1
+      study_id: STU-FIELD-2024
       observation_unit_type: plot
       biological_material_id: BM-WHEAT-001
       observation_unit_block: A
@@ -1333,6 +1341,7 @@ entities:
       '
     example:
       identifier: VAR-PLANTHEIGHT
+      study_id: STU-FIELD-2024
       name: Plant Height
       trait: plant height
       trait_accession_number: CO_321:0000020
@@ -1403,6 +1412,7 @@ entities:
       '
     example:
       identifier: EVT-SOWING-001
+      study_id: STU-FIELD-2024
       event_type: Sowing
       date: '2024-05-01'
       description: Seeds sown at 300 seeds per square meter
@@ -1453,6 +1463,7 @@ entities:
     description: Environmental conditions recorded during a study.
     example:
       identifier: ENV-TEMP-001
+      study_id: STU-FIELD-2024
       parameter: Air temperature
       value: '22.5'
       unit: degrees Celsius

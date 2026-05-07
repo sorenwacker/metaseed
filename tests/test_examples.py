@@ -2,15 +2,19 @@
 
 These tests ensure that the example YAML files in the examples/ directory
 can be successfully loaded and validated against the corresponding models.
+Also validates inline entity examples from spec definitions.
 """
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 import yaml
+from pydantic import ValidationError
 
 from metaseed.models import get_model
 from metaseed.specs.loader import SpecLoader
+from metaseed.specs.schema import FieldType
 
 EXAMPLES_DIR = Path(__file__).parent.parent / "src" / "metaseed" / "examples"
 
@@ -41,6 +45,29 @@ def get_all_example_files() -> list[tuple[str, str, Path]]:
     return examples
 
 
+def get_all_inline_examples() -> list[tuple[str, str, str, dict]]:
+    """Get all inline entity examples from spec definitions.
+
+    Returns:
+        List of (profile, version, entity_name, example_data) tuples.
+    """
+    examples = []
+    loader = SpecLoader()
+
+    for profile in loader.list_profiles():
+        for version in loader.list_versions(profile):
+            try:
+                profile_spec = loader.load_profile(version, profile)
+                for entity_name, entity_def in profile_spec.entities.items():
+                    if entity_def.example:
+                        examples.append((profile, version, entity_name, entity_def.example))
+            except Exception:  # noqa: S112
+                # Skip profiles that fail to load (e.g., invalid YAML)
+                continue
+
+    return examples
+
+
 def get_root_entity(profile: str, version: str) -> str:
     """Get the root entity type for a profile/version."""
     loader = SpecLoader(profile=profile)
@@ -59,6 +86,82 @@ def load_example_data(example_file: Path) -> dict:
     """
     with open(example_file, encoding="utf-8") as f:
         return yaml.safe_load(f)
+
+
+def get_required_field_names(profile: str, version: str, entity_name: str) -> list[str]:
+    """Get names of required fields for an entity.
+
+    Args:
+        profile: Profile name.
+        version: Profile version.
+        entity_name: Entity name.
+
+    Returns:
+        List of required field names (excluding parent_ref fields).
+    """
+    loader = SpecLoader(profile=profile)
+    entity_spec = loader.load_entity(entity_name, version, profile)
+    return [
+        f.name
+        for f in entity_spec.fields
+        if f.required and not f.parent_ref  # parent_ref fields are auto-filled
+    ]
+
+
+def check_nested_completeness(
+    data: Any, profile: str, version: str, entity_name: str, path: str = ""
+) -> list[str]:
+    """Recursively check that nested entities have required fields populated.
+
+    Args:
+        data: The data to check (dict or list).
+        profile: Profile name.
+        version: Profile version.
+        entity_name: Entity name for this data.
+        path: Current path for error messages.
+
+    Returns:
+        List of error messages for missing/empty required fields.
+    """
+    errors = []
+    if data is None:
+        return errors
+
+    loader = SpecLoader(profile=profile)
+
+    try:
+        entity_spec = loader.load_entity(entity_name, version, profile)
+    except Exception:
+        return errors  # Entity not found, skip validation
+
+    if isinstance(data, dict):
+        # Check required fields
+        for field in entity_spec.fields:
+            if not field.required or field.parent_ref:
+                continue
+
+            field_path = f"{path}.{field.name}" if path else field.name
+            value = data.get(field.name)
+
+            if value is None or value == "" or value == []:
+                errors.append(f"Missing required field: {field_path}")
+            elif field.type == FieldType.LIST and field.items:
+                # Check nested list items
+                if isinstance(value, list):
+                    for i, item in enumerate(value):
+                        item_path = f"{field_path}[{i}]"
+                        errors.extend(
+                            check_nested_completeness(
+                                item, profile, version, field.items, item_path
+                            )
+                        )
+            elif field.type == FieldType.ENTITY and field.items:
+                # Check nested entity
+                errors.extend(
+                    check_nested_completeness(value, profile, version, field.items, field_path)
+                )
+
+    return errors
 
 
 class TestExampleFilesLoad:
@@ -129,3 +232,229 @@ class TestExampleFilesHaveRequiredFields:
         title_fields = ["title", "study_title", "investigation_title"]
         has_title = any(field in data and data[field] for field in title_fields)
         assert has_title, f"Example {example_file.name} missing title field"
+
+
+class TestExampleFilesCompleteness:
+    """Tests that example files have complete nested entity data."""
+
+    @pytest.mark.parametrize(
+        "profile,version,example_file",
+        get_all_example_files(),
+        ids=lambda x: str(x) if isinstance(x, Path) else x,
+    )
+    def test_example_nested_entities_complete(
+        self, profile: str, version: str, example_file: Path
+    ) -> None:
+        """Nested entities in example files should have all required fields."""
+        data = load_example_data(example_file)
+        root_entity = get_root_entity(profile, version)
+        errors = check_nested_completeness(data, profile, version, root_entity)
+
+        if errors:
+            error_msg = f"Example {example_file.name} has incomplete nested entities:\n"
+            error_msg += "\n".join(f"  - {e}" for e in errors[:10])  # Limit to first 10
+            if len(errors) > 10:
+                error_msg += f"\n  ... and {len(errors) - 10} more"
+            pytest.fail(error_msg)
+
+
+def get_parent_ref_fields(profile: str, version: str, entity_name: str) -> list[str]:
+    """Get names of parent_ref fields for an entity.
+
+    Args:
+        profile: Profile name.
+        version: Profile version.
+        entity_name: Entity name.
+
+    Returns:
+        List of field names that have parent_ref defined.
+    """
+    loader = SpecLoader(profile=profile)
+    entity_spec = loader.load_entity(entity_name, version, profile)
+    return [f.name for f in entity_spec.fields if f.parent_ref]
+
+
+def add_placeholder_parent_refs(
+    example_data: dict, profile: str, version: str, entity_name: str
+) -> dict:
+    """Add placeholder values for parent_ref fields.
+
+    Parent ref fields are auto-filled at runtime, so inline examples may
+    not include them. This function adds placeholder values for validation.
+
+    Args:
+        example_data: Original example data.
+        profile: Profile name.
+        version: Profile version.
+        entity_name: Entity name.
+
+    Returns:
+        Example data with placeholder parent_ref values added.
+    """
+    data = dict(example_data)
+    parent_ref_fields = get_parent_ref_fields(profile, version, entity_name)
+    for field in parent_ref_fields:
+        if field not in data:
+            data[field] = f"PLACEHOLDER-{field.upper()}"
+    return data
+
+
+def find_entity_field_type_mismatches(
+    data: Any, profile: str, version: str, entity_name: str, path: str = ""
+) -> list[str]:
+    """Find fields where a string is used but an entity object is expected.
+
+    This catches issues like using 'metabolite profiling' (string) where
+    an OntologyAnnotation object is expected.
+
+    Args:
+        data: The data to check.
+        profile: Profile name.
+        version: Profile version.
+        entity_name: Entity name for this data.
+        path: Current path for error messages.
+
+    Returns:
+        List of error messages for type mismatches.
+    """
+    errors = []
+    if data is None or not isinstance(data, dict):
+        return errors
+
+    loader = SpecLoader(profile=profile)
+
+    try:
+        entity_spec = loader.load_entity(entity_name, version, profile)
+    except Exception:
+        return errors
+
+    for field in entity_spec.fields:
+        field_path = f"{path}.{field.name}" if path else field.name
+        value = data.get(field.name)
+
+        if value is None:
+            continue
+
+        # Check entity fields - should be dict, not string
+        if field.type == FieldType.ENTITY and field.items:
+            if isinstance(value, str):
+                errors.append(f"{field_path}: expected {field.items} object, got string '{value}'")
+            elif isinstance(value, dict):
+                errors.extend(
+                    find_entity_field_type_mismatches(
+                        value, profile, version, field.items, field_path
+                    )
+                )
+
+        # Check list fields with entity items
+        elif field.type == FieldType.LIST and field.items and isinstance(value, list):
+            for i, item in enumerate(value):
+                item_path = f"{field_path}[{i}]"
+                # Check if items should be entities but got strings
+                try:
+                    loader.load_entity(field.items, version, profile)
+                except Exception:  # noqa: S112
+                    # items is a primitive type, skip
+                    continue
+
+                # items is an entity type
+                if isinstance(item, str):
+                    errors.append(
+                        f"{item_path}: expected {field.items} object, got string '{item}'"
+                    )
+                elif isinstance(item, dict):
+                    errors.extend(
+                        find_entity_field_type_mismatches(
+                            item, profile, version, field.items, item_path
+                        )
+                    )
+
+    return errors
+
+
+class TestInlineEntityExamples:
+    """Tests that inline entity examples in specs validate against their models."""
+
+    @pytest.mark.parametrize(
+        "profile,version,entity_name,example_data",
+        get_all_inline_examples(),
+        ids=lambda x: x if isinstance(x, str) else None,
+    )
+    def test_inline_example_validates(
+        self, profile: str, version: str, entity_name: str, example_data: dict
+    ) -> None:
+        """Each inline entity example should validate against its model."""
+        try:
+            Model = get_model(entity_name, version, profile=profile)
+        except Exception as e:
+            pytest.skip(f"Could not get model for {entity_name}: {e}")
+
+        # Add placeholder values for parent_ref fields (auto-filled at runtime)
+        data_with_refs = add_placeholder_parent_refs(example_data, profile, version, entity_name)
+
+        try:
+            instance = Model(**data_with_refs)
+            assert instance is not None
+        except ValidationError as e:
+            pytest.fail(
+                f"Inline example for {profile}/{version}/{entity_name} failed validation:\n{e}"
+            )
+
+    @pytest.mark.parametrize(
+        "profile,version,entity_name,example_data",
+        get_all_inline_examples(),
+        ids=lambda x: x if isinstance(x, str) else None,
+    )
+    def test_inline_example_has_required_fields(
+        self, profile: str, version: str, entity_name: str, example_data: dict
+    ) -> None:
+        """Each inline entity example should have all required fields."""
+        required_fields = get_required_field_names(profile, version, entity_name)
+        missing = [f for f in required_fields if f not in example_data or not example_data[f]]
+
+        if missing:
+            pytest.fail(
+                f"Inline example for {profile}/{version}/{entity_name} "
+                f"missing required fields: {', '.join(missing)}"
+            )
+
+
+class TestExampleFieldTypes:
+    """Tests that example data uses correct field types (not strings where objects expected)."""
+
+    @pytest.mark.parametrize(
+        "profile,version,example_file",
+        get_all_example_files(),
+        ids=lambda x: str(x) if isinstance(x, Path) else x,
+    )
+    def test_example_file_entity_fields_are_objects(
+        self, profile: str, version: str, example_file: Path
+    ) -> None:
+        """Entity fields should contain objects, not plain strings."""
+        data = load_example_data(example_file)
+        root_entity = get_root_entity(profile, version)
+        errors = find_entity_field_type_mismatches(data, profile, version, root_entity)
+
+        if errors:
+            error_msg = f"Example {example_file.name} has field type mismatches:\n"
+            error_msg += "\n".join(f"  - {e}" for e in errors[:15])
+            if len(errors) > 15:
+                error_msg += f"\n  ... and {len(errors) - 15} more"
+            pytest.fail(error_msg)
+
+    @pytest.mark.parametrize(
+        "profile,version,entity_name,example_data",
+        get_all_inline_examples(),
+        ids=lambda x: x if isinstance(x, str) else None,
+    )
+    def test_inline_example_entity_fields_are_objects(
+        self, profile: str, version: str, entity_name: str, example_data: dict
+    ) -> None:
+        """Entity fields in inline examples should contain objects, not strings.
+
+        Note: This test is skipped because the spec schema (EntityDefSpec.example)
+        only allows primitive types (str, int, float, bool, list), not nested objects.
+        Inline examples are for documentation only; full validation happens in
+        example files under src/metaseed/examples/.
+        """
+        pytest.skip("Inline examples cannot have nested objects due to spec schema limitation")

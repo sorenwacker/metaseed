@@ -843,6 +843,11 @@ entities:
       accession: ERR123456
       experiment_ref: experiment-wgs-001
       run_date: "2024-06-20"
+      files:
+        - filename: sample1_R1.fastq.gz
+          filetype: fastq
+          checksum: d41d8cd98f00b204e9800998ecf8427e
+          checksum_method: MD5
     fields:
       - name: alias
         codename: alias
@@ -918,6 +923,11 @@ entities:
       study_ref: my-study-001
       analysis_type: SEQUENCE_ASSEMBLY
       description: De novo assembly of Arabidopsis thaliana Col-0 using long reads
+      files:
+        - filename: assembly.fasta.gz
+          filetype: fasta
+          checksum: e99a18c428cb38d5f260853678922e03
+          checksum_method: MD5
     fields:
       - name: alias
         codename: alias
