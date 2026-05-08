@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 import yaml
 from fastapi import HTTPException
 from fastapi.responses import RedirectResponse
+from pydantic import ValidationError
 
 from metaseed.models import get_model
 from metaseed.profiles import ProfileFactory
@@ -78,7 +79,7 @@ def register_example_routes(
         try:
             Model = get_model(root_entity, version, profile=profile_name)
             instance = Model(**example_data)
-        except Exception as e:
+        except (ValidationError, KeyError, TypeError) as e:
             raise HTTPException(
                 status_code=500, detail=f"Error creating entity from example: {e}"
             ) from e

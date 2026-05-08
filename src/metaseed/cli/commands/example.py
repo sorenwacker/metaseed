@@ -214,7 +214,7 @@ def export_example(
         if not examples_dir.exists():
             # Try relative to package (from cli/commands/example.py -> metaseed/examples)
             examples_dir = Path(__file__).parent.parent.parent / "examples"
-    except Exception:
+    except (TypeError, FileNotFoundError):
         examples_dir = Path(__file__).parent.parent.parent / "examples"
 
     if not examples_dir.exists():

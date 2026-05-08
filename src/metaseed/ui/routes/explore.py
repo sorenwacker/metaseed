@@ -6,6 +6,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
+from metaseed.specs.loader import SpecLoadError
 from metaseed.specs.merge import (
     CSVReportGenerator,
     DiffVisualizer,
@@ -114,7 +115,7 @@ def register_explore_routes(
                 }
             )
 
-        except Exception as e:
+        except (ValueError, SpecLoadError) as e:
             return JSONResponse(
                 {"error": str(e)},
                 status_code=500,
@@ -148,7 +149,7 @@ def register_explore_routes(
 
             return JSONResponse(graph_data)
 
-        except Exception as e:
+        except (ValueError, SpecLoadError) as e:
             return JSONResponse(
                 {"error": str(e)},
                 status_code=500,
@@ -185,7 +186,7 @@ def register_explore_routes(
 
             return HTMLResponse(content=content, media_type=media_type)
 
-        except Exception as e:
+        except (ValueError, SpecLoadError) as e:
             return HTMLResponse(
                 content=f"Error: {e}",
                 status_code=500,

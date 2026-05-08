@@ -14,15 +14,20 @@ User-defined specs are stored in:
     - Windows: %LOCALAPPDATA%/metaseed/specs/
 """
 
+from __future__ import annotations
+
 import logging
 from pathlib import Path
-from typing import Self
+from typing import TYPE_CHECKING, Self
 
 import yaml
 from pydantic import ValidationError
 
 from metaseed.paths import get_builtin_specs_dir, get_user_specs_dir
 from metaseed.specs.schema import EntitySpec, ProfileSpec
+
+if TYPE_CHECKING:
+    from metaseed.core.context import ProfileContext
 
 logger = logging.getLogger(__name__)
 
@@ -168,12 +173,21 @@ class SpecLoader:
                 raise SpecLoadError(f"Invalid specification at {loc}: {msg}") from e
             raise SpecLoadError(f"Invalid specification: {e}") from e
 
-    def load_profile(self: Self, version: str = "1.1", profile: str | None = None) -> ProfileSpec:
+    def load_profile(
+        self: Self,
+        version: str = "1.1",
+        profile: str | None = None,
+        *,
+        ctx: ProfileContext | None = None,
+    ) -> ProfileSpec:
         """Load a unified profile spec.
 
         Args:
-            version: Profile version (e.g., "1.1").
+            version: Profile version (e.g., "1.1"). Ignored if ctx is provided.
             profile: Profile name (e.g., "miappe", "isa"). Uses default if None.
+                Ignored if ctx is provided.
+            ctx: Optional ProfileContext containing profile and version.
+                If provided, takes precedence over version and profile args.
 
         Returns:
             ProfileSpec object.
@@ -181,6 +195,9 @@ class SpecLoader:
         Raises:
             SpecLoadError: If profile not found.
         """
+        if ctx is not None:
+            profile = ctx.profile
+            version = ctx.version
         profile_name = profile or self._default_profile
         loaded = self._load_profile(version, profile)
         if loaded is None:
@@ -188,14 +205,22 @@ class SpecLoader:
         return loaded
 
     def load_entity(
-        self: Self, entity: str, version: str = "1.1", profile: str | None = None
+        self: Self,
+        entity: str,
+        version: str = "1.1",
+        profile: str | None = None,
+        *,
+        ctx: ProfileContext | None = None,
     ) -> EntitySpec:
         """Load an entity spec by name and version.
 
         Args:
             entity: Entity name (e.g., "investigation" or "Investigation").
-            version: Version string (e.g., "1.1").
+            version: Version string (e.g., "1.1"). Ignored if ctx is provided.
             profile: Profile name (e.g., "miappe", "isa"). Uses default if None.
+                Ignored if ctx is provided.
+            ctx: Optional ProfileContext containing profile and version.
+                If provided, takes precedence over version and profile args.
 
         Returns:
             Parsed EntitySpec object.
@@ -203,6 +228,9 @@ class SpecLoader:
         Raises:
             SpecLoadError: If the entity or version is not found.
         """
+        if ctx is not None:
+            profile = ctx.profile
+            version = ctx.version
         profile_name = profile or self._default_profile
 
         loaded_profile = self._load_profile(version, profile)
@@ -216,15 +244,24 @@ class SpecLoader:
 
         raise SpecLoadError(f"Profile not found: {profile_name} v{version}")
 
-    def list_entities(self: Self, version: str = "1.1", profile: str | None = None) -> list[str]:
+    def list_entities(
+        self: Self,
+        version: str = "1.1",
+        profile: str | None = None,
+        *,
+        ctx: ProfileContext | None = None,
+    ) -> list[str]:
         """List available entities for a version.
 
         Returns entities in the order defined in the profile YAML, which is
-        typically hierarchical (Investigation → Study → nested entities).
+        typically hierarchical (Investigation -> Study -> nested entities).
 
         Args:
-            version: Version string (e.g., "1.1").
+            version: Version string (e.g., "1.1"). Ignored if ctx is provided.
             profile: Profile name (e.g., "miappe", "isa"). Uses default if None.
+                Ignored if ctx is provided.
+            ctx: Optional ProfileContext containing profile and version.
+                If provided, takes precedence over version and profile args.
 
         Returns:
             List of entity names in definition order.
@@ -232,6 +269,9 @@ class SpecLoader:
         Raises:
             SpecLoadError: If the version is not found.
         """
+        if ctx is not None:
+            profile = ctx.profile
+            version = ctx.version
         profile_name = profile or self._default_profile
 
         loaded_profile = self._load_profile(version, profile)
@@ -289,17 +329,26 @@ class SpecLoader:
         return sorted(profiles)
 
     def get_profile_path(
-        self: Self, version: str = "1.1", profile: str | None = None
+        self: Self,
+        version: str = "1.1",
+        profile: str | None = None,
+        *,
+        ctx: ProfileContext | None = None,
     ) -> Path | None:
         """Get path to the profile YAML file.
 
         Args:
-            version: Version string.
-            profile: Profile name. Uses default if None.
+            version: Version string. Ignored if ctx is provided.
+            profile: Profile name. Uses default if None. Ignored if ctx is provided.
+            ctx: Optional ProfileContext containing profile and version.
+                If provided, takes precedence over version and profile args.
 
         Returns:
             Path to profile file or None.
         """
+        if ctx is not None:
+            profile = ctx.profile
+            version = ctx.version
         return self._find_profile_file(version, profile)
 
     def is_user_defined(self: Self, profile: str, version: str | None = None) -> bool:

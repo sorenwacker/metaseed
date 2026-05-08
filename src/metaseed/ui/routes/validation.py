@@ -15,7 +15,7 @@ from starlette.requests import Request
 
 from metaseed.facade import ProfileFacade
 from metaseed.models import create_model_from_spec
-from metaseed.specs.loader import SpecLoader
+from metaseed.specs.loader import SpecLoader, SpecLoadError
 from metaseed.validators import validate as validate_data
 
 from ..helpers import collect_form_values
@@ -115,7 +115,7 @@ def _get_validation_rules_for_entity(
                     )
     except FileNotFoundError:
         logger.debug("Entity spec not found: %s", entity_type)
-    except Exception:
+    except SpecLoadError:
         logger.debug("Failed to load entity spec: %s", entity_type, exc_info=True)
 
     # Get profile validation rules
@@ -132,7 +132,7 @@ def _get_validation_rules_for_entity(
                     )
     except FileNotFoundError:
         logger.debug("Profile spec not found: %s v%s", profile, version)
-    except Exception:
+    except SpecLoadError:
         logger.debug("Failed to load profile spec: %s", profile, exc_info=True)
 
     return rules
@@ -203,8 +203,17 @@ def _validate_entity_deep(
                 rule="error",
             )
         )
-    except Exception as e:
+    except SpecLoadError as e:
         logger.warning("Validation error for %s: %s", entity_type, e, exc_info=True)
+        error_list.append(
+            ValidationError(
+                field=path_prefix.rstrip(".") or entity_type,
+                message=str(e),
+                rule="error",
+            )
+        )
+    except PydanticValidationError as e:
+        logger.warning("Pydantic validation error for %s: %s", entity_type, e, exc_info=True)
         error_list.append(
             ValidationError(
                 field=path_prefix.rstrip(".") or entity_type,

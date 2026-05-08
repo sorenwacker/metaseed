@@ -103,7 +103,7 @@ class AppState:
 
         Returns the profile's declared root_entity (typically Investigation).
         """
-        from metaseed.specs.loader import SpecLoader
+        from metaseed.specs.loader import SpecLoader, SpecLoadError
 
         loader = SpecLoader(profile=self.profile)
         facade = self.get_or_create_facade()
@@ -113,7 +113,7 @@ class AppState:
             root = spec.root_entity
             if root and root in facade.entities:
                 return [root]
-        except Exception:
+        except SpecLoadError:
             pass
 
         # Fallback to Investigation if available

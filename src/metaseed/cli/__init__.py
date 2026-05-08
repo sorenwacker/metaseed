@@ -333,7 +333,7 @@ def import_isa(
         else:
             typer.echo("Error: Path must be a .json file or directory", err=True)
             raise typer.Exit(1)
-    except Exception as e:
+    except (FileNotFoundError, NotADirectoryError, ValueError, OSError) as e:
         typer.echo(f"Error importing: {e}", err=True)
         raise typer.Exit(1) from None
 

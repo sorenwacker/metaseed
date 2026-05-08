@@ -5,6 +5,7 @@ Provides routes for exporting to Excel and importing ISA data.
 
 from __future__ import annotations
 
+import json
 import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -142,5 +143,5 @@ def register_import_routes(
             response.headers["HX-Trigger"] = "refreshPage"
             return response
 
-        except Exception as e:
+        except (json.JSONDecodeError, ValidationError, KeyError, OSError) as e:
             return error_response(request, templates, f"Import failed: {e!s}")

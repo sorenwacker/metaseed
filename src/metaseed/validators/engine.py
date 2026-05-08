@@ -5,7 +5,7 @@ This module provides the validation engine that coordinates rule execution.
 
 from typing import Any, Self
 
-from metaseed.specs.loader import SpecLoader
+from metaseed.specs.loader import SpecLoader, SpecLoadError
 from metaseed.specs.schema import ValidationRuleSpec
 from metaseed.validators.base import ValidationError, ValidationRule
 from metaseed.validators.rules import (
@@ -196,7 +196,7 @@ def create_engine_for_entity(
             if field.name in ("unique_id", "identifier"):
                 engine.add_rule(UniqueIdPatternRule(field=field.name))
                 break
-    except Exception:
+    except SpecLoadError:
         # Entity spec not found, check if profile has this entity
         pass
 
@@ -215,14 +215,12 @@ def create_engine_for_entity(
                     rule = _create_rule_from_spec(rule_spec)
                     if rule:
                         engine.add_rule(rule)
-    except Exception:
+    except SpecLoadError:
         # If profile not found, continue with basic rules only
         pass
 
     # Raise error if entity was not found in either spec or profile
     if not entity_found:
-        from metaseed.specs.loader import SpecLoadError
-
         raise SpecLoadError(f"Entity not found: {entity} ({profile} v{version})")
 
     return engine
@@ -248,7 +246,7 @@ def create_engine_from_profile(
         entities = loader.list_entities(version, profile)
         for entity in entities:
             engines[entity] = create_engine_for_entity(entity, version, profile)
-    except Exception:
+    except SpecLoadError:
         pass
 
     return engines

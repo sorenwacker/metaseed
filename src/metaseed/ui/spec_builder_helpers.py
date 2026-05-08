@@ -49,12 +49,12 @@ def clone_spec(profile: str, version: str) -> ProfileSpec:
     Raises:
         ValueError: If the profile/version cannot be loaded.
     """
-    from metaseed.specs.loader import SpecLoader
+    from metaseed.specs.loader import SpecLoader, SpecLoadError
 
     loader = SpecLoader(profile=profile)
     try:
         spec = loader.load_profile(version=version, profile=profile)
-    except Exception as e:
+    except SpecLoadError as e:
         raise ValueError(f"Cannot load profile {profile} v{version}: {e}") from e
 
     # Deep copy to ensure independence from cached version
@@ -171,7 +171,7 @@ def _list_specs(include_user_defined: bool, default_display_name_fn: callable) -
     Returns:
         List of dicts with spec info: name, display_name, versions.
     """
-    from metaseed.specs.loader import SpecLoader
+    from metaseed.specs.loader import SpecLoader, SpecLoadError
 
     loader = SpecLoader()
     profiles = loader.list_profiles()
@@ -198,7 +198,7 @@ def _list_specs(include_user_defined: bool, default_display_name_fn: callable) -
                     "versions": versions,
                 }
             )
-        except Exception:
+        except SpecLoadError:
             result.append(
                 {
                     "name": profile_name,

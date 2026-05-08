@@ -138,7 +138,7 @@ def register_export_routes(
                 "spec_builder/partials/save_result.html",
                 {"success": True, "path": str(saved_path)},
             )
-        except Exception as e:
+        except (ValueError, OSError) as e:
             return templates.TemplateResponse(
                 request,
                 "spec_builder/partials/save_result.html",
@@ -155,5 +155,5 @@ def register_export_routes(
             raise HTTPException(status_code=404, detail=f"Spec {name} v{version} not found")
         except ValueError as e:
             raise HTTPException(status_code=403, detail=str(e)) from e
-        except Exception as e:
+        except OSError as e:
             raise HTTPException(status_code=500, detail=str(e)) from e

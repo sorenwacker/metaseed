@@ -102,7 +102,7 @@ class ModelContext:
         model = self._models.get(key)
 
         if model is None and self._loader is not None:
-            with contextlib.suppress(Exception):
+            with contextlib.suppress(KeyError, LookupError):
                 model = self._loader(name, self._version, self._profile)
 
         return model
@@ -195,7 +195,7 @@ def _coerce_string_to_entity(value: str, model_class: type[BaseModel]) -> BaseMo
             if len(required_fields) <= 1:
                 try:
                     return model_class.model_validate({field_name: value})
-                except Exception:
+                except (ValueError, TypeError):
                     # If validation fails, keep as string
                     return value
 

@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 from fastapi import Body, Query
 from fastapi.responses import JSONResponse
 
+from metaseed.specs.loader import SpecLoadError
 from metaseed.specs.merge import compare, merge
 
 from ..helpers import collect_entities_by_type, get_reference_fields
@@ -190,7 +191,7 @@ def register_api_routes(
                 }
             )
 
-        except Exception as e:
+        except (ValueError, SpecLoadError) as e:
             return JSONResponse(
                 status_code=500,
                 content={"error": str(e)},
@@ -274,7 +275,7 @@ def register_api_routes(
                 status_code=400,
                 content={"error": str(e)},
             )
-        except Exception as e:
+        except SpecLoadError as e:
             return JSONResponse(
                 status_code=500,
                 content={"error": str(e)},

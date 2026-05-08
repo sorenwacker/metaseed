@@ -13,7 +13,7 @@ from typing import Any, Self
 import yaml
 
 from metaseed.profiles import ProfileFactory
-from metaseed.specs.loader import SpecLoader
+from metaseed.specs.loader import SpecLoader, SpecLoadError
 from metaseed.validators.base import ValidationError
 from metaseed.validators.engine import create_engine_for_entity
 
@@ -161,7 +161,7 @@ class DatasetValidator:
         """Load reference field definitions from specs."""
         try:
             entities = self._loader.list_entities(self.version)
-        except Exception:
+        except SpecLoadError:
             return
 
         for entity_name in entities:
@@ -169,11 +169,11 @@ class DatasetValidator:
                 spec = self._loader.load_entity(entity_name, self.version)
                 refs = []
                 for f in spec.fields:
-                    if f.ref:
-                        refs.append((f.name, f.ref))
+                    if f.reference:
+                        refs.append((f.name, f.reference))
                 if refs:
                     self._reference_fields[entity_name] = refs
-            except Exception:
+            except SpecLoadError:
                 continue
 
     def _detect_entity_type(self: Self, data: dict[str, Any]) -> str | None:
@@ -217,7 +217,7 @@ class DatasetValidator:
         # Recursively collect from nested lists
         try:
             spec = self._loader.load_entity(entity_type, self.version)
-        except Exception:
+        except SpecLoadError:
             return
 
         for f in spec.fields:
@@ -276,7 +276,7 @@ class DatasetValidator:
         # Recursively validate nested entities
         try:
             spec = self._loader.load_entity(entity_type, self.version)
-        except Exception:
+        except SpecLoadError:
             return errors
 
         for f in spec.fields:
@@ -323,13 +323,13 @@ class DatasetValidator:
                         rule=error.rule,
                     )
                 )
-        except Exception:
+        except SpecLoadError:
             pass
 
         # Recursively validate nested entities
         try:
             spec = self._loader.load_entity(entity_type, self.version)
-        except Exception:
+        except SpecLoadError:
             return errors
 
         for f in spec.fields:
@@ -363,7 +363,7 @@ class DatasetValidator:
 
         try:
             spec = self._loader.load_entity(entity_type, self.version)
-        except Exception:
+        except SpecLoadError:
             return
 
         for f in spec.fields:

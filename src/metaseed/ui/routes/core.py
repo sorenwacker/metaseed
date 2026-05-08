@@ -15,7 +15,7 @@ from pydantic import ValidationError
 from starlette.requests import Request
 
 from metaseed.profiles import ProfileFactory
-from metaseed.specs.loader import SpecLoader
+from metaseed.specs.loader import SpecLoader, SpecLoadError
 
 from ..helpers import (
     FormContext,
@@ -71,7 +71,7 @@ def get_profile_display_info(factory: ProfileFactory) -> list[dict]:
                     "latest_version": latest_version,
                 }
             )
-        except Exception:
+        except SpecLoadError:
             profiles.append(
                 {
                     "name": name,

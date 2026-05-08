@@ -10,7 +10,7 @@ from __future__ import annotations
 import copy
 from typing import TYPE_CHECKING
 
-from metaseed.specs.loader import SpecLoader
+from metaseed.specs.loader import SpecLoader, SpecLoadError
 from metaseed.ui.spec_persistence import SpecPersistence
 from metaseed.ui.spec_provider import SpecProvider
 
@@ -218,5 +218,5 @@ class FilesystemSpecProvider(SpecProvider):
         try:
             spec = self._loader.load_profile(version=latest_version, profile=profile)
             return spec.display_name or profile
-        except Exception:
+        except SpecLoadError:
             return profile
