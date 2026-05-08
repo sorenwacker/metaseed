@@ -408,8 +408,8 @@ class TestAppState:
         assert result is None
 
 
-class TestImportExport:
-    """Tests for import/export functionality."""
+class TestExport:
+    """Tests for export functionality."""
 
     def test_export_empty_returns_excel(self, client):
         """Export with no entities returns Excel file."""
@@ -424,39 +424,6 @@ class TestImportExport:
         assert "spreadsheetml" in response.headers["content-type"]
         # Check content disposition header has filename
         assert "attachment" in response.headers.get("content-disposition", "")
-
-    def test_import_requires_file(self, client):
-        """Import requires a file upload."""
-        response = client.post("/import")
-        assert response.status_code == 422  # Validation error
-
-    def test_import_rejects_non_json(self, client):
-        """Import rejects non-JSON files."""
-        response = client.post(
-            "/import",
-            files={"file": ("test.txt", b"not json", "text/plain")},
-        )
-        assert response.status_code == 200
-        assert "Unsupported file type" in response.text
-
-    def test_import_valid_isa_json(self, client):
-        """Import valid ISA-JSON creates entities."""
-        isa_json = """{
-            "identifier": "INV-001",
-            "title": "Test Investigation",
-            "description": "Test description",
-            "studies": []
-        }"""
-        response = client.post(
-            "/import",
-            files={"file": ("investigation.json", isa_json.encode(), "application/json")},
-        )
-        assert response.status_code == 200
-
-    def test_index_contains_import_button(self, client):
-        """Index page contains import button."""
-        response = client.get("/")
-        assert "Import" in response.text
 
     def test_index_contains_export_button(self, client):
         """Index page contains export button."""
@@ -811,37 +778,6 @@ class TestCreateEntityEdgeCases:
                 "unique_id": "INV-001",
                 "title": "Test Investigation",
             },
-        )
-        assert response.status_code == 200
-
-
-class TestImportEdgeCases:
-    """Tests for import edge cases."""
-
-    def test_import_invalid_json(self, client):
-        """Import invalid JSON shows error."""
-        response = client.post(
-            "/import",
-            files={"file": ("test.json", b"not valid json{", "application/json")},
-        )
-        assert response.status_code == 200
-        # Should show error or handle gracefully
-
-    def test_import_json_with_studies(self, client):
-        """Import JSON with nested studies."""
-        isa_json = """{
-            "identifier": "INV-002",
-            "title": "Test Investigation",
-            "studies": [
-                {
-                    "identifier": "STU-001",
-                    "title": "Study One"
-                }
-            ]
-        }"""
-        response = client.post(
-            "/import",
-            files={"file": ("investigation.json", isa_json.encode(), "application/json")},
         )
         assert response.status_code == 200
 

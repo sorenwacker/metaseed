@@ -12,7 +12,6 @@ from metaseed import __version__
 from metaseed.cli.commands.example import export_example
 from metaseed.cli.commands.merge import compare_profiles, merge_profiles
 from metaseed.cli.output import CheckOutput, echo_error, echo_success
-from metaseed.importers import ISAImporter
 from metaseed.logging import configure_logging
 from metaseed.models import get_model
 from metaseed.profiles import ProfileFactory
@@ -307,72 +306,6 @@ def check(
 
     if not result.is_valid:
         raise typer.Exit(EXIT_VALIDATION_ERROR)
-
-
-@app.command(name="import")
-def import_isa(
-    path: Annotated[Path, typer.Argument(help="Path to ISA-JSON file or ISA-Tab directory")],
-    output: Annotated[Path | None, typer.Option("--output", "-o", help="Output directory")] = None,
-    format: Annotated[str, typer.Option("--format", "-f", help="Output format")] = "yaml",
-) -> None:
-    """Import ISA-Tab or ISA-JSON data to MIAPPE format.
-
-    Supports:
-    - ISA-JSON: Single .json file
-    - ISA-Tab: Directory containing i_*.txt, s_*.txt, a_*.txt files
-    """
-    importer = ISAImporter()
-
-    try:
-        if path.is_file() and path.suffix.lower() == ".json":
-            result = importer.import_json(path)
-            typer.echo(f"Imported ISA-JSON: {path.name}")
-        elif path.is_dir():
-            result = importer.import_tab(path)
-            typer.echo(f"Imported ISA-Tab: {path.name}")
-        else:
-            typer.echo("Error: Path must be a .json file or directory", err=True)
-            raise typer.Exit(1)
-    except (FileNotFoundError, NotADirectoryError, ValueError, OSError) as e:
-        typer.echo(f"Error importing: {e}", err=True)
-        raise typer.Exit(1) from None
-
-    # Print summary
-    typer.echo(result.summary)
-
-    # Show warnings if any
-    for warning in result.warnings:
-        typer.echo(f"  Warning: {warning}")
-
-    # Output results
-    if output:
-        output.mkdir(parents=True, exist_ok=True)
-
-        if format.lower() == "json":
-            import json
-
-            (output / "investigation.json").write_text(json.dumps(result.investigation, indent=2))
-            for i, study in enumerate(result.studies):
-                (output / f"study_{i + 1}.json").write_text(json.dumps(study, indent=2))
-        else:
-            (output / "investigation.yaml").write_text(
-                yaml.dump(result.investigation, default_flow_style=False)
-            )
-            for i, study in enumerate(result.studies):
-                (output / f"study_{i + 1}.yaml").write_text(
-                    yaml.dump(study, default_flow_style=False)
-                )
-
-        typer.echo(f"Output written to: {output}")
-    else:
-        # Print investigation to stdout
-        typer.echo("\n--- Investigation ---")
-        typer.echo(yaml.dump(result.investigation, default_flow_style=False))
-
-        if result.studies:
-            typer.echo("--- Studies ---")
-            for study in result.studies:
-                typer.echo(yaml.dump(study, default_flow_style=False))
 
 
 @app.command(name="ui")

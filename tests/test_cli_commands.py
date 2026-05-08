@@ -257,85 +257,6 @@ class TestEntitiesCommand:
         assert "Error" in output or "error" in output.lower()
 
 
-class TestImportCommand:
-    """Tests for the import command."""
-
-    def test_import_isa_json(self, tmp_path):
-        """Import ISA-JSON file."""
-        isa_json = tmp_path / "investigation.json"
-        data = {
-            "identifier": "INV-001",
-            "title": "Test Investigation",
-            "studies": [],
-        }
-        isa_json.write_text(json.dumps(data), encoding="utf-8")
-
-        result = runner.invoke(app, ["import", str(isa_json)])
-        assert result.exit_code == 0
-        assert "Imported ISA-JSON" in result.output
-
-    def test_import_isa_json_with_output(self, tmp_path):
-        """Import ISA-JSON with output directory."""
-        isa_json = tmp_path / "investigation.json"
-        output_dir = tmp_path / "output"
-        data = {
-            "identifier": "INV-001",
-            "title": "Test Investigation",
-            "studies": [{"identifier": "STU-001", "title": "Study 1"}],
-        }
-        isa_json.write_text(json.dumps(data), encoding="utf-8")
-
-        result = runner.invoke(app, ["import", str(isa_json), "-o", str(output_dir)])
-        assert result.exit_code == 0
-        assert output_dir.exists()
-        assert (output_dir / "investigation.yaml").exists()
-
-    def test_import_isa_json_output_json_format(self, tmp_path):
-        """Import ISA-JSON with JSON output format."""
-        isa_json = tmp_path / "investigation.json"
-        output_dir = tmp_path / "output"
-        data = {
-            "identifier": "INV-001",
-            "title": "Test Investigation",
-            "studies": [],
-        }
-        isa_json.write_text(json.dumps(data), encoding="utf-8")
-
-        result = runner.invoke(app, ["import", str(isa_json), "-o", str(output_dir), "-f", "json"])
-        assert result.exit_code == 0
-        assert (output_dir / "investigation.json").exists()
-
-    def test_import_invalid_path(self, tmp_path):
-        """Import returns error for invalid path."""
-        invalid_file = tmp_path / "invalid.txt"
-        invalid_file.write_text("not json", encoding="utf-8")
-
-        result = runner.invoke(app, ["import", str(invalid_file)])
-        assert result.exit_code == 1
-        assert "Error" in result.output or "must be" in result.output.lower()
-
-    def test_import_isa_tab_directory(self, tmp_path):
-        """Import ISA-Tab directory invokes the import path."""
-        # Create minimal ISA-Tab structure
-        isa_dir = tmp_path / "isa_tab"
-        isa_dir.mkdir()
-        # Empty investigation file to trigger ISA-Tab import path
-        (isa_dir / "i_investigation.txt").write_text("", encoding="utf-8")
-
-        result = runner.invoke(app, ["import", str(isa_dir)])
-        # Should either succeed or show import error (tests that path is executed)
-        assert result.exit_code in (0, 1)
-        assert "Imported ISA-Tab" in result.output or "Error" in result.output
-
-    def test_import_invalid_json(self, tmp_path):
-        """Import returns error for invalid JSON."""
-        bad_json = tmp_path / "bad.json"
-        bad_json.write_text("{invalid json}", encoding="utf-8")
-
-        result = runner.invoke(app, ["import", str(bad_json)])
-        assert result.exit_code == 1
-
-
 class TestNoArgsHelp:
     """Tests for no-args-is-help behavior."""
 
@@ -373,12 +294,6 @@ class TestHelpOptions:
         result = runner.invoke(app, ["entities", "--help"])
         assert result.exit_code == 0
         assert "entities" in result.output.lower()
-
-    def test_import_help(self):
-        """Import --help shows usage."""
-        result = runner.invoke(app, ["import", "--help"])
-        assert result.exit_code == 0
-        assert "Import" in result.output
 
     def test_compare_help(self):
         """Compare --help shows usage."""
