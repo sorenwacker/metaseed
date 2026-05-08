@@ -5,6 +5,8 @@ can be successfully loaded and validated against the corresponding models.
 Also validates inline entity examples from spec definitions.
 """
 
+from collections.abc import Callable
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -13,10 +15,50 @@ import yaml
 from pydantic import ValidationError
 
 from metaseed.models import get_model
-from metaseed.specs.loader import SpecLoader
-from metaseed.specs.schema import FieldType
+from metaseed.specs.loader import SpecLoader, SpecLoadError
+from metaseed.specs.schema import EntityDefSpec, FieldSpec, FieldType
 
 EXAMPLES_DIR = Path(__file__).parent.parent / "src" / "metaseed" / "examples"
+
+# Common field names used across different profiles
+IDENTIFIER_FIELDS = frozenset(
+    {
+        "unique_id",
+        "identifier",
+        "id",
+        "occurrenceID",
+        "alias",
+        "internal_study_id",
+        "study_id",
+        "investigation_id",
+    }
+)
+
+TITLE_FIELDS = frozenset({"title", "study_title", "investigation_title"})
+
+# Profiles that don't have standard title fields
+PROFILES_WITHOUT_TITLE = frozenset({"darwin-core", "ena", "dissco"})
+
+
+@lru_cache(maxsize=32)
+def _get_cached_loader(profile: str) -> SpecLoader:
+    """Get a cached SpecLoader instance for a profile."""
+    return SpecLoader(profile=profile)
+
+
+def _try_load_entity(
+    loader: SpecLoader, entity_name: str, version: str, profile: str
+) -> EntityDefSpec | None:
+    """Try to load an entity spec, returning None if not found."""
+    try:
+        return loader.load_entity(entity_name, version, profile)
+    except (KeyError, FileNotFoundError, ValueError, SpecLoadError):
+        return None
+
+
+def _is_entity_type(loader: SpecLoader, items: str, version: str, profile: str) -> bool:
+    """Check if items refers to an entity type (not a primitive)."""
+    return _try_load_entity(loader, items, version, profile) is not None
 
 
 def get_all_example_files() -> list[tuple[str, str, Path]]:
@@ -61,8 +103,8 @@ def get_all_inline_examples() -> list[tuple[str, str, str, dict]]:
                 for entity_name, entity_def in profile_spec.entities.items():
                     if entity_def.example:
                         examples.append((profile, version, entity_name, entity_def.example))
-            except Exception:  # noqa: S112
-                # Skip profiles that fail to load (e.g., invalid YAML)
+            except (KeyError, FileNotFoundError, yaml.YAMLError, SpecLoadError):
+                # Skip profiles that fail to load
                 continue
 
     return examples
@@ -70,7 +112,7 @@ def get_all_inline_examples() -> list[tuple[str, str, str, dict]]:
 
 def get_root_entity(profile: str, version: str) -> str:
     """Get the root entity type for a profile/version."""
-    loader = SpecLoader(profile=profile)
+    loader = _get_cached_loader(profile)
     spec = loader.load_profile(version, profile)
     return spec.root_entity or "Investigation"
 
@@ -99,7 +141,7 @@ def get_required_field_names(profile: str, version: str, entity_name: str) -> li
     Returns:
         List of required field names (excluding parent_ref fields).
     """
-    loader = SpecLoader(profile=profile)
+    loader = _get_cached_loader(profile)
     entity_spec = loader.load_entity(entity_name, version, profile)
     return [
         f.name
@@ -108,13 +150,126 @@ def get_required_field_names(profile: str, version: str, entity_name: str) -> li
     ]
 
 
+def traverse_entity_tree(
+    data: Any,
+    profile: str,
+    version: str,
+    entity_name: str,
+    visitor: Callable[[dict, EntityDefSpec, FieldSpec, str, Any], list[str]],
+    path: str = "",
+) -> list[str]:
+    """Generic entity tree traversal with visitor callback.
+
+    Recursively traverses entity data, calling the visitor function for each field.
+    The visitor can inspect the field and value to collect errors/warnings.
+
+    Args:
+        data: The data to traverse (dict or None).
+        profile: Profile name.
+        version: Profile version.
+        entity_name: Entity name for this data.
+        visitor: Callback function(data, entity_spec, field, path, value) -> list[str].
+        path: Current path for error messages.
+
+    Returns:
+        Collected results from all visitor calls.
+    """
+    results: list[str] = []
+    if data is None or not isinstance(data, dict):
+        return results
+
+    loader = _get_cached_loader(profile)
+    entity_spec = _try_load_entity(loader, entity_name, version, profile)
+    if entity_spec is None:
+        return results
+
+    for field in entity_spec.fields:
+        if field.parent_ref:
+            continue  # Skip parent_ref fields (auto-filled)
+
+        field_path = f"{path}.{field.name}" if path else field.name
+        value = data.get(field.name)
+
+        # Call visitor for this field
+        results.extend(visitor(data, entity_spec, field, field_path, value))
+
+        # Recurse into nested entities
+        if value is None:
+            continue
+
+        if (
+            field.type == FieldType.LIST
+            and field.items
+            and _is_entity_type(loader, field.items, version, profile)
+            and isinstance(value, list)
+        ):
+            for i, item in enumerate(value):
+                if isinstance(item, dict):
+                    item_path = f"{field_path}[{i}]"
+                    results.extend(
+                        traverse_entity_tree(
+                            item, profile, version, field.items, visitor, item_path
+                        )
+                    )
+
+        elif field.type == FieldType.ENTITY and field.items and isinstance(value, dict):
+            results.extend(
+                traverse_entity_tree(value, profile, version, field.items, visitor, field_path)
+            )
+
+    return results
+
+
+def _check_required_fields_visitor(
+    data: dict, entity_spec: EntityDefSpec, field: FieldSpec, path: str, value: Any
+) -> list[str]:
+    """Visitor that checks for missing required fields."""
+    if field.required and (value is None or value == "" or value == []):
+        return [f"Missing required field: {path}"]
+    return []
+
+
+def _check_empty_entity_lists_visitor(
+    data: dict, entity_spec: EntityDefSpec, field: FieldSpec, path: str, value: Any
+) -> list[str]:
+    """Visitor that checks for empty entity list fields."""
+    if field.reference:
+        return []  # Skip reference fields (links to other entities)
+
+    if field.type == FieldType.LIST and field.items and (value is None or value == []):
+        # Only report if it's potentially an entity list (has items defined)
+        return [f"Empty entity list: {path} (type: {field.items})"]
+    return []
+
+
+def _check_type_mismatch_visitor(
+    data: dict, entity_spec: EntityDefSpec, field: FieldSpec, path: str, value: Any
+) -> list[str]:
+    """Visitor that checks for type mismatches (strings where objects expected)."""
+    errors = []
+    if value is None:
+        return errors
+
+    # Check entity fields - should be dict, not string
+    if field.type == FieldType.ENTITY and field.items:
+        if isinstance(value, str):
+            errors.append(f"{path}: expected {field.items} object, got string '{value}'")
+
+    # Check list fields with entity items - items should be dicts, not strings
+    elif field.type == FieldType.LIST and field.items and isinstance(value, list):
+        for i, item in enumerate(value):
+            if isinstance(item, str):
+                # This will be checked only if items is an entity type
+                # The traversal handles this, but we flag strings in entity lists
+                errors.append(f"{path}[{i}]: expected {field.items} object, got string '{item}'")
+
+    return errors
+
+
 def check_nested_completeness(
     data: Any, profile: str, version: str, entity_name: str, path: str = ""
 ) -> list[str]:
     """Recursively check that nested entities have required fields populated.
-
-    Checks ALL nested entities (not just required fields) to ensure the example
-    is complete and usable.
 
     Args:
         data: The data to check (dict or list).
@@ -126,64 +281,124 @@ def check_nested_completeness(
     Returns:
         List of error messages for missing/empty required fields.
     """
-    errors = []
-    if data is None:
-        return errors
+    return traverse_entity_tree(
+        data, profile, version, entity_name, _check_required_fields_visitor, path
+    )
 
-    loader = SpecLoader(profile=profile)
 
-    try:
-        entity_spec = loader.load_entity(entity_name, version, profile)
-    except Exception:
-        return errors  # Entity not found, skip validation
+def find_incomplete_entity_lists(
+    data: Any, profile: str, version: str, entity_name: str, path: str = ""
+) -> list[str]:
+    """Find entity list fields that are empty when they should be populated.
 
-    if isinstance(data, dict):
-        # First check required fields at this level
-        for field in entity_spec.fields:
-            if field.parent_ref:
-                continue  # Skip parent_ref fields (auto-filled)
+    Args:
+        data: The data to check.
+        profile: Profile name.
+        version: Profile version.
+        entity_name: Entity name for this data.
+        path: Current path for error messages.
 
-            field_path = f"{path}.{field.name}" if path else field.name
-            value = data.get(field.name)
+    Returns:
+        List of warnings for empty entity list fields.
+    """
+    # Custom traversal needed here because we only want to report empty lists
+    # for entity types, not primitive lists
+    warnings: list[str] = []
+    if data is None or not isinstance(data, dict):
+        return warnings
 
-            # Check required fields are present
-            if field.required and (value is None or value == "" or value == []):
-                errors.append(f"Missing required field: {field_path}")
+    loader = _get_cached_loader(profile)
+    entity_spec = _try_load_entity(loader, entity_name, version, profile)
+    if entity_spec is None:
+        return warnings
 
-        # Then recursively check ALL nested entities (required or not)
-        for field in entity_spec.fields:
-            if field.parent_ref:
-                continue
+    for field in entity_spec.fields:
+        if field.parent_ref or field.reference:
+            continue
 
-            field_path = f"{path}.{field.name}" if path else field.name
-            value = data.get(field.name)
+        field_path = f"{path}.{field.name}" if path else field.name
+        value = data.get(field.name)
 
-            if value is None:
-                continue
-
-            if field.type == FieldType.LIST and field.items:
-                # Check if items is an entity type
-                try:
-                    loader.load_entity(field.items, version, profile)
-                    is_entity_list = True
-                except Exception:
-                    is_entity_list = False
-
-                if is_entity_list and isinstance(value, list):
+        if field.type == FieldType.LIST and field.items:
+            if _is_entity_type(loader, field.items, version, profile):
+                if value is None or value == []:
+                    warnings.append(f"Empty entity list: {field_path} (type: {field.items})")
+                elif isinstance(value, list):
                     for i, item in enumerate(value):
                         if isinstance(item, dict):
                             item_path = f"{field_path}[{i}]"
-                            errors.extend(
-                                check_nested_completeness(
+                            warnings.extend(
+                                find_incomplete_entity_lists(
                                     item, profile, version, field.items, item_path
                                 )
                             )
 
-            elif field.type == FieldType.ENTITY and field.items:
-                # Check nested entity
-                if isinstance(value, dict):
+        elif field.type == FieldType.ENTITY and field.items and isinstance(value, dict):
+            warnings.extend(
+                find_incomplete_entity_lists(value, profile, version, field.items, field_path)
+            )
+
+    return warnings
+
+
+def find_entity_field_type_mismatches(
+    data: Any, profile: str, version: str, entity_name: str, path: str = ""
+) -> list[str]:
+    """Find fields where a string is used but an entity object is expected.
+
+    Args:
+        data: The data to check.
+        profile: Profile name.
+        version: Profile version.
+        entity_name: Entity name for this data.
+        path: Current path for error messages.
+
+    Returns:
+        List of error messages for type mismatches.
+    """
+    errors: list[str] = []
+    if data is None or not isinstance(data, dict):
+        return errors
+
+    loader = _get_cached_loader(profile)
+    entity_spec = _try_load_entity(loader, entity_name, version, profile)
+    if entity_spec is None:
+        return errors
+
+    for field in entity_spec.fields:
+        field_path = f"{path}.{field.name}" if path else field.name
+        value = data.get(field.name)
+
+        if value is None:
+            continue
+
+        if field.type == FieldType.ENTITY and field.items:
+            if isinstance(value, str):
+                errors.append(f"{field_path}: expected {field.items} object, got string '{value}'")
+            elif isinstance(value, dict):
+                errors.extend(
+                    find_entity_field_type_mismatches(
+                        value, profile, version, field.items, field_path
+                    )
+                )
+
+        elif (
+            field.type == FieldType.LIST
+            and field.items
+            and isinstance(value, list)
+            and _is_entity_type(loader, field.items, version, profile)
+        ):
+            for i, item in enumerate(value):
+                item_path = f"{field_path}[{i}]"
+                if isinstance(item, str):
+                    errors.append(
+                        f"{item_path}: expected {field.items} object, got string '{item}'"
+                    )
+                elif isinstance(item, dict):
                     errors.extend(
-                        check_nested_completeness(value, profile, version, field.items, field_path)
+                        find_entity_field_type_mismatches(
+                            item, profile, version, field.items, item_path
+                        )
                     )
 
     return errors
@@ -226,17 +441,7 @@ class TestExampleFilesHaveRequiredFields:
     def test_example_has_identifier(self, profile: str, version: str, example_file: Path) -> None:
         """Each example should have a unique identifier field."""
         data = load_example_data(example_file)
-        identifier_fields = [
-            "unique_id",
-            "identifier",
-            "id",
-            "occurrenceID",
-            "alias",
-            "internal_study_id",
-            "study_id",
-            "investigation_id",
-        ]
-        has_identifier = any(field in data and data[field] for field in identifier_fields)
+        has_identifier = any(field in data and data[field] for field in IDENTIFIER_FIELDS)
         assert has_identifier, f"Example {example_file.name} missing identifier field"
 
     @pytest.mark.parametrize(
@@ -245,87 +450,13 @@ class TestExampleFilesHaveRequiredFields:
         ids=lambda x: str(x) if isinstance(x, Path) else x,
     )
     def test_example_has_title(self, profile: str, version: str, example_file: Path) -> None:
-        """Each example should have a title field (except darwin-core and ena)."""
-        # darwin-core uses Occurrence as root which doesn't have title
-        # ena uses Study as root which doesn't have title (uses alias)
-        # dissco uses DigitalSpecimen which uses specimen_name instead
-        # cropxr profiles use study_title or investigation_title
-        if profile in ("darwin-core", "ena", "dissco"):
+        """Each example should have a title field (except certain profiles)."""
+        if profile in PROFILES_WITHOUT_TITLE:
             pytest.skip(f"{profile} root entity doesn't have a standard title field")
 
         data = load_example_data(example_file)
-        title_fields = ["title", "study_title", "investigation_title"]
-        has_title = any(field in data and data[field] for field in title_fields)
+        has_title = any(field in data and data[field] for field in TITLE_FIELDS)
         assert has_title, f"Example {example_file.name} missing title field"
-
-
-def find_incomplete_entity_lists(
-    data: Any, profile: str, version: str, entity_name: str, path: str = ""
-) -> list[str]:
-    """Find entity list fields that are empty when they should be populated.
-
-    This catches cases where one assay has other_materials but another doesn't,
-    indicating an incomplete example. Skips reference fields (fields that link
-    to other entities by ID rather than embedding them).
-
-    Args:
-        data: The data to check.
-        profile: Profile name.
-        version: Profile version.
-        entity_name: Entity name for this data.
-        path: Current path for error messages.
-
-    Returns:
-        List of warnings for empty entity list fields.
-    """
-    warnings = []
-    if data is None or not isinstance(data, dict):
-        return warnings
-
-    loader = SpecLoader(profile=profile)
-
-    try:
-        entity_spec = loader.load_entity(entity_name, version, profile)
-    except Exception:
-        return warnings
-
-    for field in entity_spec.fields:
-        # Skip parent_ref fields and reference fields (links to other entities)
-        if field.parent_ref or field.reference:
-            continue
-
-        field_path = f"{path}.{field.name}" if path else field.name
-        value = data.get(field.name)
-
-        if field.type == FieldType.LIST and field.items:
-            # Check if items is an entity type
-            try:
-                loader.load_entity(field.items, version, profile)
-                is_entity_list = True
-            except Exception:
-                is_entity_list = False
-
-            if is_entity_list:
-                if value is None or value == []:
-                    # Empty entity list - this is a potential completeness issue
-                    warnings.append(f"Empty entity list: {field_path} (type: {field.items})")
-                elif isinstance(value, list):
-                    # Recurse into list items
-                    for i, item in enumerate(value):
-                        if isinstance(item, dict):
-                            item_path = f"{field_path}[{i}]"
-                            warnings.extend(
-                                find_incomplete_entity_lists(
-                                    item, profile, version, field.items, item_path
-                                )
-                            )
-
-        elif field.type == FieldType.ENTITY and field.items and isinstance(value, dict):
-            warnings.extend(
-                find_incomplete_entity_lists(value, profile, version, field.items, field_path)
-            )
-
-    return warnings
 
 
 class TestExampleFilesCompleteness:
@@ -346,7 +477,7 @@ class TestExampleFilesCompleteness:
 
         if errors:
             error_msg = f"Example {example_file.name} has incomplete nested entities:\n"
-            error_msg += "\n".join(f"  - {e}" for e in errors[:10])  # Limit to first 10
+            error_msg += "\n".join(f"  - {e}" for e in errors[:10])
             if len(errors) > 10:
                 error_msg += f"\n  ... and {len(errors) - 10} more"
             pytest.fail(error_msg)
@@ -388,7 +519,7 @@ def get_parent_ref_fields(profile: str, version: str, entity_name: str) -> list[
     Returns:
         List of field names that have parent_ref defined.
     """
-    loader = SpecLoader(profile=profile)
+    loader = _get_cached_loader(profile)
     entity_spec = loader.load_entity(entity_name, version, profile)
     return [f.name for f in entity_spec.fields if f.parent_ref]
 
@@ -418,79 +549,6 @@ def add_placeholder_parent_refs(
     return data
 
 
-def find_entity_field_type_mismatches(
-    data: Any, profile: str, version: str, entity_name: str, path: str = ""
-) -> list[str]:
-    """Find fields where a string is used but an entity object is expected.
-
-    This catches issues like using 'metabolite profiling' (string) where
-    an OntologyAnnotation object is expected.
-
-    Args:
-        data: The data to check.
-        profile: Profile name.
-        version: Profile version.
-        entity_name: Entity name for this data.
-        path: Current path for error messages.
-
-    Returns:
-        List of error messages for type mismatches.
-    """
-    errors = []
-    if data is None or not isinstance(data, dict):
-        return errors
-
-    loader = SpecLoader(profile=profile)
-
-    try:
-        entity_spec = loader.load_entity(entity_name, version, profile)
-    except Exception:
-        return errors
-
-    for field in entity_spec.fields:
-        field_path = f"{path}.{field.name}" if path else field.name
-        value = data.get(field.name)
-
-        if value is None:
-            continue
-
-        # Check entity fields - should be dict, not string
-        if field.type == FieldType.ENTITY and field.items:
-            if isinstance(value, str):
-                errors.append(f"{field_path}: expected {field.items} object, got string '{value}'")
-            elif isinstance(value, dict):
-                errors.extend(
-                    find_entity_field_type_mismatches(
-                        value, profile, version, field.items, field_path
-                    )
-                )
-
-        # Check list fields with entity items
-        elif field.type == FieldType.LIST and field.items and isinstance(value, list):
-            for i, item in enumerate(value):
-                item_path = f"{field_path}[{i}]"
-                # Check if items should be entities but got strings
-                try:
-                    loader.load_entity(field.items, version, profile)
-                except Exception:  # noqa: S112
-                    # items is a primitive type, skip
-                    continue
-
-                # items is an entity type
-                if isinstance(item, str):
-                    errors.append(
-                        f"{item_path}: expected {field.items} object, got string '{item}'"
-                    )
-                elif isinstance(item, dict):
-                    errors.extend(
-                        find_entity_field_type_mismatches(
-                            item, profile, version, field.items, item_path
-                        )
-                    )
-
-    return errors
-
-
 class TestInlineEntityExamples:
     """Tests that inline entity examples in specs validate against their models."""
 
@@ -505,10 +563,9 @@ class TestInlineEntityExamples:
         """Each inline entity example should validate against its model."""
         try:
             Model = get_model(entity_name, version, profile=profile)
-        except Exception as e:
+        except (KeyError, ValueError, FileNotFoundError, SpecLoadError) as e:
             pytest.skip(f"Could not get model for {entity_name}: {e}")
 
-        # Add placeholder values for parent_ref fields (auto-filled at runtime)
         data_with_refs = add_placeholder_parent_refs(example_data, profile, version, entity_name)
 
         try:
@@ -560,20 +617,3 @@ class TestExampleFieldTypes:
             if len(errors) > 15:
                 error_msg += f"\n  ... and {len(errors) - 15} more"
             pytest.fail(error_msg)
-
-    @pytest.mark.parametrize(
-        "profile,version,entity_name,example_data",
-        get_all_inline_examples(),
-        ids=lambda x: x if isinstance(x, str) else None,
-    )
-    def test_inline_example_entity_fields_are_objects(
-        self, profile: str, version: str, entity_name: str, example_data: dict
-    ) -> None:
-        """Entity fields in inline examples should contain objects, not strings.
-
-        Note: This test is skipped because the spec schema (EntityDefSpec.example)
-        only allows primitive types (str, int, float, bool, list), not nested objects.
-        Inline examples are for documentation only; full validation happens in
-        example files under src/metaseed/examples/.
-        """
-        pytest.skip("Inline examples cannot have nested objects due to spec schema limitation")
