@@ -27,7 +27,6 @@ dependencies = [
     "python-multipart>=0.0.9",
     "openpyxl>=3.1",
     "mkdocs-material>=9.7.6",
-    "isatools>=0.14.3",
 ]
 
 [project.optional-dependencies]
@@ -183,7 +182,6 @@ exclude = ["tests/", "docs/"]
 
 [[tool.mypy.overrides]]
 module = [
-    "isatools.*",
     "openpyxl.*",
     "yaml.*",
 ]

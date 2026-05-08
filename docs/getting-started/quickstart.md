@@ -13,7 +13,7 @@ metaseed convert data.yaml data.json
 
 ## Python
 
-The Python API follows a similar pattern to [isatools](https://github.com/ISA-tools/isa-api), using constructor-style entity creation with keyword arguments. Unlike isatools, Metaseed generates models dynamically from YAML specifications, which allows it to support multiple metadata standards with the same codebase.
+The Python API uses constructor-style entity creation with keyword arguments. Metaseed generates models dynamically from YAML specifications, which allows it to support multiple metadata standards with the same codebase.
 
 ```python
 from metaseed import miappe
