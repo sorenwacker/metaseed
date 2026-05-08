@@ -51,19 +51,24 @@ nav:
       - Profile Comparison: guides/spec-merge.md
       - Logging: guides/logging.md
   - Profiles:
+      - Darwin Core: profiles/darwin-core.md
+      - DiSSCo: profiles/dissco.md
+      - ENA: profiles/ena.md
       - ISA: profiles/isa.md
       - JERM: profiles/jerm.md
       - MIAPPE: profiles/miappe.md
-      - Combined: profiles/combined.md
   - Discussion:
       - Comparison: discussion/comparison.md
   - Architecture:
       - Overview: architecture/overview.md
       - Model Factory: architecture/model-factory.md
+      - UI Helpers: architecture/ui-helpers.md
   - API Reference:
       - CLI: api/cli.md
       - REST API: api/rest.md
       - Schema Specs: api/schema-specs.md
+      - Validators: api/validators.md
+      - Storage: api/storage.md
   - Development:
       - Contributing: development/contributing.md
       - Testing: development/testing.md

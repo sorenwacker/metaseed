@@ -4,11 +4,11 @@ Metaseed provides tools for comparing profile specifications. This is useful for
 
 ## Web Interface
 
-Access the comparison UI at `/merge/` when running the web interface:
+Access the comparison UI at `/explore/` when running the web interface:
 
 ```bash
 metaseed ui
-# Then visit http://127.0.0.1:8080/merge/
+# Then visit http://127.0.0.1:8080/explore/
 ```
 
 ### Using the Compare Tool
@@ -201,7 +201,7 @@ Metaseed also supports merging multiple profiles into a single combined profile.
 metaseed merge miappe/1.1 isa/1.0 -o combined.yaml
 
 # Merge with most restrictive strategy
-metaseed merge miappe/1.1 cropxr-phenotyping/0.0.5 -s most_restrictive -o strict.yaml
+metaseed merge miappe/1.1 jerm/1.0 -s most_restrictive -o strict.yaml
 
 # Merge with custom name and version
 metaseed merge miappe/1.1 isa/1.0 -n miappe-extended -v 2.0 -o extended.yaml

@@ -24,7 +24,7 @@ study = m.Study(unique_id="STU001", title="Field trial")
 inv.studies.append(study)
 ```
 
-See [Profiles](../profiles/isa.md) for ISA and combined profiles.
+See [Profiles](../profiles/isa.md) for ISA and other available profiles.
 
 ## Web UI
 

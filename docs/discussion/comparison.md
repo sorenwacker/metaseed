@@ -6,7 +6,7 @@ ISA and MIAPPE were developed by different communities for different purposes, b
 
 **MIAPPE** focuses on what is being observed and measured. It uses ObservationUnits as the central concept, with Events and Environment providing context for when and where measurements were taken.
 
-When working with plant experiments that involve both phenotyping and molecular assays (e.g., measuring plant height and also doing RNA-seq), consider using the combined profile.
+When working with plant experiments that involve both phenotyping and molecular assays (e.g., measuring plant height and also doing RNA-seq), consider using the profile merge feature to create a custom combined profile.
 
 ## Entity Comparison
 

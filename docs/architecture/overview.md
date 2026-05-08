@@ -44,6 +44,26 @@ graph TB
 3. **Validation-focused**: Multiple validation layers
 4. **Interface-agnostic**: Core logic separated from interfaces
 
+## ProfileContext
+
+`ProfileContext` is an immutable dataclass that encapsulates the `(profile, version)` pair used throughout the codebase. This reduces parameter passing and provides a consistent cache key.
+
+```python
+from metaseed.core.context import ProfileContext
+
+ctx = ProfileContext(profile="miappe", version="1.2")
+loader.load_profile(ctx=ctx)
+loader.load_entity("Investigation", ctx=ctx)
+```
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `profile` | `str` | Profile name (e.g., "miappe", "isa", "darwin-core") |
+| `version` | `str` | Version string (e.g., "1.1", "1.0") |
+| `cache_key` | `str` | Generated key in format "profile:version" |
+
+The `cache_key` property enables consistent caching across components that operate on profile-version combinations.
+
 ## Entity Relationships
 
 Entities are linked through **parent ID reference fields**. Each nested entity includes a reference to its parent, enabling:
