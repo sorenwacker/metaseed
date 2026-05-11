@@ -11,8 +11,9 @@ from typing import Any, Self
 from pydantic import BaseModel
 
 from metaseed.models import get_model
+from metaseed.models.factory import create_model_from_spec, set_model_context
 from metaseed.specs.loader import SpecLoader
-from metaseed.specs.schema import PRIMITIVE_TYPES, EntitySpec, FieldSpec, FieldType
+from metaseed.specs.schema import PRIMITIVE_TYPES, EntitySpec, FieldSpec, FieldType, ProfileSpec
 
 
 class EntityHelper:
@@ -298,46 +299,102 @@ class ProfileFacade:
 
     Provides tab completion and help for all entities in the profile.
 
+    Supports dependency injection for custom loading strategies:
+    - Provide a custom `loader` to use alternative spec loading
+    - Provide a pre-loaded `spec` to bypass the loader entirely
+
     Example:
         >>> from metaseed.facade import ProfileFacade
         >>> miappe = ProfileFacade("miappe", "1.1")
         >>> miappe.entities  # List all entities
         >>> miappe.Investigation.help()  # Show help for Investigation
         >>> inv = miappe.Investigation(unique_id="INV-001", title="My Investigation")
+
+        # With custom loader:
+        >>> custom_loader = MySpecLoader(profile="miappe")
+        >>> facade = ProfileFacade("miappe", loader=custom_loader)
+
+        # With pre-loaded spec (bypasses loader):
+        >>> spec = ProfileSpec(...)
+        >>> facade = ProfileFacade("miappe", spec=spec)
     """
 
-    def __init__(self: Self, profile: str = "miappe", version: str | None = None) -> None:
+    def __init__(
+        self: Self,
+        profile: str = "miappe",
+        version: str | None = None,
+        *,
+        loader: SpecLoader | None = None,
+        spec: ProfileSpec | None = None,
+    ) -> None:
         """Initialize the profile facade.
 
         Args:
             profile: Profile name (e.g., "miappe", "isa").
-            version: Profile version. If None, uses the latest available.
+            version: Profile version. If None, uses the latest available
+                (or spec.version if spec is provided).
+            loader: Optional custom SpecLoader instance. If not provided,
+                a default loader is created. When a custom loader is provided,
+                it is used for all spec loading operations.
+            spec: Optional pre-loaded ProfileSpec. If provided, the loader
+                is not used for entity loading. The spec.version takes
+                precedence over the version parameter.
         """
         self._profile = profile.lower()
-        self._loader = SpecLoader(profile=self._profile)
+        self._spec = spec
+        self._custom_loader = loader is not None
 
-        # Get version
-        if version is None:
+        # Use provided loader or create default
+        self._loader = loader if loader is not None else SpecLoader(profile=self._profile)
+
+        # Determine version
+        if spec is not None:
+            self._version = spec.version
+        elif version is not None:
+            self._version = version
+        else:
             versions = self._loader.list_versions()
             if not versions:
                 raise ValueError(f"No versions found for profile: {profile}")
-            version = versions[-1]  # Use latest
-        self._version = version
+            self._version = versions[-1]
 
-        # Load all entities
         self._entities: dict[str, EntityHelper] = {}
         self._load_entities()
 
     def _load_entities(self: Self) -> None:
-        """Load all entity helpers for this profile."""
-        entity_names = self._loader.list_entities(self._version)
+        """Load all entity helpers for this profile.
+
+        Uses the injected spec if available, otherwise falls back to the loader.
+        When a spec or custom loader is injected, models are created directly
+        from entity specs to avoid requiring the spec to exist on the filesystem.
+        """
+        if self._spec is not None:
+            entity_names = self._spec.list_entities()
+        else:
+            entity_names = self._loader.list_entities(self._version)
+
+        # Set model context for nested entity resolution
+        set_model_context(self._profile, self._version)
+
+        # Use direct model creation when custom loader or spec is provided.
+        # This avoids get_model creating its own internal loader.
+        use_direct_model_creation = self._spec is not None or self._custom_loader
 
         for name in entity_names:
-            spec = self._loader.load_entity(name, self._version)
-            model = get_model(name, self._version, self._profile)
+            if self._spec is not None:
+                entity_spec = self._spec.get_entity(name)
+            else:
+                entity_spec = self._loader.load_entity(name, self._version)
+
+            if use_direct_model_creation:
+                # Create model directly from spec to avoid filesystem lookup
+                model = create_model_from_spec(entity_spec)
+            else:
+                model = get_model(name, self._version, self._profile)
+
             self._entities[name] = EntityHelper(
                 entity_name=name,
-                spec=spec,
+                spec=entity_spec,
                 model=model,
                 profile=self._profile,
                 version=self._version,

@@ -1,8 +1,12 @@
 """Tests for the interactive facade module."""
 
+from unittest.mock import MagicMock
+
 import pytest
 
 from metaseed.facade import EntityHelper, ProfileFacade, isa, miappe
+from metaseed.specs.loader import SpecLoader
+from metaseed.specs.schema import EntityDefSpec, EntitySpec, FieldSpec, FieldType, ProfileSpec
 
 
 class TestProfileFacade:
@@ -494,3 +498,135 @@ class TestCombinedFacade:
         # String is coerced to OntologyAnnotation with term field
         assert hasattr(prot.protocol_type, "term")
         assert prot.protocol_type.term == "sample collection"
+
+
+class TestDependencyInjection:
+    """Tests for ProfileFacade dependency injection support."""
+
+    @pytest.fixture
+    def mock_loader(self) -> MagicMock:
+        """Create a mock SpecLoader."""
+        loader = MagicMock(spec=SpecLoader)
+        loader.list_versions.return_value = ["1.0", "2.0"]
+        loader.list_entities.return_value = ["TestEntity"]
+        loader.load_entity.return_value = EntitySpec(
+            name="TestEntity",
+            version="2.0",
+            description="Test entity",
+            ontology_term=None,
+            fields=[
+                FieldSpec(name="id", type=FieldType.STRING, required=True, description="ID"),
+            ],
+            example=None,
+        )
+        return loader
+
+    @pytest.fixture
+    def sample_spec(self) -> ProfileSpec:
+        """Create a sample ProfileSpec for testing."""
+        return ProfileSpec(
+            version="3.0",
+            name="test-profile",
+            description="Test profile",
+            entities={
+                "CustomEntity": EntityDefSpec(
+                    description="A custom entity for testing",
+                    fields=[
+                        FieldSpec(
+                            name="identifier",
+                            type=FieldType.STRING,
+                            required=True,
+                            description="Unique identifier",
+                        ),
+                        FieldSpec(
+                            name="name",
+                            type=FieldType.STRING,
+                            required=False,
+                            description="Display name",
+                        ),
+                    ],
+                ),
+            },
+        )
+
+    def test_inject_loader(self, mock_loader: MagicMock) -> None:
+        """ProfileFacade uses injected loader."""
+        facade = ProfileFacade("miappe", version="2.0", loader=mock_loader)
+
+        # Should use the mock loader's list_entities
+        mock_loader.list_entities.assert_called_once_with("2.0")
+        assert facade.version == "2.0"
+
+    def test_inject_loader_version_autodetect(self, mock_loader: MagicMock) -> None:
+        """Injected loader used for version autodetection."""
+        facade = ProfileFacade("miappe", loader=mock_loader)
+
+        # Should call list_versions on mock loader
+        mock_loader.list_versions.assert_called_once()
+        # Should use last version from mock
+        assert facade.version == "2.0"
+
+    def test_inject_spec_bypasses_loader(self, sample_spec: ProfileSpec) -> None:
+        """Injected spec bypasses loader for entity loading."""
+        mock_loader = MagicMock(spec=SpecLoader)
+
+        facade = ProfileFacade("test-profile", loader=mock_loader, spec=sample_spec)
+
+        # Loader should not be used for entity loading
+        mock_loader.list_entities.assert_not_called()
+        mock_loader.load_entity.assert_not_called()
+
+        # Should have entities from spec
+        assert "CustomEntity" in facade.entities
+        assert facade.version == "3.0"
+
+    def test_spec_version_takes_precedence(self, sample_spec: ProfileSpec) -> None:
+        """Spec version takes precedence over explicit version parameter."""
+        facade = ProfileFacade("test-profile", version="1.0", spec=sample_spec)
+
+        # Spec version (3.0) should override the explicit version (1.0)
+        assert facade.version == "3.0"
+
+    def test_inject_both_loader_and_spec(
+        self, mock_loader: MagicMock, sample_spec: ProfileSpec
+    ) -> None:
+        """Both loader and spec can be provided; spec is used for entities."""
+        facade = ProfileFacade("test-profile", loader=mock_loader, spec=sample_spec)
+
+        # Loader should not be used since spec is provided
+        mock_loader.list_entities.assert_not_called()
+
+        # Entities come from spec
+        assert "CustomEntity" in facade.entities
+        assert facade.version == "3.0"
+
+    def test_backward_compatibility_positional(self) -> None:
+        """Existing positional argument usage still works."""
+        facade = ProfileFacade("miappe", "1.1")
+
+        assert facade.profile == "miappe"
+        assert facade.version == "1.1"
+        assert len(facade.entities) > 0
+
+    def test_backward_compatibility_keyword(self) -> None:
+        """Existing keyword argument usage still works."""
+        facade = ProfileFacade(profile="miappe", version="1.1")
+
+        assert facade.profile == "miappe"
+        assert facade.version == "1.1"
+        assert len(facade.entities) > 0
+
+    def test_entity_creation_with_injected_spec(self, sample_spec: ProfileSpec) -> None:
+        """Entities created from injected spec work normally."""
+        facade = ProfileFacade("test-profile", spec=sample_spec)
+
+        # Get entity helper
+        helper = facade.CustomEntity
+        assert helper.name == "CustomEntity"
+        assert "identifier" in helper.required_fields
+        assert "name" in helper.optional_fields
+
+        # Create instance
+        instance = helper.create(identifier="TEST-001", name="Test Instance")
+        assert instance.identifier == "TEST-001"
+        assert instance.name == "Test Instance"
