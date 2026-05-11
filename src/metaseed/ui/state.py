@@ -102,19 +102,26 @@ class AppState:
         """Get entity types that can be created at root level.
 
         Returns the profile's declared root_entity (typically Investigation).
+        Uses the facade's injected spec if available, otherwise loads from disk.
         """
-        from metaseed.specs.loader import SpecLoader, SpecLoadError
+        from metaseed.specs.loader import SpecLoadError
 
-        loader = SpecLoader(profile=self.profile)
         facade = self.get_or_create_facade()
 
-        try:
-            spec = loader.load_profile(version=facade.version, profile=self.profile)
-            root = spec.root_entity
+        # Use injected spec from facade if available
+        if facade._spec is not None:
+            root = facade._spec.root_entity
             if root and root in facade.entities:
                 return [root]
-        except SpecLoadError:
-            pass
+        else:
+            # Fall back to loading from disk
+            try:
+                spec = facade._loader.load_profile(version=facade.version, profile=self.profile)
+                root = spec.root_entity
+                if root and root in facade.entities:
+                    return [root]
+            except SpecLoadError:
+                pass
 
         # Fallback to Investigation if available
         if "Investigation" in facade.entities:
