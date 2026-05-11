@@ -16,5 +16,8 @@ repos:
     rev: v0.4.4
     hooks:
       - id: ruff
-        args: [--fix, --exit-non-zero-on-fix]
+        args: [--fix, --exit-non-zero-on-fix, .]
+        pass_filenames: false
       - id: ruff-format
+        args: [.]
+        pass_filenames: false
