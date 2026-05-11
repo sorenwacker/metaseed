@@ -224,7 +224,7 @@ def _check_required_fields_visitor(
     data: dict, entity_spec: EntityDefSpec, field: FieldSpec, path: str, value: Any
 ) -> list[str]:
     """Visitor that checks for missing required fields."""
-    if field.required and (value is None or value == "" or value == []):
+    if field.required and (value is None or value in ("", [])):
         return [f"Missing required field: {path}"]
     return []
 
