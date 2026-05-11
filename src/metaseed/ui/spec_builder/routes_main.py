@@ -160,7 +160,7 @@ def register_main_routes(
         builder = _require_spec()
         form_data = await request.form()
         builder.spec.name = form_data.get("name", "").strip()
-        builder.spec.version = form_data.get("version", "").strip() or "1.0"
+        builder.spec.version = form_data.get("version", "").strip()
         builder.spec.display_name = form_data.get("display_name", "").strip() or None
         builder.spec.description = form_data.get("description", "").strip()
         builder.spec.ontology = form_data.get("ontology", "").strip() or None

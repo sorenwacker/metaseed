@@ -148,7 +148,7 @@ class TestSpecBuilderHelpers:
         """create_empty_spec returns valid empty ProfileSpec."""
         spec = create_empty_spec()
         assert isinstance(spec, ProfileSpec)
-        assert spec.version == "1.0"
+        assert spec.version == "0.1"
         assert spec.name == ""
         assert spec.entities == {}
         assert spec.validation_rules == []

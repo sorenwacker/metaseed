@@ -25,7 +25,7 @@ def create_empty_spec() -> ProfileSpec:
     from metaseed.specs.schema import ProfileSpec
 
     return ProfileSpec(
-        version="1.0",
+        version="0.1",
         name="",
         display_name="",
         description="",
