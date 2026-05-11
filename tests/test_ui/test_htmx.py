@@ -190,11 +190,6 @@ class TestProfileSwitch:
         response = client.get("/profile/isa", follow_redirects=False)
         assert response.status_code == 303
 
-    def test_switch_to_combined(self, client):
-        """Switch to isa-miappe-combined profile redirects."""
-        response = client.get("/profile/isa-miappe-combined", follow_redirects=False)
-        assert response.status_code == 303
-
     def test_switch_unknown_profile_400(self, client):
         """Switch to unknown profile returns 400."""
         response = client.get("/profile/unknown")

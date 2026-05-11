@@ -32,11 +32,6 @@ class TestProfileFactoryBasic:
         profiles = factory.list_profiles()
         assert "isa" in profiles
 
-    def test_list_profiles_includes_combined(self, factory: ProfileFactory) -> None:
-        """list_profiles includes isa-miappe-combined profile."""
-        profiles = factory.list_profiles()
-        assert "isa-miappe-combined" in profiles
-
     def test_list_profiles_is_sorted(self, factory: ProfileFactory) -> None:
         """list_profiles returns sorted list."""
         profiles = factory.list_profiles()
@@ -65,13 +60,6 @@ class TestProfileFactoryVersions:
         assert len(versions) > 0
         assert "1.0" in versions
 
-    def test_list_versions_combined(self, factory: ProfileFactory) -> None:
-        """list_versions returns versions for isa-miappe-combined profile."""
-        versions = factory.list_versions("isa-miappe-combined")
-        assert isinstance(versions, list)
-        assert len(versions) > 0
-        assert "1.0" in versions
-
     def test_list_versions_is_sorted(self, factory: ProfileFactory) -> None:
         """list_versions returns sorted list."""
         versions = factory.list_versions("miappe")
@@ -82,13 +70,6 @@ class TestProfileFactoryVersions:
         latest = factory.get_latest_version("miappe")
         assert latest is not None
         assert latest == factory.list_versions("miappe")[-1]
-
-    def test_get_latest_version_combined(self, factory: ProfileFactory) -> None:
-        """get_latest_version returns latest isa-miappe-combined version."""
-        latest = factory.get_latest_version("isa-miappe-combined")
-        assert latest is not None
-        # v2.0 should be latest
-        assert latest == "2.0"
 
 
 class TestProfileFactoryInfo:
@@ -141,21 +122,15 @@ class TestProfileFactoryCreate:
         assert isinstance(facade, ProfileFacade)
         assert facade.profile == "isa"
 
-    def test_create_combined_returns_facade(self, factory: ProfileFactory) -> None:
-        """create returns ProfileFacade for isa-miappe-combined."""
-        facade = factory.create("isa-miappe-combined")
-        assert isinstance(facade, ProfileFacade)
-        assert facade.profile == "isa-miappe-combined"
-
     def test_create_with_version(self, factory: ProfileFactory) -> None:
         """create with explicit version works."""
-        facade = factory.create("isa-miappe-combined", "1.0")
-        assert facade.version == "1.0"
+        facade = factory.create("miappe", "1.1")
+        assert facade.version == "1.1"
 
     def test_create_uses_latest_version_by_default(self, factory: ProfileFactory) -> None:
         """create uses latest version when version not specified."""
-        facade = factory.create("isa-miappe-combined")
-        expected_latest = factory.get_latest_version("isa-miappe-combined")
+        facade = factory.create("miappe")
+        expected_latest = factory.get_latest_version("miappe")
         assert facade.version == expected_latest
 
     def test_create_unknown_profile_raises(self, factory: ProfileFactory) -> None:
