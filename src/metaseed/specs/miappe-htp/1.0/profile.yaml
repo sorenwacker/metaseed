@@ -1839,18 +1839,8 @@ entities:
         maximum: 180
   Country:
     ontology_term: PPEO:country
-    description: A country.
+    description: A country (embedded type).
     fields:
-    - name: unique_id
-      codename: countryDbId
-      type: string
-      required: true
-      description: Unique identifier.
-      ontology_term: PPEO:hasIdentifier
-      constraints:
-        pattern: ^[A-Za-z0-9_-]+$
-        min_length: 1
-        max_length: 100
     - name: name
       codename: countryName
       type: string
@@ -1867,18 +1857,8 @@ entities:
         pattern: ^[A-Z]{3}$
   EnvironmentParameter:
     ontology_term: PPEO:environment_parameter
-    description: A specific environmental parameter measurement.
+    description: A specific environmental parameter measurement (embedded type).
     fields:
-    - name: unique_id
-      codename: environmentParameterDbId
-      type: string
-      required: true
-      description: Unique identifier.
-      ontology_term: PPEO:hasIdentifier
-      constraints:
-        pattern: ^[A-Za-z0-9_-]+$
-        min_length: 1
-        max_length: 100
     - name: name
       codename: parameterName
       type: string
@@ -1937,18 +1917,8 @@ entities:
       ontology_term: PPEO:hasExperimentalDesignMap
   GPSLocation:
     ontology_term: PPEO:GPS_location
-    description: A GPS coordinate location.
+    description: A GPS coordinate location (embedded type).
     fields:
-    - name: unique_id
-      codename: gpsLocationDbId
-      type: string
-      required: true
-      description: Unique identifier.
-      ontology_term: PPEO:hasIdentifier
-      constraints:
-        pattern: ^[A-Za-z0-9_-]+$
-        min_length: 1
-        max_length: 100
     - name: latitude
       codename: latitude
       type: float
@@ -2101,18 +2071,8 @@ entities:
       ontology_term: PPEO:hasType
   NamedLocation:
     ontology_term: PPEO:named_location
-    description: A named geographic location.
+    description: A named geographic location (embedded type).
     fields:
-    - name: unique_id
-      codename: namedLocationDbId
-      type: string
-      required: true
-      description: Unique identifier.
-      ontology_term: PPEO:hasIdentifier
-      constraints:
-        pattern: ^[A-Za-z0-9_-]+$
-        min_length: 1
-        max_length: 100
     - name: name
       codename: locationName
       type: string
@@ -2289,16 +2249,6 @@ entities:
     ontology_term: PPEO:spatial_coordinate
     description: A spatial coordinate within an experimental layout.
     fields:
-    - name: unique_id
-      codename: spatialCoordinateDbId
-      type: string
-      required: true
-      description: Unique identifier.
-      ontology_term: PPEO:hasIdentifier
-      constraints:
-        pattern: ^[A-Za-z0-9_-]+$
-        min_length: 1
-        max_length: 100
     - name: x
       codename: positionCoordinateX
       type: string
@@ -2321,16 +2271,6 @@ entities:
     ontology_term: PPEO:spatial_distribution
     description: The spatial distribution of an observation unit.
     fields:
-    - name: unique_id
-      codename: spatialDistributionDbId
-      type: string
-      required: true
-      description: Unique identifier.
-      ontology_term: PPEO:hasIdentifier
-      constraints:
-        pattern: ^[A-Za-z0-9_-]+$
-        min_length: 1
-        max_length: 100
     - name: description
       codename: positionCoordinateDescription
       type: string
@@ -2354,16 +2294,6 @@ entities:
     ontology_term: PPEO:spatial_distribution_type
     description: A type of spatial distribution (grid, GPS, etc.).
     fields:
-    - name: unique_id
-      codename: spatialDistributionTypeDbId
-      type: string
-      required: true
-      description: Unique identifier.
-      ontology_term: PPEO:hasIdentifier
-      constraints:
-        pattern: ^[A-Za-z0-9_-]+$
-        min_length: 1
-        max_length: 100
     - name: name
       codename: typeName
       type: string
