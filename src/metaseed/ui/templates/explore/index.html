@@ -265,9 +265,9 @@
                     option.textContent = `v${version}`;
                     versionSelect.appendChild(option);
                 });
-                // Default to latest version
+                // Default to latest version (first in list, sorted descending)
                 if (versions.length > 0) {
-                    versionSelect.value = versions[versions.length - 1];
+                    versionSelect.value = versions[0];
                 }
             }
         }
