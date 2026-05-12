@@ -1767,3 +1767,598 @@ entities:
       constraints:
         minimum: -180
         maximum: 180
+  Country:
+    ontology_term: PPEO:country
+    description: A country.
+    fields:
+    - name: unique_id
+      codename: countryDbId
+      type: string
+      required: true
+      description: Unique identifier.
+      ontology_term: PPEO:hasIdentifier
+      constraints:
+        pattern: ^[A-Za-z0-9_-]+$
+        min_length: 1
+        max_length: 100
+    - name: name
+      codename: countryName
+      type: string
+      required: true
+      description: Country name.
+      ontology_term: PPEO:hasName
+    - name: code
+      codename: countryCode
+      type: string
+      required: false
+      description: ISO 3166-1 alpha-3 code.
+      ontology_term: PPEO:hasCountryCode
+      constraints:
+        pattern: ^[A-Z]{3}$
+  EnvironmentParameter:
+    ontology_term: PPEO:environment_parameter
+    description: A specific environmental parameter measurement.
+    fields:
+    - name: unique_id
+      codename: environmentParameterDbId
+      type: string
+      required: true
+      description: Unique identifier.
+      ontology_term: PPEO:hasIdentifier
+      constraints:
+        pattern: ^[A-Za-z0-9_-]+$
+        min_length: 1
+        max_length: 100
+    - name: name
+      codename: parameterName
+      type: string
+      required: true
+      description: Parameter name.
+      ontology_term: PPEO:hasName
+    - name: value
+      codename: value
+      type: string
+      required: false
+      description: Parameter value.
+      ontology_term: PPEO:hasValue
+    - name: unit
+      codename: unit
+      type: string
+      required: false
+      description: Unit of measurement.
+      ontology_term: PPEO:hasUnit
+    - name: accession_number
+      codename: parameterPUI
+      type: string
+      required: false
+      description: Ontology accession.
+      ontology_term: PPEO:hasExternalIdentifier
+  ExperimentalDesign:
+    ontology_term: PPEO:experimental_design
+    description: The experimental design of a study.
+    fields:
+    - name: unique_id
+      codename: experimentalDesignDbId
+      type: string
+      required: true
+      description: Unique identifier.
+      ontology_term: PPEO:hasIdentifier
+      constraints:
+        pattern: ^[A-Za-z0-9_-]+$
+        min_length: 1
+        max_length: 100
+    - name: design_type
+      codename: experimentalDesignType
+      type: string
+      required: true
+      description: Type of experimental design (e.g., RCBD, CRD, split-plot).
+      ontology_term: PPEO:hasType
+    - name: description
+      codename: experimentalDesignDescription
+      type: string
+      required: false
+      description: Description of the experimental design.
+      ontology_term: PPEO:hasDescription
+    - name: map_url
+      codename: documentationURL
+      type: uri
+      required: false
+      description: URL to experimental design map.
+      ontology_term: PPEO:hasExperimentalDesignMap
+  GPSLocation:
+    ontology_term: PPEO:GPS_location
+    description: A GPS coordinate location.
+    fields:
+    - name: unique_id
+      codename: gpsLocationDbId
+      type: string
+      required: true
+      description: Unique identifier.
+      ontology_term: PPEO:hasIdentifier
+      constraints:
+        pattern: ^[A-Za-z0-9_-]+$
+        min_length: 1
+        max_length: 100
+    - name: latitude
+      codename: latitude
+      type: float
+      required: true
+      description: Latitude in decimal degrees (WGS84).
+      ontology_term: PPEO:hasLatitude
+      constraints:
+        minimum: -90
+        maximum: 90
+    - name: longitude
+      codename: longitude
+      type: float
+      required: true
+      description: Longitude in decimal degrees (WGS84).
+      ontology_term: PPEO:hasLongitude
+      constraints:
+        minimum: -180
+        maximum: 180
+    - name: altitude
+      codename: altitude
+      type: float
+      required: false
+      description: Altitude in meters.
+      ontology_term: PPEO:hasAltitude
+    - name: uncertainty
+      codename: coordinateUncertainty
+      type: string
+      required: false
+      description: Coordinate uncertainty.
+      ontology_term: PPEO:hasUncertainty
+  GrowthFacility:
+    ontology_term: PPEO:growth_facility
+    description: A facility where plants are grown.
+    fields:
+    - name: unique_id
+      codename: growthFacilityDbId
+      type: string
+      required: true
+      description: Unique identifier.
+      ontology_term: PPEO:hasIdentifier
+      constraints:
+        pattern: ^[A-Za-z0-9_-]+$
+        min_length: 1
+        max_length: 100
+    - name: name
+      codename: growthFacilityName
+      type: string
+      required: true
+      description: Name of the growth facility.
+      ontology_term: PPEO:hasName
+    - name: facility_type
+      codename: growthFacilityType
+      type: string
+      required: false
+      description: Type of facility (field, greenhouse, growth chamber, etc.).
+      ontology_term: PPEO:hasType
+    - name: description
+      codename: growthFacilityDescription
+      type: string
+      required: false
+      description: Description of the facility.
+      ontology_term: PPEO:hasDescription
+  Institution:
+    ontology_term: PPEO:institution
+    description: An organization or institution.
+    fields:
+    - name: unique_id
+      codename: institutionDbId
+      type: string
+      required: true
+      description: Unique identifier.
+      ontology_term: PPEO:hasIdentifier
+      constraints:
+        pattern: ^[A-Za-z0-9_-]+$
+        min_length: 1
+        max_length: 100
+    - name: name
+      codename: instituteName
+      type: string
+      required: true
+      description: Institution name.
+      ontology_term: PPEO:hasName
+    - name: abbreviation
+      codename: abbreviation
+      type: string
+      required: false
+      description: Short code or abbreviation.
+      ontology_term: PPEO:hasAbbreviation
+    - name: institute_code
+      codename: instituteCode
+      type: string
+      required: false
+      description: FAO WIEWS institute code.
+      ontology_term: PPEO:hasInstituteCode
+    - name: address
+      codename: address
+      type: string
+      required: false
+      description: Physical address.
+      ontology_term: PPEO:hasAddress
+    - name: url
+      codename: url
+      type: uri
+      required: false
+      description: Institution website.
+      ontology_term: PPEO:hasURL
+  Method:
+    ontology_term: PPEO:method
+    description: A measurement method.
+    fields:
+    - name: unique_id
+      codename: methodDbId
+      type: string
+      required: true
+      description: Unique identifier.
+      ontology_term: PPEO:hasIdentifier
+      constraints:
+        pattern: ^[A-Za-z0-9_-]+$
+        min_length: 1
+        max_length: 100
+    - name: name
+      codename: methodName
+      type: string
+      required: true
+      description: Method name.
+      ontology_term: PPEO:hasName
+    - name: description
+      codename: methodDescription
+      type: string
+      required: false
+      description: Description of the method.
+      ontology_term: PPEO:hasDescription
+    - name: accession_number
+      codename: methodPUI
+      type: string
+      required: false
+      description: Method ontology accession.
+      ontology_term: PPEO:hasExternalIdentifier
+    - name: reference
+      codename: methodReference
+      type: uri
+      required: false
+      description: URI to method definition.
+      ontology_term: PPEO:hasExternalIdentifier
+    - name: method_class
+      codename: methodClass
+      type: string
+      required: false
+      description: Class of method (measurement, counting, estimation, etc.).
+      ontology_term: PPEO:hasType
+  NamedLocation:
+    ontology_term: PPEO:named_location
+    description: A named geographic location.
+    fields:
+    - name: unique_id
+      codename: namedLocationDbId
+      type: string
+      required: true
+      description: Unique identifier.
+      ontology_term: PPEO:hasIdentifier
+      constraints:
+        pattern: ^[A-Za-z0-9_-]+$
+        min_length: 1
+        max_length: 100
+    - name: name
+      codename: locationName
+      type: string
+      required: true
+      description: Location name.
+      ontology_term: PPEO:hasName
+    - name: location_type
+      codename: locationType
+      type: string
+      required: false
+      description: Type of location.
+      ontology_term: PPEO:hasType
+  ObservationLevel:
+    ontology_term: PPEO:observation_level
+    description: A level in the observation unit hierarchy.
+    fields:
+    - name: unique_id
+      codename: observationLevelDbId
+      type: string
+      required: true
+      description: Unique identifier.
+      ontology_term: PPEO:hasIdentifier
+      constraints:
+        pattern: ^[A-Za-z0-9_-]+$
+        min_length: 1
+        max_length: 100
+    - name: name
+      codename: levelName
+      type: string
+      required: true
+      description: Level name (e.g., block, plot, plant).
+      ontology_term: PPEO:hasName
+    - name: order
+      codename: levelOrder
+      type: integer
+      required: false
+      description: Order in hierarchy (0 = top level).
+      ontology_term: PPEO:hasOrder
+    - name: superlevel_id
+      codename: superlevelDbId
+      type: string
+      required: false
+      description: Reference to parent level.
+      ontology_term: PPEO:hasSuperlevel
+    - name: sublevel_id
+      codename: sublevelDbId
+      type: string
+      required: false
+      description: Reference to child level.
+      ontology_term: PPEO:hasSublevel
+  ObservationLevelHierarchy:
+    ontology_term: PPEO:observation_level_hierarchy
+    description: The hierarchy of observation levels in a study.
+    fields:
+    - name: unique_id
+      codename: observationLevelHierarchyDbId
+      type: string
+      required: true
+      description: Unique identifier.
+      ontology_term: PPEO:hasIdentifier
+      constraints:
+        pattern: ^[A-Za-z0-9_-]+$
+        min_length: 1
+        max_length: 100
+    - name: name
+      codename: hierarchyName
+      type: string
+      required: false
+      description: Name of the hierarchy.
+      ontology_term: PPEO:hasName
+    - name: levels
+      codename: observationLevels
+      type: list
+      items: ObservationLevel
+      required: false
+      description: Ordered list of observation levels.
+      ontology_term: PPEO:hasPart
+  Role:
+    ontology_term: PPEO:role
+    description: A role that a person plays in an investigation or study.
+    fields:
+    - name: unique_id
+      codename: roleDbId
+      type: string
+      required: true
+      description: Unique identifier.
+      ontology_term: PPEO:hasIdentifier
+      constraints:
+        pattern: ^[A-Za-z0-9_-]+$
+        min_length: 1
+        max_length: 100
+    - name: name
+      codename: roleName
+      type: string
+      required: true
+      description: Role name (e.g., Principal Investigator, Data Curator).
+      ontology_term: PPEO:hasName
+    - name: description
+      codename: roleDescription
+      type: string
+      required: false
+      description: Description of the role.
+      ontology_term: PPEO:hasDescription
+    - name: person_id
+      codename: personDbId
+      type: string
+      required: false
+      description: Reference to the person.
+      ontology_term: PPEO:isRoleOf
+    - name: investigation_id
+      codename: investigationDbId
+      type: string
+      required: false
+      description: Reference to investigation (if role is at investigation level).
+      ontology_term: PPEO:isRoleOfPersonIn
+    - name: study_id
+      codename: studyDbId
+      type: string
+      required: false
+      description: Reference to study (if role is at study level).
+      ontology_term: PPEO:isRoleOfPersonIn
+  Scale:
+    ontology_term: PPEO:scale
+    description: A measurement scale or unit.
+    fields:
+    - name: unique_id
+      codename: scaleDbId
+      type: string
+      required: true
+      description: Unique identifier.
+      ontology_term: PPEO:hasIdentifier
+      constraints:
+        pattern: ^[A-Za-z0-9_-]+$
+        min_length: 1
+        max_length: 100
+    - name: name
+      codename: scaleName
+      type: string
+      required: true
+      description: Scale name.
+      ontology_term: PPEO:hasName
+    - name: description
+      codename: scaleDescription
+      type: string
+      required: false
+      description: Description of the scale.
+      ontology_term: PPEO:hasDescription
+    - name: accession_number
+      codename: scalePUI
+      type: string
+      required: false
+      description: Scale ontology accession (e.g., UO term).
+      ontology_term: PPEO:hasExternalIdentifier
+    - name: data_type
+      codename: dataType
+      type: string
+      required: false
+      description: Data type (numerical, categorical, ordinal, etc.).
+      ontology_term: PPEO:hasType
+    - name: decimal_places
+      codename: decimalPlaces
+      type: integer
+      required: false
+      description: Number of decimal places for numerical scales.
+      ontology_term: PPEO:hasDecimalPlaces
+    - name: valid_values
+      codename: validValues
+      type: list
+      items: string
+      required: false
+      description: Valid values for categorical scales.
+      ontology_term: PPEO:hasValidValues
+  SpatialCoordinate:
+    ontology_term: PPEO:spatial_coordinate
+    description: A spatial coordinate within an experimental layout.
+    fields:
+    - name: unique_id
+      codename: spatialCoordinateDbId
+      type: string
+      required: true
+      description: Unique identifier.
+      ontology_term: PPEO:hasIdentifier
+      constraints:
+        pattern: ^[A-Za-z0-9_-]+$
+        min_length: 1
+        max_length: 100
+    - name: x
+      codename: positionCoordinateX
+      type: string
+      required: false
+      description: X coordinate (column).
+      ontology_term: PPEO:hasXCoordinate
+    - name: y
+      codename: positionCoordinateY
+      type: string
+      required: false
+      description: Y coordinate (row).
+      ontology_term: PPEO:hasYCoordinate
+    - name: z
+      codename: positionCoordinateZ
+      type: string
+      required: false
+      description: Z coordinate (depth/height).
+      ontology_term: PPEO:hasZCoordinate
+  SpatialDistribution:
+    ontology_term: PPEO:spatial_distribution
+    description: The spatial distribution of an observation unit.
+    fields:
+    - name: unique_id
+      codename: spatialDistributionDbId
+      type: string
+      required: true
+      description: Unique identifier.
+      ontology_term: PPEO:hasIdentifier
+      constraints:
+        pattern: ^[A-Za-z0-9_-]+$
+        min_length: 1
+        max_length: 100
+    - name: description
+      codename: positionCoordinateDescription
+      type: string
+      required: false
+      description: Description of spatial position.
+      ontology_term: PPEO:hasDescription
+    - name: distribution_type_id
+      codename: spatialDistributionTypeDbId
+      type: string
+      required: false
+      description: Reference to spatial distribution type.
+      ontology_term: PPEO:hasSpatialDistributionType
+    - name: coordinate
+      codename: coordinate
+      type: entity
+      items: SpatialCoordinate
+      required: false
+      description: Spatial coordinate.
+      ontology_term: PPEO:hasCoordinate
+  SpatialDistributionType:
+    ontology_term: PPEO:spatial_distribution_type
+    description: A type of spatial distribution (grid, GPS, etc.).
+    fields:
+    - name: unique_id
+      codename: spatialDistributionTypeDbId
+      type: string
+      required: true
+      description: Unique identifier.
+      ontology_term: PPEO:hasIdentifier
+      constraints:
+        pattern: ^[A-Za-z0-9_-]+$
+        min_length: 1
+        max_length: 100
+    - name: name
+      codename: typeName
+      type: string
+      required: true
+      description: Type name (e.g., grid, GPS, lattice).
+      ontology_term: PPEO:hasName
+    - name: description
+      codename: typeDescription
+      type: string
+      required: false
+      description: Description of the distribution type.
+      ontology_term: PPEO:hasDescription
+  Trait:
+    ontology_term: PPEO:trait
+    description: A trait being measured.
+    fields:
+    - name: unique_id
+      codename: traitDbId
+      type: string
+      required: true
+      description: Unique identifier.
+      ontology_term: PPEO:hasIdentifier
+      constraints:
+        pattern: ^[A-Za-z0-9_-]+$
+        min_length: 1
+        max_length: 100
+    - name: name
+      codename: traitName
+      type: string
+      required: true
+      description: Trait name.
+      ontology_term: PPEO:hasName
+    - name: description
+      codename: traitDescription
+      type: string
+      required: false
+      description: Description of the trait.
+      ontology_term: PPEO:hasDescription
+    - name: accession_number
+      codename: traitPUI
+      type: string
+      required: false
+      description: Trait ontology accession.
+      ontology_term: PPEO:hasExternalIdentifier
+    - name: entity
+      codename: traitEntity
+      type: string
+      required: false
+      description: The entity on which trait is observed (e.g., plant part).
+      ontology_term: PPEO:hasEntity
+    - name: entity_accession_number
+      codename: traitEntityPUI
+      type: string
+      required: false
+      description: Entity ontology accession (e.g., PO term).
+      ontology_term: PPEO:hasExternalIdentifier
+    - name: attribute
+      codename: traitAttribute
+      type: string
+      required: false
+      description: The attribute being measured (e.g., length, color).
+      ontology_term: PPEO:hasAttribute
+    - name: attribute_accession_number
+      codename: traitAttributePUI
+      type: string
+      required: false
+      description: Attribute ontology accession (e.g., PATO term).
+      ontology_term: PPEO:hasExternalIdentifier
