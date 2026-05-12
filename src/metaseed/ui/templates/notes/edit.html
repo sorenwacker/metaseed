@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if is_new %}New Note{% else %}{{ note_name }}{% endif %} - Metaseed</title>
+    <link rel="icon" type="image/svg+xml" href="{{ base_url }}/static/images/metaseed-icon.svg">
+    <link rel="icon" type="image/png" sizes="128x128" href="{{ base_url }}/static/images/metaseed-icon-128.png">
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <link rel="stylesheet" href="{{ base_url }}/static/css/style.css?v=59">
+</head>
+<body hx-headers='{"X-Requested-With": "XMLHttpRequest"}'>
+    <div class="layout layout-fixed">
+        <header class="header">
+            <h1 class="header-title">
+                <a href="{{ base_url }}/" style="color: inherit; text-decoration: none;"><img src="{{ base_url }}/static/images/metaseed-logo-light.svg" alt="Metaseed" class="header-logo"></a>
+            </h1>
+            <nav class="header-nav">
+                <a href="{{ base_url }}/" class="nav-btn" data-testid="nav-editor">Editor</a>
+                <a href="{{ base_url }}/spec-builder" class="nav-btn" data-testid="nav-spec-builder">Spec Builder</a>
+                <a href="{{ base_url }}/explore/" class="nav-btn" data-testid="nav-explorer">Explorer</a>
+                <a href="{{ base_url }}/notes/" class="nav-btn active" data-testid="nav-notes">Notes</a>
+            </nav>
+            <div class="header-breadcrumb">
+                <span class="header-sep">/</span>
+                <a href="{{ base_url }}/notes/">Notes</a>
+                <span class="header-sep">/</span>
+                <span>{% if is_new %}New{% else %}{{ note_name }}{% endif %}</span>
+            </div>
+            <div class="header-actions">
+                <a href="{{ base_url }}/notes/" class="btn btn-header">Back to Notes</a>
+            </div>
+        </header>
+
+        <main class="notes-editor-main">
+            <form method="post" action="{{ base_url }}/notes/{{ note_name if not is_new else 'new' }}" class="notes-editor-form">
+                <div class="notes-editor-toolbar">
+                    <input type="text"
+                           name="new_name"
+                           class="notes-name-input"
+                           placeholder="Note name"
+                           value="{{ note_name }}"
+                           required
+                           data-testid="note-name-input">
+                    <button type="submit" class="btn btn-primary" data-testid="btn-save-note">
+                        Save
+                    </button>
+                </div>
+                <textarea name="content"
+                          class="notes-editor-textarea"
+                          placeholder="Write your markdown notes here..."
+                          data-testid="note-content">{{ content }}</textarea>
+            </form>
+        </main>
+    </div>
+
+    <div id="notification-container" class="notification-container"></div>
+
+    <script>
+        const BASE_URL = "{{ base_url }}";
+
+        // Handle Ctrl+S to save
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                e.preventDefault();
+                document.querySelector('.notes-editor-form').submit();
+            }
+        });
+
+        // Auto-resize textarea
+        const textarea = document.querySelector('.notes-editor-textarea');
+        if (textarea) {
+            textarea.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = this.scrollHeight + 'px';
+            });
+        }
+    </script>
+</body>
+</html>

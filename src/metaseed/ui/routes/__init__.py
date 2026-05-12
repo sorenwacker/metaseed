@@ -9,6 +9,7 @@ This package contains route handlers split by domain:
 - examples: Example loading
 - api: JSON API endpoints
 - explore: Profile exploration and comparison
+- notes: Markdown notes management
 """
 
 from .api import register_api_routes
@@ -24,6 +25,7 @@ from .examples import register_example_routes
 from .explore import register_explore_routes
 from .import_export import register_export_routes
 from .nested import register_nested_routes
+from .notes import register_notes_routes
 from .table import register_table_routes
 from .validation import register_validation_routes
 
@@ -37,6 +39,7 @@ __all__ = [
     "register_export_routes",
     "register_form_routes",
     "register_nested_routes",
+    "register_notes_routes",
     "register_table_routes",
     "register_validation_routes",
     "render_entity_form",

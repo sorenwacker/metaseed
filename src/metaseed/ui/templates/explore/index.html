@@ -9,7 +9,7 @@
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
     <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
     <script src="{{ base_url }}/static/js/erd-common.js?v=1"></script>
-    <link rel="stylesheet" href="{{ base_url }}/static/css/style.css?v=58">
+    <link rel="stylesheet" href="{{ base_url }}/static/css/style.css?v=59">
 </head>
 <body hx-headers='{"X-Requested-With": "XMLHttpRequest"}'>
     <div class="layout layout-fixed">
@@ -21,6 +21,7 @@
                 <a href="{{ base_url }}/" class="nav-btn" data-testid="nav-editor">Editor</a>
                 <a href="{{ base_url }}/spec-builder" class="nav-btn" data-testid="nav-spec-builder">Spec Builder</a>
                 <a href="{{ base_url }}/explore/" class="nav-btn active" data-testid="nav-explorer">Explorer</a>
+                <a href="{{ base_url }}/notes/" class="nav-btn" data-testid="nav-notes">Notes</a>
             </nav>
             <div class="header-actions">
                 <button class="btn btn-header" onclick="autoLayout()">Layout</button>
