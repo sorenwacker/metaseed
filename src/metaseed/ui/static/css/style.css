@@ -2117,8 +2117,21 @@ body::before {
     margin: 0;
 }
 
-.start-option-clone {
+.start-option-clone,
+.start-option-import {
     cursor: default;
+}
+
+.import-form {
+    margin-top: var(--space-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    align-items: flex-start;
+}
+
+.import-form label {
+    cursor: pointer;
 }
 
 .template-list {

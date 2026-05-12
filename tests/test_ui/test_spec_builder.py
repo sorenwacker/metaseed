@@ -638,3 +638,69 @@ class TestSpecBuilderIntegration:
         response = client.get("/spec-builder/preview")
         assert "FieldEntity:" in response.text
         assert "test_field" in response.text
+
+
+class TestSpecBuilderImport:
+    """Tests for spec import functionality."""
+
+    def test_import_valid_yaml(self, client):
+        """Import a valid YAML spec file."""
+        yaml_content = """
+version: '1.0'
+name: imported-spec
+display_name: Imported Spec
+description: A spec imported from YAML
+root_entity: Document
+entities:
+  Document:
+    description: A document entity
+    fields:
+      - name: identifier
+        type: string
+        required: true
+        description: Unique identifier
+"""
+        response = client.post(
+            "/spec-builder/import",
+            files={"file": ("test-spec.yaml", yaml_content, "application/x-yaml")},
+        )
+        # Should redirect to spec builder
+        assert response.status_code == 303
+
+        # Verify spec was loaded
+        response = client.get("/spec-builder/preview")
+        assert "imported-spec" in response.text
+        assert "Document:" in response.text
+        assert "identifier" in response.text
+
+    def test_import_invalid_extension(self, client):
+        """Reject files without .yaml or .yml extension."""
+        response = client.post(
+            "/spec-builder/import",
+            files={"file": ("test.txt", "some content", "text/plain")},
+        )
+        assert response.status_code == 400
+        assert "YAML file" in response.json()["detail"]
+
+    def test_import_invalid_yaml_syntax(self, client):
+        """Reject files with invalid YAML syntax."""
+        invalid_yaml = "{ invalid: yaml: content"
+        response = client.post(
+            "/spec-builder/import",
+            files={"file": ("bad.yaml", invalid_yaml, "application/x-yaml")},
+        )
+        assert response.status_code == 400
+        assert "Invalid YAML" in response.json()["detail"]
+
+    def test_import_invalid_spec_structure(self, client):
+        """Reject YAML that doesn't match ProfileSpec schema."""
+        invalid_spec = """
+not_a_valid_field: true
+random_data: 123
+"""
+        response = client.post(
+            "/spec-builder/import",
+            files={"file": ("invalid.yaml", invalid_spec, "application/x-yaml")},
+        )
+        assert response.status_code == 400
+        assert "Failed to parse" in response.json()["detail"]

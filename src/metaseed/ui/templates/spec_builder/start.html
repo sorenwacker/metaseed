@@ -71,6 +71,17 @@
                         <p>Create a new empty specification with your own entities and fields.</p>
                     </a>
 
+                    <div class="start-option start-option-import">
+                        <div class="start-option-icon">&uarr;</div>
+                        <h3>Import from File</h3>
+                        <p>Load a specification from a YAML file.</p>
+                        <form action="{{ base_url }}/spec-builder/import" method="post" enctype="multipart/form-data" class="import-form">
+                            <input type="file" name="file" accept=".yaml,.yml" required id="import-file-input" style="display: none;">
+                            <label for="import-file-input" class="btn btn-outline-primary">Choose YAML File</label>
+                            <button type="submit" class="btn btn-primary" id="import-submit-btn" style="display: none;">Import</button>
+                        </form>
+                    </div>
+
                     <div class="start-option start-option-clone">
                         <div class="start-option-icon">~</div>
                         <h3>Clone Template</h3>
@@ -106,6 +117,14 @@
 
     <script src="{{ base_url }}/static/js/app.js?v=30"></script>
     <script>
+        // Handle import file selection
+        document.getElementById('import-file-input').addEventListener('change', function(e) {
+            if (this.files.length > 0) {
+                document.getElementById('import-submit-btn').style.display = 'inline-block';
+                document.getElementById('import-submit-btn').textContent = 'Import ' + this.files[0].name;
+            }
+        });
+
         function deleteUserSpec(name, version) {
             if (!confirm(`Delete specification "${name}" v${version}? This cannot be undone.`)) {
                 return;

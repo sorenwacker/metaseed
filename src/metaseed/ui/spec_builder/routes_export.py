@@ -1,6 +1,6 @@
-"""Export and save routes for the Spec Builder.
+"""Export, import, and save routes for the Spec Builder.
 
-Handles preview, export, save, and graph data operations.
+Handles preview, export, import, save, and graph data operations.
 """
 
 from __future__ import annotations
@@ -8,9 +8,12 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
-from fastapi import APIRouter, HTTPException, Request
+import yaml
+from fastapi import APIRouter, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, Response, StreamingResponse
 from fastapi.templating import Jinja2Templates
+
+from metaseed.specs.schema import ProfileSpec
 
 from ..spec_builder_helpers import spec_to_yaml
 
@@ -157,3 +160,57 @@ def register_export_routes(
             raise HTTPException(status_code=403, detail=str(e)) from e
         except OSError as e:
             raise HTTPException(status_code=500, detail=str(e)) from e
+
+    @router.post("/import", response_class=HTMLResponse)
+    async def import_yaml(_request: Request, file: UploadFile) -> Response:
+        """Import a spec from an uploaded YAML file.
+
+        Args:
+            request: The FastAPI request.
+            file: Uploaded YAML file.
+
+        Returns:
+            Redirect to spec builder on success, or error response.
+        """
+        if not file.filename or not file.filename.endswith((".yaml", ".yml")):
+            raise HTTPException(
+                status_code=400,
+                detail="File must be a YAML file (.yaml or .yml)",
+            )
+
+        try:
+            content = await file.read()
+            yaml_content = content.decode("utf-8")
+            data = yaml.safe_load(yaml_content)
+
+            if not isinstance(data, dict):
+                raise HTTPException(
+                    status_code=400,
+                    detail="Invalid YAML: root must be a mapping",
+                )
+
+            # Parse into ProfileSpec
+            spec = ProfileSpec.model_validate(data)
+
+            # Load into builder state
+            builder = get_builder_state()
+            builder.spec = spec
+            builder.template_source = f"Imported: {file.filename}"
+            builder.mark_changed()
+
+            # Redirect to spec builder
+            return Response(
+                status_code=303,
+                headers={"HX-Redirect": f"{router.prefix or '/spec-builder'}"},
+            )
+
+        except yaml.YAMLError as e:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid YAML syntax: {e}",
+            ) from e
+        except Exception as e:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Failed to parse spec: {e}",
+            ) from e
