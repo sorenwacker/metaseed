@@ -549,6 +549,27 @@ entities:
       required: false
       description: Type of growth facility.
       ontology_term: PPEO:hasType
+    - name: growth_facility_ref
+      codename: growthFacilityRef
+      type: entity
+      items: GrowthFacility
+      required: false
+      description: Reference to GrowthFacility entity.
+      ontology_term: PPEO:hasGrowthFacility
+    - name: experimental_design_ref
+      codename: experimentalDesignRef
+      type: entity
+      items: ExperimentalDesign
+      required: false
+      description: Reference to ExperimentalDesign entity.
+      ontology_term: PPEO:hasExperimentalDesign
+    - name: observation_level_hierarchy_ref
+      codename: observationLevelHierarchyRef
+      type: entity
+      items: ObservationLevelHierarchy
+      required: false
+      description: Reference to ObservationLevelHierarchy entity.
+      ontology_term: PPEO:hasObservationLevelHierarchy
     - name: cultural_practices
       codename: culturalPractices
       type: string
@@ -656,13 +677,27 @@ entities:
       codename: instituteName
       type: string
       required: false
-      description: Affiliation or institution.
+      description: Affiliation or institution name.
+      ontology_term: PPEO:hasAffiliation
+    - name: institution_ref
+      codename: institutionRef
+      type: entity
+      items: Institution
+      required: false
+      description: Reference to Institution entity.
       ontology_term: PPEO:hasAffiliation
     - name: role
       codename: type
       type: string
       required: false
       description: Role in the investigation or study.
+      ontology_term: PPEO:hasRole
+    - name: role_ref
+      codename: roleRef
+      type: entity
+      items: Role
+      required: false
+      description: Reference to Role entity.
       ontology_term: PPEO:hasRole
     - name: orcid
       codename: orcid
@@ -967,6 +1002,20 @@ entities:
       required: false
       description: Level in hierarchy.
       ontology_term: PPEO:hasObservationLevel
+    - name: observation_level_ref
+      codename: observationLevelRef
+      type: entity
+      items: ObservationLevel
+      required: false
+      description: Reference to ObservationLevel entity.
+      ontology_term: PPEO:hasObservationLevel
+    - name: spatial_distribution_ref
+      codename: spatialDistributionRef
+      type: entity
+      items: SpatialDistribution
+      required: false
+      description: Reference to SpatialDistribution entity.
+      ontology_term: PPEO:hasSpatialDistribution
     - name: observation_level_code
       codename: observationLevelCode
       type: string
@@ -1140,6 +1189,27 @@ entities:
       required: false
       description: URI to variable definition.
       ontology_term: PPEO:hasExternalIdentifier
+    - name: trait_ref
+      codename: traitRef
+      type: entity
+      items: Trait
+      required: false
+      description: Reference to Trait entity.
+      ontology_term: PPEO:hasTrait
+    - name: method_ref
+      codename: methodRef
+      type: entity
+      items: Method
+      required: false
+      description: Reference to Method entity.
+      ontology_term: PPEO:hasMethod
+    - name: scale_ref
+      codename: scaleRef
+      type: entity
+      items: Scale
+      required: false
+      description: Reference to Scale entity.
+      ontology_term: PPEO:hasScale
   Factor:
     ontology_term: PPEO:factor
     description: Experimental factor (controlled variable).
