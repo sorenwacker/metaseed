@@ -281,6 +281,21 @@ class SpecMerger:
                         )
                         break
 
+            elif field_diff.diff_type == DiffType.REMOVED:
+                # Include fields that exist only in earlier profiles
+                for profile_id in profile_order:
+                    spec = field_diff.profiles.get(profile_id)
+                    if spec is not None:
+                        merged_fields.append(spec)
+                        warnings.append(
+                            MergeWarning(
+                                entity_name=entity_name,
+                                field_name=field_diff.field_name,
+                                message=f"Field retained from {profile_id}",
+                            )
+                        )
+                        break
+
         return merged_fields, warnings, resolutions_applied, unresolved
 
     def _find_manual_resolution(
