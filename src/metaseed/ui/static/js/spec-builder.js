@@ -714,6 +714,30 @@ function toggleSidebar() {
     }, 300);
 }
 
+function toggleNotesPanel() {
+    const mainArea = document.querySelector('.erd-main-area');
+    const notesPanel = document.getElementById('notes-panel');
+    const toggleBtn = document.getElementById('notes-toggle-btn');
+
+    notesPanel.classList.toggle('hidden');
+    mainArea.classList.toggle('notes-visible');
+
+    if (notesPanel.classList.contains('hidden')) {
+        toggleBtn.classList.remove('active');
+    } else {
+        toggleBtn.classList.add('active');
+        // Trigger HTMX to load notes content if not loaded yet
+        htmx.trigger(notesPanel.querySelector('.notes-panel-content'), 'revealed');
+    }
+
+    // Resize the graph to fit new space after animation
+    setTimeout(() => {
+        if (network) {
+            network.fit();
+        }
+    }, 100);
+}
+
 // =============================================================================
 // Keyboard Shortcuts
 // =============================================================================

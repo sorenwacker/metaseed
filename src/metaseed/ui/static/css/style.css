@@ -195,6 +195,11 @@ body::before {
     transform: translateY(0);
 }
 
+.btn-header.active {
+    background: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
 .header-divider {
     width: 1px;
     height: 24px;
@@ -2423,6 +2428,22 @@ body::before {
     font-weight: 500;
 }
 
+/* ERD Main Area - contains canvas and notes split */
+.erd-main-area {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.erd-main-area.notes-visible .erd-canvas-container {
+    flex: 1;
+}
+
+.erd-main-area.notes-visible .erd-notes-panel {
+    flex: 1;
+}
+
 /* ERD Canvas */
 .erd-canvas-container {
     background: #f8f9fa;
@@ -2432,6 +2453,55 @@ body::before {
     min-height: 0; /* Allow flex child to shrink */
     overflow: hidden;
     flex: 1; /* Fill remaining space when sidebar collapses */
+}
+
+/* Notes Panel - spec builder */
+.erd-notes-panel {
+    display: flex;
+    flex-direction: column;
+    background: var(--clr-ivory);
+    border-left: 1px solid var(--clr-parchment);
+    min-width: 0;
+}
+
+.erd-notes-panel.hidden {
+    display: none;
+}
+
+.notes-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-sm) var(--space-md);
+    background: white;
+    border-bottom: 1px solid var(--clr-parchment);
+}
+
+.notes-panel-header h3 {
+    margin: 0;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--clr-forest);
+}
+
+.notes-panel-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: var(--space-md);
+    overflow: hidden;
+}
+
+.notes-panel-content .notes-form {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.notes-panel-content .notes-textarea {
+    flex: 1;
+    min-height: 200px;
+    resize: none;
 }
 
 /* Wrapper needed to constrain vis.js canvas */
