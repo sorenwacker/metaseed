@@ -45,6 +45,7 @@ def clone_spec(profile: str, version: str) -> ProfileSpec:
 
     Returns:
         A deep copy of the ProfileSpec that can be modified independently.
+        The version is set to "dev" to indicate it's a work in progress.
 
     Raises:
         ValueError: If the profile/version cannot be loaded.
@@ -58,7 +59,10 @@ def clone_spec(profile: str, version: str) -> ProfileSpec:
         raise ValueError(f"Cannot load profile {profile} v{version}: {e}") from e
 
     # Deep copy to ensure independence from cached version
-    return copy.deepcopy(spec)
+    cloned = copy.deepcopy(spec)
+    # Set version to dev to indicate it's a work in progress
+    cloned.version = "dev"
+    return cloned
 
 
 def spec_to_yaml(spec: ProfileSpec) -> str:
