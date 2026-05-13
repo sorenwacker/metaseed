@@ -4350,3 +4350,100 @@ details.sidebar-section summary:hover {
     font-size: 0.8125rem;
     line-height: 1.5;
 }
+
+/* Notes container and toolbar */
+.notes-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    gap: var(--space-sm);
+}
+
+.notes-toolbar {
+    display: flex;
+    gap: var(--space-xs);
+    padding-bottom: var(--space-sm);
+    border-bottom: 1px solid var(--clr-parchment);
+}
+
+.notes-mode-btn {
+    flex: 1;
+    text-align: center;
+}
+
+.notes-mode-btn.active {
+    background: var(--clr-forest);
+    color: white;
+    border-color: var(--clr-forest);
+}
+
+.notes-preview {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-md);
+    background: var(--clr-ivory);
+    border: 1px solid var(--clr-parchment);
+    border-radius: var(--radius-md);
+}
+
+.notes-preview-content {
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: var(--clr-ink);
+}
+
+.notes-preview-content h1,
+.notes-preview-content h2,
+.notes-preview-content h3 {
+    margin-top: var(--space-md);
+    margin-bottom: var(--space-sm);
+    color: var(--clr-forest);
+}
+
+.notes-preview-content h1 { font-size: 1.25rem; }
+.notes-preview-content h2 { font-size: 1.125rem; }
+.notes-preview-content h3 { font-size: 1rem; }
+
+.notes-preview-content p {
+    margin-bottom: var(--space-sm);
+}
+
+.notes-preview-content ul {
+    margin: var(--space-sm) 0;
+    padding-left: var(--space-lg);
+}
+
+.notes-preview-content li {
+    margin-bottom: var(--space-xs);
+}
+
+.notes-preview-content code {
+    background: var(--clr-parchment);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    font-family: 'SF Mono', 'Consolas', monospace;
+    font-size: 0.8125rem;
+}
+
+.notes-preview-content pre {
+    background: var(--clr-forest);
+    color: var(--clr-ivory);
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    overflow-x: auto;
+    margin: var(--space-sm) 0;
+}
+
+.notes-preview-content pre code {
+    background: none;
+    padding: 0;
+    color: inherit;
+}
+
+.notes-preview-content a {
+    color: var(--clr-moss);
+}
+
+.notes-preview-content strong {
+    font-weight: 600;
+}

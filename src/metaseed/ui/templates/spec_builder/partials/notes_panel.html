@@ -1,20 +1,100 @@
-<form hx-post="/spec-builder/notes"
-      hx-target="#notes-panel-content"
-      hx-swap="innerHTML"
-      class="notes-form sidebar-notes-form">
+<div class="notes-container">
+    <div class="notes-toolbar">
+        <button type="button" class="btn btn-sm btn-secondary notes-mode-btn active" onclick="setNotesMode('edit')" data-mode="edit">Edit</button>
+        <button type="button" class="btn btn-sm btn-secondary notes-mode-btn" onclick="setNotesMode('preview')" data-mode="preview">Preview</button>
+    </div>
 
     {% if saved %}
     <div class="form-success">Saved</div>
     {% endif %}
 
-    <textarea name="notes"
-              class="form-input notes-textarea sidebar-notes-textarea"
-              placeholder="Write notes about this spec...
+    <form hx-post="/spec-builder/notes"
+          hx-target="#notes-panel-content"
+          hx-swap="innerHTML"
+          class="notes-form sidebar-notes-form"
+          id="notes-edit-form">
+
+        <textarea name="notes"
+                  id="notes-textarea"
+                  class="form-input notes-textarea sidebar-notes-textarea"
+                  placeholder="Write notes about this spec...
 
 - Design decisions
 - Questions to resolve
 - References
-- TODO items">{{ notes or '' }}</textarea>
+- TODO items"
+                  oninput="updateNotesPreview()">{{ notes or '' }}</textarea>
 
-    <button type="submit" class="btn btn-primary btn-sm btn-full">Save Notes</button>
-</form>
+        <button type="submit" class="btn btn-primary btn-sm btn-full">Save Notes</button>
+    </form>
+
+    <div id="notes-preview" class="notes-preview hidden">
+        <div class="notes-preview-content markdown-body" id="notes-preview-content">
+            <!-- Rendered markdown appears here -->
+        </div>
+    </div>
+</div>
+
+<script>
+function setNotesMode(mode) {
+    const editForm = document.getElementById('notes-edit-form');
+    const preview = document.getElementById('notes-preview');
+    const buttons = document.querySelectorAll('.notes-mode-btn');
+
+    buttons.forEach(btn => btn.classList.toggle('active', btn.dataset.mode === mode));
+
+    if (mode === 'edit') {
+        editForm.classList.remove('hidden');
+        preview.classList.add('hidden');
+    } else {
+        editForm.classList.add('hidden');
+        preview.classList.remove('hidden');
+        updateNotesPreview();
+    }
+}
+
+function updateNotesPreview() {
+    const textarea = document.getElementById('notes-textarea');
+    const previewContent = document.getElementById('notes-preview-content');
+    const markdown = textarea.value || '*No notes yet*';
+
+    // Simple markdown rendering (basic)
+    let html = markdown
+        // Escape HTML
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        // Headers
+        .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+        .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+        .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+        // Bold
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        // Italic
+        .replace(/\*(.+?)\*/g, '<em>$1</em>')
+        // Code blocks
+        .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
+        // Inline code
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+        // Lists
+        .replace(/^- (.+)$/gm, '<li>$1</li>')
+        // Links
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
+        // Paragraphs (double newlines)
+        .replace(/\n\n/g, '</p><p>')
+        // Single newlines in non-list context
+        .replace(/\n/g, '<br>');
+
+    // Wrap lists
+    html = html.replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>');
+    // Clean up multiple ul tags
+    html = html.replace(/<\/ul>\s*<ul>/g, '');
+
+    previewContent.innerHTML = '<p>' + html + '</p>';
+}
+
+// Initialize preview on load
+if (document.getElementById('notes-textarea')) {
+    updateNotesPreview();
+}
+</script>
