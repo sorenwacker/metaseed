@@ -104,6 +104,8 @@ def register_main_routes(
     @router.get("/clone/{profile}/{version}", response_class=HTMLResponse)
     async def clone_template(request: Request, profile: str, version: str) -> HTMLResponse:
         """Clone an existing spec as a template."""
+        from metaseed.specs.loader import SpecLoader
+
         builder = get_builder_state()
 
         try:
@@ -114,6 +116,14 @@ def register_main_routes(
         builder.reset()
         builder.spec = spec
         builder.template_source = (profile, version)
+
+        # Load notes if they exist
+        loader = SpecLoader()
+        spec_path = loader._find_profile_file(version, profile)
+        if spec_path:
+            notes_path = spec_path.parent / "notes.md"
+            if notes_path.exists():
+                builder.notes = notes_path.read_text(encoding="utf-8")
 
         return templates.TemplateResponse(
             request,
@@ -171,4 +181,28 @@ def register_main_routes(
             request,
             "spec_builder/partials/profile_metadata_form.html",
             {"spec": builder.spec, "success": True},
+        )
+
+    @router.get("/notes", response_class=HTMLResponse)
+    async def get_notes(request: Request) -> HTMLResponse:
+        """Get the notes panel."""
+        builder = get_builder_state()
+        return templates.TemplateResponse(
+            request,
+            "spec_builder/partials/notes_panel.html",
+            {"notes": builder.notes, "spec": builder.spec},
+        )
+
+    @router.post("/notes", response_class=HTMLResponse)
+    async def save_notes(request: Request) -> HTMLResponse:
+        """Save notes content."""
+        builder = get_builder_state()
+        form_data = await request.form()
+        builder.notes = form_data.get("notes", "")
+        builder.mark_changed()
+
+        return templates.TemplateResponse(
+            request,
+            "spec_builder/partials/notes_panel.html",
+            {"notes": builder.notes, "spec": builder.spec, "saved": True},
         )

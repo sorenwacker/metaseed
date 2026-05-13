@@ -8,7 +8,7 @@
     <link rel="icon" type="image/png" sizes="128x128" href="{{ base_url }}/static/images/metaseed-icon-128.png">
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
     <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
-    <link rel="stylesheet" href="{{ base_url }}/static/css/style.css?v=59">
+    <link rel="stylesheet" href="{{ base_url }}/static/css/style.css?v=60">
 </head>
 <body hx-headers='{"X-Requested-With": "XMLHttpRequest"}'>
     <div class="layout layout-fixed">
@@ -87,6 +87,9 @@
                         Rules
                         {% if spec.validation_rules %}<span class="count-badge">{{ spec.validation_rules|length }}</span>{% endif %}
                     </button>
+                    <button class="sidebar-tab" onclick="switchSidebarTab('notes')" data-tab="notes">
+                        Notes
+                    </button>
                 </div>
 
                 <!-- Tab Content -->
@@ -105,6 +108,16 @@
                     <div id="tab-rules" class="sidebar-tab-content">
                         <div id="validation-rules-panel"
                              hx-get="/spec-builder/validation-rules"
+                             hx-trigger="load"
+                             hx-swap="innerHTML">
+                            Loading...
+                        </div>
+                    </div>
+
+                    <!-- Notes Tab -->
+                    <div id="tab-notes" class="sidebar-tab-content">
+                        <div id="notes-panel"
+                             hx-get="/spec-builder/notes"
                              hx-trigger="load"
                              hx-swap="innerHTML">
                             Loading...

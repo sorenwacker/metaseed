@@ -24,6 +24,7 @@ class SpecBuilderState:
         editing_rule_idx: Index of validation rule being edited.
         template_source: Tuple of (profile, version) if cloned from template.
         has_unsaved_changes: Whether there are unsaved modifications.
+        notes: Markdown notes for this spec.
     """
 
     spec: ProfileSpec | None = None
@@ -32,6 +33,7 @@ class SpecBuilderState:
     editing_rule_idx: int | None = None
     template_source: tuple[str, str] | None = None
     has_unsaved_changes: bool = False
+    notes: str = ""
 
     def reset(self: Self) -> None:
         """Reset all state to initial values."""
@@ -41,6 +43,7 @@ class SpecBuilderState:
         self.editing_rule_idx = None
         self.template_source = None
         self.has_unsaved_changes = False
+        self.notes = ""
 
     def mark_changed(self: Self) -> None:
         """Mark that unsaved changes exist."""

@@ -135,6 +135,18 @@ def register_export_routes(
 
         try:
             saved_path = await persistence.save(builder.spec)
+
+            # Save notes alongside the spec
+            from pathlib import Path
+
+            spec_dir = Path(saved_path).parent
+            notes_path = spec_dir / "notes.md"
+            if builder.notes:
+                notes_path.write_text(builder.notes, encoding="utf-8")
+            elif notes_path.exists():
+                # Remove notes file if notes are empty
+                notes_path.unlink()
+
             builder.mark_saved()
             return templates.TemplateResponse(
                 request,
