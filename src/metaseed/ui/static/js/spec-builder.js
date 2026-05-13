@@ -718,6 +718,7 @@ function toggleNotesPanel() {
     const mainArea = document.querySelector('.erd-main-area');
     const notesPanel = document.getElementById('notes-panel');
     const toggleBtn = document.getElementById('notes-toggle-btn');
+    const notesContent = document.getElementById('notes-panel-content');
 
     notesPanel.classList.toggle('hidden');
     mainArea.classList.toggle('notes-visible');
@@ -726,8 +727,8 @@ function toggleNotesPanel() {
         toggleBtn.classList.remove('active');
     } else {
         toggleBtn.classList.add('active');
-        // Trigger HTMX to load notes content if not loaded yet
-        htmx.trigger(notesPanel.querySelector('.notes-panel-content'), 'revealed');
+        // Load notes content via HTMX
+        htmx.ajax('GET', '/spec-builder/notes', {target: '#notes-panel-content', swap: 'innerHTML'});
     }
 
     // Resize the graph to fit new space after animation
