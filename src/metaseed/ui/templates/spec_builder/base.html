@@ -8,7 +8,7 @@
     <link rel="icon" type="image/png" sizes="128x128" href="{{ base_url }}/static/images/metaseed-icon-128.png">
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
     <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
-    <link rel="stylesheet" href="{{ base_url }}/static/css/style.css?v=61">
+    <link rel="stylesheet" href="{{ base_url }}/static/css/style.css?v=62">
 </head>
 <body hx-headers='{"X-Requested-With": "XMLHttpRequest"}'>
     <div class="layout layout-fixed">
@@ -20,7 +20,6 @@
                 <a href="{{ base_url }}/" class="nav-btn" data-testid="nav-editor">Editor</a>
                 <a href="{{ base_url }}/spec-builder" class="nav-btn active" data-testid="nav-spec-builder">Spec Builder</a>
                 <a href="{{ base_url }}/explore/" class="nav-btn" data-testid="nav-explorer">Explorer</a>
-                <a href="{{ base_url }}/notes/" class="nav-btn" data-testid="nav-notes">Notes</a>
             </nav>
             <div class="header-breadcrumb">
                 <span class="header-sep">/</span>
@@ -41,9 +40,6 @@
                 {% endif %}
                 <button id="sidebar-toggle-btn" class="btn btn-header" onclick="toggleSidebar()" title="Hide sidebar (Ctrl+B)">
                     Sidebar
-                </button>
-                <button id="notes-toggle-btn" class="btn btn-header" onclick="toggleNotesPanel()" title="Toggle spec notes panel">
-                    Spec Notes
                 </button>
                 <button class="btn btn-header" onclick="autoLayout()">
                     Layout
@@ -90,6 +86,9 @@
                         Rules
                         {% if spec.validation_rules %}<span class="count-badge">{{ spec.validation_rules|length }}</span>{% endif %}
                     </button>
+                    <button class="sidebar-tab" onclick="switchSidebarTab('notes')" data-tab="notes">
+                        Notes
+                    </button>
                 </div>
 
                 <!-- Tab Content -->
@@ -113,62 +112,59 @@
                             Loading...
                         </div>
                     </div>
+
+                    <!-- Notes Tab -->
+                    <div id="tab-notes" class="sidebar-tab-content">
+                        <div id="notes-panel-content"
+                             hx-get="/spec-builder/notes"
+                             hx-trigger="load"
+                             hx-swap="innerHTML">
+                            Loading...
+                        </div>
+                    </div>
                 </div>
             </aside>
 
-            <!-- Center: ERD Canvas + Notes Split -->
-            <div class="erd-main-area">
-                <main class="erd-canvas-container">
-                    <div class="erd-canvas-toolbar">
-                        <span class="canvas-info">
-                            <strong>{{ spec.entities|length }}</strong> entities
-                        </span>
-                        <div class="canvas-controls">
-                            <button class="btn btn-sm btn-primary" onclick="startAddRelationship()" title="Draw a line between entities to add relationship">
-                                + Relationship
-                            </button>
-                            <span class="toolbar-divider"></span>
-                            <button class="btn btn-sm btn-secondary" onclick="zoomIn()">+</button>
-                            <button class="btn btn-sm btn-secondary" onclick="zoomOut()">-</button>
-                            <button class="btn btn-sm btn-secondary" onclick="fitGraph()">Fit</button>
-                            <span class="toolbar-divider"></span>
-                            <span id="hidden-count-badge" class="hidden-badge hidden"></span>
-                            <button class="btn btn-sm btn-secondary" onclick="showAllEntities()" title="Show all hidden entities">Show All</button>
-                        </div>
+            <!-- Center: ERD Canvas -->
+            <main class="erd-canvas-container">
+                <div class="erd-canvas-toolbar">
+                    <span class="canvas-info">
+                        <strong>{{ spec.entities|length }}</strong> entities
+                    </span>
+                    <div class="canvas-controls">
+                        <button class="btn btn-sm btn-primary" onclick="startAddRelationship()" title="Draw a line between entities to add relationship">
+                            + Relationship
+                        </button>
+                        <span class="toolbar-divider"></span>
+                        <button class="btn btn-sm btn-secondary" onclick="zoomIn()">+</button>
+                        <button class="btn btn-sm btn-secondary" onclick="zoomOut()">-</button>
+                        <button class="btn btn-sm btn-secondary" onclick="fitGraph()">Fit</button>
+                        <span class="toolbar-divider"></span>
+                        <span id="hidden-count-badge" class="hidden-badge hidden"></span>
+                        <button class="btn btn-sm btn-secondary" onclick="showAllEntities()" title="Show all hidden entities">Show All</button>
                     </div>
-                    <div class="erd-canvas-wrapper">
-                        <div id="erd-canvas"
-                             ondrop="dropNewEntity(event)"
-                             ondragover="event.preventDefault()"
-                             ondblclick="addEntityAtPosition(event)">
-                        </div>
+                </div>
+                <div class="erd-canvas-wrapper">
+                    <div id="erd-canvas"
+                         ondrop="dropNewEntity(event)"
+                         ondragover="event.preventDefault()"
+                         ondblclick="addEntityAtPosition(event)">
                     </div>
-                    <div class="canvas-legend">
-                        <span class="legend-item"><span class="legend-dot root"></span> Root Entity</span>
-                        <span class="legend-item"><span class="legend-dot entity"></span> Entity</span>
-                        <span class="legend-item"><span class="legend-line"></span> Relationship</span>
-                        <span class="legend-item legend-hint">Right-click to hide</span>
-                    </div>
+                </div>
+                <div class="canvas-legend">
+                    <span class="legend-item"><span class="legend-dot root"></span> Root Entity</span>
+                    <span class="legend-item"><span class="legend-dot entity"></span> Entity</span>
+                    <span class="legend-item"><span class="legend-line"></span> Relationship</span>
+                    <span class="legend-item legend-hint">Right-click to hide</span>
+                </div>
 
-                    <!-- Context Menu for nodes -->
-                    <div id="node-context-menu" class="context-menu hidden">
-                        <div class="context-menu-header" id="ctx-node-name"></div>
-                        <button id="ctx-hide-btn" class="context-menu-item" onclick="hideEntity()">Hide</button>
-                        <button id="ctx-show-btn" class="context-menu-item" onclick="showEntity()">Show</button>
-                    </div>
-                </main>
-
-                <!-- Notes Panel (hidden by default) -->
-                <aside class="erd-notes-panel hidden" id="notes-panel">
-                    <div class="notes-panel-header">
-                        <h3>Spec Notes</h3>
-                        <button class="btn-close" onclick="toggleNotesPanel()">&times;</button>
-                    </div>
-                    <div class="notes-panel-content" id="notes-panel-content">
-                        <!-- Loaded via HTMX when panel opens -->
-                    </div>
-                </aside>
-            </div>
+                <!-- Context Menu for nodes -->
+                <div id="node-context-menu" class="context-menu hidden">
+                    <div class="context-menu-header" id="ctx-node-name"></div>
+                    <button id="ctx-hide-btn" class="context-menu-item" onclick="hideEntity()">Hide</button>
+                    <button id="ctx-show-btn" class="context-menu-item" onclick="showEntity()">Show</button>
+                </div>
+            </main>
 
             <!-- Right: Entity Editor Panel -->
             <aside class="erd-editor-panel" id="editor-panel">
@@ -271,6 +267,6 @@
         const fieldTypes = {{ field_types | tojson | safe }};
     </script>
     <script src="/static/js/erd-common.js?v=1"></script>
-    <script src="/static/js/spec-builder.js?v=26"></script>
+    <script src="/static/js/spec-builder.js?v=27"></script>
 </body>
 </html>

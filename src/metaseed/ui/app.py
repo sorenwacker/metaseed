@@ -24,7 +24,6 @@ from .routes import (
     register_export_routes,
     register_form_routes,
     register_nested_routes,
-    register_notes_routes,
     register_table_routes,
     register_validation_routes,
 )
@@ -95,7 +94,6 @@ def create_app(state: AppState | None = None, base_url: str = "") -> FastAPI:
     register_example_routes(app, get_state)
     register_api_routes(app, get_state)
     register_explore_routes(app, templates, get_state, base_url=base_url)
-    register_notes_routes(app, templates, get_state, base_url=base_url)
 
     return app
 

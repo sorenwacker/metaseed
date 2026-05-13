@@ -77,6 +77,17 @@ function switchSidebarTab(tabName) {
     document.querySelectorAll('.sidebar-tab-content').forEach(content => {
         content.classList.toggle('active', content.id === `tab-${tabName}`);
     });
+
+    // Widen sidebar for notes tab
+    const sidebar = document.querySelector('.erd-sidebar');
+    sidebar.classList.toggle('notes-active', tabName === 'notes');
+
+    // Resize graph after sidebar width change
+    setTimeout(() => {
+        if (network) {
+            network.fit();
+        }
+    }, 250);
 }
 
 // =============================================================================
@@ -712,31 +723,6 @@ function toggleSidebar() {
             network.fit();
         }
     }, 300);
-}
-
-function toggleNotesPanel() {
-    const mainArea = document.querySelector('.erd-main-area');
-    const notesPanel = document.getElementById('notes-panel');
-    const toggleBtn = document.getElementById('notes-toggle-btn');
-    const notesContent = document.getElementById('notes-panel-content');
-
-    notesPanel.classList.toggle('hidden');
-    mainArea.classList.toggle('notes-visible');
-
-    if (notesPanel.classList.contains('hidden')) {
-        toggleBtn.classList.remove('active');
-    } else {
-        toggleBtn.classList.add('active');
-        // Load notes content via HTMX
-        htmx.ajax('GET', '/spec-builder/notes', {target: '#notes-panel-content', swap: 'innerHTML'});
-    }
-
-    // Resize the graph to fit new space after animation
-    setTimeout(() => {
-        if (network) {
-            network.fit();
-        }
-    }, 100);
 }
 
 // =============================================================================

@@ -2275,6 +2275,10 @@ body::before {
     pointer-events: none;
 }
 
+.erd-sidebar.notes-active {
+    width: 450px;
+}
+
 .erd-toolbox {
     padding: var(--space-sm) var(--space-md);
     border-bottom: 1px solid var(--clr-parchment);
@@ -4329,4 +4333,20 @@ details.sidebar-section summary:hover {
 
 .notes-form .form-label {
     margin-bottom: var(--space-sm);
+}
+
+/* Sidebar notes form */
+.sidebar-notes-form {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.sidebar-notes-textarea {
+    flex: 1;
+    min-height: 400px;
+    font-family: 'SF Mono', 'Consolas', 'Monaco', monospace;
+    font-size: 0.8125rem;
+    line-height: 1.5;
 }

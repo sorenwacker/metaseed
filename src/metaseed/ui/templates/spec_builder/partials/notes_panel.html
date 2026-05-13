@@ -1,21 +1,20 @@
 <form hx-post="/spec-builder/notes"
       hx-target="#notes-panel-content"
       hx-swap="innerHTML"
-      class="notes-form">
+      class="notes-form sidebar-notes-form">
 
     {% if saved %}
     <div class="form-success">Saved</div>
     {% endif %}
 
     <textarea name="notes"
-              class="form-input notes-textarea"
+              class="form-input notes-textarea sidebar-notes-textarea"
               placeholder="Write notes about this spec...
 
-Markdown supported:
 - Design decisions
 - Questions to resolve
 - References
 - TODO items">{{ notes or '' }}</textarea>
 
-    <button type="submit" class="btn btn-primary btn-sm">Save Notes</button>
+    <button type="submit" class="btn btn-primary btn-sm btn-full">Save Notes</button>
 </form>
