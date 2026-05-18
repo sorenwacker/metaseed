@@ -3,18 +3,17 @@
 Contains utility functions for form handling, table rendering,
 validation formatting, and breadcrumb navigation.
 
-This module re-exports all helper functions from the focused modules
-for backwards compatibility. New code should import directly from:
-- form_helpers: FormContext, collect_form_values, filter_fields, etc.
-- table_helpers: build_inline_tables, format_table_rows, etc.
-- entity_helpers: walk_nested_entities, extract_nested_items, etc.
-- navigation_helpers: build_breadcrumb, error_response, etc.
+Submodules:
+- entity: Entity traversal and collection utilities
+- form: Form context, value collection, and field filtering
+- navigation: Breadcrumbs, error responses, and reference fields
+- table: Inline table building and formatting
 """
 
 from __future__ import annotations
 
 # Re-export from entity_helpers
-from metaseed.ui.entity_helpers import (
+from metaseed.ui.helpers.entity_helpers import (
     collect_entities_by_type,
     extract_nested_items,
     to_dict,
@@ -22,7 +21,7 @@ from metaseed.ui.entity_helpers import (
 )
 
 # Re-export from form_helpers
-from metaseed.ui.form_helpers import (
+from metaseed.ui.helpers.form_helpers import (
     FormContext,
     collect_form_values,
     filter_fields,
@@ -32,7 +31,7 @@ from metaseed.ui.form_helpers import (
 )
 
 # Re-export from navigation_helpers
-from metaseed.ui.navigation_helpers import (
+from metaseed.ui.helpers.navigation_helpers import (
     build_breadcrumb,
     error_response,
     get_parent_id_fields,
@@ -41,7 +40,7 @@ from metaseed.ui.navigation_helpers import (
 )
 
 # Re-export from table_helpers
-from metaseed.ui.table_helpers import (
+from metaseed.ui.helpers.table_helpers import (
     build_inline_tables,
     format_table_rows,
     get_items_store,

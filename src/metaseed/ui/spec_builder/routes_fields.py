@@ -15,7 +15,7 @@ from pydantic import BaseModel
 
 from metaseed.specs.schema import Constraints, FieldSpec, FieldType
 
-from ..spec_builder_helpers import validate_field_name
+from ..helpers.spec_builder_helpers import validate_field_name
 
 if TYPE_CHECKING:
     from .state import SpecBuilderState

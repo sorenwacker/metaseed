@@ -15,7 +15,7 @@ from fastapi.templating import Jinja2Templates
 
 from metaseed.specs.schema import ProfileSpec
 
-from ..spec_builder_helpers import spec_to_yaml
+from ..helpers.spec_builder_helpers import spec_to_yaml
 
 if TYPE_CHECKING:
     from ..spec_persistence import SpecPersistence

@@ -46,7 +46,7 @@ class FilesystemSpecPersistence(SpecPersistence):
         Raises:
             ValueError: If the name is empty or conflicts with a built-in spec.
         """
-        from metaseed.ui.spec_builder_helpers import save_spec
+        from metaseed.ui.helpers.spec_builder_helpers import save_spec
 
         path = save_spec(spec, name)
         return str(path)
@@ -65,7 +65,7 @@ class FilesystemSpecPersistence(SpecPersistence):
         Raises:
             ValueError: If attempting to delete a built-in spec.
         """
-        from metaseed.ui.spec_builder_helpers import delete_user_spec
+        from metaseed.ui.helpers.spec_builder_helpers import delete_user_spec
 
         return delete_user_spec(name, version)
 
@@ -79,7 +79,7 @@ class FilesystemSpecPersistence(SpecPersistence):
                 - versions: List of available version strings
                 - description: Brief description of the spec
         """
-        from metaseed.ui.spec_builder_helpers import list_user_specs
+        from metaseed.ui.helpers.spec_builder_helpers import list_user_specs
 
         return list_user_specs()
 
@@ -93,7 +93,7 @@ class FilesystemSpecPersistence(SpecPersistence):
                 - versions: List of available version strings
                 - description: Brief description of the template
         """
-        from metaseed.ui.spec_builder_helpers import list_available_templates
+        from metaseed.ui.helpers.spec_builder_helpers import list_available_templates
 
         return list_available_templates()
 

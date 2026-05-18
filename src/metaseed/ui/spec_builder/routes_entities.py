@@ -14,7 +14,7 @@ from fastapi.templating import Jinja2Templates
 
 from metaseed.specs.schema import EntityDefSpec, FieldType
 
-from ..spec_builder_helpers import validate_entity_name
+from ..helpers.spec_builder_helpers import validate_entity_name
 
 if TYPE_CHECKING:
     from .state import SpecBuilderState

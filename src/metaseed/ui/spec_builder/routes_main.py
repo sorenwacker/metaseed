@@ -14,7 +14,7 @@ from fastapi.templating import Jinja2Templates
 
 from metaseed.specs.schema import FieldType
 
-from ..spec_builder_helpers import (
+from ..helpers.spec_builder_helpers import (
     clone_spec,
     create_empty_spec,
 )
