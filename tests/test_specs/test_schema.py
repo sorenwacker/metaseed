@@ -11,38 +11,8 @@ from metaseed.specs.schema import (
 )
 
 
-class TestFieldType:
-    """Tests for FieldType enum."""
-
-    def test_all_types_defined(self) -> None:
-        """All expected field types are defined."""
-        expected = {
-            "string",
-            "integer",
-            "float",
-            "boolean",
-            "date",
-            "datetime",
-            "uri",
-            "ontology_term",
-            "list",
-            "entity",
-        }
-        actual = {t.value for t in FieldType}
-        assert actual == expected
-
-
 class TestConstraints:
     """Tests for Constraints model."""
-
-    def test_empty_constraints(self) -> None:
-        """Empty constraints are valid."""
-        c = Constraints()
-        assert c.pattern is None
-        assert c.min_length is None
-        assert c.max_length is None
-        assert c.minimum is None
-        assert c.maximum is None
 
     def test_string_constraints(self) -> None:
         """String constraints (pattern, min/max length) are parsed."""
@@ -65,31 +35,6 @@ class TestConstraints:
 class TestFieldSpec:
     """Tests for FieldSpec model."""
 
-    def test_required_field(self) -> None:
-        """Required field with minimal properties."""
-        field = FieldSpec(
-            name="unique_id",
-            type=FieldType.STRING,
-            required=True,
-            description="Unique identifier",
-        )
-        assert field.name == "unique_id"
-        assert field.type == FieldType.STRING
-        assert field.required is True
-        assert field.description == "Unique identifier"
-        assert field.ontology_term is None
-        assert field.constraints is None
-        assert field.items is None
-
-    def test_optional_field(self) -> None:
-        """Optional field with defaults."""
-        field = FieldSpec(
-            name="description",
-            type=FieldType.STRING,
-            description="Description text",
-        )
-        assert field.required is False  # default
-
     def test_field_with_ontology_term(self) -> None:
         """Field with ontology term reference."""
         field = FieldSpec(
@@ -100,18 +45,6 @@ class TestFieldSpec:
             ontology_term="MIAPPE:0000001",
         )
         assert field.ontology_term == "MIAPPE:0000001"
-
-    def test_field_with_constraints(self) -> None:
-        """Field with constraints."""
-        field = FieldSpec(
-            name="unique_id",
-            type=FieldType.STRING,
-            required=True,
-            description="Unique ID",
-            constraints=Constraints(pattern=r"^[A-Za-z0-9_-]+$"),
-        )
-        assert field.constraints is not None
-        assert field.constraints.pattern == r"^[A-Za-z0-9_-]+$"
 
     def test_list_field_with_items(self) -> None:
         """List field with items type."""

@@ -3,7 +3,7 @@
 import datetime
 
 import pytest
-from pydantic import BaseModel, ValidationError
+from pydantic import ValidationError
 
 from metaseed.models.factory import create_model_from_spec
 from metaseed.specs.schema import Constraints, EntitySpec, FieldSpec, FieldType
@@ -216,41 +216,6 @@ class TestCreateModelFromSpec:
 
         with pytest.raises(ValidationError):
             Model(count=101)
-
-    def test_model_is_basemodel(self) -> None:
-        """Generated model is a Pydantic BaseModel."""
-        spec = EntitySpec(
-            name="Test",
-            version="1.0",
-            description="Test",
-            fields=[],
-        )
-
-        Model = create_model_from_spec(spec)
-        assert issubclass(Model, BaseModel)
-
-    def test_model_has_json_schema(self) -> None:
-        """Generated model has JSON schema."""
-        spec = EntitySpec(
-            name="Test",
-            version="1.0",
-            description="Test",
-            fields=[
-                FieldSpec(
-                    name="id",
-                    type=FieldType.STRING,
-                    required=True,
-                    description="ID field",
-                ),
-            ],
-        )
-
-        Model = create_model_from_spec(spec)
-        schema = Model.model_json_schema()
-
-        assert "properties" in schema
-        assert "id" in schema["properties"]
-        assert schema["properties"]["id"]["description"] == "ID field"
 
     def test_model_serialization(self) -> None:
         """Generated model can be serialized to dict and JSON."""

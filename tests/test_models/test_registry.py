@@ -15,14 +15,23 @@ class TestModelRegistry:
         return ModelRegistry()
 
     def test_register_and_get_model(self, registry: ModelRegistry) -> None:
-        """Register and retrieve a model."""
+        """Register, check existence, and retrieve a model."""
 
         class TestModel(BaseModel):
             name: str
 
-        registry.register("Test", "1.0", TestModel)
-        retrieved = registry.get("Test", "1.0")
+        # Model should not exist before registration
+        assert registry.has("Test", "1.0") is False
 
+        registry.register("Test", "1.0", TestModel)
+
+        # Model should exist after registration
+        assert registry.has("Test", "1.0") is True
+        assert registry.has("Test", "1.1") is False
+        assert registry.has("Other", "1.0") is False
+
+        # Should retrieve the registered model
+        retrieved = registry.get("Test", "1.0")
         assert retrieved is TestModel
 
     def test_get_nonexistent_raises(self, registry: ModelRegistry) -> None:
@@ -87,18 +96,6 @@ class TestModelRegistry:
         assert "Model2" in models_1_0
         assert "Model1" in models_1_1
         assert "Model2" not in models_1_1
-
-    def test_has_model(self, registry: ModelRegistry) -> None:
-        """Check if model exists."""
-
-        class TestModel(BaseModel):
-            pass
-
-        registry.register("Test", "1.0", TestModel)
-
-        assert registry.has("Test", "1.0") is True
-        assert registry.has("Test", "1.1") is False
-        assert registry.has("Other", "1.0") is False
 
     def test_clear_registry(self, registry: ModelRegistry) -> None:
         """Clear all registered models."""
