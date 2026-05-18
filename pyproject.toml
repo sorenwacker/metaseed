@@ -27,6 +27,7 @@ dependencies = [
     "python-multipart>=0.0.9",
     "openpyxl>=3.1",
     "mkdocs-material>=9.7.6",
+    "mcp>=1.0.0",
 ]
 
 [project.optional-dependencies]
@@ -107,6 +108,7 @@ ignore = [
     "PLR0912", # too many branches (some complex functions are acceptable)
     "PLR0915", # too many statements (some complex functions are acceptable)
     "PLR0911", # too many return statements (validation functions need this)
+    "TCH001",  # move import to type-checking block (not always desirable)
     "TCH002",  # move import to type-checking block (not always desirable)
     "TCH003",  # move stdlib import to type-checking block (not always desirable)
     "PLW0603", # global statement (needed for module-level state)
@@ -115,7 +117,9 @@ ignore = [
     "PERF401", # list.extend vs append (marginal perf, less readable)
     "RUF005",  # iterable unpacking (less readable in some cases)
     "RET504",  # unnecessary assignment before return (aids debugging)
+    "SIM102",  # nested if (acceptable for type guards)
     "SIM103",  # return condition directly (less readable for complex conditions)
+    "SIM108",  # ternary operator (less readable for complex expressions)
     "PTH123",  # Path.open vs open (both are fine)
     "TRY301",  # raise in try block (acceptable for CLI)
 ]
@@ -141,6 +145,10 @@ ignore = [
     "F541",    # f-string without placeholders - readability
     "W293",    # trailing whitespace - notebook formatting
 ]
+"src/metaseed/agent/mcp/manager.py" = [
+    "S603",    # subprocess call - starting internal MCP server
+    "S607",    # partial executable path - uses sys.executable
+]
 "src/metaseed/_version.py" = [
     "RUF022",  # __all__ sorting - auto-generated file
 ]
@@ -157,6 +165,9 @@ ignore = [
 ]
 "src/metaseed/ui/state.py" = [
     "S110",    # try-except-pass is intentional for safe fallback
+]
+"src/metaseed/ui/datasets.py" = [
+    "S112",    # try-except-continue is intentional for skipping invalid entities during load
 ]
 
 [tool.ruff.lint.isort]

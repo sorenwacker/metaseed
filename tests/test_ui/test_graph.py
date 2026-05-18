@@ -59,24 +59,26 @@ class TestBuildGraph:
         assert result["nodes"][0]["group"] == "Investigation"
 
     def test_nested_entities_create_edges(self) -> None:
-        """Nested entities should create nodes with connecting edges."""
+        """Child entities in tree should create nodes with connecting edges."""
         state = AppState(profile="miappe")
         facade = state.get_or_create_facade()
 
-        instance = facade.Investigation.create(
+        # Create Investigation node
+        inv_instance = facade.Investigation.create(
             unique_id="inv1",
             title="Test Investigation",
             miappe_version=facade.version,
-            studies=[
-                {
-                    "unique_id": "study1",
-                    "title": "Test Study",
-                    "start_date": "2024-01-01",
-                    "investigation_id": "inv1",
-                }
-            ],
         )
-        state.add_node("Investigation", instance)
+        inv_node = state.add_node("Investigation", inv_instance)
+
+        # Create Study as child of Investigation
+        study_instance = facade.Study.create(
+            unique_id="study1",
+            title="Test Study",
+            start_date="2024-01-01",
+            investigation_id="inv1",
+        )
+        state.add_node("Study", study_instance, parent_id=inv_node.id)
 
         result = build_graph(state)
         # Should have Investigation and Study nodes
@@ -157,32 +159,34 @@ class TestGraphWithNestedData:
     """Tests for graph visualization with nested entity data."""
 
     def test_graph_with_deeply_nested_entities(self) -> None:
-        """Graph should handle multiple levels of nesting."""
+        """Graph should handle multiple levels of tree nesting."""
         state = AppState(profile="miappe")
         facade = state.get_or_create_facade()
 
-        # Create an investigation with nested studies and observation units
-        instance = facade.Investigation.create(
+        # Create Investigation node
+        inv_instance = facade.Investigation.create(
             unique_id="inv1",
             title="Test Investigation",
             miappe_version=facade.version,
-            studies=[
-                {
-                    "unique_id": "study1",
-                    "title": "Test Study",
-                    "start_date": "2024-01-01",
-                    "investigation_id": "inv1",
-                    "observation_units": [
-                        {
-                            "unique_id": "ou1",
-                            "study_id": "study1",
-                            "observation_unit_type": "plot",
-                        }
-                    ],
-                }
-            ],
         )
-        state.add_node("Investigation", instance)
+        inv_node = state.add_node("Investigation", inv_instance)
+
+        # Create Study as child of Investigation
+        study_instance = facade.Study.create(
+            unique_id="study1",
+            title="Test Study",
+            start_date="2024-01-01",
+            investigation_id="inv1",
+        )
+        study_node = state.add_node("Study", study_instance, parent_id=inv_node.id)
+
+        # Create ObservationUnit as child of Study
+        ou_instance = facade.ObservationUnit.create(
+            unique_id="ou1",
+            study_id="study1",
+            observation_unit_type="plot",
+        )
+        state.add_node("ObservationUnit", ou_instance, parent_id=study_node.id)
 
         result = build_graph(state)
         # Should have Investigation, Study, and ObservationUnit
@@ -218,20 +222,23 @@ class TestGraphWithNestedData:
         """All edges should have from and to fields."""
         state = AppState(profile="miappe")
         facade = state.get_or_create_facade()
-        instance = facade.Investigation.create(
+
+        # Create Investigation node
+        inv_instance = facade.Investigation.create(
             unique_id="inv1",
             title="Test",
             miappe_version=facade.version,
-            studies=[
-                {
-                    "unique_id": "study1",
-                    "title": "Test Study",
-                    "start_date": "2024-01-01",
-                    "investigation_id": "inv1",
-                }
-            ],
         )
-        state.add_node("Investigation", instance)
+        inv_node = state.add_node("Investigation", inv_instance)
+
+        # Create Study as child of Investigation
+        study_instance = facade.Study.create(
+            unique_id="study1",
+            title="Test Study",
+            start_date="2024-01-01",
+            investigation_id="inv1",
+        )
+        state.add_node("Study", study_instance, parent_id=inv_node.id)
 
         result = build_graph(state)
         for edge in result["edges"]:

@@ -55,6 +55,11 @@ def create_app(state: AppState | None = None, base_url: str = "") -> FastAPI:
     app.state.ui_state = state
     app.state.base_url = base_url
 
+    # Share state with MCP server so both use the same data
+    from metaseed.agent.mcp.server import set_mcp_state
+
+    set_mcp_state(state)
+
     templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
     def format_display(value: Any) -> str:
@@ -94,6 +99,12 @@ def create_app(state: AppState | None = None, base_url: str = "") -> FastAPI:
     register_example_routes(app, get_state)
     register_api_routes(app, get_state)
     register_explore_routes(app, templates, get_state, base_url=base_url)
+
+    # Initialize entity service with AppState adapter
+    # This provides a unified API for entity operations
+    from metaseed.ui.services.entities import set_state as set_entity_service_state
+
+    set_entity_service_state(state)
 
     return app
 

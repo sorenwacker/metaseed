@@ -1,6 +1,12 @@
 <div class="card">
-    <h2 class="card-title">Select Metadata Model</h2>
-    <p class="card-subtitle">Choose which metadata standard and version to use, or load an example dataset.</p>
+    <h2 class="card-title">New Dataset</h2>
+    <p class="card-subtitle">Name your dataset and choose which metadata standard to use.</p>
+
+    <div class="dataset-name-input">
+        <label for="new-dataset-name" class="form-label">Dataset Name <span class="required">*</span></label>
+        <input type="text" id="new-dataset-name" class="form-input" placeholder="e.g., wheat-drought-2024" data-testid="new-dataset-name" required>
+        <p class="form-hint">Use lowercase letters, numbers, and hyphens.</p>
+    </div>
 
     <div class="profile-options">
         {% for profile in profiles %}
@@ -16,6 +22,8 @@
                             hx-get="/form/{{ profile.root_entity }}?profile={{ profile.name }}&version={{ version }}"
                             hx-target="#main"
                             hx-swap="innerHTML"
+                            hx-vals="js:{dataset: document.getElementById('new-dataset-name')?.value || ''}"
+                            onclick="return validateDatasetName()"
                             data-testid="profile-{{ profile.name }}-v{{ version }}">
                         v{{ version }}{% if version == profile.latest_version %} (latest){% endif %}
                     </button>

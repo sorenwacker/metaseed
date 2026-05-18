@@ -154,11 +154,11 @@ class TestSpecBuilderHelpers:
         assert spec.validation_rules == []
 
     def test_clone_spec_miappe(self):
-        """clone_spec creates independent copy of MIAPPE spec with dev version."""
+        """clone_spec creates independent copy of MIAPPE spec."""
         spec = clone_spec("miappe", "1.1")
         assert isinstance(spec, ProfileSpec)
         assert spec.name == "miappe"
-        assert spec.version == "dev"  # Cloned specs start with dev version
+        assert spec.version == "1.1-dev"  # Based on 1.1, in development
         assert "Investigation" in spec.entities
         # Verify it's a copy
         spec.name = "modified"

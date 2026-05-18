@@ -33,6 +33,7 @@ graph TB
 | **Model Factory** | Generates Pydantic models from specs at runtime |
 | **Validators** | Cross-field validation, ontology checks, referential integrity |
 | **ProfileFacade** | Fluent API for entity discovery and creation |
+| **[Entity Repository](entity-repository.md)** | Unified API for entity CRUD with pluggable backends |
 | **CLI** | Command-line interface (Typer) |
 | **Web UI** | Visual editor (HTMX) |
 | **REST API** | HTTP endpoints (FastAPI) |

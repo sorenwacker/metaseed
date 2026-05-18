@@ -4447,3 +4447,217 @@ details.sidebar-section summary:hover {
 .notes-preview-content strong {
     font-weight: 600;
 }
+
+/* ============================================
+   MCP Server Status Indicator
+   ============================================ */
+
+.status-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: var(--space-xs);
+    vertical-align: middle;
+    transition: background-color 0.2s ease;
+}
+
+.status-indicator.status-off {
+    background-color: var(--clr-ink-light);
+    box-shadow: 0 0 0 2px rgba(90, 107, 98, 0.2);
+}
+
+.status-indicator.status-on {
+    background-color: var(--clr-success);
+    box-shadow: 0 0 4px rgba(61, 122, 90, 0.6);
+    animation: pulse-green 2s infinite;
+}
+
+@keyframes pulse-green {
+    0%, 100% {
+        box-shadow: 0 0 4px rgba(61, 122, 90, 0.6);
+    }
+    50% {
+        box-shadow: 0 0 8px rgba(61, 122, 90, 0.9);
+    }
+}
+
+#mcp-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+}
+
+/* Stronger green indicator for MCP running state */
+.status-indicator.status-on {
+    background-color: #22c55e;
+    box-shadow: 0 0 8px 2px rgba(34, 197, 94, 0.8);
+    animation: pulse-green-strong 1.5s infinite;
+}
+
+@keyframes pulse-green-strong {
+    0%, 100% {
+        box-shadow: 0 0 8px 2px rgba(34, 197, 94, 0.8);
+        transform: scale(1);
+    }
+    50% {
+        box-shadow: 0 0 12px 4px rgba(34, 197, 94, 1);
+        transform: scale(1.1);
+    }
+}
+
+/* ============================================
+   DATASET MANAGEMENT
+   ============================================ */
+
+.dataset-dropdown {
+    position: relative;
+}
+
+.dataset-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    width: 280px;
+    background: var(--clr-paper);
+    border: 1px solid var(--clr-parchment);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    z-index: 100;
+    margin-top: var(--space-xs);
+}
+
+.dataset-menu.hidden {
+    display: none;
+}
+
+.dataset-menu-section {
+    padding: var(--space-sm);
+    border-bottom: 1px solid var(--clr-parchment);
+}
+
+.dataset-menu-section:last-child {
+    border-bottom: none;
+}
+
+.dataset-menu-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--clr-ink-light);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: var(--space-xs);
+}
+
+.dataset-save-form {
+    display: flex;
+    gap: var(--space-xs);
+}
+
+.dataset-save-form input {
+    flex: 1;
+    min-width: 0;
+}
+
+.dataset-list {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.dataset-list-empty {
+    font-size: 0.85rem;
+    color: var(--clr-ink-light);
+    font-style: italic;
+    padding: var(--space-sm);
+    text-align: center;
+}
+
+.dataset-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    transition: var(--transition-fast);
+}
+
+.dataset-item:hover {
+    background: var(--clr-parchment);
+}
+
+.dataset-item.active {
+    background: var(--clr-sage);
+    color: white;
+}
+
+.dataset-item.active .dataset-item-meta {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.dataset-item-main {
+    flex: 1;
+    cursor: pointer;
+    min-width: 0;
+}
+
+.dataset-item-name {
+    font-weight: 500;
+    font-size: 0.9rem;
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dataset-item-meta {
+    font-size: 0.75rem;
+    color: var(--clr-ink-light);
+}
+
+.btn-dataset-delete {
+    background: transparent;
+    border: none;
+    color: var(--clr-ink-light);
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 0 var(--space-xs);
+    opacity: 0.5;
+    transition: var(--transition-fast);
+}
+
+.btn-dataset-delete:hover {
+    color: var(--clr-error);
+    opacity: 1;
+}
+
+.dataset-item.active .btn-dataset-delete {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.dataset-item.active .btn-dataset-delete:hover {
+    color: white;
+}
+
+#dataset-name {
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Dataset name input on profile select */
+.dataset-name-input {
+    margin-bottom: var(--space-lg);
+    padding-bottom: var(--space-lg);
+    border-bottom: 1px solid var(--clr-parchment);
+}
+
+.dataset-name-input .form-input {
+    max-width: 300px;
+}
+
+.dataset-name-input .form-hint {
+    font-size: 0.8rem;
+    color: var(--clr-ink-light);
+    margin-top: var(--space-xs);
+}

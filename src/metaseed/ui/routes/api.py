@@ -1,19 +1,22 @@
 """API routes for data retrieval.
 
 Provides JSON API endpoints for lookups, graph data, and spec operations.
+Includes WebSocket endpoint for real-time updates.
 """
 
 from __future__ import annotations
 
+import contextlib
 from typing import TYPE_CHECKING
 
-from fastapi import Body, Query
+from fastapi import Body, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 
 from metaseed.specs.loader import SpecLoadError
 from metaseed.specs.merge import compare, merge
 
 from ..helpers import collect_entities_by_type, get_reference_fields
+from ..websocket import manager
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -21,6 +24,24 @@ if TYPE_CHECKING:
     from fastapi import FastAPI
 
     from ..state import AppState
+
+
+def _parse_profile_strings(profiles: list[str]) -> tuple[list[tuple[str, str]], str | None]:
+    """Parse profile strings into tuples.
+
+    Args:
+        profiles: List of profile identifiers (e.g., ["miappe/1.1", "isa/1.0"]).
+
+    Returns:
+        Tuple of (profile_tuples, error_message). Error is None if parsing succeeded.
+    """
+    profile_tuples = []
+    for p in profiles:
+        parts = p.split("/")
+        if len(parts) != 2:
+            return [], f"Invalid profile format: {p}. Use profile/version"
+        profile_tuples.append((parts[0], parts[1]))
+    return profile_tuples, None
 
 
 def register_api_routes(
@@ -33,6 +54,21 @@ def register_api_routes(
         app: FastAPI application instance.
         get_state: Callable returning AppState.
     """
+
+    @app.websocket("/ws")
+    async def websocket_endpoint(websocket: WebSocket) -> None:
+        """WebSocket endpoint for real-time updates.
+
+        Clients connect here to receive notifications when state changes
+        (e.g., entities created/updated via MCP).
+        """
+        await manager.connect(websocket)
+        try:
+            while True:
+                # Keep connection alive, wait for messages (we don't expect any)
+                await websocket.receive_text()
+        except WebSocketDisconnect:
+            await manager.disconnect(websocket)
 
     @app.get("/api/lookup/{entity_type}")
     async def lookup_entities(
@@ -104,14 +140,23 @@ def register_api_routes(
     async def get_graph() -> JSONResponse:
         """Return graph data for visualization.
 
-        Builds nodes and edges from the entity tree for vis.js network graph.
+        Reloads current dataset from disk to pick up MCP changes,
+        then builds nodes and edges for vis.js network graph.
 
         Returns:
             JSON with 'nodes' and 'edges' lists.
         """
+        from metaseed.ui.datasets import get_current_dataset_name, load_dataset
         from metaseed.ui.services.graph import build_graph
 
         state = get_state()
+
+        # Reload from disk to pick up MCP changes
+        current_dataset = get_current_dataset_name(state)
+        if current_dataset:
+            with contextlib.suppress(FileNotFoundError):
+                load_dataset(state, current_dataset)
+
         return JSONResponse(content=build_graph(state))
 
     @app.post("/api/compare")
@@ -133,16 +178,9 @@ def register_api_routes(
             )
 
         try:
-            # Parse profile strings into tuples
-            profile_tuples = []
-            for p in profiles:
-                parts = p.split("/")
-                if len(parts) != 2:
-                    return JSONResponse(
-                        status_code=400,
-                        content={"error": f"Invalid profile format: {p}. Use profile/version"},
-                    )
-                profile_tuples.append((parts[0], parts[1]))
+            profile_tuples, error = _parse_profile_strings(profiles)
+            if error:
+                return JSONResponse(status_code=400, content={"error": error})
 
             result = compare(profile_tuples)
 
@@ -223,16 +261,9 @@ def register_api_routes(
             )
 
         try:
-            # Parse profile strings into tuples
-            profile_tuples = []
-            for p in profiles:
-                parts = p.split("/")
-                if len(parts) != 2:
-                    return JSONResponse(
-                        status_code=400,
-                        content={"error": f"Invalid profile format: {p}. Use profile/version"},
-                    )
-                profile_tuples.append((parts[0], parts[1]))
+            profile_tuples, error = _parse_profile_strings(profiles)
+            if error:
+                return JSONResponse(status_code=400, content={"error": error})
 
             result = merge(
                 profiles=profile_tuples,
@@ -280,3 +311,157 @@ def register_api_routes(
                 status_code=500,
                 content={"error": str(e)},
             )
+
+    # =========================================================================
+    # MCP Server Status (MCP is mounted in-process, always running)
+    # =========================================================================
+
+    @app.get("/api/mcp/status")
+    async def mcp_status(request: Request) -> JSONResponse:
+        """Get MCP server status.
+
+        MCP is mounted in-process at /mcp, always running with shared state.
+
+        Returns:
+            JSON with running status and connection URL.
+        """
+        # Build URL from request
+        host = request.headers.get("host", "127.0.0.1:8765")
+        scheme = request.headers.get("x-forwarded-proto", "http")
+        url = f"{scheme}://{host}/mcp"
+
+        return JSONResponse(
+            content={
+                "running": True,
+                "transport": "in-process",
+                "host": host.split(":")[0],
+                "port": int(host.split(":")[1]) if ":" in host else 80,
+                "pid": None,
+                "url": url,
+                "error": None,
+            }
+        )
+
+    @app.post("/api/mcp/start")
+    async def mcp_start() -> JSONResponse:
+        """Start MCP server (no-op, always running in-process).
+
+        Returns:
+            JSON with status.
+        """
+        return JSONResponse(
+            content={
+                "running": True,
+                "transport": "in-process",
+                "message": "MCP is always running (mounted in-process at /mcp)",
+                "error": None,
+            }
+        )
+
+    @app.post("/api/mcp/stop")
+    async def mcp_stop() -> JSONResponse:
+        """Stop MCP server (no-op, always running in-process).
+
+        Returns:
+            JSON with status.
+        """
+        return JSONResponse(
+            content={
+                "running": True,
+                "message": "MCP cannot be stopped (mounted in-process)",
+                "error": None,
+            }
+        )
+
+    # =========================================================================
+    # Dataset Management
+    # =========================================================================
+
+    @app.get("/api/datasets")
+    async def list_datasets_api() -> JSONResponse:
+        """List all saved datasets.
+
+        Returns:
+            JSON array of dataset info.
+        """
+        from ..datasets import get_current_dataset_name, list_datasets
+
+        state = get_state()
+        datasets = list_datasets()
+        current = get_current_dataset_name(state)
+
+        return JSONResponse(
+            content={
+                "datasets": datasets,
+                "current": current,
+            }
+        )
+
+    @app.post("/api/datasets/save")
+    async def save_dataset_api(
+        name: str = Body(..., embed=True, description="Dataset name"),
+    ) -> JSONResponse:
+        """Save current state as a dataset.
+
+        Args:
+            name: Dataset name (alphanumeric, hyphens, underscores).
+
+        Returns:
+            JSON with saved dataset info or error.
+        """
+        from ..datasets import save_dataset, set_current_dataset_name
+
+        state = get_state()
+
+        try:
+            result = save_dataset(state, name)
+            set_current_dataset_name(state, name)
+            return JSONResponse(content={"status": "saved", **result})
+        except ValueError as e:
+            return JSONResponse(status_code=400, content={"error": str(e)})
+
+    @app.post("/api/datasets/load")
+    async def load_dataset_api(
+        name: str = Body(..., embed=True, description="Dataset name"),
+    ) -> JSONResponse:
+        """Load a dataset.
+
+        Args:
+            name: Dataset name to load.
+
+        Returns:
+            JSON with loaded dataset info or error.
+        """
+        from ..datasets import load_dataset, set_current_dataset_name
+
+        state = get_state()
+
+        try:
+            result = load_dataset(state, name)
+            set_current_dataset_name(state, name)
+            return JSONResponse(content={"status": "loaded", **result})
+        except FileNotFoundError as e:
+            return JSONResponse(status_code=404, content={"error": str(e)})
+        except ValueError as e:
+            return JSONResponse(status_code=400, content={"error": str(e)})
+
+    @app.delete("/api/datasets/{name}")
+    async def delete_dataset_api(name: str) -> JSONResponse:
+        """Delete a dataset.
+
+        Args:
+            name: Dataset name to delete.
+
+        Returns:
+            JSON with status.
+        """
+        from ..datasets import delete_dataset, get_current_dataset_name, set_current_dataset_name
+
+        state = get_state()
+
+        if delete_dataset(name):
+            # Clear current if it was the deleted one
+            if get_current_dataset_name(state) == name:
+                set_current_dataset_name(state, None)
+            return JSONResponse(content={"status": "deleted"})
+        return JSONResponse(status_code=404, content={"error": "Dataset not found"})

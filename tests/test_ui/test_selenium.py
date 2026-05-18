@@ -46,7 +46,7 @@ def server():
     cwd = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
     proc = subprocess.Popen(
-        ["uv", "run", "uvicorn", "metaseed.ui.routes:app", "--port", "8081"],
+        ["uv", "run", "uvicorn", "metaseed.ui.app:app", "--port", "8081"],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         cwd=cwd,

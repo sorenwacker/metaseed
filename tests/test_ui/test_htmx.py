@@ -47,10 +47,10 @@ class TestIndex:
         response = client.get("/")
         assert "Metaseed" in response.text
 
-    def test_index_contains_entity_buttons(self, client):
-        """Index page contains entity creation buttons."""
+    def test_index_contains_new_dataset_button(self, client):
+        """Index page contains new dataset button."""
         response = client.get("/")
-        assert "Investigation" in response.text
+        assert "New Dataset" in response.text
 
 
 class TestForm:
@@ -60,7 +60,7 @@ class TestForm:
         """New Investigation shows profile selection first."""
         response = client.get("/form/Investigation")
         assert response.status_code == 200
-        assert "Select Metadata Model" in response.text
+        assert "New Dataset" in response.text
         assert "MIAPPE" in response.text
         assert "ISA" in response.text
 
@@ -336,29 +336,40 @@ class TestAppState:
         assert tree_data[0]["label"] == "Test Investigation"
 
     def test_get_tree_data_with_nested_entities(self):
-        """Get tree data includes nested entities as children."""
+        """Get tree data includes child entities added via parent_id."""
         # Use ISA profile since it has consistent model caching across tests
         state = AppState()
         state.profile = "isa"
         facade = state.get_or_create_facade()
 
-        # Create investigation with nested studies (using ISA field names)
-        instance = facade.Investigation(
+        # Create Investigation node
+        inv_instance = facade.Investigation(
             identifier="INV-001",
             title="Test Investigation",
-            studies=[
-                {"identifier": "STU-001", "title": "Study One", "investigation_id": "INV-001"},
-                {"identifier": "STU-002", "title": "Study Two", "investigation_id": "INV-001"},
-            ],
         )
-        state.add_node("Investigation", instance)
+        inv_node = state.add_node("Investigation", inv_instance)
+
+        # Create Studies as children of Investigation
+        study1 = facade.Study(
+            identifier="STU-001",
+            title="Study One",
+            investigation_id="INV-001",
+        )
+        state.add_node("Study", study1, parent_id=inv_node.id)
+
+        study2 = facade.Study(
+            identifier="STU-002",
+            title="Study Two",
+            investigation_id="INV-001",
+        )
+        state.add_node("Study", study2, parent_id=inv_node.id)
 
         tree_data = state.get_tree_data()
         assert len(tree_data) == 1
         assert tree_data[0]["has_children"] is True
         assert len(tree_data[0]["children"]) == 2
         assert tree_data[0]["children"][0]["label"] == "Study One"
-        assert tree_data[0]["children"][0]["is_nested"] is True
+        assert tree_data[0]["children"][0]["entity_type"] == "Study"
 
     def test_reset_clears_all_state(self):
         """Reset clears all state."""
@@ -666,7 +677,7 @@ class TestProfileDisplayInfo:
         response = client.get("/form/Investigation?profile=isa")
         assert response.status_code == 200
         # Should show ISA form, not profile selection
-        assert "Select Metadata Model" not in response.text
+        assert "New Dataset" not in response.text
 
 
 class TestTableViewEdgeCases:

@@ -60,8 +60,8 @@ def clone_spec(profile: str, version: str) -> ProfileSpec:
 
     # Deep copy to ensure independence from cached version
     cloned = copy.deepcopy(spec)
-    # Set version to dev to indicate it's a work in progress
-    cloned.version = "dev"
+    # Mark as development version based on original
+    cloned.version = f"{spec.version}-dev"
     return cloned
 
 

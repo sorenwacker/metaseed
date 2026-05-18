@@ -326,5 +326,34 @@ app.command(name="compare")(compare_profiles)
 app.command(name="merge")(merge_profiles)
 
 
+@app.command(name="mcp")
+def mcp_server(
+    transport: Annotated[
+        str, typer.Option("--transport", "-t", help="Transport type (stdio or http)")
+    ] = "stdio",
+    host: Annotated[
+        str, typer.Option("--host", "-h", help="Host for HTTP transport")
+    ] = "127.0.0.1",
+    port: Annotated[int, typer.Option("--port", "-p", help="Port for HTTP transport")] = 8000,
+) -> None:
+    """Start the MCP (Model Context Protocol) server.
+
+    The MCP server exposes metaseed functionality to MCP-compatible clients
+    like Claude Desktop. It provides tools for parsing files, analyzing
+    column mappings, extracting metadata, and validating results.
+
+    Use 'stdio' transport for Claude Desktop integration.
+    Use 'http' transport for debugging or web-based clients.
+    """
+    from metaseed.agent.mcp import run_server
+
+    if transport == "http":
+        typer.echo(f"Starting MCP server at http://{host}:{port}")
+        run_server(transport="streamable-http", host=host, port=port)
+    else:
+        # stdio mode - no output to stdout as it would interfere with protocol
+        run_server(transport="stdio")
+
+
 if __name__ == "__main__":
     app()

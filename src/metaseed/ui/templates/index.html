@@ -1,15 +1,16 @@
 {% if tree_nodes %}
 <div class="entity-list">
     <h2>Entities</h2>
-    {% for node in tree_nodes %}
-    <div class="entity-item">
-        <button class="btn btn-entity"
+    {% for node in tree_nodes recursive %}
+    <div class="entity-item {% if loop.depth > 1 %}child{% endif %}">
+        <button class="btn btn-entity {% if loop.depth > 1 %}btn-nested{% endif %}"
                 hx-get="/form/{{ node.entity_type }}/{{ node.id }}"
                 hx-target="#main"
                 hx-swap="innerHTML">
             <span class="entity-type">{{ node.entity_type }}</span>
             <span class="entity-label">{{ node.label }}</span>
         </button>
+        {% if loop.depth == 1 %}
         <button class="btn btn-delete"
                 hx-delete="/entity/{{ node.id }}"
                 hx-target="#main"
@@ -17,20 +18,11 @@
                 hx-confirm="Delete '{{ node.label }}'?">
             &times;
         </button>
+        {% endif %}
     </div>
     {% if node.children %}
     <div class="entity-children">
-        {% for child in node.children %}
-        <div class="entity-item child">
-            <button class="btn btn-entity btn-nested"
-                    hx-get="/nested/{{ child.parent_entity_type }}/{{ child.field_name }}/{{ child.idx }}"
-                    hx-target="#main"
-                    hx-swap="innerHTML">
-                <span class="entity-type">{{ child.entity_type }}</span>
-                <span class="entity-label">{{ child.label }}</span>
-            </button>
-        </div>
-        {% endfor %}
+        {{ loop(node.children) }}
     </div>
     {% endif %}
     {% endfor %}

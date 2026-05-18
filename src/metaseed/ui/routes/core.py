@@ -5,6 +5,7 @@ Provides the main page, profile switching, and form rendering routes.
 
 from __future__ import annotations
 
+import contextlib
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -105,6 +106,15 @@ def register_core_routes(
     async def index(request: Request) -> HTMLResponse:
         """Render the main page."""
         state = get_state()
+
+        # Auto-load autosave dataset if state is empty and autosave exists
+        if not state.entity_tree:
+            from ..datasets import get_current_dataset_name, load_dataset
+
+            if not get_current_dataset_name(state):
+                with contextlib.suppress(FileNotFoundError):
+                    load_dataset(state, "autosave")
+
         facade = state.get_or_create_facade()
         profile_factory = ProfileFactory()
 
@@ -125,6 +135,17 @@ def register_core_routes(
                 "editing_node_type": editing_node.entity_type if editing_node else None,
                 "base_url": base_url,
             },
+        )
+
+    @app.get("/new-dataset", response_class=HTMLResponse)
+    async def new_dataset(request: Request) -> HTMLResponse:
+        """Show the new dataset / profile selection screen."""
+        profile_factory = ProfileFactory()
+        profiles_info = get_profile_display_info(profile_factory)
+        return templates.TemplateResponse(
+            request,
+            "partials/profile_select.html",
+            {"profiles": profiles_info},
         )
 
     @app.get("/profile/{name}")
@@ -182,10 +203,19 @@ def register_form_routes(
                 )
 
         version = request.query_params.get("version")
+        dataset = request.query_params.get("dataset")
+
         if profile and profile in profile_factory.list_profiles():
             state.profile = profile
             state.version = version
             state.facade = None
+            state.reset()  # Clear existing entities when starting fresh
+
+            # Set the dataset name if provided
+            if dataset:
+                from ..datasets import set_current_dataset_name
+
+                set_current_dataset_name(state, dataset)
 
         facade = state.get_or_create_facade()
 
@@ -326,6 +356,11 @@ def register_entity_crud_routes(
 
             state.current_nested_items = extract_nested_items(instance, helper)
 
+            # Auto-save to persist changes
+            from ..datasets import auto_save
+
+            auto_save(state)
+
             return render_entity_form(
                 request,
                 templates,
@@ -380,13 +415,18 @@ def register_entity_crud_routes(
 
             state.current_nested_items = extract_nested_items(instance, helper)
 
+            # Auto-save to persist changes
+            from ..datasets import auto_save
+
+            auto_save(state)
+
             action = form_data.get("_action", "")
             if action == "back":
                 return templates.TemplateResponse(
                     request,
                     "index.html",
                     {
-                        "tree_nodes": state.get_tree_for_display(),
+                        "tree_nodes": state.get_tree_data(),
                         "notification": {
                             "type": "success",
                             "message": f"Saved {entity_type}: {node.label}",
@@ -424,6 +464,11 @@ def register_entity_crud_routes(
         label = node.label
 
         state.delete_node(node_id)
+
+        # Auto-save to persist changes
+        from ..datasets import auto_save
+
+        auto_save(state)
 
         return templates.TemplateResponse(
             request,

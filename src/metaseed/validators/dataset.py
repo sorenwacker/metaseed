@@ -185,19 +185,54 @@ class DatasetValidator:
         Returns:
             Entity type name, or None if not detected.
         """
-        # Check for explicit type field
         if "_type" in data:
             return str(data["_type"]).lower()
-
-        # Check for studies field (likely investigation)
         if "studies" in data and isinstance(data.get("studies"), list):
             return "investigation"
-
-        # Check for observation_units field (likely study)
         if "observation_units" in data and isinstance(data.get("observation_units"), list):
             return "study"
-
         return None
+
+    def _to_snake_case(self: Self, name: str) -> str:
+        """Convert PascalCase to snake_case."""
+        import re
+
+        s1 = re.sub(r"(.)([A-Z][a-z]+)", r"\1_\2", name)
+        return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
+
+    def _traverse_entity_tree(
+        self: Self,
+        data: dict[str, Any],
+        entity_type: str,
+        visitor: callable,
+        path: str = "",
+    ) -> None:
+        """Traverse entity tree recursively, calling visitor at each node.
+
+        Args:
+            data: Entity data dictionary.
+            entity_type: Type of the current entity.
+            visitor: Callback function(data, entity_type, path) called for each entity.
+            path: Current path for error reporting.
+        """
+        visitor(data, entity_type, path)
+
+        try:
+            spec = self._loader.load_entity(entity_type, self.version)
+        except SpecLoadError:
+            return
+
+        for f in spec.fields:
+            if f.type.value == "list" and f.items:
+                items = data.get(f.name, [])
+                if not isinstance(items, list):
+                    continue
+
+                item_entity = self._to_snake_case(f.items)
+                for i, item in enumerate(items):
+                    if isinstance(item, dict):
+                        item_path = f"{path}.{f.name}[{i}]" if path else f"{f.name}[{i}]"
+                        self._traverse_entity_tree(item, item_entity, visitor, item_path)
 
     def _collect_ids(
         self: Self,
@@ -210,34 +245,12 @@ class DatasetValidator:
             data: Entity data dictionary.
             entity_type: Type of the entity.
         """
-        # Register this entity's ID
-        if "unique_id" in data:
-            self._registry.register(entity_type, data["unique_id"])
 
-        # Recursively collect from nested lists
-        try:
-            spec = self._loader.load_entity(entity_type, self.version)
-        except SpecLoadError:
-            return
+        def register_id(d: dict, etype: str, _path: str) -> None:
+            if "unique_id" in d:
+                self._registry.register(etype, d["unique_id"])
 
-        for f in spec.fields:
-            if f.type.value == "list" and f.items:
-                items = data.get(f.name, [])
-                if not isinstance(items, list):
-                    continue
-
-                # Convert items type to snake_case entity name
-                item_entity = self._to_snake_case(f.items)
-                for item in items:
-                    if isinstance(item, dict):
-                        self._collect_ids(item, item_entity)
-
-    def _to_snake_case(self: Self, name: str) -> str:
-        """Convert PascalCase to snake_case."""
-        import re
-
-        s1 = re.sub(r"(.)([A-Z][a-z]+)", r"\1_\2", name)
-        return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
+        self._traverse_entity_tree(data, entity_type, register_id)
 
     def _validate_references(
         self: Self,
@@ -257,40 +270,23 @@ class DatasetValidator:
         """
         errors: list[ValidationError] = []
 
-        # Check reference fields for this entity type
-        if entity_type in self._reference_fields:
-            for field_name, ref_type in self._reference_fields[entity_type]:
-                ref_value = data.get(field_name)
-                if ref_value is not None:
-                    ref_entity = self._to_snake_case(ref_type)
-                    if not self._registry.exists(ref_entity, ref_value):
-                        field_path = f"{path}.{field_name}" if path else field_name
-                        errors.append(
-                            ValidationError(
-                                field=field_path,
-                                message=f"Reference not found: {ref_type} '{ref_value}'",
-                                rule="reference_integrity",
+        def check_refs(d: dict, etype: str, p: str) -> None:
+            if etype in self._reference_fields:
+                for field_name, ref_type in self._reference_fields[etype]:
+                    ref_value = d.get(field_name)
+                    if ref_value is not None:
+                        ref_entity = self._to_snake_case(ref_type)
+                        if not self._registry.exists(ref_entity, ref_value):
+                            field_path = f"{p}.{field_name}" if p else field_name
+                            errors.append(
+                                ValidationError(
+                                    field=field_path,
+                                    message=f"Reference not found: {ref_type} '{ref_value}'",
+                                    rule="reference_integrity",
+                                )
                             )
-                        )
 
-        # Recursively validate nested entities
-        try:
-            spec = self._loader.load_entity(entity_type, self.version)
-        except SpecLoadError:
-            return errors
-
-        for f in spec.fields:
-            if f.type.value == "list" and f.items:
-                items = data.get(f.name, [])
-                if not isinstance(items, list):
-                    continue
-
-                item_entity = self._to_snake_case(f.items)
-                for i, item in enumerate(items):
-                    if isinstance(item, dict):
-                        item_path = f"{path}.{f.name}[{i}]" if path else f"{f.name}[{i}]"
-                        errors.extend(self._validate_references(item, item_entity, item_path))
-
+        self._traverse_entity_tree(data, entity_type, check_refs, path)
         return errors
 
     def _validate_entity(
@@ -311,39 +307,22 @@ class DatasetValidator:
         """
         errors: list[ValidationError] = []
 
-        # Validate against spec rules
-        try:
-            engine = create_engine_for_entity(entity_type, self.version, self.profile)
-            for error in engine.validate(data):
-                field_path = f"{path}.{error.field}" if path else error.field
-                errors.append(
-                    ValidationError(
-                        field=field_path,
-                        message=error.message,
-                        rule=error.rule,
+        def validate_node(d: dict, etype: str, p: str) -> None:
+            try:
+                engine = create_engine_for_entity(etype, self.version, self.profile)
+                for error in engine.validate(d):
+                    field_path = f"{p}.{error.field}" if p else error.field
+                    errors.append(
+                        ValidationError(
+                            field=field_path,
+                            message=error.message,
+                            rule=error.rule,
+                        )
                     )
-                )
-        except SpecLoadError:
-            pass
+            except SpecLoadError:
+                pass
 
-        # Recursively validate nested entities
-        try:
-            spec = self._loader.load_entity(entity_type, self.version)
-        except SpecLoadError:
-            return errors
-
-        for f in spec.fields:
-            if f.type.value == "list" and f.items:
-                items = data.get(f.name, [])
-                if not isinstance(items, list):
-                    continue
-
-                item_entity = self._to_snake_case(f.items)
-                for i, item in enumerate(items):
-                    if isinstance(item, dict):
-                        item_path = f"{path}.{f.name}[{i}]" if path else f"{f.name}[{i}]"
-                        errors.extend(self._validate_entity(item, item_entity, item_path))
-
+        self._traverse_entity_tree(data, entity_type, validate_node, path)
         return errors
 
     def _count_entities(
@@ -359,23 +338,11 @@ class DatasetValidator:
             entity_type: Type of the entity.
             counts: Dictionary to update with counts.
         """
-        counts[entity_type] = counts.get(entity_type, 0) + 1
 
-        try:
-            spec = self._loader.load_entity(entity_type, self.version)
-        except SpecLoadError:
-            return
+        def count_node(_d: dict, etype: str, _p: str) -> None:
+            counts[etype] = counts.get(etype, 0) + 1
 
-        for f in spec.fields:
-            if f.type.value == "list" and f.items:
-                items = data.get(f.name, [])
-                if not isinstance(items, list):
-                    continue
-
-                item_entity = self._to_snake_case(f.items)
-                for item in items:
-                    if isinstance(item, dict):
-                        self._count_entities(item, item_entity, counts)
+        self._traverse_entity_tree(data, entity_type, count_node)
 
     def validate_file(self: Self, path: Path) -> DatasetValidationResult:
         """Validate a single file.

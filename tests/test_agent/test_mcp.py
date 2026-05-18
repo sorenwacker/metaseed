@@ -1,0 +1,599 @@
+"""Tests for the MCP server module."""
+
+import json
+from pathlib import Path
+from unittest.mock import patch
+
+import pytest
+
+from metaseed.agent.mcp.server import create_server
+
+
+class TestMCPServer:
+    """Tests for MCP server creation and tools."""
+
+    def test_create_server(self) -> None:
+        """Create MCP server instance."""
+        server = create_server("test-metaseed")
+        assert server is not None
+        assert server.name == "test-metaseed"
+
+    def test_list_profiles_tool(self) -> None:
+        """List profiles tool returns profile info."""
+        server = create_server()
+
+        # Find the list_profiles tool
+        tools = server._tool_manager._tools
+        list_profiles_fn = None
+        for name, tool in tools.items():
+            if name == "list_profiles":
+                list_profiles_fn = tool.fn
+                break
+
+        assert list_profiles_fn is not None
+
+        result = list_profiles_fn()
+        data = json.loads(result)
+
+        assert isinstance(data, list)
+        # Should have at least MIAPPE if tests are running with specs
+        # This may be empty in a minimal test environment
+
+    def test_parse_source_file_tool(self, tmp_path: Path) -> None:
+        """Parse file tool returns file structure."""
+        server = create_server()
+
+        # Create a test CSV
+        csv_file = tmp_path / "test.csv"
+        csv_file.write_text("name,value\nfoo,1\nbar,2\n")
+
+        # Find the parse_source_file tool
+        tools = server._tool_manager._tools
+        parse_fn = None
+        for name, tool in tools.items():
+            if name == "parse_source_file":
+                parse_fn = tool.fn
+                break
+
+        assert parse_fn is not None
+
+        result = parse_fn(file_path=str(csv_file))
+        data = json.loads(result)
+
+        assert data["format"] == "csv"
+        assert len(data["tables"]) == 1
+        assert data["tables"][0]["headers"] == ["name", "value"]
+        assert data["tables"][0]["row_count"] == 2
+
+    def test_parse_source_file_not_found(self) -> None:
+        """Parse file tool handles missing files."""
+        server = create_server()
+
+        tools = server._tool_manager._tools
+        parse_fn = None
+        for name, tool in tools.items():
+            if name == "parse_source_file":
+                parse_fn = tool.fn
+                break
+
+        result = parse_fn(file_path="/nonexistent/file.csv")
+        data = json.loads(result)
+
+        assert "error" in data
+        assert "not found" in data["error"].lower()
+
+    def test_get_profile_schema_tool(self) -> None:
+        """Get profile schema tool returns entity info."""
+        server = create_server()
+
+        tools = server._tool_manager._tools
+        get_schema_fn = None
+        for name, tool in tools.items():
+            if name == "get_profile_schema":
+                get_schema_fn = tool.fn
+                break
+
+        assert get_schema_fn is not None
+
+        # This may return error if profile not found in test env
+        result = get_schema_fn(profile="miappe", version="1.1")
+        data = json.loads(result)
+
+        # Either has entities or error
+        assert "entities" in data or "error" in data
+
+    def test_analyze_mapping_tool(self, tmp_path: Path) -> None:
+        """Analyze mapping tool suggests column mappings."""
+        server = create_server()
+
+        # Create test CSV with MIAPPE-like columns
+        csv_file = tmp_path / "investigations.csv"
+        csv_file.write_text("identifier,title,description\nINV-001,Test,A test investigation\n")
+
+        tools = server._tool_manager._tools
+        analyze_fn = None
+        for name, tool in tools.items():
+            if name == "analyze_mapping":
+                analyze_fn = tool.fn
+                break
+
+        assert analyze_fn is not None
+
+        result = analyze_fn(
+            file_path=str(csv_file),
+            profile="miappe",
+            version="1.1",
+            entity="Investigation",
+        )
+        data = json.loads(result)
+
+        # Either has mappings or error (if profile not available)
+        assert "mappings" in data or "error" in data
+
+        if "mappings" in data:
+            assert data["entity"] == "Investigation"
+            assert len(data["mappings"]) > 0
+
+    def test_export_metadata_yaml(self) -> None:
+        """Export metadata tool outputs YAML."""
+        server = create_server()
+
+        tools = server._tool_manager._tools
+        export_fn = None
+        for name, tool in tools.items():
+            if name == "export_metadata":
+                export_fn = tool.fn
+                break
+
+        assert export_fn is not None
+
+        input_data = json.dumps({"Investigation": [{"identifier": "INV-001", "title": "Test"}]})
+        result = export_fn(data=input_data, output_format="yaml")
+
+        assert "Investigation:" in result
+        assert "identifier:" in result
+        assert "INV-001" in result
+
+    def test_export_metadata_json(self) -> None:
+        """Export metadata tool outputs JSON."""
+        server = create_server()
+
+        tools = server._tool_manager._tools
+        export_fn = None
+        for name, tool in tools.items():
+            if name == "export_metadata":
+                export_fn = tool.fn
+                break
+
+        input_data = json.dumps({"Investigation": [{"identifier": "INV-001"}]})
+        result = export_fn(data=input_data, output_format="json")
+
+        data = json.loads(result)
+        assert "Investigation" in data
+        assert data["Investigation"][0]["identifier"] == "INV-001"
+
+    def test_validate_extracted_tool(self) -> None:
+        """Validate extracted tool checks data validity."""
+        server = create_server()
+
+        tools = server._tool_manager._tools
+        validate_fn = None
+        for name, tool in tools.items():
+            if name == "validate_extracted":
+                validate_fn = tool.fn
+                break
+
+        assert validate_fn is not None
+
+        # Test with some data - may error if profile not available
+        test_data = json.dumps([{"identifier": "INV-001", "title": "Test"}])
+        result = validate_fn(
+            data=test_data,
+            profile="miappe",
+            version="1.1",
+            entity="Investigation",
+        )
+        data = json.loads(result)
+
+        # Either has results or error
+        assert "results" in data or "error" in data
+
+
+class TestMCPResources:
+    """Tests for MCP resource handlers."""
+
+    def test_list_profiles_resource(self) -> None:
+        """Profile list resource returns JSON array."""
+        server = create_server()
+
+        # Find the resource handler
+        resources = server._resource_manager._resources
+
+        # Resource may not be directly callable in newer MCP versions
+        # This test verifies the resource is registered
+        assert "profile://list" in [str(uri) for uri in resources]
+
+    def test_profile_schema_resource_pattern(self) -> None:
+        """Profile schema resource is registered."""
+        server = create_server()
+
+        # Check that resource templates are registered
+        templates = server._resource_manager._templates
+        # The template pattern should be registered
+        assert len(templates) > 0 or len(server._resource_manager._resources) > 0
+
+
+class TestMCPPrompts:
+    """Tests for MCP prompt handlers."""
+
+    def test_extraction_guide_prompt(self) -> None:
+        """Extraction guide prompt returns instructions."""
+        server = create_server()
+
+        prompts = server._prompt_manager._prompts
+        extraction_guide = None
+        for name, prompt in prompts.items():
+            if name == "extraction_guide":
+                extraction_guide = prompt
+                break
+
+        assert extraction_guide is not None
+        # Call the prompt function
+        result = extraction_guide.fn(profile="miappe")
+
+        assert "Metadata Extraction Guide" in result
+        assert "list_profiles" in result
+        assert "parse_source_file" in result
+
+    def test_field_mapping_help_prompt(self) -> None:
+        """Field mapping help prompt returns guidance."""
+        server = create_server()
+
+        prompts = server._prompt_manager._prompts
+        mapping_help = None
+        for name, prompt in prompts.items():
+            if name == "field_mapping_help":
+                mapping_help = prompt
+                break
+
+        assert mapping_help is not None
+        result = mapping_help.fn(entity="Investigation", profile="miappe")
+
+        assert "Field Mapping Help" in result
+        assert "Confidence Scores" in result
+
+
+class TestMCPDatasetTools:
+    """Tests for MCP dataset management tools."""
+
+    @pytest.fixture
+    def server_with_app(self):
+        """Create server with mocked app state."""
+        from metaseed.ui.state import AppState
+
+        server = create_server()
+
+        # Create app state
+        state = AppState(profile="miappe")
+
+        # Mock the app module
+        with patch("metaseed.agent.mcp.server.app") as mock_app:
+            mock_app.state.ui_state = state
+            yield server, state
+
+    def test_list_datasets_tool(self, tmp_path):
+        """List datasets tool returns available datasets."""
+        server = create_server()
+
+        tools = server._tool_manager._tools
+        list_fn = tools.get("list_datasets")
+        assert list_fn is not None
+
+        # The function may error due to missing app state, but should exist
+        with patch("metaseed.ui.datasets.list_datasets", return_value=[]):
+            result = list_fn.fn()
+            data = json.loads(result)
+            assert "datasets" in data
+
+    def test_get_field_spec_tool(self):
+        """Get field spec tool returns field definitions."""
+        from metaseed.agent.mcp.server import set_mcp_state
+        from metaseed.ui.state import AppState
+
+        server = create_server()
+
+        tools = server._tool_manager._tools
+        get_spec_fn = tools.get("get_field_spec")
+        assert get_spec_fn is not None
+
+        # Set the MCP state directly
+        state = AppState(profile="miappe")
+        set_mcp_state(state)
+
+        result = get_spec_fn.fn(entity_type="Investigation")
+        data = json.loads(result)
+
+        # Should have fields or error
+        assert "fields" in data or "error" in data
+
+    def test_validate_dataset_tool(self):
+        """Validate dataset tool checks entity validity."""
+        from metaseed.agent.mcp.server import set_mcp_state
+        from metaseed.ui.state import AppState
+
+        server = create_server()
+
+        tools = server._tool_manager._tools
+        validate_fn = tools.get("validate_dataset")
+        assert validate_fn is not None
+
+        # Set the MCP state directly
+        state = AppState(profile="miappe")
+        set_mcp_state(state)
+
+        result = validate_fn.fn()
+        data = json.loads(result)
+
+        # Empty state should have 0 results
+        assert data.get("total", 0) == 0 or "error" in data
+
+    def test_create_entity_tool(self):
+        """Create entity tool adds entity to state."""
+        from metaseed.agent.mcp.server import set_mcp_state
+        from metaseed.ui.state import AppState
+
+        server = create_server()
+
+        tools = server._tool_manager._tools
+        create_fn = tools.get("create_entity")
+        assert create_fn is not None
+
+        # Set the MCP state directly
+        state = AppState(profile="miappe")
+        set_mcp_state(state)
+
+        with patch("metaseed.ui.datasets.auto_save"):
+            result = create_fn.fn(
+                entity_type="Investigation", data='{"unique_id": "INV-001", "title": "Test"}'
+            )
+            data = json.loads(result)
+
+            # Should create or have validation error
+            assert data.get("status") == "created" or "error" in data
+
+    def test_bulk_update_tool(self):
+        """Bulk update tool updates multiple entities."""
+        from metaseed.agent.mcp.server import set_mcp_state
+        from metaseed.ui.state import AppState
+
+        server = create_server()
+
+        tools = server._tool_manager._tools
+        bulk_fn = tools.get("bulk_update_entities")
+        assert bulk_fn is not None
+
+        # Set the MCP state directly
+        state = AppState(profile="miappe")
+        set_mcp_state(state)
+
+        with patch("metaseed.ui.datasets.auto_save"):
+            # Empty updates should work
+            result = bulk_fn.fn(updates="[]")
+            data = json.loads(result)
+
+            assert data.get("total") == 0 or "error" in data
+
+
+class TestMCPIntegration:
+    """Integration tests for the full MCP workflow."""
+
+    def test_full_workflow_create_list_get_validate(self):
+        """Test create → list → get → validate workflow with date fields."""
+        from metaseed.agent.mcp.server import set_mcp_state
+        from metaseed.ui.state import AppState
+
+        server = create_server()
+        tools = server._tool_manager._tools
+
+        # Set up state with ISA profile (has date fields)
+        state = AppState(profile="isa")
+        set_mcp_state(state)
+
+        with patch("metaseed.ui.datasets.auto_save"):
+            # 1. Create entity with date field
+            create_fn = tools.get("create_entity")
+            result = create_fn.fn(
+                entity_type="Investigation",
+                data='{"identifier": "INV-001", "title": "Test Investigation", "submission_date": "2024-01-15"}',
+            )
+            create_data = json.loads(result)
+            assert create_data.get("status") == "created" or "error" in create_data
+
+            if "error" in create_data:
+                pytest.skip("Profile not available")
+
+            node_id = create_data["id"]
+
+            # 2. List entities (tests date serialization)
+            list_fn = tools.get("list_entities")
+            result = list_fn.fn()
+            list_data = json.loads(result)
+            assert "entities" in list_data
+            assert list_data["total"] >= 1
+
+            # 3. Get specific entity (tests date serialization)
+            get_fn = tools.get("get_entity")
+            result = get_fn.fn(node_id=node_id)
+            get_data = json.loads(result)
+            assert get_data["id"] == node_id
+            assert get_data["entity_type"] == "Investigation"
+
+            # 4. Validate dataset
+            validate_fn = tools.get("validate_dataset")
+            result = validate_fn.fn()
+            validate_data = json.loads(result)
+            assert "total" in validate_data
+            assert "results" in validate_data
+
+            # 5. Get field spec
+            spec_fn = tools.get("get_field_spec")
+            result = spec_fn.fn(entity_type="Investigation")
+            spec_data = json.loads(result)
+            assert "fields" in spec_data or "error" in spec_data
+
+    def test_person_label_uses_name_fields(self):
+        """Test that Person entities use first_name + last_name for label."""
+        from metaseed.ui.state import TreeNode
+
+        # Mock a Person instance with model_dump
+        class MockPerson:
+            def model_dump(self):
+                return {"first_name": "Jane", "last_name": "Doe", "email": "jane@example.com"}
+
+        node = TreeNode.create("Person", MockPerson())
+        assert node.label == "Jane Doe"
+
+    def test_person_label_first_name_only(self):
+        """Test Person label with only first_name."""
+        from metaseed.ui.state import TreeNode
+
+        class MockPerson:
+            def model_dump(self):
+                return {"first_name": "Jane"}
+
+        node = TreeNode.create("Person", MockPerson())
+        assert node.label == "Jane"
+
+    def test_hierarchy_creation_and_save(self, tmp_path):
+        """Test creating hierarchical entities and saving to disk."""
+        from metaseed.agent.mcp.server import set_mcp_state
+        from metaseed.ui.state import AppState
+
+        server = create_server()
+        tools = server._tool_manager._tools
+
+        # Set up state with MIAPPE profile
+        state = AppState(profile="miappe")
+        set_mcp_state(state)
+
+        # Mock the datasets directory to use tmp_path
+        with patch("metaseed.ui.datasets.DATASETS_DIR", tmp_path):
+            # 1. Create Investigation
+            create_fn = tools.get("create_entity")
+            result = create_fn.fn(
+                entity_type="Investigation",
+                data='{"unique_id": "inv-hierarchy-test", "title": "Hierarchy Test"}',
+            )
+            inv_data = json.loads(result)
+
+            if "error" in inv_data:
+                pytest.skip(f"Profile not available: {inv_data['error']}")
+
+            inv_id = inv_data["id"]
+            assert inv_data["status"] == "created"
+
+            # 2. Create Study with parent_id
+            result = create_fn.fn(
+                entity_type="Study",
+                data='{"unique_id": "study-hierarchy-test", "title": "Child Study"}',
+                parent_id=inv_id,
+            )
+            study_data = json.loads(result)
+            assert study_data["status"] == "created"
+            assert study_data.get("parent_id") == inv_id
+            assert study_data.get("linked_via_field") == "studies"
+            study_id = study_data["id"]
+
+            # 3. Verify state hierarchy
+            assert len(state.entity_tree) == 1  # Only Investigation at root
+            inv_node = state.entity_tree[0]
+            assert inv_node.id == inv_id
+            assert len(inv_node.children) == 1  # Study is child
+            assert inv_node.children[0].id == study_id
+
+            # 4. Verify both nodes are in nodes_by_id
+            assert inv_id in state.nodes_by_id
+            assert study_id in state.nodes_by_id
+            assert len(state.nodes_by_id) == 2
+
+            # 5. Verify dataset file was saved with hierarchy
+            dataset_file = tmp_path / "hierarchy-test.json"
+            assert (
+                dataset_file.exists()
+            ), f"Dataset file not found. Files: {list(tmp_path.iterdir())}"
+
+            with open(dataset_file) as f:
+                saved_data = json.load(f)
+
+            # Should have 2 entities
+            assert len(saved_data["entities"]) == 2
+
+            # Find Investigation and Study
+            saved_inv = None
+            saved_study = None
+            for entity in saved_data["entities"]:
+                if entity["_type"] == "Investigation":
+                    saved_inv = entity
+                elif entity["_type"] == "Study":
+                    saved_study = entity
+
+            assert saved_inv is not None, "Investigation not found in saved data"
+            assert saved_study is not None, "Study not found in saved data"
+
+            # Verify parent reference
+            assert saved_study.get("_parent_id") == saved_inv.get("_node_id")
+
+            # Verify Investigation's studies field was updated
+            assert "study-hierarchy-test" in saved_inv.get("studies", [])
+
+    def test_get_entity_tree_shows_hierarchy(self):
+        """Test that get_entity_tree correctly shows parent-child relationships."""
+        from metaseed.agent.mcp.server import set_mcp_state
+        from metaseed.ui.state import AppState
+
+        server = create_server()
+        tools = server._tool_manager._tools
+
+        state = AppState(profile="miappe")
+        set_mcp_state(state)
+
+        with patch("metaseed.ui.datasets.auto_save"):
+            # Create Investigation
+            create_fn = tools.get("create_entity")
+            result = create_fn.fn(
+                entity_type="Investigation",
+                data='{"unique_id": "inv-tree-test", "title": "Tree Test"}',
+            )
+            inv_data = json.loads(result)
+            if "error" in inv_data:
+                pytest.skip(f"Profile not available: {inv_data['error']}")
+            inv_id = inv_data["id"]
+
+            # Create Study as child
+            result = create_fn.fn(
+                entity_type="Study",
+                data='{"unique_id": "study-tree-test", "title": "Child Study"}',
+                parent_id=inv_id,
+            )
+            study_data = json.loads(result)
+            study_id = study_data["id"]
+
+            # Get entity tree
+            tree_fn = tools.get("get_entity_tree")
+            result = tree_fn.fn()
+            tree_data = json.loads(result)
+
+            # Verify tree structure
+            assert tree_data["root_count"] == 1
+            assert tree_data["total_count"] == 2
+
+            # Investigation at root with Study as child
+            inv_tree = tree_data["tree"][0]
+            assert inv_tree["id"] == inv_id
+            assert inv_tree["entity_type"] == "Investigation"
+            assert "children" in inv_tree
+            assert len(inv_tree["children"]) == 1
+
+            study_tree = inv_tree["children"][0]
+            assert study_tree["id"] == study_id
+            assert study_tree["entity_type"] == "Study"

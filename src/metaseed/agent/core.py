@@ -1,0 +1,530 @@
+"""Core extraction context and orchestration logic.
+
+This module provides the ExtractionContext class that manages state for
+metadata extraction sessions, including profile selection, source files,
+column mappings, and extracted entities.
+"""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Any, Self
+
+import yaml
+from pydantic import BaseModel
+
+from metaseed.agent.mapping import ColumnMapping, FieldMapping, suggest_mapping
+from metaseed.agent.parsers import ParsedContent, ParserRegistry
+from metaseed.agent.parsers.registry import create_default_registry
+from metaseed.specs.loader import SpecLoader
+from metaseed.specs.schema import EntitySpec, FieldSpec, ProfileSpec
+
+
+class TypeConverter:
+    """Converts values to appropriate types based on field specifications."""
+
+    @staticmethod
+    def convert(value: Any, field_type: str) -> Any:
+        """Convert value to appropriate type.
+
+        Args:
+            value: Raw value to convert.
+            field_type: Field type string (e.g., "string", "integer").
+
+        Returns:
+            Converted value or None if conversion fails.
+        """
+        if value is None or value == "":
+            return None
+
+        converters = {
+            "string": str,
+            "integer": TypeConverter._to_integer,
+            "float": TypeConverter._to_float,
+            "boolean": TypeConverter._to_boolean,
+            "date": str,
+            "datetime": str,
+            "uri": str,
+            "ontology_term": str,
+            "list": TypeConverter._to_list,
+        }
+
+        converter = converters.get(field_type)
+        if converter:
+            return converter(value)
+        return value
+
+    @staticmethod
+    def _to_integer(value: Any) -> int | None:
+        try:
+            return int(float(value))
+        except (ValueError, TypeError):
+            return None
+
+    @staticmethod
+    def _to_float(value: Any) -> float | None:
+        try:
+            return float(value)
+        except (ValueError, TypeError):
+            return None
+
+    @staticmethod
+    def _to_boolean(value: Any) -> bool:
+        if isinstance(value, bool):
+            return value
+        return str(value).lower() in ("true", "1", "yes")
+
+    @staticmethod
+    def _to_list(value: Any) -> list:
+        if isinstance(value, list):
+            return value
+        if isinstance(value, str) and value.startswith("["):
+            try:
+                return json.loads(value)
+            except json.JSONDecodeError:
+                return [value]
+        return [value] if value else []
+
+
+class ValidationError(BaseModel):
+    """A validation error for extracted data."""
+
+    field: str
+    message: str
+    value: Any = None
+
+
+class ExtractionResult(BaseModel):
+    """Result of extracting entities from a source."""
+
+    entity: str
+    instances: list[dict[str, Any]]
+    errors: list[ValidationError] = []
+
+
+class ExtractionContext:
+    """Context for an extraction session.
+
+    Holds state for extracting metadata from source files and mapping them
+    to a profile schema.
+
+    Attributes:
+        profile: The loaded ProfileSpec.
+        sources: List of parsed source files.
+        mappings: Dictionary of entity name to column mappings.
+        extracted: Dictionary of entity name to extracted instances.
+    """
+
+    def __init__(
+        self: Self,
+        profile: ProfileSpec,
+        parser_registry: ParserRegistry | None = None,
+    ) -> None:
+        """Initialize extraction context.
+
+        Args:
+            profile: The profile spec to extract metadata for.
+            parser_registry: Optional custom parser registry.
+        """
+        self.profile = profile
+        self.sources: list[ParsedContent] = []
+        self.mappings: dict[str, ColumnMapping] = {}
+        self.extracted: dict[str, list[dict[str, Any]]] = {}
+        self._parser_registry = parser_registry or create_default_registry()
+
+    @classmethod
+    def from_profile(
+        cls,
+        profile_name: str,
+        version: str,
+        parser_registry: ParserRegistry | None = None,
+    ) -> ExtractionContext:
+        """Create context from profile name and version.
+
+        Args:
+            profile_name: Name of the profile (e.g., "miappe").
+            version: Version of the profile (e.g., "1.1").
+            parser_registry: Optional custom parser registry.
+
+        Returns:
+            ExtractionContext instance.
+        """
+        loader = SpecLoader(profile=profile_name)
+        profile = loader.load_profile(version=version, profile=profile_name)
+        return cls(profile=profile, parser_registry=parser_registry)
+
+    def add_source(self: Self, path: Path) -> ParsedContent:
+        """Parse and add a source file.
+
+        Args:
+            path: Path to the source file.
+
+        Returns:
+            The parsed content.
+
+        Raises:
+            ValueError: If no parser can handle the file.
+        """
+        content = self._parser_registry.parse(path)
+        self.sources.append(content)
+        return content
+
+    def get_entity_spec(self: Self, entity_name: str) -> EntitySpec:
+        """Get entity spec by name.
+
+        Args:
+            entity_name: Name of the entity.
+
+        Returns:
+            EntitySpec for the entity.
+
+        Raises:
+            KeyError: If entity not found.
+        """
+        return self.profile.get_entity(entity_name)
+
+    def suggest_mapping(
+        self: Self,
+        source_index: int,
+        entity_name: str,
+        table_index: int = 0,
+    ) -> list[FieldMapping]:
+        """Suggest column mappings for an entity.
+
+        Args:
+            source_index: Index of the source in self.sources.
+            entity_name: Name of the entity to map to.
+            table_index: Index of the table within the source.
+
+        Returns:
+            List of suggested field mappings.
+        """
+        if source_index >= len(self.sources):
+            raise IndexError(f"Source index {source_index} out of range")
+
+        source = self.sources[source_index]
+        if table_index >= len(source.tables):
+            raise IndexError(f"Table index {table_index} out of range")
+
+        table = source.tables[table_index]
+        entity_spec = self.get_entity_spec(entity_name)
+
+        return suggest_mapping(table.headers, entity_spec)
+
+    def set_mapping(self: Self, entity_name: str, mapping: ColumnMapping) -> None:
+        """Set column mapping for an entity.
+
+        Args:
+            entity_name: Name of the entity.
+            mapping: The column mapping to use.
+        """
+        self.mappings[entity_name] = mapping
+
+    def extract_entities(
+        self: Self,
+        source_index: int,
+        entity_name: str,
+        mapping: ColumnMapping | None = None,
+        table_index: int = 0,
+    ) -> ExtractionResult:
+        """Extract entity instances from a source using mapping.
+
+        Args:
+            source_index: Index of the source in self.sources.
+            entity_name: Name of the entity to extract.
+            mapping: Column mapping to use. Uses stored mapping if None.
+            table_index: Index of the table within the source.
+
+        Returns:
+            ExtractionResult with instances and any errors.
+        """
+        if source_index >= len(self.sources):
+            raise IndexError(f"Source index {source_index} out of range")
+
+        source = self.sources[source_index]
+        if table_index >= len(source.tables):
+            raise IndexError(f"Table index {table_index} out of range")
+
+        if mapping is None:
+            mapping = self.mappings.get(entity_name)
+            if mapping is None:
+                raise ValueError(f"No mapping set for entity {entity_name}")
+
+        table = source.tables[table_index]
+        entity_spec = self.get_entity_spec(entity_name)
+        instances: list[dict[str, Any]] = []
+        errors: list[ValidationError] = []
+
+        for row_idx, row in enumerate(table.rows):
+            row_dict = dict(zip(table.headers, row, strict=False))
+            instance = self._extract_row(row_dict, entity_spec, mapping, row_idx, errors)
+            if instance:
+                instances.append(instance)
+
+        # Store extracted instances
+        if entity_name not in self.extracted:
+            self.extracted[entity_name] = []
+        self.extracted[entity_name].extend(instances)
+
+        return ExtractionResult(
+            entity=entity_name,
+            instances=instances,
+            errors=errors,
+        )
+
+    def _extract_row(
+        self: Self,
+        row: dict[str, Any],
+        entity_spec: EntitySpec,
+        mapping: ColumnMapping,
+        row_idx: int,
+        errors: list[ValidationError],
+    ) -> dict[str, Any] | None:
+        """Extract a single row to entity instance.
+
+        Args:
+            row: Row data as column->value dict.
+            entity_spec: Entity specification.
+            mapping: Column mapping.
+            row_idx: Row index for error reporting.
+            errors: List to append errors to.
+
+        Returns:
+            Extracted instance dict or None if extraction failed.
+        """
+        instance: dict[str, Any] = {}
+
+        for field_mapping in mapping.fields:
+            field_spec = self._find_field(entity_spec, field_mapping.field_name)
+            if field_spec is None:
+                continue
+
+            if field_mapping.source_column:
+                value = row.get(field_mapping.source_column, "")
+            elif field_mapping.default_value is not None:
+                value = field_mapping.default_value
+            else:
+                value = None
+
+            # Convert value based on field type
+            converted = self._convert_value(value, field_spec)
+            if converted is not None or not field_spec.required:
+                instance[field_spec.name] = converted
+            elif field_spec.required and converted is None and value:
+                errors.append(
+                    ValidationError(
+                        field=field_spec.name,
+                        message=f"Row {row_idx}: Failed to convert value '{value}'",
+                        value=value,
+                    )
+                )
+
+        return instance or None
+
+    def _find_field(self: Self, entity_spec: EntitySpec, field_name: str) -> FieldSpec | None:
+        """Find field spec by name."""
+        for field in entity_spec.fields:
+            if field.name == field_name:
+                return field
+        return None
+
+    def _convert_value(self: Self, value: Any, field_spec: FieldSpec) -> Any:
+        """Convert value to appropriate type based on field spec."""
+        return TypeConverter.convert(value, field_spec.type.value)
+
+    def validate_instance(
+        self: Self,
+        data: dict[str, Any],
+        entity_name: str,
+    ) -> list[ValidationError]:
+        """Validate an extracted instance against entity spec.
+
+        Args:
+            data: The instance data to validate.
+            entity_name: Name of the entity.
+
+        Returns:
+            List of validation errors.
+        """
+        entity_spec = self.get_entity_spec(entity_name)
+        errors: list[ValidationError] = []
+
+        # Check required fields
+        for field in entity_spec.fields:
+            if field.required and field.name not in data:
+                errors.append(
+                    ValidationError(
+                        field=field.name,
+                        message=f"Required field '{field.name}' is missing",
+                    )
+                )
+            elif field.name in data and data[field.name] is not None:
+                field_errors = self._validate_field(data[field.name], field)
+                errors.extend(field_errors)
+
+        return errors
+
+    def _validate_field(self: Self, value: Any, field_spec: FieldSpec) -> list[ValidationError]:
+        """Validate a single field value."""
+        errors: list[ValidationError] = []
+
+        if field_spec.constraints:
+            constraints = field_spec.constraints
+
+            if constraints.enum and value not in constraints.enum:
+                errors.append(
+                    ValidationError(
+                        field=field_spec.name,
+                        message=f"Value must be one of: {constraints.enum}",
+                        value=value,
+                    )
+                )
+
+            if constraints.pattern and isinstance(value, str):
+                import re
+
+                if not re.match(constraints.pattern, value):
+                    errors.append(
+                        ValidationError(
+                            field=field_spec.name,
+                            message=f"Value does not match pattern: {constraints.pattern}",
+                            value=value,
+                        )
+                    )
+
+            if constraints.min_length and isinstance(value, str):
+                if len(value) < constraints.min_length:
+                    errors.append(
+                        ValidationError(
+                            field=field_spec.name,
+                            message=f"Value must be at least {constraints.min_length} characters",
+                            value=value,
+                        )
+                    )
+
+            if constraints.max_length and isinstance(value, str):
+                if len(value) > constraints.max_length:
+                    errors.append(
+                        ValidationError(
+                            field=field_spec.name,
+                            message=f"Value must be at most {constraints.max_length} characters",
+                            value=value,
+                        )
+                    )
+
+            if constraints.minimum is not None and isinstance(value, int | float):
+                if value < constraints.minimum:
+                    errors.append(
+                        ValidationError(
+                            field=field_spec.name,
+                            message=f"Value must be at least {constraints.minimum}",
+                            value=value,
+                        )
+                    )
+
+            if constraints.maximum is not None and isinstance(value, int | float):
+                if value > constraints.maximum:
+                    errors.append(
+                        ValidationError(
+                            field=field_spec.name,
+                            message=f"Value must be at most {constraints.maximum}",
+                            value=value,
+                        )
+                    )
+
+        return errors
+
+    def export_yaml(self: Self, entity_name: str | None = None) -> str:
+        """Export extracted entities to YAML.
+
+        Args:
+            entity_name: Optional entity name to export. Exports all if None.
+
+        Returns:
+            YAML string.
+        """
+        if entity_name:
+            data = {entity_name: self.extracted.get(entity_name, [])}
+        else:
+            data = self.extracted
+
+        return yaml.dump(data, default_flow_style=False, sort_keys=False, allow_unicode=True)
+
+    def export_json(self: Self, entity_name: str | None = None) -> str:
+        """Export extracted entities to JSON.
+
+        Args:
+            entity_name: Optional entity name to export. Exports all if None.
+
+        Returns:
+            JSON string.
+        """
+        if entity_name:
+            data = {entity_name: self.extracted.get(entity_name, [])}
+        else:
+            data = self.extracted
+
+        return json.dumps(data, indent=2, ensure_ascii=False)
+
+
+# Convenience functions for stateless usage
+
+
+def parse_file(path: Path, registry: ParserRegistry | None = None) -> ParsedContent:
+    """Parse a file into structured content.
+
+    Args:
+        path: Path to the file.
+        registry: Optional parser registry.
+
+    Returns:
+        Parsed content.
+    """
+    if registry is None:
+        registry = create_default_registry()
+    return registry.parse(path)
+
+
+def extract_instances(
+    content: ParsedContent,
+    entity_spec: EntitySpec,
+    mapping: ColumnMapping,
+    table_index: int = 0,
+) -> list[dict[str, Any]]:
+    """Extract entity instances from parsed content.
+
+    Args:
+        content: Parsed file content.
+        entity_spec: Entity specification.
+        mapping: Column mapping.
+        table_index: Index of table to extract from.
+
+    Returns:
+        List of extracted instance dictionaries.
+    """
+    if table_index >= len(content.tables):
+        return []
+
+    table = content.tables[table_index]
+    instances: list[dict[str, Any]] = []
+
+    for row in table.rows:
+        row_dict = dict(zip(table.headers, row, strict=False))
+        instance: dict[str, Any] = {}
+
+        for field_mapping in mapping.fields:
+            for field in entity_spec.fields:
+                if field.name == field_mapping.field_name:
+                    if field_mapping.source_column:
+                        value = row_dict.get(field_mapping.source_column)
+                        if value is not None and value != "":
+                            instance[field.name] = value
+                    elif field_mapping.default_value is not None:
+                        instance[field.name] = field_mapping.default_value
+                    break
+
+        if instance:
+            instances.append(instance)
+
+    return instances
