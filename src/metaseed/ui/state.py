@@ -36,20 +36,10 @@ class TreeNode:
     @classmethod
     def create(cls, entity_type: str, instance: Any, parent_id: str | None = None) -> TreeNode:
         """Create a new tree node from an entity instance."""
-        label = ""
-        if hasattr(instance, "model_dump"):
-            data = instance.model_dump()
-            # Try common label fields first
-            for key in ["title", "name", "unique_id", "identifier", "filename"]:
-                if data.get(key):
-                    label = str(data[key])
-                    break
-            # For Person entities, combine first and last name
-            if not label and data.get("first_name"):
-                parts = [data.get("first_name", ""), data.get("last_name", "")]
-                label = " ".join(p for p in parts if p).strip()
-        if not label:
-            label = f"New {entity_type}"
+        from metaseed.repositories.helpers import derive_label
+
+        data = instance.model_dump() if hasattr(instance, "model_dump") else {}
+        label = derive_label(entity_type, data)
 
         return cls(
             id=str(uuid.uuid4())[:8],

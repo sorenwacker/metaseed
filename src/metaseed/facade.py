@@ -136,7 +136,7 @@ class EntityHelper:
         - name (for Person, Factor)
         - first_name + last_name (for Person)
         - unique_id / identifier
-        - Falls back to entity name + first field value
+        - Falls back to first non-empty string field from spec
 
         Args:
             instance: Entity instance (Pydantic model or dict).
@@ -144,6 +144,8 @@ class EntityHelper:
         Returns:
             Human-readable label string.
         """
+        from metaseed.repositories.helpers import derive_label
+
         if hasattr(instance, "model_dump"):
             data = instance.model_dump()
         elif isinstance(instance, dict):
@@ -151,37 +153,7 @@ class EntityHelper:
         else:
             return f"{self._name}"
 
-        # Try common label fields in order
-        label_fields = [
-            "title",
-            "name",
-            "display_name",
-            "unique_id",
-            "identifier",
-            "id",
-            "term",
-        ]
-
-        for field in label_fields:
-            if data.get(field):
-                return str(data[field])
-
-        # Special case: Person with first_name/last_name
-        if data.get("first_name") or data.get("last_name"):
-            parts = []
-            if data.get("first_name"):
-                parts.append(data["first_name"])
-            if data.get("last_name"):
-                parts.append(data["last_name"])
-            if parts:
-                return " ".join(parts)
-
-        # Fall back to first non-empty string field
-        for f in self._spec.fields:
-            if f.type == FieldType.STRING and data.get(f.name):
-                return str(data[f.name])[:50]
-
-        return f"{self._name}"
+        return derive_label(self._name, data, spec=self._spec)
 
     def help(self: Self) -> None:
         """Print detailed help for this entity."""

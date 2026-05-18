@@ -11,8 +11,17 @@ from typing import Any
 # Common field names for entity identification
 IDENTIFIER_FIELDS = ["unique_id", "identifier", "name", "id", "filename"]
 
-# Common field names for deriving labels
-LABEL_FIELDS = ["title", "name", "unique_id", "identifier", "filename"]
+# Common field names for deriving labels (in preference order)
+LABEL_FIELDS = [
+    "title",
+    "name",
+    "display_name",
+    "unique_id",
+    "identifier",
+    "id",
+    "term",
+    "filename",
+]
 
 
 def find_parent_ref_field(helper: Any, parent_type: str) -> str | None:
@@ -74,14 +83,16 @@ def get_identifier_from_instance(instance: Any) -> str | None:
     return get_identifier(data)
 
 
-def derive_label(entity_type: str, data: dict[str, Any]) -> str:
+def derive_label(entity_type: str, data: dict[str, Any], spec: Any = None) -> str:
     """Derive a display label from entity data.
 
     Tries common label fields, with special handling for Person entities.
+    Optionally falls back to first non-empty string field from spec.
 
     Args:
         entity_type: Type of entity.
         data: Entity data dictionary.
+        spec: Optional EntityDefSpec with field definitions for fallback.
 
     Returns:
         Derived label string.
@@ -91,11 +102,19 @@ def derive_label(entity_type: str, data: dict[str, Any]) -> str:
             return str(data[key])
 
     # Person special case: combine first and last name
-    if data.get("first_name"):
+    if data.get("first_name") or data.get("last_name"):
         parts = [data.get("first_name", ""), data.get("last_name", "")]
         label = " ".join(p for p in parts if p).strip()
         if label:
             return label
+
+    # Spec-based fallback: first non-empty string field
+    if spec and hasattr(spec, "fields"):
+        from metaseed.specs.schema import FieldType
+
+        for f in spec.fields:
+            if f.type == FieldType.STRING and data.get(f.name):
+                return str(data[f.name])[:50]
 
     return f"New {entity_type}"
 

@@ -206,9 +206,9 @@ Use `export_metadata` to format the final output.
 """
 
     @mcp.prompt()
-    def field_mapping_help(entity: str, _profile: str) -> str:
+    def field_mapping_help(entity: str, profile: str) -> str:
         """Help for mapping source columns to entity fields."""
-        return f"""# Field Mapping Help for {entity}
+        return f"""# Field Mapping Help for {entity} ({profile})
 
 ## Common Patterns
 
