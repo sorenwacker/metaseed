@@ -8,12 +8,14 @@ graph TB
         CLI[CLI - Typer]
         Web[Web - HTMX]
         API[REST API - FastAPI]
+        MCP[MCP Server]
     end
 
     subgraph Core["Core Layer"]
         Factory[Model Factory]
         Validators
         Facade[ProfileFacade]
+        Repos[Entity Repository]
     end
 
     subgraph Data["Data Layer"]
@@ -21,8 +23,16 @@ graph TB
         Storage
     end
 
+    subgraph Agent["Agent Layer"]
+        Parsers[File Parsers]
+        Mapping[Column Mapping]
+        Extract[Extraction Context]
+    end
+
     Interfaces --> Core
     Core --> Data
+    MCP --> Agent
+    Agent --> Core
 ```
 
 ## Components
@@ -34,6 +44,7 @@ graph TB
 | **Validators** | Cross-field validation, ontology checks, referential integrity |
 | **ProfileFacade** | Fluent API for entity discovery and creation |
 | **[Entity Repository](entity-repository.md)** | Unified API for entity CRUD with pluggable backends |
+| **[Metadata Agent](metadata-agent.md)** | AI-assisted metadata extraction via MCP |
 | **CLI** | Command-line interface (Typer) |
 | **Web UI** | Visual editor (HTMX) |
 | **REST API** | HTTP endpoints (FastAPI) |
