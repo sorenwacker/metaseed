@@ -1,36 +1,66 @@
 {% if tree_nodes %}
-<div class="entity-list">
-    <h2>Entities</h2>
-    {% for node in tree_nodes recursive %}
-    <div class="entity-item {% if loop.depth > 1 %}child{% endif %}">
-        <button class="btn btn-entity {% if loop.depth > 1 %}btn-nested{% endif %}"
-                hx-get="/form/{{ node.entity_type }}/{{ node.id }}"
-                hx-target="#main"
-                hx-swap="innerHTML">
-            <span class="entity-type">{{ node.entity_type }}</span>
-            <span class="entity-label">{{ node.label }}</span>
-        </button>
-        {% if loop.depth == 1 %}
-        <button class="btn btn-delete"
-                hx-delete="/entity/{{ node.id }}"
-                hx-target="#main"
-                hx-swap="innerHTML"
-                hx-confirm="Delete '{{ node.label }}'?">
-            &times;
-        </button>
+<div class="entity-overview">
+    <div class="entity-overview-header">
+        <div class="entity-overview-title">
+            <h2>{{ current_dataset or 'Entities' }}</h2>
+            <span class="entity-overview-meta">{{ current_profile }} {{ version }} - {{ tree_nodes|length }} root entities</span>
+        </div>
+        <div class="entity-overview-actions">
+            <a href="{{ base_url }}/export" class="btn btn-secondary btn-sm" download>
+                Export Excel
+            </a>
+            <label class="btn btn-secondary btn-sm btn-file">
+                Import JSON
+                <input type="file"
+                       accept=".json"
+                       hx-post="{{ base_url }}/import"
+                       hx-trigger="change"
+                       hx-target="#notification-container"
+                       hx-swap="beforeend"
+                       hx-encoding="multipart/form-data"
+                       name="file"
+                       hidden>
+            </label>
+            <a href="{{ base_url }}/" class="btn btn-secondary btn-sm">
+                Back to Datasets
+            </a>
+        </div>
+    </div>
+    <div class="entity-list">
+        {% for node in tree_nodes recursive %}
+        <div class="entity-item {% if loop.depth > 1 %}child{% endif %}">
+            <button class="btn btn-entity {% if loop.depth > 1 %}btn-nested{% endif %}"
+                    hx-get="{{ base_url }}/form/{{ node.entity_type }}/{{ node.id }}"
+                    hx-target="#main"
+                    hx-swap="innerHTML">
+                <span class="entity-type">{{ node.entity_type }}</span>
+                <span class="entity-label">{{ node.label }}</span>
+            </button>
+            {% if loop.depth == 1 %}
+            <button class="btn btn-delete"
+                    hx-delete="{{ base_url }}/entity/{{ node.id }}"
+                    hx-target="#main"
+                    hx-swap="innerHTML"
+                    hx-confirm="Delete '{{ node.label }}'?">
+                &times;
+            </button>
+            {% endif %}
+        </div>
+        {% if node.children %}
+        <div class="entity-children">
+            {{ loop(node.children) }}
+        </div>
         {% endif %}
+        {% endfor %}
     </div>
-    {% if node.children %}
-    <div class="entity-children">
-        {{ loop(node.children) }}
-    </div>
-    {% endif %}
-    {% endfor %}
 </div>
 {% else %}
 <div class="welcome">
-    <h2>Structured Metadata</h2>
-    <p>Create and manage structured metadata from schema specifications. Use the buttons in the header to create new entries or import existing data.</p>
+    <h2>Empty Dataset</h2>
+    <p>This dataset has no entities yet. Use the profile's root entity to create your first entry.</p>
+    <div class="welcome-actions">
+        <a href="{{ base_url }}/" class="btn btn-secondary">Back to Datasets</a>
+    </div>
 </div>
 {% endif %}
 
@@ -38,7 +68,7 @@
 <script>
     // Auto-load the form for the editing node
     document.addEventListener('DOMContentLoaded', function() {
-        htmx.ajax('GET', '/form/{{ editing_node_type }}/{{ editing_node_id }}', {target: '#main', swap: 'innerHTML'});
+        htmx.ajax('GET', '{{ base_url }}/form/{{ editing_node_type }}/{{ editing_node_id }}', {target: '#main', swap: 'innerHTML'});
     });
 </script>
 {% endif %}

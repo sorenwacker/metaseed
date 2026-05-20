@@ -4847,3 +4847,41 @@ details.sidebar-section summary:hover {
     margin: 0;
     font-size: 0.95rem;
 }
+
+/* Entity Overview (Dataset Edit Page) */
+.entity-overview {
+    padding: var(--space-lg);
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.entity-overview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--space-lg);
+    padding-bottom: var(--space-md);
+    border-bottom: 1px solid var(--clr-parchment);
+}
+
+.entity-overview-title h2 {
+    margin: 0 0 var(--space-xs) 0;
+    font-size: 1.5rem;
+    color: var(--clr-ink);
+    font-weight: 600;
+}
+
+.entity-overview-meta {
+    font-size: 0.85rem;
+    color: var(--clr-ink-light);
+}
+
+.entity-overview-actions {
+    display: flex;
+    gap: var(--space-sm);
+    flex-shrink: 0;
+}
+
+.welcome-actions {
+    margin-top: var(--space-lg);
+}
