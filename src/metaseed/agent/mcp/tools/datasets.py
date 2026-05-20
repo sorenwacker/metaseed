@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import asdict
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -25,10 +26,12 @@ def register_dataset_tools(mcp: FastMCP, get_mcp_state, reset_entity_service) ->
         Returns:
             JSON array of dataset names.
         """
-        from metaseed.ui.datasets import list_datasets as _list
+        from metaseed.ui.dataset_manager import get_manager
 
         try:
-            datasets = _list()
+            state = get_mcp_state()
+            manager = get_manager(state)
+            datasets = [asdict(d) for d in manager.list_datasets()]
             return json.dumps(
                 {
                     "datasets": datasets,
@@ -51,17 +54,16 @@ def register_dataset_tools(mcp: FastMCP, get_mcp_state, reset_entity_service) ->
         Returns:
             JSON with save status and dataset info.
         """
-        from metaseed.ui.datasets import save_dataset as _save
-        from metaseed.ui.datasets import set_current_dataset_name
+        from metaseed.ui.dataset_manager import get_manager
 
         try:
             state = get_mcp_state()
-            result = _save(state, name)
-            set_current_dataset_name(state, name)
+            manager = get_manager(state)
+            result = manager.save_dataset(name)
             return json.dumps(
                 {
                     "status": "saved",
-                    **result,
+                    **asdict(result),
                 },
                 indent=2,
             )
@@ -83,19 +85,17 @@ def register_dataset_tools(mcp: FastMCP, get_mcp_state, reset_entity_service) ->
         Returns:
             JSON with loaded dataset info or error.
         """
-        from metaseed.ui.datasets import load_dataset as _load
-        from metaseed.ui.datasets import set_current_dataset_name
+        from metaseed.ui.dataset_manager import get_manager
 
         try:
             state = get_mcp_state()
-            result = _load(state, name)
-            set_current_dataset_name(state, name)
-            # Reset entity service to use new dataset
+            manager = get_manager(state)
+            result = manager.load_dataset(name)
             reset_entity_service()
             return json.dumps(
                 {
                     "status": "loaded",
-                    **result,
+                    **asdict(result),
                 },
                 indent=2,
             )
@@ -116,19 +116,19 @@ def register_dataset_tools(mcp: FastMCP, get_mcp_state, reset_entity_service) ->
         Returns:
             JSON with deletion status.
         """
-        from metaseed.ui.datasets import delete_dataset as _delete
+        from metaseed.ui.dataset_manager import get_manager
 
         try:
-            result = _delete(name)
+            state = get_mcp_state()
+            manager = get_manager(state)
+            deleted = manager.delete_dataset(name)
             return json.dumps(
                 {
-                    "status": "deleted",
-                    **result,
+                    "status": "deleted" if deleted else "not_found",
+                    "name": name,
                 },
                 indent=2,
             )
-        except FileNotFoundError as e:
-            return json.dumps({"error": str(e)})
         except Exception as e:
             return json.dumps({"error": str(e)})
 
@@ -147,8 +147,7 @@ def register_dataset_tools(mcp: FastMCP, get_mcp_state, reset_entity_service) ->
         Returns:
             JSON with created dataset info or error.
         """
-        from metaseed.ui.datasets import save_dataset as _save
-        from metaseed.ui.datasets import set_current_dataset_name
+        from metaseed.ui.dataset_manager import get_manager
 
         try:
             state = get_mcp_state()
@@ -157,13 +156,10 @@ def register_dataset_tools(mcp: FastMCP, get_mcp_state, reset_entity_service) ->
             state.facade = None
             state.reset()
 
-            # Verify profile exists
             facade = state.get_or_create_facade()
 
-            # Save empty dataset
-            _save(state, name)
-            set_current_dataset_name(state, name)
-            # Reset entity service to use new dataset
+            manager = get_manager(state)
+            manager.save_dataset(name)
             reset_entity_service()
 
             return json.dumps(
@@ -188,20 +184,20 @@ def register_dataset_tools(mcp: FastMCP, get_mcp_state, reset_entity_service) ->
         Returns:
             JSON with current dataset information.
         """
-        from metaseed.ui.datasets import get_current_dataset_name
+        from metaseed.ui.dataset_manager import get_manager
 
         try:
             state = get_mcp_state()
-            dataset_name = get_current_dataset_name(state)
+            manager = get_manager(state)
 
-            entity_counts = {}
+            entity_counts: dict[str, int] = {}
             for node in state.entity_tree:
                 etype = node.entity_type
                 entity_counts[etype] = entity_counts.get(etype, 0) + 1
 
             return json.dumps(
                 {
-                    "dataset_name": dataset_name,
+                    "dataset_name": manager.current_dataset,
                     "profile": state.profile,
                     "version": state.version,
                     "entity_counts": entity_counts,
