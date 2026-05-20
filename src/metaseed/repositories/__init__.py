@@ -1,11 +1,17 @@
-"""Repository module for entity storage.
+"""Repository module for entity and dataset storage.
 
 This module provides abstract interfaces and implementations for
-entity persistence, following the same DI pattern as SpecPersistence.
+entity and dataset persistence, following the same DI pattern as SpecPersistence.
 """
 
 from metaseed.repositories.base import EntityData, EntityRepository
+from metaseed.repositories.dataset_repository import (
+    DatasetData,
+    DatasetInfo,
+    DatasetRepository,
+)
 from metaseed.repositories.file import FileEntityRepository
+from metaseed.repositories.filesystem_dataset import FilesystemDatasetRepository
 from metaseed.repositories.helpers import (
     IDENTIFIER_FIELDS,
     LABEL_FIELDS,
@@ -18,9 +24,13 @@ from metaseed.repositories.helpers import (
 from metaseed.repositories.memory import MemoryEntityRepository
 
 __all__ = [
+    "DatasetData",
+    "DatasetInfo",
+    "DatasetRepository",
     "EntityData",
     "EntityRepository",
     "FileEntityRepository",
+    "FilesystemDatasetRepository",
     "MemoryEntityRepository",
     "IDENTIFIER_FIELDS",
     "LABEL_FIELDS",
