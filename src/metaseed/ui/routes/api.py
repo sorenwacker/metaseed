@@ -9,7 +9,7 @@ from __future__ import annotations
 import contextlib
 from typing import TYPE_CHECKING
 
-from fastapi import Body, Query, Request, WebSocket, WebSocketDisconnect
+from fastapi import Body, Query, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 
 from metaseed.specs.loader import SpecLoadError
@@ -317,59 +317,69 @@ def register_api_routes(
     # =========================================================================
 
     @app.get("/api/mcp/status")
-    async def mcp_status(request: Request) -> JSONResponse:
+    async def mcp_status() -> JSONResponse:
         """Get MCP server status.
-
-        MCP is mounted in-process at /mcp, always running with shared state.
 
         Returns:
             JSON with running status and connection URL.
         """
-        # Build URL from request
-        host = request.headers.get("host", "127.0.0.1:8765")
-        scheme = request.headers.get("x-forwarded-proto", "http")
-        url = f"{scheme}://{host}/mcp"
+        from metaseed.agent.mcp.manager import get_mcp_manager
+
+        manager = get_mcp_manager()
+        status = manager.status()
 
         return JSONResponse(
             content={
-                "running": True,
-                "transport": "in-process",
-                "host": host.split(":")[0],
-                "port": int(host.split(":")[1]) if ":" in host else 80,
-                "pid": None,
-                "url": url,
-                "error": None,
+                "running": status.running,
+                "transport": status.transport,
+                "host": status.host,
+                "port": status.port,
+                "pid": status.pid,
+                "url": manager.get_connection_url() if status.running else None,
+                "error": status.error,
             }
         )
 
     @app.post("/api/mcp/start")
     async def mcp_start() -> JSONResponse:
-        """Start MCP server (no-op, always running in-process).
+        """Start MCP server on port 8001.
 
         Returns:
             JSON with status.
         """
+        from metaseed.agent.mcp.manager import get_mcp_manager
+
+        manager = get_mcp_manager()
+        status = manager.start()
+
         return JSONResponse(
             content={
-                "running": True,
-                "transport": "in-process",
-                "message": "MCP is always running (mounted in-process at /mcp)",
-                "error": None,
+                "running": status.running,
+                "transport": status.transport,
+                "host": status.host,
+                "port": status.port,
+                "pid": status.pid,
+                "url": manager.get_connection_url() if status.running else None,
+                "error": status.error,
             }
         )
 
     @app.post("/api/mcp/stop")
     async def mcp_stop() -> JSONResponse:
-        """Stop MCP server (no-op, always running in-process).
+        """Stop MCP server.
 
         Returns:
             JSON with status.
         """
+        from metaseed.agent.mcp.manager import get_mcp_manager
+
+        manager = get_mcp_manager()
+        status = manager.stop()
+
         return JSONResponse(
             content={
-                "running": True,
-                "message": "MCP cannot be stopped (mounted in-process)",
-                "error": None,
+                "running": status.running,
+                "error": status.error,
             }
         )
 
