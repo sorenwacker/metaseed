@@ -317,9 +317,19 @@ function loadGraph() {
             allGraphNodes = data.nodes.slice();
             allGraphEdges = data.edges.slice();
 
-            // Initialize visible groups
-            visibleGroups.clear();
-            allGraphNodes.forEach(function(n) { visibleGroups.add(n.group); });
+            // Only initialize visible groups on first load
+            var isFirstLoad = !graphNetwork || !graphData;
+            if (isFirstLoad) {
+                visibleGroups.clear();
+                allGraphNodes.forEach(function(n) { visibleGroups.add(n.group); });
+            } else {
+                // Add any new groups that appeared
+                allGraphNodes.forEach(function(n) {
+                    if (!visibleGroups.has(n.group) && !entityDisplayMap[n.group]) {
+                        visibleGroups.add(n.group);
+                    }
+                });
+            }
 
             // Prepare node styling
             data = prepareGraphData(data);
