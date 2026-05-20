@@ -6,6 +6,7 @@ var currentGraphLayout = 'physics';
 var allGraphNodes = [];
 var allGraphEdges = [];
 var visibleGroups = new Set();
+var lastEntityTypes = null;
 
 // Entity type to display mapping (assigned dynamically)
 var entityDisplayMap = {};
@@ -317,27 +318,37 @@ function loadGraph() {
             allGraphNodes = data.nodes.slice();
             allGraphEdges = data.edges.slice();
 
+            // Collect current entity types
+            var currentTypes = new Set();
+            allGraphNodes.forEach(function(n) { currentTypes.add(n.group); });
+            var currentTypesStr = Array.from(currentTypes).sort().join(',');
+
             // Only initialize visible groups on first load
             var isFirstLoad = !graphNetwork || !graphData;
             if (isFirstLoad) {
                 visibleGroups.clear();
-                allGraphNodes.forEach(function(n) { visibleGroups.add(n.group); });
+                currentTypes.forEach(function(t) { visibleGroups.add(t); });
             } else {
-                // Add any new groups that appeared
-                allGraphNodes.forEach(function(n) {
-                    if (!visibleGroups.has(n.group) && !entityDisplayMap[n.group]) {
-                        visibleGroups.add(n.group);
+                // Add any new types that appeared (keep them visible by default)
+                currentTypes.forEach(function(t) {
+                    if (lastEntityTypes && !lastEntityTypes.has(t)) {
+                        visibleGroups.add(t);
                     }
                 });
             }
+
+            // Check if entity types changed (for legend update)
+            var typesChanged = lastEntityTypes === null || currentTypesStr !== Array.from(lastEntityTypes).sort().join(',');
+            lastEntityTypes = currentTypes;
 
             // Prepare node styling
             data = prepareGraphData(data);
 
             // If graph exists, update incrementally
             if (graphNetwork && graphData) {
-                var changed = updateGraphIncremental(data.nodes, data.edges);
-                if (changed) {
+                updateGraphIncremental(data.nodes, data.edges);
+                // Only re-render legend if types changed
+                if (typesChanged) {
                     renderGraphLegend(data);
                 }
             } else {
