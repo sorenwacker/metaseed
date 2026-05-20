@@ -43,7 +43,7 @@ def _format_value(value: Any, max_len: int = 50) -> str:
 
 
 def _build_tooltip(entity_type: str, label: str, data: dict) -> str:
-    """Build HTML tooltip showing entity data.
+    """Build tooltip showing entity data.
 
     Args:
         entity_type: Type of entity.
@@ -51,10 +51,10 @@ def _build_tooltip(entity_type: str, label: str, data: dict) -> str:
         data: Entity data dictionary.
 
     Returns:
-        HTML string for vis.js tooltip.
+        Plain text string for vis.js tooltip (uses newlines for line breaks).
     """
     # Start with header
-    lines = [f"<b>{entity_type}</b>: {label}"]
+    lines = [f"{entity_type}: {label}"]
 
     # Add key fields (skip empty values and nested lists)
     shown = 0
@@ -64,10 +64,10 @@ def _build_tooltip(entity_type: str, label: str, data: dict) -> str:
             break
         formatted = _format_value(value)
         if formatted and not isinstance(value, list) or (isinstance(value, list) and value):
-            lines.append(f"<b>{key}</b>: {formatted}")
+            lines.append(f"{key}: {formatted}")
             shown += 1
 
-    return "<br>".join(lines)
+    return "\n".join(lines)
 
 
 def build_graph(state: AppState) -> dict:
