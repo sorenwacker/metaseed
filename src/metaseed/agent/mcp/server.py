@@ -247,9 +247,24 @@ After mapping, use `validate_extracted` to verify data quality.
 mcp = create_server()
 
 
-def run_server():
-    """Run the MCP server."""
-    mcp.run()
+def run_server(
+    transport: str = "stdio",
+    host: str = "127.0.0.1",
+    port: int = 8001,
+) -> None:
+    """Run the MCP server.
+
+    Args:
+        transport: Transport type ("stdio" or "streamable-http").
+        host: Host to bind to for HTTP transport.
+        port: Port to bind to for HTTP transport.
+    """
+    if transport == "streamable-http":
+        import uvicorn
+
+        uvicorn.run(mcp.streamable_http_app(), host=host, port=port)
+    else:
+        mcp.run(transport="stdio")
 
 
 if __name__ == "__main__":
