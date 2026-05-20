@@ -7,7 +7,7 @@
     <link rel="icon" type="image/svg+xml" href="{{ base_url }}/static/images/metaseed-icon.svg">
     <link rel="icon" type="image/png" sizes="128x128" href="{{ base_url }}/static/images/metaseed-icon-128.png">
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
-    <link rel="stylesheet" href="{{ base_url }}/static/css/style.css?v=59">
+    <link rel="stylesheet" href="{{ base_url }}/static/css/style.css?v=70">
 </head>
 <body hx-headers='{"X-Requested-With": "XMLHttpRequest"}'>
     <div class="layout">
@@ -31,7 +31,33 @@
                 <div class="user-specs-section">
                     <div class="user-specs-header">
                         <h2>Your Specifications</h2>
-                        <a href="{{ base_url }}/spec-builder/new" class="btn btn-primary btn-sm">+ New Spec</a>
+                        <div class="new-spec-dropdown">
+                            <button class="btn btn-primary btn-sm" onclick="toggleNewSpecMenu()">+ New Spec</button>
+                            <div id="new-spec-menu" class="new-spec-menu hidden">
+                                <a href="{{ base_url }}/spec-builder/new" class="new-spec-option">
+                                    <span class="new-spec-option-icon">+</span>
+                                    <span class="new-spec-option-text">
+                                        <strong>From Scratch</strong>
+                                        <small>Create an empty specification</small>
+                                    </span>
+                                </a>
+                                <div class="new-spec-option new-spec-option-clone" onclick="scrollToTemplates()">
+                                    <span class="new-spec-option-icon">~</span>
+                                    <span class="new-spec-option-text">
+                                        <strong>Clone Template</strong>
+                                        <small>Start from a built-in spec</small>
+                                    </span>
+                                </div>
+                                <label class="new-spec-option">
+                                    <span class="new-spec-option-icon">&uarr;</span>
+                                    <span class="new-spec-option-text">
+                                        <strong>Import YAML</strong>
+                                        <small>Load from a file</small>
+                                    </span>
+                                    <input type="file" accept=".yaml,.yml" onchange="importYamlFile(this)" hidden>
+                                </label>
+                            </div>
+                        </div>
                     </div>
                     {% if user_specs %}
                     <div class="user-specs-list">
@@ -129,6 +155,56 @@
                 document.getElementById('import-submit-btn').textContent = 'Import ' + this.files[0].name;
             }
         });
+
+        function toggleNewSpecMenu() {
+            const menu = document.getElementById('new-spec-menu');
+            menu.classList.toggle('hidden');
+
+            // Close menu when clicking outside
+            if (!menu.classList.contains('hidden')) {
+                setTimeout(() => {
+                    document.addEventListener('click', closeNewSpecMenuOnClickOutside);
+                }, 0);
+            }
+        }
+
+        function closeNewSpecMenuOnClickOutside(e) {
+            const dropdown = document.querySelector('.new-spec-dropdown');
+            if (!dropdown.contains(e.target)) {
+                document.getElementById('new-spec-menu').classList.add('hidden');
+                document.removeEventListener('click', closeNewSpecMenuOnClickOutside);
+            }
+        }
+
+        function scrollToTemplates() {
+            document.getElementById('new-spec-menu').classList.add('hidden');
+            document.querySelector('.start-option-clone').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function importYamlFile(input) {
+            if (input.files.length > 0) {
+                const formData = new FormData();
+                formData.append('file', input.files[0]);
+
+                fetch('{{ base_url }}/spec-builder/import', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (response.redirected) {
+                        window.location.href = response.url;
+                    } else if (!response.ok) {
+                        return response.json().then(data => {
+                            alert('Import failed: ' + (data.detail || 'Unknown error'));
+                        });
+                    }
+                })
+                .catch(err => {
+                    console.error('Error importing YAML:', err);
+                    alert('Failed to import YAML file');
+                });
+            }
+        }
 
         function deleteUserSpec(name, version) {
             if (!confirm(`Delete specification "${name}" v${version}? This cannot be undone.`)) {
