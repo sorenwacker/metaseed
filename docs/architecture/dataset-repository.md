@@ -41,15 +41,19 @@ graph TB
 
 | Component | Location | Responsibility |
 |-----------|----------|----------------|
-| **DatasetRepository** | `metaseed.repositories.dataset_repository` | Abstract interface for dataset storage |
+| **DatasetRepository** | `metaseed.repositories.dataset_repository` | Sync abstract interface |
+| **AsyncDatasetRepository** | `metaseed.repositories.dataset_repository` | Async abstract interface |
 | **DatasetInfo** | `metaseed.repositories.dataset_repository` | Summary info for listing |
 | **DatasetData** | `metaseed.repositories.dataset_repository` | Full dataset contents |
 | **FilesystemDatasetRepository** | `metaseed.repositories.filesystem_dataset` | JSON file-based storage |
-| **DatasetManager** | `metaseed.ui.dataset_manager` | Business logic + state integration |
+| **DatasetManager** | `metaseed.ui.dataset_manager` | Sync business logic + state |
+| **AsyncDatasetManager** | `metaseed.ui.dataset_manager` | Async business logic + state |
 
-## DatasetRepository Interface
+## DatasetRepository Interfaces
 
-The `DatasetRepository` ABC defines the contract for dataset persistence:
+Two interfaces are provided: sync for filesystem/simple backends, async for database backends.
+
+### Sync Interface
 
 ```python
 from metaseed.repositories import DatasetRepository, DatasetInfo, DatasetData
@@ -60,6 +64,22 @@ class DatasetRepository(ABC):
     def load(self, name: str) -> DatasetData: ...
     def delete(self, name: str) -> bool: ...
     def exists(self, name: str) -> bool: ...
+
+    @staticmethod
+    def validate_name(name: str) -> str | None: ...
+```
+
+### Async Interface
+
+```python
+from metaseed.repositories import AsyncDatasetRepository, DatasetInfo, DatasetData
+
+class AsyncDatasetRepository(ABC):
+    async def list(self) -> list[DatasetInfo]: ...
+    async def save(self, name: str, data: DatasetData) -> DatasetInfo: ...
+    async def load(self, name: str) -> DatasetData: ...
+    async def delete(self, name: str) -> bool: ...
+    async def exists(self, name: str) -> bool: ...
 
     @staticmethod
     def validate_name(name: str) -> str | None: ...
@@ -121,38 +141,49 @@ info = manager.load_dataset("my-experiment")
 manager.delete_dataset("old-experiment")
 ```
 
-### metaseed-hub Integration
+### metaseed-hub Integration (Async)
 
-Swap in a database backend at app startup:
+Swap in an async database backend at app startup:
 
 ```python
-from metaseed.repositories import DatasetRepository, DatasetInfo, DatasetData
-from metaseed.ui.dataset_manager import set_repository
+from datetime import datetime
 
-class DatabaseDatasetRepository(DatasetRepository):
-    """Database-backed dataset storage for metaseed-hub."""
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-    def __init__(self, db_session):
-        self._db = db_session
+from metaseed.repositories import AsyncDatasetRepository, DatasetInfo, DatasetData
+from metaseed.ui.dataset_manager import set_async_repository, get_async_manager
 
-    def list(self) -> list[DatasetInfo]:
+
+class DatabaseDatasetRepository(AsyncDatasetRepository):
+    """Async database-backed dataset storage for metaseed-hub."""
+
+    def __init__(self, session: AsyncSession):
+        self._session = session
+
+    async def list(self) -> list[DatasetInfo]:
+        result = await self._session.execute(select(Dataset))
         return [
             DatasetInfo(
                 name=row.name,
                 profile=row.profile,
                 version=row.version,
-                entity_count=row.entity_count,
+                entity_count=len(row.entities),
                 modified=row.modified.isoformat(),
             )
-            for row in self._db.query(Dataset).all()
+            for row in result.scalars()
         ]
 
-    def save(self, name: str, data: DatasetData) -> DatasetInfo:
+    async def save(self, name: str, data: DatasetData) -> DatasetInfo:
         error = self.validate_name(name)
         if error:
             raise ValueError(error)
 
-        dataset = self._db.query(Dataset).filter_by(name=name).first()
+        result = await self._session.execute(
+            select(Dataset).filter_by(name=name)
+        )
+        dataset = result.scalar_one_or_none()
+
         if dataset:
             dataset.profile = data.profile
             dataset.version = data.version
@@ -165,13 +196,22 @@ class DatabaseDatasetRepository(DatasetRepository):
                 version=data.version,
                 entities=data.entities,
             )
-            self._db.add(dataset)
+            self._session.add(dataset)
 
-        self._db.commit()
-        return DatasetInfo(...)
+        await self._session.commit()
+        return DatasetInfo(
+            name=name,
+            profile=data.profile,
+            version=data.version,
+            entity_count=len(data.entities),
+            modified=dataset.modified.isoformat(),
+        )
 
-    def load(self, name: str) -> DatasetData:
-        dataset = self._db.query(Dataset).filter_by(name=name).first()
+    async def load(self, name: str) -> DatasetData:
+        result = await self._session.execute(
+            select(Dataset).filter_by(name=name)
+        )
+        dataset = result.scalar_one_or_none()
         if not dataset:
             raise FileNotFoundError(f"Dataset not found: {name}")
         return DatasetData(
@@ -182,26 +222,54 @@ class DatabaseDatasetRepository(DatasetRepository):
             modified=dataset.modified.isoformat(),
         )
 
-    def delete(self, name: str) -> bool:
-        dataset = self._db.query(Dataset).filter_by(name=name).first()
+    async def delete(self, name: str) -> bool:
+        result = await self._session.execute(
+            select(Dataset).filter_by(name=name)
+        )
+        dataset = result.scalar_one_or_none()
         if dataset:
-            self._db.delete(dataset)
-            self._db.commit()
+            await self._session.delete(dataset)
+            await self._session.commit()
             return True
         return False
 
-    def exists(self, name: str) -> bool:
-        return self._db.query(Dataset).filter_by(name=name).count() > 0
+    async def exists(self, name: str) -> bool:
+        result = await self._session.execute(
+            select(Dataset).filter_by(name=name)
+        )
+        return result.scalar_one_or_none() is not None
 
 
 # In metaseed-hub app startup:
-def create_app(db_session):
-    # Configure custom repository BEFORE any dataset operations
-    set_repository(DatabaseDatasetRepository(db_session))
+async def create_app(async_session: AsyncSession):
+    # Configure async repository BEFORE any dataset operations
+    set_async_repository(DatabaseDatasetRepository(async_session))
 
-    # Now all dataset operations use the database
+    # Now routes can use async manager
     from metaseed.ui.app import create_app as create_metaseed_app
     return create_metaseed_app()
+```
+
+### Using AsyncDatasetManager in Routes
+
+```python
+from metaseed.ui.dataset_manager import get_async_manager
+
+@app.get("/api/datasets")
+async def list_datasets_api():
+    state = get_state()
+    manager = get_async_manager(state)
+
+    if manager:
+        # Use async operations
+        datasets = await manager.list_datasets()
+        return {"datasets": [asdict(d) for d in datasets]}
+    else:
+        # Fall back to sync
+        from metaseed.ui.dataset_manager import get_manager
+        sync_manager = get_manager(state)
+        datasets = sync_manager.list_datasets()
+        return {"datasets": [asdict(d) for d in datasets]}
 ```
 
 ### Direct Repository Access
@@ -230,10 +298,18 @@ For dependency injection configuration:
 
 ```python
 from metaseed.ui.dataset_manager import (
-    set_repository,   # Configure custom repository
-    get_repository,   # Get current repository
-    get_manager,      # Get DatasetManager instance
-    reset_manager,    # Clear cached manager (for testing)
+    # Sync
+    set_repository,       # Configure sync repository
+    get_repository,       # Get sync repository
+    get_manager,          # Get DatasetManager instance
+
+    # Async
+    set_async_repository, # Configure async repository
+    get_async_repository, # Get async repository
+    get_async_manager,    # Get AsyncDatasetManager instance
+
+    # Utilities
+    reset_manager,        # Clear all cached managers (for testing)
 )
 ```
 
