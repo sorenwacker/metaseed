@@ -32,6 +32,7 @@ __all__ = [
     "ValidationRule",
     "create_engine_for_entity",
     "validate",
+    "validate_entity",
 ]
 
 
@@ -152,3 +153,87 @@ def validate(
 
     engine = create_engine_for_entity(entity, version, profile=profile)
     return engine.validate(data)
+
+
+def validate_entity(
+    data: dict[str, Any],
+    entity_type: str,
+    profile: str = "miappe",
+    version: str = "1.2",
+) -> list[ValidationError]:
+    """Validate an entity with comprehensive checks.
+
+    Combines Pydantic model validation (type checking, constraints like
+    patterns, min/max length, numeric ranges) with custom validation rules
+    from the profile spec (date_range, coordinate_pair, etc.).
+
+    This is the canonical validation function that both UI and MCP should use.
+
+    Args:
+        data: Entity data dictionary to validate.
+        entity_type: Entity type name (e.g., "Investigation", "Study").
+        profile: Profile name (e.g., "miappe", "isa").
+        version: Profile version.
+
+    Returns:
+        List of validation errors. Empty if validation passes.
+
+    Example:
+        >>> errors = validate_entity(
+        ...     {"unique_id": "INV001", "title": "Test"},
+        ...     entity_type="Investigation",
+        ...     profile="miappe",
+        ...     version="1.2",
+        ... )
+    """
+    from pydantic import ValidationError as PydanticValidationError
+
+    from metaseed.models.factory import create_model_from_spec
+    from metaseed.specs.loader import SpecLoader, SpecLoadError
+
+    errors: list[ValidationError] = []
+    loader = SpecLoader(profile=profile)
+
+    try:
+        entity_spec = loader.load_entity(entity_type, version)
+    except (FileNotFoundError, SpecLoadError) as e:
+        errors.append(
+            ValidationError(
+                field=entity_type,
+                message=f"Unknown entity type: {entity_type} - {e}",
+                rule="error",
+            )
+        )
+        return errors
+
+    # 1. Pydantic validation - checks types, patterns, ranges, etc.
+    try:
+        model_class = create_model_from_spec(entity_spec)
+
+        # Filter to only simple fields (not nested entity lists)
+        simple_data = {}
+        nested_field_names = {
+            f.name for f in entity_spec.fields if f.type.value == "list" and f.items
+        }
+        for key, value in data.items():
+            if key not in nested_field_names and not key.startswith("_"):
+                simple_data[key] = value
+
+        model_class(**simple_data)
+
+    except PydanticValidationError as e:
+        for err in e.errors():
+            field_path = ".".join(str(loc) for loc in err["loc"])
+            errors.append(
+                ValidationError(
+                    field=field_path,
+                    message=err["msg"],
+                    rule="constraint",
+                )
+            )
+
+    # 2. Custom rule validation from profile spec
+    engine = create_engine_for_entity(entity_type, version, profile=profile)
+    errors.extend(engine.validate(data))
+
+    return errors

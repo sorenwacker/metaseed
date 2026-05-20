@@ -163,25 +163,38 @@ def register_validation_tools(mcp: FastMCP, get_mcp_state) -> None:
 def _validate_node_recursive(node, facade, results: list) -> None:
     """Recursively validate a node and its children.
 
+    Uses comprehensive validation from the validators module, including:
+    - Pydantic type checking and constraints (patterns, min/max length, ranges)
+    - Custom validation rules from the profile spec
+
     Args:
         node: TreeNode to validate.
         facade: ProfileFacade instance.
         results: List to append results to.
     """
+    from metaseed.validators import validate_entity
+
     errors = []
 
     if node.instance:
-        helper = getattr(facade, node.entity_type, None)
-        if helper:
-            data = node.instance.model_dump(exclude_none=True)
-            for field in helper._spec.fields:
-                if field.required and field.name not in data:
-                    errors.append(
-                        {
-                            "field": field.name,
-                            "message": "Required field missing",
-                        }
-                    )
+        data = node.instance.model_dump(exclude_none=True)
+
+        # Use comprehensive validation from validators module
+        validation_errors = validate_entity(
+            data=data,
+            entity_type=node.entity_type,
+            profile=facade.profile,
+            version=facade.version,
+        )
+
+        for err in validation_errors:
+            errors.append(
+                {
+                    "field": err.field,
+                    "message": err.message,
+                    "rule": getattr(err, "rule", "constraint"),
+                }
+            )
 
     results.append(
         {
