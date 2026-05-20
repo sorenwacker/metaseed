@@ -8,7 +8,7 @@
     <link rel="icon" type="image/png" sizes="128x128" href="{{ base_url }}/static/images/metaseed-icon-128.png">
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
     <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
-    <link rel="stylesheet" href="{{ base_url }}/static/css/style.css?v=66">
+    <link rel="stylesheet" href="{{ base_url }}/static/css/style.css?v=67">
 </head>
 <body hx-headers='{"X-Requested-With": "XMLHttpRequest"}'>
     <div class="layout">
@@ -42,9 +42,6 @@
                            name="file"
                            hidden>
                 </label>
-                <a href="{{ base_url }}/export" class="btn btn-header" data-testid="btn-export" download>
-                    Export
-                </a>
                 {% if tree_nodes %}
                 <span class="header-divider"></span>
                 <button id="graph-toggle" class="btn btn-header" onclick="toggleGraph()" data-testid="btn-graph">
@@ -119,6 +116,13 @@
         // Base URL for API calls (passed from server)
         const BASE_URL = "{{ base_url }}";
     </script>
-    <script src="{{ base_url }}/static/js/app.js?v=38"></script>
+    <!-- Modular JS files -->
+    <script src="{{ base_url }}/static/js/core.js?v=1"></script>
+    <script src="{{ base_url }}/static/js/validation.js?v=1"></script>
+    <script src="{{ base_url }}/static/js/table-edit.js?v=1"></script>
+    <script src="{{ base_url }}/static/js/lookup.js?v=1"></script>
+    <script src="{{ base_url }}/static/js/graph.js?v=1"></script>
+    <script src="{{ base_url }}/static/js/mcp.js?v=1"></script>
+    <script src="{{ base_url }}/static/js/dataset.js?v=1"></script>
 </body>
 </html>

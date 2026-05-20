@@ -1482,10 +1482,13 @@ function showNotification(message, type) {
     }, 5000);
 }
 
-// Check MCP status on page load
+// Check MCP status on page load and periodically
 document.addEventListener('DOMContentLoaded', function() {
     checkMCPStatus();
     loadDatasets();
+
+    // Poll MCP status every 10 seconds to detect crashes
+    setInterval(checkMCPStatus, 10000);
 });
 
 // Validate dataset name before creating new dataset

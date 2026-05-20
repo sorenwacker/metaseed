@@ -355,5 +355,31 @@ def mcp_server(
         run_server(transport="stdio")
 
 
+@app.command(name="migrate")
+def migrate_datasets(
+    apply: Annotated[
+        bool, typer.Option("--apply", help="Apply changes (default is dry run)")
+    ] = False,
+) -> None:
+    """Migrate datasets to use unique_id for entity references.
+
+    By default runs in dry-run mode showing what would change.
+    Use --apply to actually save the changes.
+
+    This migrates:
+    - _parent_id (node ID) -> _parent_unique_id
+    - Entity reference fields (e.g., material_source) from node IDs to unique_ids
+    """
+    from metaseed.cli.migrate import migrate_all_datasets, print_migration_report
+
+    if not apply:
+        typer.echo("DRY RUN - use --apply to save changes\n")
+    else:
+        typer.echo("APPLYING CHANGES\n")
+
+    reports = migrate_all_datasets(dry_run=not apply)
+    print_migration_report(reports)
+
+
 if __name__ == "__main__":
     app()

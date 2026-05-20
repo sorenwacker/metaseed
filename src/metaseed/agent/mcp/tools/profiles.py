@@ -6,9 +6,56 @@ import json
 from typing import TYPE_CHECKING
 
 from metaseed.specs.loader import SpecLoader, SpecLoadError
+from metaseed.specs.schema import EntityDefSpec
 
 if TYPE_CHECKING:
     from mcp.server.fastmcp import FastMCP
+
+
+def _load_entity_def(
+    entity_type: str, profile: str, version: str
+) -> tuple[EntityDefSpec | None, str | None]:
+    """Load entity definition from a profile.
+
+    Args:
+        entity_type: Entity type name.
+        profile: Profile name.
+        version: Profile version.
+
+    Returns:
+        Tuple of (entity_def, error_message). One will be None.
+    """
+    loader = SpecLoader(profile=profile)
+    try:
+        spec = loader.load_profile(version=version, profile=profile)
+        entity_def = spec.entities.get(entity_type)
+        if not entity_def:
+            return None, f"Entity '{entity_type}' not found in {profile} v{version}"
+        return entity_def, None
+    except SpecLoadError as e:
+        return None, str(e)
+
+
+def _field_to_dict(field: any) -> dict:
+    """Convert a FieldSpec to a dictionary for JSON serialization.
+
+    Args:
+        field: FieldSpec object.
+
+    Returns:
+        Dictionary with field properties.
+    """
+    field_info = {
+        "name": field.name,
+        "type": field.type.value,
+        "required": field.required,
+        "description": field.description,
+    }
+    if field.codename:
+        field_info["codename"] = field.codename
+    if field.items:
+        field_info["items"] = field.items
+    return field_info
 
 
 def register_profile_tools(mcp: FastMCP) -> None:
@@ -59,19 +106,7 @@ def register_profile_tools(mcp: FastMCP) -> None:
 
             for entity_name in spec.list_entities():
                 entity_def = spec.entities[entity_name]
-                fields = []
-                for field in entity_def.fields:
-                    field_info = {
-                        "name": field.name,
-                        "type": field.type.value,
-                        "required": field.required,
-                        "description": field.description,
-                    }
-                    if field.codename:
-                        field_info["codename"] = field.codename
-                    if field.items:
-                        field_info["items"] = field.items
-                    fields.append(field_info)
+                fields = [_field_to_dict(f) for f in entity_def.fields]
 
                 entities[entity_name] = {
                     "description": entity_def.description,
@@ -158,3 +193,138 @@ def register_profile_tools(mcp: FastMCP) -> None:
             )
         except Exception as e:
             return json.dumps({"error": str(e)})
+
+    @mcp.tool()
+    def get_entity_fields(entity_type: str, profile: str, version: str) -> str:
+        """Get all fields for a specific entity type.
+
+        Returns field definitions including name, type, required status,
+        description, and other metadata. Useful for understanding what
+        data is needed to create an entity.
+
+        Args:
+            entity_type: Entity type name (e.g., "Investigation", "Study").
+            profile: Profile name (e.g., "miappe", "isa").
+            version: Profile version (e.g., "1.2", "1.0").
+
+        Returns:
+            JSON with entity_type, profile, version, field_count,
+            required_count, and list of field definitions.
+        """
+        entity_def, error = _load_entity_def(entity_type, profile, version)
+        if error:
+            return json.dumps({"error": error})
+
+        fields = [_field_to_dict(f) for f in entity_def.fields]
+
+        return json.dumps(
+            {
+                "entity_type": entity_type,
+                "profile": profile,
+                "version": version,
+                "field_count": len(fields),
+                "required_count": sum(1 for f in fields if f["required"]),
+                "fields": fields,
+            },
+            indent=2,
+        )
+
+    @mcp.tool()
+    def get_required_fields(entity_type: str, profile: str, version: str) -> str:
+        """Get only the required field names for an entity type.
+
+        Returns a simple list of field names that are mandatory when
+        creating an entity. Use this for quick validation checks.
+
+        Args:
+            entity_type: Entity type name (e.g., "Investigation", "Study").
+            profile: Profile name (e.g., "miappe", "isa").
+            version: Profile version (e.g., "1.2", "1.0").
+
+        Returns:
+            JSON with entity_type, profile, version, and required_fields list.
+        """
+        entity_def, error = _load_entity_def(entity_type, profile, version)
+        if error:
+            return json.dumps({"error": error})
+
+        required_fields = [f.name for f in entity_def.fields if f.required]
+
+        return json.dumps(
+            {
+                "entity_type": entity_type,
+                "profile": profile,
+                "version": version,
+                "required_fields": required_fields,
+            },
+            indent=2,
+        )
+
+    @mcp.tool()
+    def get_entity_template(entity_type: str, profile: str, version: str) -> str:
+        """Get a template for creating an entity with placeholder values.
+
+        Returns a template object with placeholder values by field type:
+        - string (required): "<required>"
+        - integer: 0
+        - float: 0.0
+        - date: "YYYY-MM-DD"
+        - datetime: "YYYY-MM-DDTHH:MM:SS"
+        - uri: "https://example.com"
+        - list: []
+        - boolean: false
+        - optional fields: null
+
+        Args:
+            entity_type: Entity type name (e.g., "Investigation", "Study").
+            profile: Profile name (e.g., "miappe", "isa").
+            version: Profile version (e.g., "1.2", "1.0").
+
+        Returns:
+            JSON with entity_type, template object, and _required list.
+        """
+        from metaseed.specs.schema import FieldType
+
+        entity_def, error = _load_entity_def(entity_type, profile, version)
+        if error:
+            return json.dumps({"error": error})
+
+        template = {}
+        required_fields = []
+
+        for field in entity_def.fields:
+            if field.required:
+                required_fields.append(field.name)
+                # Required field placeholders by type
+                if field.type == FieldType.STRING:
+                    template[field.name] = "<required>"
+                elif field.type == FieldType.INTEGER:
+                    template[field.name] = 0
+                elif field.type == FieldType.FLOAT:
+                    template[field.name] = 0.0
+                elif field.type == FieldType.DATE:
+                    template[field.name] = "YYYY-MM-DD"
+                elif field.type == FieldType.DATETIME:
+                    template[field.name] = "YYYY-MM-DDTHH:MM:SS"
+                elif field.type == FieldType.URI:
+                    template[field.name] = "https://example.com"
+                elif field.type == FieldType.BOOLEAN:
+                    template[field.name] = False
+                elif field.type == FieldType.LIST:
+                    template[field.name] = []
+                elif field.type == FieldType.ENTITY:
+                    template[field.name] = None
+                else:
+                    template[field.name] = "<required>"
+            else:
+                # Optional fields are null
+                template[field.name] = None
+
+        return json.dumps(
+            {
+                "entity_type": entity_type,
+                "template": template,
+                "_required": required_fields,
+            },
+            indent=2,
+        )

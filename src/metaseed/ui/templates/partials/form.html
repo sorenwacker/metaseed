@@ -51,6 +51,22 @@
     </div>
     {% endif %}
 
+    {% if parent_label %}
+    <nav class="breadcrumb" data-testid="breadcrumb-child">
+        <span class="breadcrumb-item">
+            <a href="#"
+               hx-get="/"
+               hx-target="#main"
+               hx-swap="innerHTML"
+               hx-select="#main > *">Entities</a>
+        </span>
+        <span class="breadcrumb-sep">&gt;</span>
+        <span class="breadcrumb-item">{{ parent_label }}</span>
+        <span class="breadcrumb-sep">&gt;</span>
+        <span class="breadcrumb-item active">New {{ entity_type }}</span>
+    </nav>
+    {% endif %}
+
     <form {% if is_edit %}
           hx-put="/entity/{{ node_id }}"
           {% else %}
@@ -63,6 +79,9 @@
         <input type="hidden" name="_entity_type" value="{{ entity_type }}">
         {% if node_id %}
         <input type="hidden" name="_node_id" value="{{ node_id }}">
+        {% endif %}
+        {% if parent_id %}
+        <input type="hidden" name="_parent_id" value="{{ parent_id }}">
         {% endif %}
 
         {% include "partials/form_sections.html" %}

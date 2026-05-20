@@ -98,32 +98,34 @@ def save_dataset(state: AppState, name: str) -> dict[str, Any]:
     datasets_dir = get_datasets_dir()
     path = datasets_dir / f"{name}.json"
 
-    # Serialize entity tree with hierarchy
+    # Serialize entity tree with hierarchy using unique_id for relationships
     entities = []
 
-    def serialize_with_children(node: Any, parent_id: str | None = None) -> None:
-        """Recursively serialize node and all children."""
+    def get_entity_unique_id(node: Any) -> str | None:
+        """Get the unique_id from an entity node."""
+        if node.instance and hasattr(node.instance, "model_dump"):
+            data = node.instance.model_dump(exclude_none=True)
+            return data.get("unique_id")
+        return None
+
+    def serialize_with_children(node: Any, parent_unique_id: str | None = None) -> None:
+        """Recursively serialize node and all children.
+
+        Uses unique_id for parent references instead of internal node IDs.
+        """
         entity_data = _serialize_node(node)
         if entity_data:
-            entity_data["_node_id"] = node.id
-            if parent_id:
-                entity_data["_parent_id"] = parent_id
+            # Store parent relationship using unique_id (stable across reloads)
+            if parent_unique_id:
+                entity_data["_parent_unique_id"] = parent_unique_id
             entities.append(entity_data)
+
+            # Get this node's unique_id for children to reference
+            node_unique_id = get_entity_unique_id(node)
+
             # Serialize children
             for child in node.children:
-                serialize_with_children(child, node.id)
-
-    # Debug: log tree structure
-    import logging
-
-    logger = logging.getLogger(__name__)
-    logger.info(
-        f"Saving dataset: {len(state.entity_tree)} root nodes, {len(state.nodes_by_id)} total nodes"
-    )
-    for node in state.entity_tree:
-        logger.info(f"  Root: {node.entity_type} ({node.id}) - {len(node.children)} children")
-        for child in node.children:
-            logger.info(f"    Child: {child.entity_type} ({child.id})")
+                serialize_with_children(child, node_unique_id)
 
     for node in state.entity_tree:
         serialize_with_children(node)
@@ -176,12 +178,14 @@ def load_dataset(state: AppState, name: str) -> dict[str, Any]:
     state.facade = None  # Force reload with new profile
     state.reset()  # Clear existing entities
 
-    # Load entities with hierarchy support
+    # Load entities with hierarchy support using unique_id for relationships
     facade = state.get_or_create_facade()
     loaded_count = 0
 
-    # First pass: create all entities and map old IDs to new nodes
-    old_id_to_node: dict[str, Any] = {}
+    # First pass: create all entities and track by unique_id
+    unique_id_to_node: dict[str, Any] = {}
+    old_id_to_node: dict[str, Any] = {}  # For backwards compatibility
+    nodes_with_parent: list[tuple[Any, str, bool]] = []  # (node, parent_ref, is_unique_id)
 
     for entity_data in data.get("entities", []):
         entity_type = entity_data.get("_type")
@@ -191,9 +195,10 @@ def load_dataset(state: AppState, name: str) -> dict[str, Any]:
         try:
             helper = getattr(facade, entity_type, None)
             if helper:
-                # Extract internal fields
-                old_node_id = entity_data.get("_node_id")
-                old_parent_id = entity_data.get("_parent_id")
+                # Extract parent reference - prefer new format, fall back to old
+                parent_unique_id = entity_data.get("_parent_unique_id")
+                old_parent_id = entity_data.get("_parent_id")  # Backwards compat
+                old_node_id = entity_data.get("_node_id")  # Backwards compat
 
                 # Remove internal fields before creating
                 fields = {k: v for k, v in entity_data.items() if not k.startswith("_")}
@@ -203,18 +208,33 @@ def load_dataset(state: AppState, name: str) -> dict[str, Any]:
                 node = state.add_node(entity_type, instance)
                 loaded_count += 1
 
-                # Track old ID mapping
+                # Track by unique_id for relationship restoration
+                entity_unique_id = fields.get("unique_id")
+                if entity_unique_id:
+                    unique_id_to_node[entity_unique_id] = node
+
+                # Track by old node_id for backwards compatibility
                 if old_node_id:
-                    old_id_to_node[old_node_id] = (node, old_parent_id)
+                    old_id_to_node[old_node_id] = node
+
+                # Track nodes that need parent relationship
+                if parent_unique_id:
+                    nodes_with_parent.append((node, parent_unique_id, True))
+                elif old_parent_id:
+                    nodes_with_parent.append((node, old_parent_id, False))
         except Exception:
             # Skip invalid entities
             continue
 
     # Second pass: restore parent-child relationships
-    for node, old_parent_id in old_id_to_node.values():
-        if old_parent_id and old_parent_id in old_id_to_node:
-            parent_node, _ = old_id_to_node[old_parent_id]
+    for node, parent_ref, is_unique_id in nodes_with_parent:
+        if is_unique_id:
+            parent_node = unique_id_to_node.get(parent_ref)
+        else:
+            # Backwards compatibility: look up by old node_id
+            parent_node = old_id_to_node.get(parent_ref)
 
+        if parent_node:
             # Remove from root level
             state.entity_tree = [n for n in state.entity_tree if n.id != node.id]
 

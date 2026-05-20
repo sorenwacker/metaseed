@@ -1220,9 +1220,7 @@ body::before {
 }
 
 .entity-item.child {
-    margin-left: var(--space-xl);
-    padding-left: var(--space-md);
-    border-left: 2px solid var(--clr-sage);
+    /* Indentation now handled by .entity-children wrapper */
 }
 
 .btn-entity {
@@ -1259,6 +1257,8 @@ body::before {
     font-family: var(--font-body);
     font-size: 1rem;
     color: var(--clr-ink);
+    flex: 1;
+    text-align: left;
 }
 
 .btn-delete {
@@ -1285,6 +1285,9 @@ body::before {
 .entity-children {
     margin-top: var(--space-xs);
     margin-bottom: var(--space-md);
+    padding-left: var(--space-xl);
+    border-left: 2px solid var(--clr-sage);
+    margin-left: var(--space-md);
 }
 
 /* ============================================

@@ -180,7 +180,8 @@ Exposes agent capabilities via Model Context Protocol:
 | `list_entities` | List all entities in the current dataset |
 | `get_entity_tree` | Get hierarchical tree showing parent-child relationships |
 | `get_entity` | Get a specific entity by node ID |
-| `create_entity` | Create entity with optional `parent_id` (auto-fills parent references) |
+| `create_entity` | Create entity with optional `parent_id` (auto-fills parent references). Returns `valid_fields` and `required_fields` on validation errors |
+| `batch_create` | Create multiple entities in one operation with `[{entity_type, data, parent_id?}, ...]` |
 | `link_entity` | Link existing entity as child of another |
 | `update_entity` | Update an existing entity (auto-saves) |
 | `bulk_update_entities` | Update multiple entities at once |
@@ -199,12 +200,36 @@ Or link after creation:
 link_entity(child_id="<study_id>", parent_id="<investigation_id>")
 ```
 
+**Batch Creation:** Create multiple entities in one call:
+```
+batch_create([
+    {"entity_type": "Investigation", "data": {"unique_id": "inv-1", "title": "Test"}},
+    {"entity_type": "Study", "data": {"unique_id": "st-1", "title": "Trial"}, "parent_id": "<inv_node_id>"}
+])
+```
+Returns `{total, created, failed, results}` with detailed error info per entity.
+
+**Schema Discovery:** Before creating entities, discover field requirements:
+```
+get_entity_fields("Investigation", "miappe", "1.2")  # Full field info
+get_required_fields("Study", "miappe", "1.2")        # Just required field names
+get_entity_template("Investigation", "miappe", "1.2") # Template with placeholders
+```
+
 **Validation Tools:**
 
 | Tool | Description |
 |------|-------------|
 | `validate_dataset` | Validate all entities (same logic as UI - single source of truth) |
 | `get_field_spec` | Get field definitions, constraints, and ontology terms |
+
+**Schema Discovery Tools:**
+
+| Tool | Description |
+|------|-------------|
+| `get_entity_fields` | Get all fields for an entity type with `(entity_type, profile, version)` |
+| `get_required_fields` | Get list of required field names for an entity type |
+| `get_entity_template` | Get template with placeholder values by field type |
 
 The `validate_dataset` tool uses the same validation as the web UI, checking:
 - Required fields

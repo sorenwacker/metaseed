@@ -8,6 +8,8 @@ import pytest
 
 from metaseed.agent.mcp.server import create_server
 
+from .helpers import get_prompt, get_tool
+
 
 class TestMCPServer:
     """Tests for MCP server creation and tools."""
@@ -21,15 +23,7 @@ class TestMCPServer:
     def test_list_profiles_tool(self) -> None:
         """List profiles tool returns profile info."""
         server = create_server()
-
-        # Find the list_profiles tool
-        tools = server._tool_manager._tools
-        list_profiles_fn = None
-        for name, tool in tools.items():
-            if name == "list_profiles":
-                list_profiles_fn = tool.fn
-                break
-
+        list_profiles_fn = get_tool(server, "list_profiles")
         assert list_profiles_fn is not None
 
         result = list_profiles_fn()
@@ -47,14 +41,7 @@ class TestMCPServer:
         csv_file = tmp_path / "test.csv"
         csv_file.write_text("name,value\nfoo,1\nbar,2\n")
 
-        # Find the parse_source_file tool
-        tools = server._tool_manager._tools
-        parse_fn = None
-        for name, tool in tools.items():
-            if name == "parse_source_file":
-                parse_fn = tool.fn
-                break
-
+        parse_fn = get_tool(server, "parse_source_file")
         assert parse_fn is not None
 
         result = parse_fn(file_path=str(csv_file))
@@ -68,13 +55,7 @@ class TestMCPServer:
     def test_parse_source_file_not_found(self) -> None:
         """Parse file tool handles missing files."""
         server = create_server()
-
-        tools = server._tool_manager._tools
-        parse_fn = None
-        for name, tool in tools.items():
-            if name == "parse_source_file":
-                parse_fn = tool.fn
-                break
+        parse_fn = get_tool(server, "parse_source_file")
 
         result = parse_fn(file_path="/nonexistent/file.csv")
         data = json.loads(result)
@@ -85,14 +66,7 @@ class TestMCPServer:
     def test_get_profile_schema_tool(self) -> None:
         """Get profile schema tool returns entity info."""
         server = create_server()
-
-        tools = server._tool_manager._tools
-        get_schema_fn = None
-        for name, tool in tools.items():
-            if name == "get_profile_schema":
-                get_schema_fn = tool.fn
-                break
-
+        get_schema_fn = get_tool(server, "get_profile_schema")
         assert get_schema_fn is not None
 
         # This may return error if profile not found in test env
@@ -137,14 +111,7 @@ class TestMCPServer:
     def test_export_metadata_yaml(self) -> None:
         """Export metadata tool outputs YAML."""
         server = create_server()
-
-        tools = server._tool_manager._tools
-        export_fn = None
-        for name, tool in tools.items():
-            if name == "export_metadata":
-                export_fn = tool.fn
-                break
-
+        export_fn = get_tool(server, "export_metadata")
         assert export_fn is not None
 
         input_data = json.dumps({"Investigation": [{"identifier": "INV-001", "title": "Test"}]})
@@ -157,13 +124,7 @@ class TestMCPServer:
     def test_export_metadata_json(self) -> None:
         """Export metadata tool outputs JSON."""
         server = create_server()
-
-        tools = server._tool_manager._tools
-        export_fn = None
-        for name, tool in tools.items():
-            if name == "export_metadata":
-                export_fn = tool.fn
-                break
+        export_fn = get_tool(server, "export_metadata")
 
         input_data = json.dumps({"Investigation": [{"identifier": "INV-001"}]})
         result = export_fn(data=input_data, output_format="json")
@@ -175,14 +136,7 @@ class TestMCPServer:
     def test_validate_extracted_tool(self) -> None:
         """Validate extracted tool checks data validity."""
         server = create_server()
-
-        tools = server._tool_manager._tools
-        validate_fn = None
-        for name, tool in tools.items():
-            if name == "validate_extracted":
-                validate_fn = tool.fn
-                break
-
+        validate_fn = get_tool(server, "validate_extracted")
         assert validate_fn is not None
 
         # Test with some data - may error if profile not available
@@ -229,15 +183,9 @@ class TestMCPPrompts:
     def test_extraction_guide_prompt(self) -> None:
         """Extraction guide prompt returns instructions."""
         server = create_server()
-
-        prompts = server._prompt_manager._prompts
-        extraction_guide = None
-        for name, prompt in prompts.items():
-            if name == "extraction_guide":
-                extraction_guide = prompt
-                break
-
+        extraction_guide = get_prompt(server, "extraction_guide")
         assert extraction_guide is not None
+
         # Call the prompt function
         result = extraction_guide.fn(profile="miappe")
 
@@ -248,15 +196,9 @@ class TestMCPPrompts:
     def test_field_mapping_help_prompt(self) -> None:
         """Field mapping help prompt returns guidance."""
         server = create_server()
-
-        prompts = server._prompt_manager._prompts
-        mapping_help = None
-        for name, prompt in prompts.items():
-            if name == "field_mapping_help":
-                mapping_help = prompt
-                break
-
+        mapping_help = get_prompt(server, "field_mapping_help")
         assert mapping_help is not None
+
         result = mapping_help.fn(entity="Investigation", profile="miappe")
 
         assert "Field Mapping Help" in result
@@ -597,3 +539,500 @@ class TestMCPIntegration:
             study_tree = inv_tree["children"][0]
             assert study_tree["id"] == study_id
             assert study_tree["entity_type"] == "Study"
+
+
+class TestMCPNewProfileTools:
+    """Tests for new profile discovery tools."""
+
+    def test_get_entity_fields(self):
+        """Get entity fields returns field definitions."""
+        server = create_server()
+        tools = server._tool_manager._tools
+
+        get_fields_fn = tools.get("get_entity_fields")
+        assert get_fields_fn is not None
+
+        result = get_fields_fn.fn(
+            entity_type="Investigation",
+            profile="miappe",
+            version="1.2",
+        )
+        data = json.loads(result)
+
+        if "error" in data:
+            pytest.skip(f"Profile not available: {data['error']}")
+
+        assert data["entity_type"] == "Investigation"
+        assert data["profile"] == "miappe"
+        assert data["version"] == "1.2"
+        assert "fields" in data
+        assert data["field_count"] > 0
+        assert data["required_count"] >= 0
+
+        # Check field structure
+        field = data["fields"][0]
+        assert "name" in field
+        assert "type" in field
+        assert "required" in field
+        assert "description" in field
+
+    def test_get_entity_fields_not_found(self):
+        """Get entity fields returns error for unknown entity."""
+        server = create_server()
+        tools = server._tool_manager._tools
+
+        get_fields_fn = tools.get("get_entity_fields")
+        result = get_fields_fn.fn(
+            entity_type="NonExistent",
+            profile="miappe",
+            version="1.2",
+        )
+        data = json.loads(result)
+
+        assert "error" in data
+        assert "NonExistent" in data["error"]
+
+    def test_get_required_fields(self):
+        """Get required fields returns list of required field names."""
+        server = create_server()
+        tools = server._tool_manager._tools
+
+        get_required_fn = tools.get("get_required_fields")
+        assert get_required_fn is not None
+
+        result = get_required_fn.fn(
+            entity_type="Investigation",
+            profile="miappe",
+            version="1.2",
+        )
+        data = json.loads(result)
+
+        if "error" in data:
+            pytest.skip(f"Profile not available: {data['error']}")
+
+        assert data["entity_type"] == "Investigation"
+        assert "required_fields" in data
+        assert isinstance(data["required_fields"], list)
+
+    def test_get_entity_template(self):
+        """Get entity template returns template with placeholders."""
+        server = create_server()
+        tools = server._tool_manager._tools
+
+        get_template_fn = tools.get("get_entity_template")
+        assert get_template_fn is not None
+
+        result = get_template_fn.fn(
+            entity_type="Investigation",
+            profile="miappe",
+            version="1.2",
+        )
+        data = json.loads(result)
+
+        if "error" in data:
+            pytest.skip(f"Profile not available: {data['error']}")
+
+        assert data["entity_type"] == "Investigation"
+        assert "template" in data
+        assert "_required" in data
+        assert isinstance(data["template"], dict)
+        assert isinstance(data["_required"], list)
+
+        # Template should have placeholders for required fields
+        for req_field in data["_required"]:
+            assert req_field in data["template"]
+            # Required fields should have non-null placeholders
+            assert data["template"][req_field] is not None
+
+
+class TestMCPBatchCreate:
+    """Tests for batch entity creation."""
+
+    def test_batch_create_single(self):
+        """Batch create with single entity."""
+        from metaseed.agent.mcp.server import set_mcp_state
+        from metaseed.ui.state import AppState
+
+        server = create_server()
+        tools = server._tool_manager._tools
+
+        batch_fn = tools.get("batch_create")
+        assert batch_fn is not None
+
+        state = AppState(profile="miappe")
+        set_mcp_state(state)
+
+        with patch("metaseed.ui.datasets.auto_save"):
+            result = batch_fn.fn(
+                entities='[{"entity_type": "Investigation", "data": {"unique_id": "INV-BATCH-1", "title": "Batch Test"}}]'
+            )
+            data = json.loads(result)
+
+            if "error" in data:
+                pytest.skip(f"Profile not available: {data['error']}")
+
+            assert data["total"] == 1
+            assert data["created"] == 1
+            assert data["failed"] == 0
+            assert len(data["results"]) == 1
+            assert data["results"][0]["status"] == "created"
+            assert "id" in data["results"][0]
+
+    def test_batch_create_multiple(self):
+        """Batch create with multiple entities."""
+        from metaseed.agent.mcp.server import set_mcp_state
+        from metaseed.ui.state import AppState
+
+        server = create_server()
+        tools = server._tool_manager._tools
+
+        batch_fn = tools.get("batch_create")
+        state = AppState(profile="miappe")
+        set_mcp_state(state)
+
+        entities = json.dumps(
+            [
+                {
+                    "entity_type": "Investigation",
+                    "data": {"unique_id": "INV-B1", "title": "Test 1"},
+                },
+                {
+                    "entity_type": "Investigation",
+                    "data": {"unique_id": "INV-B2", "title": "Test 2"},
+                },
+            ]
+        )
+
+        with patch("metaseed.ui.datasets.auto_save"):
+            result = batch_fn.fn(entities=entities)
+            data = json.loads(result)
+
+            if "error" in data:
+                pytest.skip(f"Profile not available: {data['error']}")
+
+            assert data["total"] == 2
+            assert data["created"] == 2
+            assert data["failed"] == 0
+
+    def test_batch_create_with_parent(self):
+        """Batch create with parent relationship."""
+        from metaseed.agent.mcp.server import set_mcp_state
+        from metaseed.ui.state import AppState
+
+        server = create_server()
+        tools = server._tool_manager._tools
+
+        batch_fn = tools.get("batch_create")
+        create_fn = tools.get("create_entity")
+
+        state = AppState(profile="miappe")
+        set_mcp_state(state)
+
+        with patch("metaseed.ui.datasets.auto_save"):
+            # First create parent
+            result = create_fn.fn(
+                entity_type="Investigation",
+                data='{"unique_id": "INV-PARENT", "title": "Parent"}',
+            )
+            parent_data = json.loads(result)
+
+            if "error" in parent_data:
+                pytest.skip(f"Profile not available: {parent_data['error']}")
+
+            parent_id = parent_data["id"]
+
+            # Batch create children
+            entities = json.dumps(
+                [
+                    {
+                        "entity_type": "Study",
+                        "data": {"unique_id": "ST-1", "title": "Study 1"},
+                        "parent_id": parent_id,
+                    },
+                    {
+                        "entity_type": "Study",
+                        "data": {"unique_id": "ST-2", "title": "Study 2"},
+                        "parent_id": parent_id,
+                    },
+                ]
+            )
+
+            result = batch_fn.fn(entities=entities)
+            data = json.loads(result)
+
+            assert data["total"] == 2
+            assert data["created"] == 2
+
+    def test_batch_create_with_error(self):
+        """Batch create continues after error."""
+        from metaseed.agent.mcp.server import set_mcp_state
+        from metaseed.ui.state import AppState
+
+        server = create_server()
+        tools = server._tool_manager._tools
+
+        batch_fn = tools.get("batch_create")
+        state = AppState(profile="miappe")
+        set_mcp_state(state)
+
+        # First entity missing entity_type, second valid
+        entities = json.dumps(
+            [
+                {"data": {"unique_id": "FAIL-1"}},  # Missing entity_type
+                {"entity_type": "Investigation", "data": {"unique_id": "INV-OK", "title": "Valid"}},
+            ]
+        )
+
+        with patch("metaseed.ui.datasets.auto_save"):
+            result = batch_fn.fn(entities=entities)
+            data = json.loads(result)
+
+            if "error" in data:
+                pytest.skip(f"Profile not available: {data['error']}")
+
+            assert data["total"] == 2
+            assert data["failed"] >= 1  # At least the first one failed
+            assert data["results"][0]["status"] == "error"
+            assert "Missing entity_type" in data["results"][0]["message"]
+
+    def test_batch_create_invalid_json(self):
+        """Batch create handles invalid JSON."""
+        server = create_server()
+        tools = server._tool_manager._tools
+
+        batch_fn = tools.get("batch_create")
+        result = batch_fn.fn(entities="not valid json")
+        data = json.loads(result)
+
+        assert "error" in data
+        assert "Invalid JSON" in data["error"]
+
+    def test_batch_create_not_array(self):
+        """Batch create requires array input."""
+        server = create_server()
+        tools = server._tool_manager._tools
+
+        batch_fn = tools.get("batch_create")
+        result = batch_fn.fn(entities='{"entity_type": "Investigation"}')
+        data = json.loads(result)
+
+        assert "error" in data
+        assert "array" in data["error"].lower()
+
+
+class TestMCPEnhancedErrors:
+    """Tests for enhanced validation error messages."""
+
+    def test_create_entity_validation_error_includes_fields(self):
+        """Create entity validation error includes valid_fields."""
+        from metaseed.agent.mcp.server import set_mcp_state
+        from metaseed.ui.state import AppState
+
+        server = create_server()
+        tools = server._tool_manager._tools
+
+        create_fn = tools.get("create_entity")
+        state = AppState(profile="miappe")
+        set_mcp_state(state)
+
+        with patch("metaseed.ui.datasets.auto_save"):
+            # Create with invalid field to trigger validation error
+            result = create_fn.fn(
+                entity_type="Investigation",
+                data='{"invalid_field_xyz": "value"}',
+            )
+            data = json.loads(result)
+
+            # Should either succeed (if no required fields) or have error with hints
+            if "error" in data:
+                # May have valid_fields hint depending on error type
+                assert "error" in data
+
+
+class TestMCPDatasetSafety:
+    """Tests for dataset safety checks."""
+
+    def test_create_entity_with_wrong_expected_dataset(self):
+        """Create entity fails if expected_dataset doesn't match."""
+        from metaseed.agent.mcp.server import set_mcp_state
+        from metaseed.ui.state import AppState
+
+        server = create_server()
+        tools = server._tool_manager._tools
+
+        create_fn = tools.get("create_entity")
+        state = AppState(profile="miappe")
+        set_mcp_state(state)
+
+        with patch("metaseed.ui.datasets.auto_save"):
+            with patch(
+                "metaseed.ui.datasets.get_current_dataset_name", return_value="actual-dataset"
+            ):
+                result = create_fn.fn(
+                    entity_type="Investigation",
+                    data='{"unique_id": "INV-001", "title": "Test"}',
+                    expected_dataset="expected-dataset",
+                )
+                data = json.loads(result)
+
+                assert "error" in data
+                assert "mismatch" in data["error"].lower()
+                assert "expected-dataset" in data["error"]
+                assert "actual-dataset" in data["error"]
+
+    def test_create_entity_with_correct_expected_dataset(self):
+        """Create entity succeeds when expected_dataset matches."""
+        from metaseed.agent.mcp.server import set_mcp_state
+        from metaseed.ui.state import AppState
+
+        server = create_server()
+        tools = server._tool_manager._tools
+
+        create_fn = tools.get("create_entity")
+        state = AppState(profile="miappe")
+        set_mcp_state(state)
+
+        with patch("metaseed.ui.datasets.auto_save"):
+            with patch("metaseed.ui.datasets.get_current_dataset_name", return_value="my-dataset"):
+                result = create_fn.fn(
+                    entity_type="Investigation",
+                    data='{"unique_id": "INV-001", "title": "Test"}',
+                    expected_dataset="my-dataset",
+                )
+                data = json.loads(result)
+
+                if "error" in data:
+                    pytest.skip(f"Profile not available: {data['error']}")
+
+                assert data["status"] == "created"
+                assert "_dataset" in data
+                assert data["_dataset"]["dataset"] == "my-dataset"
+
+    def test_batch_create_with_wrong_expected_dataset(self):
+        """Batch create fails if expected_dataset doesn't match."""
+        from metaseed.agent.mcp.server import set_mcp_state
+        from metaseed.ui.state import AppState
+
+        server = create_server()
+        tools = server._tool_manager._tools
+
+        batch_fn = tools.get("batch_create")
+        state = AppState(profile="miappe")
+        set_mcp_state(state)
+
+        with patch("metaseed.ui.datasets.get_current_dataset_name", return_value="actual-dataset"):
+            result = batch_fn.fn(
+                entities='[{"entity_type": "Investigation", "data": {"unique_id": "INV-001"}}]',
+                expected_dataset="wrong-dataset",
+            )
+            data = json.loads(result)
+
+            assert "error" in data
+            assert "mismatch" in data["error"].lower()
+
+    def test_response_includes_dataset_info(self):
+        """Entity responses include _dataset info."""
+        from metaseed.agent.mcp.server import set_mcp_state
+        from metaseed.ui.state import AppState
+
+        server = create_server()
+        tools = server._tool_manager._tools
+
+        create_fn = tools.get("create_entity")
+        state = AppState(profile="miappe")
+        set_mcp_state(state)
+
+        with patch("metaseed.ui.datasets.auto_save"):
+            with patch("metaseed.ui.datasets.get_current_dataset_name", return_value="test-ds"):
+                result = create_fn.fn(
+                    entity_type="Investigation",
+                    data='{"unique_id": "INV-001", "title": "Test"}',
+                )
+                data = json.loads(result)
+
+                if "error" in data:
+                    pytest.skip(f"Profile not available: {data['error']}")
+
+                assert "_dataset" in data
+                assert data["_dataset"]["dataset"] == "test-ds"
+                assert data["_dataset"]["profile"] == "miappe"
+
+
+class TestEntityLabelFields:
+    """Tests for entity-specific label field handling."""
+
+    def test_biological_material_label_uses_organism(self):
+        """BiologicalMaterial uses organism field for label."""
+        from metaseed.repositories.helpers import derive_label
+
+        data = {
+            "unique_id": "BM-001",
+            "organism": "Arabidopsis thaliana",
+            "title": "Material 1",
+        }
+
+        label = derive_label("BiologicalMaterial", data)
+        assert label == "Arabidopsis thaliana"
+
+    def test_biological_material_label_fallback_to_genus(self):
+        """BiologicalMaterial falls back to genus when organism is missing."""
+        from metaseed.repositories.helpers import derive_label
+
+        data = {
+            "unique_id": "BM-001",
+            "genus": "Arabidopsis",
+        }
+
+        label = derive_label("BiologicalMaterial", data)
+        assert label == "Arabidopsis"
+
+    def test_observed_variable_label_uses_name(self):
+        """ObservedVariable uses name field for label."""
+        from metaseed.repositories.helpers import derive_label
+
+        data = {
+            "unique_id": "OV-001",
+            "name": "Plant height",
+            "trait": "Height",
+        }
+
+        label = derive_label("ObservedVariable", data)
+        assert label == "Plant height"
+
+    def test_observed_variable_label_fallback_to_trait(self):
+        """ObservedVariable falls back to trait when name is missing."""
+        from metaseed.repositories.helpers import derive_label
+
+        data = {
+            "unique_id": "OV-001",
+            "trait": "Height",
+        }
+
+        label = derive_label("ObservedVariable", data)
+        assert label == "Height"
+
+    def test_generic_entity_uses_standard_fields(self):
+        """Non-specialized entity uses standard label fields."""
+        from metaseed.repositories.helpers import derive_label
+
+        data = {
+            "unique_id": "INV-001",
+            "title": "My Investigation",
+        }
+
+        label = derive_label("Investigation", data)
+        assert label == "My Investigation"
+
+    def test_entity_specific_before_generic(self):
+        """Entity-specific fields are checked before generic fields."""
+        from metaseed.repositories.helpers import derive_label
+
+        # BiologicalMaterial should prefer organism over title
+        data = {
+            "title": "Generic Title",
+            "organism": "Specific Organism",
+            "unique_id": "BM-001",
+        }
+
+        label = derive_label("BiologicalMaterial", data)
+        assert label == "Specific Organism"

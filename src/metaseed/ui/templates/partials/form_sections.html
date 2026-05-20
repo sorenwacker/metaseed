@@ -28,12 +28,30 @@
     <h3 class="form-section-title">Related Entities</h3>
     {% for field in nested_fields %}
     {% set table_data = inline_tables.get(field.name, {}) %}
+    {% set child_type = table_data.nested_entity_type if table_data else field.items %}
     {% if table_data %}
     {% include "partials/inline_table.html" with context %}
     {% else %}
     {% include "partials/field.html" %}
     {% endif %}
     {% endfor %}
+
+    {# Add Child Entity buttons for tree-based children #}
+    {% if child_entity_types %}
+    <div class="add-child-section" style="margin-top: 1rem; padding: 1rem; border: 1px dashed var(--border-color); border-radius: 4px;">
+        <span class="text-muted" style="margin-right: 0.5rem;">Add child entity:</span>
+        {% for child_type in child_entity_types %}
+        <button type="button" class="btn btn-sm btn-outline-primary"
+                hx-get="/form/child/{{ node_id }}/{{ child_type }}"
+                hx-target="#main"
+                hx-swap="innerHTML"
+                style="margin-right: 0.25rem;"
+                data-testid="btn-add-child-{{ child_type }}">
+            + {{ child_type }}
+        </button>
+        {% endfor %}
+    </div>
+    {% endif %}
 </div>
 {% elif nested_fields %}
 <div class="form-section">

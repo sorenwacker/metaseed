@@ -89,11 +89,35 @@ def filter_fields(
     return result
 
 
-def get_field_data(helper: Any) -> list[dict]:
-    """Get field data for template rendering."""
+def get_field_data(helper: Any, exclude_parent_ref: str | None = None) -> list[dict]:
+    """Get field data for template rendering.
+
+    Args:
+        helper: Entity helper with field info.
+        exclude_parent_ref: If provided, exclude fields that reference this parent type.
+                           Used when creating child entities to hide auto-filled parent refs.
+
+    Returns:
+        List of field dicts for template rendering.
+    """
     fields = []
     for field_name in helper.all_fields:
         info = helper.field_info(field_name)
+
+        # Check if this field references the parent type - if so, skip it
+        if exclude_parent_ref:
+            items = info.get("items")
+            if items and items == exclude_parent_ref:
+                continue
+            # Also check field name patterns like "study_id" for parent "Study"
+            parent_lower = exclude_parent_ref.lower()
+            if field_name.lower() in [
+                f"{parent_lower}_id",
+                f"{parent_lower}_identifier",
+                f"{parent_lower}_unique_id",
+            ]:
+                continue
+
         fields.append(
             {
                 "name": field_name,

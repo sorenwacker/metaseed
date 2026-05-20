@@ -6,12 +6,123 @@ Uses EntityService for all CRUD operations to avoid code duplication.
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+
+from pydantic import ValidationError
 
 from metaseed.utils.json import DateAwareEncoder
 
 if TYPE_CHECKING:
     from mcp.server.fastmcp import FastMCP
+
+
+def _get_current_dataset_info() -> dict[str, Any]:
+    """Get info about the current dataset for safety checks."""
+    from metaseed.agent.mcp.server import get_mcp_state
+    from metaseed.ui.datasets import get_current_dataset_name
+
+    try:
+        state = get_mcp_state()
+        return {
+            "dataset": get_current_dataset_name(state),
+            "profile": state.profile,
+            "version": state.version,
+        }
+    except Exception:
+        return {"dataset": None, "profile": None, "version": None}
+
+
+def _check_dataset(expected_dataset: str | None) -> str | None:
+    """Check if expected dataset matches current. Returns error message if mismatch."""
+    if expected_dataset is None:
+        return None
+
+    info = _get_current_dataset_info()
+    current = info.get("dataset")
+
+    if current != expected_dataset:
+        return f"Dataset mismatch: expected '{expected_dataset}' but current is '{current}'"
+    return None
+
+
+def _get_entity_field_info(entity_type: str) -> dict[str, Any] | None:
+    """Get field info for an entity type from the current facade.
+
+    Returns dict with valid_fields and required_fields, or None if entity not found.
+    """
+    from metaseed.agent.mcp.server import get_mcp_state
+
+    try:
+        state = get_mcp_state()
+        facade = state.get_or_create_facade()
+        helper = getattr(facade, entity_type, None)
+        if not helper:
+            return None
+
+        valid_fields = [f.name for f in helper._spec.fields]
+        required_fields = [f.name for f in helper._spec.fields if f.required]
+
+        return {
+            "valid_fields": valid_fields,
+            "required_fields": required_fields,
+        }
+    except Exception:
+        return None
+
+
+def _format_validation_error(
+    error: ValidationError,
+    entity_type: str,
+) -> dict[str, Any]:
+    """Format a Pydantic ValidationError into a helpful response.
+
+    Args:
+        error: The Pydantic ValidationError.
+        entity_type: Entity type for field lookup.
+
+    Returns:
+        Dict with error details, valid_fields, and required_fields.
+    """
+    details = []
+    for err in error.errors():
+        field = ".".join(str(loc) for loc in err["loc"])
+        details.append(
+            {
+                "field": field,
+                "message": err["msg"],
+                "type": err["type"],
+            }
+        )
+
+    result: dict[str, Any] = {
+        "error": "Validation failed",
+        "details": details,
+    }
+
+    # Add field hints
+    field_info = _get_entity_field_info(entity_type)
+    if field_info:
+        result["valid_fields"] = field_info["valid_fields"]
+        result["required_fields"] = field_info["required_fields"]
+
+    return result
+
+
+def _handle_validation_error(error: Exception, entity_type: str) -> dict[str, Any] | None:
+    """Check if exception is or wraps a ValidationError and format it.
+
+    Args:
+        error: Exception to check.
+        entity_type: Entity type for field hints.
+
+    Returns:
+        Formatted error dict if ValidationError, None otherwise.
+    """
+    if isinstance(error, ValidationError):
+        return _format_validation_error(error, entity_type)
+    if hasattr(error, "__cause__") and isinstance(error.__cause__, ValidationError):
+        return _format_validation_error(error.__cause__, entity_type)
+    return None
 
 
 def register_entity_tools(mcp: FastMCP, get_entity_service) -> None:
@@ -78,7 +189,12 @@ def register_entity_tools(mcp: FastMCP, get_entity_service) -> None:
             return json.dumps({"error": str(e)})
 
     @mcp.tool()
-    def create_entity(entity_type: str, data: str, parent_id: str | None = None) -> str:
+    def create_entity(
+        entity_type: str,
+        data: str,
+        parent_id: str | None = None,
+        expected_dataset: str | None = None,
+    ) -> str:
         """Create a new entity in the current dataset.
 
         Creates an entity of the specified type with the provided data.
@@ -94,14 +210,27 @@ def register_entity_tools(mcp: FastMCP, get_entity_service) -> None:
             parent_id: Optional parent entity ID to create as child of.
                       Use this to build hierarchies (e.g., Study under Investigation).
                       The parent's reference field will be auto-updated.
+            expected_dataset: Optional safety check - if provided, operation fails
+                             if current dataset name doesn't match.
 
         Returns:
-            JSON with created entity info including parent relationship.
+            JSON with created entity info including parent relationship and dataset name.
+            On validation error, returns details with field-specific messages,
+            valid_fields, and required_fields for the entity type.
         """
+        # Safety check: verify we're editing the expected dataset
+        if expected_dataset:
+            mismatch_error = _check_dataset(expected_dataset)
+            if mismatch_error:
+                return json.dumps({"error": mismatch_error})
+
         try:
             service = get_entity_service()
             entity_data = json.loads(data)
             result = service.create_entity(entity_type, entity_data, parent_id)
+
+            # Add dataset info to response
+            result["_dataset"] = _get_current_dataset_info()
 
             # Add linked_via_field info if parent was specified
             if parent_id:
@@ -123,10 +252,17 @@ def register_entity_tools(mcp: FastMCP, get_entity_service) -> None:
         except json.JSONDecodeError as e:
             return json.dumps({"error": f"Invalid JSON: {e}"})
         except Exception as e:
+            validation_error = _handle_validation_error(e, entity_type)
+            if validation_error:
+                return json.dumps(validation_error, indent=2)
             return json.dumps({"error": str(e)})
 
     @mcp.tool()
-    def update_entity(node_id: str, data: str) -> str:
+    def update_entity(
+        node_id: str,
+        data: str,
+        expected_dataset: str | None = None,
+    ) -> str:
         """Update an existing entity.
 
         Merges the provided data with the existing entity.
@@ -135,14 +271,23 @@ def register_entity_tools(mcp: FastMCP, get_entity_service) -> None:
         Args:
             node_id: The entity's node ID.
             data: JSON string of fields to update.
+            expected_dataset: Optional safety check - if provided, operation fails
+                             if current dataset name doesn't match.
 
         Returns:
-            JSON with updated entity info or error.
+            JSON with updated entity info and dataset name, or error.
         """
+        # Safety check
+        if expected_dataset:
+            mismatch_error = _check_dataset(expected_dataset)
+            if mismatch_error:
+                return json.dumps({"error": mismatch_error})
+
         try:
             service = get_entity_service()
             updates = json.loads(data)
             result = service.update_entity(node_id, updates)
+            result["_dataset"] = _get_current_dataset_info()
             return json.dumps(result, indent=2)
         except json.JSONDecodeError as e:
             return json.dumps({"error": f"Invalid JSON: {e}"})
@@ -150,26 +295,35 @@ def register_entity_tools(mcp: FastMCP, get_entity_service) -> None:
             return json.dumps({"error": str(e)})
 
     @mcp.tool()
-    def delete_entity(node_id: str) -> str:
+    def delete_entity(node_id: str, expected_dataset: str | None = None) -> str:
         """Delete an entity from the current dataset.
 
         Removes the entity and auto-saves the dataset.
 
         Args:
             node_id: The entity's node ID.
+            expected_dataset: Optional safety check - if provided, operation fails
+                             if current dataset name doesn't match.
 
         Returns:
-            JSON with deletion status.
+            JSON with deletion status and dataset name.
         """
+        # Safety check
+        if expected_dataset:
+            mismatch_error = _check_dataset(expected_dataset)
+            if mismatch_error:
+                return json.dumps({"error": mismatch_error})
+
         try:
             service = get_entity_service()
             result = service.delete_entity(node_id)
+            result["_dataset"] = _get_current_dataset_info()
             return json.dumps(result, indent=2)
         except Exception as e:
             return json.dumps({"error": str(e)})
 
     @mcp.tool()
-    def bulk_update_entities(updates: str) -> str:
+    def bulk_update_entities(updates: str, expected_dataset: str | None = None) -> str:
         """Update multiple entities at once.
 
         Applies updates to multiple entities in a single operation.
@@ -178,10 +332,18 @@ def register_entity_tools(mcp: FastMCP, get_entity_service) -> None:
         Args:
             updates: JSON array of updates, each with "id" and "data" fields.
                     Example: [{"id": "abc123", "data": {"title": "New Title"}}]
+            expected_dataset: Optional safety check - if provided, operation fails
+                             if current dataset name doesn't match.
 
         Returns:
-            JSON with results for each update.
+            JSON with results for each update and dataset name.
         """
+        # Safety check
+        if expected_dataset:
+            mismatch_error = _check_dataset(expected_dataset)
+            if mismatch_error:
+                return json.dumps({"error": mismatch_error})
+
         try:
             service = get_entity_service()
             update_list = json.loads(updates)
@@ -218,6 +380,105 @@ def register_entity_tools(mcp: FastMCP, get_entity_service) -> None:
                     "updated": sum(1 for r in results if r["status"] == "updated"),
                     "errors": sum(1 for r in results if r["status"] == "error"),
                     "results": results,
+                    "_dataset": _get_current_dataset_info(),
+                },
+                indent=2,
+            )
+        except json.JSONDecodeError as e:
+            return json.dumps({"error": f"Invalid JSON: {e}"})
+        except Exception as e:
+            return json.dumps({"error": str(e)})
+
+    @mcp.tool()
+    def batch_create(entities: str, expected_dataset: str | None = None) -> str:
+        """Create multiple entities in a single operation.
+
+        Creates entities in order. Use parent_id to establish hierarchies.
+        Results include both successes and failures with detailed error info.
+        Auto-saves after all creations complete.
+
+        Args:
+            entities: JSON array of entity specs, each with:
+                - entity_type: Entity type (e.g., "Investigation", "Study")
+                - data: Field values for the entity
+                - parent_id: Optional parent entity ID
+            expected_dataset: Optional safety check - if provided, operation fails
+                             if current dataset name doesn't match.
+
+        Returns:
+            JSON with total, created, failed counts, dataset info, and per-entity results.
+            Each result includes index, status ("created" or "error"),
+            id (if created), and message (if error).
+        """
+        # Safety check: verify we're editing the expected dataset
+        if expected_dataset:
+            mismatch_error = _check_dataset(expected_dataset)
+            if mismatch_error:
+                return json.dumps({"error": mismatch_error})
+
+        try:
+            service = get_entity_service()
+            entity_list = json.loads(entities)
+
+            if not isinstance(entity_list, list):
+                return json.dumps({"error": "Input must be a JSON array"})
+
+            results = []
+            for idx, spec in enumerate(entity_list):
+                entity_type = spec.get("entity_type")
+                data = spec.get("data", {})
+                parent_id = spec.get("parent_id")
+
+                if not entity_type:
+                    results.append(
+                        {
+                            "index": idx,
+                            "status": "error",
+                            "message": "Missing entity_type",
+                        }
+                    )
+                    continue
+
+                try:
+                    result = service.create_entity(entity_type, data, parent_id)
+                    results.append(
+                        {
+                            "index": idx,
+                            "status": "created",
+                            "id": result["id"],
+                            "entity_type": entity_type,
+                            "label": result.get("label"),
+                        }
+                    )
+                except Exception as e:
+                    validation_error = _handle_validation_error(e, entity_type)
+                    if validation_error:
+                        results.append(
+                            {
+                                "index": idx,
+                                "status": "error",
+                                "entity_type": entity_type,
+                                "message": "Validation failed",
+                                "details": validation_error.get("details", []),
+                            }
+                        )
+                    else:
+                        results.append(
+                            {
+                                "index": idx,
+                                "status": "error",
+                                "entity_type": entity_type,
+                                "message": str(e),
+                            }
+                        )
+
+            return json.dumps(
+                {
+                    "total": len(entity_list),
+                    "created": sum(1 for r in results if r["status"] == "created"),
+                    "failed": sum(1 for r in results if r["status"] == "error"),
+                    "results": results,
+                    "_dataset": _get_current_dataset_info(),
                 },
                 indent=2,
             )

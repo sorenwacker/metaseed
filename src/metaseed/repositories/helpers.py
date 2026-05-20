@@ -23,6 +23,31 @@ LABEL_FIELDS = [
     "filename",
 ]
 
+# Entity-specific label field priorities
+# These are checked before the generic LABEL_FIELDS
+ENTITY_LABEL_FIELDS: dict[str, list[str]] = {
+    "BiologicalMaterial": [
+        "organism",
+        "genus",
+        "species",
+        "infraspecific_name",
+        "unique_id",
+    ],
+    "ObservedVariable": [
+        "name",
+        "trait",
+        "unique_id",
+    ],
+    "Sample": [
+        "description",
+        "unique_id",
+    ],
+    "Event": [
+        "type",
+        "description",
+    ],
+}
+
 
 def find_parent_ref_field(helper: Any, parent_type: str) -> str | None:
     """Find field on child entity that references parent type.
@@ -86,7 +111,8 @@ def get_identifier_from_instance(instance: Any) -> str | None:
 def derive_label(entity_type: str, data: dict[str, Any], spec: Any = None) -> str:
     """Derive a display label from entity data.
 
-    Tries common label fields, with special handling for Person entities.
+    Checks entity-specific label fields first, then common label fields,
+    with special handling for Person entities.
     Optionally falls back to first non-empty string field from spec.
 
     Args:
@@ -97,6 +123,13 @@ def derive_label(entity_type: str, data: dict[str, Any], spec: Any = None) -> st
     Returns:
         Derived label string.
     """
+    # Check entity-specific label fields first
+    if entity_type in ENTITY_LABEL_FIELDS:
+        for key in ENTITY_LABEL_FIELDS[entity_type]:
+            if data.get(key):
+                return str(data[key])
+
+    # Fall back to generic label fields
     for key in LABEL_FIELDS:
         if data.get(key):
             return str(data[key])

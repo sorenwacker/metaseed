@@ -34,15 +34,29 @@ class TreeNode:
     parent_id: str | None = None
 
     @classmethod
-    def create(cls, entity_type: str, instance: Any, parent_id: str | None = None) -> TreeNode:
-        """Create a new tree node from an entity instance."""
+    def create(
+        cls,
+        entity_type: str,
+        instance: Any,
+        parent_id: str | None = None,
+        node_id: str | None = None,
+    ) -> TreeNode:
+        """Create a new tree node from an entity instance.
+
+        Args:
+            entity_type: Type of entity.
+            instance: The entity instance (Pydantic model).
+            parent_id: Optional parent node ID.
+            node_id: Optional node ID to preserve (for loading saved datasets).
+                    If not provided, a new UUID is generated.
+        """
         from metaseed.repositories.helpers import derive_label
 
         data = instance.model_dump() if hasattr(instance, "model_dump") else {}
         label = derive_label(entity_type, data)
 
         return cls(
-            id=str(uuid.uuid4())[:8],
+            id=node_id or str(uuid.uuid4())[:8],
             entity_type=entity_type,
             instance=instance,
             label=label,
@@ -125,10 +139,21 @@ class AppState:
         return []
 
     def add_node(
-        self: Self, entity_type: str, instance: Any, parent_id: str | None = None
+        self: Self,
+        entity_type: str,
+        instance: Any,
+        parent_id: str | None = None,
+        node_id: str | None = None,
     ) -> TreeNode:
-        """Add a new node to the tree."""
-        node = TreeNode.create(entity_type, instance, parent_id)
+        """Add a new node to the tree.
+
+        Args:
+            entity_type: Type of entity.
+            instance: The entity instance.
+            parent_id: Optional parent node ID for hierarchy.
+            node_id: Optional node ID to preserve (for loading saved datasets).
+        """
+        node = TreeNode.create(entity_type, instance, parent_id, node_id)
         self.nodes_by_id[node.id] = node
 
         if parent_id and parent_id in self.nodes_by_id:
@@ -140,15 +165,14 @@ class AppState:
 
     def update_node(self: Self, node_id: str, instance: Any) -> TreeNode | None:
         """Update an existing node."""
+        from metaseed.repositories.helpers import derive_label
+
         node = self.nodes_by_id.get(node_id)
         if node:
             node.instance = instance
             if hasattr(instance, "model_dump"):
                 data = instance.model_dump()
-                for key in ["title", "name", "unique_id", "identifier", "filename"]:
-                    if data.get(key):
-                        node.label = str(data[key])
-                        break
+                node.label = derive_label(node.entity_type, data)
         return node
 
     def delete_node(self: Self, node_id: str) -> bool:

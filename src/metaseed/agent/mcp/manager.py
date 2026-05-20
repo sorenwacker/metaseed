@@ -185,20 +185,26 @@ class MCPServerManager:
     def is_running(self: Self, port: int = 8001) -> bool:
         """Check if the server is running.
 
-        Checks both the internal process reference and whether the port is in use.
-        This handles the case where the server is running but we lost the reference
-        (e.g., after uvicorn reload).
+        Checks the internal process reference, port availability, and whether
+        the MCP server is actually responding.
         """
+        host = self._host or "127.0.0.1"
+
         # First check our process reference
         if self._process is not None:
             if self._process.poll() is None:
+                # Process is running, verify it's responding
+                if self._check_mcp_responding(host, port):
+                    return True
+                # Process running but not responding - might be starting up
                 return True
             # Process has exited
             self._process = None
 
-        # Also check if port is in use (server might be running but we lost reference)
+        # Check if port is in use AND MCP is responding
         if self._check_port_in_use(port):
-            return True
+            if self._check_mcp_responding(host, port):
+                return True
 
         return False
 
@@ -235,6 +241,33 @@ class MCPServerManager:
         except OSError:
             pass
         return None
+
+    def _check_mcp_responding(self: Self, host: str, port: int) -> bool:
+        """Check if MCP server is actually responding.
+
+        Makes a quick HTTP request to verify the server is working.
+
+        Args:
+            host: Host to check.
+            port: Port to check.
+
+        Returns:
+            True if server responds, False otherwise.
+        """
+        import urllib.error
+        import urllib.request
+
+        try:
+            url = f"http://{host}:{port}/mcp"
+            req = urllib.request.Request(url, method="GET")  # noqa: S310
+            with urllib.request.urlopen(req, timeout=2):  # noqa: S310
+                return True
+        except urllib.error.HTTPError as e:
+            # MCP server returns various HTTP errors for invalid requests
+            # but if we get ANY HTTP response, the server is running
+            return e.code in (400, 405, 406, 415)
+        except (urllib.error.URLError, TimeoutError, OSError):
+            return False
 
     def kill_orphaned(self: Self, port: int = 8001) -> bool:
         """Kill any orphaned MCP server on the given port.

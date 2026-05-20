@@ -431,10 +431,13 @@ class TestExport:
         # Check content disposition header has filename
         assert "attachment" in response.headers.get("content-disposition", "")
 
-    def test_index_contains_export_button(self, client):
-        """Index page contains export button."""
-        response = client.get("/")
-        assert "Export" in response.text
+    def test_export_button_in_edit_form(self, client_with_entity):
+        """Edit form contains Export All button."""
+        # Export button moved from navbar to edit form
+        state = client_with_entity.app.state.ui_state
+        node = next(iter(state.nodes_by_id.values()))
+        response = client_with_entity.get(f"/form/{node.entity_type}/{node.id}")
+        assert "Export All" in response.text
 
 
 class TestResetState:
@@ -823,6 +826,174 @@ class TestNestedFormEdgeCases:
 
         response = client_with_nested.get("/nested/Investigation/studies/0")
         assert response.status_code == 200
+
+
+class TestChildEntityCreation:
+    """Tests for child entity creation from parent."""
+
+    def test_child_entity_form_shows_parent_context(self, client_with_entity):
+        """Child entity form shows parent context and breadcrumb."""
+        state = client_with_entity.app.state.ui_state
+        parent_id = next(iter(state.nodes_by_id.keys()))
+
+        response = client_with_entity.get(f"/form/child/{parent_id}/Study")
+        assert response.status_code == 200
+        assert "New Study" in response.text
+        assert "Investigation" in response.text  # Parent type in breadcrumb
+
+    def test_child_entity_form_prefills_parent_reference(self, client_with_entity):
+        """Child entity form pre-fills parent reference field."""
+        state = client_with_entity.app.state.ui_state
+        parent_id = next(iter(state.nodes_by_id.keys()))
+
+        response = client_with_entity.get(f"/form/child/{parent_id}/Study")
+        assert response.status_code == 200
+        # Should have parent_id hidden field
+        assert f'name="_parent_id" value="{parent_id}"' in response.text
+
+    def test_child_entity_form_unknown_parent_404(self, client_with_entity):
+        """Child entity form with unknown parent returns 404."""
+        response = client_with_entity.get("/form/child/unknown-id/Study")
+        assert response.status_code == 404
+
+    def test_child_entity_form_unknown_child_type_404(self, client_with_entity):
+        """Child entity form with unknown child type returns 404."""
+        state = client_with_entity.app.state.ui_state
+        parent_id = next(iter(state.nodes_by_id.keys()))
+
+        response = client_with_entity.get(f"/form/child/{parent_id}/UnknownEntity")
+        assert response.status_code == 404
+
+    def test_create_child_entity_links_to_parent(self, client_with_entity):
+        """Creating child entity links it to parent in tree."""
+        state = client_with_entity.app.state.ui_state
+        parent_id = next(iter(state.nodes_by_id.keys()))
+
+        response = client_with_entity.post(
+            "/entity",
+            data={
+                "_entity_type": "Study",
+                "_parent_id": parent_id,
+                "unique_id": "STU-001",
+                "title": "Child Study",
+                "investigation_id": "INV-001",  # Required field
+            },
+        )
+        assert response.status_code == 200
+
+        # Verify parent has the child
+        parent_node = state.nodes_by_id[parent_id]
+        assert len(parent_node.children) == 1
+        assert parent_node.children[0].entity_type == "Study"
+        assert parent_node.children[0].parent_id == parent_id
+
+    def test_edit_form_shows_add_child_buttons(self, client_with_entity):
+        """Edit form shows Add Child buttons for nested entity types."""
+        state = client_with_entity.app.state.ui_state
+        node_id = next(iter(state.nodes_by_id.keys()))
+
+        response = client_with_entity.get(f"/form/Investigation/{node_id}")
+        assert response.status_code == 200
+        # Should have buttons for child entity types
+        assert "Add child entity" in response.text or "btn-add-child" in response.text
+
+
+class TestDatasetStability:
+    """Tests for stable entity references across save/load cycles."""
+
+    def test_dataset_save_load_preserves_hierarchy(self, client_with_entity, tmp_path):
+        """Dataset save/load preserves parent-child relationships using unique_id."""
+
+        from metaseed.ui.datasets import load_dataset, save_dataset
+
+        state = client_with_entity.app.state.ui_state
+        facade = state.get_or_create_facade()
+
+        # Get existing Investigation
+        inv_node = next(iter(state.nodes_by_id.values()))
+        inv_unique_id = inv_node.instance.unique_id
+
+        # Add a child Study (requires investigation_id)
+        study = facade.Study.create(
+            unique_id="ST-CHILD-001",
+            title="Child Study",
+            investigation_id=inv_unique_id,
+        )
+        study_node = state.add_node("Study", study, parent_id=inv_node.id)
+        study_unique_id = study_node.instance.unique_id
+
+        assert len(inv_node.children) == 1
+        assert inv_node.children[0].id == study_node.id
+
+        # Save dataset
+        save_dataset(state, "test-stability")
+
+        # Reset and reload
+        state.reset()
+        assert len(state.nodes_by_id) == 0
+
+        load_dataset(state, "test-stability")
+
+        # Verify hierarchy restored
+        assert len(state.nodes_by_id) == 2
+
+        # Find nodes by unique_id
+        loaded_inv = None
+        loaded_study = None
+        for node in state.nodes_by_id.values():
+            if node.instance.unique_id == inv_unique_id:
+                loaded_inv = node
+            elif node.instance.unique_id == study_unique_id:
+                loaded_study = node
+
+        assert loaded_inv is not None
+        assert loaded_study is not None
+        assert len(loaded_inv.children) == 1
+        assert loaded_inv.children[0].instance.unique_id == study_unique_id
+
+    def test_dataset_uses_unique_id_not_node_id(self, client_with_entity, tmp_path):
+        """Dataset JSON uses unique_id for references, not internal node IDs."""
+        import json
+
+        from metaseed.ui.datasets import get_datasets_dir, save_dataset
+
+        state = client_with_entity.app.state.ui_state
+        facade = state.get_or_create_facade()
+
+        # Get existing Investigation
+        inv_node = next(iter(state.nodes_by_id.values()))
+        inv_unique_id = inv_node.instance.unique_id
+
+        # Add a child Study (requires investigation_id)
+        study = facade.Study.create(
+            unique_id="ST-REF-001",
+            title="Reference Test",
+            investigation_id=inv_unique_id,
+        )
+        state.add_node("Study", study, parent_id=inv_node.id)
+
+        # Save dataset
+        save_dataset(state, "test-unique-id-ref")
+
+        # Read the JSON file directly
+        datasets_dir = get_datasets_dir()
+        with open(datasets_dir / "test-unique-id-ref.json") as f:
+            data = json.load(f)
+
+        # Find Study entity in saved data
+        study_entity = None
+        for entity in data["entities"]:
+            if entity.get("_type") == "Study":
+                study_entity = entity
+                break
+
+        assert study_entity is not None
+        # Should use _parent_unique_id, not _parent_id (node ID)
+        assert "_parent_unique_id" in study_entity
+        assert study_entity["_parent_unique_id"] == inv_unique_id
+        # Should NOT have old-style _node_id or _parent_id
+        assert "_node_id" not in study_entity
+        assert "_parent_id" not in study_entity
 
 
 class TestHelperFunctionIntegration:

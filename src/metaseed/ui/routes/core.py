@@ -258,6 +258,57 @@ def register_form_routes(
             },
         )
 
+    @app.get("/form/child/{parent_id}/{child_entity_type}", response_class=HTMLResponse)
+    async def new_child_entity_form(
+        request: Request, parent_id: str, child_entity_type: str
+    ) -> HTMLResponse:
+        """Render a form for creating a child entity linked to a parent."""
+        state = get_state()
+        facade = state.get_or_create_facade()
+
+        parent_node = state.nodes_by_id.get(parent_id)
+        if not parent_node:
+            raise HTTPException(status_code=404, detail=f"Parent node not found: {parent_id}")
+
+        try:
+            helper = getattr(facade, child_entity_type)
+        except AttributeError as e:
+            raise HTTPException(
+                status_code=404, detail=f"Entity type not found: {child_entity_type}"
+            ) from e
+
+        state.editing_node_id = None
+        state.current_nested_items = {}
+
+        # Get fields, excluding parent reference fields (they'll be auto-filled)
+        fields = get_field_data(helper, exclude_parent_ref=parent_node.entity_type)
+
+        auto_values = {}
+        auto_fields = set()
+
+        if "miappe_version" in helper.all_fields:
+            auto_values["miappe_version"] = facade.version
+            auto_fields.add("miappe_version")
+
+        return templates.TemplateResponse(
+            request,
+            "partials/form.html",
+            {
+                "entity_type": child_entity_type,
+                "is_edit": False,
+                "node_id": None,
+                "parent_id": parent_id,
+                "parent_label": f"{parent_node.entity_type}: {parent_node.label}",
+                "description": helper.description,
+                "ontology_term": helper.ontology_term,
+                "required_fields": filter_fields(fields, required=True),
+                "optional_fields": filter_fields(fields, required=False, exclude_nested=True),
+                "nested_fields": filter_fields(fields, nested_only=True),
+                "values": auto_values,
+                "auto_fields": auto_fields,
+            },
+        )
+
     @app.get("/form/{entity_type}/{node_id}", response_class=HTMLResponse)
     async def edit_entity_form(request: Request, entity_type: str, node_id: str) -> HTMLResponse:
         """Render an edit form for an existing entity."""
@@ -297,6 +348,9 @@ def register_form_routes(
 
         inline_tables = build_inline_tables(state, facade, entity_type)
 
+        # Get child entity types that can be created under this entity
+        child_entity_types = list(helper.nested_fields.values())
+
         return templates.TemplateResponse(
             request,
             "partials/form.html",
@@ -313,6 +367,7 @@ def register_form_routes(
                 "values": values,
                 "auto_fields": auto_fields,
                 "inline_tables": inline_tables,
+                "child_entity_types": child_entity_types,
             },
         )
 
@@ -339,6 +394,7 @@ def register_entity_crud_routes(
 
         form_data = await request.form()
         entity_type = form_data.get("_entity_type")
+        parent_id = form_data.get("_parent_id")
 
         if not entity_type:
             return error_response(request, templates, "Entity type is required")
@@ -352,7 +408,7 @@ def register_entity_crud_routes(
 
         try:
             instance = helper.create(**values)
-            node = state.add_node(entity_type, instance)
+            node = state.add_node(entity_type, instance, parent_id=parent_id)
             state.editing_node_id = node.id
 
             state.current_nested_items = extract_nested_items(instance, helper)
@@ -542,6 +598,9 @@ def render_entity_form(
     if state and node_id and node_id in state.nodes_by_id:
         node_label = state.nodes_by_id[node_id].label
 
+    # Get child entity types that can be created under this entity
+    child_entity_types = list(helper.nested_fields.values())
+
     response = templates.TemplateResponse(
         request,
         "partials/form.html",
@@ -559,6 +618,7 @@ def render_entity_form(
             "auto_fields": ctx.auto_fields,
             "success_message": success_message,
             "inline_tables": ctx.inline_tables,
+            "child_entity_types": child_entity_types,
         },
     )
     response.headers["HX-Trigger"] = (
