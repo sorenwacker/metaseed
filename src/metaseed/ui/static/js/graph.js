@@ -332,6 +332,8 @@ function loadGraph() {
             // If graph exists, update incrementally (don't touch legend)
             if (!isFirstLoad) {
                 updateGraphIncremental(data.nodes, data.edges);
+                // Re-apply filter to respect current legend selections
+                filterGraph();
             } else {
                 // Initial render
                 renderGraph(data);
