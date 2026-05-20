@@ -9,6 +9,8 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import TYPE_CHECKING, Any
 
+from metaseed.repositories.helpers import get_identifier
+
 if TYPE_CHECKING:
     from metaseed.ui.state import AppState
 
@@ -104,11 +106,9 @@ def build_graph(state: AppState) -> dict:
         if tree_node and tree_node.instance and hasattr(tree_node.instance, "model_dump"):
             entity_data = tree_node.instance.model_dump(exclude_none=True)
             # Map identifier to vis_id for reference resolution
-            # Check multiple possible identifier fields
-            for id_field in ["unique_id", "identifier", "name", "id"]:
-                if entity_data.get(id_field):
-                    unique_id_to_vis_id[str(entity_data[id_field])] = vis_id
-                    break
+            entity_id = get_identifier(entity_data)
+            if entity_id:
+                unique_id_to_vis_id[entity_id] = vis_id
 
         tooltip = _build_tooltip(
             tree_item["entity_type"],
@@ -177,19 +177,17 @@ def build_graph(state: AppState) -> dict:
                         ref_ids.append(item)
                     elif isinstance(item, dict):
                         # Embedded object - extract identifier (fallback for old data)
-                        for id_field in ["unique_id", "identifier", "name", "id"]:
-                            if item.get(id_field):
-                                ref_ids.append(str(item[id_field]))
-                                break
+                        item_id = get_identifier(item)
+                        if item_id:
+                            ref_ids.append(item_id)
             elif isinstance(ref_value, str):
                 # Single ID reference
                 ref_ids.append(ref_value)
             elif isinstance(ref_value, dict):
                 # Single embedded object (fallback for old data)
-                for id_field in ["unique_id", "identifier", "name", "id"]:
-                    if ref_value.get(id_field):
-                        ref_ids.append(str(ref_value[id_field]))
-                        break
+                item_id = get_identifier(ref_value)
+                if item_id:
+                    ref_ids.append(item_id)
 
             # Create edges for each reference
             for ref_id in ref_ids:
