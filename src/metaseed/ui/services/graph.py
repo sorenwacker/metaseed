@@ -162,22 +162,46 @@ def build_graph(state: AppState) -> dict:
         # Check for entity reference fields
         for field_name in getattr(helper, "nested_fields", {}):
             ref_value = entity_data.get(field_name)
-            if not ref_value or isinstance(ref_value, list | dict):
+            if not ref_value:
                 continue
 
-            # ref_value should be the unique_id of the referenced entity
-            target_vis_id = unique_id_to_vis_id.get(str(ref_value))
-            if target_vis_id and target_vis_id != vis_id:
-                # Add reference edge (dashed, different color)
-                edges.append(
-                    {
-                        "id": f"{vis_id}->{target_vis_id}:{field_name}",
-                        "from": vis_id,
-                        "to": target_vis_id,
-                        "dashes": True,
-                        "label": field_name,
-                        "font": {"size": 8},
-                    }
-                )
+            # Handle both single references and lists of references
+            ref_ids = []
+            if isinstance(ref_value, list):
+                # List of IDs (e.g., derives_from: ["SOURCE-001", "SOURCE-002"])
+                for item in ref_value:
+                    if isinstance(item, str):
+                        ref_ids.append(item)
+                    elif isinstance(item, dict):
+                        # Embedded object - extract identifier (fallback for old data)
+                        for id_field in ["unique_id", "identifier", "name", "id"]:
+                            if item.get(id_field):
+                                ref_ids.append(str(item[id_field]))
+                                break
+            elif isinstance(ref_value, str):
+                # Single ID reference
+                ref_ids.append(ref_value)
+            elif isinstance(ref_value, dict):
+                # Single embedded object (fallback for old data)
+                for id_field in ["unique_id", "identifier", "name", "id"]:
+                    if ref_value.get(id_field):
+                        ref_ids.append(str(ref_value[id_field]))
+                        break
+
+            # Create edges for each reference
+            for ref_id in ref_ids:
+                target_vis_id = unique_id_to_vis_id.get(ref_id)
+                if target_vis_id and target_vis_id != vis_id:
+                    # Add reference edge (dashed, different color)
+                    edges.append(
+                        {
+                            "id": f"{vis_id}->{target_vis_id}:{field_name}",
+                            "from": vis_id,
+                            "to": target_vis_id,
+                            "dashes": True,
+                            "label": field_name,
+                            "font": {"size": 8},
+                        }
+                    )
 
     return {"nodes": nodes, "edges": edges}
