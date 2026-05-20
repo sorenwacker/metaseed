@@ -64,6 +64,8 @@ nav:
   - Architecture:
       - Overview: architecture/overview.md
       - Model Factory: architecture/model-factory.md
+      - Entity Repository: architecture/entity-repository.md
+      - Dataset Repository: architecture/dataset-repository.md
       - UI Helpers: architecture/ui-helpers.md
   - API Reference:
       - CLI: api/cli.md
