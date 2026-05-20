@@ -71,7 +71,7 @@ nav:
       - CLI: api/cli.md
       - Facade: api/facade.md
       - REST API: api/rest.md
-      - Schema Specs: api/schema-specs.md
+      - Specification Language: api/schema-specs.md
       - Validators: api/validators.md
       - Storage: api/storage.md
   - Development:
