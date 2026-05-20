@@ -193,6 +193,22 @@ class ValidationRuleSpec(BaseModel):
     max_items: int | None = None
 
 
+class OntologyDefinition(BaseModel):
+    """Definition of an ontology used in the profile.
+
+    Attributes:
+        name: Human-readable name (e.g., "Plant Ontology").
+        uri: Namespace URI (e.g., "http://purl.obolibrary.org/obo/po.owl").
+        ols_id: OLS4 identifier for lookups (e.g., "po").
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    uri: str | None = None
+    ols_id: str | None = None
+
+
 class ProfileSpec(BaseModel):
     """Unified profile specification containing all entities.
 
@@ -200,11 +216,13 @@ class ProfileSpec(BaseModel):
     in a single YAML file.
 
     Attributes:
+        spec_version: Specification format version (e.g., "0.1", "0.2").
         version: Profile version (e.g., "1.1").
         name: Profile name (e.g., "MIAPPE").
         display_name: Human-friendly name for UI (e.g., "MIAPPE").
         description: Description of the profile.
         ontology: Base ontology used (e.g., "PPEO").
+        ontologies: Dictionary of ontology prefix to definition (spec_version 0.2+).
         root_entity: Primary entity type for this profile (e.g., "Investigation").
         validation_rules: Cross-entity validation rules.
         entities: Dictionary of entity name to definition.
@@ -212,11 +230,13 @@ class ProfileSpec(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    spec_version: str = "0.1"
     version: str
     name: str
     display_name: str | None = None
     description: str = ""
     ontology: str | None = None
+    ontologies: dict[str, OntologyDefinition] | None = None
     root_entity: str = "Investigation"
     validation_rules: list[ValidationRuleSpec] = []
     entities: dict[str, EntityDefSpec] = {}

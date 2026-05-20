@@ -7,12 +7,19 @@ Metaseed uses a YAML-based specification language to define metadata schemas. Sp
 A specification (spec) defines a complete metadata standard. Metaseed includes built-in specs for MIAPPE, ISA, DiSSCo, Darwin Core, and others. You can create custom specs using the Spec Builder UI or by writing YAML directly.
 
 ```yaml
+spec_version: "0.2"
 name: my-profile
 version: "1.0"
 display_name: My Profile
 description: Custom metadata schema for my project
 root_entity: Project
 ontology: myonto
+
+ontologies:
+  OBI:
+    name: Ontology for Biomedical Investigations
+    uri: http://purl.obolibrary.org/obo/obi.owl
+    ols_id: obi
 
 entities:
   Project:
@@ -48,14 +55,55 @@ validation_rules:
 
 | Field | Required | Description |
 |-------|----------|-------------|
+| `spec_version` | no | Specification format version (default: "0.1") |
 | `name` | yes | Profile identifier (lowercase, hyphens) |
 | `version` | yes | Version string (e.g., "1.0", "2.1") |
 | `display_name` | no | Human-friendly name for UI |
 | `description` | no | Profile description |
 | `ontology` | no | Base ontology prefix (e.g., PPEO, OBI) |
+| `ontologies` | no | Dictionary of ontology definitions (spec_version 0.2+) |
 | `root_entity` | no | Primary entity type (default: "Investigation") |
 | `entities` | yes | Dictionary of entity definitions |
 | `validation_rules` | no | Cross-entity validation rules |
+
+## Specification Format Versions
+
+The `spec_version` field indicates which version of the specification language format is used. This is distinct from the profile's own `version` field.
+
+| spec_version | Description |
+|--------------|-------------|
+| `0.1` | Initial format. Implicit default for existing specs. |
+| `0.2` | Adds `ontologies` section for structured ontology definitions. |
+
+Existing specs without `spec_version` are automatically treated as version `0.1`.
+
+## Ontologies Section
+
+The `ontologies` section (spec_version 0.2+) defines ontologies used in the profile. Each entry maps an ontology prefix to its definition.
+
+```yaml
+ontologies:
+  OBI:
+    name: Ontology for Biomedical Investigations
+    uri: http://purl.obolibrary.org/obo/obi.owl
+    ols_id: obi
+  ENVO:
+    name: Environment Ontology
+    uri: http://purl.obolibrary.org/obo/envo.owl
+    ols_id: envo
+  PO:
+    name: Plant Ontology
+    uri: http://purl.obolibrary.org/obo/po.owl
+    ols_id: po
+```
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | yes | Human-readable ontology name |
+| `uri` | no | Namespace URI for the ontology |
+| `ols_id` | no | OLS4 identifier for lookups via the ontology tools |
+
+The `ols_id` enables integration with the OLS4 ontology lookup tools. When defined, users can search for terms within specific ontologies referenced by the profile.
 
 ## Entities
 

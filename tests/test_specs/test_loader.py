@@ -314,3 +314,55 @@ class TestISAProfile:
         assert "filename" in field_names
         assert "measurement_type" in field_names
         assert "technology_type" in field_names
+
+
+class TestSpecVersionBackwardCompatibility:
+    """Tests for spec_version backward compatibility."""
+
+    @pytest.fixture
+    def loader(self) -> SpecLoader:
+        """Create a spec loader instance."""
+        return SpecLoader()
+
+    def test_existing_profiles_have_default_spec_version(self, loader: SpecLoader) -> None:
+        """Existing profiles without spec_version get default 0.1."""
+        profile = loader.load_profile(version="1.1", profile="miappe")
+        assert profile.spec_version == "0.1"
+
+    def test_isa_profile_has_default_spec_version(self, loader: SpecLoader) -> None:
+        """ISA profile without spec_version gets default 0.1."""
+        profile = loader.load_profile(version="1.0", profile="isa")
+        assert profile.spec_version == "0.1"
+
+    def test_profile_with_explicit_spec_version(self, tmp_path: Path) -> None:
+        """Profile with explicit spec_version uses that value."""
+        content = """
+spec_version: "0.2"
+name: test-profile
+version: "1.0"
+ontologies:
+  OBI:
+    name: Ontology for Biomedical Investigations
+    ols_id: obi
+entities:
+  Sample:
+    fields:
+      - name: id
+        type: string
+        required: true
+"""
+        # Create profile structure
+        profile_dir = tmp_path / "test-profile" / "1.0"
+        profile_dir.mkdir(parents=True)
+        (profile_dir / "profile.yaml").write_text(content)
+
+        # Create loader pointing to tmp_path
+        loader = SpecLoader(profile="test-profile")
+        # Override user specs dir to use our tmp_path
+        loader._user_specs_dir = tmp_path
+
+        profile = loader.load_profile(version="1.0", profile="test-profile")
+        assert profile.spec_version == "0.2"
+        assert profile.ontologies is not None
+        assert "OBI" in profile.ontologies
+        assert profile.ontologies["OBI"].ols_id == "obi"

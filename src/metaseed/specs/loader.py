@@ -114,6 +114,11 @@ class SpecLoader:
             if data is None:
                 logger.warning("Empty profile file: %s", profile_path)
                 return None
+
+            # Set default spec_version for backward compatibility with old specs
+            if "spec_version" not in data:
+                data["spec_version"] = "0.1"
+
             loaded_profile = ProfileSpec.model_validate(data)
             self._profile_cache[cache_key] = loaded_profile
             logger.debug(

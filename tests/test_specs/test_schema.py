@@ -5,9 +5,12 @@ from pydantic import ValidationError
 
 from metaseed.specs.schema import (
     Constraints,
+    EntityDefSpec,
     EntitySpec,
     FieldSpec,
     FieldType,
+    OntologyDefinition,
+    ProfileSpec,
 )
 
 
@@ -231,3 +234,116 @@ class TestEntitySpec:
         optional = spec.get_optional_fields()
         assert len(optional) == 1
         assert optional[0].name == "optional_field"
+
+
+class TestOntologyDefinition:
+    """Tests for OntologyDefinition model."""
+
+    def test_full_definition(self) -> None:
+        """OntologyDefinition with all fields."""
+        ont = OntologyDefinition(
+            name="Plant Ontology",
+            uri="http://purl.obolibrary.org/obo/po.owl",
+            ols_id="po",
+        )
+        assert ont.name == "Plant Ontology"
+        assert ont.uri == "http://purl.obolibrary.org/obo/po.owl"
+        assert ont.ols_id == "po"
+
+    def test_minimal_definition(self) -> None:
+        """OntologyDefinition with only required name field."""
+        ont = OntologyDefinition(name="Custom Ontology")
+        assert ont.name == "Custom Ontology"
+        assert ont.uri is None
+        assert ont.ols_id is None
+
+    def test_missing_name_raises(self) -> None:
+        """Missing name raises ValidationError."""
+        with pytest.raises(ValidationError):
+            OntologyDefinition(uri="http://example.org")
+
+    def test_extra_fields_forbidden(self) -> None:
+        """Extra fields are rejected."""
+        with pytest.raises(ValidationError):
+            OntologyDefinition(name="Test", extra_field="value")
+
+
+class TestProfileSpecVersioning:
+    """Tests for ProfileSpec spec_version and ontologies fields."""
+
+    def test_default_spec_version(self) -> None:
+        """ProfileSpec defaults to spec_version 0.1."""
+        profile = ProfileSpec(
+            name="test",
+            version="1.0",
+            entities={
+                "Sample": EntityDefSpec(
+                    fields=[
+                        FieldSpec(name="id", type=FieldType.STRING, required=True),
+                    ]
+                )
+            },
+        )
+        assert profile.spec_version == "0.1"
+
+    def test_explicit_spec_version(self) -> None:
+        """ProfileSpec with explicit spec_version."""
+        profile = ProfileSpec(
+            spec_version="0.2",
+            name="test",
+            version="1.0",
+            entities={},
+        )
+        assert profile.spec_version == "0.2"
+
+    def test_ontologies_section(self) -> None:
+        """ProfileSpec with ontologies section."""
+        profile = ProfileSpec(
+            spec_version="0.2",
+            name="test",
+            version="1.0",
+            ontologies={
+                "OBI": OntologyDefinition(
+                    name="Ontology for Biomedical Investigations",
+                    uri="http://purl.obolibrary.org/obo/obi.owl",
+                    ols_id="obi",
+                ),
+                "ENVO": OntologyDefinition(
+                    name="Environment Ontology",
+                    ols_id="envo",
+                ),
+            },
+            entities={},
+        )
+        assert profile.ontologies is not None
+        assert len(profile.ontologies) == 2
+        assert profile.ontologies["OBI"].name == "Ontology for Biomedical Investigations"
+        assert profile.ontologies["OBI"].ols_id == "obi"
+        assert profile.ontologies["ENVO"].ols_id == "envo"
+
+    def test_ontologies_defaults_to_none(self) -> None:
+        """ProfileSpec without ontologies section has None."""
+        profile = ProfileSpec(
+            name="test",
+            version="1.0",
+            entities={},
+        )
+        assert profile.ontologies is None
+
+    def test_profile_with_ontology_and_ontologies(self) -> None:
+        """ProfileSpec can have both ontology and ontologies fields."""
+        profile = ProfileSpec(
+            spec_version="0.2",
+            name="test",
+            version="1.0",
+            ontology="PPEO",
+            ontologies={
+                "PPEO": OntologyDefinition(
+                    name="Plant Phenotyping Experiment Ontology",
+                    ols_id="ppeo",
+                ),
+            },
+            entities={},
+        )
+        assert profile.ontology == "PPEO"
+        assert profile.ontologies["PPEO"].ols_id == "ppeo"

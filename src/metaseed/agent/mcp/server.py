@@ -154,6 +154,7 @@ def create_server(name: str = "metaseed") -> FastMCP:
     from metaseed.agent.mcp.tools.datasets import register_dataset_tools
     from metaseed.agent.mcp.tools.entities import register_entity_tools
     from metaseed.agent.mcp.tools.extraction import register_extraction_tools
+    from metaseed.agent.mcp.tools.ontology import register_ontology_tools
     from metaseed.agent.mcp.tools.profiles import register_profile_tools
     from metaseed.agent.mcp.tools.validation import register_validation_tools
 
@@ -162,6 +163,7 @@ def create_server(name: str = "metaseed") -> FastMCP:
     register_entity_tools(mcp, get_entity_service)
     register_extraction_tools(mcp, _parser_registry)
     register_validation_tools(mcp, get_mcp_state)
+    register_ontology_tools(mcp)
 
     # =========================================================================
     # Prompts - Guided workflows
