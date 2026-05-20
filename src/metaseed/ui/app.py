@@ -56,9 +56,12 @@ def create_app(state: AppState | None = None, base_url: str = "") -> FastAPI:
     app.state.base_url = base_url
 
     # Share state with MCP server so both use the same data
-    from metaseed.agent.mcp.server import set_mcp_state
+    from metaseed.agent.mcp.server import mcp, set_mcp_state
 
     set_mcp_state(state)
+
+    # Mount MCP server at /mcp for HTTP/SSE transport
+    app.mount("/mcp", mcp.sse_app())
 
     templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
