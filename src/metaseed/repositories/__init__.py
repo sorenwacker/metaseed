@@ -6,9 +6,11 @@ entity and dataset persistence, following the same DI pattern as SpecPersistence
 
 from metaseed.repositories.base import EntityData, EntityRepository
 from metaseed.repositories.dataset_repository import (
+    AsyncDatasetRepository,
     DatasetData,
     DatasetInfo,
     DatasetRepository,
+    validate_dataset_name,
 )
 from metaseed.repositories.file import FileEntityRepository
 from metaseed.repositories.filesystem_dataset import FilesystemDatasetRepository
@@ -24,6 +26,7 @@ from metaseed.repositories.helpers import (
 from metaseed.repositories.memory import MemoryEntityRepository
 
 __all__ = [
+    "AsyncDatasetRepository",
     "DatasetData",
     "DatasetInfo",
     "DatasetRepository",
@@ -39,4 +42,5 @@ __all__ = [
     "get_identifier",
     "get_identifier_from_instance",
     "update_parent_reference",
+    "validate_dataset_name",
 ]
