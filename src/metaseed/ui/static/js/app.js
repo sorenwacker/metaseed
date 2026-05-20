@@ -1036,6 +1036,19 @@ function updateGraphIncremental(newNodes, newEdges) {
         }
     }
 
+    // Check if any changes needed
+    var hasChanges = nodesToAdd.length > 0 || nodesToRemove.length > 0 ||
+                     edgesToAdd.length > 0 || edgesToRemove.length > 0;
+
+    if (!hasChanges) {
+        return false;
+    }
+
+    // Disable physics during update to preserve positions
+    if (graphNetwork) {
+        graphNetwork.setOptions({ physics: { enabled: false } });
+    }
+
     // Apply changes
     if (nodesToRemove.length > 0) {
         graphData.nodes.remove(nodesToRemove);
@@ -1050,8 +1063,7 @@ function updateGraphIncremental(newNodes, newEdges) {
         graphData.edges.add(edgesToAdd);
     }
 
-    return nodesToAdd.length > 0 || nodesToRemove.length > 0 ||
-           edgesToAdd.length > 0 || edgesToRemove.length > 0;
+    return true;
 }
 
 // Entity type to display mapping (assigned dynamically)
