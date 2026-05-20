@@ -1,0 +1,209 @@
+"""Filesystem implementation of DatasetRepository.
+
+Stores datasets as JSON files in a configurable directory.
+This is the default implementation used by metaseed standalone.
+"""
+
+from __future__ import annotations
+
+import json
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+
+from metaseed.repositories.dataset_repository import (
+    DatasetData,
+    DatasetInfo,
+    DatasetRepository,
+)
+
+DEFAULT_DATASETS_DIR = Path.home() / ".local" / "share" / "metaseed" / "datasets"
+
+
+class FilesystemDatasetRepository(DatasetRepository):
+    """Filesystem-based dataset storage.
+
+    Stores each dataset as a JSON file in the configured directory.
+    File name is {dataset_name}.json.
+    """
+
+    def __init__(self, datasets_dir: Path | None = None):
+        """Initialize filesystem repository.
+
+        Args:
+            datasets_dir: Directory for dataset files. Defaults to
+                ~/.local/share/metaseed/datasets
+        """
+        self._dir = datasets_dir or DEFAULT_DATASETS_DIR
+        self._ensure_dir()
+
+    def _ensure_dir(self) -> None:
+        """Ensure the datasets directory exists."""
+        self._dir.mkdir(parents=True, exist_ok=True)
+
+    def _get_path(self, name: str) -> Path:
+        """Get the file path for a dataset."""
+        return self._dir / f"{name}.json"
+
+    def list(self) -> list[DatasetInfo]:
+        """List all saved datasets.
+
+        Returns:
+            List of DatasetInfo summaries, sorted by modified time (most recent first).
+        """
+        self._ensure_dir()
+        datasets = []
+
+        for path in sorted(self._dir.glob("*.json")):
+            try:
+                with open(path) as f:
+                    data = json.load(f)
+
+                entity_count = len(data.get("entities", []))
+
+                datasets.append(
+                    DatasetInfo(
+                        name=path.stem,
+                        profile=data.get("profile", "unknown"),
+                        version=data.get("version", "unknown"),
+                        entity_count=entity_count,
+                        modified=data.get("modified", str(path.stat().st_mtime)),
+                    )
+                )
+            except (json.JSONDecodeError, OSError):
+                continue
+
+        datasets.sort(key=lambda d: d.modified, reverse=True)
+        return datasets
+
+    def save(self, name: str, data: DatasetData) -> DatasetInfo:
+        """Save a dataset to a JSON file.
+
+        Args:
+            name: Dataset name.
+            data: Dataset contents to save.
+
+        Returns:
+            DatasetInfo for the saved dataset.
+
+        Raises:
+            ValueError: If name is invalid.
+        """
+        error = self.validate_name(name)
+        if error:
+            raise ValueError(error)
+
+        self._ensure_dir()
+        path = self._get_path(name)
+
+        modified = data.modified or datetime.now().isoformat()
+
+        file_data = {
+            "name": name,
+            "profile": data.profile,
+            "version": data.version,
+            "entities": data.entities,
+            "modified": modified,
+        }
+
+        with open(path, "w") as f:
+            json.dump(file_data, f, indent=2, default=str)
+
+        return DatasetInfo(
+            name=name,
+            profile=data.profile,
+            version=data.version,
+            entity_count=len(data.entities),
+            modified=modified,
+        )
+
+    def load(self, name: str) -> DatasetData:
+        """Load a dataset from a JSON file.
+
+        Args:
+            name: Dataset name to load.
+
+        Returns:
+            DatasetData with full contents.
+
+        Raises:
+            FileNotFoundError: If dataset doesn't exist.
+        """
+        path = self._get_path(name)
+
+        if not path.exists():
+            raise FileNotFoundError(f"Dataset not found: {name}")
+
+        with open(path) as f:
+            data = json.load(f)
+
+        return DatasetData(
+            name=data.get("name", name),
+            profile=data.get("profile", "unknown"),
+            version=data.get("version", "unknown"),
+            entities=data.get("entities", []),
+            modified=data.get("modified", ""),
+        )
+
+    def delete(self, name: str) -> bool:
+        """Delete a dataset file.
+
+        Args:
+            name: Dataset name to delete.
+
+        Returns:
+            True if deleted, False if not found.
+        """
+        path = self._get_path(name)
+
+        if path.exists():
+            path.unlink()
+            return True
+        return False
+
+    def exists(self, name: str) -> bool:
+        """Check if a dataset file exists.
+
+        Args:
+            name: Dataset name to check.
+
+        Returns:
+            True if exists, False otherwise.
+        """
+        return self._get_path(name).exists()
+
+
+def serialize_tree_node(node: Any, parent_unique_id: str | None = None) -> list[dict[str, Any]]:
+    """Serialize a TreeNode and its children to entity dicts.
+
+    Uses unique_id for parent references for stability across reloads.
+
+    Args:
+        node: TreeNode to serialize.
+        parent_unique_id: Parent's unique_id for relationship tracking.
+
+    Returns:
+        List of serialized entity dicts (node and all descendants).
+    """
+    entities: list[dict[str, Any]] = []
+
+    if not node.instance:
+        return entities
+
+    if hasattr(node.instance, "model_dump"):
+        data = node.instance.model_dump(exclude_none=True)
+    else:
+        return entities
+
+    data["_type"] = node.entity_type
+    if parent_unique_id:
+        data["_parent_unique_id"] = parent_unique_id
+
+    entities.append(data)
+
+    node_unique_id = data.get("unique_id")
+
+    for child in node.children:
+        entities.extend(serialize_tree_node(child, node_unique_id))
+
+    return entities

@@ -1,0 +1,134 @@
+"""Abstract repository interface for dataset storage.
+
+This module defines the abstract interface for dataset CRUD operations,
+following the same DI pattern as EntityRepository. Implementations handle
+the actual storage mechanism (filesystem, database, etc.).
+
+A dataset is a named collection of entities with metadata about the
+profile, version, and modification time.
+"""
+
+from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
+from typing import Any
+
+
+@dataclass
+class DatasetInfo:
+    """Summary information about a dataset.
+
+    Used for listing datasets without loading full entity data.
+    """
+
+    name: str
+    profile: str
+    version: str
+    entity_count: int
+    modified: str
+
+
+@dataclass
+class DatasetData:
+    """Full dataset contents including entities.
+
+    This is the transfer object for saving and loading datasets.
+    """
+
+    name: str
+    profile: str
+    version: str
+    entities: list[dict[str, Any]] = field(default_factory=list)
+    modified: str = ""
+
+
+class DatasetRepository(ABC):
+    """Abstract interface for dataset persistence.
+
+    This interface defines the contract for dataset CRUD operations,
+    separating storage concerns from business logic. Implementations
+    may use filesystem, database, or other backends.
+    """
+
+    @abstractmethod
+    def list(self) -> list[DatasetInfo]:
+        """List all saved datasets.
+
+        Returns:
+            List of DatasetInfo summaries, sorted by modified time (most recent first).
+        """
+        pass
+
+    @abstractmethod
+    def save(self, name: str, data: DatasetData) -> DatasetInfo:
+        """Save a dataset.
+
+        Args:
+            name: Dataset name (must be valid per validate_name).
+            data: Dataset contents to save.
+
+        Returns:
+            DatasetInfo for the saved dataset.
+
+        Raises:
+            ValueError: If name is invalid.
+        """
+        pass
+
+    @abstractmethod
+    def load(self, name: str) -> DatasetData:
+        """Load a dataset by name.
+
+        Args:
+            name: Dataset name to load.
+
+        Returns:
+            DatasetData with full contents.
+
+        Raises:
+            FileNotFoundError: If dataset doesn't exist.
+        """
+        pass
+
+    @abstractmethod
+    def delete(self, name: str) -> bool:
+        """Delete a dataset.
+
+        Args:
+            name: Dataset name to delete.
+
+        Returns:
+            True if deleted, False if not found.
+        """
+        pass
+
+    @abstractmethod
+    def exists(self, name: str) -> bool:
+        """Check if a dataset exists.
+
+        Args:
+            name: Dataset name to check.
+
+        Returns:
+            True if exists, False otherwise.
+        """
+        pass
+
+    @staticmethod
+    def validate_name(name: str) -> str | None:
+        """Validate a dataset name.
+
+        Args:
+            name: Dataset name to validate.
+
+        Returns:
+            Error message if invalid, None if valid.
+        """
+        import re
+
+        if not name:
+            return "Dataset name is required"
+        if not re.match(r"^[a-zA-Z0-9][a-zA-Z0-9_-]*$", name):
+            return "Name must start with alphanumeric and contain only letters, numbers, hyphens, underscores"
+        if len(name) > 64:
+            return "Name must be 64 characters or less"
+        return None
