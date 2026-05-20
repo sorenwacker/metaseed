@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
+from metaseed.repositories.dataset_repository import DatasetRepository
 from metaseed.ui.datasets import (
     delete_dataset,
     list_datasets,
@@ -20,7 +21,12 @@ def temp_datasets_dir(tmp_path):
     """Use a temporary directory for datasets."""
     datasets_dir = tmp_path / "datasets"
     datasets_dir.mkdir()
-    with patch("metaseed.ui.datasets.DATASETS_DIR", datasets_dir):
+    with (
+        patch("metaseed.repositories.filesystem_dataset.DEFAULT_DATASETS_DIR", datasets_dir),
+        patch("metaseed.ui.datasets.DATASETS_DIR", datasets_dir),
+        patch("metaseed.ui.dataset_manager._repository", None),
+        patch("metaseed.ui.dataset_manager._default_manager", None),
+    ):
         yield datasets_dir
 
 
@@ -37,7 +43,7 @@ class TestValidateDatasetName:
     def test_empty_name(self):
         """Empty name should fail."""
         assert validate_dataset_name("") is not None
-        assert validate_dataset_name("   ") is not None
+        assert DatasetRepository.validate_name("   ") is not None
 
     def test_invalid_start_char(self):
         """Name starting with invalid char should fail."""
