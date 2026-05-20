@@ -990,21 +990,28 @@ function prepareGraphData(data) {
 function updateGraphIncremental(newNodes, newEdges) {
     if (!graphData || !graphData.nodes || !graphData.edges) return false;
 
+    // Filter new data by visible groups
+    var visibleNewNodes = newNodes.filter(function(n) {
+        return visibleGroups.has(n.group);
+    });
+    var visibleNewNodeIds = new Set(visibleNewNodes.map(function(n) { return n.id; }));
+    var visibleNewEdges = newEdges.filter(function(e) {
+        return visibleNewNodeIds.has(e.from) && visibleNewNodeIds.has(e.to);
+    });
+
     // Build maps of current data
     var currentNodeIds = new Set(graphData.nodes.getIds());
-    var currentEdgeIds = new Set(graphData.edges.getIds());
 
-    // Build maps of new data
-    var newNodeIds = new Set(newNodes.map(function(n) { return n.id; }));
+    // Build maps of new visible data
+    var newNodeIds = new Set(visibleNewNodes.map(function(n) { return n.id; }));
     var newEdgeMap = {};
-    newEdges.forEach(function(e) {
+    visibleNewEdges.forEach(function(e) {
         var edgeId = e.id || (e.from + '->' + e.to);
         newEdgeMap[edgeId] = e;
     });
-    var newEdgeIds = new Set(Object.keys(newEdgeMap));
 
     // Find nodes to add and remove
-    var nodesToAdd = newNodes.filter(function(n) { return !currentNodeIds.has(n.id); });
+    var nodesToAdd = visibleNewNodes.filter(function(n) { return !currentNodeIds.has(n.id); });
     var nodesToRemove = Array.from(currentNodeIds).filter(function(id) { return !newNodeIds.has(id); });
 
     // Find edges to add and remove
@@ -1285,10 +1292,9 @@ function loadGraph() {
             data = prepareGraphData(data);
 
             // If graph exists, update incrementally (don't touch legend)
+            // updateGraphIncremental respects visibleGroups filter
             if (!isFirstLoad) {
                 updateGraphIncremental(data.nodes, data.edges);
-                // Re-apply filter to respect current legend selections
-                filterGraph();
             } else {
                 // Initial render
                 renderGraph(data);
