@@ -12,6 +12,7 @@ from metaseed.repositories.base import EntityData, EntityRepository
 from metaseed.repositories.helpers import (
     find_parent_ref_field,
     get_identifier_from_instance,
+    normalize_reference_fields,
     update_parent_reference,
 )
 
@@ -108,6 +109,9 @@ class MemoryEntityRepository(EntityRepository):
                 if parent_identifier:
                     data[ref_field] = parent_identifier
 
+        # Normalize reference fields (convert embedded objects to IDs)
+        data = normalize_reference_fields(data, helper)
+
         instance = helper.create(**data)
         node = self._state.add_node(entity_type, instance, parent_id=parent_id)
 
@@ -143,6 +147,9 @@ class MemoryEntityRepository(EntityRepository):
         existing = {}
         if node.instance and hasattr(node.instance, "model_dump"):
             existing = node.instance.model_dump(exclude_none=True)
+
+        # Normalize reference fields in update data (convert embedded objects to IDs)
+        data = normalize_reference_fields(data, helper)
 
         merged = {**existing, **data}
         instance = helper.create(**merged)

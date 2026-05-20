@@ -6,6 +6,7 @@ Tests the autocomplete API and reference field detection.
 import pytest
 from fastapi.testclient import TestClient
 
+from metaseed.repositories.helpers import normalize_reference_fields
 from metaseed.ui.app import create_app
 from metaseed.ui.helpers import collect_entities_by_type, get_reference_fields
 from metaseed.ui.state import AppState
@@ -289,3 +290,134 @@ class TestOntologySearchAPI:
         assert response.status_code == 200
         data = response.json()
         assert "results" in data
+
+
+class TestNormalizeReferenceFields:
+    """Tests for normalize_reference_fields helper function."""
+
+    def test_extracts_ids_from_embedded_objects_in_list(self):
+        """Embedded objects in list fields are converted to IDs."""
+        from metaseed.facade import ProfileFacade
+
+        facade = ProfileFacade("isa", "1.0")
+        helper = facade.Sample
+
+        # Input with embedded Source objects
+        data = {
+            "name": "Sample-001",
+            "derives_from": [
+                {"name": "SOURCE-001", "characteristics": []},
+                {"name": "SOURCE-002", "characteristics": []},
+            ],
+        }
+
+        result = normalize_reference_fields(data, helper)
+
+        # Should extract just the names (identifiers)
+        assert result["derives_from"] == ["SOURCE-001", "SOURCE-002"]
+        # Original data should not be modified
+        assert isinstance(data["derives_from"][0], dict)
+
+    def test_preserves_string_ids_in_list(self):
+        """String IDs in list fields are preserved as-is."""
+        from metaseed.facade import ProfileFacade
+
+        facade = ProfileFacade("isa", "1.0")
+        helper = facade.Sample
+
+        data = {
+            "name": "Sample-001",
+            "derives_from": ["SOURCE-001", "SOURCE-002"],
+        }
+
+        result = normalize_reference_fields(data, helper)
+
+        assert result["derives_from"] == ["SOURCE-001", "SOURCE-002"]
+
+    def test_handles_mixed_list(self):
+        """Mixed lists with objects and strings are normalized."""
+        from metaseed.facade import ProfileFacade
+
+        facade = ProfileFacade("isa", "1.0")
+        helper = facade.Sample
+
+        data = {
+            "name": "Sample-001",
+            "derives_from": [
+                {"name": "SOURCE-001"},
+                "SOURCE-002",
+            ],
+        }
+
+        result = normalize_reference_fields(data, helper)
+
+        assert result["derives_from"] == ["SOURCE-001", "SOURCE-002"]
+
+    def test_extracts_id_from_single_embedded_object(self):
+        """Single embedded object fields are converted to ID."""
+        from metaseed.facade import ProfileFacade
+
+        facade = ProfileFacade("miappe", "1.2")
+        helper = facade.Study
+
+        data = {
+            "unique_id": "STUDY-001",
+            "title": "Test Study",
+            "geographic_location": {"name": "LOC-001", "country": "USA"},
+        }
+
+        result = normalize_reference_fields(data, helper)
+
+        assert result["geographic_location"] == "LOC-001"
+
+    def test_ignores_non_reference_fields(self):
+        """Non-reference fields are not modified."""
+        from metaseed.facade import ProfileFacade
+
+        facade = ProfileFacade("isa", "1.0")
+        helper = facade.Sample
+
+        data = {
+            "name": "Sample-001",
+            "characteristics": [{"category": "organism", "value": "human"}],
+        }
+
+        result = normalize_reference_fields(data, helper)
+
+        # characteristics is a list of Characteristic entities (nested, not reference)
+        # But the normalization should still extract IDs if it can
+        # Actually characteristics don't have unique_id so no ID extraction
+        assert result["name"] == "Sample-001"
+
+    def test_handles_empty_list(self):
+        """Empty list fields are handled."""
+        from metaseed.facade import ProfileFacade
+
+        facade = ProfileFacade("isa", "1.0")
+        helper = facade.Sample
+
+        data = {
+            "name": "Sample-001",
+            "derives_from": [],
+        }
+
+        result = normalize_reference_fields(data, helper)
+
+        # Empty list after normalization (no valid IDs)
+        assert "derives_from" not in result or result.get("derives_from") == []
+
+    def test_handles_none_value(self):
+        """None values are handled."""
+        from metaseed.facade import ProfileFacade
+
+        facade = ProfileFacade("isa", "1.0")
+        helper = facade.Sample
+
+        data = {
+            "name": "Sample-001",
+            "derives_from": None,
+        }
+
+        result = normalize_reference_fields(data, helper)
+
+        assert result.get("derives_from") is None

@@ -6,7 +6,11 @@ to handle common operations like finding parent references and deriving labels.
 
 from __future__ import annotations
 
-from typing import Any
+import copy
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from metaseed.facade import EntityHelper
 
 # Common field names for entity identification
 IDENTIFIER_FIELDS = ["unique_id", "identifier", "name", "id", "filename"]
@@ -205,3 +209,56 @@ def update_parent_reference(
         parent_data[target_field] = refs
 
     return target_field
+
+
+def normalize_reference_fields(data: dict[str, Any], helper: EntityHelper) -> dict[str, Any]:
+    """Normalize reference fields in entity data to store IDs instead of embedded objects.
+
+    When an MCP agent creates entities, it may pass embedded objects for reference
+    fields (e.g., derives_from: [{name: "SOURCE-001", ...}]). This function
+    normalizes such fields to store just the identifiers (e.g., ["SOURCE-001"]).
+
+    Args:
+        data: Entity data dictionary (will NOT be modified in-place).
+        helper: EntityHelper for the entity type.
+
+    Returns:
+        New dictionary with normalized reference fields.
+    """
+    # Make a shallow copy to avoid modifying input
+    result = copy.copy(data)
+
+    # Get fields that reference other entities
+    nested_fields = helper.nested_fields
+
+    for field_name in nested_fields:
+        if field_name not in result:
+            continue
+
+        value = result[field_name]
+        if value is None:
+            continue
+
+        # Handle list fields
+        if isinstance(value, list):
+            normalized_list = []
+            for item in value:
+                if isinstance(item, dict):
+                    # Extract identifier from embedded object
+                    item_id = get_identifier(item)
+                    if item_id:
+                        normalized_list.append(item_id)
+                elif isinstance(item, str):
+                    # Already an ID
+                    normalized_list.append(item)
+            if normalized_list:
+                result[field_name] = normalized_list
+
+        # Handle single entity fields
+        elif isinstance(value, dict):
+            # Extract identifier from embedded object
+            item_id = get_identifier(value)
+            if item_id:
+                result[field_name] = item_id
+
+    return result
