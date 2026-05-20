@@ -68,12 +68,8 @@ document.addEventListener('htmx:afterRequest', function(e) {
 var graphPollingInterval = null;
 
 function startGraphPolling() {
-    if (graphPollingInterval) return;
-    graphPollingInterval = setInterval(function() {
-        if (typeof loadGraph === 'function') {
-            loadGraph();
-        }
-    }, 5000);
+    // Polling disabled - UI and MCP share state, no need for constant refresh
+    // Graph updates when user interacts or via htmx swaps
 }
 
 function stopGraphPolling() {
