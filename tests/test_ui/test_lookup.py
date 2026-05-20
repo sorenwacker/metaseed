@@ -252,3 +252,40 @@ class TestTableRowWithLookup:
         response = client.post("/table/Investigation/studies/row")
         assert response.status_code == 200
         # Row should be rendered successfully
+
+
+class TestOntologySearchAPI:
+    """Tests for the ontology search API endpoint."""
+
+    def test_ontology_search_returns_json(self, client):
+        """Ontology search endpoint returns valid JSON."""
+        response = client.get("/api/ontology/search?q=temperature")
+        assert response.status_code == 200
+        data = response.json()
+        assert "results" in data
+
+    def test_ontology_search_empty_query(self, client):
+        """Empty query returns empty results."""
+        response = client.get("/api/ontology/search?q=")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["results"] == []
+
+    def test_ontology_search_returns_expected_fields(self, client):
+        """Results include value, label, and ontology fields."""
+        response = client.get("/api/ontology/search?q=temperature")
+        assert response.status_code == 200
+        data = response.json()
+
+        if data["results"]:
+            result = data["results"][0]
+            assert "value" in result
+            assert "label" in result
+            assert "ontology" in result
+
+    def test_ontology_search_with_ontology_filter(self, client):
+        """Can filter by specific ontology."""
+        response = client.get("/api/ontology/search?q=temperature&ontology=pato")
+        assert response.status_code == 200
+        data = response.json()
+        assert "results" in data

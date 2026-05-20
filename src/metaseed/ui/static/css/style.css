@@ -1801,6 +1801,154 @@ body::before {
 }
 
 /* ============================================
+   ONTOLOGY LOOKUP STYLES
+   ============================================ */
+
+/* Ontology autocomplete dropdown */
+.ontology-autocomplete {
+    min-width: 300px;
+    max-width: 450px;
+}
+
+.ontology-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-xs);
+    padding: var(--space-sm) var(--space-md);
+}
+
+.ontology-item-main {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-sm);
+    width: 100%;
+}
+
+.ontology-term-id {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--clr-forest);
+    background: var(--clr-success-bg);
+    padding: 1px 6px;
+    border-radius: var(--radius-sm);
+}
+
+.ontology-term-label {
+    font-weight: 500;
+    color: var(--clr-ink);
+    font-size: 0.875rem;
+}
+
+.ontology-item-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+    width: 100%;
+}
+
+.ontology-source {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--clr-moss);
+    background: var(--clr-paper);
+    padding: 1px 4px;
+    border-radius: var(--radius-sm);
+    text-transform: uppercase;
+}
+
+.ontology-description {
+    font-size: 0.75rem;
+    color: var(--clr-ink-light);
+    line-height: 1.3;
+}
+
+/* Ontology modal specific styles */
+.ontology-modal-content {
+    max-width: 600px;
+}
+
+.ontology-results {
+    max-height: 350px;
+}
+
+.ontology-modal-item {
+    flex-direction: column;
+    align-items: stretch;
+    padding: var(--space-md);
+    gap: var(--space-sm);
+}
+
+.ontology-modal-item-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+.ontology-modal-item-header {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+}
+
+.ontology-modal-item-meta {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-sm);
+}
+
+.ontology-source-badge {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: white;
+    background: var(--clr-moss);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    text-transform: uppercase;
+    flex-shrink: 0;
+}
+
+/* Ontology chip styling */
+.ontology-chip {
+    background: var(--clr-success-bg);
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+}
+
+/* Input with lookup button container */
+.input-with-lookup {
+    display: flex;
+    gap: var(--space-xs);
+    align-items: stretch;
+}
+
+.input-with-lookup .form-input {
+    flex: 1;
+}
+
+.ontology-lookup-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    padding: 0;
+    border: 1px solid var(--clr-parchment);
+    border-radius: var(--radius-md);
+    background: var(--clr-paper);
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all var(--transition-fast);
+}
+
+.ontology-lookup-btn:hover {
+    background: var(--clr-sky);
+    border-color: var(--clr-sky);
+}
+
+/* ============================================
    INLINE TABLES
    ============================================ */
 

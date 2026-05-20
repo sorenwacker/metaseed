@@ -479,3 +479,70 @@ def register_api_routes(
         if manager.delete_dataset(name):
             return JSONResponse(content={"status": "deleted"})
         return JSONResponse(status_code=404, content={"error": "Dataset not found"})
+
+    # =========================================================================
+    # Ontology Lookup
+    # =========================================================================
+
+    @app.get("/api/ontology/search")
+    async def search_ontology_terms(
+        q: str = Query(default="", description="Search query"),
+        ontology: str | None = Query(default=None, description="Ontology ID to filter"),
+    ) -> JSONResponse:
+        """Search OLS4 for ontology terms.
+
+        Args:
+            q: Search query to find matching ontology terms.
+            ontology: Optional ontology ID to restrict search (e.g., "pato", "go").
+
+        Returns:
+            JSON with results list containing value, label, description, and ontology.
+        """
+        from metaseed.agent.mcp.tools.ontology import _make_request
+
+        if not q.strip():
+            return JSONResponse(content={"results": []})
+
+        params = {
+            "q": q,
+            "rows": 20,
+            "fieldList": "iri,label,short_form,obo_id,ontology_name,ontology_prefix,description",
+        }
+
+        if ontology:
+            params["ontology"] = ontology.lower()
+
+        data = _make_request("/search", params)
+        if data is None:
+            return JSONResponse(
+                status_code=502,
+                content={"error": "Failed to search OLS4"},
+            )
+
+        response = data.get("response", {})
+        docs = response.get("docs", [])
+
+        results = []
+        seen = set()
+        for doc in docs:
+            term_id = doc.get("obo_id") or doc.get("short_form")
+            if not term_id or term_id in seen:
+                continue
+            seen.add(term_id)
+
+            result = {
+                "value": term_id,
+                "label": doc.get("label", term_id),
+                "ontology": doc.get("ontology_prefix") or doc.get("ontology_name"),
+            }
+
+            if doc.get("description"):
+                descriptions = doc["description"]
+                if isinstance(descriptions, list) and descriptions:
+                    result["description"] = descriptions[0]
+                elif isinstance(descriptions, str):
+                    result["description"] = descriptions
+
+            results.append(result)
+
+        return JSONResponse(content={"results": results})

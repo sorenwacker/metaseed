@@ -31,13 +31,19 @@ document.addEventListener('htmx:afterSwap', function(e) {
 // Handle input typing for autocomplete
 function handleLookupInput(e) {
     var input = e.target;
+    var lookupType = input.dataset.lookupType;
     var entityType = input.dataset.lookup;
     var query = input.value;
 
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(function() {
         if (query.length > 0) {
-            fetchLookupSuggestions(input, entityType, query);
+            if (lookupType === 'ontology') {
+                var ontologyId = input.dataset.ontologyId || null;
+                fetchOntologySuggestions(input, query, ontologyId);
+            } else {
+                fetchLookupSuggestions(input, entityType, query);
+            }
         } else {
             hideAutocomplete();
         }
@@ -47,11 +53,17 @@ function handleLookupInput(e) {
 // Handle focus to show existing suggestions
 function handleLookupFocus(e) {
     var input = e.target;
+    var lookupType = input.dataset.lookupType;
     var entityType = input.dataset.lookup;
     var query = input.value;
 
     if (query.length > 0) {
-        fetchLookupSuggestions(input, entityType, query);
+        if (lookupType === 'ontology') {
+            var ontologyId = input.dataset.ontologyId || null;
+            fetchOntologySuggestions(input, query, ontologyId);
+        } else {
+            fetchLookupSuggestions(input, entityType, query);
+        }
     }
 }
 
@@ -67,6 +79,7 @@ function handleLookupBlur(e) {
 // Handle keyboard navigation in autocomplete
 function handleLookupKeydown(e) {
     var input = e.target;
+    var lookupType = input.dataset.lookupType;
     var entityType = input.dataset.lookup;
 
     // Tab key: open the lookup modal for better UX
@@ -78,7 +91,12 @@ function handleLookupKeydown(e) {
             inputId = 'lookup-input-' + Date.now();
             input.setAttribute('data-testid', inputId);
         }
-        openLookupModal(entityType, inputId);
+        if (lookupType === 'ontology') {
+            var ontologyId = input.dataset.ontologyId || null;
+            openOntologyModal(inputId, ontologyId);
+        } else {
+            openLookupModal(entityType, inputId);
+        }
         return;
     }
 
@@ -151,6 +169,81 @@ function fetchLookupSuggestions(input, entityType, query) {
         .catch(function(error) {
             console.error('Lookup error:', error);
         });
+}
+
+// Fetch ontology suggestions from OLS4 API
+function fetchOntologySuggestions(input, query, ontologyId) {
+    var url = '/api/ontology/search?q=' + encodeURIComponent(query);
+    if (ontologyId) {
+        url += '&ontology=' + encodeURIComponent(ontologyId);
+    }
+
+    fetch(url)
+        .then(function(response) {
+            return response.json();
+        })
+        .then(function(data) {
+            showOntologyAutocomplete(input, data.results);
+        })
+        .catch(function(error) {
+            console.error('Ontology lookup error:', error);
+        });
+}
+
+// Show ontology autocomplete dropdown with enhanced display
+function showOntologyAutocomplete(input, results) {
+    hideAutocomplete();
+
+    if (!results || results.length === 0) return;
+
+    var dropdown = document.createElement('div');
+    dropdown.className = 'autocomplete-dropdown ontology-autocomplete';
+    dropdown.setAttribute('data-testid', 'ontology-autocomplete-dropdown');
+
+    results.forEach(function(result, index) {
+        var item = document.createElement('div');
+        item.className = 'autocomplete-item ontology-item';
+        if (index === 0) item.classList.add('active');
+        item.dataset.value = result.value;
+
+        var html = '<div class="ontology-item-main">' +
+            '<span class="ontology-term-id">' + escapeHtml(result.value) + '</span>' +
+            '<span class="ontology-term-label">' + escapeHtml(result.label) + '</span>' +
+            '</div>';
+
+        if (result.ontology || result.description) {
+            html += '<div class="ontology-item-meta">';
+            if (result.ontology) {
+                html += '<span class="ontology-source">' + escapeHtml(result.ontology) + '</span>';
+            }
+            if (result.description) {
+                var desc = result.description.length > 80
+                    ? result.description.substring(0, 80) + '...'
+                    : result.description;
+                html += '<span class="ontology-description">' + escapeHtml(desc) + '</span>';
+            }
+            html += '</div>';
+        }
+
+        item.innerHTML = html;
+
+        item.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            selectLookupValue(input, result.value);
+        });
+
+        dropdown.appendChild(item);
+    });
+
+    // Position dropdown below input
+    var wrapper = input.closest('.cell-input-wrapper');
+    if (wrapper) {
+        wrapper.appendChild(dropdown);
+    } else {
+        input.parentElement.appendChild(dropdown);
+    }
+
+    activeAutocomplete = dropdown;
 }
 
 // Show simple autocomplete dropdown (no inline search - use Tab for modal)
@@ -399,6 +492,16 @@ document.addEventListener('click', function(e) {
         var inputId = btn.dataset.input;
         openLookupModal(entityType, inputId);
     }
+
+    // Handle ontology lookup button clicks
+    var ontologyBtn = e.target.closest('.ontology-lookup-btn');
+    if (ontologyBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        var inputId = ontologyBtn.dataset.input;
+        var ontologyId = ontologyBtn.dataset.ontologyId || null;
+        openOntologyModal(inputId, ontologyId);
+    }
 });
 
 // Close modal on Escape key
@@ -408,5 +511,248 @@ document.addEventListener('keydown', function(e) {
         if (modal && !modal.classList.contains('hidden')) {
             closeLookupModal();
         }
+        var ontologyModal = document.getElementById('ontology-modal');
+        if (ontologyModal && !ontologyModal.classList.contains('hidden')) {
+            closeOntologyModal();
+        }
     }
 });
+
+// ============================================
+// Ontology Modal
+// ============================================
+
+var ontologyModalInput = null;
+var ontologyModalOntologyId = null;
+var ontologyModalSelectedValues = new Set();
+
+// Open ontology modal
+function openOntologyModal(inputId, ontologyId) {
+    var input = document.querySelector('[data-testid="' + inputId + '"]');
+    if (!input) return;
+
+    ontologyModalInput = input;
+    ontologyModalOntologyId = ontologyId;
+    ontologyModalSelectedValues.clear();
+
+    var modal = document.getElementById('ontology-modal');
+    if (!modal) {
+        // Create modal if it doesn't exist
+        modal = createOntologyModal();
+        document.body.appendChild(modal);
+    }
+
+    var ontologyLabel = document.getElementById('ontology-modal-ontology');
+    var searchInput = document.getElementById('ontology-modal-search');
+    var resultsDiv = document.getElementById('ontology-modal-results');
+
+    ontologyLabel.textContent = ontologyId ? ontologyId.toUpperCase() : 'All Ontologies';
+    searchInput.value = '';
+    resultsDiv.innerHTML = '<div class="lookup-modal-empty">Start typing to search ontology terms</div>';
+
+    // Parse existing values
+    var existingValue = input.value.trim();
+    if (existingValue) {
+        existingValue.split(',').forEach(function(v) {
+            var trimmed = v.trim();
+            if (trimmed && trimmed !== '[]') ontologyModalSelectedValues.add(trimmed);
+        });
+    }
+
+    modal.classList.remove('hidden');
+    searchInput.focus();
+
+    // Render selected items
+    renderOntologySelectedItems();
+
+    // Set up search with debounce
+    var searchDebounce = null;
+    searchInput.oninput = function() {
+        clearTimeout(searchDebounce);
+        searchDebounce = setTimeout(function() {
+            if (searchInput.value.length >= 2) {
+                loadOntologyModalResults(searchInput.value);
+            } else {
+                resultsDiv.innerHTML = '<div class="lookup-modal-empty">Type at least 2 characters to search</div>';
+            }
+        }, 300);
+    };
+}
+
+// Create ontology modal HTML
+function createOntologyModal() {
+    var modal = document.createElement('div');
+    modal.id = 'ontology-modal';
+    modal.className = 'lookup-modal hidden';
+    modal.setAttribute('data-testid', 'ontology-modal');
+
+    modal.innerHTML = '<div class="lookup-modal-backdrop" onclick="closeOntologyModal()"></div>' +
+        '<div class="lookup-modal-content ontology-modal-content">' +
+        '<div class="lookup-modal-header">' +
+        '<h3>Search Ontology: <span id="ontology-modal-ontology">All</span></h3>' +
+        '<button type="button" class="lookup-modal-close" onclick="closeOntologyModal()">&times;</button>' +
+        '</div>' +
+        '<div class="lookup-modal-body">' +
+        '<input type="text" id="ontology-modal-search" class="lookup-modal-search" ' +
+        'placeholder="Search terms (e.g., temperature, drought)..." autocomplete="off">' +
+        '<div id="ontology-modal-selected" class="lookup-modal-selected"></div>' +
+        '<div id="ontology-modal-results" class="lookup-modal-results ontology-results"></div>' +
+        '</div>' +
+        '<div class="lookup-modal-footer">' +
+        '<button type="button" class="btn btn-secondary" onclick="closeOntologyModal()">Done</button>' +
+        '</div>' +
+        '</div>';
+
+    return modal;
+}
+
+// Close ontology modal
+function closeOntologyModal() {
+    var modal = document.getElementById('ontology-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+    ontologyModalInput = null;
+    ontologyModalOntologyId = null;
+}
+
+// Render selected ontology items
+function renderOntologySelectedItems() {
+    var selectedDiv = document.getElementById('ontology-modal-selected');
+    if (!selectedDiv) return;
+
+    if (ontologyModalSelectedValues.size === 0) {
+        selectedDiv.innerHTML = '';
+        return;
+    }
+
+    var html = '';
+    ontologyModalSelectedValues.forEach(function(value) {
+        html += '<span class="lookup-modal-chip ontology-chip">' +
+            escapeHtml(value) +
+            '<button type="button" class="lookup-modal-chip-remove" data-value="' + escapeHtml(value) + '" title="Remove">-</button>' +
+            '</span>';
+    });
+    selectedDiv.innerHTML = html;
+
+    // Add remove handlers
+    selectedDiv.querySelectorAll('.lookup-modal-chip-remove').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            removeOntologySelectedValue(this.dataset.value);
+        });
+    });
+}
+
+// Update input with ontology selections
+function updateOntologyInput() {
+    if (!ontologyModalInput) return;
+
+    var values = Array.from(ontologyModalSelectedValues);
+    var valueStr = values.join(', ');
+
+    ontologyModalInput.value = valueStr;
+    ontologyModalInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+    // Update display if in editable cell
+    var cell = ontologyModalInput.closest('.editable-cell');
+    if (cell) {
+        var display = cell.querySelector('.cell-display');
+        if (display) {
+            display.textContent = valueStr;
+        }
+    }
+}
+
+// Add ontology value to selection
+function addOntologySelectedValue(value) {
+    if (ontologyModalSelectedValues.has(value)) return;
+    ontologyModalSelectedValues.add(value);
+    renderOntologySelectedItems();
+    updateOntologyInput();
+    // Re-render results
+    var searchInput = document.getElementById('ontology-modal-search');
+    if (searchInput && searchInput.value.length >= 2) {
+        loadOntologyModalResults(searchInput.value);
+    }
+}
+
+// Remove ontology value from selection
+function removeOntologySelectedValue(value) {
+    ontologyModalSelectedValues.delete(value);
+    renderOntologySelectedItems();
+    updateOntologyInput();
+    // Re-render results
+    var searchInput = document.getElementById('ontology-modal-search');
+    if (searchInput && searchInput.value.length >= 2) {
+        loadOntologyModalResults(searchInput.value);
+    }
+}
+
+// Load ontology results into modal
+function loadOntologyModalResults(query) {
+    var resultsDiv = document.getElementById('ontology-modal-results');
+
+    var url = '/api/ontology/search?q=' + encodeURIComponent(query);
+    if (ontologyModalOntologyId) {
+        url += '&ontology=' + encodeURIComponent(ontologyModalOntologyId);
+    }
+
+    resultsDiv.innerHTML = '<div class="lookup-modal-loading">Searching OLS4...</div>';
+
+    fetch(url)
+        .then(function(response) {
+            return response.json();
+        })
+        .then(function(data) {
+            if (!data.results || data.results.length === 0) {
+                resultsDiv.innerHTML = '<div class="lookup-modal-empty">No terms found</div>';
+                return;
+            }
+
+            resultsDiv.innerHTML = '';
+            data.results.forEach(function(result) {
+                var item = document.createElement('div');
+                item.className = 'lookup-modal-item ontology-modal-item';
+                item.dataset.value = result.value;
+
+                var isSelected = ontologyModalSelectedValues.has(result.value);
+
+                var html = '<div class="ontology-modal-item-info">' +
+                    '<div class="ontology-modal-item-header">' +
+                    '<span class="ontology-term-id">' + escapeHtml(result.value) + '</span>' +
+                    '<span class="ontology-term-label">' + escapeHtml(result.label) + '</span>' +
+                    '</div>';
+
+                if (result.ontology || result.description) {
+                    html += '<div class="ontology-modal-item-meta">';
+                    if (result.ontology) {
+                        html += '<span class="ontology-source-badge">' + escapeHtml(result.ontology) + '</span>';
+                    }
+                    if (result.description) {
+                        var desc = result.description.length > 120
+                            ? result.description.substring(0, 120) + '...'
+                            : result.description;
+                        html += '<span class="ontology-description">' + escapeHtml(desc) + '</span>';
+                    }
+                    html += '</div>';
+                }
+
+                html += '</div>' +
+                    '<button type="button" class="lookup-modal-item-add' + (isSelected ? ' hidden' : '') + '" title="Add">+</button>';
+
+                item.innerHTML = html;
+
+                var addBtn = item.querySelector('.lookup-modal-item-add');
+                addBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    addOntologySelectedValue(result.value);
+                });
+
+                resultsDiv.appendChild(item);
+            });
+        })
+        .catch(function(error) {
+            console.error('Ontology modal error:', error);
+            resultsDiv.innerHTML = '<div class="lookup-modal-error">Error searching ontology</div>';
+        });
+}
