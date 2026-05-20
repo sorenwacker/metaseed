@@ -5,7 +5,6 @@ Provides the main page, profile switching, and form rendering routes.
 
 from __future__ import annotations
 
-import contextlib
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -105,16 +104,47 @@ def register_core_routes(
 
     @app.get("/", response_class=HTMLResponse)
     async def index(request: Request) -> HTMLResponse:
-        """Render the main page."""
+        """Render the datasets list page."""
+        from ..dataset_manager import get_manager
+
         state = get_state()
+        manager = get_manager(state)
+        datasets = manager.list_datasets()
 
-        # Auto-load autosave dataset if state is empty and autosave exists
-        if not state.entity_tree:
-            from ..datasets import get_current_dataset_name, load_dataset
+        return templates.TemplateResponse(
+            request,
+            "base.html",
+            {
+                "datasets": [
+                    {
+                        "name": d.name,
+                        "profile": d.profile,
+                        "version": d.version,
+                        "entity_count": d.entity_count,
+                        "modified": d.modified,
+                    }
+                    for d in datasets
+                ],
+                "current_dataset": manager.current_dataset,
+                "tree_nodes": [],
+                "base_url": base_url,
+            },
+        )
 
-            if not get_current_dataset_name(state):
-                with contextlib.suppress(FileNotFoundError):
-                    load_dataset(state, "autosave")
+    @app.get("/dataset/{name}/edit", response_class=HTMLResponse)
+    async def edit_dataset(request: Request, name: str) -> HTMLResponse:
+        """Edit a specific dataset."""
+        from ..dataset_manager import get_manager
+
+        state = get_state()
+        manager = get_manager(state)
+
+        # Load the dataset if not already loaded
+        if manager.current_dataset != name:
+            try:
+                manager.load_dataset(name)
+            except FileNotFoundError:
+                raise HTTPException(status_code=404, detail=f"Dataset not found: {name}") from None
 
         facade = state.get_or_create_facade()
         profile_factory = ProfileFactory()
@@ -134,6 +164,7 @@ def register_core_routes(
                 "tree_nodes": state.get_tree_data(),
                 "editing_node_id": state.editing_node_id,
                 "editing_node_type": editing_node.entity_type if editing_node else None,
+                "current_dataset": name,
                 "base_url": base_url,
             },
         )

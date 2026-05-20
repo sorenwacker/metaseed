@@ -1,0 +1,74 @@
+<div class="datasets-page">
+    <div class="datasets-header">
+        <h2>Datasets</h2>
+        <div class="datasets-actions">
+            <button class="btn btn-primary"
+                    hx-get="{{ base_url }}/new-dataset"
+                    hx-target="#main"
+                    hx-swap="innerHTML">
+                + New Dataset
+            </button>
+            <label class="btn btn-secondary btn-file">
+                Import
+                <input type="file"
+                       accept=".json"
+                       hx-post="{{ base_url }}/import"
+                       hx-trigger="change"
+                       hx-target="#notification-container"
+                       hx-swap="beforeend"
+                       hx-encoding="multipart/form-data"
+                       name="file"
+                       hidden>
+            </label>
+        </div>
+    </div>
+
+    {% if datasets %}
+    <div class="datasets-grid">
+        {% for ds in datasets %}
+        <div class="dataset-card {% if ds.name == current_dataset %}active{% endif %}"
+             hx-post="{{ base_url }}/api/datasets/load"
+             hx-vals='{"name": "{{ ds.name }}"}'
+             hx-target="#main"
+             hx-swap="innerHTML"
+             hx-on::after-request="if(event.detail.successful) window.location.reload()">
+            <div class="dataset-card-header">
+                <h3 class="dataset-card-name">{{ ds.name }}</h3>
+                {% if ds.name == current_dataset %}
+                <span class="dataset-card-badge">Active</span>
+                {% endif %}
+            </div>
+            <div class="dataset-card-meta">
+                <span class="dataset-card-profile">{{ ds.profile }} {{ ds.version }}</span>
+                <span class="dataset-card-count">{{ ds.entity_count }} entities</span>
+            </div>
+            <div class="dataset-card-modified">
+                {{ ds.modified[:10] if ds.modified else '' }}
+            </div>
+            <div class="dataset-card-actions">
+                <button class="btn btn-sm btn-secondary"
+                        hx-get="{{ base_url }}/dataset/{{ ds.name }}/edit"
+                        hx-target="#main"
+                        hx-swap="innerHTML"
+                        onclick="event.stopPropagation()">
+                    Edit
+                </button>
+                <button class="btn btn-sm btn-danger"
+                        hx-delete="{{ base_url }}/api/datasets/{{ ds.name }}"
+                        hx-target="#main"
+                        hx-swap="innerHTML"
+                        hx-confirm="Delete dataset '{{ ds.name }}'?"
+                        hx-on::after-request="if(event.detail.successful) window.location.reload()"
+                        onclick="event.stopPropagation()">
+                    Delete
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="datasets-empty">
+        <p>No datasets yet. Create a new dataset to get started.</p>
+    </div>
+    {% endif %}
+</div>

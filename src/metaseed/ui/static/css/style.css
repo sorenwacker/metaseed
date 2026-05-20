@@ -4664,3 +4664,114 @@ details.sidebar-section summary:hover {
     color: var(--clr-ink-light);
     margin-top: var(--space-xs);
 }
+
+/* Datasets Page */
+.datasets-page {
+    padding: var(--space-lg);
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.datasets-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-xl);
+}
+
+.datasets-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--clr-ink);
+}
+
+.datasets-actions {
+    display: flex;
+    gap: var(--space-sm);
+}
+
+.datasets-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--space-lg);
+}
+
+.dataset-card {
+    background: white;
+    border: 1px solid var(--clr-parchment);
+    border-radius: var(--radius-md);
+    padding: var(--space-lg);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.dataset-card:hover {
+    border-color: var(--clr-sage);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+}
+
+.dataset-card.active {
+    border-color: var(--clr-sage);
+    background: var(--clr-paper);
+}
+
+.dataset-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--space-sm);
+}
+
+.dataset-card-name {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--clr-ink);
+    word-break: break-word;
+}
+
+.dataset-card-badge {
+    background: var(--clr-sage);
+    color: white;
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.dataset-card-meta {
+    display: flex;
+    gap: var(--space-md);
+    font-size: 0.85rem;
+    color: var(--clr-ink-light);
+    margin-bottom: var(--space-sm);
+}
+
+.dataset-card-profile {
+    font-weight: 500;
+}
+
+.dataset-card-modified {
+    font-size: 0.8rem;
+    color: var(--clr-ink-lighter);
+    margin-bottom: var(--space-md);
+}
+
+.dataset-card-actions {
+    display: flex;
+    gap: var(--space-sm);
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--clr-parchment);
+}
+
+.datasets-empty {
+    text-align: center;
+    padding: var(--space-xxl);
+    color: var(--clr-ink-light);
+}
+
+.datasets-empty p {
+    margin: 0;
+    font-size: 1rem;
+}

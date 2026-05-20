@@ -22,14 +22,6 @@
                 <a href="{{ base_url }}/explore/" class="nav-btn" data-testid="nav-explorer">Explorer</a>
             </nav>
             <div class="header-actions">
-                <button class="btn btn-header"
-                        hx-get="{{ base_url }}/new-dataset"
-                        hx-target="#main"
-                        hx-swap="innerHTML"
-                        data-testid="btn-new-dataset">
-                    + New Dataset
-                </button>
-                <span class="header-divider"></span>
                 <label class="btn btn-header btn-file" data-testid="btn-import">
                     Import
                     <input type="file"
@@ -103,7 +95,11 @@
 
         <main class="main" id="main">
             {% block content %}
+            {% if datasets is defined %}
+            {% include "datasets_list.html" %}
+            {% else %}
             {% include "index.html" %}
+            {% endif %}
             {% endblock %}
         </main>
     </div>
