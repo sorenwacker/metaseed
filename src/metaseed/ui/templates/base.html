@@ -8,7 +8,7 @@
     <link rel="icon" type="image/png" sizes="128x128" href="{{ base_url }}/static/images/metaseed-icon-128.png">
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
     <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
-    <link rel="stylesheet" href="{{ base_url }}/static/css/style.css?v=67">
+    <link rel="stylesheet" href="{{ base_url }}/static/css/style.css?v=68">
 </head>
 <body hx-headers='{"X-Requested-With": "XMLHttpRequest"}'>
     <div class="layout">
@@ -22,49 +22,16 @@
                 <a href="{{ base_url }}/explore/" class="nav-btn" data-testid="nav-explorer">Explorer</a>
             </nav>
             <div class="header-actions">
-                <label class="btn btn-header btn-file" data-testid="btn-import">
-                    Import
-                    <input type="file"
-                           accept=".json"
-                           hx-post="{{ base_url }}/import"
-                           hx-trigger="change"
-                           hx-target="#notification-container"
-                           hx-swap="beforeend"
-                           hx-encoding="multipart/form-data"
-                           name="file"
-                           hidden>
-                </label>
                 {% if tree_nodes %}
-                <span class="header-divider"></span>
                 <button id="graph-toggle" class="btn btn-header" onclick="toggleGraph()" data-testid="btn-graph">
                     Graph
                 </button>
-                {% endif %}
                 <span class="header-divider"></span>
+                {% endif %}
                 <button id="mcp-toggle" class="btn btn-header" onclick="toggleMCP()" data-testid="btn-mcp" title="MCP Server">
                     <span id="mcp-status-indicator" class="status-indicator status-off"></span>
                     MCP
                 </button>
-                <span class="header-divider"></span>
-                <div class="dataset-dropdown">
-                    <button id="dataset-toggle" class="btn btn-header" onclick="toggleDatasetDropdown()" data-testid="btn-datasets">
-                        <span id="dataset-name">Datasets</span>
-                    </button>
-                    <div id="dataset-menu" class="dataset-menu hidden">
-                        <div class="dataset-menu-section">
-                            <div class="dataset-save-form">
-                                <input type="text" id="dataset-save-name" placeholder="Dataset name" class="form-input form-input-sm">
-                                <button class="btn btn-sm btn-primary" onclick="saveDataset()">Save</button>
-                            </div>
-                        </div>
-                        <div class="dataset-menu-section">
-                            <div class="dataset-menu-label">Saved Datasets</div>
-                            <div id="dataset-list" class="dataset-list">
-                                <!-- Populated by JavaScript -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
         </header>
 

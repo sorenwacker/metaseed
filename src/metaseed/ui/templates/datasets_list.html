@@ -1,6 +1,9 @@
 <div class="datasets-page">
     <div class="datasets-header">
-        <h2>Datasets</h2>
+        <div class="datasets-title">
+            <h2>Datasets</h2>
+            <p class="datasets-subtitle">Manage your metadata collections</p>
+        </div>
         <div class="datasets-actions">
             <button class="btn btn-primary"
                     hx-get="{{ base_url }}/new-dataset"
@@ -9,7 +12,7 @@
                 + New Dataset
             </button>
             <label class="btn btn-secondary btn-file">
-                Import
+                Import JSON
                 <input type="file"
                        accept=".json"
                        hx-post="{{ base_url }}/import"
@@ -26,49 +29,49 @@
     {% if datasets %}
     <div class="datasets-grid">
         {% for ds in datasets %}
-        <div class="dataset-card {% if ds.name == current_dataset %}active{% endif %}"
-             hx-post="{{ base_url }}/api/datasets/load"
-             hx-vals='{"name": "{{ ds.name }}"}'
-             hx-target="#main"
-             hx-swap="innerHTML"
-             hx-on::after-request="if(event.detail.successful) window.location.reload()">
-            <div class="dataset-card-header">
+        <a href="{{ base_url }}/dataset/{{ ds.name }}/edit" class="dataset-card {% if ds.name == current_dataset %}active{% endif %}">
+            <div class="dataset-card-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                </svg>
+            </div>
+            <div class="dataset-card-content">
                 <h3 class="dataset-card-name">{{ ds.name }}</h3>
-                {% if ds.name == current_dataset %}
-                <span class="dataset-card-badge">Active</span>
-                {% endif %}
+                <div class="dataset-card-meta">
+                    <span class="dataset-card-profile">{{ ds.profile }} {{ ds.version }}</span>
+                    <span class="dataset-card-dot"></span>
+                    <span class="dataset-card-count">{{ ds.entity_count }} entities</span>
+                </div>
+                <div class="dataset-card-modified">
+                    Modified {{ ds.modified[:10] if ds.modified else 'recently' }}
+                </div>
             </div>
-            <div class="dataset-card-meta">
-                <span class="dataset-card-profile">{{ ds.profile }} {{ ds.version }}</span>
-                <span class="dataset-card-count">{{ ds.entity_count }} entities</span>
-            </div>
-            <div class="dataset-card-modified">
-                {{ ds.modified[:10] if ds.modified else '' }}
-            </div>
-            <div class="dataset-card-actions">
-                <button class="btn btn-sm btn-secondary"
-                        hx-get="{{ base_url }}/dataset/{{ ds.name }}/edit"
-                        hx-target="#main"
-                        hx-swap="innerHTML"
-                        onclick="event.stopPropagation()">
-                    Edit
-                </button>
-                <button class="btn btn-sm btn-danger"
+            <div class="dataset-card-actions" onclick="event.preventDefault(); event.stopPropagation();">
+                <button class="btn-icon btn-icon-danger"
                         hx-delete="{{ base_url }}/api/datasets/{{ ds.name }}"
-                        hx-target="#main"
-                        hx-swap="innerHTML"
                         hx-confirm="Delete dataset '{{ ds.name }}'?"
                         hx-on::after-request="if(event.detail.successful) window.location.reload()"
-                        onclick="event.stopPropagation()">
-                    Delete
+                        title="Delete">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                    </svg>
                 </button>
             </div>
-        </div>
+            {% if ds.name == current_dataset %}
+            <span class="dataset-card-badge">Active</span>
+            {% endif %}
+        </a>
         {% endfor %}
     </div>
     {% else %}
     <div class="datasets-empty">
-        <p>No datasets yet. Create a new dataset to get started.</p>
+        <div class="datasets-empty-icon">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+            </svg>
+        </div>
+        <h3>No datasets yet</h3>
+        <p>Create a new dataset to start managing your metadata.</p>
     </div>
     {% endif %}
 </div>
