@@ -98,14 +98,17 @@ def build_graph(state: AppState) -> dict:
         vis_id = tree_item["id"]
         tree_id_to_vis_id[tree_item["id"]] = vis_id
 
-        # Get entity data for tooltip and unique_id mapping
+        # Get entity data for tooltip and identifier mapping
         entity_data = {}
         tree_node = state.nodes_by_id.get(tree_item["id"])
         if tree_node and tree_node.instance and hasattr(tree_node.instance, "model_dump"):
             entity_data = tree_node.instance.model_dump(exclude_none=True)
-            # Map unique_id to vis_id for reference resolution
-            if entity_data.get("unique_id"):
-                unique_id_to_vis_id[entity_data["unique_id"]] = vis_id
+            # Map identifier to vis_id for reference resolution
+            # Check multiple possible identifier fields
+            for id_field in ["unique_id", "identifier", "name", "id"]:
+                if entity_data.get(id_field):
+                    unique_id_to_vis_id[str(entity_data[id_field])] = vis_id
+                    break
 
         tooltip = _build_tooltip(
             tree_item["entity_type"],
