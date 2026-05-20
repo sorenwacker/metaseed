@@ -959,13 +959,92 @@ var currentGraphLayout = 'physics';
 var allGraphNodes = [];
 var allGraphEdges = [];
 var visibleGroups = new Set();
-var lastGraphDataHash = null;
 
-function computeGraphDataHash(data) {
-    // Simple hash based on node/edge ids and labels
-    var nodeStr = data.nodes.map(function(n) { return n.id + ':' + n.label; }).sort().join('|');
-    var edgeStr = data.edges.map(function(e) { return e.from + '-' + e.to; }).sort().join('|');
-    return nodeStr + '||' + edgeStr;
+function prepareGraphData(data) {
+    // Collect unique entity types and assign colors/shapes
+    var entityTypes = new Set();
+    data.nodes.forEach(function(n) { entityTypes.add(n.group); });
+    assignEntityDisplay(entityTypes);
+
+    // Count edges per node for sizing
+    var edgeCount = {};
+    data.edges.forEach(function(edge) {
+        edgeCount[edge.from] = (edgeCount[edge.from] || 0) + 1;
+        edgeCount[edge.to] = (edgeCount[edge.to] || 0) + 1;
+    });
+
+    // Apply colors, shapes, and sizes to nodes
+    var minSize = 12, maxSize = 30;
+    var maxEdges = Math.max.apply(null, Object.values(edgeCount).concat([1]));
+    data.nodes.forEach(function(node) {
+        var display = getEntityDisplay(node.group);
+        node.color = display.color;
+        node.shape = display.shape;
+        var edges = edgeCount[node.id] || 0;
+        node.size = minSize + (edges / maxEdges) * (maxSize - minSize);
+    });
+
+    return data;
+}
+
+function updateGraphIncremental(newNodes, newEdges) {
+    if (!graphData || !graphData.nodes || !graphData.edges) return false;
+
+    // Build maps of current data
+    var currentNodeIds = new Set(graphData.nodes.getIds());
+    var currentEdgeIds = new Set(graphData.edges.getIds());
+
+    // Build maps of new data
+    var newNodeIds = new Set(newNodes.map(function(n) { return n.id; }));
+    var newEdgeMap = {};
+    newEdges.forEach(function(e) {
+        var edgeId = e.id || (e.from + '->' + e.to);
+        newEdgeMap[edgeId] = e;
+    });
+    var newEdgeIds = new Set(Object.keys(newEdgeMap));
+
+    // Find nodes to add and remove
+    var nodesToAdd = newNodes.filter(function(n) { return !currentNodeIds.has(n.id); });
+    var nodesToRemove = Array.from(currentNodeIds).filter(function(id) { return !newNodeIds.has(id); });
+
+    // Find edges to add and remove
+    var currentEdges = graphData.edges.get();
+    var currentEdgeMap = {};
+    currentEdges.forEach(function(e) {
+        var edgeId = e.id || (e.from + '->' + e.to);
+        currentEdgeMap[edgeId] = e;
+    });
+
+    var edgesToAdd = [];
+    for (var edgeId in newEdgeMap) {
+        if (!currentEdgeMap[edgeId]) {
+            edgesToAdd.push(newEdgeMap[edgeId]);
+        }
+    }
+
+    var edgesToRemove = [];
+    for (var edgeId in currentEdgeMap) {
+        if (!newEdgeMap[edgeId]) {
+            edgesToRemove.push(currentEdgeMap[edgeId].id || edgeId);
+        }
+    }
+
+    // Apply changes
+    if (nodesToRemove.length > 0) {
+        graphData.nodes.remove(nodesToRemove);
+    }
+    if (edgesToRemove.length > 0) {
+        graphData.edges.remove(edgesToRemove);
+    }
+    if (nodesToAdd.length > 0) {
+        graphData.nodes.add(nodesToAdd);
+    }
+    if (edgesToAdd.length > 0) {
+        graphData.edges.add(edgesToAdd);
+    }
+
+    return nodesToAdd.length > 0 || nodesToRemove.length > 0 ||
+           edgesToAdd.length > 0 || edgesToRemove.length > 0;
 }
 
 // Entity type to display mapping (assigned dynamically)
@@ -1184,51 +1263,33 @@ function loadGraph() {
                 if (graphView) {
                     graphView.innerHTML = '<div class="graph-empty">No entities to display. Create an entity to see it in the graph.</div>';
                 }
-                lastGraphDataHash = null;
                 graphNetwork = null;
+                graphData = null;
                 return;
             }
-
-            // Check if data has changed - skip re-render if same
-            var newHash = computeGraphDataHash(data);
-            if (newHash === lastGraphDataHash && graphNetwork) {
-                return; // Data unchanged, keep existing graph
-            }
-            lastGraphDataHash = newHash;
 
             // Store original data for filtering
             allGraphNodes = data.nodes.slice();
             allGraphEdges = data.edges.slice();
 
-            // Collect unique entity types and assign colors/shapes
-            var entityTypes = new Set();
-            allGraphNodes.forEach(function(n) { entityTypes.add(n.group); });
-            assignEntityDisplay(entityTypes);
-
             // Initialize visible groups
             visibleGroups.clear();
             allGraphNodes.forEach(function(n) { visibleGroups.add(n.group); });
 
-            // Count edges per node for sizing
-            var edgeCount = {};
-            data.edges.forEach(function(edge) {
-                edgeCount[edge.from] = (edgeCount[edge.from] || 0) + 1;
-                edgeCount[edge.to] = (edgeCount[edge.to] || 0) + 1;
-            });
+            // Prepare node styling
+            data = prepareGraphData(data);
 
-            // Apply colors, shapes, and sizes to nodes (size based on edge count)
-            var minSize = 12, maxSize = 30;
-            var maxEdges = Math.max.apply(null, Object.values(edgeCount).concat([1]));
-            data.nodes.forEach(function(node) {
-                var display = getEntityDisplay(node.group);
-                node.color = display.color;
-                node.shape = display.shape;
-                var edges = edgeCount[node.id] || 0;
-                node.size = minSize + (edges / maxEdges) * (maxSize - minSize);
-            });
-
-            renderGraph(data);
-            renderGraphLegend(data);
+            // If graph exists, update incrementally
+            if (graphNetwork && graphData) {
+                var changed = updateGraphIncremental(data.nodes, data.edges);
+                if (changed) {
+                    renderGraphLegend(data);
+                }
+            } else {
+                // Initial render
+                renderGraph(data);
+                renderGraphLegend(data);
+            }
         })
         .catch(function(error) {
             console.error('Error loading graph:', error);
