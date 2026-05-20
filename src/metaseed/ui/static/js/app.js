@@ -959,6 +959,14 @@ var currentGraphLayout = 'physics';
 var allGraphNodes = [];
 var allGraphEdges = [];
 var visibleGroups = new Set();
+var lastGraphDataHash = null;
+
+function computeGraphDataHash(data) {
+    // Simple hash based on node/edge ids and labels
+    var nodeStr = data.nodes.map(function(n) { return n.id + ':' + n.label; }).sort().join('|');
+    var edgeStr = data.edges.map(function(e) { return e.from + '-' + e.to; }).sort().join('|');
+    return nodeStr + '||' + edgeStr;
+}
 
 // Entity type to display mapping (assigned dynamically)
 var entityDisplayMap = {};
@@ -1163,7 +1171,9 @@ function toggleGraph() {
 
 function loadGraph() {
     var graphView = document.getElementById('graph-view');
-    if (graphView) {
+
+    // Only show loading message on initial load
+    if (!graphNetwork && graphView) {
         graphView.innerHTML = '<div class="graph-loading">Loading graph...</div>';
     }
 
@@ -1174,8 +1184,17 @@ function loadGraph() {
                 if (graphView) {
                     graphView.innerHTML = '<div class="graph-empty">No entities to display. Create an entity to see it in the graph.</div>';
                 }
+                lastGraphDataHash = null;
+                graphNetwork = null;
                 return;
             }
+
+            // Check if data has changed - skip re-render if same
+            var newHash = computeGraphDataHash(data);
+            if (newHash === lastGraphDataHash && graphNetwork) {
+                return; // Data unchanged, keep existing graph
+            }
+            lastGraphDataHash = newHash;
 
             // Store original data for filtering
             allGraphNodes = data.nodes.slice();
