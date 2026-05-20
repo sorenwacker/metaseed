@@ -1044,11 +1044,6 @@ function updateGraphIncremental(newNodes, newEdges) {
         return false;
     }
 
-    // Disable physics during update to preserve positions
-    if (graphNetwork) {
-        graphNetwork.setOptions({ physics: { enabled: false } });
-    }
-
     // Apply changes
     if (nodesToRemove.length > 0) {
         graphData.nodes.remove(nodesToRemove);

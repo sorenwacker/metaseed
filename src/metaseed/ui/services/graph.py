@@ -85,23 +85,17 @@ def build_graph(state: AppState) -> dict:
     """
     nodes: list[dict] = []
     edges: list[dict] = []
-    node_counter = 0
 
     # Maps for resolving references by unique_id
     unique_id_to_vis_id: dict[str, str] = {}
     tree_id_to_vis_id: dict[str, str] = {}
 
-    def get_node_id() -> str:
-        """Generate unique node ID for vis.js."""
-        nonlocal node_counter
-        node_counter += 1
-        return f"n{node_counter}"
-
     def process_tree_node(
         tree_item: dict, parent_vis_id: str | None = None, level: int = 0
     ) -> None:
         """Process a tree node and its children recursively."""
-        vis_id = get_node_id()
+        # Use tree ID as vis ID for stable identification across requests
+        vis_id = tree_item["id"]
         tree_id_to_vis_id[tree_item["id"]] = vis_id
 
         # Get entity data for tooltip and unique_id mapping
@@ -131,7 +125,13 @@ def build_graph(state: AppState) -> dict:
 
         # Parent-child containment edge (solid)
         if parent_vis_id:
-            edges.append({"from": parent_vis_id, "to": vis_id})
+            edges.append(
+                {
+                    "id": f"{parent_vis_id}->{vis_id}",
+                    "from": parent_vis_id,
+                    "to": vis_id,
+                }
+            )
 
         # Process children recursively
         for child in tree_item.get("children", []):
@@ -171,6 +171,7 @@ def build_graph(state: AppState) -> dict:
                 # Add reference edge (dashed, different color)
                 edges.append(
                     {
+                        "id": f"{vis_id}->{target_vis_id}:{field_name}",
                         "from": vis_id,
                         "to": target_vis_id,
                         "dashes": True,
