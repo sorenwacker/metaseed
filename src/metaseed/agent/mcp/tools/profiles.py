@@ -137,7 +137,7 @@ def register_profile_tools(mcp: FastMCP) -> None:
                     field_info["constraints"] = field.constraints.model_dump(exclude_none=True)
                 if field.items:
                     field_info["items"] = field.items
-                if field.example:
+                if hasattr(field, "example") and field.example:
                     field_info["example"] = field.example
 
                 fields.append(field_info)
