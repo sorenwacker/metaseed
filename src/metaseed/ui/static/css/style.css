@@ -2196,10 +2196,22 @@ body::before {
     border-bottom: 1px solid var(--clr-parchment);
 }
 
-.user-specs-section h2 {
+.user-specs-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: var(--space-lg);
+}
+
+.user-specs-header h2 {
+    margin: 0;
     font-size: 1.25rem;
     color: var(--clr-ink);
+}
+
+.user-specs-empty {
+    color: var(--clr-ink-light);
+    font-size: 0.95rem;
 }
 
 .user-specs-list {

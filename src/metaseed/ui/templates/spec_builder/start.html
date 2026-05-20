@@ -28,9 +28,12 @@
 
         <main class="main">
             <div class="spec-builder-start">
-                {% if user_specs %}
                 <div class="user-specs-section">
-                    <h2>Your Specifications</h2>
+                    <div class="user-specs-header">
+                        <h2>Your Specifications</h2>
+                        <a href="{{ base_url }}/spec-builder/new" class="btn btn-primary btn-sm">+ New Spec</a>
+                    </div>
+                    {% if user_specs %}
                     <div class="user-specs-list">
                         {% for spec in user_specs %}
                         <div class="user-spec-item">
@@ -56,8 +59,10 @@
                         </div>
                         {% endfor %}
                     </div>
+                    {% else %}
+                    <p class="user-specs-empty">No specifications yet. Create one to get started.</p>
+                    {% endif %}
                 </div>
-                {% endif %}
 
                 <div class="welcome">
                     <h2>Create a New Specification</h2>
