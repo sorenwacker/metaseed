@@ -146,16 +146,16 @@ def register_api_routes(
         Returns:
             JSON with 'nodes' and 'edges' lists.
         """
-        from metaseed.ui.datasets import get_current_dataset_name, load_dataset
+        from metaseed.ui.dataset_manager import get_manager
         from metaseed.ui.services.graph import build_graph
 
         state = get_state()
+        manager = get_manager(state)
 
         # Reload from disk to pick up MCP changes
-        current_dataset = get_current_dataset_name(state)
-        if current_dataset:
+        if manager.current_dataset:
             with contextlib.suppress(FileNotFoundError):
-                load_dataset(state, current_dataset)
+                manager.load_dataset(manager.current_dataset)
 
         return JSONResponse(content=build_graph(state))
 
@@ -394,16 +394,18 @@ def register_api_routes(
         Returns:
             JSON array of dataset info.
         """
-        from ..datasets import get_current_dataset_name, list_datasets
+        from dataclasses import asdict
+
+        from ..dataset_manager import get_manager
 
         state = get_state()
-        datasets = list_datasets()
-        current = get_current_dataset_name(state)
+        manager = get_manager(state)
+        datasets = [asdict(d) for d in manager.list_datasets()]
 
         return JSONResponse(
             content={
                 "datasets": datasets,
-                "current": current,
+                "current": manager.current_dataset,
             }
         )
 
@@ -419,14 +421,16 @@ def register_api_routes(
         Returns:
             JSON with saved dataset info or error.
         """
-        from ..datasets import save_dataset, set_current_dataset_name
+        from dataclasses import asdict
+
+        from ..dataset_manager import get_manager
 
         state = get_state()
+        manager = get_manager(state)
 
         try:
-            result = save_dataset(state, name)
-            set_current_dataset_name(state, name)
-            return JSONResponse(content={"status": "saved", **result})
+            result = manager.save_dataset(name)
+            return JSONResponse(content={"status": "saved", **asdict(result)})
         except ValueError as e:
             return JSONResponse(status_code=400, content={"error": str(e)})
 
@@ -442,14 +446,16 @@ def register_api_routes(
         Returns:
             JSON with loaded dataset info or error.
         """
-        from ..datasets import load_dataset, set_current_dataset_name
+        from dataclasses import asdict
+
+        from ..dataset_manager import get_manager
 
         state = get_state()
+        manager = get_manager(state)
 
         try:
-            result = load_dataset(state, name)
-            set_current_dataset_name(state, name)
-            return JSONResponse(content={"status": "loaded", **result})
+            result = manager.load_dataset(name)
+            return JSONResponse(content={"status": "loaded", **asdict(result)})
         except FileNotFoundError as e:
             return JSONResponse(status_code=404, content={"error": str(e)})
         except ValueError as e:
@@ -465,13 +471,11 @@ def register_api_routes(
         Returns:
             JSON with status.
         """
-        from ..datasets import delete_dataset, get_current_dataset_name, set_current_dataset_name
+        from ..dataset_manager import get_manager
 
         state = get_state()
+        manager = get_manager(state)
 
-        if delete_dataset(name):
-            # Clear current if it was the deleted one
-            if get_current_dataset_name(state) == name:
-                set_current_dataset_name(state, None)
+        if manager.delete_dataset(name):
             return JSONResponse(content={"status": "deleted"})
         return JSONResponse(status_code=404, content={"error": "Dataset not found"})
