@@ -103,6 +103,85 @@ def extract_nested_items(instance: Any, helper: Any) -> dict[str, list[dict]]:
     return result
 
 
+def extract_nested_from_tree(node: Any, helper: Any) -> dict[str, list[dict]]:
+    """Extract nested items from tree children.
+
+    When entities are created via MCP with parent_id, child entities are
+    stored as separate tree nodes, not as nested objects in the parent.
+    This function reconstructs the nested items from the tree structure.
+
+    Args:
+        node: TreeNode with potential children.
+        helper: EntityHelper with nested_fields mapping.
+
+    Returns:
+        Dictionary mapping nested field names to lists of child entity dicts.
+    """
+    result: dict[str, list[dict]] = {}
+
+    if not node.children:
+        return result
+
+    # Build reverse mapping: entity_type -> field_name
+    type_to_field = {v: k for k, v in helper.nested_fields.items()}
+
+    for child in node.children:
+        field_name = type_to_field.get(child.entity_type)
+        if not field_name:
+            continue
+
+        if field_name not in result:
+            result[field_name] = []
+
+        if child.instance and hasattr(child.instance, "model_dump"):
+            child_data = child.instance.model_dump(exclude_none=True)
+            # Add node_id for reference when editing
+            child_data["_node_id"] = child.id
+            result[field_name].append(child_data)
+
+    return result
+
+
+def get_nested_items_for_edit(node: Any, helper: Any) -> dict[str, list[dict]]:
+    """Get all nested items for editing, combining instance data and tree children.
+
+    This is the canonical function for getting nested items when editing an entity.
+    It combines items from:
+    1. The instance's nested fields (for inline nested objects)
+    2. The tree's child nodes (for entities created via MCP with parent_id)
+
+    Args:
+        node: TreeNode being edited.
+        helper: EntityHelper with nested_fields mapping.
+
+    Returns:
+        Dictionary mapping nested field names to lists of entity dicts.
+    """
+    result: dict[str, list[dict]] = {}
+
+    # First, get items from instance data
+    if node.instance:
+        instance_items = extract_nested_items(node.instance, helper)
+        for field_name, items in instance_items.items():
+            # Only include actual dicts, not string references
+            result[field_name] = [
+                item for item in items if isinstance(item, dict) and not isinstance(item, str)
+            ]
+
+    # Then, add items from tree children (these take precedence for MCP-created entities)
+    tree_items = extract_nested_from_tree(node, helper)
+    for field_name, items in tree_items.items():
+        if field_name not in result:
+            result[field_name] = []
+        # Add tree children that aren't already in result (by node_id)
+        existing_ids = {item.get("_node_id") for item in result[field_name]}
+        for item in items:
+            if item.get("_node_id") not in existing_ids:
+                result[field_name].append(item)
+
+    return result
+
+
 def collect_entities_by_type(state: AppState, facade: ProfileFacade) -> dict[str, list[dict]]:
     """Collect all entities (root and nested) organized by type.
 

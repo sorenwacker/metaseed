@@ -26,6 +26,7 @@ from ..helpers import (
     filter_fields,
     format_validation_errors,
     get_field_data,
+    get_nested_items_for_edit,
 )
 
 if TYPE_CHECKING:
@@ -286,8 +287,8 @@ def register_form_routes(
             if items:
                 values[field_name] = items
 
-        if not state.current_nested_items and node.instance:
-            state.current_nested_items = extract_nested_items(node.instance, helper)
+        if not state.current_nested_items:
+            state.current_nested_items = get_nested_items_for_edit(node, helper)
 
         auto_fields = set()
         if "miappe_version" in helper.all_fields:

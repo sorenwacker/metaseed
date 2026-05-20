@@ -15,7 +15,9 @@ from __future__ import annotations
 # Re-export from entity_helpers
 from metaseed.ui.helpers.entity_helpers import (
     collect_entities_by_type,
+    extract_nested_from_tree,
     extract_nested_items,
+    get_nested_items_for_edit,
     to_dict,
     walk_nested_entities,
 )
@@ -55,12 +57,14 @@ __all__ = [
     "collect_entities_by_type",
     "collect_form_values",
     "error_response",
+    "extract_nested_from_tree",
     "extract_nested_items",
     "filter_fields",
     "format_table_rows",
     "format_validation_errors",
     "get_field_data",
     "get_items_store",
+    "get_nested_items_for_edit",
     "get_parent_id_fields",
     "get_parent_identifier",
     "get_reference_fields",
