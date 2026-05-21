@@ -219,7 +219,13 @@ class DatasetManager:
                     old_parent_id = entity_data.get("_parent_id")
                     old_node_id = entity_data.get("_node_id")
 
-                    fields = {k: v for k, v in entity_data.items() if not k.startswith("_")}
+                    # Lenient loading: filter to only fields defined in schema
+                    valid_fields = set(helper.all_fields)
+                    fields = {
+                        k: v
+                        for k, v in entity_data.items()
+                        if not k.startswith("_") and k in valid_fields
+                    }
                     instance = helper.create(**fields)
 
                     node = self._state.add_node(entity_type, instance)
@@ -441,7 +447,13 @@ class AsyncDatasetManager:
                     old_parent_id = entity_data.get("_parent_id")
                     old_node_id = entity_data.get("_node_id")
 
-                    fields = {k: v for k, v in entity_data.items() if not k.startswith("_")}
+                    # Lenient loading: filter to only fields defined in schema
+                    valid_fields = set(helper.all_fields)
+                    fields = {
+                        k: v
+                        for k, v in entity_data.items()
+                        if not k.startswith("_") and k in valid_fields
+                    }
                     instance = helper.create(**fields)
 
                     node = self._state.add_node(entity_type, instance)
