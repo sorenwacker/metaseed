@@ -230,6 +230,15 @@ function prepareGraphData(data) {
         node.size = minSize + (edges / maxEdges) * (maxSize - minSize);
     });
 
+    // Style reference edges differently (dashed, different color)
+    data.edges.forEach(function(edge) {
+        if (edge.dashes) {
+            // Reference edge - use a distinct color
+            edge.color = { color: '#e67e22', highlight: '#d35400', hover: '#d35400' };
+            edge.width = 1.5;
+        }
+    });
+
     return data;
 }
 
