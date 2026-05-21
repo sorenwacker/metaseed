@@ -843,11 +843,6 @@ entities:
       accession: ERR123456
       experiment_ref: experiment-wgs-001
       run_date: "2024-06-20"
-      files:
-        - filename: sample1_R1.fastq.gz
-          filetype: fastq
-          checksum: d41d8cd98f00b204e9800998ecf8427e
-          checksum_method: MD5
     fields:
       - name: alias
         codename: alias
@@ -894,14 +889,6 @@ entities:
         required: false
         description: Center where the run was performed.
         ontology_term: SRA:run_center
-
-      - name: files
-        codename: FILES
-        type: list
-        items: File
-        required: true
-        description: Data files associated with this run.
-        ontology_term: SRA:has_file
 
       - name: run_attributes
         codename: RUN_ATTRIBUTES
