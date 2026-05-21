@@ -112,16 +112,15 @@ def build_graph(state: AppState) -> dict:
 
             # Get spec-defined identifier field from facade
             helper = getattr(facade, entity_type, None) if facade else None
-            spec = helper._spec if helper else None
 
-            # Map by spec-defined identifier_field first
-            if spec and hasattr(spec, "identifier_field") and spec.identifier_field:
-                id_value = entity_data.get(spec.identifier_field)
+            # Map by spec-defined identifier_field first (is_identifier: true)
+            if helper and helper.identifier_field:
+                id_value = entity_data.get(helper.identifier_field)
                 if id_value:
                     unique_id_to_vis_id[str(id_value)] = vis_id
 
             # Also map by common identifier fields as fallback
-            entity_id = get_identifier(entity_data)
+            entity_id = get_identifier(entity_data, helper)
             if entity_id:
                 unique_id_to_vis_id[entity_id] = vis_id
 

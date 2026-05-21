@@ -312,6 +312,7 @@ entities:
       codename: investigationDbId
       type: string
       required: true
+      is_identifier: true
       description: Unique identifier for the investigation.
       ontology_term: PPEO:hasIdentifier
       constraints:
@@ -412,6 +413,7 @@ entities:
       codename: studyDbId
       type: string
       required: true
+      is_identifier: true
       description: Unique identifier for the study.
       ontology_term: PPEO:hasIdentifier
       constraints:
@@ -685,6 +687,7 @@ entities:
       codename: germplasmDbId
       type: string
       required: true
+      is_identifier: true
       description: Unique identifier for the biological material.
       ontology_term: PPEO:hasIdentifier
       constraints:
@@ -862,6 +865,7 @@ entities:
       codename: observationUnitDbId
       type: string
       required: true
+      is_identifier: true
       description: Unique identifier for the observation unit.
       ontology_term: PPEO:hasIdentifier
       constraints:
@@ -991,6 +995,7 @@ entities:
       codename: observationVariableDbId
       type: string
       required: true
+      is_identifier: true
       description: Unique identifier.
       ontology_term: PPEO:hasIdentifier
       constraints:
@@ -1123,6 +1128,7 @@ entities:
       codename: factorDbId
       type: string
       required: true
+      is_identifier: true
       description: Unique identifier.
       ontology_term: PPEO:hasIdentifier
       constraints:
@@ -1177,6 +1183,7 @@ entities:
       codename: factorValueDbId
       type: string
       required: true
+      is_identifier: true
       description: Unique identifier.
       ontology_term: PPEO:hasIdentifier
       constraints:
@@ -1222,6 +1229,7 @@ entities:
       codename: eventDbId
       type: string
       required: true
+      is_identifier: true
       description: Unique identifier.
       ontology_term: PPEO:hasIdentifier
       constraints:
@@ -1293,6 +1301,7 @@ entities:
       codename: environmentParameterDbId
       type: string
       required: true
+      is_identifier: true
       description: Unique identifier.
       ontology_term: PPEO:hasIdentifier
       constraints:
@@ -1362,6 +1371,7 @@ entities:
       codename: sampleDbId
       type: string
       required: true
+      is_identifier: true
       description: Unique identifier.
       ontology_term: PPEO:hasIdentifier
       constraints:
@@ -1422,6 +1432,7 @@ entities:
       codename: dataFileDbId
       type: string
       required: true
+      is_identifier: true
       description: Unique identifier.
       ontology_term: PPEO:hasIdentifier
       constraints:
@@ -1489,6 +1500,7 @@ entities:
       codename: locationDbId
       type: string
       required: true
+      is_identifier: true
       description: Unique identifier.
       ontology_term: PPEO:hasIdentifier
       constraints:
@@ -1592,6 +1604,7 @@ entities:
       codename: seedSourceDbId
       type: string
       required: true
+      is_identifier: true
       description: Unique identifier.
       ontology_term: PPEO:hasIdentifier
       constraints:

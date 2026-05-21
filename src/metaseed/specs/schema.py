@@ -88,6 +88,7 @@ class FieldSpec(BaseModel):
     parent_ref: str | None = None
     unique_within: str | None = None
     reference: str | None = None
+    is_identifier: bool = False
 
     def is_nested(self: Self) -> bool:
         """Check if this field represents a nested entity.
@@ -125,8 +126,6 @@ class EntitySpec(BaseModel):
     description: str = ""
     fields: list[FieldSpec] = []
     example: dict[str, str | int | float | bool | list] | None = None
-    identifier_field: str | None = None
-    label_field: str | None = None
 
     def get_required_fields(self: Self) -> list[FieldSpec]:
         """Return list of required fields.
@@ -157,8 +156,6 @@ class EntityDefSpec(BaseModel):
     description: str = ""
     fields: list[FieldSpec] = []
     example: dict[str, str | int | float | bool | list] | None = None
-    identifier_field: str | None = None
-    label_field: str | None = None
 
 
 class ValidationRuleSpec(BaseModel):

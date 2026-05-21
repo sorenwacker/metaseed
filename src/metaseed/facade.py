@@ -105,13 +105,11 @@ class EntityHelper:
 
     @property
     def identifier_field(self: Self) -> str | None:
-        """Field name to use as identifier (from spec)."""
-        return getattr(self._spec, "identifier_field", None)
-
-    @property
-    def label_field(self: Self) -> str | None:
-        """Field name to use for display label (from spec)."""
-        return getattr(self._spec, "label_field", None)
+        """Field name marked as identifier (is_identifier: true in spec)."""
+        for f in self._spec.fields:
+            if getattr(f, "is_identifier", False):
+                return f.name
+        return None
 
     @property
     def example_data(self: Self) -> dict[str, Any]:
