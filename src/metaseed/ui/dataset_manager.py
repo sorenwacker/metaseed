@@ -203,7 +203,7 @@ class DatasetManager:
         facade = self._state.get_or_create_facade()
         loaded_count = 0
 
-        unique_id_to_node: dict[str, Any] = {}
+        id_to_node: dict[str, Any] = {}  # unique_id or alias -> node
         old_id_to_node: dict[str, Any] = {}
         nodes_with_parent: list[tuple[Any, str, bool]] = []
 
@@ -231,9 +231,10 @@ class DatasetManager:
                     node = self._state.add_node(entity_type, instance)
                     loaded_count += 1
 
-                    entity_unique_id = fields.get("unique_id")
-                    if entity_unique_id:
-                        unique_id_to_node[entity_unique_id] = node
+                    # Index by unique_id or alias for parent lookup
+                    entity_id = fields.get("unique_id") or fields.get("alias")
+                    if entity_id:
+                        id_to_node[entity_id] = node
 
                     if old_node_id:
                         old_id_to_node[old_node_id] = node
@@ -247,7 +248,7 @@ class DatasetManager:
 
         for node, parent_ref, is_unique_id in nodes_with_parent:
             if is_unique_id:
-                parent_node = unique_id_to_node.get(parent_ref)
+                parent_node = id_to_node.get(parent_ref)
             else:
                 parent_node = old_id_to_node.get(parent_ref)
 
@@ -255,6 +256,33 @@ class DatasetManager:
                 self._state.entity_tree = [n for n in self._state.entity_tree if n.id != node.id]
                 node.parent_id = parent_node.id
                 parent_node.children.append(node)
+
+        # Link children via parent's nested arrays (e.g., Study.samples contains child aliases)
+        for node in list(self._state.entity_tree):
+            if node.parent_id:
+                continue  # Already linked
+
+            helper = getattr(facade, node.entity_type, None)
+            if not helper:
+                continue
+
+            node_data = node.instance.model_dump() if node.instance else {}
+
+            # Check nested fields (e.g., Study.samples, Study.experiments)
+            for field_name in helper.nested_fields:
+                child_ids = node_data.get(field_name, [])
+                if not isinstance(child_ids, list):
+                    continue
+
+                for child_id in child_ids:
+                    child_node = id_to_node.get(child_id)
+                    if child_node and child_node.parent_id is None:
+                        # Link child to this parent
+                        self._state.entity_tree = [
+                            n for n in self._state.entity_tree if n.id != child_node.id
+                        ]
+                        child_node.parent_id = node.id
+                        node.children.append(child_node)
 
         return loaded_count
 
@@ -431,7 +459,7 @@ class AsyncDatasetManager:
         facade = self._state.get_or_create_facade()
         loaded_count = 0
 
-        unique_id_to_node: dict[str, Any] = {}
+        id_to_node: dict[str, Any] = {}  # unique_id or alias -> node
         old_id_to_node: dict[str, Any] = {}
         nodes_with_parent: list[tuple[Any, str, bool]] = []
 
@@ -459,9 +487,10 @@ class AsyncDatasetManager:
                     node = self._state.add_node(entity_type, instance)
                     loaded_count += 1
 
-                    entity_unique_id = fields.get("unique_id")
-                    if entity_unique_id:
-                        unique_id_to_node[entity_unique_id] = node
+                    # Index by unique_id or alias for parent lookup
+                    entity_id = fields.get("unique_id") or fields.get("alias")
+                    if entity_id:
+                        id_to_node[entity_id] = node
 
                     if old_node_id:
                         old_id_to_node[old_node_id] = node
@@ -475,7 +504,7 @@ class AsyncDatasetManager:
 
         for node, parent_ref, is_unique_id in nodes_with_parent:
             if is_unique_id:
-                parent_node = unique_id_to_node.get(parent_ref)
+                parent_node = id_to_node.get(parent_ref)
             else:
                 parent_node = old_id_to_node.get(parent_ref)
 
@@ -483,6 +512,33 @@ class AsyncDatasetManager:
                 self._state.entity_tree = [n for n in self._state.entity_tree if n.id != node.id]
                 node.parent_id = parent_node.id
                 parent_node.children.append(node)
+
+        # Link children via parent's nested arrays (e.g., Study.samples contains child aliases)
+        for node in list(self._state.entity_tree):
+            if node.parent_id:
+                continue  # Already linked
+
+            helper = getattr(facade, node.entity_type, None)
+            if not helper:
+                continue
+
+            node_data = node.instance.model_dump() if node.instance else {}
+
+            # Check nested fields (e.g., Study.samples, Study.experiments)
+            for field_name in helper.nested_fields:
+                child_ids = node_data.get(field_name, [])
+                if not isinstance(child_ids, list):
+                    continue
+
+                for child_id in child_ids:
+                    child_node = id_to_node.get(child_id)
+                    if child_node and child_node.parent_id is None:
+                        # Link child to this parent
+                        self._state.entity_tree = [
+                            n for n in self._state.entity_tree if n.id != child_node.id
+                        ]
+                        child_node.parent_id = node.id
+                        node.children.append(child_node)
 
         return loaded_count
 
