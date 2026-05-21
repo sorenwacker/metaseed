@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from metaseed.facade import EntityHelper
 
 # Common field names for entity identification
-IDENTIFIER_FIELDS = ["unique_id", "identifier", "name", "id", "filename"]
+IDENTIFIER_FIELDS = ["unique_id", "identifier", "name", "id", "alias", "accession", "filename"]
 
 # Common field names for deriving labels (in preference order)
 LABEL_FIELDS = [
@@ -22,6 +22,8 @@ LABEL_FIELDS = [
     "display_name",
     "unique_id",
     "identifier",
+    "alias",
+    "accession",
     "id",
     "term",
     "filename",
@@ -80,17 +82,25 @@ def find_parent_ref_field(helper: Any, parent_type: str) -> str | None:
     return None
 
 
-def get_identifier(data: dict[str, Any]) -> str | None:
+def get_identifier(data: dict[str, Any], spec: Any = None) -> str | None:
     """Get identifier value from entity data.
 
-    Tries common identifier field names in order of preference.
+    If spec has identifier_field defined, uses that first.
+    Otherwise tries common identifier field names in order of preference.
 
     Args:
         data: Entity data dictionary.
+        spec: Optional EntityDefSpec with identifier_field.
 
     Returns:
         Identifier string if found, None otherwise.
     """
+    # First priority: spec-defined identifier_field
+    if spec and hasattr(spec, "identifier_field") and spec.identifier_field:
+        if data.get(spec.identifier_field):
+            return str(data[spec.identifier_field])
+
+    # Fallback to common identifier fields
     for id_field in IDENTIFIER_FIELDS:
         if data.get(id_field):
             return str(data[id_field])
@@ -115,9 +125,12 @@ def get_identifier_from_instance(instance: Any) -> str | None:
 def derive_label(entity_type: str, data: dict[str, Any], spec: Any = None) -> str:
     """Derive a display label from entity data.
 
-    Checks entity-specific label fields first, then common label fields,
-    with special handling for Person entities.
-    Optionally falls back to first non-empty string field from spec.
+    Priority order:
+    1. spec.label_field (if defined in spec)
+    2. spec.identifier_field (if defined in spec)
+    3. Entity-specific label fields (hardcoded per entity type)
+    4. Common label fields (title, name, etc.)
+    5. First non-empty string field from spec
 
     Args:
         entity_type: Type of entity.
@@ -127,7 +140,17 @@ def derive_label(entity_type: str, data: dict[str, Any], spec: Any = None) -> st
     Returns:
         Derived label string.
     """
-    # Check entity-specific label fields first
+    # First priority: spec-defined label_field
+    if spec and hasattr(spec, "label_field") and spec.label_field:
+        if data.get(spec.label_field):
+            return str(data[spec.label_field])
+
+    # Second priority: spec-defined identifier_field (as fallback label)
+    if spec and hasattr(spec, "identifier_field") and spec.identifier_field:
+        if data.get(spec.identifier_field):
+            return str(data[spec.identifier_field])
+
+    # Check entity-specific label fields
     if entity_type in ENTITY_LABEL_FIELDS:
         for key in ENTITY_LABEL_FIELDS[entity_type]:
             if data.get(key):

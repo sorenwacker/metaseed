@@ -104,6 +104,16 @@ class EntityHelper:
         return refs
 
     @property
+    def identifier_field(self: Self) -> str | None:
+        """Field name to use as identifier (from spec)."""
+        return getattr(self._spec, "identifier_field", None)
+
+    @property
+    def label_field(self: Self) -> str | None:
+        """Field name to use for display label (from spec)."""
+        return getattr(self._spec, "label_field", None)
+
+    @property
     def example_data(self: Self) -> dict[str, Any]:
         """Example values for this entity from the spec.
 

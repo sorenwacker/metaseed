@@ -125,6 +125,8 @@ class EntitySpec(BaseModel):
     description: str = ""
     fields: list[FieldSpec] = []
     example: dict[str, str | int | float | bool | list] | None = None
+    identifier_field: str | None = None
+    label_field: str | None = None
 
     def get_required_fields(self: Self) -> list[FieldSpec]:
         """Return list of required fields.
@@ -155,6 +157,8 @@ class EntityDefSpec(BaseModel):
     description: str = ""
     fields: list[FieldSpec] = []
     example: dict[str, str | int | float | bool | list] | None = None
+    identifier_field: str | None = None
+    label_field: str | None = None
 
 
 class ValidationRuleSpec(BaseModel):

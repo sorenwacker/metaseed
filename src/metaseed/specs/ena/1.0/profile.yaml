@@ -258,6 +258,8 @@ entities:
 
   Study:
     ontology_term: SRA:study
+    identifier_field: alias
+    label_field: title
     description: >
       A study (project) groups together data submitted to the archive and controls
       its release date. A study accession is typically used when citing data
@@ -367,6 +369,8 @@ entities:
 
   Sample:
     ontology_term: SRA:sample
+    identifier_field: alias
+    label_field: title
     description: >
       A sample contains information about the sequenced source material.
       Samples are associated with checklists which define the fields used
@@ -662,6 +666,8 @@ entities:
 
   Experiment:
     ontology_term: SRA:experiment
+    identifier_field: alias
+    label_field: title
     description: >
       An experiment contains information about a sequencing experiment including
       library and instrument details. An experiment references a study and one
@@ -834,6 +840,7 @@ entities:
 
   Run:
     ontology_term: SRA:run
+    identifier_field: alias
     description: >
       A run is part of an experiment and refers to data files containing
       sequence reads. Each run contains one or more files with associated
@@ -913,6 +920,8 @@ entities:
 
   Analysis:
     ontology_term: SRA:analysis
+    identifier_field: alias
+    label_field: title
     description: >
       An analysis contains secondary analysis results derived from sequence
       reads, such as genome assemblies, variant calls, or annotations.
