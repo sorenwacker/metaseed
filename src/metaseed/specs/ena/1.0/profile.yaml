@@ -898,6 +898,14 @@ entities:
         description: Center where the run was performed.
         ontology_term: SRA:run_center
 
+      - name: files
+        codename: FILES
+        type: list
+        items: File
+        required: false
+        description: Data files associated with this run (e.g., FASTQ, BAM).
+        ontology_term: SRA:has_file
+
       - name: run_attributes
         codename: RUN_ATTRIBUTES
         type: list
