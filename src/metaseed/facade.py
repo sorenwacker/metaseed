@@ -104,14 +104,6 @@ class EntityHelper:
         return refs
 
     @property
-    def identifier_field(self: Self) -> str | None:
-        """Field name marked as identifier (is_identifier: true in spec)."""
-        for f in self._spec.fields:
-            if getattr(f, "is_identifier", False):
-                return f.name
-        return None
-
-    @property
     def example_data(self: Self) -> dict[str, Any]:
         """Example values for this entity from the spec.
 

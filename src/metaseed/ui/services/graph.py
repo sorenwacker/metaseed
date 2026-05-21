@@ -92,9 +92,6 @@ def build_graph(state: AppState) -> dict:
     unique_id_to_vis_id: dict[str, str] = {}
     tree_id_to_vis_id: dict[str, str] = {}
 
-    # Get facade early for spec-defined identifier fields
-    facade = state.get_or_create_facade()
-
     def process_tree_node(
         tree_item: dict, parent_vis_id: str | None = None, level: int = 0
     ) -> None:
@@ -106,23 +103,13 @@ def build_graph(state: AppState) -> dict:
         # Get entity data for tooltip and identifier mapping
         entity_data = {}
         tree_node = state.nodes_by_id.get(tree_item["id"])
-        entity_type = tree_item["entity_type"]
         if tree_node and tree_node.instance and hasattr(tree_node.instance, "model_dump"):
             entity_data = tree_node.instance.model_dump(exclude_none=True)
-
-            # Get spec-defined identifier field from facade
-            helper = getattr(facade, entity_type, None) if facade else None
-
-            # Map by spec-defined identifier_field first (is_identifier: true)
-            if helper and helper.identifier_field:
-                id_value = entity_data.get(helper.identifier_field)
-                if id_value:
-                    unique_id_to_vis_id[str(id_value)] = vis_id
-
-            # Also map by common identifier fields as fallback
-            entity_id = get_identifier(entity_data, helper)
-            if entity_id:
-                unique_id_to_vis_id[entity_id] = vis_id
+            # Map ALL potential identifier fields to vis_id for reference resolution
+            # This allows references like Sample.alias to work (not just unique_id)
+            for id_field in ["unique_id", "identifier", "name", "id", "alias", "accession"]:
+                if entity_data.get(id_field):
+                    unique_id_to_vis_id[str(entity_data[id_field])] = vis_id
 
         tooltip = _build_tooltip(
             tree_item["entity_type"],
@@ -161,6 +148,8 @@ def build_graph(state: AppState) -> dict:
 
     # Second pass: add entity reference edges
     # Look for fields that reference other entities by unique_id
+    facade = state.get_or_create_facade()
+
     for tree_id, tree_node in state.nodes_by_id.items():
         if not tree_node.instance or not hasattr(tree_node.instance, "model_dump"):
             continue

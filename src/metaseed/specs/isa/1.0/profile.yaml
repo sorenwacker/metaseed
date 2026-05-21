@@ -115,7 +115,6 @@ entities:
     - name: identifier
       type: string
       required: true
-      is_identifier: true
       description: A locally unique identifier or an accession number provided by a repository
       ontology_term: isaterms:identifier
     - name: title
@@ -177,7 +176,6 @@ entities:
     - name: identifier
       type: string
       required: true
-      is_identifier: true
       description: A unique identifier or accession number
       ontology_term: isaterms:identifier
     - name: investigation_id
@@ -286,7 +284,6 @@ entities:
     - name: filename
       type: string
       required: true
-      is_identifier: true
       description: The name of the Assay file (a_*.txt)
     - name: study_id
       type: string
@@ -454,7 +451,6 @@ entities:
     - name: name
       type: string
       required: true
-      is_identifier: true
       description: The name of the protocol
       ontology_term: isaterms:name
     - name: protocol_type
@@ -518,7 +514,6 @@ entities:
     - name: name
       type: string
       required: true
-      is_identifier: true
       description: A name/reference for the source material
       ontology_term: isaterms:name
     - name: characteristics
@@ -544,7 +539,6 @@ entities:
     - name: name
       type: string
       required: true
-      is_identifier: true
       description: A name/reference for the sample material
       ontology_term: isaterms:name
     - name: characteristics
@@ -576,7 +570,6 @@ entities:
     - name: name
       type: string
       required: true
-      is_identifier: true
       description: A name/reference for the extract material
       ontology_term: isaterms:name
     - name: characteristics
@@ -602,7 +595,6 @@ entities:
     - name: name
       type: string
       required: true
-      is_identifier: true
       description: A name/reference for the labeled extract
       ontology_term: isaterms:name
     - name: label
@@ -637,7 +629,6 @@ entities:
     - name: name
       type: string
       required: true
-      is_identifier: true
       description: A unique name/reference for the material
       ontology_term: isaterms:name
     - name: type
@@ -679,7 +670,6 @@ entities:
     - name: name
       type: string
       required: true
-      is_identifier: true
       description: Study factor name
       ontology_term: isaterms:name
     - name: factor_type
@@ -772,7 +762,6 @@ entities:
     - name: name
       type: string
       required: false
-      is_identifier: true
       description: Process name
       ontology_term: isaterms:name
     - name: executes_protocol
@@ -839,7 +828,6 @@ entities:
     - name: filename
       type: string
       required: true
-      is_identifier: true
       description: A name/reference for the data file
     - name: label
       type: string

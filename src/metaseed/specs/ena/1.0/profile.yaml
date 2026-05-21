@@ -274,7 +274,6 @@ entities:
         codename: alias
         type: string
         required: true
-        is_identifier: true
         description: Unique submitter-assigned identifier for the study.
         ontology_term: SRA:alias
         constraints:
@@ -386,7 +385,6 @@ entities:
         codename: alias
         type: string
         required: true
-        is_identifier: true
         description: Unique submitter-assigned identifier for the sample.
         ontology_term: SRA:alias
         constraints:
@@ -686,7 +684,6 @@ entities:
         codename: alias
         type: string
         required: true
-        is_identifier: true
         description: Unique submitter-assigned identifier for the experiment.
         ontology_term: SRA:alias
         constraints:
@@ -856,7 +853,6 @@ entities:
         codename: alias
         type: string
         required: true
-        is_identifier: true
         description: Unique submitter-assigned identifier for the run.
         ontology_term: SRA:alias
         constraints:
@@ -937,7 +933,6 @@ entities:
         codename: alias
         type: string
         required: true
-        is_identifier: true
         description: Unique submitter-assigned identifier for the analysis.
         ontology_term: SRA:alias
         constraints:

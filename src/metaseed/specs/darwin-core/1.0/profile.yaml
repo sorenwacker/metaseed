@@ -102,7 +102,6 @@ entities:
       - name: occurrenceID
         type: string
         required: true
-        is_identifier: true
         description: "Unique identifier for the occurrence record"
         ontology_term: dwc:occurrenceID
 
@@ -270,7 +269,6 @@ entities:
       - name: eventID
         type: string
         required: true
-        is_identifier: true
         description: "Unique identifier for the sampling event"
         ontology_term: dwc:eventID
 
@@ -416,7 +414,6 @@ entities:
       - name: locationID
         type: string
         required: false
-        is_identifier: true
         description: "Unique identifier for the location"
         ontology_term: dwc:locationID
 
@@ -700,7 +697,6 @@ entities:
       - name: taxonID
         type: string
         required: true
-        is_identifier: true
         description: "Unique identifier for the taxon"
         ontology_term: dwc:taxonID
 
@@ -939,7 +935,6 @@ entities:
       - name: identificationID
         type: string
         required: false
-        is_identifier: true
         description: "Unique identifier for the identification"
         ontology_term: dwc:identificationID
 
@@ -1021,7 +1016,6 @@ entities:
       - name: organismID
         type: string
         required: true
-        is_identifier: true
         description: "Unique identifier for the organism"
         ontology_term: dwc:organismID
 
@@ -1076,7 +1070,6 @@ entities:
       - name: materialSampleID
         type: string
         required: true
-        is_identifier: true
         description: "Unique identifier for the material sample"
         ontology_term: dwc:materialSampleID
 
@@ -1116,7 +1109,6 @@ entities:
       - name: measurementID
         type: string
         required: false
-        is_identifier: true
         description: "Unique identifier for the measurement"
         ontology_term: dwc:measurementID
 
@@ -1185,7 +1177,6 @@ entities:
       - name: geologicalContextID
         type: string
         required: false
-        is_identifier: true
         description: "Unique identifier for the geological context"
         ontology_term: dwc:geologicalContextID
 
@@ -1303,7 +1294,6 @@ entities:
       - name: resourceRelationshipID
         type: string
         required: false
-        is_identifier: true
         description: "Unique identifier for the relationship"
         ontology_term: dwc:resourceRelationshipID
 

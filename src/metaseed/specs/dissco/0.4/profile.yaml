@@ -49,7 +49,6 @@ entities:
         codename: "@id"
         type: string
         required: true
-        is_identifier: true
         description: DOI-format unique identifier for the digital specimen
         constraints:
           pattern: "^https://doi\\.org/.*$"
@@ -436,7 +435,6 @@ entities:
         codename: "@id"
         type: string
         required: false
-        is_identifier: true
         description: Identifier for the identification
 
       - name: type
@@ -526,7 +524,6 @@ entities:
         codename: "@id"
         type: string
         required: false
-        is_identifier: true
         description: Identifier for the taxon identification
 
       - name: type
@@ -695,7 +692,6 @@ entities:
         codename: "@id"
         type: string
         required: false
-        is_identifier: true
         description: Identifier for the event
 
       - name: type
@@ -903,7 +899,6 @@ entities:
         codename: "@id"
         type: string
         required: false
-        is_identifier: true
         description: Identifier for the location
 
       - name: type
@@ -1067,7 +1062,6 @@ entities:
         codename: "@id"
         type: string
         required: false
-        is_identifier: true
         description: Identifier for the georeference
 
       - name: type
@@ -1206,7 +1200,6 @@ entities:
         codename: "@id"
         type: string
         required: false
-        is_identifier: true
         description: Identifier for the agent
 
       - name: type
@@ -1263,7 +1256,6 @@ entities:
         codename: "@id"
         type: string
         required: false
-        is_identifier: true
         description: Identifier for the role
 
       - name: type
@@ -1306,7 +1298,6 @@ entities:
         codename: "@id"
         type: string
         required: false
-        is_identifier: true
         description: Identifier for the assertion
 
       - name: type
@@ -1393,7 +1384,6 @@ entities:
         codename: "@id"
         type: string
         required: false
-        is_identifier: true
         description: Identifier (DOI, ISBN, etc.)
 
       - name: type
@@ -1467,7 +1457,6 @@ entities:
         codename: "@id"
         type: string
         required: false
-        is_identifier: true
         description: Identifier for the identifier object
 
       - name: type
@@ -1528,7 +1517,6 @@ entities:
         codename: "@id"
         type: string
         required: false
-        is_identifier: true
         description: Identifier for the relationship
 
       - name: type
@@ -1565,7 +1553,6 @@ entities:
         codename: "@id"
         type: string
         required: false
-        is_identifier: true
         description: Identifier for the specimen part
 
       - name: type
@@ -1614,7 +1601,6 @@ entities:
         codename: "@id"
         type: string
         required: false
-        is_identifier: true
         description: Identifier for the age determination
 
       - name: type

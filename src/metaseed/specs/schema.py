@@ -88,7 +88,6 @@ class FieldSpec(BaseModel):
     parent_ref: str | None = None
     unique_within: str | None = None
     reference: str | None = None
-    is_identifier: bool = False
 
     def is_nested(self: Self) -> bool:
         """Check if this field represents a nested entity.
