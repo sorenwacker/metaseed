@@ -992,6 +992,142 @@ class TestMCPSchemaValidation:
             assert data["results"][1]["status"] == "error"
 
 
+class TestMCPEdgeCases:
+    """Tests for edge cases that could cause data integrity issues.
+
+    These tests document current behavior and flag potential improvements.
+    """
+
+    def test_dangling_reference_accepted(self):
+        """Reference to non-existent entity is currently accepted.
+
+        This documents current behavior - ideally this should warn or error.
+        """
+        from metaseed.agent.mcp.server import set_mcp_state
+        from metaseed.ui.state import AppState
+
+        server = create_server()
+        tools = server._tool_manager._tools
+
+        create_fn = tools.get("create_entity")
+        get_fn = tools.get("get_entity")
+        state = AppState(profile="ena")
+        set_mcp_state(state)
+
+        with patch("metaseed.ui.datasets.auto_save"):
+            # Create Run referencing non-existent experiment
+            result = create_fn.fn(
+                entity_type="Run",
+                data=json.dumps(
+                    {
+                        "alias": "SRR12345",
+                        "experiment_ref": "NONEXISTENT-EXPERIMENT",
+                    }
+                ),
+            )
+            create_data = json.loads(result)
+
+            # Currently succeeds - documenting this behavior
+            # TODO: Consider warning about dangling references
+            if "error" in create_data:
+                pytest.skip(f"Profile/entity not available: {create_data}")
+            assert create_data.get("status") == "created", f"Got: {create_data}"
+
+            # Fetch the entity to verify the reference was stored
+            result = get_fn.fn(node_id=create_data["id"])
+            entity_data = json.loads(result)
+            assert entity_data["data"]["experiment_ref"] == "NONEXISTENT-EXPERIMENT"
+
+    def test_delete_leaves_orphan_references(self):
+        """Deleting entity leaves orphan references in parent.
+
+        This documents current behavior - ideally references should be cleaned.
+        """
+        from metaseed.agent.mcp.server import set_mcp_state
+        from metaseed.ui.state import AppState
+
+        server = create_server()
+        tools = server._tool_manager._tools
+
+        state = AppState(profile="miappe")
+        set_mcp_state(state)
+
+        with patch("metaseed.ui.datasets.auto_save"):
+            create_fn = tools.get("create_entity")
+            delete_fn = tools.get("delete_entity")
+            get_fn = tools.get("get_entity")
+
+            # Create Investigation
+            result = create_fn.fn(
+                entity_type="Investigation",
+                data='{"unique_id": "INV-ORPHAN-TEST", "title": "Orphan Test"}',
+            )
+            inv_data = json.loads(result)
+            if "error" in inv_data:
+                pytest.skip(f"Profile not available: {inv_data['error']}")
+            inv_id = inv_data["id"]
+
+            # Create Study as child
+            result = create_fn.fn(
+                entity_type="Study",
+                data='{"unique_id": "ST-ORPHAN-TEST", "title": "Child Study"}',
+                parent_id=inv_id,
+            )
+            study_data = json.loads(result)
+            study_id = study_data["id"]
+
+            # Verify parent has reference to child
+            result = get_fn.fn(node_id=inv_id)
+            inv_after_create = json.loads(result)
+            assert "ST-ORPHAN-TEST" in inv_after_create["data"].get("studies", [])
+
+            # Delete the study
+            delete_fn.fn(node_id=study_id)
+
+            # Check if parent still has orphan reference (current behavior)
+            result = get_fn.fn(node_id=inv_id)
+            inv_after_delete = json.loads(result)
+
+            # Document: orphan reference remains after deletion
+            orphan_exists = "ST-ORPHAN-TEST" in inv_after_delete["data"].get("studies", [])
+            if orphan_exists:
+                pytest.xfail("Known issue: orphan references remain after deletion")
+
+    def test_embedded_objects_with_invalid_fields_rejected(self):
+        """Embedded objects with invalid fields are properly rejected.
+
+        This validates that Pydantic's extra="forbid" works for nested objects.
+        """
+        from metaseed.agent.mcp.server import set_mcp_state
+        from metaseed.ui.state import AppState
+
+        server = create_server()
+        tools = server._tool_manager._tools
+
+        state = AppState(profile="miappe")
+        set_mcp_state(state)
+
+        with patch("metaseed.ui.datasets.auto_save"):
+            create_fn = tools.get("create_entity")
+
+            # Create Investigation with embedded studies that have invalid fields
+            result = create_fn.fn(
+                entity_type="Investigation",
+                data=json.dumps(
+                    {
+                        "unique_id": "INV-EMBED-TEST",
+                        "title": "Embed Test",
+                        "studies": [{"bad_field": "invalid"}],
+                    }
+                ),
+            )
+            data = json.loads(result)
+
+            # Should fail validation because embedded Study has invalid field
+            assert "error" in data, f"Expected validation error, got: {data}"
+            assert "bad_field" in str(data), f"Error should mention bad_field: {data}"
+
+
 class TestMCPDatasetSafety:
     """Tests for dataset safety checks."""
 
