@@ -63,12 +63,3 @@
     </div>
 </div>
 {% endif %}
-
-{% if editing_node_id and editing_node_type %}
-<script>
-    // Auto-load the form for the editing node
-    document.addEventListener('DOMContentLoaded', function() {
-        htmx.ajax('GET', '{{ base_url }}/form/{{ editing_node_type }}/{{ editing_node_id }}', {target: '#main', swap: 'innerHTML'});
-    });
-</script>
-{% endif %}

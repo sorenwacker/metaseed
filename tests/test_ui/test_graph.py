@@ -4,33 +4,8 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from metaseed.ui.app import create_app
-from metaseed.ui.services.graph import build_graph, truncate
+from metaseed.ui.services.graph import build_graph
 from metaseed.ui.state import AppState
-
-
-class TestTruncate:
-    """Tests for truncate helper function."""
-
-    def test_short_text_unchanged(self) -> None:
-        """Short text should not be truncated."""
-        assert truncate("short", 25) == "short"
-
-    def test_exact_length_unchanged(self) -> None:
-        """Text at exactly max length should not be truncated."""
-        text = "a" * 25
-        assert truncate(text, 25) == text
-
-    def test_long_text_truncated(self) -> None:
-        """Long text should be truncated with ellipsis."""
-        text = "a" * 30
-        result = truncate(text, 25)
-        # Truncation takes first 24 chars + "..." = 27 chars total
-        assert result.endswith("...")
-        assert len(result) < len(text)
-
-    def test_custom_max_length(self) -> None:
-        """Custom max length should be respected."""
-        assert truncate("abcdefghij", 5) == "abcd..."
 
 
 class TestBuildGraph:

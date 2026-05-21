@@ -10,8 +10,7 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from metaseed.facade import ProfileFacade
-
-    from .state import AppState
+    from metaseed.ui.state import AppState
 
 
 def to_dict(item: Any, exclude_none: bool = True) -> dict | None:
@@ -103,27 +102,52 @@ def extract_nested_items(instance: Any, helper: Any) -> dict[str, list[dict]]:
     return result
 
 
-def extract_nested_from_tree(node: Any, helper: Any) -> dict[str, list[dict]]:
+def extract_nested_from_tree(node: Any, helper: Any, facade: Any = None) -> dict[str, list[dict]]:
     """Extract nested items from tree children.
 
     When entities are created via MCP with parent_id, child entities are
     stored as separate tree nodes, not as nested objects in the parent.
     This function reconstructs the nested items from the tree structure.
 
+    Children are matched by:
+    1. Nested array fields (e.g., Study.samples -> Sample)
+    2. Reference fields pointing to this entity (e.g., File.run_ref -> Run)
+
     Args:
         node: TreeNode with potential children.
         helper: EntityHelper with nested_fields mapping.
+        facade: Optional ProfileFacade to find children via reference fields.
 
     Returns:
-        Dictionary mapping nested field names to lists of child entity dicts.
+        Dictionary mapping field names to lists of child entity dicts.
     """
     result: dict[str, list[dict]] = {}
 
     if not node.children:
         return result
 
-    # Build reverse mapping: entity_type -> field_name
+    # Build mapping: entity_type -> field_name from nested arrays
     type_to_field = {v: k for k, v in helper.nested_fields.items()}
+
+    # Also find children via reference fields (e.g., File.run_ref -> Run)
+    # These use a synthetic field name based on entity type (e.g., "files" for File)
+    if facade:
+        parent_type = node.entity_type
+
+        for child in node.children:
+            if child.entity_type in type_to_field:
+                continue  # Already handled by nested array
+
+            # Check if child has a reference field pointing to this parent
+            child_helper = getattr(facade, child.entity_type, None)
+            if child_helper:
+                for field in child_helper._spec.fields:
+                    if field.reference and field.reference.startswith(f"{parent_type}."):
+                        # This child type references our parent type
+                        # Use pluralized entity type as field name
+                        field_name = child.entity_type.lower() + "s"
+                        type_to_field[child.entity_type] = field_name
+                        break
 
     for child in node.children:
         field_name = type_to_field.get(child.entity_type)
@@ -142,20 +166,22 @@ def extract_nested_from_tree(node: Any, helper: Any) -> dict[str, list[dict]]:
     return result
 
 
-def get_nested_items_for_edit(node: Any, helper: Any) -> dict[str, list[dict]]:
+def get_nested_items_for_edit(node: Any, helper: Any, facade: Any = None) -> dict[str, list[dict]]:
     """Get all nested items for editing, combining instance data and tree children.
 
     This is the canonical function for getting nested items when editing an entity.
     It combines items from:
     1. The instance's nested fields (for inline nested objects)
     2. The tree's child nodes (for entities created via MCP with parent_id)
+    3. Children linked via reference fields (e.g., File.run_ref -> Run)
 
     Args:
         node: TreeNode being edited.
         helper: EntityHelper with nested_fields mapping.
+        facade: Optional ProfileFacade to find children via reference fields.
 
     Returns:
-        Dictionary mapping nested field names to lists of entity dicts.
+        Dictionary mapping field names to lists of entity dicts.
     """
     result: dict[str, list[dict]] = {}
 
@@ -168,8 +194,8 @@ def get_nested_items_for_edit(node: Any, helper: Any) -> dict[str, list[dict]]:
                 item for item in items if isinstance(item, dict) and not isinstance(item, str)
             ]
 
-    # Then, add items from tree children (these take precedence for MCP-created entities)
-    tree_items = extract_nested_from_tree(node, helper)
+    # Then, add items from tree children (includes reference-linked children if facade provided)
+    tree_items = extract_nested_from_tree(node, helper, facade)
     for field_name, items in tree_items.items():
         if field_name not in result:
             result[field_name] = []

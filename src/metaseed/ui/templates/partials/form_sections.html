@@ -23,9 +23,10 @@
 </div>
 {% endif %}
 
-{% if nested_fields and is_edit and inline_tables %}
+{% if is_edit and inline_tables %}
 <div class="form-section">
     <h3 class="form-section-title">Related Entities</h3>
+    {# Render tables for spec-defined nested fields #}
     {% for field in nested_fields %}
     {% set table_data = inline_tables.get(field.name, {}) %}
     {% set child_type = table_data.nested_entity_type if table_data else field.items %}
@@ -33,6 +34,16 @@
     {% include "partials/inline_table.html" with context %}
     {% else %}
     {% include "partials/field.html" %}
+    {% endif %}
+    {% endfor %}
+
+    {# Render tables for reference-linked children (not in nested_fields) #}
+    {% set nested_field_names = nested_fields | map(attribute='name') | list %}
+    {% for field_name, table_data in inline_tables.items() %}
+    {% if field_name not in nested_field_names and table_data.rows %}
+    {% set field = {'name': field_name, 'items': table_data.nested_entity_type} %}
+    {% set child_type = table_data.nested_entity_type %}
+    {% include "partials/inline_table.html" with context %}
     {% endif %}
     {% endfor %}
 

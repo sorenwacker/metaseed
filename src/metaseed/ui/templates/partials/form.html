@@ -39,13 +39,15 @@
     <p class="text-small text-muted mb-4">Ontology: {{ ontology_term }}</p>
     {% endif %}
 
-    {% if success_message %}
+    {% if notification %}
+    <div class="notification notification-{{ notification.type }}" data-testid="form-{{ notification.type }}">
+        {{ notification.message }}
+    </div>
+    {% elif success_message %}
     <div class="notification notification-success" data-testid="form-success">
         {{ success_message }}
     </div>
-    {% endif %}
-
-    {% if error_message %}
+    {% elif error_message %}
     <div class="notification notification-error" data-testid="form-error">
         {{ error_message }}
     </div>

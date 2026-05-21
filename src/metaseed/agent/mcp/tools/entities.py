@@ -88,6 +88,9 @@ def _auto_fill_reference_fields(
     Returns:
         The modified entity_data dict.
     """
+    import logging
+
+    logger = logging.getLogger(__name__)
     from metaseed.agent.mcp.server import get_mcp_state
 
     try:
@@ -117,15 +120,21 @@ def _auto_fill_reference_fields(
             all_entities = service.list_entities(target_entity_type)
             entities_list = all_entities.get("entities", {}).get(target_entity_type, [])
 
+            logger.info(
+                f"Auto-fill check: {entity_type}.{field.name} -> {target_entity_type}, "
+                f"found {len(entities_list)} candidates"
+            )
+
             # Auto-fill only if exactly one candidate exists
             if len(entities_list) == 1:
                 parent_data = entities_list[0].get("data", {})
                 ref_value = parent_data.get(target_field)
                 if ref_value:
                     entity_data[field.name] = ref_value
+                    logger.info(f"Auto-filled {field.name}={ref_value}")
 
-    except Exception:  # noqa: S110
-        pass
+    except Exception as e:
+        logger.warning(f"Auto-fill failed: {e}")
 
     return entity_data
 

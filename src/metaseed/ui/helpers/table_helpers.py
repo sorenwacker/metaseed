@@ -14,6 +14,41 @@ if TYPE_CHECKING:
     from .state import AppState
 
 
+def infer_entity_type_from_field(
+    facade: ProfileFacade,
+    parent_entity_type: str,
+    field_name: str,
+) -> str | None:
+    """Infer the nested entity type from a field name.
+
+    First checks the parent's nested_fields spec. If not found,
+    infers from field name convention (e.g., "files" -> "File").
+
+    Args:
+        facade: Profile facade for entity lookups.
+        parent_entity_type: Parent entity type (e.g., "Run").
+        field_name: Field name (e.g., "files", "run_attributes").
+
+    Returns:
+        Entity type string if found, None otherwise.
+    """
+    parent_helper = getattr(facade, parent_entity_type, None)
+    if not parent_helper:
+        return None
+
+    # Check spec-defined nested fields first
+    entity_type = parent_helper.nested_fields.get(field_name)
+    if entity_type:
+        return entity_type
+
+    # Infer from field name convention: "files" -> "File"
+    inferred_type = field_name.rstrip("s").capitalize()
+    if inferred_type in facade.entities:
+        return inferred_type
+
+    return None
+
+
 def get_table_columns(facade: ProfileFacade, entity_type: str) -> list[str]:
     """Get table columns for a nested entity type."""
     helper = getattr(facade, entity_type, None)
@@ -100,7 +135,18 @@ def build_inline_tables(
     source = items_source if items_source is not None else state.current_nested_items
 
     inline_tables = {}
-    for field_name, nested_type in helper.nested_fields.items():
+
+    # Build map of field_name -> nested_type from spec
+    field_to_type = dict(helper.nested_fields)
+
+    # Also include reference-linked children from source (e.g., files linked via run_ref)
+    for field_name in source:
+        if field_name not in field_to_type:
+            inferred_type = infer_entity_type_from_field(facade, entity_type, field_name)
+            if inferred_type:
+                field_to_type[field_name] = inferred_type
+
+    for field_name, nested_type in field_to_type.items():
         col_info = get_table_column_info(facade, nested_type)
 
         # Get items from source

@@ -21,6 +21,7 @@ from ..helpers import (
     get_parent_id_fields,
     get_reference_fields,
     get_table_column_info,
+    infer_entity_type_from_field,
 )
 
 if TYPE_CHECKING:
@@ -111,8 +112,7 @@ def register_table_routes(
 
         _, items = get_items_store(state, parent_entity_type, field_name)
 
-        parent_helper = getattr(facade, parent_entity_type, None)
-        entity_type = parent_helper.nested_fields.get(field_name) if parent_helper else None
+        entity_type = infer_entity_type_from_field(facade, parent_entity_type, field_name)
         col_info = get_table_column_info(facade, entity_type)
 
         reference_fields = (
@@ -204,14 +204,24 @@ def register_table_routes(
     ) -> HTMLResponse:
         """Update a cell value in the nested table."""
         state = get_state()
+        facade = state.get_or_create_facade()
         _, items = get_items_store(state, parent_entity_type, field_name)
+
+        # Get valid fields for the child entity type
+        entity_type = infer_entity_type_from_field(facade, parent_entity_type, field_name)
+        valid_fields: set[str] = set()
+        if entity_type:
+            child_helper = getattr(facade, entity_type, None)
+            if child_helper:
+                valid_fields = set(child_helper.all_fields)
 
         if 0 <= idx < len(items):
             form_data = await request.form()
             item = items[idx]
             if isinstance(item, dict):
                 for key, value in form_data.items():
-                    if not key.startswith("_"):
+                    # Only accept valid child entity fields
+                    if not key.startswith("_") and (not valid_fields or key in valid_fields):
                         item[key] = value
 
         return HTMLResponse(content="")

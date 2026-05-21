@@ -48,6 +48,7 @@ from metaseed.ui.helpers.table_helpers import (
     get_items_store,
     get_table_column_info,
     get_table_columns,
+    infer_entity_type_from_field,
 )
 
 __all__ = [
@@ -70,6 +71,7 @@ __all__ = [
     "get_reference_fields",
     "get_table_column_info",
     "get_table_columns",
+    "infer_entity_type_from_field",
     "is_nested_field",
     "to_dict",
     "walk_nested_entities",

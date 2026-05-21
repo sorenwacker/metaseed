@@ -7,6 +7,10 @@ with AppState and allows repository implementation to be swapped
 Two managers are provided:
 - DatasetManager: Synchronous manager (for filesystem, simple use cases)
 - AsyncDatasetManager: Asynchronous manager (for database backends)
+
+Note: Entity storage and relationship linking is now handled by ProfileFacade.
+The dataset manager delegates to facade.load_from_dict() and facade.to_dict()
+for loading and saving operations.
 """
 
 from __future__ import annotations
@@ -24,7 +28,6 @@ from metaseed.repositories.dataset_repository import (
 )
 from metaseed.repositories.filesystem_dataset import (
     FilesystemDatasetRepository,
-    serialize_tree_node,
 )
 
 if TYPE_CHECKING:
@@ -178,111 +181,39 @@ class DatasetManager:
         return "autosave"
 
     def _build_dataset_data(self, name: str) -> DatasetData:
-        """Build DatasetData from current state."""
-        facade = self._state.get_or_create_facade()
+        """Build DatasetData from current state.
 
-        entities: list[dict[str, Any]] = []
-        for node in self._state.entity_tree:
-            entities.extend(serialize_tree_node(node))
+        Delegates to facade.to_dict() for entity serialization.
+        """
+        facade = self._state.get_or_create_facade()
 
         return DatasetData(
             name=name,
             profile=self._state.profile,
             version=self._state.version or facade.version,
-            entities=entities,
+            entities=facade.to_dict(),
             modified=datetime.now().isoformat(),
         )
 
     def _restore_state_from_data(self, data: DatasetData) -> int:
-        """Restore state from DatasetData, returns loaded count."""
+        """Restore state from DatasetData, returns loaded count.
+
+        Delegates to facade.load_from_dict() for entity loading and linking.
+        This single method handles:
+        - Parent-child relationships via _parent_id/_parent_unique_id
+        - Nested array linking (e.g., Study.samples)
+        - Reference field linking (e.g., File.run_ref -> Run.alias)
+        """
         self._state.profile = data.profile
         self._state.version = data.version
         self._state.facade = None
         self._state.reset()
 
         facade = self._state.get_or_create_facade()
-        loaded_count = 0
+        loaded_count = facade.load_from_dict(data.entities)
 
-        id_to_node: dict[str, Any] = {}  # unique_id or alias -> node
-        old_id_to_node: dict[str, Any] = {}
-        nodes_with_parent: list[tuple[Any, str, bool]] = []
-
-        for entity_data in data.entities:
-            entity_type = entity_data.get("_type")
-            if not entity_type:
-                continue
-
-            try:
-                helper = getattr(facade, entity_type, None)
-                if helper:
-                    parent_unique_id = entity_data.get("_parent_unique_id")
-                    old_parent_id = entity_data.get("_parent_id")
-                    old_node_id = entity_data.get("_node_id")
-
-                    # Lenient loading: filter to only fields defined in schema
-                    valid_fields = set(helper.all_fields)
-                    fields = {
-                        k: v
-                        for k, v in entity_data.items()
-                        if not k.startswith("_") and k in valid_fields
-                    }
-                    instance = helper.create(**fields)
-
-                    node = self._state.add_node(entity_type, instance)
-                    loaded_count += 1
-
-                    # Index by unique_id or alias for parent lookup
-                    entity_id = fields.get("unique_id") or fields.get("alias")
-                    if entity_id:
-                        id_to_node[entity_id] = node
-
-                    if old_node_id:
-                        old_id_to_node[old_node_id] = node
-
-                    if parent_unique_id:
-                        nodes_with_parent.append((node, parent_unique_id, True))
-                    elif old_parent_id:
-                        nodes_with_parent.append((node, old_parent_id, False))
-            except Exception:  # noqa: S112
-                continue
-
-        for node, parent_ref, is_unique_id in nodes_with_parent:
-            if is_unique_id:
-                parent_node = id_to_node.get(parent_ref)
-            else:
-                parent_node = old_id_to_node.get(parent_ref)
-
-            if parent_node:
-                self._state.entity_tree = [n for n in self._state.entity_tree if n.id != node.id]
-                node.parent_id = parent_node.id
-                parent_node.children.append(node)
-
-        # Link children via parent's nested arrays (e.g., Study.samples contains child aliases)
-        for node in list(self._state.entity_tree):
-            if node.parent_id:
-                continue  # Already linked
-
-            helper = getattr(facade, node.entity_type, None)
-            if not helper:
-                continue
-
-            node_data = node.instance.model_dump() if node.instance else {}
-
-            # Check nested fields (e.g., Study.samples, Study.experiments)
-            for field_name in helper.nested_fields:
-                child_ids = node_data.get(field_name, [])
-                if not isinstance(child_ids, list):
-                    continue
-
-                for child_id in child_ids:
-                    child_node = id_to_node.get(child_id)
-                    if child_node and child_node.parent_id is None:
-                        # Link child to this parent
-                        self._state.entity_tree = [
-                            n for n in self._state.entity_tree if n.id != child_node.id
-                        ]
-                        child_node.parent_id = node.id
-                        node.children.append(child_node)
+        # Invalidate AppState cache to pick up new data
+        self._state._invalidate_cache()
 
         return loaded_count
 
@@ -434,111 +365,35 @@ class AsyncDatasetManager:
         return "autosave"
 
     def _build_dataset_data(self, name: str) -> DatasetData:
-        """Build DatasetData from current state."""
-        facade = self._state.get_or_create_facade()
+        """Build DatasetData from current state.
 
-        entities: list[dict[str, Any]] = []
-        for node in self._state.entity_tree:
-            entities.extend(serialize_tree_node(node))
+        Delegates to facade.to_dict() for entity serialization.
+        """
+        facade = self._state.get_or_create_facade()
 
         return DatasetData(
             name=name,
             profile=self._state.profile,
             version=self._state.version or facade.version,
-            entities=entities,
+            entities=facade.to_dict(),
             modified=datetime.now().isoformat(),
         )
 
     def _restore_state_from_data(self, data: DatasetData) -> int:
-        """Restore state from DatasetData, returns loaded count."""
+        """Restore state from DatasetData, returns loaded count.
+
+        Delegates to facade.load_from_dict() for entity loading and linking.
+        """
         self._state.profile = data.profile
         self._state.version = data.version
         self._state.facade = None
         self._state.reset()
 
         facade = self._state.get_or_create_facade()
-        loaded_count = 0
+        loaded_count = facade.load_from_dict(data.entities)
 
-        id_to_node: dict[str, Any] = {}  # unique_id or alias -> node
-        old_id_to_node: dict[str, Any] = {}
-        nodes_with_parent: list[tuple[Any, str, bool]] = []
-
-        for entity_data in data.entities:
-            entity_type = entity_data.get("_type")
-            if not entity_type:
-                continue
-
-            try:
-                helper = getattr(facade, entity_type, None)
-                if helper:
-                    parent_unique_id = entity_data.get("_parent_unique_id")
-                    old_parent_id = entity_data.get("_parent_id")
-                    old_node_id = entity_data.get("_node_id")
-
-                    # Lenient loading: filter to only fields defined in schema
-                    valid_fields = set(helper.all_fields)
-                    fields = {
-                        k: v
-                        for k, v in entity_data.items()
-                        if not k.startswith("_") and k in valid_fields
-                    }
-                    instance = helper.create(**fields)
-
-                    node = self._state.add_node(entity_type, instance)
-                    loaded_count += 1
-
-                    # Index by unique_id or alias for parent lookup
-                    entity_id = fields.get("unique_id") or fields.get("alias")
-                    if entity_id:
-                        id_to_node[entity_id] = node
-
-                    if old_node_id:
-                        old_id_to_node[old_node_id] = node
-
-                    if parent_unique_id:
-                        nodes_with_parent.append((node, parent_unique_id, True))
-                    elif old_parent_id:
-                        nodes_with_parent.append((node, old_parent_id, False))
-            except Exception:  # noqa: S112
-                continue
-
-        for node, parent_ref, is_unique_id in nodes_with_parent:
-            if is_unique_id:
-                parent_node = id_to_node.get(parent_ref)
-            else:
-                parent_node = old_id_to_node.get(parent_ref)
-
-            if parent_node:
-                self._state.entity_tree = [n for n in self._state.entity_tree if n.id != node.id]
-                node.parent_id = parent_node.id
-                parent_node.children.append(node)
-
-        # Link children via parent's nested arrays (e.g., Study.samples contains child aliases)
-        for node in list(self._state.entity_tree):
-            if node.parent_id:
-                continue  # Already linked
-
-            helper = getattr(facade, node.entity_type, None)
-            if not helper:
-                continue
-
-            node_data = node.instance.model_dump() if node.instance else {}
-
-            # Check nested fields (e.g., Study.samples, Study.experiments)
-            for field_name in helper.nested_fields:
-                child_ids = node_data.get(field_name, [])
-                if not isinstance(child_ids, list):
-                    continue
-
-                for child_id in child_ids:
-                    child_node = id_to_node.get(child_id)
-                    if child_node and child_node.parent_id is None:
-                        # Link child to this parent
-                        self._state.entity_tree = [
-                            n for n in self._state.entity_tree if n.id != child_node.id
-                        ]
-                        child_node.parent_id = node.id
-                        node.children.append(child_node)
+        # Invalidate AppState cache to pick up new data
+        self._state._invalidate_cache()
 
         return loaded_count
 
