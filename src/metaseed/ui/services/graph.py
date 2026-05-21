@@ -105,10 +105,11 @@ def build_graph(state: AppState) -> dict:
         tree_node = state.nodes_by_id.get(tree_item["id"])
         if tree_node and tree_node.instance and hasattr(tree_node.instance, "model_dump"):
             entity_data = tree_node.instance.model_dump(exclude_none=True)
-            # Map identifier to vis_id for reference resolution
-            entity_id = get_identifier(entity_data)
-            if entity_id:
-                unique_id_to_vis_id[entity_id] = vis_id
+            # Map ALL potential identifier fields to vis_id for reference resolution
+            # This allows references like Sample.alias to work (not just unique_id)
+            for id_field in ["unique_id", "identifier", "name", "id", "alias", "accession"]:
+                if entity_data.get(id_field):
+                    unique_id_to_vis_id[str(entity_data[id_field])] = vis_id
 
         tooltip = _build_tooltip(
             tree_item["entity_type"],
@@ -204,5 +205,24 @@ def build_graph(state: AppState) -> dict:
                             "font": {"size": 8},
                         }
                     )
+
+        # Also check for string reference fields (e.g., ENA sample_ref → Sample.alias)
+        for field_name in getattr(helper, "reference_fields", {}):
+            ref_value = entity_data.get(field_name)
+            if not ref_value or not isinstance(ref_value, str):
+                continue
+
+            target_vis_id = unique_id_to_vis_id.get(ref_value)
+            if target_vis_id and target_vis_id != vis_id:
+                edges.append(
+                    {
+                        "id": f"{vis_id}->{target_vis_id}:{field_name}",
+                        "from": vis_id,
+                        "to": target_vis_id,
+                        "dashes": True,
+                        "label": field_name,
+                        "font": {"size": 8},
+                    }
+                )
 
     return {"nodes": nodes, "edges": edges}

@@ -88,6 +88,22 @@ class EntityHelper:
         return nested
 
     @property
+    def reference_fields(self: Self) -> dict[str, tuple[str, str]]:
+        """Fields that reference other entities by ID.
+
+        Returns {field_name: (target_entity, target_field)}.
+        Example: {"sample_ref": ("Sample", "alias")}
+        """
+        refs = {}
+        for f in self._spec.fields:
+            if f.reference:
+                # Parse "Entity.field" format
+                parts = f.reference.split(".", 1)
+                if len(parts) == 2:
+                    refs[f.name] = (parts[0], parts[1])
+        return refs
+
+    @property
     def example_data(self: Self) -> dict[str, Any]:
         """Example values for this entity from the spec.
 
