@@ -1052,11 +1052,20 @@ entities:
       A data file associated with a run or analysis, including filename,
       type, and checksum for integrity verification.
     example:
+      run_ref: run-001
       filename: sample_R1.fastq.gz
       filetype: fastq
       checksum_method: MD5
       checksum: d41d8cd98f00b204e9800998ecf8427e
     fields:
+      - name: run_ref
+        codename: run_ref
+        type: string
+        required: false
+        description: Reference to the parent run (alias or accession).
+        ontology_term: SRA:run_ref
+        reference: Run.alias
+
       - name: filename
         codename: filename
         type: string
