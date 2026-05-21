@@ -139,6 +139,36 @@ entities:
 
 Fields define the data attributes within an entity.
 
+### Label Convention
+
+**The first field's value is used as the entity's display label.** This applies to:
+
+- Node labels in graph visualization
+- Tree view labels in the UI
+- Entity identification in references
+
+Place the field that best identifies the entity first in the field list. This could be `name`, `identifier`, `alias`, `title`, or any other field appropriate for the metadata model:
+
+```yaml
+# ENA uses 'alias' as the identifying field
+fields:
+  - name: alias         # First field → used as label
+    type: string
+    required: true
+  - name: accession
+    type: string
+
+# MIAPPE uses 'name'
+fields:
+  - name: name          # First field → used as label
+    type: string
+    required: true
+  - name: description
+    type: string
+```
+
+This convention keeps specs aligned with the actual metadata standard while providing consistent UI behavior.
+
 ```yaml
 fields:
   - name: latitude
@@ -355,17 +385,22 @@ field1 >= field2              # Comparison (dates, numbers)
 
 ## Design Patterns
 
-### Identifier Fields
+### Field Ordering
 
-Most entities need an identifier:
+Place the most identifying field first in each entity's field list. The first field's value is used as the display label throughout the UI:
 
 ```yaml
-- name: identifier
-  type: string
-  required: true
-  unique_within: parent
-  description: Unique identifier within this context
+fields:
+  - name: name            # First → display label
+    type: string
+    required: true
+  - name: description
+    type: string
+  - name: other_fields
+    type: string
 ```
+
+Use whatever field name fits the metadata standard (`name`, `identifier`, `alias`, `title`, etc.).
 
 ### Ontology Linking
 

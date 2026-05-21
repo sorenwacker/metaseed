@@ -195,23 +195,25 @@ class TestEntityHelper:
         assert "required" in repr_str
         assert "optional" in repr_str
 
-    def test_get_label_with_title(self, investigation_helper: EntityHelper) -> None:
-        """get_label returns title for Investigation."""
+    def test_get_label_uses_first_field(self, investigation_helper: EntityHelper) -> None:
+        """get_label uses first field (unique_id for Investigation) by convention."""
         inv = investigation_helper.create(
             unique_id="INV-001",
             title="My Research Project",
         )
         label = investigation_helper.get_label(inv)
-        assert label == "My Research Project"
+        # By convention, first field (unique_id) is used as label
+        assert label == "INV-001"
 
     def test_get_label_with_dict(self, investigation_helper: EntityHelper) -> None:
-        """get_label works with dict input."""
+        """get_label works with dict input, using first field by convention."""
         data = {"unique_id": "INV-002", "title": "Dict Investigation"}
         label = investigation_helper.get_label(data)
-        assert label == "Dict Investigation"
+        # By convention, first field (unique_id) is used as label
+        assert label == "INV-002"
 
-    def test_get_label_falls_back_to_unique_id(self, investigation_helper: EntityHelper) -> None:
-        """get_label falls back to unique_id if no title."""
+    def test_get_label_with_only_first_field(self, investigation_helper: EntityHelper) -> None:
+        """get_label uses first field value."""
         data = {"unique_id": "INV-003"}
         label = investigation_helper.get_label(data)
         assert label == "INV-003"

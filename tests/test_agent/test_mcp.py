@@ -383,32 +383,39 @@ class TestMCPIntegration:
             spec_data = json.loads(result)
             assert "fields" in spec_data or "error" in spec_data
 
-    def test_person_label_uses_name_fields(self):
-        """Test that Person entities use first_name + last_name for label."""
-        from metaseed.ui.state import TreeNode
+    def test_person_label_uses_first_field(self):
+        """Test that Person entities use first field as label per convention."""
+        from metaseed.ui.state import AppState
 
-        # Mock a Person instance with model_dump
-        class MockPerson:
-            def model_dump(self):
-                return {"first_name": "Jane", "last_name": "Doe", "email": "jane@example.com"}
-
-        node = TreeNode.create("Person", MockPerson())
+        state = AppState(profile="miappe")
+        facade = state.get_or_create_facade()
+        # MIAPPE Person has 'name' as first field
+        instance = facade.Person.create(
+            name="Jane Doe",
+            email="jane@example.com",
+        )
+        node = state.add_node("Person", instance)
         assert node.label == "Jane Doe"
 
-    def test_person_label_first_name_only(self):
-        """Test Person label with only first_name."""
-        from metaseed.ui.state import TreeNode
+    def test_person_label_with_short_name(self):
+        """Test Person label with short name."""
+        from metaseed.ui.state import AppState
 
-        class MockPerson:
-            def model_dump(self):
-                return {"first_name": "Jane"}
-
-        node = TreeNode.create("Person", MockPerson())
-        assert node.label == "Jane"
+        state = AppState(profile="miappe")
+        facade = state.get_or_create_facade()
+        # Create with minimal name
+        instance = facade.Person.create(
+            name="J",
+            email="j@example.com",
+        )
+        node = state.add_node("Person", instance)
+        assert node.label == "J"
 
     def test_hierarchy_creation_and_save(self, tmp_path):
         """Test creating hierarchical entities and saving to disk."""
         from metaseed.agent.mcp.server import set_mcp_state
+        from metaseed.repositories.filesystem_dataset import FilesystemDatasetRepository
+        from metaseed.ui import dataset_manager
         from metaseed.ui.state import AppState
 
         server = create_server()
@@ -418,8 +425,11 @@ class TestMCPIntegration:
         state = AppState(profile="miappe")
         set_mcp_state(state)
 
-        # Mock the datasets directory to use tmp_path
-        with patch("metaseed.ui.datasets.DATASETS_DIR", tmp_path):
+        # Create a test repository using tmp_path
+        test_repo = FilesystemDatasetRepository(datasets_dir=tmp_path)
+        original_repo = dataset_manager._repository
+        dataset_manager._repository = test_repo
+        try:
             # 1. Create Investigation
             create_fn = tools.get("create_entity")
             result = create_fn.fn(
@@ -459,7 +469,7 @@ class TestMCPIntegration:
             assert len(state.nodes_by_id) == 2
 
             # 5. Verify dataset file was saved with hierarchy
-            dataset_file = tmp_path / "hierarchy-test.json"
+            dataset_file = tmp_path / "inv-hierarchy-test.json"
             assert (
                 dataset_file.exists()
             ), f"Dataset file not found. Files: {list(tmp_path.iterdir())}"
@@ -487,6 +497,8 @@ class TestMCPIntegration:
 
             # Verify Investigation's studies field was updated
             assert "study-hierarchy-test" in saved_inv.get("studies", [])
+        finally:
+            dataset_manager._repository = original_repo
 
     def test_get_entity_tree_shows_hierarchy(self):
         """Test that get_entity_tree correctly shows parent-child relationships."""
@@ -959,80 +971,91 @@ class TestMCPDatasetSafety:
 
 
 class TestEntityLabelFields:
-    """Tests for entity-specific label field handling."""
+    """Tests for convention-based label derivation.
 
-    def test_biological_material_label_uses_organism(self):
-        """BiologicalMaterial uses organism field for label."""
+    By convention, the first field in the entity spec is used as the label.
+    For MIAPPE entities, this is typically `unique_id`.
+    """
+
+    def test_label_uses_first_field_from_spec(self):
+        """Label is derived from the first field in the spec."""
+        from metaseed.facade import ProfileFacade
         from metaseed.repositories.helpers import derive_label
 
-        data = {
-            "unique_id": "BM-001",
-            "organism": "Arabidopsis thaliana",
-            "title": "Material 1",
-        }
-
-        label = derive_label("BiologicalMaterial", data)
-        assert label == "Arabidopsis thaliana"
-
-    def test_biological_material_label_fallback_to_genus(self):
-        """BiologicalMaterial falls back to genus when organism is missing."""
-        from metaseed.repositories.helpers import derive_label
-
-        data = {
-            "unique_id": "BM-001",
-            "genus": "Arabidopsis",
-        }
-
-        label = derive_label("BiologicalMaterial", data)
-        assert label == "Arabidopsis"
-
-    def test_observed_variable_label_uses_name(self):
-        """ObservedVariable uses name field for label."""
-        from metaseed.repositories.helpers import derive_label
-
-        data = {
-            "unique_id": "OV-001",
-            "name": "Plant height",
-            "trait": "Height",
-        }
-
-        label = derive_label("ObservedVariable", data)
-        assert label == "Plant height"
-
-    def test_observed_variable_label_fallback_to_trait(self):
-        """ObservedVariable falls back to trait when name is missing."""
-        from metaseed.repositories.helpers import derive_label
-
-        data = {
-            "unique_id": "OV-001",
-            "trait": "Height",
-        }
-
-        label = derive_label("ObservedVariable", data)
-        assert label == "Height"
-
-    def test_generic_entity_uses_standard_fields(self):
-        """Non-specialized entity uses standard label fields."""
-        from metaseed.repositories.helpers import derive_label
+        facade = ProfileFacade("miappe", "1.2")
+        helper = facade.Investigation
+        spec = helper._spec
 
         data = {
             "unique_id": "INV-001",
             "title": "My Investigation",
         }
 
-        label = derive_label("Investigation", data)
-        assert label == "My Investigation"
+        # Investigation's first field is unique_id
+        label = derive_label("Investigation", data, spec=spec)
+        assert label == "INV-001"
 
-    def test_entity_specific_before_generic(self):
-        """Entity-specific fields are checked before generic fields."""
+    def test_label_without_spec_returns_default(self):
+        """Without spec, returns default label."""
         from metaseed.repositories.helpers import derive_label
 
-        # BiologicalMaterial should prefer organism over title
         data = {
-            "title": "Generic Title",
-            "organism": "Specific Organism",
             "unique_id": "BM-001",
+            "organism": "Arabidopsis thaliana",
         }
 
+        # Without spec, falls back to default
         label = derive_label("BiologicalMaterial", data)
-        assert label == "Specific Organism"
+        assert label == "New BiologicalMaterial"
+
+    def test_label_with_missing_first_field(self):
+        """When first field is empty, returns default label."""
+        from metaseed.facade import ProfileFacade
+        from metaseed.repositories.helpers import derive_label
+
+        facade = ProfileFacade("miappe", "1.2")
+        helper = facade.Study
+        spec = helper._spec
+
+        # Data without the first field (unique_id)
+        data = {
+            "title": "My Study",
+            "investigation_id": "INV-001",
+        }
+
+        label = derive_label("Study", data, spec=spec)
+        assert label == "New Study"
+
+    def test_different_entity_first_fields(self):
+        """Different entities may have different first fields as identifiers."""
+        from metaseed.facade import ProfileFacade
+        from metaseed.repositories.helpers import derive_label
+
+        facade = ProfileFacade("miappe", "1.2")
+
+        # Person's first field is 'name' in MIAPPE 1.2
+        person_spec = facade.Person._spec
+        person_data = {"name": "Dr. Smith", "email": "smith@example.org"}
+        label = derive_label("Person", person_data, spec=person_spec)
+        assert label == "Dr. Smith"
+
+        # Investigation's first field is 'unique_id'
+        inv_spec = facade.Investigation._spec
+        inv_data = {"unique_id": "INV-001", "title": "My Investigation"}
+        label = derive_label("Investigation", inv_data, spec=inv_spec)
+        assert label == "INV-001"
+
+    def test_label_truncation(self):
+        """Labels are truncated to 50 characters."""
+        from metaseed.facade import ProfileFacade
+        from metaseed.repositories.helpers import derive_label
+
+        facade = ProfileFacade("miappe", "1.2")
+        spec = facade.Investigation._spec
+
+        long_id = "A" * 100
+        data = {"unique_id": long_id}
+
+        label = derive_label("Investigation", data, spec=spec)
+        assert len(label) == 50
+        assert label == long_id[:50]

@@ -15,8 +15,6 @@ from metaseed.repositories.dataset_repository import (
 from metaseed.repositories.file import FileEntityRepository
 from metaseed.repositories.filesystem_dataset import FilesystemDatasetRepository
 from metaseed.repositories.helpers import (
-    IDENTIFIER_FIELDS,
-    LABEL_FIELDS,
     derive_label,
     find_parent_ref_field,
     get_identifier,
@@ -35,8 +33,6 @@ __all__ = [
     "FileEntityRepository",
     "FilesystemDatasetRepository",
     "MemoryEntityRepository",
-    "IDENTIFIER_FIELDS",
-    "LABEL_FIELDS",
     "derive_label",
     "find_parent_ref_field",
     "get_identifier",

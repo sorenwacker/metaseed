@@ -331,7 +331,10 @@ class TestBuildBreadcrumb:
         assert breadcrumb == []
 
     def test_breadcrumb_with_root_entity(self):
-        """Breadcrumb includes root entity."""
+        """Breadcrumb includes root entity.
+
+        By convention, the first field (unique_id for Investigation) is used as label.
+        """
         state = AppState()
         facade = state.get_or_create_facade()
         instance = facade.Investigation(unique_id="INV-001", title="Test Investigation")
@@ -341,11 +344,14 @@ class TestBuildBreadcrumb:
         breadcrumb = build_breadcrumb(state)
 
         assert len(breadcrumb) == 1
-        assert breadcrumb[0]["label"] == "Test Investigation"
+        assert breadcrumb[0]["label"] == "INV-001"  # First field is unique_id
         assert breadcrumb[0]["entity_type"] == "Investigation"
 
     def test_breadcrumb_with_nested_context(self):
-        """Breadcrumb includes nested edit context."""
+        """Breadcrumb includes nested edit context.
+
+        By convention, the first field (unique_id) is used as label.
+        """
         state = AppState()
         facade = state.get_or_create_facade()
         instance = facade.Investigation(unique_id="INV-001", title="Root")
@@ -353,7 +359,10 @@ class TestBuildBreadcrumb:
         state.editing_node_id = node.id
 
         # Add nested items and context
-        state.current_nested_items = {"studies": [{"title": "Nested Study"}]}
+        # Study's first field is unique_id, but we provide title for display
+        state.current_nested_items = {
+            "studies": [{"unique_id": "STUDY-001", "title": "Nested Study"}]
+        }
         context = NestedEditContext(
             field_name="studies",
             row_idx=0,
@@ -365,8 +374,8 @@ class TestBuildBreadcrumb:
         breadcrumb = build_breadcrumb(state)
 
         assert len(breadcrumb) == 2
-        assert breadcrumb[0]["label"] == "Root"
-        assert breadcrumb[1]["label"] == "Nested Study"
+        assert breadcrumb[0]["label"] == "INV-001"  # First field is unique_id
+        assert breadcrumb[1]["label"] == "STUDY-001"  # First field is unique_id
 
     def test_breadcrumb_missing_node(self):
         """Breadcrumb handles missing node gracefully."""

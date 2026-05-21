@@ -311,7 +311,7 @@ class TestNormalizeReferenceFields:
             ],
         }
 
-        result = normalize_reference_fields(data, helper)
+        result = normalize_reference_fields(data, helper, facade)
 
         # Should extract just the names (identifiers)
         assert result["derives_from"] == ["SOURCE-001", "SOURCE-002"]
@@ -330,7 +330,7 @@ class TestNormalizeReferenceFields:
             "derives_from": ["SOURCE-001", "SOURCE-002"],
         }
 
-        result = normalize_reference_fields(data, helper)
+        result = normalize_reference_fields(data, helper, facade)
 
         assert result["derives_from"] == ["SOURCE-001", "SOURCE-002"]
 
@@ -349,7 +349,7 @@ class TestNormalizeReferenceFields:
             ],
         }
 
-        result = normalize_reference_fields(data, helper)
+        result = normalize_reference_fields(data, helper, facade)
 
         assert result["derives_from"] == ["SOURCE-001", "SOURCE-002"]
 
@@ -360,13 +360,18 @@ class TestNormalizeReferenceFields:
         facade = ProfileFacade("miappe", "1.2")
         helper = facade.Study
 
+        # Location's first field (identifier) is unique_id, not name
         data = {
             "unique_id": "STUDY-001",
             "title": "Test Study",
-            "geographic_location": {"name": "LOC-001", "country": "USA"},
+            "geographic_location": {
+                "unique_id": "LOC-001",
+                "name": "Test Location",
+                "country": "USA",
+            },
         }
 
-        result = normalize_reference_fields(data, helper)
+        result = normalize_reference_fields(data, helper, facade)
 
         assert result["geographic_location"] == "LOC-001"
 
@@ -382,7 +387,7 @@ class TestNormalizeReferenceFields:
             "characteristics": [{"category": "organism", "value": "human"}],
         }
 
-        result = normalize_reference_fields(data, helper)
+        result = normalize_reference_fields(data, helper, facade)
 
         # characteristics is a list of Characteristic entities (nested, not reference)
         # But the normalization should still extract IDs if it can
@@ -401,7 +406,7 @@ class TestNormalizeReferenceFields:
             "derives_from": [],
         }
 
-        result = normalize_reference_fields(data, helper)
+        result = normalize_reference_fields(data, helper, facade)
 
         # Empty list after normalization (no valid IDs)
         assert "derives_from" not in result or result.get("derives_from") == []
@@ -418,6 +423,6 @@ class TestNormalizeReferenceFields:
             "derives_from": None,
         }
 
-        result = normalize_reference_fields(data, helper)
+        result = normalize_reference_fields(data, helper, facade)
 
         assert result.get("derives_from") is None

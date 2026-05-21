@@ -90,17 +90,18 @@ class TestBuildGraph:
         """Long labels should be truncated."""
         state = AppState(profile="miappe")
         facade = state.get_or_create_facade()
-        long_title = "A" * 50
+        # First field (unique_id) is used as label per convention, so make it long
+        long_id = "A" * 50
         instance = facade.Investigation.create(
-            unique_id="inv1",
-            title=long_title,
+            unique_id=long_id,
+            title="Test Investigation",
             miappe_version=facade.version,
         )
         state.add_node("Investigation", instance)
 
         result = build_graph(state)
         # Label should be shorter than original
-        assert len(result["nodes"][0]["label"]) < len(long_title)
+        assert len(result["nodes"][0]["label"]) < len(long_id)
         # Label should end with ellipsis
         assert result["nodes"][0]["label"].endswith("...")
 

@@ -104,6 +104,20 @@ class EntityHelper:
         return refs
 
     @property
+    def identifier_field(self: Self) -> str | None:
+        """Field name used as display label for this entity.
+
+        By convention, the first non-parent-ref field in the entity definition
+        is used as the identifier/label for display purposes.
+        """
+        for f in self._spec.fields:
+            # Skip parent reference fields (these are auto-populated)
+            if f.parent_ref:
+                continue
+            return f.name
+        return None
+
+    @property
     def example_data(self: Self) -> dict[str, Any]:
         """Example values for this entity from the spec.
 

@@ -284,7 +284,8 @@ class TestAppState:
 
         assert node.id in state.nodes_by_id
         assert len(state.entity_tree) == 1
-        assert node.label == "Test"
+        # By convention, first field (unique_id) is used as label
+        assert node.label == "INV-001"
 
     def test_update_node(self):
         """Update existing node."""
@@ -293,10 +294,11 @@ class TestAppState:
         instance = facade.Investigation(unique_id="INV-001", title="Original")
         node = state.add_node("Investigation", instance)
 
-        updated_instance = facade.Investigation(unique_id="INV-001", title="Updated")
+        updated_instance = facade.Investigation(unique_id="INV-002", title="Updated")
         state.update_node(node.id, updated_instance)
 
-        assert state.nodes_by_id[node.id].label == "Updated"
+        # By convention, first field (unique_id) is used as label
+        assert state.nodes_by_id[node.id].label == "INV-002"
 
     def test_delete_node(self):
         """Delete node from tree."""
@@ -333,10 +335,14 @@ class TestAppState:
         tree_data = state.get_tree_data()
         assert len(tree_data) == 1
         assert tree_data[0]["entity_type"] == "Investigation"
-        assert tree_data[0]["label"] == "Test Investigation"
+        # By convention, first field (unique_id) is used as label
+        assert tree_data[0]["label"] == "INV-001"
 
     def test_get_tree_data_with_nested_entities(self):
-        """Get tree data includes child entities added via parent_id."""
+        """Get tree data includes child entities added via parent_id.
+
+        By convention, first field (identifier for ISA) is used as label.
+        """
         # Use ISA profile since it has consistent model caching across tests
         state = AppState()
         state.profile = "isa"
@@ -368,7 +374,8 @@ class TestAppState:
         assert len(tree_data) == 1
         assert tree_data[0]["has_children"] is True
         assert len(tree_data[0]["children"]) == 2
-        assert tree_data[0]["children"][0]["label"] == "Study One"
+        # ISA Study's first field is identifier
+        assert tree_data[0]["children"][0]["label"] == "STU-001"
         assert tree_data[0]["children"][0]["entity_type"] == "Study"
 
     def test_reset_clears_all_state(self):

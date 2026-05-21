@@ -40,6 +40,7 @@ class TreeNode:
         instance: Any,
         parent_id: str | None = None,
         node_id: str | None = None,
+        spec: Any = None,
     ) -> TreeNode:
         """Create a new tree node from an entity instance.
 
@@ -49,11 +50,12 @@ class TreeNode:
             parent_id: Optional parent node ID.
             node_id: Optional node ID to preserve (for loading saved datasets).
                     If not provided, a new UUID is generated.
+            spec: Optional EntityDefSpec for label derivation.
         """
         from metaseed.repositories.helpers import derive_label
 
         data = instance.model_dump() if hasattr(instance, "model_dump") else {}
-        label = derive_label(entity_type, data)
+        label = derive_label(entity_type, data, spec)
 
         return cls(
             id=node_id or str(uuid.uuid4())[:8],
@@ -153,7 +155,12 @@ class AppState:
             parent_id: Optional parent node ID for hierarchy.
             node_id: Optional node ID to preserve (for loading saved datasets).
         """
-        node = TreeNode.create(entity_type, instance, parent_id, node_id)
+        # Get spec for label derivation (first field convention)
+        facade = self.get_or_create_facade()
+        helper = getattr(facade, entity_type, None)
+        spec = helper._spec if helper else None
+
+        node = TreeNode.create(entity_type, instance, parent_id, node_id, spec)
         self.nodes_by_id[node.id] = node
 
         if parent_id and parent_id in self.nodes_by_id:
@@ -172,7 +179,11 @@ class AppState:
             node.instance = instance
             if hasattr(instance, "model_dump"):
                 data = instance.model_dump()
-                node.label = derive_label(node.entity_type, data)
+                # Get spec for label derivation (first field convention)
+                facade = self.get_or_create_facade()
+                helper = getattr(facade, node.entity_type, None)
+                spec = helper._spec if helper else None
+                node.label = derive_label(node.entity_type, data, spec)
         return node
 
     def delete_node(self: Self, node_id: str) -> bool:

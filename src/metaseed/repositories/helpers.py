@@ -12,46 +12,6 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from metaseed.facade import EntityHelper
 
-# Common field names for entity identification
-IDENTIFIER_FIELDS = ["unique_id", "identifier", "name", "id", "filename"]
-
-# Common field names for deriving labels (in preference order)
-LABEL_FIELDS = [
-    "title",
-    "name",
-    "display_name",
-    "unique_id",
-    "identifier",
-    "id",
-    "term",
-    "filename",
-]
-
-# Entity-specific label field priorities
-# These are checked before the generic LABEL_FIELDS
-ENTITY_LABEL_FIELDS: dict[str, list[str]] = {
-    "BiologicalMaterial": [
-        "organism",
-        "genus",
-        "species",
-        "infraspecific_name",
-        "unique_id",
-    ],
-    "ObservedVariable": [
-        "name",
-        "trait",
-        "unique_id",
-    ],
-    "Sample": [
-        "description",
-        "unique_id",
-    ],
-    "Event": [
-        "type",
-        "description",
-    ],
-}
-
 
 def find_parent_ref_field(helper: Any, parent_type: str) -> str | None:
     """Find field on child entity that references parent type.
@@ -80,28 +40,31 @@ def find_parent_ref_field(helper: Any, parent_type: str) -> str | None:
     return None
 
 
-def get_identifier(data: dict[str, Any]) -> str | None:
+def get_identifier(data: dict[str, Any], helper: EntityHelper | None = None) -> str | None:
     """Get identifier value from entity data.
 
-    Tries common identifier field names in order of preference.
+    By convention, the first field in the spec is the identifier.
 
     Args:
         data: Entity data dictionary.
+        helper: EntityHelper for spec-based lookup.
 
     Returns:
         Identifier string if found, None otherwise.
     """
-    for id_field in IDENTIFIER_FIELDS:
-        if data.get(id_field):
-            return str(data[id_field])
+    if helper and helper.identifier_field:
+        value = data.get(helper.identifier_field)
+        if value:
+            return str(value)
     return None
 
 
-def get_identifier_from_instance(instance: Any) -> str | None:
+def get_identifier_from_instance(instance: Any, helper: EntityHelper | None = None) -> str | None:
     """Get identifier from a Pydantic model instance.
 
     Args:
         instance: Pydantic model instance.
+        helper: Optional EntityHelper for spec-based lookup.
 
     Returns:
         Identifier string if found, None otherwise.
@@ -109,49 +72,27 @@ def get_identifier_from_instance(instance: Any) -> str | None:
     if not instance or not hasattr(instance, "model_dump"):
         return None
     data = instance.model_dump(exclude_none=True)
-    return get_identifier(data)
+    return get_identifier(data, helper)
 
 
 def derive_label(entity_type: str, data: dict[str, Any], spec: Any = None) -> str:
     """Derive a display label from entity data.
 
-    Checks entity-specific label fields first, then common label fields,
-    with special handling for Person entities.
-    Optionally falls back to first non-empty string field from spec.
+    By convention, the first field in the spec is used as the label.
 
     Args:
         entity_type: Type of entity.
         data: Entity data dictionary.
-        spec: Optional EntityDefSpec with field definitions for fallback.
+        spec: EntityDefSpec with field definitions.
 
     Returns:
         Derived label string.
     """
-    # Check entity-specific label fields first
-    if entity_type in ENTITY_LABEL_FIELDS:
-        for key in ENTITY_LABEL_FIELDS[entity_type]:
-            if data.get(key):
-                return str(data[key])
-
-    # Fall back to generic label fields
-    for key in LABEL_FIELDS:
-        if data.get(key):
-            return str(data[key])
-
-    # Person special case: combine first and last name
-    if data.get("first_name") or data.get("last_name"):
-        parts = [data.get("first_name", ""), data.get("last_name", "")]
-        label = " ".join(p for p in parts if p).strip()
-        if label:
-            return label
-
-    # Spec-based fallback: first non-empty string field
-    if spec and hasattr(spec, "fields"):
-        from metaseed.specs.schema import FieldType
-
-        for f in spec.fields:
-            if f.type == FieldType.STRING and data.get(f.name):
-                return str(data[f.name])[:50]
+    # Use first field by convention
+    if spec and hasattr(spec, "fields") and spec.fields:
+        first_field = spec.fields[0].name
+        if data.get(first_field):
+            return str(data[first_field])[:50]
 
     return f"New {entity_type}"
 
@@ -195,8 +136,9 @@ def update_parent_reference(
     if not target_field:
         return None
 
-    # Get child's identifier
-    child_ref = get_identifier(child_data) or child_id
+    # Get child's identifier using spec
+    child_helper = getattr(facade, child_type, None)
+    child_ref = get_identifier(child_data, child_helper) or child_id
 
     # Get or create the list field
     refs = parent_data.get(target_field, [])
@@ -211,7 +153,9 @@ def update_parent_reference(
     return target_field
 
 
-def normalize_reference_fields(data: dict[str, Any], helper: EntityHelper) -> dict[str, Any]:
+def normalize_reference_fields(
+    data: dict[str, Any], helper: EntityHelper, facade: Any = None
+) -> dict[str, Any]:
     """Normalize reference fields in entity data to store IDs instead of embedded objects.
 
     When an MCP agent creates entities, it may pass embedded objects for reference
@@ -221,6 +165,7 @@ def normalize_reference_fields(data: dict[str, Any], helper: EntityHelper) -> di
     Args:
         data: Entity data dictionary (will NOT be modified in-place).
         helper: EntityHelper for the entity type.
+        facade: Optional ProfileFacade for looking up target entity helpers.
 
     Returns:
         New dictionary with normalized reference fields.
@@ -231,7 +176,7 @@ def normalize_reference_fields(data: dict[str, Any], helper: EntityHelper) -> di
     # Get fields that reference other entities
     nested_fields = helper.nested_fields
 
-    for field_name in nested_fields:
+    for field_name, target_type in nested_fields.items():
         if field_name not in result:
             continue
 
@@ -239,13 +184,16 @@ def normalize_reference_fields(data: dict[str, Any], helper: EntityHelper) -> di
         if value is None:
             continue
 
+        # Get target entity helper for identifier lookup
+        target_helper = getattr(facade, target_type, None) if facade else None
+
         # Handle list fields
         if isinstance(value, list):
             normalized_list = []
             for item in value:
                 if isinstance(item, dict):
                     # Extract identifier from embedded object
-                    item_id = get_identifier(item)
+                    item_id = get_identifier(item, target_helper)
                     if item_id:
                         normalized_list.append(item_id)
                 elif isinstance(item, str):
@@ -257,7 +205,7 @@ def normalize_reference_fields(data: dict[str, Any], helper: EntityHelper) -> di
         # Handle single entity fields
         elif isinstance(value, dict):
             # Extract identifier from embedded object
-            item_id = get_identifier(value)
+            item_id = get_identifier(value, target_helper)
             if item_id:
                 result[field_name] = item_id
 

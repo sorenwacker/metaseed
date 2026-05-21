@@ -92,6 +92,9 @@ def build_graph(state: AppState) -> dict:
     unique_id_to_vis_id: dict[str, str] = {}
     tree_id_to_vis_id: dict[str, str] = {}
 
+    # Get facade for identifier field lookup
+    facade = state.get_or_create_facade()
+
     def process_tree_node(
         tree_item: dict, parent_vis_id: str | None = None, level: int = 0
     ) -> None:
@@ -105,11 +108,13 @@ def build_graph(state: AppState) -> dict:
         tree_node = state.nodes_by_id.get(tree_item["id"])
         if tree_node and tree_node.instance and hasattr(tree_node.instance, "model_dump"):
             entity_data = tree_node.instance.model_dump(exclude_none=True)
-            # Map ALL potential identifier fields to vis_id for reference resolution
-            # This allows references like Sample.alias to work (not just unique_id)
-            for id_field in ["unique_id", "identifier", "name", "id", "alias", "accession"]:
-                if entity_data.get(id_field):
-                    unique_id_to_vis_id[str(entity_data[id_field])] = vis_id
+            # Map identifier field value to vis_id for reference resolution
+            # By convention, the first field is the identifier (see spec docs)
+            helper = getattr(facade, tree_item["entity_type"], None)
+            if helper and helper.identifier_field:
+                id_value = entity_data.get(helper.identifier_field)
+                if id_value:
+                    unique_id_to_vis_id[str(id_value)] = vis_id
 
         tooltip = _build_tooltip(
             tree_item["entity_type"],
@@ -147,9 +152,7 @@ def build_graph(state: AppState) -> dict:
         process_tree_node(root_item)
 
     # Second pass: add entity reference edges
-    # Look for fields that reference other entities by unique_id
-    facade = state.get_or_create_facade()
-
+    # Look for fields that reference other entities by identifier
     for tree_id, tree_node in state.nodes_by_id.items():
         if not tree_node.instance or not hasattr(tree_node.instance, "model_dump"):
             continue

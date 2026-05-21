@@ -174,10 +174,13 @@ def build_breadcrumb(state: AppState) -> list[dict]:
         if ctx.row_idx < len(items):
             item = items[ctx.row_idx]
             if isinstance(item, dict):
-                for key in ["title", "name", "unique_id", "identifier"]:
-                    if item.get(key):
-                        item_label = str(item[key])
-                        break
+                # Use the first field from spec as label (convention)
+                facade = state.get_or_create_facade()
+                helper = getattr(facade, ctx.entity_type, None)
+                if helper and helper.identifier_field:
+                    value = item.get(helper.identifier_field)
+                    if value:
+                        item_label = str(value)
 
         # Build URL for navigating to this nested item
         if is_last:

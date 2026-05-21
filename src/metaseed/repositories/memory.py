@@ -105,12 +105,13 @@ class MemoryEntityRepository(EntityRepository):
             # Auto-fill child's reference to parent
             ref_field = find_parent_ref_field(helper, parent.entity_type)
             if ref_field and ref_field not in data:
-                parent_identifier = get_identifier_from_instance(parent.instance)
+                parent_helper = getattr(facade, parent.entity_type, None)
+                parent_identifier = get_identifier_from_instance(parent.instance, parent_helper)
                 if parent_identifier:
                     data[ref_field] = parent_identifier
 
         # Normalize reference fields (convert embedded objects to IDs)
-        data = normalize_reference_fields(data, helper)
+        data = normalize_reference_fields(data, helper, facade)
 
         instance = helper.create(**data)
         node = self._state.add_node(entity_type, instance, parent_id=parent_id)
@@ -149,7 +150,7 @@ class MemoryEntityRepository(EntityRepository):
             existing = node.instance.model_dump(exclude_none=True)
 
         # Normalize reference fields in update data (convert embedded objects to IDs)
-        data = normalize_reference_fields(data, helper)
+        data = normalize_reference_fields(data, helper, facade)
 
         merged = {**existing, **data}
         instance = helper.create(**merged)
