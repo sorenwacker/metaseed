@@ -391,6 +391,14 @@ entities:
           min_length: 1
           max_length: 255
 
+      - name: study_ref
+        codename: study_ref
+        type: string
+        required: false
+        description: Reference to the parent study (alias or accession).
+        ontology_term: SRA:study_ref
+        reference: Study.alias
+
       - name: accession
         codename: accession
         type: string
