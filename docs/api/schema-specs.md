@@ -74,6 +74,7 @@ The `spec_version` field indicates which version of the specification language f
 |--------------|-------------|
 | `0.1` | Initial format. Implicit default for existing specs. |
 | `0.2` | Adds `ontologies` section for structured ontology definitions. |
+| `0.3` | Adds `is_identifier` field attribute for explicit identifier marking. |
 
 Existing specs without `spec_version` are automatically treated as version `0.1`.
 
@@ -141,6 +142,11 @@ Fields define the data attributes within an entity.
 
 ```yaml
 fields:
+  - name: unique_id
+    type: string
+    required: true
+    is_identifier: true
+    description: Unique identifier for this entity
   - name: latitude
     type: float
     required: true
@@ -151,11 +157,17 @@ fields:
       maximum: 90.0
 ```
 
+The `is_identifier` field marks which field serves as the entity's primary identifier. This is used for:
+- Display labels in the UI and graph visualization
+- Resolving cross-entity references
+- Determining node identity in data operations
+
 | Field | Required | Description |
 |-------|----------|-------------|
 | `name` | yes | Field identifier (snake_case) |
 | `type` | yes | Data type (see Field Types) |
 | `required` | no | Whether mandatory (default: false) |
+| `is_identifier` | no | Marks field as entity identifier for labels and references (default: false) |
 | `description` | no | Human-readable description |
 | `ontology_term` | no | Ontology reference |
 | `constraints` | no | Validation constraints |

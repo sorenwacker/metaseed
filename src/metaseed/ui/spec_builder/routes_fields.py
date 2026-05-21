@@ -27,6 +27,7 @@ class FieldUpdateData(BaseModel):
     name: str
     field_type: str = "string"
     required: bool = False
+    is_identifier: bool = False
     description: str = ""
     ontology_term: str = ""
     codename: str = ""
@@ -199,6 +200,7 @@ def register_field_routes(
         name: str = Form(...),
         field_type: str = Form("string"),
         required: bool = Form(False),
+        is_identifier: bool = Form(False),
         description: str = Form(""),
         ontology_term: str = Form(""),
         codename: str = Form(""),
@@ -225,6 +227,7 @@ def register_field_routes(
             name=name,
             field_type=field_type,
             required=required,
+            is_identifier=is_identifier,
             description=description,
             ontology_term=ontology_term,
             codename=codename,
@@ -247,6 +250,7 @@ def register_field_routes(
         field.name = update_data.name.strip()
         field.type = FieldType(update_data.field_type)
         field.required = update_data.required
+        field.is_identifier = update_data.is_identifier
         field.description = update_data.description.strip()
         field.ontology_term = update_data.ontology_term.strip() or None
         field.codename = update_data.codename.strip() or None
