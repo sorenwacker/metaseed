@@ -861,6 +861,137 @@ class TestMCPEnhancedErrors:
                 assert "error" in data
 
 
+class TestMCPSchemaValidation:
+    """Tests for strict schema validation in MCP tools."""
+
+    def test_create_entity_rejects_extra_fields(self):
+        """Create entity should reject fields not in the schema."""
+        from metaseed.agent.mcp.server import set_mcp_state
+        from metaseed.ui.state import AppState
+
+        server = create_server()
+        tools = server._tool_manager._tools
+
+        create_fn = tools.get("create_entity")
+        state = AppState(profile="ena")
+        set_mcp_state(state)
+
+        with patch("metaseed.ui.datasets.auto_save"):
+            # Try to create Run with invalid 'files' field (not in Run schema)
+            result = create_fn.fn(
+                entity_type="Run",
+                data=json.dumps(
+                    {
+                        "alias": "SRR12345",
+                        "experiment_ref": "SRX12345",
+                        "files": [{"filename": "test.fastq", "checksum": "abc123"}],
+                    }
+                ),
+            )
+            data = json.loads(result)
+
+            # Should have validation error for extra field
+            assert "error" in data, f"Expected validation error but got: {data}"
+            assert "details" in data, f"Expected error details but got: {data}"
+            # Error should mention the extra field
+            error_fields = [d["field"] for d in data.get("details", [])]
+            assert (
+                "files" in error_fields or "extra" in str(data).lower()
+            ), f"Error should mention 'files' field. Got: {data}"
+
+    def test_create_entity_accepts_valid_fields(self):
+        """Create entity should accept fields defined in the schema."""
+        from metaseed.agent.mcp.server import set_mcp_state
+        from metaseed.ui.state import AppState
+
+        server = create_server()
+        tools = server._tool_manager._tools
+
+        create_fn = tools.get("create_entity")
+        state = AppState(profile="ena")
+        set_mcp_state(state)
+
+        with patch("metaseed.ui.datasets.auto_save"):
+            # Create Run with valid fields (including required experiment_ref)
+            result = create_fn.fn(
+                entity_type="Run",
+                data=json.dumps(
+                    {
+                        "alias": "SRR12345",
+                        "experiment_ref": "SRX12345",
+                    }
+                ),
+            )
+            data = json.loads(result)
+
+            # Should succeed
+            assert data.get("status") == "created", f"Expected success but got: {data}"
+
+    def test_create_entity_error_includes_valid_fields_list(self):
+        """Error response should include list of valid fields for entity."""
+        from metaseed.agent.mcp.server import set_mcp_state
+        from metaseed.ui.state import AppState
+
+        server = create_server()
+        tools = server._tool_manager._tools
+
+        create_fn = tools.get("create_entity")
+        state = AppState(profile="miappe")
+        set_mcp_state(state)
+
+        with patch("metaseed.ui.datasets.auto_save"):
+            # Create with extra field
+            result = create_fn.fn(
+                entity_type="Investigation",
+                data='{"unique_id": "INV-001", "title": "Test", "invalid_extra_field": "value"}',
+            )
+            data = json.loads(result)
+
+            # Should have error with valid_fields
+            assert "error" in data, f"Expected error but got: {data}"
+            assert "valid_fields" in data, f"Error should include valid_fields: {data}"
+            assert "unique_id" in data["valid_fields"]
+            assert "title" in data["valid_fields"]
+            assert "invalid_extra_field" not in data["valid_fields"]
+
+    def test_batch_create_rejects_extra_fields(self):
+        """Batch create should reject entities with extra fields."""
+        from metaseed.agent.mcp.server import set_mcp_state
+        from metaseed.ui.state import AppState
+
+        server = create_server()
+        tools = server._tool_manager._tools
+
+        batch_fn = tools.get("batch_create")
+        state = AppState(profile="miappe")
+        set_mcp_state(state)
+
+        with patch("metaseed.ui.datasets.auto_save"):
+            # Batch with valid entity and entity with extra field
+            entities = json.dumps(
+                [
+                    {
+                        "entity_type": "Investigation",
+                        "data": {"unique_id": "INV-VALID", "title": "Valid"},
+                    },
+                    {
+                        "entity_type": "Investigation",
+                        "data": {"unique_id": "INV-INVALID", "extra_bad_field": "bad"},
+                    },
+                ]
+            )
+
+            result = batch_fn.fn(entities=entities)
+            data = json.loads(result)
+
+            # First should succeed, second should fail
+            assert data["total"] == 2
+            assert data["created"] == 1, f"Expected 1 created but got: {data}"
+            assert data["failed"] == 1, f"Expected 1 failed but got: {data}"
+            # Second result should have error
+            assert data["results"][1]["status"] == "error"
+
+
 class TestMCPDatasetSafety:
     """Tests for dataset safety checks."""
 

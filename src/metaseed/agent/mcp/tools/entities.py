@@ -70,6 +70,76 @@ def _get_entity_field_info(entity_type: str) -> dict[str, Any] | None:
         return None
 
 
+def _find_parent_from_references(
+    entity_type: str,
+    entity_data: dict[str, Any],
+    service: Any,
+) -> tuple[str | None, str | None]:
+    """Auto-detect parent entity from reference fields in the data.
+
+    Looks for fields like study_ref, sample_ref, experiment_ref that reference
+    other entities, and finds the matching parent entity.
+
+    Args:
+        entity_type: Type of entity being created.
+        entity_data: The entity data dict.
+        service: EntityService instance.
+
+    Returns:
+        Tuple of (parent_node_id, parent_field_name) or (None, None) if not found.
+    """
+    from metaseed.agent.mcp.server import get_mcp_state
+
+    try:
+        state = get_mcp_state()
+        facade = state.get_or_create_facade()
+        helper = getattr(facade, entity_type, None)
+        if not helper:
+            return None, None
+
+        # Check each field for references
+        for field in helper._spec.fields:
+            if not field.reference:
+                continue
+
+            # Parse reference format: "EntityType.field"
+            parts = field.reference.split(".", 1)
+            if len(parts) != 2:
+                continue
+
+            target_entity_type, target_field = parts
+
+            # Get the reference value from entity data
+            ref_value = entity_data.get(field.name)
+            if not ref_value:
+                continue
+
+            # Find the parent entity by searching all entities of target type
+            all_entities = service.list_entities(target_entity_type)
+            entities_list = all_entities.get("entities", {}).get(target_entity_type, [])
+
+            for entity in entities_list:
+                entity_id = entity.get("id")
+                data = entity.get("data", {})
+                # Check if this entity's target field matches the reference value
+                if data.get(target_field) == ref_value:
+                    # Found the parent! Also find which field on parent holds children of this type
+                    parent_helper = getattr(facade, target_entity_type, None)
+                    parent_field = None
+                    if parent_helper:
+                        for fname, ftype in parent_helper.nested_fields.items():
+                            if ftype == entity_type:
+                                parent_field = fname
+                                break
+                    return entity_id, parent_field
+
+    except Exception:  # noqa: S110
+        # Silently return None on any error - parent detection is optional
+        pass
+
+    return None, None
+
+
 def _format_validation_error(
     error: ValidationError,
     entity_type: str,
@@ -198,18 +268,19 @@ def register_entity_tools(mcp: FastMCP, get_entity_service) -> None:
         """Create a new entity in the current dataset.
 
         Creates an entity of the specified type with the provided data.
-        If parent_id is provided:
-        - Auto-fills the child's reference to the parent (e.g., Study.investigation_id)
-        - Updates the parent's reference field to include the child
+
+        Parent relationships are handled automatically:
+        - If parent_id is provided, uses that as the parent
+        - Otherwise, auto-detects parent from reference fields (e.g., study_ref, sample_ref)
+        - Automatically adds the new entity to the parent's nested array
 
         Auto-saves the dataset after creation.
 
         Args:
-            entity_type: Entity type (e.g., "Investigation", "Study").
+            entity_type: Entity type (e.g., "Investigation", "Study", "Sample").
             data: JSON string of field values.
-            parent_id: Optional parent entity ID to create as child of.
-                      Use this to build hierarchies (e.g., Study under Investigation).
-                      The parent's reference field will be auto-updated.
+            parent_id: Optional explicit parent entity ID. If not provided,
+                      parent is auto-detected from reference fields in data.
             expected_dataset: Optional safety check - if provided, operation fails
                              if current dataset name doesn't match.
 
@@ -227,6 +298,16 @@ def register_entity_tools(mcp: FastMCP, get_entity_service) -> None:
         try:
             service = get_entity_service()
             entity_data = json.loads(data)
+
+            # Auto-detect parent from reference fields if not explicitly provided
+            if not parent_id:
+                auto_detected_parent, _ = _find_parent_from_references(
+                    entity_type, entity_data, service
+                )
+                if auto_detected_parent:
+                    parent_id = auto_detected_parent
+
+            # Service.create_entity handles adding to parent's nested array
             result = service.create_entity(entity_type, entity_data, parent_id)
 
             # Add dataset info to response
