@@ -70,6 +70,66 @@ def _get_entity_field_info(entity_type: str) -> dict[str, Any] | None:
         return None
 
 
+def _auto_fill_reference_fields(
+    entity_type: str,
+    entity_data: dict[str, Any],
+    service: Any,
+) -> dict[str, Any]:
+    """Auto-fill missing reference fields when there's exactly one candidate parent.
+
+    For example, if creating a Sample without study_ref, and there's exactly one
+    Study in the dataset, automatically set study_ref to that Study's alias.
+
+    Args:
+        entity_type: Type of entity being created.
+        entity_data: The entity data dict (will be modified in place).
+        service: EntityService instance.
+
+    Returns:
+        The modified entity_data dict.
+    """
+    from metaseed.agent.mcp.server import get_mcp_state
+
+    try:
+        state = get_mcp_state()
+        facade = state.get_or_create_facade()
+        helper = getattr(facade, entity_type, None)
+        if not helper:
+            return entity_data
+
+        # Check each reference field
+        for field in helper._spec.fields:
+            if not field.reference:
+                continue
+
+            # Skip if already set
+            if entity_data.get(field.name):
+                continue
+
+            # Parse reference format: "EntityType.field"
+            parts = field.reference.split(".", 1)
+            if len(parts) != 2:
+                continue
+
+            target_entity_type, target_field = parts
+
+            # Get all entities of target type
+            all_entities = service.list_entities(target_entity_type)
+            entities_list = all_entities.get("entities", {}).get(target_entity_type, [])
+
+            # Auto-fill only if exactly one candidate exists
+            if len(entities_list) == 1:
+                parent_data = entities_list[0].get("data", {})
+                ref_value = parent_data.get(target_field)
+                if ref_value:
+                    entity_data[field.name] = ref_value
+
+    except Exception:  # noqa: S110
+        pass
+
+    return entity_data
+
+
 def _find_parent_from_references(
     entity_type: str,
     entity_data: dict[str, Any],
@@ -298,6 +358,9 @@ def register_entity_tools(mcp: FastMCP, get_entity_service) -> None:
         try:
             service = get_entity_service()
             entity_data = json.loads(data)
+
+            # Auto-fill missing reference fields (e.g., study_ref) when unambiguous
+            entity_data = _auto_fill_reference_fields(entity_type, entity_data, service)
 
             # Auto-detect parent from reference fields if not explicitly provided
             if not parent_id:
