@@ -101,8 +101,22 @@ body::before {
    ============================================ */
 .layout {
     display: grid;
-    grid-template-rows: auto 1fr;
+    grid-template-rows: auto 1fr auto;
     min-height: 100vh;
+}
+
+/* Footer */
+.footer {
+    padding: var(--space-sm) var(--space-xl);
+    background: var(--clr-parchment);
+    border-top: 1px solid var(--clr-sage);
+    text-align: right;
+}
+
+.footer-version {
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    color: var(--clr-ink-light);
 }
 
 /* Full-height layout that prevents scrolling (for ERD pages) */

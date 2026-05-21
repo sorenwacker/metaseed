@@ -18,12 +18,12 @@
             </h1>
             <nav class="header-nav">
                 <a href="{{ base_url }}/" class="nav-btn" data-testid="nav-datasets">Datasets</a>
-                <a href="{{ base_url }}/spec-builder" class="nav-btn active" data-testid="nav-spec-builder">Spec Builder</a>
+                <a href="{{ base_url }}/spec-builder/select" class="nav-btn active" data-testid="nav-spec-builder">Spec Builder</a>
                 <a href="{{ base_url }}/explore/" class="nav-btn" data-testid="nav-explorer">Explorer</a>
             </nav>
             <div class="header-breadcrumb">
                 <span class="header-sep">/</span>
-                <a href="{{ base_url }}/spec-builder">Spec Builder</a>
+                <a href="{{ base_url }}/spec-builder/select">Spec Builder</a>
                 {% if spec.name %}
                 <span class="header-sep">/</span>
                 <span class="spec-name">{{ spec.name }}</span>

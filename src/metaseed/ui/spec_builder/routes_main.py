@@ -152,6 +152,17 @@ def register_main_routes(
             {"templates": available_templates, "user_specs": user_specs, "base_url": base_url},
         )
 
+    @router.get("/select", response_class=HTMLResponse)
+    async def select_spec(request: Request) -> HTMLResponse:
+        """Show the spec selection page without resetting current work."""
+        available_templates = await persistence.list_templates()
+        user_specs = await persistence.list_user_specs()
+        return templates.TemplateResponse(
+            request,
+            "spec_builder/start.html",
+            {"templates": available_templates, "user_specs": user_specs, "base_url": base_url},
+        )
+
     @router.get("/profile-metadata", response_class=HTMLResponse)
     async def get_profile_metadata_form(request: Request) -> HTMLResponse:
         """Get the profile metadata form."""

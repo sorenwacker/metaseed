@@ -62,6 +62,11 @@ def create_app(state: AppState | None = None, base_url: str = "") -> FastAPI:
 
     templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
+    # Add version as a global template variable
+    from metaseed import __version__
+
+    templates.env.globals["app_version"] = __version__
+
     def format_display(value: Any) -> str:
         """Format a value for display in table cells."""
         if value is None:
