@@ -445,6 +445,7 @@ entities:
         type: string
         required: true
         parent_ref: Study.identifier
+        reference: Study.identifier
         description: Reference to the parent Study.
 
       - name: measurement_type
@@ -522,6 +523,7 @@ entities:
         type: string
         required: true
         parent_ref: Study.identifier
+        reference: Study.identifier
         description: Reference to the parent Study.
 
       - name: measurement_type
@@ -645,6 +647,7 @@ entities:
         type: string
         required: true
         parent_ref: Study.identifier
+        reference: Study.identifier
         description: Reference to the parent Study.
 
       - name: measurement_type
@@ -792,6 +795,7 @@ entities:
         type: string
         required: true
         parent_ref: Study.identifier
+        reference: Study.identifier
         description: Reference to the parent Study.
 
       - name: measurement_type
@@ -915,6 +919,7 @@ entities:
         type: string
         required: true
         parent_ref: Study.identifier
+        reference: Study.identifier
         description: Reference to the parent Study.
 
       - name: organism
@@ -964,6 +969,7 @@ entities:
         type: string
         required: true
         parent_ref: Study.identifier
+        reference: Study.identifier
         description: Reference to the parent Study.
 
       - name: source_ref
@@ -1220,6 +1226,7 @@ entities:
         type: string
         required: true
         parent_ref: Study.identifier
+        reference: Study.identifier
         description: Reference to the parent Study.
 
       - name: type
@@ -1345,6 +1352,7 @@ entities:
         type: string
         required: true
         parent_ref: Study.identifier
+        reference: Study.identifier
         description: Reference to the parent Study.
 
       - name: type
