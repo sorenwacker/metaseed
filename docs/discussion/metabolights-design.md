@@ -148,12 +148,35 @@ Assay:
 
 ### Decision: Option D (Merged Entity with Discriminator)
 
-After evaluation, **Option D** was implemented because:
+#### Why Not Option A (Separate Lists)?
+
+Option A was initially implemented but rejected because:
+
+- `RawSpectralData` and `MetaboliteAssignment` reference `Assay.file_name`
+- With separate assay types, these entities would need multiple reference fields (`nmr_assay_ref`, `lcms_assay_ref`, etc.) or lose type safety
+- The generic `Assay` entity became orphaned (nothing pointed to it)
+
+#### Why Not Option B (Remove Generic Assay)?
+
+- Breaks the reference chain: data files need to point to their parent assay
+- Would require restructuring `RawSpectralData` and `MetaboliteAssignment`
+- Loses the conceptual "assay" abstraction that ISA-Tab provides
+
+#### Why Not Option C (Discriminated Union)?
+
+- Not supported in metaseed's spec language
+- Would require significant parser and model generation changes
+- Pydantic discriminated unions add runtime complexity
+
+#### Why Option D Works
+
+**Option D** was implemented because:
 
 1. Keeps a single `Assay` entity that other entities can reference
 2. `RawSpectralData` and `MetaboliteAssignment` can point to `Assay.file_name`
 3. Simpler graph visualization (Study → Assay → data files)
 4. No orphaned entities
+5. Matches ISA-Tab's single assay concept with technology differentiation via columns
 
 ### Implementation
 
