@@ -70,6 +70,7 @@ NMRAssay:
 Some profiles (like MetaboLights) have entity hierarchies where `NMRAssay` is conceptually a subtype of `Assay`.
 
 Metaseed does not support entity inheritance (`extends`) because:
+
 1. Pydantic model generation becomes complex
 2. Field conflicts between parent/child are ambiguous
 3. Validation rules become harder to reason about
