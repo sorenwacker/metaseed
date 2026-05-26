@@ -146,47 +146,169 @@ Assay:
 - No compile-time enforcement of which fields apply to which type
 - Validation rules needed for field dependencies
 
-### Recommendation
+### Decision: Option D (Merged Entity with Discriminator)
 
-For MetaboLights, **Option A (Separate Lists)** is recommended because:
+After evaluation, **Option D** was implemented because:
 
-1. Most studies use a single technology (NMR or MS, rarely both)
-2. Type safety prevents mixing incompatible assay configurations
-3. Graph visualization clearly shows Study → specific assay relationships
-4. Each assay type is self-documenting with only relevant fields
+1. Keeps a single `Assay` entity that other entities can reference
+2. `RawSpectralData` and `MetaboliteAssignment` can point to `Assay.file_name`
+3. Simpler graph visualization (Study → Assay → data files)
+4. No orphaned entities
 
 ### Implementation
 
-Update Study entity:
+Single `Assay` entity with `assay_type` discriminator:
+
+```yaml
+Assay:
+  fields:
+    # Common fields
+    - name: file_name
+    - name: study_id
+      reference: Study.identifier
+    - name: assay_type
+      constraints:
+        enum: [nmr, lcms, gcms]
+    - name: measurement_type
+    - name: technology_type
+
+    # NMR-specific (optional, used when assay_type=nmr)
+    - name: nmr_instrument
+    - name: pulse_sequence
+    - name: magnetic_field_strength
+    - name: acquisition_nucleus
+
+    # MS-specific (optional, used when assay_type=lcms or gcms)
+    - name: ms_instrument
+    - name: ionization_mode
+    - name: mass_analyzer
+
+    # LC-specific (optional, used when assay_type=lcms)
+    - name: chromatography_instrument
+    - name: column_type
+
+    # GC-specific (optional, used when assay_type=gcms)
+    - name: gc_instrument
+    - name: derivatization_method
+
+    # Nested data
+    - name: raw_spectral_data_files
+      items: RawSpectralData
+    - name: metabolite_assignments
+      items: MetaboliteAssignment
+```
+
+Study references assays directly:
 
 ```yaml
 Study:
   fields:
-    # Remove generic assays field
-    # - name: assays
-    #   items: Assay
-
-    # Add technology-specific lists
-    - name: nmr_assays
+    - name: assays
       type: list
-      items: NMRAssay
-      required: false
-      description: NMR spectroscopy assays in this study.
-
-    - name: lcms_assays
-      type: list
-      items: LCMSAssay
-      required: false
-      description: LC-MS assays in this study.
-
-    - name: gcms_assays
-      type: list
-      items: GCMSAssay
-      required: false
-      description: GC-MS assays in this study.
+      items: Assay
 ```
 
-Keep the generic `Assay` entity for cases where technology-agnostic assay metadata is needed, but don't link it from Study.
+## The Polymorphism Problem
+
+This design decision reveals a **general problem with flat entity models**: how to handle type hierarchies without inheritance.
+
+### The Challenge
+
+Different modeling paradigms handle this differently:
+
+| Paradigm | Solution |
+|----------|----------|
+| Relational DB | Table inheritance or discriminator columns |
+| OOP | Class inheritance |
+| JSON Schema | `oneOf`/`anyOf` with discriminator |
+| Pydantic | Discriminated unions |
+| Metaseed specs | ? |
+
+### Current Limitations
+
+The merged `Assay` approach works but has drawbacks:
+
+1. **No compile-time type safety** - Nothing prevents setting `pulse_sequence` on a GC-MS assay
+2. **Large entities** - 31 fields, most optional for any given assay type
+3. **Documentation burden** - Must document which fields apply to which type
+4. **Validation gaps** - Can't enforce "if type=nmr then require pulse_sequence"
+
+### Potential Spec-Level Solutions
+
+**1. Conditional field requirements (validation rules):**
+
+```yaml
+validation_rules:
+  - name: nmr_requires_pulse_sequence
+    when: assay_type == "nmr"
+    require: [pulse_sequence, magnetic_field_strength, acquisition_nucleus]
+
+  - name: lcms_requires_ms_fields
+    when: assay_type == "lcms"
+    require: [ms_instrument, ionization_mode, chromatography_instrument]
+```
+
+**2. Field groups with conditional inclusion:**
+
+```yaml
+field_groups:
+  nmr_fields:
+    - name: pulse_sequence
+      required: true
+    - name: magnetic_field_strength
+      required: true
+
+Assay:
+  include_when:
+    - condition: assay_type == "nmr"
+      groups: [nmr_fields]
+```
+
+**3. Discriminated entity variants (new syntax):**
+
+```yaml
+Assay:
+  discriminator: assay_type
+  common_fields:
+    - name: file_name
+    - name: study_id
+  variants:
+    nmr:
+      fields:
+        - name: pulse_sequence
+          required: true
+    lcms:
+      fields:
+        - name: chromatography_instrument
+          required: true
+```
+
+**4. Entity composition (current workaround):**
+
+Define technology-specific detail entities and reference them:
+
+```yaml
+Assay:
+  fields:
+    - name: nmr_details
+      type: entity
+      items: NMRDetails
+      required: false
+    - name: lcms_details
+      type: entity
+      items: LCMSDetails
+      required: false
+```
+
+### Recommendation for Metaseed
+
+Consider implementing **Option 1 (Conditional validation rules)** as a near-term solution:
+
+- Minimal spec syntax changes
+- Leverages existing validation infrastructure
+- Provides runtime enforcement without model complexity
+
+Long-term, **Option 3 (Discriminated variants)** would provide the cleanest developer experience but requires significant spec parser changes.
 
 ## Other Design Decisions
 
