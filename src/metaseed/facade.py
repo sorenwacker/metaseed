@@ -15,6 +15,7 @@ duplicating relationship logic.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date, datetime
@@ -28,8 +29,28 @@ from metaseed.models.factory import create_model_from_spec, set_model_context
 from metaseed.specs.loader import SpecLoader
 from metaseed.specs.schema import PRIMITIVE_TYPES, EntitySpec, FieldSpec, FieldType, ProfileSpec
 
+logger = logging.getLogger(__name__)
+
 # Common identifier field names used for indexing and reference lookups
 IDENTIFIER_FIELDS = ("alias", "unique_id", "identifier")
+
+
+def validate_ontology_term(term_id: str) -> tuple[bool, str | None]:
+    """Validate an ontology term exists in OLS4.
+
+    Uses the centralized OntologyService with caching and rate limiting.
+    Network failures are treated as valid (fail-open) to avoid blocking work.
+
+    Args:
+        term_id: Ontology term ID (e.g., "PATO:0000001", "GO:0008150").
+
+    Returns:
+        Tuple of (is_valid, warning_message). Warning is None if valid.
+    """
+    from metaseed.services.ontology import get_ontology_service
+
+    service = get_ontology_service()
+    return service.validate_term_sync(term_id)
 
 
 @dataclass
@@ -736,6 +757,45 @@ class EntityHelper:
         print(f"    {args_str}")
         print(")")
 
+    def validate_ontology_terms(self: Self, data: dict | BaseModel, warn: bool = True) -> list[str]:
+        """Validate ontology term fields in entity data.
+
+        Checks that ontology term values exist in OLS4. Uses caching to
+        avoid repeated network calls. Network failures are treated as
+        valid (fail-open) to avoid blocking work.
+
+        Args:
+            data: Entity data as dict or Pydantic model.
+            warn: If True, log warnings for invalid terms.
+
+        Returns:
+            List of warning messages for invalid terms.
+        """
+        warnings: list[str] = []
+
+        if hasattr(data, "model_dump"):
+            data = data.model_dump(exclude_none=True)
+        elif not isinstance(data, dict):
+            return warnings
+
+        # Find ontology_term fields
+        for fld in self._spec.fields:
+            if fld.type != FieldType.ONTOLOGY_TERM:
+                continue
+
+            value = data.get(fld.name)
+            if not value:
+                continue
+
+            is_valid, warning = validate_ontology_term(value)
+            if not is_valid and warning:
+                full_warning = f"{self._name}.{fld.name}: {warning}"
+                warnings.append(full_warning)
+                if warn:
+                    logger.warning(full_warning)
+
+        return warnings
+
     def create(self: Self, **kwargs: Any) -> BaseModel:
         """Create an instance of this entity.
 
@@ -750,13 +810,19 @@ class EntityHelper:
             If you need to reuse the input data, make a deep copy first:
             ``import copy; data = copy.deepcopy(original_data)``
 
+            Ontology term fields are validated against OLS4. Invalid terms
+            generate warnings but do not prevent entity creation.
+
         Example:
             >>> inv = profile.Investigation.create(
             ...     unique_id="INV-001",
             ...     title="My Investigation",
             ... )
         """
-        return self._model(**kwargs)
+        instance = self._model(**kwargs)
+        # Validate ontology terms (warnings only, don't block)
+        self.validate_ontology_terms(kwargs, warn=True)
+        return instance
 
     def __call__(self: Self, **kwargs: Any) -> BaseModel:
         """Create an instance (shorthand for create()).

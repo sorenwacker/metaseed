@@ -4,7 +4,14 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from metaseed.facade import EntityHelper, ProfileFacade, isa, miappe
+from metaseed.facade import (
+    EntityHelper,
+    ProfileFacade,
+    isa,
+    miappe,
+    validate_ontology_term,
+)
+from metaseed.services.ontology import OntologyService, get_ontology_service, reset_ontology_service
 from metaseed.specs.loader import SpecLoader
 from metaseed.specs.schema import EntityDefSpec, EntitySpec, FieldSpec, FieldType, ProfileSpec
 
@@ -551,3 +558,136 @@ class TestDependencyInjection:
         instance = helper.create(identifier="TEST-001", name="Test Instance")
         assert instance.identifier == "TEST-001"
         assert instance.name == "Test Instance"
+
+
+class TestOntologyValidation:
+    """Tests for ontology term validation using OntologyService."""
+
+    def setup_method(self) -> None:
+        """Reset ontology service before each test."""
+        reset_ontology_service()
+
+    def teardown_method(self) -> None:
+        """Clean up after each test."""
+        reset_ontology_service()
+
+    def test_ontology_service_singleton(self) -> None:
+        """get_ontology_service returns the same instance."""
+        service1 = get_ontology_service()
+        service2 = get_ontology_service()
+        assert service1 is service2
+
+    def test_ontology_service_cache(self) -> None:
+        """OntologyService caches results."""
+        service = OntologyService(cache_ttl=3600)
+
+        # Manually populate cache
+        import time
+
+        from metaseed.services.ontology import CacheEntry, OntologyTerm
+
+        service._cache["term:CACHED:0001"] = CacheEntry(
+            value=OntologyTerm(term_id="CACHED:0001", label="Test Term"),
+            expires_at=time.time() + 3600,
+        )
+        service._cache["term:CACHED:0002"] = CacheEntry(
+            value=None,  # Cached negative result
+            expires_at=time.time() + 3600,
+        )
+
+        # Validate using cache
+        is_valid, warning = service.validate_term_sync("CACHED:0001")
+        assert is_valid is True
+        assert warning is None
+
+        is_valid, warning = service.validate_term_sync("CACHED:0002")
+        assert is_valid is False
+        assert "not found" in warning
+
+    def test_ontology_service_cache_clear(self) -> None:
+        """Cache can be cleared."""
+        service = OntologyService()
+        import time
+
+        from metaseed.services.ontology import CacheEntry, OntologyTerm
+
+        service._cache["term:TEST:0001"] = CacheEntry(
+            value=OntologyTerm(term_id="TEST:0001", label="Test"),
+            expires_at=time.time() + 3600,
+        )
+
+        assert len(service._cache) == 1
+        service.clear_cache()
+        assert len(service._cache) == 0
+
+    def test_ontology_service_cache_stats(self) -> None:
+        """Cache stats are reported correctly."""
+        service = OntologyService()
+        import time
+
+        from metaseed.services.ontology import CacheEntry, OntologyTerm
+
+        # Add valid entry
+        service._cache["term:VALID:0001"] = CacheEntry(
+            value=OntologyTerm(term_id="VALID:0001", label="Valid"),
+            expires_at=time.time() + 3600,
+        )
+        # Add expired entry
+        service._cache["term:EXPIRED:0001"] = CacheEntry(
+            value=OntologyTerm(term_id="EXPIRED:0001", label="Expired"),
+            expires_at=time.time() - 1,  # Already expired
+        )
+
+        stats = service.get_cache_stats()
+        assert stats["total_entries"] == 2
+        assert stats["expired_entries"] == 1
+        assert stats["valid_entries"] == 1
+
+    def test_validate_ontology_term_empty(self) -> None:
+        """Empty term values are considered valid."""
+        is_valid, warning = validate_ontology_term("")
+        assert is_valid is True
+        assert warning is None
+
+        is_valid, warning = validate_ontology_term(None)
+        assert is_valid is True
+        assert warning is None
+
+    def test_validate_ontology_term_no_prefix(self) -> None:
+        """Terms without prefix are skipped (assumed valid)."""
+        is_valid, warning = validate_ontology_term("nocolon")
+        assert is_valid is True
+        assert warning is None
+
+    def test_entity_helper_validate_ontology_terms(self) -> None:
+        """EntityHelper can validate ontology terms in data."""
+        # Create a spec with an ontology_term field
+        spec = EntitySpec(
+            name="TestEntity",
+            version="1.0",
+            fields=[
+                FieldSpec(name="identifier", type=FieldType.STRING, required=True),
+                FieldSpec(name="organism", type=FieldType.ONTOLOGY_TERM, required=False),
+            ],
+        )
+        import time
+
+        from metaseed.models.factory import create_model_from_spec
+        from metaseed.services.ontology import CacheEntry
+
+        model = create_model_from_spec(spec)
+        helper = EntityHelper("TestEntity", spec, model, "test", "1.0")
+
+        # Pre-populate service cache with invalid term (None = not found)
+        service = get_ontology_service()
+        service._cache["term:INVALID:9999"] = CacheEntry(
+            value=None,
+            expires_at=time.time() + 3600,
+        )
+
+        warnings = helper.validate_ontology_terms(
+            {"identifier": "TEST-001", "organism": "INVALID:9999"}, warn=False
+        )
+
+        assert len(warnings) == 1
+        assert "INVALID:9999" in warnings[0]
