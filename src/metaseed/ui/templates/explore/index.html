@@ -125,7 +125,8 @@
                 </div>
                 <div class="canvas-legend" id="explore-legend" style="display: none;">
                     <span class="legend-item"><span class="legend-dot entity"></span> Entity</span>
-                    <span class="legend-item"><span class="legend-line"></span> Relationship</span>
+                    <span class="legend-item"><span class="legend-line"></span> Nested</span>
+                    <span class="legend-item"><span class="legend-line-dashed"></span> Reference</span>
                     <span class="legend-item"><code>*</code> Required</span>
                     <span class="legend-item" style="margin-left: 12px;">Right-click to hide</span>
                 </div>
@@ -451,7 +452,8 @@
                     font: { size: 10, color: '#666', background: 'white' },
                     smooth: { type: 'cubicBezier', roundness: 0.4 },
                     width: 2,
-                    title: edge.title || ''
+                    title: edge.title || '',
+                    dashes: edge.dashes || false
                 });
             });
 

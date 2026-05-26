@@ -262,12 +262,18 @@ class DiffVisualizer:
 
                     # Check for entity references
                     target = None
+                    is_reference = False
                     if spec.type.value == "entity" or (spec.type.value == "list" and spec.items):
                         target = spec.items
+                        # Reference fields typically end with _ref or ref
+                        is_reference = field_diff.field_name.endswith(
+                            "_ref"
+                        ) or field_diff.field_name.endswith("ref")
 
                     if target and target.lower() in entity_node_ids:
                         to_id = entity_node_ids[target.lower()]
-                        edge_key = (from_id, to_id, field_diff.field_name)
+                        # Include is_reference in the key to track edge type
+                        edge_key = (from_id, to_id, field_diff.field_name, is_reference)
 
                         if edge_key not in edge_profiles:
                             edge_profiles[edge_key] = set()
@@ -278,10 +284,11 @@ class DiffVisualizer:
         base_profile = all_profile_ids[0] if all_profile_ids else None
         is_explore_mode = len(all_profile_ids) == 1
 
-        for (from_id, to_id, label), profiles in edge_profiles.items():
+        for (from_id, to_id, label, is_reference), profiles in edge_profiles.items():
             if is_explore_mode:
-                # Explore mode: use spec-builder green for all edges
-                color = "#4a7c59"
+                # Explore mode: use spec-builder colors
+                # Green for nested, different color for reference
+                color = "#7c4a6b" if is_reference else "#4a7c59"
             else:
                 in_base = base_profile in profiles if base_profile else False
                 in_others = any(p in profiles for p in all_profile_ids[1:])
@@ -310,6 +317,7 @@ class DiffVisualizer:
                     "label": label,
                     "font": {"size": 8},
                     "title": f"In: {', '.join(sorted(profiles))}",
+                    "dashes": is_reference,
                 }
             )
 
