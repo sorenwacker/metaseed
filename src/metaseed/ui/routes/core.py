@@ -26,6 +26,8 @@ from ..helpers import (
     format_validation_errors,
     get_field_data,
     get_nested_items_for_edit,
+    process_reference_linked_children,
+    rebuild_nested_items_with_failures,
 )
 
 if TYPE_CHECKING:
@@ -492,6 +494,7 @@ def register_entity_crud_routes(
 
         values = collect_form_values(dict(form_data), helper)
 
+        # Merge spec-defined nested fields from current_nested_items
         for field_name, items in state.current_nested_items.items():
             if field_name in helper.nested_fields and items:
                 cleaned_items = []
@@ -507,155 +510,31 @@ def register_entity_crud_routes(
             instance = helper.create(**values)
             state.update_node(node_id, instance)
 
-            # Handle reference-linked children (e.g., files added to Run)
-            # These are NOT in helper.nested_fields but ARE in current_nested_items
-            from ..helpers import infer_entity_type_from_field
-
+            # Get parent identifier for reference-linked children
             parent_data = instance.model_dump() if hasattr(instance, "model_dump") else {}
             parent_identifier = parent_data.get("alias") or parent_data.get("unique_id")
 
-            import logging
+            # Process reference-linked children (e.g., files added to Run via run_ref)
+            validation_result = process_reference_linked_children(
+                state=state,
+                facade=facade,
+                node_id=node_id,
+                helper=helper,
+                entity_type=entity_type,
+                parent_identifier=parent_identifier,
+            )
 
-            logger = logging.getLogger(__name__)
-            validation_errors: list[str] = []
-            failed_items: dict[str, list[dict]] = {}  # field_name -> list of failed items
-
-            for field_name, items in state.current_nested_items.items():
-                if field_name in helper.nested_fields:
-                    continue  # Skip spec-defined nested fields (handled above)
-
-                child_type = infer_entity_type_from_field(facade, entity_type, field_name)
-                if not child_type:
-                    continue
-
-                child_helper = getattr(facade, child_type, None)
-                if not child_helper:
-                    continue
-
-                # Find the reference field that points back to parent
-                parent_ref_field = None
-                for ref_field, (target_type, _) in child_helper.reference_fields.items():
-                    if target_type == entity_type:
-                        parent_ref_field = ref_field
-                        break
-
-                for item in items:
-                    if not isinstance(item, dict):
-                        continue
-
-                    logger.info(f"Processing {child_type} item: {list(item.keys())}")
-
-                    # Check if this item already exists as a node (has _node_id or matches existing)
-                    item_id = item.get("_node_id") or item.get("alias") or item.get("unique_id")
-                    existing_node = None
-                    if item_id:
-                        existing_node = state.nodes_by_id.get(item_id)
-                        if not existing_node:
-                            # Try to find by identifier
-                            for n in state.nodes_by_id.values():
-                                if n.entity_type == child_type:
-                                    n_data = n.instance.model_dump() if n.instance else {}
-                                    if (
-                                        n_data.get("alias") == item_id
-                                        or n_data.get("unique_id") == item_id
-                                    ):
-                                        existing_node = n
-                                        break
-
-                    # Clean item data - only keep valid child entity fields
-                    valid_fields = set(child_helper.all_fields)
-                    cleaned = {
-                        k: v
-                        for k, v in item.items()
-                        if not k.startswith("_") and v and k in valid_fields
-                    }
-                    if not cleaned:
-                        continue
-
-                    # Set parent reference field
-                    if parent_ref_field and parent_identifier:
-                        cleaned[parent_ref_field] = parent_identifier
-
-                    if existing_node:
-                        # Update existing node
-                        try:
-                            child_instance = child_helper.create(**cleaned)
-                            state.update_node(existing_node.id, child_instance)
-                        except ValidationError as e:
-                            logger.warning(f"Validation error updating {child_type}: {e}")
-                            missing = [
-                                str(err["loc"][0]) for err in e.errors() if err["type"] == "missing"
-                            ]
-                            if missing:
-                                validation_errors.append(
-                                    f"{child_type}: Missing required: {', '.join(missing)}"
-                                )
-                            else:
-                                validation_errors.append(f"{child_type}: {e.errors()[0]['msg']}")
-                            # Keep the failed item
-                            if field_name not in failed_items:
-                                failed_items[field_name] = []
-                            failed_items[field_name].append(item)
-                        except Exception as e:
-                            logger.warning(f"Error updating {child_type}: {e}")
-                    else:
-                        # Create new child node
-                        try:
-                            logger.info(f"Creating {child_type} with data: {cleaned}")
-                            child_instance = child_helper.create(**cleaned)
-                            state.add_node(child_type, child_instance, parent_id=node_id)
-                        except ValidationError as e:
-                            logger.warning(
-                                f"Validation error creating {child_type} with {cleaned}: {e}"
-                            )
-                            # Get the specific error type
-                            err = e.errors()[0] if e.errors() else {}
-                            err_type = err.get("type", "")
-                            if err_type == "missing":
-                                missing = [
-                                    str(err["loc"][0])
-                                    for err in e.errors()
-                                    if err["type"] == "missing"
-                                ]
-                                validation_errors.append(
-                                    f"{child_type}: Missing required: {', '.join(missing)}"
-                                )
-                            elif err_type == "extra_forbidden":
-                                extra = [
-                                    str(err["loc"][0])
-                                    for err in e.errors()
-                                    if err["type"] == "extra_forbidden"
-                                ]
-                                validation_errors.append(
-                                    f"{child_type}: Unknown fields: {', '.join(extra)}"
-                                )
-                            else:
-                                validation_errors.append(f"{child_type}: {err.get('msg', str(e))}")
-                            # Keep the failed item so user can fix it
-                            if field_name not in failed_items:
-                                failed_items[field_name] = []
-                            failed_items[field_name].append(item)
-                        except Exception as e:
-                            logger.warning(f"Error creating {child_type}: {e}")
-
-            # Rebuild nested items including tree children (reference-linked entities)
-            updated_node = state.nodes_by_id.get(node_id)
-            if updated_node:
-                state.current_nested_items = get_nested_items_for_edit(updated_node, helper, facade)
-            else:
-                state.current_nested_items = extract_nested_items(instance, helper)
-
-            # Add back any items that failed validation so user can fix them
-            for field_name, items in failed_items.items():
-                if field_name not in state.current_nested_items:
-                    state.current_nested_items[field_name] = []
-                for item in items:
-                    # Mark as having validation error
-                    item["_validation_error"] = True
-                    state.current_nested_items[field_name].append(item)
+            # Rebuild nested items including failed items for user correction
+            rebuild_nested_items_with_failures(
+                state=state,
+                node_id=node_id,
+                helper=helper,
+                facade=facade,
+                failed_items=validation_result.failed_items,
+            )
 
             # Only auto-save if there were no validation errors
-            if not validation_errors:
+            if not validation_result.has_errors():
                 from ..datasets import auto_save
 
                 auto_save(state)
@@ -663,8 +542,8 @@ def register_entity_crud_routes(
             action = form_data.get("_action", "")
 
             # Build appropriate message based on validation results
-            if validation_errors:
-                msg = f"Validation errors - please fix: {'; '.join(validation_errors)}"
+            if validation_result.has_errors():
+                msg = f"Validation errors - please fix: {'; '.join(validation_result.errors)}"
                 msg_type = "error"
             else:
                 msg = f"Saved {entity_type}: {node.label}"

@@ -8,6 +8,11 @@ Two managers are provided:
 - DatasetManager: Synchronous manager (for filesystem, simple use cases)
 - AsyncDatasetManager: Asynchronous manager (for database backends)
 
+Both inherit from BaseDatasetManager which contains shared logic for:
+- Building dataset data from state
+- Restoring state from dataset data
+- Default dataset name generation
+
 Note: Entity storage and relationship linking is now handled by ProfileFacade.
 The dataset manager delegates to facade.load_from_dict() and facade.to_dict()
 for loading and saving operations.
@@ -16,9 +21,10 @@ for loading and saving operations.
 from __future__ import annotations
 
 import re
+from abc import ABC
 from dataclasses import asdict
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 from metaseed.repositories.dataset_repository import (
     AsyncDatasetRepository,
@@ -33,23 +39,27 @@ from metaseed.repositories.filesystem_dataset import (
 if TYPE_CHECKING:
     from metaseed.ui.state import AppState
 
+# Type variable for repository type (sync or async)
+R = TypeVar("R", DatasetRepository, AsyncDatasetRepository)
 
-class DatasetManager:
-    """Manages dataset operations with DI support.
 
-    Integrates a DatasetRepository with AppState to provide
-    high-level dataset operations including state synchronization.
+class BaseDatasetManager(ABC, Generic[R]):
+    """Base class with shared logic for dataset managers.
+
+    Contains common implementation for building dataset data,
+    restoring state, and generating default names. Subclasses
+    implement sync or async versions of the repository operations.
     """
 
     def __init__(
         self,
-        repository: DatasetRepository,
+        repository: R,
         state: AppState,
     ):
         """Initialize dataset manager.
 
         Args:
-            repository: DatasetRepository implementation for storage.
+            repository: Repository implementation for storage.
             state: AppState instance for entity management.
         """
         self._repo = repository
@@ -57,7 +67,7 @@ class DatasetManager:
         self._current: str | None = None
 
     @property
-    def repository(self) -> DatasetRepository:
+    def repository(self) -> R:
         """Get the underlying repository."""
         return self._repo
 
@@ -70,6 +80,61 @@ class DatasetManager:
     def current_dataset(self, name: str | None) -> None:
         """Set the current dataset name."""
         self._current = name
+
+    def _get_default_dataset_name(self) -> str:
+        """Get a default dataset name from the first entity's label."""
+        if self._state.entity_tree:
+            label = self._state.entity_tree[0].label
+            if label and label != f"New {self._state.entity_tree[0].entity_type}":
+                name = re.sub(r"[^a-zA-Z0-9]+", "-", label).strip("-").lower()
+                if name and len(name) <= 64:
+                    return name
+        return "autosave"
+
+    def _build_dataset_data(self, name: str) -> DatasetData:
+        """Build DatasetData from current state.
+
+        Delegates to facade.to_dict() for entity serialization.
+        """
+        facade = self._state.get_or_create_facade()
+
+        return DatasetData(
+            name=name,
+            profile=self._state.profile,
+            version=self._state.version or facade.version,
+            entities=facade.to_dict(),
+            modified=datetime.now().isoformat(),
+        )
+
+    def _restore_state_from_data(self, data: DatasetData) -> int:
+        """Restore state from DatasetData, returns loaded count.
+
+        Delegates to facade.load_from_dict() for entity loading and linking.
+        This single method handles:
+        - Parent-child relationships via _parent_id/_parent_unique_id
+        - Nested array linking (e.g., Study.samples)
+        - Reference field linking (e.g., File.run_ref -> Run.alias)
+        """
+        self._state.profile = data.profile
+        self._state.version = data.version
+        self._state.facade = None
+        self._state.reset()
+
+        facade = self._state.get_or_create_facade()
+        loaded_count = facade.load_from_dict(data.entities)
+
+        # Invalidate AppState cache to pick up new data
+        self._state._invalidate_cache()
+
+        return loaded_count
+
+
+class DatasetManager(BaseDatasetManager[DatasetRepository]):
+    """Manages dataset operations with DI support.
+
+    Integrates a DatasetRepository with AppState to provide
+    high-level dataset operations including state synchronization.
+    """
 
     def list_datasets(self) -> list[DatasetInfo]:
         """List all saved datasets.
@@ -170,90 +235,13 @@ class DatasetManager:
         except (ValueError, OSError):
             pass
 
-    def _get_default_dataset_name(self) -> str:
-        """Get a default dataset name from the first entity's label."""
-        if self._state.entity_tree:
-            label = self._state.entity_tree[0].label
-            if label and label != f"New {self._state.entity_tree[0].entity_type}":
-                name = re.sub(r"[^a-zA-Z0-9]+", "-", label).strip("-").lower()
-                if name and len(name) <= 64:
-                    return name
-        return "autosave"
 
-    def _build_dataset_data(self, name: str) -> DatasetData:
-        """Build DatasetData from current state.
-
-        Delegates to facade.to_dict() for entity serialization.
-        """
-        facade = self._state.get_or_create_facade()
-
-        return DatasetData(
-            name=name,
-            profile=self._state.profile,
-            version=self._state.version or facade.version,
-            entities=facade.to_dict(),
-            modified=datetime.now().isoformat(),
-        )
-
-    def _restore_state_from_data(self, data: DatasetData) -> int:
-        """Restore state from DatasetData, returns loaded count.
-
-        Delegates to facade.load_from_dict() for entity loading and linking.
-        This single method handles:
-        - Parent-child relationships via _parent_id/_parent_unique_id
-        - Nested array linking (e.g., Study.samples)
-        - Reference field linking (e.g., File.run_ref -> Run.alias)
-        """
-        self._state.profile = data.profile
-        self._state.version = data.version
-        self._state.facade = None
-        self._state.reset()
-
-        facade = self._state.get_or_create_facade()
-        loaded_count = facade.load_from_dict(data.entities)
-
-        # Invalidate AppState cache to pick up new data
-        self._state._invalidate_cache()
-
-        return loaded_count
-
-
-class AsyncDatasetManager:
+class AsyncDatasetManager(BaseDatasetManager[AsyncDatasetRepository]):
     """Manages dataset operations with async DI support.
 
     Integrates an AsyncDatasetRepository with AppState to provide
     high-level async dataset operations for database backends.
     """
-
-    def __init__(
-        self,
-        repository: AsyncDatasetRepository,
-        state: AppState,
-    ):
-        """Initialize async dataset manager.
-
-        Args:
-            repository: AsyncDatasetRepository implementation for storage.
-            state: AppState instance for entity management.
-        """
-        self._repo = repository
-        self._state = state
-        self._current: str | None = None
-
-    @property
-    def repository(self) -> AsyncDatasetRepository:
-        """Get the underlying repository."""
-        return self._repo
-
-    @property
-    def current_dataset(self) -> str | None:
-        """Get the name of the currently loaded dataset."""
-        return self._current
-
-    @current_dataset.setter
-    def current_dataset(self, name: str | None) -> None:
-        """Set the current dataset name."""
-        self._current = name
 
     async def list_datasets(self) -> list[DatasetInfo]:
         """List all saved datasets.
@@ -353,49 +341,6 @@ class AsyncDatasetManager:
             )
         except (ValueError, OSError):
             pass
-
-    def _get_default_dataset_name(self) -> str:
-        """Get a default dataset name from the first entity's label."""
-        if self._state.entity_tree:
-            label = self._state.entity_tree[0].label
-            if label and label != f"New {self._state.entity_tree[0].entity_type}":
-                name = re.sub(r"[^a-zA-Z0-9]+", "-", label).strip("-").lower()
-                if name and len(name) <= 64:
-                    return name
-        return "autosave"
-
-    def _build_dataset_data(self, name: str) -> DatasetData:
-        """Build DatasetData from current state.
-
-        Delegates to facade.to_dict() for entity serialization.
-        """
-        facade = self._state.get_or_create_facade()
-
-        return DatasetData(
-            name=name,
-            profile=self._state.profile,
-            version=self._state.version or facade.version,
-            entities=facade.to_dict(),
-            modified=datetime.now().isoformat(),
-        )
-
-    def _restore_state_from_data(self, data: DatasetData) -> int:
-        """Restore state from DatasetData, returns loaded count.
-
-        Delegates to facade.load_from_dict() for entity loading and linking.
-        """
-        self._state.profile = data.profile
-        self._state.version = data.version
-        self._state.facade = None
-        self._state.reset()
-
-        facade = self._state.get_or_create_facade()
-        loaded_count = facade.load_from_dict(data.entities)
-
-        # Invalidate AppState cache to pick up new data
-        self._state._invalidate_cache()
-
-        return loaded_count
 
 
 _default_manager: DatasetManager | None = None

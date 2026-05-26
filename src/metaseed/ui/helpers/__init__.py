@@ -51,8 +51,16 @@ from metaseed.ui.helpers.table_helpers import (
     infer_entity_type_from_field,
 )
 
+# Re-export from validation helpers
+from metaseed.ui.helpers.validation import (
+    ValidationResult,
+    process_reference_linked_children,
+    rebuild_nested_items_with_failures,
+)
+
 __all__ = [
     "FormContext",
+    "ValidationResult",
     "build_breadcrumb",
     "build_inline_tables",
     "collect_entities_by_type",
@@ -73,6 +81,8 @@ __all__ = [
     "get_table_columns",
     "infer_entity_type_from_field",
     "is_nested_field",
+    "process_reference_linked_children",
+    "rebuild_nested_items_with_failures",
     "to_dict",
     "walk_nested_entities",
 ]
