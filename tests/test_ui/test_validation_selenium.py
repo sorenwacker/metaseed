@@ -124,7 +124,9 @@ def element_exists(driver, testid: str) -> bool:
 
 def start_new_investigation(driver, profile: str = "miappe", version: str = "1.1"):
     """Start creating a new Investigation by selecting profile."""
-    click_button(driver, "btn-new-investigation")
+    click_button(driver, "btn-new-dataset")
+    time.sleep(CLICK_DELAY)
+    fill_field(driver, "new-dataset-name", f"test-{int(time.time())}")
     click_button(driver, f"profile-{profile}-v{version}")
 
 
