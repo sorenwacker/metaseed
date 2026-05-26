@@ -81,29 +81,29 @@ validation_rules:
       - metabolic footprinting
       - fluxomics
 
-  # Ionization mode vocabulary
+  # Ionization mode vocabulary (applies when assay_type=lcms or gcms)
   - name: ionization_mode_vocabulary
     description: Ionization mode must be a valid MS ionization mode
-    applies_to: [LCMSAssay, GCMSAssay]
+    applies_to: [Assay]
     field: ionization_mode
     enum:
       - positive
       - negative
       - alternating
 
-  # Scan polarity vocabulary
+  # Scan polarity vocabulary (applies when assay_type=lcms or gcms)
   - name: scan_polarity_vocabulary
     description: Scan polarity must be positive or negative
-    applies_to: [LCMSAssay, GCMSAssay]
+    applies_to: [Assay]
     field: scan_polarity
     enum:
       - positive
       - negative
 
-  # Mass analyzer vocabulary
+  # Mass analyzer vocabulary (applies when assay_type=lcms or gcms)
   - name: mass_analyzer_vocabulary
     description: Mass analyzer must be a valid type
-    applies_to: [LCMSAssay, GCMSAssay]
+    applies_to: [Assay]
     field: mass_analyzer
     enum:
       - quadrupole
@@ -117,10 +117,10 @@ validation_rules:
       - LTQ-Orbitrap
       - Q-Orbitrap
 
-  # NMR acquisition nucleus vocabulary
+  # NMR acquisition nucleus vocabulary (applies when assay_type=nmr)
   - name: acquisition_nucleus_vocabulary
     description: NMR acquisition nucleus must be valid
-    applies_to: [NMRAssay]
+    applies_to: [Assay]
     field: acquisition_nucleus
     enum:
       - 1H
@@ -199,10 +199,10 @@ validation_rules:
     field: retention_time
     minimum: 0
 
-  # Magnetic field strength constraint
+  # Magnetic field strength constraint (applies when assay_type=nmr)
   - name: magnetic_field_strength_positive
     description: Magnetic field strength must be positive
-    applies_to: [NMRAssay]
+    applies_to: [Assay]
     field: magnetic_field_strength
     minimum: 0
 
