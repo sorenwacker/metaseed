@@ -362,29 +362,13 @@ entities:
         constraints:
           pattern: "^s_.*\\.txt$"
 
-      - name: nmr_assays
-        codename: nmr_assays
+      - name: assays
+        codename: assays
         type: list
-        items: NMRAssay
+        items: Assay
         required: false
-        description: NMR spectroscopy assays in this study.
-        ontology_term: MTBLS:has_nmr_assay
-
-      - name: lcms_assays
-        codename: lcms_assays
-        type: list
-        items: LCMSAssay
-        required: false
-        description: LC-MS assays in this study.
-        ontology_term: MTBLS:has_lcms_assay
-
-      - name: gcms_assays
-        codename: gcms_assays
-        type: list
-        items: GCMSAssay
-        required: false
-        description: GC-MS assays in this study.
-        ontology_term: MTBLS:has_gcms_assay
+        description: Assays performed in this study (NMR, LC-MS, or GC-MS).
+        ontology_term: MTBLS:has_assay
 
       - name: sources
         codename: sources
@@ -438,15 +422,20 @@ entities:
     ontology_term: MTBLS:assay
     description: >
       An assay represents a measurement performed on samples to generate
-      metabolomics data. This is the base assay type with common fields
-      shared by all assay types (NMR, LC-MS, GC-MS).
+      metabolomics data. Contains common fields plus technology-specific
+      fields for NMR, LC-MS, and GC-MS assays.
     example:
       file_name: a_MTBLS1234_lcms_positive.txt
       study_id: s_MTBLS1234
+      assay_type: lcms
       measurement_type: metabolite profiling
       technology_type: mass spectrometry
       technology_platform: Thermo Q Exactive
+      ms_instrument: Thermo Q Exactive Plus
+      ionization_mode: positive
+      mass_analyzer: orbitrap
     fields:
+      # Common fields
       - name: file_name
         codename: file_name
         type: string
@@ -463,6 +452,18 @@ entities:
         parent_ref: Study.identifier
         reference: Study.identifier
         description: Reference to the parent Study.
+
+      - name: assay_type
+        codename: assay_type
+        type: string
+        required: true
+        description: Type of assay technology (nmr, lcms, or gcms).
+        ontology_term: MTBLS:assay_type
+        constraints:
+          enum:
+            - nmr
+            - lcms
+            - gcms
 
       - name: measurement_type
         codename: measurement_type
@@ -509,81 +510,25 @@ entities:
         description: Metabolite assignments from this assay.
         ontology_term: MTBLS:has_metabolite_assignment
 
-  NMRAssay:
-    ontology_term: MTBLS:nmr_assay
-    description: >
-      An NMR spectroscopy assay for metabolomics analysis. Contains specific
-      parameters for NMR data acquisition including magnetic field strength,
-      pulse sequence, and acquisition nucleus.
-    example:
-      file_name: a_MTBLS1234_nmr_1H.txt
-      study_id: s_MTBLS1234
-      measurement_type: metabolite profiling
-      technology_type: NMR spectroscopy
-      technology_platform: Bruker Avance III HD
-      instrument: Bruker Avance III HD 600 MHz
-      pulse_sequence: noesypr1d
-      magnetic_field_strength: 600.13
-      acquisition_nucleus: 1H
-      temperature: 298.0
-    fields:
-      - name: file_name
-        codename: file_name
-        type: string
-        required: true
-        description: Name of the assay file (a_*.txt).
-        ontology_term: MTBLS:filename
-
-      - name: study_id
-        codename: study_id
-        type: string
-        required: true
-        parent_ref: Study.identifier
-        reference: Study.identifier
-        description: Reference to the parent Study.
-
-      - name: measurement_type
-        codename: measurement_type
-        type: string
-        required: true
-        description: Type of measurement performed.
-        ontology_term: OBI:0000070
-
-      - name: technology_type
-        codename: technology_type
-        type: string
-        required: true
-        description: Technology type (NMR spectroscopy).
-        ontology_term: OBI:0000011
-        constraints:
-          enum:
-            - NMR spectroscopy
-
-      - name: technology_platform
-        codename: technology_platform
+      # NMR-specific fields (used when assay_type=nmr)
+      - name: nmr_instrument
+        codename: nmr_instrument
         type: string
         required: false
-        description: NMR spectrometer platform.
-        ontology_term: MTBLS:technology_platform
-
-      - name: instrument
-        codename: instrument
-        type: string
-        required: true
         description: NMR spectrometer instrument name and model.
         ontology_term: MTBLS:nmr_instrument
 
       - name: pulse_sequence
         codename: pulse_sequence
         type: string
-        required: true
-        description: NMR pulse sequence used (e.g., noesypr1d, cpmgpr1d, jresgpprqf).
+        required: false
+        description: NMR pulse sequence used (e.g., noesypr1d, cpmgpr1d).
         ontology_term: MTBLS:pulse_sequence
 
       - name: magnetic_field_strength
         codename: magnetic_field_strength
         type: float
-        required: true
+        required: false
         description: Magnetic field strength in MHz.
         ontology_term: MTBLS:magnetic_field_strength
         constraints:
@@ -592,7 +537,7 @@ entities:
       - name: acquisition_nucleus
         codename: acquisition_nucleus
         type: string
-        required: true
+        required: false
         description: Nucleus observed in the NMR experiment (e.g., 1H, 13C).
         ontology_term: MTBLS:acquisition_nucleus
 
@@ -628,100 +573,18 @@ entities:
         description: Spectral width in ppm.
         ontology_term: MTBLS:spectral_width
 
-  LCMSAssay:
-    ontology_term: MTBLS:lcms_assay
-    description: >
-      A liquid chromatography-mass spectrometry assay for metabolomics analysis.
-      Contains parameters specific to LC separation and MS detection including
-      chromatography type, column, ionization mode, and mass analyzer.
-    example:
-      file_name: a_MTBLS1234_lcms_pos.txt
-      study_id: s_MTBLS1234
-      measurement_type: metabolite profiling
-      technology_type: mass spectrometry
-      technology_platform: Thermo Q Exactive Plus
-      chromatography_instrument: Thermo Vanquish UHPLC
-      column_type: C18 reverse phase
-      column_name: Waters ACQUITY UPLC BEH C18
-      ms_instrument: Thermo Q Exactive Plus
-      ionization_mode: positive
-      ionization_source: electrospray ionization
-      mass_analyzer: orbitrap
-      scan_polarity: positive
-      mass_range_low: 70.0
-      mass_range_high: 1050.0
-    fields:
-      - name: file_name
-        codename: file_name
-        type: string
-        required: true
-        description: Name of the assay file (a_*.txt).
-        ontology_term: MTBLS:filename
-
-      - name: study_id
-        codename: study_id
-        type: string
-        required: true
-        parent_ref: Study.identifier
-        reference: Study.identifier
-        description: Reference to the parent Study.
-
-      - name: measurement_type
-        codename: measurement_type
-        type: string
-        required: true
-        description: Type of measurement performed.
-        ontology_term: OBI:0000070
-
-      - name: technology_type
-        codename: technology_type
-        type: string
-        required: true
-        description: Technology type (mass spectrometry).
-        ontology_term: OBI:0000011
-        constraints:
-          enum:
-            - mass spectrometry
-
-      - name: technology_platform
-        codename: technology_platform
-        type: string
-        required: false
-        description: MS platform name.
-        ontology_term: MTBLS:technology_platform
-
-      - name: chromatography_instrument
-        codename: chromatography_instrument
-        type: string
-        required: true
-        description: Liquid chromatography instrument name and model.
-        ontology_term: MTBLS:chromatography_instrument
-
-      - name: column_type
-        codename: column_type
-        type: string
-        required: true
-        description: Type of chromatographic column (e.g., C18 reverse phase, HILIC).
-        ontology_term: MTBLS:column_type
-
-      - name: column_name
-        codename: column_name
-        type: string
-        required: false
-        description: Specific column name and manufacturer.
-        ontology_term: MTBLS:column_name
-
+      # MS-specific fields (used when assay_type=lcms or gcms)
       - name: ms_instrument
         codename: ms_instrument
         type: string
-        required: true
+        required: false
         description: Mass spectrometer instrument name and model.
         ontology_term: MTBLS:ms_instrument
 
       - name: ionization_mode
         codename: ionization_mode
         type: string
-        required: true
+        required: false
         description: Ionization mode (positive, negative, or alternating).
         ontology_term: MS:1000465
 
@@ -729,20 +592,20 @@ entities:
         codename: ionization_source
         type: string
         required: false
-        description: Ionization source type (e.g., electrospray ionization, APCI).
+        description: Ionization source type (e.g., electrospray ionization, APCI, EI).
         ontology_term: MS:1000008
 
       - name: mass_analyzer
         codename: mass_analyzer
         type: string
-        required: true
+        required: false
         description: Type of mass analyzer used.
         ontology_term: MS:1000443
 
       - name: scan_polarity
         codename: scan_polarity
         type: string
-        required: true
+        required: false
         description: Scan polarity (positive or negative).
         ontology_term: MS:1000465
 
@@ -778,139 +641,42 @@ entities:
         description: Collision energy for MS/MS (can be fixed value or range).
         ontology_term: MS:1000045
 
-  GCMSAssay:
-    ontology_term: MTBLS:gcms_assay
-    description: >
-      A gas chromatography-mass spectrometry assay for metabolomics analysis.
-      Contains parameters specific to GC separation and MS detection including
-      column type, derivatization method, and mass analyzer.
-    example:
-      file_name: a_MTBLS1234_gcms.txt
-      study_id: s_MTBLS1234
-      measurement_type: metabolite profiling
-      technology_type: mass spectrometry
-      technology_platform: Agilent 7890B/5977B
-      gc_instrument: Agilent 7890B GC
-      column_type: DB-5ms capillary column
-      column_name: Agilent DB-5ms 30m x 0.25mm x 0.25um
-      ms_instrument: Agilent 5977B MSD
-      ionization_mode: positive
-      ionization_source: electron ionization
-      mass_analyzer: quadrupole
-      derivatization_method: methoximation and silylation (MSTFA)
-    fields:
-      - name: file_name
-        codename: file_name
-        type: string
-        required: true
-        description: Name of the assay file (a_*.txt).
-        ontology_term: MTBLS:filename
-
-      - name: study_id
-        codename: study_id
-        type: string
-        required: true
-        parent_ref: Study.identifier
-        reference: Study.identifier
-        description: Reference to the parent Study.
-
-      - name: measurement_type
-        codename: measurement_type
-        type: string
-        required: true
-        description: Type of measurement performed.
-        ontology_term: OBI:0000070
-
-      - name: technology_type
-        codename: technology_type
-        type: string
-        required: true
-        description: Technology type (mass spectrometry).
-        ontology_term: OBI:0000011
-        constraints:
-          enum:
-            - mass spectrometry
-
-      - name: technology_platform
-        codename: technology_platform
+      # LC-specific fields (used when assay_type=lcms)
+      - name: chromatography_instrument
+        codename: chromatography_instrument
         type: string
         required: false
-        description: GC-MS platform name.
-        ontology_term: MTBLS:technology_platform
-
-      - name: gc_instrument
-        codename: gc_instrument
-        type: string
-        required: true
-        description: Gas chromatograph instrument name and model.
-        ontology_term: MTBLS:gc_instrument
+        description: Liquid chromatography instrument name and model.
+        ontology_term: MTBLS:chromatography_instrument
 
       - name: column_type
         codename: column_type
         type: string
-        required: true
-        description: Type of GC column (e.g., DB-5ms capillary column).
+        required: false
+        description: Type of chromatographic column (e.g., C18 reverse phase, HILIC).
         ontology_term: MTBLS:column_type
 
       - name: column_name
         codename: column_name
         type: string
         required: false
-        description: Specific column name with dimensions.
+        description: Specific column name and manufacturer.
         ontology_term: MTBLS:column_name
 
-      - name: ms_instrument
-        codename: ms_instrument
-        type: string
-        required: true
-        description: Mass spectrometer instrument name and model.
-        ontology_term: MTBLS:ms_instrument
-
-      - name: ionization_mode
-        codename: ionization_mode
-        type: string
-        required: true
-        description: Ionization mode (typically positive for EI).
-        ontology_term: MS:1000465
-
-      - name: ionization_source
-        codename: ionization_source
+      # GC-specific fields (used when assay_type=gcms)
+      - name: gc_instrument
+        codename: gc_instrument
         type: string
         required: false
-        description: Ionization source (typically electron ionization for GC-MS).
-        ontology_term: MS:1000008
-        constraints:
-          enum:
-            - electron ionization
-            - chemical ionization
-
-      - name: mass_analyzer
-        codename: mass_analyzer
-        type: string
-        required: true
-        description: Type of mass analyzer used.
-        ontology_term: MS:1000443
+        description: Gas chromatograph instrument name and model.
+        ontology_term: MTBLS:gc_instrument
 
       - name: derivatization_method
         codename: derivatization_method
         type: string
         required: false
-        description: Chemical derivatization method applied before GC analysis.
+        description: Chemical derivatization method used.
         ontology_term: MTBLS:derivatization_method
-
-      - name: carrier_gas
-        codename: carrier_gas
-        type: string
-        required: false
-        description: Carrier gas used (e.g., helium, hydrogen).
-        ontology_term: MTBLS:carrier_gas
-
-      - name: oven_temperature_program
-        codename: oven_temperature_program
-        type: string
-        required: false
-        description: GC oven temperature program description.
-        ontology_term: MTBLS:oven_temperature_program
 
   Source:
     ontology_term: MTBLS:source
