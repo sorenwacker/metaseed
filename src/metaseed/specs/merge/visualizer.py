@@ -260,16 +260,24 @@ class DiffVisualizer:
                     if spec is None:
                         continue
 
-                    # Check for entity references
+                    # Check for nested entity relationships (entity/list types)
                     target = None
                     is_reference = False
                     if spec.type.value == "entity" or (spec.type.value == "list" and spec.items):
                         target = spec.items
-                        # Reference fields typically end with _ref or ref
-                        is_reference = field_diff.field_name.endswith(
-                            "_ref"
-                        ) or field_diff.field_name.endswith("ref")
 
+                    # Check for reference relationships (reference property)
+                    if spec.reference:
+                        # Reference format is "Entity.field" (e.g., "Study.alias")
+                        ref_target = spec.reference.split(".")[0]
+                        if ref_target.lower() in entity_node_ids:
+                            to_id = entity_node_ids[ref_target.lower()]
+                            edge_key = (from_id, to_id, field_diff.field_name, True)
+                            if edge_key not in edge_profiles:
+                                edge_profiles[edge_key] = set()
+                            edge_profiles[edge_key].add(profile_id)
+
+                    # Create edge for nested relationships
                     if target and target.lower() in entity_node_ids:
                         to_id = entity_node_ids[target.lower()]
                         # Include is_reference in the key to track edge type
