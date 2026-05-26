@@ -177,6 +177,7 @@ Option A was initially implemented but rejected because:
 3. Simpler graph visualization (Study → Assay → data files)
 4. No orphaned entities
 5. Matches ISA-Tab's single assay concept with technology differentiation via columns
+6. **Supports multi-technique studies**: MetaboLights studies commonly combine multiple analytical platforms (e.g., NMR + LC-MS) for complementary metabolite coverage. A Study can contain multiple Assay instances with different `assay_type` values, each with its technology-specific fields populated.
 
 ### Implementation
 
@@ -323,16 +324,27 @@ Assay:
       required: false
 ```
 
-### Feature Priority: Don't Let Metaseed Be the Bottleneck
+### Feature Priority: When Does This Problem Actually Occur?
 
-Type hierarchies are common in scientific metadata:
+Not all type differentiation requires polymorphism. Consider how different profiles handle variation:
 
-- **MetaboLights**: NMR vs LC-MS vs GC-MS assays
-- **PRIDE**: Different quantification methods (label-free, TMT, SILAC)
-- **ENA**: Different experiment types (WGS, RNA-seq, amplicon)
-- **ISA**: Different assay measurement types
+| Profile | How Variation is Handled | Polymorphism Needed? |
+|---------|-------------------------|---------------------|
+| PRIDE | `QuantMethod.name` enum (TMT, SILAC, label-free) | No - same fields for all methods |
+| ENA | `Experiment.library_strategy` enum (WGS, RNA-Seq) | No - same fields for all strategies |
+| ISA | `Assay.measurement_type` as OntologyAnnotation | No - same fields for all assay types |
+| MetaboLights | NMR/LC-MS/GC-MS assays with different instruments and parameters | **Yes** - different field sets per technology |
 
-If metaseed forces awkward workarounds for this common pattern, it becomes a bottleneck rather than an enabler.
+The key distinction is whether **different types need different fields**, not just different enum values.
+
+MetaboLights is a genuine polymorphism case because:
+- NMR assays need: `pulse_sequence`, `magnetic_field_strength`, `acquisition_nucleus`
+- LC-MS assays need: `chromatography_instrument`, `column_type`, `ionization_mode`
+- GC-MS assays need: `gc_instrument`, `derivatization_method`
+
+These aren't just different labels - they're fundamentally different field sets that only make sense for their respective technologies.
+
+If metaseed encounters more profiles like MetaboLights (with technology-specific field sets), the workaround of "large entity with many optional fields" becomes increasingly awkward and should be addressed with proper spec-level support.
 
 ### Recommended Implementation Path
 
