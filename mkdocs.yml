@@ -63,6 +63,7 @@ nav:
       - ISA vs MIAPPE: discussion/comparison.md
       - Entity Relationships: discussion/entity-relationships.md
       - Profile Design: discussion/profile-design-approaches.md
+      - MetaboLights Design: discussion/metabolights-design.md
   - Architecture:
       - Overview: architecture/overview.md
       - Model Factory: architecture/model-factory.md

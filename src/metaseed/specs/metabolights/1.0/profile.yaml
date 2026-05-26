@@ -362,13 +362,29 @@ entities:
         constraints:
           pattern: "^s_.*\\.txt$"
 
-      - name: assays
-        codename: assays
+      - name: nmr_assays
+        codename: nmr_assays
         type: list
-        items: Assay
+        items: NMRAssay
         required: false
-        description: Assays performed in this study.
-        ontology_term: MTBLS:has_assay
+        description: NMR spectroscopy assays in this study.
+        ontology_term: MTBLS:has_nmr_assay
+
+      - name: lcms_assays
+        codename: lcms_assays
+        type: list
+        items: LCMSAssay
+        required: false
+        description: LC-MS assays in this study.
+        ontology_term: MTBLS:has_lcms_assay
+
+      - name: gcms_assays
+        codename: gcms_assays
+        type: list
+        items: GCMSAssay
+        required: false
+        description: GC-MS assays in this study.
+        ontology_term: MTBLS:has_gcms_assay
 
       - name: sources
         codename: sources
