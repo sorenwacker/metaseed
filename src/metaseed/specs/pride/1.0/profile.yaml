@@ -1,0 +1,1026 @@
+# PRIDE v1.0 Specification
+# ProteomeXchange Proteomics Data Repository
+# Based on PX XML Schema 1.4.0
+#
+# References:
+# - https://www.proteomexchange.org/docs/guidelines_px.pdf
+# - https://proteomecentral.proteomexchange.org/schemas/proteomeXchange-1.4.0.xsd
+
+version: "1.0"
+name: pride
+display_name: PRIDE
+description: "ProteomeXchange proteomics data repository for mass spectrometry experiments."
+root_entity: Project
+ontology: MS
+
+ontologies:
+  MS:
+    name: PSI Mass Spectrometry Ontology
+    uri: http://purl.obolibrary.org/obo/ms.owl
+    ols_id: ms
+  PRIDE:
+    name: PRIDE Controlled Vocabulary
+    uri: https://www.ebi.ac.uk/pride/
+    ols_id: pride
+  NCBITAXON:
+    name: NCBI Taxonomy
+    uri: http://purl.obolibrary.org/obo/ncbitaxon.owl
+    ols_id: ncbitaxon
+  BTO:
+    name: BRENDA Tissue Ontology
+    uri: http://purl.obolibrary.org/obo/bto.owl
+    ols_id: bto
+  CL:
+    name: Cell Ontology
+    uri: http://purl.obolibrary.org/obo/cl.owl
+    ols_id: cl
+  DOID:
+    name: Disease Ontology
+    uri: http://purl.obolibrary.org/obo/doid.owl
+    ols_id: doid
+  UNIMOD:
+    name: UNIMOD Protein Modifications
+    uri: http://www.unimod.org/
+    ols_id: unimod
+
+validation_rules:
+  # Accession format validations
+  - name: pxd_accession_format
+    description: Project accession must be PXD format (6 digits)
+    applies_to: [Project]
+    field: accession
+    pattern: "^PXD[0-9]{6}$"
+
+  - name: ncbi_taxon_format
+    description: NCBI taxon ID must be a positive integer
+    applies_to: [Species]
+    field: ncbi_taxon_id
+    minimum: 1
+
+  - name: md5_checksum_format
+    description: MD5 checksum must be 32 hexadecimal characters
+    applies_to: [RawFile, PeakListFile, ResultFile]
+    field: checksum
+    pattern: "^[a-fA-F0-9]{32}$"
+
+  - name: pubmed_id_format
+    description: PubMed ID must be numeric
+    applies_to: [Publication]
+    field: pubmed_id
+    pattern: "^[0-9]+$"
+
+  - name: doi_format
+    description: DOI must follow standard format
+    applies_to: [Publication]
+    field: doi
+    pattern: "^10\\.[0-9]{4,}/.*$"
+
+  # Instrument component vocabularies
+  - name: ion_source_vocabulary
+    description: Ion source must be a valid controlled vocabulary term
+    applies_to: [Instrument]
+    field: source
+    enum:
+      - electrospray ionization
+      - nanoelectrospray
+      - matrix-assisted laser desorption ionization
+      - atmospheric pressure chemical ionization
+      - atmospheric pressure photoionization
+      - surface-enhanced laser desorption ionization
+      - desorption electrospray ionization
+      - electron ionization
+      - chemical ionization
+      - fast atom bombardment
+      - ESI
+      - nano-ESI
+      - MALDI
+      - APCI
+      - APPI
+      - SELDI
+      - DESI
+      - EI
+      - CI
+      - FAB
+
+  - name: mass_analyzer_vocabulary
+    description: Mass analyzer must be a valid controlled vocabulary term
+    applies_to: [Instrument]
+    field: analyzer
+    enum:
+      - orbitrap
+      - quadrupole
+      - time-of-flight
+      - ion trap
+      - linear ion trap
+      - fourier transform ion cyclotron resonance
+      - magnetic sector
+      - electrostatic energy analyzer
+      - TOF
+      - Q
+      - IT
+      - LIT
+      - FTICR
+      - Orbitrap
+      - QqQ
+      - QqTOF
+      - QIT
+
+  - name: detector_vocabulary
+    description: Detector must be a valid controlled vocabulary term
+    applies_to: [Instrument]
+    field: detector
+    enum:
+      - electron multiplier
+      - photomultiplier
+      - microchannel plate detector
+      - Faraday cup
+      - conversion dynode
+      - inductive detector
+      - channeltron
+      - MCP
+      - EMT
+      - PMT
+
+  - name: quantification_method_vocabulary
+    description: Quantification method must be a valid controlled vocabulary term
+    applies_to: [QuantMethod]
+    field: name
+    enum:
+      - label-free quantification
+      - spectral counting
+      - intensity-based
+      - TMT
+      - iTRAQ
+      - SILAC
+      - dimethyl labeling
+      - O18 labeling
+      - ICAT
+      - mTRAQ
+      - TMTpro
+      - SRM
+      - MRM
+      - PRM
+      - DIA
+      - SWATH-MS
+
+  - name: raw_file_format_vocabulary
+    description: Raw file format must be a valid controlled vocabulary term
+    applies_to: [RawFile]
+    field: format
+    enum:
+      - Thermo RAW format
+      - Bruker BAF format
+      - Bruker TDF format
+      - Waters raw format
+      - Agilent MassHunter format
+      - SCIEX WIFF format
+      - mzML format
+      - mzXML format
+
+  - name: peak_list_format_vocabulary
+    description: Peak list format must be a valid controlled vocabulary term
+    applies_to: [PeakListFile]
+    field: format
+    enum:
+      - mzML
+      - mzXML
+      - MGF
+      - DTA
+      - PKL
+      - mzData
+      - ms2
+
+  - name: result_file_format_vocabulary
+    description: Result file format must be a valid controlled vocabulary term
+    applies_to: [ResultFile]
+    field: format
+    enum:
+      - mzIdentML
+      - mzTab
+      - pepXML
+      - protXML
+      - MaxQuant txt
+      - Spectronaut CSV
+      - DIA-NN tsv
+      - MSFragger tsv
+      - PRIDE XML
+
+  # Cardinality constraints
+  - name: project_has_contacts
+    description: Project must have at least one contact
+    applies_to: [Project]
+    field: contacts
+    min_items: 1
+
+  - name: project_has_samples
+    description: Project must have at least one sample
+    applies_to: [Project]
+    field: samples
+    min_items: 1
+
+  - name: project_has_instruments
+    description: Project must have at least one instrument
+    applies_to: [Project]
+    field: instruments
+    min_items: 1
+
+  - name: project_has_raw_files
+    description: Project must have at least one raw file
+    applies_to: [Project]
+    field: raw_files
+    min_items: 1
+
+  # Contact role vocabulary
+  - name: contact_role_vocabulary
+    description: Contact role must be a valid controlled vocabulary term
+    applies_to: [Contact]
+    field: role
+    enum:
+      - submitter
+      - principal investigator
+      - lab head
+      - data analyst
+      - researcher
+      - software developer
+      - instrument scientist
+
+  # Hosting repository vocabulary
+  - name: hosting_repository_vocabulary
+    description: Hosting repository must be a valid ProteomeXchange partner
+    applies_to: [Project]
+    field: hosting_repository
+    enum:
+      - PRIDE
+      - PeptideAtlas
+      - MassIVE
+      - jPOST
+      - iProX
+      - Panorama Public
+
+entities:
+
+  Project:
+    ontology_term: MS:1002854
+    description: >
+      A ProteomeXchange project containing metadata and data files for a
+      proteomics experiment. Projects are assigned PXD accessions upon
+      submission and made public after publication or embargo period.
+    example:
+      accession: PXD012345
+      title: Quantitative proteomics analysis of human liver tissue
+      description: This study presents a comprehensive quantitative proteomics analysis of human liver tissue samples from healthy donors and patients with hepatocellular carcinoma using TMT-based labeling.
+      keywords:
+        - proteomics
+        - liver
+        - hepatocellular carcinoma
+        - TMT
+        - quantitative
+      announce_date: "2024-06-15"
+      sample_processing_protocol: Liver tissue was homogenized, proteins extracted using RIPA buffer, reduced with DTT, alkylated with iodoacetamide, and digested with trypsin overnight.
+      data_processing_protocol: Raw files were processed with MaxQuant 2.1.0 using the UniProt human database. TMT quantification was performed with reporter ion correction.
+      hosting_repository: PRIDE
+      contacts:
+        - id: contact-001
+          name: Jane Smith
+          email: jane.smith@university.edu
+          affiliation: Department of Biochemistry, University of Science
+          role: submitter
+      samples:
+        - name: HCC_patient_01_liver
+          description: Liver tissue biopsy from hepatocellular carcinoma patient
+          species:
+            - term_id: NCBITAXON:9606
+              name: Homo sapiens
+              ncbi_taxon_id: 9606
+      instruments:
+        - id: instrument-001
+          name: Orbitrap Exploris 480
+          source: nanoelectrospray
+          analyzer: orbitrap
+          detector: electron multiplier
+      raw_files:
+        - filename: HCC_patient_01_fraction_01.raw
+          format: Thermo RAW format
+          checksum: a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
+          checksum_method: MD5
+    fields:
+      - name: accession
+        codename: accession
+        type: string
+        required: false
+        description: ProteomeXchange-assigned accession number (PXD format).
+        ontology_term: MS:1001919
+
+      - name: title
+        codename: title
+        type: string
+        required: true
+        description: Descriptive title for the project.
+        ontology_term: MS:1002851
+        constraints:
+          min_length: 10
+          max_length: 500
+
+      - name: description
+        codename: description
+        type: string
+        required: true
+        description: Detailed description of the proteomics experiment including objectives, methods, and expected outcomes.
+        ontology_term: MS:1002852
+
+      - name: keywords
+        codename: keywords
+        type: list
+        items: string
+        required: true
+        description: Keywords describing the project for searchability.
+        ontology_term: MS:1002855
+
+      - name: announce_date
+        codename: announce_date
+        type: date
+        required: false
+        description: Date when the dataset was made public.
+        ontology_term: MS:1002856
+
+      - name: sample_processing_protocol
+        codename: sample_processing_protocol
+        type: string
+        required: true
+        description: Description of sample preparation including extraction, digestion, and any labeling procedures.
+        ontology_term: MS:1002857
+
+      - name: data_processing_protocol
+        codename: data_processing_protocol
+        type: string
+        required: true
+        description: Description of data analysis workflow including software, databases, and parameters used.
+        ontology_term: MS:1002858
+
+      - name: hosting_repository
+        codename: hosting_repository
+        type: string
+        required: true
+        description: ProteomeXchange partner repository hosting the data.
+        ontology_term: MS:1002859
+
+      - name: contacts
+        codename: contacts
+        type: list
+        items: Contact
+        required: true
+        description: Contact persons associated with this project.
+        ontology_term: MS:1000586
+
+      - name: samples
+        codename: samples
+        type: list
+        items: Sample
+        required: true
+        description: Biological samples analyzed in this project.
+        ontology_term: MS:1000548
+
+      - name: instruments
+        codename: instruments
+        type: list
+        items: Instrument
+        required: true
+        description: Mass spectrometry instruments used for data acquisition.
+        ontology_term: MS:1000463
+
+      - name: publications
+        codename: publications
+        type: list
+        items: Publication
+        required: false
+        description: Publications associated with this project.
+        ontology_term: MS:1000882
+
+      - name: modifications
+        codename: modifications
+        type: list
+        items: Modification
+        required: false
+        description: Protein modifications searched in this project.
+        ontology_term: MS:1001471
+
+      - name: quant_methods
+        codename: quant_methods
+        type: list
+        items: QuantMethod
+        required: false
+        description: Quantification methods used in this project.
+        ontology_term: MS:1001833
+
+      - name: raw_files
+        codename: raw_files
+        type: list
+        items: RawFile
+        required: true
+        description: Raw data files from mass spectrometry acquisition.
+        ontology_term: MS:1000577
+
+      - name: peak_list_files
+        codename: peak_list_files
+        type: list
+        items: PeakListFile
+        required: false
+        description: Peak list files derived from raw data.
+        ontology_term: MS:1000069
+
+      - name: result_files
+        codename: result_files
+        type: list
+        items: ResultFile
+        required: false
+        description: Search result and identification files.
+        ontology_term: MS:1002851
+
+  Contact:
+    ontology_term: MS:1000586
+    description: >
+      A contact person associated with the project, such as the submitter,
+      principal investigator, or data analyst.
+    example:
+      id: contact-001
+      name: Jane Smith
+      email: jane.smith@university.edu
+      affiliation: Department of Biochemistry, University of Science
+      role: submitter
+    fields:
+      - name: id
+        codename: id
+        type: string
+        required: true
+        description: Unique identifier for the contact within the project.
+        ontology_term: MS:1000587
+        constraints:
+          min_length: 1
+          max_length: 255
+
+      - name: project_ref
+        codename: project_ref
+        type: string
+        required: false
+        description: Reference to the parent project accession.
+        ontology_term: MS:1001919
+        reference: Project.accession
+
+      - name: name
+        codename: name
+        type: string
+        required: true
+        description: Full name of the contact person.
+        ontology_term: MS:1000588
+        constraints:
+          min_length: 1
+          max_length: 255
+
+      - name: email
+        codename: email
+        type: string
+        required: true
+        description: Email address for contact.
+        ontology_term: MS:1000589
+        constraints:
+          pattern: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+
+      - name: affiliation
+        codename: affiliation
+        type: string
+        required: true
+        description: Institutional affiliation of the contact.
+        ontology_term: MS:1000590
+
+      - name: role
+        codename: role
+        type: string
+        required: true
+        description: Role of the contact in the project.
+        ontology_term: MS:1001271
+
+  Sample:
+    ontology_term: MS:1000548
+    description: >
+      A biological sample that was analyzed by mass spectrometry. Samples
+      are annotated with species, tissue, cell type, and disease information.
+    example:
+      name: HCC_patient_01_liver
+      description: Liver tissue biopsy from hepatocellular carcinoma patient
+      species:
+        - term_id: NCBITAXON:9606
+          name: Homo sapiens
+          ncbi_taxon_id: 9606
+    fields:
+      - name: name
+        codename: name
+        type: string
+        required: true
+        description: Unique name identifying the sample.
+        ontology_term: MS:1000551
+        constraints:
+          min_length: 1
+          max_length: 255
+
+      - name: project_ref
+        codename: project_ref
+        type: string
+        required: false
+        description: Reference to the parent project accession.
+        ontology_term: MS:1001919
+        reference: Project.accession
+
+      - name: description
+        codename: description
+        type: string
+        required: false
+        description: Detailed description of the sample.
+        ontology_term: MS:1000549
+
+      - name: species
+        codename: species
+        type: list
+        items: Species
+        required: true
+        description: Organism species from which the sample was derived.
+        ontology_term: MS:1001467
+
+      - name: tissue
+        codename: tissue
+        type: list
+        items: Tissue
+        required: false
+        description: Tissue type of the sample.
+        ontology_term: MS:1001468
+
+      - name: cell_type
+        codename: cell_type
+        type: list
+        items: CellType
+        required: false
+        description: Cell type of the sample.
+        ontology_term: MS:1001469
+
+      - name: disease
+        codename: disease
+        type: list
+        items: Disease
+        required: false
+        description: Disease state of the sample.
+        ontology_term: MS:1001470
+
+  Species:
+    ontology_term: MS:1001467
+    description: >
+      Organism species information using NCBI taxonomy identifiers and
+      controlled vocabulary terms.
+    example:
+      term_id: NCBITAXON:9606
+      name: Homo sapiens
+      ncbi_taxon_id: 9606
+    fields:
+      - name: term_id
+        codename: term_id
+        type: string
+        required: true
+        description: Ontology term identifier (NCBITAXON prefix).
+        ontology_term: MS:1001467
+        constraints:
+          pattern: "^NCBITAXON:[0-9]+$"
+
+      - name: name
+        codename: name
+        type: string
+        required: true
+        description: Scientific name of the species.
+        ontology_term: MS:1001469
+        constraints:
+          min_length: 1
+
+      - name: ncbi_taxon_id
+        codename: ncbi_taxon_id
+        type: integer
+        required: true
+        description: NCBI taxonomy identifier.
+        ontology_term: MS:1001469
+        constraints:
+          minimum: 1
+
+  Tissue:
+    ontology_term: MS:1001468
+    description: >
+      Tissue type annotation using BRENDA Tissue Ontology (BTO) or other
+      controlled vocabulary.
+    example:
+      term_id: BTO:0000759
+      name: liver
+    fields:
+      - name: term_id
+        codename: term_id
+        type: string
+        required: true
+        description: Ontology term identifier (BTO prefix preferred).
+        ontology_term: MS:1001468
+        constraints:
+          min_length: 1
+
+      - name: name
+        codename: name
+        type: string
+        required: true
+        description: Tissue name from controlled vocabulary.
+        ontology_term: MS:1001468
+
+  CellType:
+    ontology_term: MS:1001469
+    description: >
+      Cell type annotation using Cell Ontology (CL) or other controlled
+      vocabulary.
+    example:
+      term_id: CL:0000182
+      name: hepatocyte
+    fields:
+      - name: term_id
+        codename: term_id
+        type: string
+        required: true
+        description: Ontology term identifier (CL prefix preferred).
+        ontology_term: MS:1001469
+        constraints:
+          min_length: 1
+
+      - name: name
+        codename: name
+        type: string
+        required: true
+        description: Cell type name from controlled vocabulary.
+        ontology_term: MS:1001469
+
+  Disease:
+    ontology_term: MS:1001470
+    description: >
+      Disease state annotation using Disease Ontology (DOID) or other
+      controlled vocabulary.
+    example:
+      term_id: DOID:684
+      name: hepatocellular carcinoma
+    fields:
+      - name: term_id
+        codename: term_id
+        type: string
+        required: true
+        description: Ontology term identifier (DOID prefix preferred).
+        ontology_term: MS:1001470
+        constraints:
+          min_length: 1
+
+      - name: name
+        codename: name
+        type: string
+        required: true
+        description: Disease name from controlled vocabulary.
+        ontology_term: MS:1001470
+
+  Instrument:
+    ontology_term: MS:1000463
+    description: >
+      Mass spectrometry instrument used for data acquisition, including
+      ion source, mass analyzer, and detector components.
+    example:
+      id: instrument-001
+      name: Orbitrap Exploris 480
+      source: nanoelectrospray
+      analyzer: orbitrap
+      detector: electron multiplier
+    fields:
+      - name: id
+        codename: id
+        type: string
+        required: true
+        description: Unique identifier for the instrument within the project.
+        ontology_term: MS:1000529
+        constraints:
+          min_length: 1
+          max_length: 255
+
+      - name: project_ref
+        codename: project_ref
+        type: string
+        required: false
+        description: Reference to the parent project accession.
+        ontology_term: MS:1001919
+        reference: Project.accession
+
+      - name: name
+        codename: name
+        type: string
+        required: true
+        description: Instrument model name.
+        ontology_term: MS:1000031
+
+      - name: source
+        codename: source
+        type: string
+        required: true
+        description: Ion source type (e.g., ESI, MALDI).
+        ontology_term: MS:1000008
+
+      - name: analyzer
+        codename: analyzer
+        type: string
+        required: true
+        description: Mass analyzer type (e.g., orbitrap, TOF, quadrupole).
+        ontology_term: MS:1000443
+
+      - name: detector
+        codename: detector
+        type: string
+        required: true
+        description: Detector type.
+        ontology_term: MS:1000026
+
+  Publication:
+    ontology_term: MS:1000882
+    description: >
+      A publication associated with the project, identified by PubMed ID
+      or DOI.
+    example:
+      id: pub-001
+      pubmed_id: "12345678"
+      doi: 10.1038/s41586-024-00001-0
+      title: Comprehensive proteomics analysis of hepatocellular carcinoma
+      authors: Smith J, Johnson A, Williams B, et al.
+    fields:
+      - name: id
+        codename: id
+        type: string
+        required: true
+        description: Unique identifier for the publication within the project.
+        ontology_term: MS:1000879
+        constraints:
+          min_length: 1
+          max_length: 255
+
+      - name: project_ref
+        codename: project_ref
+        type: string
+        required: false
+        description: Reference to the parent project accession.
+        ontology_term: MS:1001919
+        reference: Project.accession
+
+      - name: pubmed_id
+        codename: pubmed_id
+        type: string
+        required: false
+        description: PubMed identifier for the publication.
+        ontology_term: MS:1000879
+
+      - name: doi
+        codename: doi
+        type: string
+        required: false
+        description: Digital Object Identifier for the publication.
+        ontology_term: MS:1000880
+
+      - name: title
+        codename: title
+        type: string
+        required: false
+        description: Title of the publication.
+        ontology_term: MS:1000881
+
+      - name: authors
+        codename: authors
+        type: string
+        required: false
+        description: Authors of the publication (formatted string).
+        ontology_term: MS:1000883
+
+  Modification:
+    ontology_term: MS:1001471
+    description: >
+      A protein modification searched in the proteomics experiment, using
+      UNIMOD or PSI-MOD ontology terms.
+    example:
+      term_id: UNIMOD:35
+      name: Oxidation
+      mass_delta: 15.994915
+    fields:
+      - name: term_id
+        codename: term_id
+        type: string
+        required: true
+        description: Ontology term identifier (UNIMOD or MOD prefix).
+        ontology_term: MS:1001471
+        constraints:
+          min_length: 1
+
+      - name: project_ref
+        codename: project_ref
+        type: string
+        required: false
+        description: Reference to the parent project accession.
+        ontology_term: MS:1001919
+        reference: Project.accession
+
+      - name: name
+        codename: name
+        type: string
+        required: true
+        description: Name of the modification.
+        ontology_term: MS:1001471
+
+      - name: mass_delta
+        codename: mass_delta
+        type: float
+        required: false
+        description: Monoisotopic mass difference introduced by the modification.
+        ontology_term: MS:1001525
+
+  QuantMethod:
+    ontology_term: MS:1001833
+    description: >
+      A quantification method used in the proteomics experiment, such as
+      label-free, TMT, SILAC, or other labeling approaches.
+    example:
+      term_id: MS:1002018
+      name: TMT
+      description: Tandem Mass Tag isobaric labeling for multiplexed quantification
+    fields:
+      - name: term_id
+        codename: term_id
+        type: string
+        required: true
+        description: Ontology term identifier from PSI-MS ontology.
+        ontology_term: MS:1001833
+        constraints:
+          min_length: 1
+
+      - name: project_ref
+        codename: project_ref
+        type: string
+        required: false
+        description: Reference to the parent project accession.
+        ontology_term: MS:1001919
+        reference: Project.accession
+
+      - name: name
+        codename: name
+        type: string
+        required: true
+        description: Name of the quantification method.
+        ontology_term: MS:1001833
+
+      - name: description
+        codename: description
+        type: string
+        required: false
+        description: Description of the quantification approach.
+        ontology_term: MS:1001834
+
+  RawFile:
+    ontology_term: MS:1000577
+    description: >
+      A raw data file from mass spectrometry acquisition in vendor-specific
+      or open format.
+    example:
+      filename: HCC_patient_01_fraction_01.raw
+      file_uri: ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2024/06/PXD012345/HCC_patient_01_fraction_01.raw
+      format: Thermo RAW format
+      checksum: a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
+      checksum_method: MD5
+    fields:
+      - name: filename
+        codename: filename
+        type: string
+        required: true
+        description: Name of the raw data file.
+        ontology_term: MS:1000568
+        constraints:
+          min_length: 1
+          max_length: 1000
+
+      - name: project_ref
+        codename: project_ref
+        type: string
+        required: false
+        description: Reference to the parent project accession.
+        ontology_term: MS:1001919
+        reference: Project.accession
+
+      - name: file_uri
+        codename: file_uri
+        type: uri
+        required: false
+        description: URI location of the file (FTP or HTTPS).
+        ontology_term: MS:1000569
+
+      - name: format
+        codename: format
+        type: string
+        required: false
+        description: File format type.
+        ontology_term: MS:1000560
+
+      - name: checksum
+        codename: checksum
+        type: string
+        required: true
+        description: MD5 checksum for file integrity verification.
+        ontology_term: MS:1000569
+
+      - name: checksum_method
+        codename: checksum_method
+        type: string
+        required: true
+        description: Checksum algorithm used.
+        ontology_term: MS:1000569
+        constraints:
+          enum:
+            - MD5
+            - SHA-256
+
+  PeakListFile:
+    ontology_term: MS:1000069
+    description: >
+      A peak list file derived from raw data, containing processed spectra
+      in open format.
+    example:
+      filename: HCC_patient_01_fraction_01.mgf
+      file_uri: ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2024/06/PXD012345/HCC_patient_01_fraction_01.mgf
+      format: MGF
+    fields:
+      - name: filename
+        codename: filename
+        type: string
+        required: true
+        description: Name of the peak list file.
+        ontology_term: MS:1000568
+        constraints:
+          min_length: 1
+          max_length: 1000
+
+      - name: project_ref
+        codename: project_ref
+        type: string
+        required: false
+        description: Reference to the parent project accession.
+        ontology_term: MS:1001919
+        reference: Project.accession
+
+      - name: file_uri
+        codename: file_uri
+        type: uri
+        required: false
+        description: URI location of the file.
+        ontology_term: MS:1000569
+
+      - name: format
+        codename: format
+        type: string
+        required: true
+        description: Peak list file format.
+        ontology_term: MS:1000560
+
+  ResultFile:
+    ontology_term: MS:1002851
+    description: >
+      A search result or identification file containing peptide and protein
+      identifications.
+    example:
+      filename: HCC_combined_results.mzid
+      file_uri: ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2024/06/PXD012345/HCC_combined_results.mzid
+      format: mzIdentML
+    fields:
+      - name: filename
+        codename: filename
+        type: string
+        required: true
+        description: Name of the result file.
+        ontology_term: MS:1000568
+        constraints:
+          min_length: 1
+          max_length: 1000
+
+      - name: project_ref
+        codename: project_ref
+        type: string
+        required: false
+        description: Reference to the parent project accession.
+        ontology_term: MS:1001919
+        reference: Project.accession
+
+      - name: file_uri
+        codename: file_uri
+        type: uri
+        required: false
+        description: URI location of the file.
+        ontology_term: MS:1000569
+
+      - name: format
+        codename: format
+        type: string
+        required: true
+        description: Result file format.
+        ontology_term: MS:1000560
