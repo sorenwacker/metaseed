@@ -323,15 +323,55 @@ Assay:
       required: false
 ```
 
-### Recommendation for Metaseed
+### Feature Priority: Don't Let Metaseed Be the Bottleneck
 
-Consider implementing **Option 1 (Conditional validation rules)** as a near-term solution:
+Type hierarchies are common in scientific metadata:
+
+- **MetaboLights**: NMR vs LC-MS vs GC-MS assays
+- **PRIDE**: Different quantification methods (label-free, TMT, SILAC)
+- **ENA**: Different experiment types (WGS, RNA-seq, amplicon)
+- **ISA**: Different assay measurement types
+
+If metaseed forces awkward workarounds for this common pattern, it becomes a bottleneck rather than an enabler.
+
+### Recommended Implementation Path
+
+**Phase 1: Conditional validation rules** (near-term)
+
+Add `when` clause to validation rules:
+
+```yaml
+validation_rules:
+  - name: nmr_requires_fields
+    applies_to: [Assay]
+    when: assay_type == "nmr"
+    require_fields: [pulse_sequence, magnetic_field_strength]
+```
 
 - Minimal spec syntax changes
 - Leverages existing validation infrastructure
-- Provides runtime enforcement without model complexity
+- Provides runtime enforcement
 
-Long-term, **Option 3 (Discriminated variants)** would provide the cleanest developer experience but requires significant spec parser changes.
+**Phase 2: Discriminated variants** (medium-term)
+
+Native syntax for type variants:
+
+```yaml
+Assay:
+  discriminator: assay_type
+  common_fields: [file_name, study_id, measurement_type]
+  variants:
+    nmr:
+      fields: [pulse_sequence, magnetic_field_strength]
+    lcms:
+      fields: [chromatography_instrument, ionization_mode]
+```
+
+- Cleanest developer experience
+- Type-safe at model generation time
+- Self-documenting specs
+
+This should be prioritized to avoid metaseed becoming a constraint on schema expressiveness.
 
 ## Other Design Decisions
 
