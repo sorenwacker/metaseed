@@ -17,7 +17,16 @@ Interactive facade usage:
     >>> inv = m.Investigation(unique_id="INV-001", title="My Investigation")
 """
 
-from metaseed.facade import ProfileFacade, isa, miappe
+from metaseed.facade import (
+    ProfileFacade,
+    darwin_core,
+    dissco,
+    ena,
+    isa,
+    metabolights,
+    miappe,
+    pride,
+)
 from metaseed.models import get_model
 from metaseed.specs import SpecLoader
 from metaseed.storage import JsonStorage, YamlStorage
@@ -33,8 +42,13 @@ __all__ = [
     "ProfileFacade",
     "SpecLoader",
     "YamlStorage",
+    "darwin_core",
+    "dissco",
+    "ena",
     "get_model",
     "isa",
+    "metabolights",
     "miappe",
+    "pride",
     "validate",
 ]

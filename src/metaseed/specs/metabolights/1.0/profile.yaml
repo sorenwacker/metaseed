@@ -494,7 +494,6 @@ entities:
 
   NMRAssay:
     ontology_term: MTBLS:nmr_assay
-    extends: Assay
     description: >
       An NMR spectroscopy assay for metabolomics analysis. Contains specific
       parameters for NMR data acquisition including magnetic field strength,
@@ -613,7 +612,6 @@ entities:
 
   LCMSAssay:
     ontology_term: MTBLS:lcms_assay
-    extends: Assay
     description: >
       A liquid chromatography-mass spectrometry assay for metabolomics analysis.
       Contains parameters specific to LC separation and MS detection including
@@ -763,7 +761,6 @@ entities:
 
   GCMSAssay:
     ontology_term: MTBLS:gcms_assay
-    extends: Assay
     description: >
       A gas chromatography-mass spectrometry assay for metabolomics analysis.
       Contains parameters specific to GC separation and MS detection including

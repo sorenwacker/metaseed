@@ -877,14 +877,14 @@ class TestMCPSchemaValidation:
         set_mcp_state(state)
 
         with patch("metaseed.ui.datasets.auto_save"):
-            # Try to create Run with invalid 'files' field (not in Run schema)
+            # Try to create Run with invalid field (not in Run schema)
             result = create_fn.fn(
                 entity_type="Run",
                 data=json.dumps(
                     {
                         "alias": "SRR12345",
                         "experiment_ref": "SRX12345",
-                        "files": [{"filename": "test.fastq", "checksum": "abc123"}],
+                        "invalid_extra_field": "should_be_rejected",
                     }
                 ),
             )
@@ -896,8 +896,8 @@ class TestMCPSchemaValidation:
             # Error should mention the extra field
             error_fields = [d["field"] for d in data.get("details", [])]
             assert (
-                "files" in error_fields or "extra" in str(data).lower()
-            ), f"Error should mention 'files' field. Got: {data}"
+                "invalid_extra_field" in error_fields or "extra" in str(data).lower()
+            ), f"Error should mention 'invalid_extra_field'. Got: {data}"
 
     def test_create_entity_accepts_valid_fields(self):
         """Create entity should accept fields defined in the schema."""

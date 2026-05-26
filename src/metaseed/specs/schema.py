@@ -289,9 +289,10 @@ class ProfileSpec(BaseModel):
                 example=entity_def.example,
             )
 
-        # Try case-insensitive match
+        # Try case-insensitive match (also handles snake_case vs PascalCase with acronyms)
+        entity_normalized = entity_name.lower().replace("_", "")
         for name, entity_def in self.entities.items():
-            if name.lower() == entity_name.lower():
+            if name.lower().replace("_", "") == entity_normalized:
                 return EntitySpec(
                     name=name,
                     version=self.version,

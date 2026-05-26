@@ -1484,3 +1484,88 @@ def isa(version: str = "1.0") -> ProfileFacade:
         >>> i.Investigation.help()
     """
     return ProfileFacade("isa", version)
+
+
+def ena(version: str = "1.0") -> ProfileFacade:
+    """Get ENA profile facade.
+
+    Args:
+        version: ENA version (default: "1.0").
+
+    Returns:
+        ProfileFacade for ENA (European Nucleotide Archive).
+
+    Example:
+        >>> from metaseed import ena
+        >>> e = ena()
+        >>> e.Study.help()
+    """
+    return ProfileFacade("ena", version)
+
+
+def pride(version: str = "1.0") -> ProfileFacade:
+    """Get PRIDE profile facade.
+
+    Args:
+        version: PRIDE version (default: "1.0").
+
+    Returns:
+        ProfileFacade for PRIDE (ProteomeXchange).
+
+    Example:
+        >>> from metaseed import pride
+        >>> p = pride()
+        >>> p.Project.help()
+    """
+    return ProfileFacade("pride", version)
+
+
+def metabolights(version: str = "1.0") -> ProfileFacade:
+    """Get MetaboLights profile facade.
+
+    Args:
+        version: MetaboLights version (default: "1.0").
+
+    Returns:
+        ProfileFacade for MetaboLights.
+
+    Example:
+        >>> from metaseed import metabolights
+        >>> m = metabolights()
+        >>> m.Investigation.help()
+    """
+    return ProfileFacade("metabolights", version)
+
+
+def dissco(version: str = "0.4") -> ProfileFacade:
+    """Get DiSSCo profile facade.
+
+    Args:
+        version: DiSSCo version (default: "0.4").
+
+    Returns:
+        ProfileFacade for DiSSCo.
+
+    Example:
+        >>> from metaseed import dissco
+        >>> d = dissco()
+        >>> d.DigitalSpecimen.help()
+    """
+    return ProfileFacade("dissco", version)
+
+
+def darwin_core(version: str = "1.0") -> ProfileFacade:
+    """Get Darwin Core profile facade.
+
+    Args:
+        version: Darwin Core version (default: "1.0").
+
+    Returns:
+        ProfileFacade for Darwin Core.
+
+    Example:
+        >>> from metaseed import darwin_core
+        >>> d = darwin_core()
+        >>> d.Occurrence.help()
+    """
+    return ProfileFacade("darwin-core", version)
