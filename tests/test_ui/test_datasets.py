@@ -19,15 +19,21 @@ from metaseed.ui.state import AppState
 @pytest.fixture
 def temp_datasets_dir(tmp_path):
     """Use a temporary directory for datasets."""
+    from metaseed.ui.datasets import _factory_var
+
     datasets_dir = tmp_path / "datasets"
     datasets_dir.mkdir()
-    with (
-        patch("metaseed.repositories.filesystem_dataset.DEFAULT_DATASETS_DIR", datasets_dir),
-        patch("metaseed.ui.datasets.DATASETS_DIR", datasets_dir),
-        # Reset the module-level factory so it picks up the new directory
-        patch("metaseed.ui.datasets._factory", None),
-    ):
-        yield datasets_dir
+
+    # Reset the contextvar factory so it picks up the new directory
+    token = _factory_var.set(None)
+    try:
+        with (
+            patch("metaseed.repositories.filesystem_dataset.DEFAULT_DATASETS_DIR", datasets_dir),
+            patch("metaseed.ui.datasets.DATASETS_DIR", datasets_dir),
+        ):
+            yield datasets_dir
+    finally:
+        _factory_var.reset(token)
 
 
 class TestValidateDatasetName:
