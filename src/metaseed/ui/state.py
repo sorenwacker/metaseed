@@ -161,9 +161,16 @@ class AppState:
     _nodes_cache: dict[str, TreeNode] = field(default_factory=dict)
     _cache_valid: bool = field(default=False)
 
-    def _invalidate_cache(self: Self) -> None:
-        """Invalidate the TreeNode cache when facade data changes."""
+    def invalidate_cache(self: Self) -> None:
+        """Invalidate the TreeNode cache.
+
+        Call this after modifying entities via MetaseedClient or facade
+        to ensure the tree cache is rebuilt on next access.
+        """
         self._cache_valid = False
+
+    # Alias for backward compatibility
+    _invalidate_cache = invalidate_cache
 
     def _rebuild_cache(self: Self) -> None:
         """Rebuild TreeNode cache from facade's EntityNodes."""
