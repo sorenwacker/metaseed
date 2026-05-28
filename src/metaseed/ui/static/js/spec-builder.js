@@ -533,10 +533,6 @@ function saveSpec() {
     });
 }
 
-function startAddRelationship() {
-    alert('To add a relationship:\n1. Click on the source entity\n2. Add a field of type "entity" or "list"\n3. Set the Items/Target to the target entity name');
-}
-
 // =============================================================================
 // Drag & Drop
 // =============================================================================
