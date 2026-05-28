@@ -123,6 +123,25 @@ class MetaseedClient:
         instance._facade = ProfileFacade(spec.name, spec=spec)
         return instance
 
+    @classmethod
+    def from_yaml(cls, path: str) -> MetaseedClient:
+        """Create client from a custom spec YAML file.
+
+        Args:
+            path: Path to the profile spec YAML file.
+
+        Returns:
+            MetaseedClient configured with the custom spec.
+
+        Example:
+            >>> client = MetaseedClient.from_yaml("my-custom-spec.yaml")
+        """
+        from metaseed.facade import ProfileFacade
+
+        instance = cls.__new__(cls)
+        instance._facade = ProfileFacade.from_yaml(path)
+        return instance
+
     # ========================================================================
     # Entity CRUD Operations
     # ========================================================================
@@ -321,6 +340,20 @@ class MetaseedClient:
             entities = data if isinstance(data, list) else []
 
         return self._facade.load_from_dict(entities)
+
+    def load_yaml(self: Self, path: str) -> int:
+        """Load entities from a YAML dataset file.
+
+        Args:
+            path: Path to the YAML file containing entity data.
+
+        Returns:
+            Number of entities loaded.
+
+        Example:
+            >>> client.load_yaml("my-dataset.yaml")
+        """
+        return self._facade.load_yaml(path)
 
     def clear(self: Self) -> None:
         """Clear all entities from the client."""

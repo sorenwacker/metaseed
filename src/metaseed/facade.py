@@ -19,6 +19,7 @@ import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date, datetime
+from pathlib import Path
 from typing import Any, Self
 from uuid import uuid4
 
@@ -1195,6 +1196,61 @@ class ProfileFacade:
             Number of entities loaded.
         """
         return self._store.load_from_dict(entities)
+
+    def load_yaml(self: Self, path: str | Path) -> int:
+        """Load entities from a YAML dataset file.
+
+        Args:
+            path: Path to the YAML file containing entity data.
+
+        Returns:
+            Number of entities loaded.
+
+        Example:
+            >>> facade = ProfileFacade("miappe", "1.2")
+            >>> facade.load_yaml("my-dataset.yaml")
+        """
+        import yaml
+
+        path = Path(path)
+        with path.open() as f:
+            data = yaml.safe_load(f)
+
+        # Support both flat list and wrapped format
+        if isinstance(data, list):
+            entities = data
+        elif isinstance(data, dict) and "entities" in data:
+            entities = data["entities"]
+        else:
+            # Assume it's a single root entity (like Investigation with nested studies)
+            entities = [data]
+
+        return self.load_from_dict(entities)
+
+    @classmethod
+    def from_yaml(cls, path: str | Path) -> ProfileFacade:
+        """Create a ProfileFacade from a custom spec YAML file.
+
+        Args:
+            path: Path to the profile spec YAML file.
+
+        Returns:
+            ProfileFacade configured with the custom spec.
+
+        Example:
+            >>> facade = ProfileFacade.from_yaml("my-custom-spec.yaml")
+            >>> facade.MyEntity.help()
+        """
+        import yaml
+
+        from metaseed.specs.schema import ProfileSpec
+
+        path = Path(path)
+        with path.open() as f:
+            data = yaml.safe_load(f)
+
+        spec = ProfileSpec(**data)
+        return cls(spec.name, spec=spec)
 
     def clear(self: Self) -> None:
         """Clear all stored entity instances."""
