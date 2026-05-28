@@ -53,6 +53,26 @@ cd metaseed
 uv sync --extra dev --extra docs
 ```
 
+## Usage
+
+```python
+from metaseed import MetaseedClient
+
+client = MetaseedClient("miappe", "1.2")
+
+# Create entities
+inv = client.create_entity("Investigation", {
+    "unique_id": "INV001",
+    "title": "Drought study"
+})
+
+# Validate
+result = client.validate()
+
+# Serialize
+data = client.serialize()
+```
+
 ## Development
 
 ```bash
