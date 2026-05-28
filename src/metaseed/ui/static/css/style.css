@@ -4037,7 +4037,13 @@ details.sidebar-section summary:hover {
 
 .yaml-preview-actions {
     display: flex;
-    gap: var(--space-xs);
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.yaml-preview-actions .btn {
+    padding: var(--space-xs) var(--space-sm);
+    font-size: 0.8125rem;
 }
 
 .yaml-content {
