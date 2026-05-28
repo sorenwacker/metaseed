@@ -4012,37 +4012,85 @@ details.sidebar-section summary:hover {
     gap: var(--space-xs);
 }
 
-.yaml-edit-content {
-    display: flex;
-    flex-direction: column;
-    height: calc(70vh - 120px);
+.yaml-content {
+    flex: 1;
+    overflow: auto;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: var(--radius-md);
 }
 
-.yaml-textarea {
+#yaml-preview-view {
+    padding: var(--space-md);
+}
+
+#yaml-edit-view {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+}
+
+.yaml-editor {
     flex: 1;
     font-family: 'Monaco', 'Menlo', monospace;
     font-size: 0.8125rem;
     line-height: 1.5;
-    background: rgba(0, 0, 0, 0.3);
+    background: transparent;
     color: var(--clr-ivory);
-    border: 1px solid var(--clr-bronze);
-    border-radius: var(--radius-md);
+    border: none;
     padding: var(--space-md);
     resize: none;
-    overflow: auto;
+    min-height: 400px;
 }
 
-.yaml-textarea:focus {
+.yaml-editor:focus {
     outline: none;
-    border-color: var(--clr-teal);
 }
 
-.yaml-edit-actions {
+.yaml-editor-footer {
     display: flex;
     align-items: center;
+    justify-content: space-between;
+    padding: var(--space-sm) var(--space-md);
+    background: rgba(0, 0, 0, 0.2);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.yaml-editor-buttons {
+    display: flex;
     gap: var(--space-sm);
-    padding-top: var(--space-md);
-    flex-shrink: 0;
+}
+
+.status-text {
+    font-size: 0.8125rem;
+    color: var(--clr-ivory);
+    opacity: 0.7;
+}
+
+.status-success {
+    color: var(--clr-teal);
+    opacity: 1;
+}
+
+.status-error {
+    color: #e57373;
+    opacity: 1;
+}
+
+.yaml-preview-container.editing .yaml-preview-header {
+    border-bottom: 1px solid var(--clr-teal);
+}
+
+.btn-ghost {
+    background: transparent;
+    color: var(--clr-ivory);
+    border: none;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.btn-ghost:hover {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .preview-placeholder {

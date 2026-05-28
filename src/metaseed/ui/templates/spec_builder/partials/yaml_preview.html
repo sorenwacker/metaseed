@@ -1,27 +1,33 @@
-<div class="yaml-preview-container">
+<div class="yaml-preview-container" id="yaml-container">
     <div class="yaml-preview-header">
-        <h4>YAML Preview</h4>
+        <h4 id="yaml-title">YAML Preview</h4>
         <div class="yaml-preview-actions">
-            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyYamlToClipboard()" title="Copy to clipboard">
+            <button type="button" class="btn btn-sm btn-ghost" onclick="copyYamlToClipboard()" title="Copy to clipboard">
                 <span id="copy-icon">Copy</span>
             </button>
-            <a href="/spec-builder/export" class="btn btn-sm btn-outline-secondary" download title="Download YAML">
+            <a href="/spec-builder/export" class="btn btn-sm btn-ghost" download title="Download">
                 Download
             </a>
-            <button type="button" class="btn btn-sm btn-outline-primary" onclick="toggleYamlEdit()" id="edit-yaml-btn" title="Edit YAML directly">
+            <button type="button" class="btn btn-sm btn-ghost" onclick="toggleYamlEdit()" id="edit-yaml-btn">
                 Edit
             </button>
         </div>
     </div>
-    <div class="yaml-preview-content" id="yaml-preview-view">
+
+    <!-- Preview Mode -->
+    <div class="yaml-content" id="yaml-preview-view">
         <pre class="yaml-code"><code id="yaml-code-content">{{ yaml_content }}</code></pre>
     </div>
-    <div class="yaml-edit-content" id="yaml-edit-view" style="display: none;">
-        <textarea id="yaml-edit-textarea" class="form-control yaml-textarea" rows="20">{{ yaml_content }}</textarea>
-        <div class="yaml-edit-actions mt-2">
-            <button type="button" class="btn btn-sm btn-primary" onclick="applyYamlEdit()">Apply Changes</button>
-            <button type="button" class="btn btn-sm btn-secondary" onclick="cancelYamlEdit()">Cancel</button>
-            <span id="yaml-edit-status" class="ms-2 text-muted"></span>
+
+    <!-- Edit Mode -->
+    <div class="yaml-content" id="yaml-edit-view" style="display: none;">
+        <textarea id="yaml-edit-textarea" class="yaml-editor">{{ yaml_content }}</textarea>
+        <div class="yaml-editor-footer">
+            <span id="yaml-edit-status"></span>
+            <div class="yaml-editor-buttons">
+                <button type="button" class="btn btn-sm btn-secondary" onclick="cancelYamlEdit()">Cancel</button>
+                <button type="button" class="btn btn-sm btn-primary" onclick="applyYamlEdit()">Apply</button>
+            </div>
         </div>
     </div>
 </div>
@@ -31,43 +37,42 @@ function copyYamlToClipboard() {
     const yamlContent = document.getElementById('yaml-code-content').textContent;
     navigator.clipboard.writeText(yamlContent).then(() => {
         const icon = document.getElementById('copy-icon');
-        const original = icon.textContent;
         icon.textContent = 'Copied!';
-        setTimeout(() => { icon.textContent = original; }, 2000);
-    }).catch(err => {
-        console.error('Failed to copy:', err);
-        alert('Failed to copy to clipboard');
-    });
+        setTimeout(() => { icon.textContent = 'Copy'; }, 1500);
+    }).catch(() => alert('Failed to copy'));
 }
 
 function toggleYamlEdit() {
     const previewView = document.getElementById('yaml-preview-view');
     const editView = document.getElementById('yaml-edit-view');
     const editBtn = document.getElementById('edit-yaml-btn');
+    const title = document.getElementById('yaml-title');
+    const container = document.getElementById('yaml-container');
 
     if (editView.style.display === 'none') {
-        // Switch to edit mode
-        const yamlContent = document.getElementById('yaml-code-content').textContent;
-        document.getElementById('yaml-edit-textarea').value = yamlContent;
+        document.getElementById('yaml-edit-textarea').value =
+            document.getElementById('yaml-code-content').textContent;
         previewView.style.display = 'none';
-        editView.style.display = 'block';
+        editView.style.display = 'flex';
         editBtn.textContent = 'Preview';
+        title.textContent = 'Edit YAML';
+        container.classList.add('editing');
     } else {
-        // Switch to preview mode
         editView.style.display = 'none';
         previewView.style.display = 'block';
         editBtn.textContent = 'Edit';
+        title.textContent = 'YAML Preview';
+        container.classList.remove('editing');
     }
 }
 
 function cancelYamlEdit() {
-    const previewView = document.getElementById('yaml-preview-view');
-    const editView = document.getElementById('yaml-edit-view');
-    const editBtn = document.getElementById('edit-yaml-btn');
-
-    editView.style.display = 'none';
-    previewView.style.display = 'block';
-    editBtn.textContent = 'Edit';
+    document.getElementById('yaml-edit-view').style.display = 'none';
+    document.getElementById('yaml-preview-view').style.display = 'block';
+    document.getElementById('edit-yaml-btn').textContent = 'Edit';
+    document.getElementById('yaml-title').textContent = 'YAML Preview';
+    document.getElementById('yaml-container').classList.remove('editing');
+    document.getElementById('yaml-edit-status').textContent = '';
 }
 
 function applyYamlEdit() {
@@ -75,30 +80,25 @@ function applyYamlEdit() {
     const statusEl = document.getElementById('yaml-edit-status');
 
     statusEl.textContent = 'Applying...';
-    statusEl.className = 'ms-2 text-muted';
+    statusEl.className = 'status-text';
 
     fetch('/spec-builder/apply-yaml', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-yaml',
-        },
+        headers: { 'Content-Type': 'application/x-yaml' },
         body: yamlContent
     })
     .then(response => {
-        if (!response.ok) {
-            return response.text().then(text => { throw new Error(text); });
-        }
+        if (!response.ok) return response.text().then(t => { throw new Error(t); });
         return response.text();
     })
     .then(() => {
         statusEl.textContent = 'Applied!';
-        statusEl.className = 'ms-2 text-success';
-        // Refresh the page to show updated spec
-        setTimeout(() => { window.location.reload(); }, 500);
+        statusEl.className = 'status-text status-success';
+        setTimeout(() => window.location.reload(), 500);
     })
     .catch(err => {
-        statusEl.textContent = 'Error: ' + err.message;
-        statusEl.className = 'ms-2 text-danger';
+        statusEl.textContent = err.message;
+        statusEl.className = 'status-text status-error';
     });
 }
 </script>
