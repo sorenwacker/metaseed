@@ -27,21 +27,17 @@ from metaseed.api.rest import app
 from metaseed.api.schema import EntitySchema, FieldInfo, ValidationIssue, ValidationResult
 
 __all__ = [
-    # Main client
-    "MetaseedClient",
-    # Domain objects
     "Entity",
     "EntityNode",
-    "EntitySchema",
-    "FieldInfo",
-    "ValidationIssue",
-    "ValidationResult",
-    # Errors
     "EntityNotFoundError",
+    "EntitySchema",
     "EntityTypeNotFoundError",
+    "FieldInfo",
+    "MetaseedClient",
     "MetaseedError",
     "ProfileNotFoundError",
     "ValidationError",
-    # REST API
+    "ValidationIssue",
+    "ValidationResult",
     "app",
 ]

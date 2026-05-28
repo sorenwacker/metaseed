@@ -61,31 +61,28 @@ except ImportError:
     __version__ = "0.0.0+unknown"
 
 __all__ = [
-    # Public API (recommended)
     "Entity",
     "EntityNode",
     "EntityNotFoundError",
     "EntitySchema",
     "EntityTypeNotFoundError",
     "FieldInfo",
+    "JsonStorage",
     "MetaseedClient",
     "MetaseedError",
+    "ProfileFacade",
     "ProfileNotFoundError",
+    "SpecLoader",
     "ValidationIssue",
     "ValidationResult",
-    # Interactive facade
-    "ProfileFacade",
+    "YamlStorage",
     "darwin_core",
     "dissco",
     "ena",
+    "get_model",
     "isa",
     "metabolights",
     "miappe",
     "pride",
-    # Legacy/internal
-    "JsonStorage",
-    "SpecLoader",
-    "YamlStorage",
-    "get_model",
     "validate",
 ]

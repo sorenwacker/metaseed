@@ -18,16 +18,17 @@ if TYPE_CHECKING:
 
 def _auto_save_dataset() -> None:
     """Auto-save the current dataset after entity operations."""
-    import logging
-
     from metaseed.agent.mcp.server import get_mcp_state
+    from metaseed.logging import get_logger
     from metaseed.ui.datasets import auto_save
+
+    logger = get_logger(__name__)
 
     try:
         state = get_mcp_state()
         auto_save(state)
     except Exception as e:
-        logging.debug(f"MCP auto-save skipped: {e}")
+        logger.debug(f"MCP auto-save skipped: {e}")
 
 
 def _get_current_dataset_info() -> dict[str, Any]:
