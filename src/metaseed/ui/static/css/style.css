@@ -4013,9 +4013,9 @@ details.sidebar-section summary:hover {
 }
 
 .yaml-edit-content {
-    flex: 1;
     display: flex;
     flex-direction: column;
+    height: calc(70vh - 120px);
 }
 
 .yaml-textarea {
@@ -4029,6 +4029,7 @@ details.sidebar-section summary:hover {
     border-radius: var(--radius-md);
     padding: var(--space-md);
     resize: none;
+    overflow: auto;
 }
 
 .yaml-textarea:focus {
@@ -4040,6 +4041,8 @@ details.sidebar-section summary:hover {
     display: flex;
     align-items: center;
     gap: var(--space-sm);
+    padding-top: var(--space-md);
+    flex-shrink: 0;
 }
 
 .preview-placeholder {
