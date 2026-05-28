@@ -605,9 +605,9 @@ class OntologyService:
             Lowercase ontology prefix or None.
         """
         if ":" in term_id:
-            return term_id.split(":")[0].lower()
+            return term_id.split(":", maxsplit=1)[0].lower()
         if "_" in term_id:
-            return term_id.split("_")[0].lower()
+            return term_id.split("_", maxsplit=1)[0].lower()
         return None
 
     def _construct_iri(self, term_id: str) -> str | None:

@@ -211,13 +211,14 @@ def validate_entity(
         model_class = create_model_from_spec(entity_spec)
 
         # Filter to only simple fields (not nested entity lists)
-        simple_data = {}
         nested_field_names = {
             f.name for f in entity_spec.fields if f.type.value == "list" and f.items
         }
-        for key, value in data.items():
-            if key not in nested_field_names and not key.startswith("_"):
-                simple_data[key] = value
+        simple_data = {
+            key: value
+            for key, value in data.items()
+            if key not in nested_field_names and not key.startswith("_")
+        }
 
         model_class(**simple_data)
 
