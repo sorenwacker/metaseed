@@ -3206,9 +3206,9 @@ body::before {
 .preview-modal {
     background: var(--clr-forest);
     border-radius: var(--radius-lg);
-    width: 90%;
-    max-width: 800px;
-    max-height: 85vh;
+    width: 95%;
+    max-width: 1000px;
+    max-height: 90vh;
     display: flex;
     flex-direction: column;
     box-shadow: var(--shadow-lg);
@@ -3274,17 +3274,17 @@ body::before {
 }
 
 .modal-dialog {
-    background: white;
+    background: var(--clr-forest);
     border-radius: var(--radius-lg);
-    width: 90%;
-    max-width: 400px;
+    width: 95%;
+    max-width: 500px;
     box-shadow: var(--shadow-lg);
     animation: slideUp 0.3s ease;
 }
 
 .modal-dialog.modal-lg {
-    max-width: 700px;
-    max-height: 85vh;
+    max-width: 900px;
+    max-height: 90vh;
     overflow-y: auto;
 }
 
@@ -3293,18 +3293,46 @@ body::before {
     align-items: center;
     justify-content: space-between;
     padding: var(--space-lg);
-    border-bottom: 1px solid var(--clr-parchment);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .modal-header h3 {
     font-family: var(--font-display);
     font-size: 1.25rem;
-    color: var(--clr-forest);
+    color: var(--clr-ivory);
     margin: 0;
 }
 
 .modal-body {
     padding: var(--space-lg);
+    color: var(--clr-ivory);
+}
+
+.modal-body .form-label {
+    color: var(--clr-ivory);
+}
+
+.modal-body .form-input,
+.modal-body .form-textarea,
+.modal-body .form-select {
+    background: rgba(0, 0, 0, 0.2);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: var(--clr-ivory);
+}
+
+.modal-body .form-input:focus,
+.modal-body .form-textarea:focus,
+.modal-body .form-select:focus {
+    border-color: var(--clr-teal);
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.modal-body .form-input::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.modal-body .form-help {
+    color: rgba(255, 255, 255, 0.6);
 }
 
 .modal-footer {
@@ -3312,8 +3340,8 @@ body::before {
     justify-content: flex-end;
     gap: var(--space-sm);
     padding: var(--space-lg);
-    border-top: 1px solid var(--clr-parchment);
-    background: var(--clr-paper);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.1);
 }
 
 /* Sidebar collapsible sections */
