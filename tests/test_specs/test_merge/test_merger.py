@@ -46,7 +46,16 @@ class TestSpecMerger:
 
         assert result.merged_profile is not None
         # Should have entities from both profiles
-        assert len(result.merged_profile.entities) > 0
+        entity_names = list(result.merged_profile.entities.keys())
+        assert len(entity_names) > 0
+
+        # Verify entities from MIAPPE exist (case-insensitive check)
+        entity_names_lower = [e.lower() for e in entity_names]
+        assert "investigation" in entity_names_lower, "Missing Investigation from MIAPPE"
+        assert "study" in entity_names_lower, "Missing Study from MIAPPE"
+
+        # Verify entities from ISA exist
+        assert "assay" in entity_names_lower, "Missing Assay from ISA"
 
     def test_merge_tracks_strategy(self, merger: SpecMerger) -> None:
         """Merge tracks which strategy was used."""

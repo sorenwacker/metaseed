@@ -122,7 +122,7 @@ class TestCreateEntity:
             },
         )
         assert response.status_code == 200
-        assert "error" in response.text.lower() or "required" in response.text.lower()
+        assert "Validation error" in response.text
 
 
 class TestEditEntity:
@@ -173,7 +173,7 @@ class TestDeleteEntity:
         """Delete nonexistent node returns error."""
         response = client.delete("/entity/nonexistent")
         assert response.status_code == 200
-        assert "error" in response.text.lower() or "not found" in response.text.lower()
+        assert "Node not found: nonexistent" in response.text
 
 
 class TestProfileSwitch:
@@ -644,7 +644,7 @@ class TestUpdateEntity:
             data={"unique_id": "INV-001"},
         )
         assert response.status_code == 200
-        assert "not found" in response.text.lower() or "error" in response.text.lower()
+        assert "Node not found: nonexistent-id" in response.text
 
     def test_update_entity_with_nested(self, client_with_entity):
         """Update entity merges nested items."""
@@ -668,7 +668,7 @@ class TestUpdateEntity:
             data={},  # Missing required fields
         )
         assert response.status_code == 200
-        assert "error" in response.text.lower() or "required" in response.text.lower()
+        assert "Validation error" in response.text
 
 
 class TestProfileDisplayInfo:

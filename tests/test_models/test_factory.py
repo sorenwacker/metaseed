@@ -1,6 +1,7 @@
 """Tests for model factory."""
 
 import datetime
+import json
 
 import pytest
 from pydantic import ValidationError
@@ -246,10 +247,100 @@ class TestCreateModelFromSpec:
         data = instance.model_dump()
         assert data == {"name": "test", "count": 42}
 
-        # To JSON
+        # To JSON - parse and validate structure
         json_str = instance.model_dump_json()
-        assert "test" in json_str
-        assert "42" in json_str
+        parsed = json.loads(json_str)
+        assert parsed == {"name": "test", "count": 42}
+        assert parsed["name"] == "test"
+        assert parsed["count"] == 42
+
+    def test_enum_constraint_validation(self) -> None:
+        """Enum constraints restrict values to allowed list."""
+        spec = EntitySpec(
+            name="WithEnum",
+            version="1.0",
+            description="Test enum constraint",
+            fields=[
+                FieldSpec(
+                    name="status",
+                    type=FieldType.STRING,
+                    required=True,
+                    description="Status",
+                    constraints=Constraints(enum=["active", "inactive", "pending"]),
+                ),
+            ],
+        )
+
+        Model = create_model_from_spec(spec)
+
+        # Valid enum value works
+        instance = Model(status="active")
+        assert instance.status == "active"
+
+        instance = Model(status="pending")
+        assert instance.status == "pending"
+
+        # Invalid enum value raises error
+        with pytest.raises(ValidationError) as exc_info:
+            Model(status="unknown")
+        assert "status" in str(exc_info.value)
+
+    def test_extra_field_rejection(self) -> None:
+        """Extra fields not in spec are rejected (ConfigDict extra='forbid')."""
+        spec = EntitySpec(
+            name="StrictModel",
+            version="1.0",
+            description="Test extra field rejection",
+            fields=[
+                FieldSpec(
+                    name="name",
+                    type=FieldType.STRING,
+                    required=True,
+                    description="Name",
+                ),
+            ],
+        )
+
+        Model = create_model_from_spec(spec)
+
+        # Valid field works
+        instance = Model(name="test")
+        assert instance.name == "test"
+
+        # Extra field raises error
+        with pytest.raises(ValidationError) as exc_info:
+            Model(name="test", unknown_field="value")
+        assert "extra" in str(exc_info.value).lower()
+
+    def test_assignment_validation(self) -> None:
+        """Assigning invalid value after creation raises error (validate_assignment=True)."""
+        spec = EntitySpec(
+            name="ValidatedAssignment",
+            version="1.0",
+            description="Test assignment validation",
+            fields=[
+                FieldSpec(
+                    name="count",
+                    type=FieldType.INTEGER,
+                    required=True,
+                    description="Count",
+                    constraints=Constraints(minimum=0, maximum=100),
+                ),
+            ],
+        )
+
+        Model = create_model_from_spec(spec)
+        instance = Model(count=50)
+        assert instance.count == 50
+
+        # Valid reassignment works
+        instance.count = 75
+        assert instance.count == 75
+
+        # Invalid reassignment raises error
+        with pytest.raises(ValidationError) as exc_info:
+            instance.count = 150  # exceeds maximum
+        assert "count" in str(exc_info.value)
 
     def test_nested_models_in_constructor(self) -> None:
         """Models can contain nested models in constructor."""

@@ -53,6 +53,35 @@ class TestDateRangeRule:
         errors = rule.validate(data)
         assert len(errors) == 0
 
+    def test_malformed_date_string_raises_error(self) -> None:
+        """Malformed date string raises ValueError from fromisoformat.
+
+        DateRangeRule uses datetime.date.fromisoformat() for string parsing,
+        which raises ValueError for invalid date formats. The rule does not
+        catch this exception - callers should ensure dates are valid ISO format.
+        """
+        import pytest
+
+        rule = DateRangeRule(start_field="start_date", end_field="end_date")
+        data = {
+            "start_date": "not-a-date",
+            "end_date": "2024-12-31",
+        }
+        with pytest.raises(ValueError):
+            rule.validate(data)
+
+    def test_malformed_end_date_string_raises_error(self) -> None:
+        """Malformed end date string also raises ValueError."""
+        import pytest
+
+        rule = DateRangeRule(start_field="start_date", end_field="end_date")
+        data = {
+            "start_date": "2024-01-01",
+            "end_date": "invalid-date-format",
+        }
+        with pytest.raises(ValueError):
+            rule.validate(data)
+
 
 class TestRequiredFieldsRule:
     """Tests for RequiredFieldsRule."""
@@ -86,6 +115,28 @@ class TestRequiredFieldsRule:
         errors = rule.validate(data)
         assert len(errors) == 1
 
+    def test_zero_value_is_valid(self) -> None:
+        """Zero integer is treated as valid (not missing).
+
+        The rule only checks for None or empty string "", so 0 passes.
+        This documents that numeric zero is a legitimate value.
+        """
+        rule = RequiredFieldsRule(fields=["count"])
+        data = {"count": 0}
+        errors = rule.validate(data)
+        assert len(errors) == 0
+
+    def test_false_value_is_valid(self) -> None:
+        """Boolean False is treated as valid (not missing).
+
+        The rule only checks for None or empty string "", so False passes.
+        This documents that False is a legitimate boolean value.
+        """
+        rule = RequiredFieldsRule(fields=["enabled"])
+        data = {"enabled": False}
+        errors = rule.validate(data)
+        assert len(errors) == 0
+
 
 class TestUniqueIdPatternRule:
     """Tests for UniqueIdPatternRule."""
@@ -116,6 +167,29 @@ class TestUniqueIdPatternRule:
         """Missing ID field is skipped."""
         rule = UniqueIdPatternRule(field="unique_id")
         data = {}
+        errors = rule.validate(data)
+        assert len(errors) == 0
+
+    def test_integer_id_returns_type_error(self) -> None:
+        """Integer ID returns type error.
+
+        UniqueIdPatternRule expects string values. Non-string types return
+        an error indicating the field must be a string.
+        """
+        rule = UniqueIdPatternRule(field="unique_id")
+        data = {"unique_id": 12345}
+        errors = rule.validate(data)
+        assert len(errors) == 1
+        assert "must be a string" in errors[0].message
+
+    def test_none_id_skipped(self) -> None:
+        """None ID is skipped (same as missing).
+
+        When the value is explicitly None, the rule skips validation
+        since RequiredFieldsRule should handle None checks.
+        """
+        rule = UniqueIdPatternRule(field="unique_id")
+        data = {"unique_id": None}
         errors = rule.validate(data)
         assert len(errors) == 0
 
@@ -264,6 +338,39 @@ class TestListCardinalityRule:
         errors = rule.validate(data)
         assert len(errors) == 1
         assert "at most 2" in errors[0].message
+
+    def test_non_list_input_skipped(self) -> None:
+        """Non-list input is silently skipped.
+
+        When the field contains a non-list value (e.g., string, dict, int),
+        the rule returns no errors. This is because non-list values should
+        be caught by schema validation, not cardinality rules.
+        """
+        from metaseed.validators.rules import ListCardinalityRule
+
+        rule = ListCardinalityRule(field="samples", min_items=1)
+        # String instead of list
+        data = {"samples": "not-a-list"}
+        errors = rule.validate(data)
+        assert len(errors) == 0
+
+    def test_dict_input_skipped(self) -> None:
+        """Dict input is silently skipped."""
+        from metaseed.validators.rules import ListCardinalityRule
+
+        rule = ListCardinalityRule(field="samples", min_items=1)
+        data = {"samples": {"name": "S1"}}
+        errors = rule.validate(data)
+        assert len(errors) == 0
+
+    def test_integer_input_skipped(self) -> None:
+        """Integer input is silently skipped."""
+        from metaseed.validators.rules import ListCardinalityRule
+
+        rule = ListCardinalityRule(field="samples", min_items=1)
+        data = {"samples": 42}
+        errors = rule.validate(data)
+        assert len(errors) == 0
 
 
 class TestConditionalRule:

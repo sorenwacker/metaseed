@@ -82,6 +82,8 @@ class TestLLMService:
                 return_value=mock_response
             )
 
+            mock_post = mock_client.return_value.__aenter__.return_value.post
+
             result = await service.get_response(
                 message="What is Investigation?",
                 profile="miappe",
@@ -89,6 +91,7 @@ class TestLLMService:
             )
 
             assert result == "Test response"
+            mock_post.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_get_response_with_entity_context(self) -> None:

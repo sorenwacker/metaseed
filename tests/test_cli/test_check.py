@@ -50,9 +50,9 @@ unique_id: INV001
         """Check nonexistent file returns input error."""
         result = runner.invoke(app, ["check", "/nonexistent/file.yaml"])
         assert result.exit_code == 2
-        # Error message may be in stdout or stderr
-        output = (result.stdout + (result.stderr or "")).lower()
-        assert "not found" in output or "error" in output
+        # Error message is in stderr
+        assert result.stderr is not None
+        assert "path not found" in result.stderr.lower()
 
     def test_check_directory(self, tmp_path: Path) -> None:
         """Check directory with valid files."""
@@ -76,7 +76,7 @@ studies:
         """Check empty directory shows warning but succeeds."""
         result = runner.invoke(app, ["check", str(tmp_path)])
         assert result.exit_code == 0  # Warnings don't cause failure
-        assert "no yaml" in result.stdout.lower() or "warning" in result.stdout.lower()
+        assert "no yaml" in result.stdout.lower()
 
     def test_check_with_profile(self, tmp_path: Path) -> None:
         """Check with explicit profile option."""
@@ -107,9 +107,9 @@ studies:
 
         result = runner.invoke(app, ["check", str(file_path), "--profile", "nonexistent_profile"])
         assert result.exit_code == 3
-        # Error message may be in stdout or stderr
-        output = (result.stdout + (result.stderr or "")).lower()
-        assert "unknown profile" in output or "error" in output
+        # Error message is in stderr
+        assert result.stderr is not None
+        assert "unknown profile" in result.stderr.lower()
 
     def test_check_verbose(self, tmp_path: Path) -> None:
         """Check with verbose option shows details."""

@@ -108,7 +108,7 @@ class TestBulkUpdateEndpoint:
             },
         )
         assert response.status_code == 200
-        assert "required" in response.text.lower() or "error" in response.text.lower()
+        assert "Field and indices are required" in response.text
 
     def test_bulk_update_missing_indices(self, client_with_studies):
         """Bulk update with missing indices returns error."""
@@ -120,7 +120,7 @@ class TestBulkUpdateEndpoint:
             },
         )
         assert response.status_code == 200
-        assert "required" in response.text.lower() or "error" in response.text.lower()
+        assert "Field and indices are required" in response.text
 
     def test_bulk_update_invalid_indices(self, client_with_studies):
         """Bulk update with invalid indices returns error."""
@@ -133,7 +133,7 @@ class TestBulkUpdateEndpoint:
             },
         )
         assert response.status_code == 200
-        assert "invalid" in response.text.lower() or "error" in response.text.lower()
+        assert "Invalid indices format" in response.text
 
     def test_bulk_update_out_of_range_indices(self, client_with_studies):
         """Bulk update ignores out-of-range indices gracefully."""
@@ -221,7 +221,7 @@ class TestPasteEndpoint:
             data={"changes": "not valid json"},
         )
         assert response.status_code == 200
-        assert "invalid" in response.text.lower() or "error" in response.text.lower()
+        assert "Invalid paste data format" in response.text
 
     def test_paste_empty_changes(self, client_with_studies):
         """Paste with empty changes list succeeds with zero updates."""

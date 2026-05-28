@@ -57,9 +57,9 @@ class TestBuildGraph:
 
         result = build_graph(state)
         # Should have Investigation and Study nodes
-        assert len(result["nodes"]) >= 2
-        # Should have at least one edge connecting them
-        assert len(result["edges"]) >= 1
+        assert len(result["nodes"]) == 2
+        # Should have one edge connecting them
+        assert len(result["edges"]) == 1
 
     def test_node_labels_truncated(self) -> None:
         """Long labels should be truncated."""
@@ -75,6 +75,7 @@ class TestBuildGraph:
         state.add_node("Investigation", instance)
 
         result = build_graph(state)
+        assert len(result["nodes"]) == 1
         # Label should be shorter than original
         assert len(result["nodes"][0]["label"]) < len(long_id)
         # Label should end with ellipsis
@@ -127,7 +128,7 @@ class TestGraphAPI:
             response = await client.get("/api/graph")
 
         data = response.json()
-        assert len(data["nodes"]) >= 1
+        assert len(data["nodes"]) == 1
         assert data["nodes"][0]["group"] == "Investigation"
 
 
@@ -166,9 +167,9 @@ class TestGraphWithNestedData:
 
         result = build_graph(state)
         # Should have Investigation, Study, and ObservationUnit
-        assert len(result["nodes"]) >= 3
-        # Should have edges connecting them
-        assert len(result["edges"]) >= 2
+        assert len(result["nodes"]) == 3
+        # Should have edges connecting them (2 parent-child + 1 study_id reference)
+        assert len(result["edges"]) == 3
 
         # Check entity types
         entity_types = {node["group"] for node in result["nodes"]}

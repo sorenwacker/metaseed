@@ -43,18 +43,21 @@ class TestDocumentedCompareAPI:
         result = compare([("isa", "1.0"), ("jerm", "1.0")])
         assert hasattr(result.statistics, "total_entities")
         assert isinstance(result.statistics.total_entities, int)
+        assert result.statistics.total_entities >= 0
 
     def test_result_has_statistics_common_entities(self) -> None:
         """Documented: result.statistics.common_entities."""
         result = compare([("isa", "1.0"), ("jerm", "1.0")])
         assert hasattr(result.statistics, "common_entities")
         assert isinstance(result.statistics.common_entities, int)
+        assert result.statistics.common_entities >= 0
 
     def test_result_has_statistics_conflicting_fields(self) -> None:
         """Documented: result.statistics.conflicting_fields."""
         result = compare([("isa", "1.0"), ("jerm", "1.0")])
         assert hasattr(result.statistics, "conflicting_fields")
         assert isinstance(result.statistics.conflicting_fields, int)
+        assert result.statistics.conflicting_fields >= 0
 
     def test_result_has_entity_diffs(self) -> None:
         """Documented: result.entity_diffs is iterable."""
@@ -246,36 +249,43 @@ class TestDocumentedComparisonStatistics:
         """Documented: total_entities - Total unique entities across all profiles."""
         assert hasattr(stats, "total_entities")
         assert isinstance(stats.total_entities, int)
+        assert stats.total_entities >= 0
 
     def test_has_common_entities(self, stats: ComparisonStatistics) -> None:
         """Documented: common_entities - Entities present in all profiles."""
         assert hasattr(stats, "common_entities")
         assert isinstance(stats.common_entities, int)
+        assert stats.common_entities >= 0
 
     def test_has_unique_entities(self, stats: ComparisonStatistics) -> None:
         """Documented: unique_entities - Entities in only one profile."""
         assert hasattr(stats, "unique_entities")
         assert isinstance(stats.unique_entities, int)
+        assert stats.unique_entities >= 0
 
     def test_has_modified_entities(self, stats: ComparisonStatistics) -> None:
         """Documented: modified_entities - Entities with differences."""
         assert hasattr(stats, "modified_entities")
         assert isinstance(stats.modified_entities, int)
+        assert stats.modified_entities >= 0
 
     def test_has_total_fields(self, stats: ComparisonStatistics) -> None:
         """Documented: total_fields - Total unique fields."""
         assert hasattr(stats, "total_fields")
         assert isinstance(stats.total_fields, int)
+        assert stats.total_fields >= 0
 
     def test_has_common_fields(self, stats: ComparisonStatistics) -> None:
         """Documented: common_fields - Fields identical across profiles."""
         assert hasattr(stats, "common_fields")
         assert isinstance(stats.common_fields, int)
+        assert stats.common_fields >= 0
 
     def test_has_conflicting_fields(self, stats: ComparisonStatistics) -> None:
         """Documented: conflicting_fields - Fields with conflicts."""
         assert hasattr(stats, "conflicting_fields")
         assert isinstance(stats.conflicting_fields, int)
+        assert stats.conflicting_fields >= 0
 
 
 class TestDocumentedReportGenerators:

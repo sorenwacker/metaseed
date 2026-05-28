@@ -48,7 +48,12 @@ class TestAllEntitySpecs:
     def test_entity_spec_loads(self, loader: SpecLoader, entity: str) -> None:
         """Each entity spec can be loaded."""
         spec = loader.load_entity(entity, version="1.1")
-        assert spec.name is not None
+        # Verify name matches entity (case-insensitive, underscore-insensitive)
+        entity_normalized = entity.replace("_", "").lower()
+        spec_name_normalized = spec.name.replace("_", "").lower()
+        assert (
+            spec_name_normalized == entity_normalized
+        ), f"Spec name '{spec.name}' does not match entity '{entity}'"
         assert spec.version == "1.1"
 
     @pytest.mark.parametrize("entity", MIAPPE_V11_ENTITIES)

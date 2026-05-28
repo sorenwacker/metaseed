@@ -1038,6 +1038,7 @@ class TestMCPEdgeCases:
             entity_data = json.loads(result)
             assert entity_data["data"]["experiment_ref"] == "NONEXISTENT-EXPERIMENT"
 
+    @pytest.mark.xfail(reason="Known issue: orphan references remain after deletion")
     def test_delete_leaves_orphan_references(self):
         """Deleting entity leaves orphan references in parent.
 
@@ -1088,10 +1089,9 @@ class TestMCPEdgeCases:
             result = get_fn.fn(node_id=inv_id)
             inv_after_delete = json.loads(result)
 
-            # Document: orphan reference remains after deletion
-            orphan_exists = "ST-ORPHAN-TEST" in inv_after_delete["data"].get("studies", [])
-            if orphan_exists:
-                pytest.xfail("Known issue: orphan references remain after deletion")
+            # Assert that orphan reference is cleaned up (the expected behavior)
+            # This test is marked xfail because currently orphan references remain
+            assert "ST-ORPHAN-TEST" not in inv_after_delete["data"].get("studies", [])
 
     def test_embedded_objects_with_invalid_fields_rejected(self):
         """Embedded objects with invalid fields are properly rejected.

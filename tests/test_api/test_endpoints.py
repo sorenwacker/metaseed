@@ -45,9 +45,14 @@ class TestSchemasEndpoint:
         response = client.get("/schemas/1.1/investigation")
         assert response.status_code == 200
         data = response.json()
+        # Verify standard JSON Schema structure
+        assert data["type"] == "object"
         assert "properties" in data
         assert "unique_id" in data["properties"]
         assert "title" in data["properties"]
+        # Verify property types are defined
+        assert "type" in data["properties"]["unique_id"]
+        assert "type" in data["properties"]["title"]
 
     def test_get_nonexistent_entity(self) -> None:
         """Get schema for nonexistent entity returns 404."""

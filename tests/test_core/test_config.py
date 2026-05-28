@@ -40,6 +40,12 @@ class TestSettings:
             settings = Settings()
             assert settings.debug is True
 
+    def test_mixed_case_env_vars(self):
+        """Environment variables work with mixed case."""
+        with patch.dict(os.environ, {"MetaSeed_DEBUG": "true"}):
+            settings = Settings()
+            assert settings.debug is True
+
 
 class TestGetSettings:
     """Test get_settings function."""

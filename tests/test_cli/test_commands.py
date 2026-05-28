@@ -45,7 +45,7 @@ studies:
 
         result = runner.invoke(app, ["validate", str(file_path), "--entity", "investigation"])
         assert result.exit_code == 0
-        assert "valid" in result.stdout.lower() or "passed" in result.stdout.lower()
+        assert "validation passed" in result.stdout.lower()
 
     def test_validate_missing_required_field(self, tmp_path: Path) -> None:
         """Validate file missing required field shows error."""
@@ -64,7 +64,9 @@ unique_id: INV001
         result = runner.invoke(
             app, ["validate", "/nonexistent/file.yaml", "--entity", "investigation"]
         )
-        assert result.exit_code != 0 or "error" in result.stdout.lower()
+        assert result.exit_code == 2
+        assert result.stderr is not None
+        assert "file not found" in result.stderr.lower()
 
 
 class TestTemplateCommand:

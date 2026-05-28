@@ -133,16 +133,20 @@ class TestYamlStorage:
         tmp_path: Path,
     ) -> None:
         """URL fields are serialized as plain strings, not Pydantic objects."""
+        url_value = "https://creativecommons.org/licenses/by/4.0/"
         inv = investigation_model(
             unique_id="INV-URL-TEST",
             title="URL Test",
-            license="https://creativecommons.org/licenses/by/4.0/",
+            license=url_value,
         )
         file_path = tmp_path / "url_test.yaml"
         storage.save(inv, file_path)
 
+        # Deserialize and verify the field type is a plain string
         content = file_path.read_text()
-        # Should be plain URL, not Pydantic internal representation
-        assert "license: https://creativecommons.org/licenses/by/4.0/" in content
+        data = yaml.safe_load(content)
+        assert data["license"] == url_value
+        assert isinstance(data["license"], str)
+        # Verify no Pydantic internal representation in raw content
         assert "!!python" not in content
         assert "_url" not in content
