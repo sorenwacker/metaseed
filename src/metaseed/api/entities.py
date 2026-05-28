@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 
-@dataclass
+@dataclass(slots=True)
 class Entity:
     """A metadata entity instance.
 
@@ -67,7 +67,7 @@ class Entity:
         return self.data[field]
 
 
-@dataclass
+@dataclass(slots=True)
 class EntityNode:
     """A node in the entity tree.
 

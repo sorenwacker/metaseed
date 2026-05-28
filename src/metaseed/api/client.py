@@ -309,7 +309,7 @@ class MetaseedClient:
         if node is None:
             raise EntityNotFoundError(entity_id)
 
-        helper = self._facade._entities.get(node.entity_type)
+        helper = self._facade.get_helper(node.entity_type)
         if helper and node.instance:
             return helper.get_label(node.instance)
         return node.label
@@ -355,13 +355,10 @@ class MetaseedClient:
         roots = self._facade.get_roots()
 
         def node_to_tree(node: Any) -> dict[str, Any]:
-            if node.instance and hasattr(node.instance, "model_dump"):
-                data = node.instance.model_dump(exclude_none=True)
-            else:
-                data = {}
+            data = self._get_instance_data(node.instance)
 
             # Get label using helper
-            helper = self._facade._entities.get(node.entity_type)
+            helper = self._facade.get_helper(node.entity_type)
             if helper and node.instance:
                 label = helper.get_label(node.instance)
             else:
@@ -467,11 +464,11 @@ class MetaseedClient:
 
         all_issues: list[ValidationIssue] = []
 
-        for node in self._facade._store._instances.values():
-            if node.instance and hasattr(node.instance, "model_dump"):
-                data = node.instance.model_dump(exclude_none=True)
-            else:
-                continue
+        # Iterate over all entities via get_roots and recursion
+        def validate_node(node: Any) -> None:
+            data = self._get_instance_data(node.instance)
+            if not data:
+                return
 
             errors = validate_entity(
                 data,
@@ -488,6 +485,12 @@ class MetaseedClient:
                         rule=err.rule,
                     )
                 )
+
+            for child in node.children:
+                validate_node(child)
+
+        for root in self._facade.get_roots():
+            validate_node(root)
 
         if all_issues:
             return ValidationResult.failure(all_issues)
@@ -511,10 +514,7 @@ class MetaseedClient:
         if node is None:
             raise EntityNotFoundError(entity_id)
 
-        if node.instance and hasattr(node.instance, "model_dump"):
-            data = node.instance.model_dump(exclude_none=True)
-        else:
-            data = {}
+        data = self._get_instance_data(node.instance)
 
         errors = validate_fn(
             data,
@@ -623,9 +623,54 @@ class MetaseedClient:
         """Profile version."""
         return self._facade.version
 
+    @property
+    def facade(self: Self) -> Any:
+        """Access to underlying ProfileFacade for advanced use cases.
+
+        This provides access to the internal ProfileFacade for scenarios
+        that require direct facade access (e.g., UI routes, interactive use).
+        Prefer using MetaseedClient methods when possible.
+
+        Returns:
+            The underlying ProfileFacade instance.
+        """
+        return self._facade
+
+    def get_model(self: Self, entity_type: str) -> Any:
+        """Get the Pydantic model class for an entity type.
+
+        Provides access to the underlying model class for validation
+        or advanced use cases.
+
+        Args:
+            entity_type: Name of the entity type.
+
+        Returns:
+            The Pydantic model class.
+
+        Raises:
+            EntityTypeNotFoundError: If entity type not found.
+        """
+        self._validate_entity_type(entity_type)
+        helper = getattr(self._facade, entity_type)
+        return helper._model
+
     # ========================================================================
     # Private Helpers
     # ========================================================================
+
+    def _get_instance_data(self: Self, instance: Any) -> dict[str, Any]:
+        """Extract data dictionary from a model instance.
+
+        Args:
+            instance: Pydantic model instance or None.
+
+        Returns:
+            Data dictionary or empty dict if instance is None/invalid.
+        """
+        if instance and hasattr(instance, "model_dump"):
+            return instance.model_dump(exclude_none=True)
+        return {}
 
     def _validate_entity_type(self: Self, entity_type: str) -> None:
         """Validate that an entity type exists in the profile."""
@@ -638,15 +683,10 @@ class MetaseedClient:
 
     def _convert_node(self: Self, node: InternalEntityNode) -> Entity:
         """Convert internal EntityNode to public Entity."""
-        if node.instance and hasattr(node.instance, "model_dump"):
-            data = node.instance.model_dump(exclude_none=True)
-        else:
-            data = {}
-
         return Entity(
             id=node.id,
             entity_type=node.entity_type,
-            data=data,
+            data=self._get_instance_data(node.instance),
             parent_id=node.parent_id,
         )
 

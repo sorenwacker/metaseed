@@ -1496,6 +1496,19 @@ class ProfileFacade:
         """
         return self._store._index
 
+    def get_helper(self: Self, entity_type: str) -> EntityHelper | None:
+        """Get an EntityHelper by entity type name.
+
+        Public method to access entity helpers without accessing internal state.
+
+        Args:
+            entity_type: Name of the entity type.
+
+        Returns:
+            EntityHelper if found, None otherwise.
+        """
+        return self._entities.get(entity_type)
+
     def __getattr__(self: Self, name: str) -> EntityHelper:
         """Get an entity helper by name (enables tab completion).
 

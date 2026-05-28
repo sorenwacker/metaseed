@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class FieldInfo:
     """Information about a single field in an entity schema.
 
@@ -39,7 +39,7 @@ class FieldInfo:
     reference: str | None = None
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class EntitySchema:
     """Schema information for an entity type.
 
@@ -68,7 +68,7 @@ class EntitySchema:
         return tuple(f.name for f in self.fields)
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class ValidationIssue:
     """A single validation issue.
 
@@ -83,7 +83,7 @@ class ValidationIssue:
     rule: str
 
 
-@dataclass
+@dataclass(slots=True)
 class ValidationResult:
     """Result of entity or dataset validation.
 
