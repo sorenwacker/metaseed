@@ -24,9 +24,20 @@ jobs:
       - name: Run linting
         run: uv run ruff check .
 
-      - name: Run tests
+      - name: Run tests with coverage
         run: |
           uv run pytest \
             --ignore=tests/test_ui/test_selenium.py \
             --ignore=tests/test_ui/test_spec_builder_selenium.py \
+            --cov=src/metaseed \
+            --cov-report=xml \
             -q
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage.xml
+          fail_ci_if_error: false
+          verbose: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
