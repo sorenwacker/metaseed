@@ -158,6 +158,9 @@ roots = client.get_roots()
 
 # Get children of a specific entity
 children = client.get_children(parent_id)
+
+# Get label for an entity
+label = client.get_entity_label(entity_id)
 ```
 
 ## Serialization
@@ -167,7 +170,11 @@ children = client.get_children(parent_id)
 ```python
 import json
 
+# Default flat format (list of entities with _type metadata)
 data = client.serialize()
+
+# Tree format (nested hierarchy with labels)
+data = client.serialize(format="tree")
 
 with open("dataset.json", "w") as f:
     json.dump(data, f, indent=2)
@@ -179,7 +186,42 @@ with open("dataset.json", "w") as f:
 with open("dataset.json") as f:
     data = json.load(f)
 
+# Auto-detects format (flat or tree)
 client.load(data)
+
+# Load from YAML file
+client.load_yaml("dataset.yaml")
+```
+
+### Serialization Formats
+
+**Flat format** (default):
+```json
+{
+  "profile": "miappe",
+  "version": "1.2",
+  "entities": [
+    {"_type": "Investigation", "unique_id": "INV-1", "title": "..."},
+    {"_type": "Study", "unique_id": "STU-1", "_parent_unique_id": "INV-1"}
+  ]
+}
+```
+
+**Tree format**:
+```json
+{
+  "profile": "miappe",
+  "version": "1.2",
+  "tree": [
+    {
+      "id": "node-1",
+      "entity_type": "Investigation",
+      "label": "INV-1",
+      "data": {"unique_id": "INV-1", "title": "..."},
+      "children": [...]
+    }
+  ]
+}
 ```
 
 ### Clear

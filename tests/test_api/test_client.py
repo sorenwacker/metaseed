@@ -477,6 +477,117 @@ class TestSchemaIntrospection:
         assert "unique_id" in schema.all_field_names
 
 
+class TestSerializationFormats:
+    """Tests for serialization format options."""
+
+    @pytest.fixture
+    def client_with_data(self) -> MetaseedClient:
+        """Create client with test data."""
+        client = MetaseedClient("miappe", "1.2")
+
+        inv = client.create_entity(
+            "Investigation",
+            {"unique_id": "INV-001", "title": "Test Investigation"},
+        )
+
+        client.create_entity(
+            "Study",
+            {
+                "unique_id": "STU-001",
+                "title": "Test Study",
+                "investigation_id": "INV-001",
+            },
+            parent_id=inv.id,
+        )
+
+        return client
+
+    def test_serialize_flat_format(self, client_with_data: MetaseedClient) -> None:
+        """Serialize with default flat format."""
+        data = client_with_data.serialize()
+
+        assert "profile" in data
+        assert "version" in data
+        assert "entities" in data
+        assert isinstance(data["entities"], list)
+        assert len(data["entities"]) == 2
+
+    def test_serialize_tree_format(self, client_with_data: MetaseedClient) -> None:
+        """Serialize with tree format."""
+        data = client_with_data.serialize(format="tree")
+
+        assert "profile" in data
+        assert "version" in data
+        assert "tree" in data
+        assert "entities" not in data
+
+        tree = data["tree"]
+        assert len(tree) == 1  # One root
+        root = tree[0]
+        assert root["entity_type"] == "Investigation"
+        assert "label" in root
+        assert "data" in root
+        assert "children" in root
+        assert len(root["children"]) == 1
+
+    def test_load_auto_detects_flat_format(self, client_with_data: MetaseedClient) -> None:
+        """Load auto-detects flat format."""
+        data = client_with_data.serialize(format="flat")
+
+        new_client = MetaseedClient("miappe", "1.2")
+        count = new_client.load(data)
+
+        assert count == 2
+        assert len(new_client.get_roots()) == 1
+
+    def test_load_auto_detects_tree_format(self, client_with_data: MetaseedClient) -> None:
+        """Load auto-detects tree format."""
+        data = client_with_data.serialize(format="tree")
+
+        new_client = MetaseedClient("miappe", "1.2")
+        count = new_client.load(data)
+
+        assert count == 2
+        roots = new_client.get_roots()
+        assert len(roots) == 1
+        assert roots[0].entity_type == "Investigation"
+
+    def test_tree_roundtrip(self, client_with_data: MetaseedClient) -> None:
+        """Tree format roundtrips correctly."""
+        original_tree = client_with_data.get_tree()
+
+        data = client_with_data.serialize(format="tree")
+        new_client = MetaseedClient("miappe", "1.2")
+        new_client.load(data)
+
+        new_tree = new_client.get_tree()
+        assert len(new_tree) == len(original_tree)
+
+
+class TestEntityLabel:
+    """Tests for get_entity_label method."""
+
+    @pytest.fixture
+    def client(self) -> MetaseedClient:
+        """Create client."""
+        return MetaseedClient("miappe", "1.2")
+
+    def test_get_entity_label(self, client: MetaseedClient) -> None:
+        """Get label for an entity."""
+        entity = client.create_entity(
+            "Investigation",
+            {"unique_id": "INV-001", "title": "My Investigation"},
+        )
+
+        label = client.get_entity_label(entity.id)
+        assert label == "INV-001"  # First field value
+
+    def test_get_entity_label_not_found_raises(self, client: MetaseedClient) -> None:
+        """Getting label for nonexistent entity raises."""
+        with pytest.raises(EntityNotFoundError):
+            client.get_entity_label("nonexistent-id")
+
+
 class TestSkipValidation:
     """Tests for skip_validation mode (permissive editing)."""
 

@@ -293,34 +293,95 @@ class MetaseedClient:
         nodes = self._facade.get_roots()
         return [self._convert_to_entity_node(n) for n in nodes]
 
+    def get_entity_label(self: Self, entity_id: str) -> str:
+        """Get the display label for an entity.
+
+        Args:
+            entity_id: ID of the entity.
+
+        Returns:
+            Display label string.
+
+        Raises:
+            EntityNotFoundError: If entity not found.
+        """
+        node = self._facade.get_entity(entity_id)
+        if node is None:
+            raise EntityNotFoundError(entity_id)
+
+        helper = self._facade._entities.get(node.entity_type)
+        if helper and node.instance:
+            return helper.get_label(node.instance)
+        return node.label
+
     # ========================================================================
     # Serialization
     # ========================================================================
 
-    def serialize(self: Self) -> dict[str, Any]:
+    def serialize(self: Self, format: str = "flat") -> dict[str, Any]:
         """Serialize all entities to a dictionary.
 
         Returns a structure that can be saved to JSON/YAML and later
         loaded back with load().
 
+        Args:
+            format: Output format - "flat" (default) or "tree".
+                - "flat": List of entities with _type and _parent_unique_id
+                - "tree": Nested hierarchy with id, entity_type, label, data, children
+
         Returns:
             Dictionary with profile info and entity data.
 
         Example:
-            >>> data = client.serialize()
+            >>> data = client.serialize()  # flat format
+            >>> data = client.serialize(format="tree")  # nested tree
             >>> with open("dataset.json", "w") as f:
             ...     json.dump(data, f)
         """
-        return {
+        base = {
             "profile": self._facade.profile,
             "version": self._facade.version,
-            "entities": self._facade.to_dict(),
         }
+
+        if format == "tree":
+            base["tree"] = self._serialize_tree()
+        else:
+            base["entities"] = self._facade.to_dict()
+
+        return base
+
+    def _serialize_tree(self: Self) -> list[dict[str, Any]]:
+        """Serialize entities as nested tree structure."""
+        roots = self._facade.get_roots()
+
+        def node_to_tree(node: Any) -> dict[str, Any]:
+            if node.instance and hasattr(node.instance, "model_dump"):
+                data = node.instance.model_dump(exclude_none=True)
+            else:
+                data = {}
+
+            # Get label using helper
+            helper = self._facade._entities.get(node.entity_type)
+            if helper and node.instance:
+                label = helper.get_label(node.instance)
+            else:
+                label = node.label
+
+            return {
+                "id": node.id,
+                "entity_type": node.entity_type,
+                "label": label,
+                "data": data,
+                "children": [node_to_tree(c) for c in node.children],
+            }
+
+        return [node_to_tree(r) for r in roots]
 
     def load(self: Self, data: dict[str, Any]) -> int:
         """Load entities from serialized data.
 
         Clears existing entities and loads from the provided data.
+        Auto-detects format (flat with "entities" or nested "tree").
 
         Args:
             data: Serialized data from serialize() or entity list directly.
@@ -331,15 +392,46 @@ class MetaseedClient:
         Example:
             >>> with open("dataset.json") as f:
             ...     data = json.load(f)
-            >>> client.load(data)
+            >>> client.load(data)  # auto-detects format
         """
-        # Support both full serialize() output and direct entity list
+        # Auto-detect format: tree vs flat
+        if "tree" in data:
+            return self._load_tree(data["tree"])
+
         if "entities" in data:
             entities = data["entities"]
         else:
             entities = data if isinstance(data, list) else []
 
         return self._facade.load_from_dict(entities)
+
+    def _load_tree(self: Self, tree: list[dict[str, Any]]) -> int:
+        """Load entities from nested tree format."""
+        self._facade.clear()
+        count = 0
+
+        def load_node(node: dict[str, Any], parent_id: str | None = None) -> None:
+            nonlocal count
+            entity_type = node["entity_type"]
+            data = node.get("data", {})
+            node_id = node.get("id")
+
+            self._facade.add_entity(
+                entity_type,
+                data,
+                node_id=node_id,
+                parent_id=parent_id,
+                skip_validation=True,
+            )
+            count += 1
+
+            for child in node.get("children", []):
+                load_node(child, parent_id=node_id)
+
+        for root in tree:
+            load_node(root)
+
+        return count
 
     def load_yaml(self: Self, path: str) -> int:
         """Load entities from a YAML dataset file.
