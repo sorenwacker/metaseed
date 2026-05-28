@@ -4007,6 +4007,41 @@ details.sidebar-section summary:hover {
     margin: 0;
 }
 
+.yaml-preview-actions {
+    display: flex;
+    gap: var(--space-xs);
+}
+
+.yaml-edit-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.yaml-textarea {
+    flex: 1;
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    background: rgba(0, 0, 0, 0.3);
+    color: var(--clr-ivory);
+    border: 1px solid var(--clr-bronze);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+    resize: none;
+}
+
+.yaml-textarea:focus {
+    outline: none;
+    border-color: var(--clr-teal);
+}
+
+.yaml-edit-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
 .preview-placeholder {
     display: flex;
     align-items: center;

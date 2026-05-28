@@ -173,6 +173,48 @@ def register_export_routes(
         except OSError as e:
             raise HTTPException(status_code=500, detail=str(e)) from e
 
+    @router.post("/apply-yaml", response_class=HTMLResponse)
+    async def apply_yaml_edit(request: Request) -> Response:
+        """Apply edited YAML content to the current spec.
+
+        Args:
+            request: The FastAPI request with YAML content in body.
+
+        Returns:
+            Success or error response.
+        """
+        try:
+            content = await request.body()
+            yaml_content = content.decode("utf-8")
+            data = yaml.safe_load(yaml_content)
+
+            if not isinstance(data, dict):
+                raise HTTPException(
+                    status_code=400,
+                    detail="Invalid YAML: root must be a mapping",
+                )
+
+            # Parse into ProfileSpec
+            spec = ProfileSpec.model_validate(data)
+
+            # Update builder state
+            builder = get_builder_state()
+            builder.spec = spec
+            builder.mark_changed()
+
+            return Response(status_code=200, content="YAML applied successfully")
+
+        except yaml.YAMLError as e:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid YAML syntax: {e}",
+            ) from e
+        except Exception as e:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Failed to parse spec: {e}",
+            ) from e
+
     @router.post("/import", response_class=HTMLResponse)
     async def import_yaml(_request: Request, file: UploadFile) -> Response:
         """Import a spec from an uploaded YAML file.
