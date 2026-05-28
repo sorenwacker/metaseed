@@ -1,1511 +1,454 @@
-# MetaboLights v1.0 Specification
-# EMBL-EBI Metabolomics Repository
-# Based on ISA-Tab format with metabolomics extensions
-#
-# References:
-# - https://www.ebi.ac.uk/metabolights/
-# - https://isa-specs.readthedocs.io/en/latest/isatab.html
-# - https://www.metabolomics-msi.org/
-
-version: "1.0"
+version: '1.0'
 name: metabolights
 display_name: MetaboLights
-description: "MetaboLights metabolomics repository using ISA-Tab format with MS and NMR assay types."
+description: MetaboLights metabolomics data repository format. Based on ISA-Tab with metabolomics-specific extensions for NMR, LC-MS, and GC-MS assays.
 root_entity: Investigation
-ontology: MTBLS
+ontology: mtbls
 
 validation_rules:
-  # MetaboLights accession format
-  - name: mtbls_accession_format
-    description: MetaboLights accession must be MTBLS followed by digits
-    applies_to: [Investigation]
-    field: identifier
-    pattern: "^MTBLS[0-9]+$"
+- name: identifier_pattern
+  description: Identifiers must be alphanumeric with underscores/hyphens
+  applies_to: all
+  field: identifier
+  pattern: ^[A-Za-z0-9_-]+$
 
-  # ChEBI ID format
-  - name: chebi_id_format
-    description: ChEBI identifier must be CHEBI followed by colon and digits
-    applies_to: [MetaboliteAssignment]
-    field: chebi_id
-    pattern: "^CHEBI:[0-9]+$"
+- name: mtbls_accession_format
+  description: MetaboLights accession must follow MTBLS pattern
+  applies_to: [Investigation]
+  field: accession
+  pattern: ^MTBLS[0-9]+$
 
-  # InChIKey format (27 characters with two hyphens)
-  - name: inchikey_format
-    description: InChIKey must follow standard format (27 characters)
-    applies_to: [MetaboliteAssignment]
-    field: inchi_key
-    pattern: "^[A-Z]{14}-[A-Z]{10}-[A-Z]$"
+- name: email_format
+  description: Email must be valid format
+  applies_to: [Person]
+  field: email
+  pattern: ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$
 
-  # PubChem CID format
-  - name: pubchem_cid_format
-    description: PubChem CID must be numeric
-    applies_to: [MetaboliteAssignment]
-    field: pubchem_cid
-    pattern: "^[0-9]+$"
+- name: orcid_format
+  description: ORCID must be in standard format
+  applies_to: [Person]
+  field: orcid
+  pattern: ^[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X]$
 
-  # HMDB ID format
-  - name: hmdb_id_format
-    description: HMDB identifier must be HMDB followed by digits
-    applies_to: [MetaboliteAssignment]
-    field: hmdb_id
-    pattern: "^HMDB[0-9]+$"
-
-  # MSI reporting level (1-4)
-  - name: msi_level_range
-    description: MSI identification level must be between 1 and 4
-    applies_to: [MetaboliteAssignment]
-    field: msi_level
-    minimum: 1
-    maximum: 4
-
-  # Technology type vocabulary
-  - name: technology_type_vocabulary
-    description: Technology type must be a valid metabolomics technology
-    applies_to: [Assay]
-    field: technology_type
-    enum:
-      - mass spectrometry
-      - NMR spectroscopy
-
-  # Measurement type vocabulary
-  - name: measurement_type_vocabulary
-    description: Measurement type must be a valid metabolomics measurement
-    applies_to: [Assay]
-    field: measurement_type
-    enum:
-      - metabolite profiling
-      - targeted metabolite profiling
-      - untargeted metabolite profiling
-      - lipidomics
-      - metabolic fingerprinting
-      - metabolic footprinting
-      - fluxomics
-
-  # Ionization mode vocabulary (applies when assay_type=lcms or gcms)
-  - name: ionization_mode_vocabulary
-    description: Ionization mode must be a valid MS ionization mode
-    applies_to: [Assay]
-    field: ionization_mode
-    enum:
-      - positive
-      - negative
-      - alternating
-
-  # Scan polarity vocabulary (applies when assay_type=lcms or gcms)
-  - name: scan_polarity_vocabulary
-    description: Scan polarity must be positive or negative
-    applies_to: [Assay]
-    field: scan_polarity
-    enum:
-      - positive
-      - negative
-
-  # Mass analyzer vocabulary (applies when assay_type=lcms or gcms)
-  - name: mass_analyzer_vocabulary
-    description: Mass analyzer must be a valid type
-    applies_to: [Assay]
-    field: mass_analyzer
-    enum:
-      - quadrupole
-      - time-of-flight
-      - ion trap
-      - orbitrap
-      - FT-ICR
-      - magnetic sector
-      - triple quadrupole
-      - Q-TOF
-      - LTQ-Orbitrap
-      - Q-Orbitrap
-
-  # NMR acquisition nucleus vocabulary (applies when assay_type=nmr)
-  - name: acquisition_nucleus_vocabulary
-    description: NMR acquisition nucleus must be valid
-    applies_to: [Assay]
-    field: acquisition_nucleus
-    enum:
-      - 1H
-      - 13C
-      - 31P
-      - 15N
-      - 19F
-      - 2H
-      - 23Na
-      - 29Si
-
-  # Email format
-  - name: email_format
-    description: Email must be valid format
-    applies_to: [Contact]
-    field: email
-    pattern: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
-
-  # DOI format
-  - name: doi_format
-    description: DOI must follow standard format
-    applies_to: [Publication]
-    field: doi
-    pattern: "^10\\.[0-9]{4,}/.*$"
-
-  # PubMed ID format
-  - name: pubmed_id_format
-    description: PubMed ID must be numeric
-    applies_to: [Publication]
-    field: pubmed_id
-    pattern: "^[0-9]+$"
-
-  # Date format validation
-  - name: date_format
-    description: Dates must be ISO 8601 format (YYYY-MM-DD)
-    applies_to: all
-    field: submission_date
-    pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
-
-  - name: public_release_date_format
-    description: Public release date must be ISO 8601 format
-    applies_to: [Investigation, Study]
-    field: public_release_date
-    pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
-
-  # Checksum format
-  - name: md5_checksum_format
-    description: MD5 checksum must be 32 hexadecimal characters
-    applies_to: [RawSpectralData]
-    field: checksum
-    pattern: "^[a-fA-F0-9]{32}$"
-
-  # Cardinality constraints
-  - name: investigation_has_studies
-    description: Investigation must have at least one study
-    applies_to: [Investigation]
-    field: studies
-    min_items: 1
-
-  - name: study_has_assays
-    description: Study must have at least one assay
-    applies_to: [Study]
-    field: assays
-    min_items: 1
-
-  - name: assay_filename_format
-    description: Assay filename should follow ISA-Tab pattern
-    applies_to: [Assay]
-    field: file_name
-    pattern: "^a_.*\\.txt$"
-
-  # Retention time constraint
-  - name: retention_time_positive
-    description: Retention time must be non-negative
-    applies_to: [MetaboliteAssignment]
-    field: retention_time
-    minimum: 0
-
-  # Magnetic field strength constraint (applies when assay_type=nmr)
-  - name: magnetic_field_strength_positive
-    description: Magnetic field strength must be positive
-    applies_to: [Assay]
-    field: magnetic_field_strength
-    minimum: 0
+- name: inchi_format
+  description: InChI must start with InChI=
+  applies_to: [Metabolite]
+  field: inchi
+  pattern: ^InChI=.*$
 
 entities:
-
   Investigation:
-    ontology_term: MTBLS:investigation
-    description: >
-      A MetaboLights investigation contains metadata about a metabolomics project
-      and links to one or more studies. The investigation captures submission
-      information and provides context for all associated studies.
-    example:
-      identifier: MTBLS1234
-      title: Metabolomic profiling of Arabidopsis thaliana under drought stress
-      description: This study investigates the metabolic response of Arabidopsis thaliana to water deficit conditions using LC-MS and NMR spectroscopy
-      submission_date: "2024-06-15"
-      public_release_date: "2025-01-01"
+    ontology_term: mtbls:Investigation
+    description: Top-level container for a MetaboLights submission. Contains study metadata and links to studies.
     fields:
-      - name: identifier
-        codename: identifier
-        type: string
-        required: true
-        description: MetaboLights accession number (MTBLS followed by digits).
-        ontology_term: MTBLS:identifier
-        constraints:
-          pattern: "^MTBLS[0-9]+$"
+    - name: identifier
+      type: string
+      required: true
+      description: A locally unique identifier for the investigation
 
-      - name: title
-        codename: title
-        type: string
-        required: true
-        description: Concise title describing the investigation.
-        ontology_term: MTBLS:title
-        constraints:
-          min_length: 1
-          max_length: 4000
+    - name: accession
+      type: string
+      required: false
+      description: MetaboLights accession number (assigned upon submission)
 
-      - name: description
-        codename: description
-        type: string
-        required: true
-        description: Detailed abstract describing the investigation objectives and scope.
-        ontology_term: MTBLS:description
+    - name: title
+      type: string
+      required: true
+      description: A concise descriptive title for the investigation
 
-      - name: submission_date
-        codename: submission_date
-        type: date
-        required: false
-        description: Date when the investigation was submitted to MetaboLights (ISO 8601).
-        ontology_term: MTBLS:submission_date
+    - name: description
+      type: string
+      required: true
+      description: Detailed description of the investigation aims and scope
 
-      - name: public_release_date
-        codename: public_release_date
-        type: date
-        required: false
-        description: Date when the investigation should be made publicly available (ISO 8601).
-        ontology_term: MTBLS:release_date
+    - name: submission_date
+      type: date
+      required: false
+      description: Date the investigation was submitted
 
-      - name: studies
-        codename: studies
-        type: list
-        items: Study
-        required: false
-        description: Studies contained in this investigation.
-        ontology_term: MTBLS:has_study
+    - name: public_release_date
+      type: date
+      required: false
+      description: Date the investigation becomes publicly available
 
-      - name: contacts
-        codename: contacts
-        type: list
-        items: Contact
-        required: false
-        description: Contacts associated with the investigation.
-        ontology_term: MTBLS:has_contact
+    - name: contacts
+      type: list
+      items: Person
+      required: true
+      description: People associated with the investigation
 
-      - name: publications
-        codename: publications
-        type: list
-        items: Publication
-        required: false
-        description: Publications associated with the investigation.
-        ontology_term: MTBLS:has_publication
+    - name: publications
+      type: list
+      items: Publication
+      required: false
+      description: Publications associated with the investigation
 
-      - name: ontology_sources
-        codename: ontology_sources
-        type: list
-        items: OntologySource
-        required: false
-        description: Ontology sources referenced in this investigation.
-        ontology_term: MTBLS:has_ontology_source
+    - name: studies
+      type: list
+      items: Study
+      required: true
+      description: Studies within this investigation
 
   Study:
-    ontology_term: MTBLS:study
-    description: >
-      A MetaboLights study is the central unit containing information about the
-      metabolomics experiment including samples, protocols, factors, and assays.
-      Each study represents a distinct experimental investigation.
-    example:
-      identifier: s_MTBLS1234
-      investigation_id: MTBLS1234
-      title: LC-MS metabolite profiling of drought-stressed Arabidopsis
-      description: Untargeted metabolite profiling using reverse-phase LC-MS/MS to identify metabolic changes in response to drought
-      submission_date: "2024-06-15"
-      public_release_date: "2025-01-01"
-      file_name: s_MTBLS1234.txt
+    ontology_term: mtbls:Study
+    description: A study contains information about the subject under study and associated protocols.
     fields:
-      - name: identifier
-        codename: identifier
-        type: string
-        required: true
-        description: Unique identifier for the study within the investigation.
-        ontology_term: MTBLS:identifier
+    - name: identifier
+      type: string
+      required: true
+      description: Unique identifier for the study
 
-      - name: investigation_id
-        codename: investigation_id
-        type: string
-        required: true
-        parent_ref: Investigation.identifier
-        description: Reference to the parent Investigation.
+    - name: title
+      type: string
+      required: true
+      description: Title of the study
 
-      - name: title
-        codename: title
-        type: string
-        required: true
-        description: Concise title describing the study.
-        ontology_term: MTBLS:title
-        constraints:
-          min_length: 1
-          max_length: 4000
+    - name: description
+      type: string
+      required: false
+      description: Description of the study
 
-      - name: description
-        codename: description
-        type: string
-        required: false
-        description: Detailed description of the study objectives and methods.
-        ontology_term: MTBLS:description
+    - name: study_design_descriptors
+      type: list
+      items: string
+      required: false
+      description: Study design types (ontology terms)
 
-      - name: submission_date
-        codename: submission_date
-        type: date
-        required: false
-        description: Date when the study was submitted (ISO 8601).
-        ontology_term: MTBLS:submission_date
+    - name: factors
+      type: list
+      items: Factor
+      required: false
+      description: Experimental factors/variables
 
-      - name: public_release_date
-        codename: public_release_date
-        type: date
-        required: false
-        description: Date when the study should be released publicly (ISO 8601).
-        ontology_term: MTBLS:release_date
+    - name: protocols
+      type: list
+      items: Protocol
+      required: true
+      description: Protocols used in the study
 
-      - name: file_name
-        codename: file_name
-        type: string
-        required: false
-        description: Name of the study file (s_*.txt).
-        ontology_term: MTBLS:filename
-        constraints:
-          pattern: "^s_.*\\.txt$"
+    - name: samples
+      type: list
+      items: Sample
+      required: true
+      description: Samples used in the study
 
-      - name: assays
-        codename: assays
-        type: list
-        items: Assay
-        required: false
-        description: Assays performed in this study (NMR, LC-MS, or GC-MS).
-        ontology_term: MTBLS:has_assay
-
-      - name: sources
-        codename: sources
-        type: list
-        items: Source
-        required: false
-        description: Source materials in this study.
-        ontology_term: MTBLS:has_source
-
-      - name: samples
-        codename: samples
-        type: list
-        items: Sample
-        required: false
-        description: Samples in this study.
-        ontology_term: MTBLS:has_sample
-
-      - name: protocols
-        codename: protocols
-        type: list
-        items: Protocol
-        required: false
-        description: Protocols used in this study.
-        ontology_term: MTBLS:has_protocol
-
-      - name: factors
-        codename: factors
-        type: list
-        items: Factor
-        required: false
-        description: Experimental factors manipulated in this study.
-        ontology_term: MTBLS:has_factor
-
-      - name: contacts
-        codename: contacts
-        type: list
-        items: Contact
-        required: false
-        description: Contacts associated with the study.
-        ontology_term: MTBLS:has_contact
-
-      - name: publications
-        codename: publications
-        type: list
-        items: Publication
-        required: false
-        description: Publications associated with the study.
-        ontology_term: MTBLS:has_publication
+    - name: assays
+      type: list
+      items: Assay
+      required: true
+      description: Assays performed in the study
 
   Assay:
-    ontology_term: MTBLS:assay
-    description: >
-      An assay represents a measurement performed on samples to generate
-      metabolomics data. Contains common fields plus technology-specific
-      fields for NMR, LC-MS, and GC-MS assays.
-    example:
-      file_name: a_MTBLS1234_lcms_positive.txt
-      study_id: s_MTBLS1234
-      assay_type: lcms
-      measurement_type: metabolite profiling
-      technology_type: mass spectrometry
-      technology_platform: Thermo Q Exactive
-      ms_instrument: Thermo Q Exactive Plus
-      ionization_mode: positive
-      mass_analyzer: orbitrap
+    ontology_term: mtbls:Assay
+    description: An assay represents an analytical measurement. MetaboLights supports NMR, LC-MS, GC-MS techniques.
     fields:
-      # Common fields
-      - name: file_name
-        codename: file_name
-        type: string
-        required: true
-        description: Name of the assay file (a_*.txt).
-        ontology_term: MTBLS:filename
-        constraints:
-          pattern: "^a_.*\\.txt$"
+    - name: identifier
+      type: string
+      required: true
+      description: Unique identifier for the assay
 
-      - name: study_id
-        codename: study_id
-        type: string
-        required: true
-        parent_ref: Study.identifier
-        reference: Study.identifier
-        description: Reference to the parent Study.
+    - name: filename
+      type: string
+      required: true
+      description: Assay file name (a_*.txt)
 
-      - name: assay_type
-        codename: assay_type
-        type: string
-        required: true
-        description: Type of assay technology (nmr, lcms, or gcms).
-        ontology_term: MTBLS:assay_type
-        constraints:
-          enum:
-            - nmr
-            - lcms
-            - gcms
+    - name: technology_type
+      type: string
+      required: true
+      description: Technology type (e.g., mass spectrometry, NMR spectroscopy)
 
-      - name: measurement_type
-        codename: measurement_type
-        type: string
-        required: true
-        description: Type of measurement performed (e.g., metabolite profiling).
-        ontology_term: OBI:0000070
+    - name: technology_platform
+      type: string
+      required: false
+      description: Technology platform or instrument
 
-      - name: technology_type
-        codename: technology_type
-        type: string
-        required: true
-        description: Technology used for measurement (mass spectrometry or NMR spectroscopy).
-        ontology_term: OBI:0000011
+    - name: measurement_type
+      type: string
+      required: true
+      description: Measurement type (e.g., metabolite profiling)
 
-      - name: technology_platform
-        codename: technology_platform
-        type: string
-        required: false
-        description: Specific instrument platform used (e.g., Thermo Q Exactive, Bruker Avance).
-        ontology_term: MTBLS:technology_platform
+    - name: samples
+      type: list
+      items: string
+      required: true
+      description: Sample names in this assay
 
-      - name: samples
-        codename: samples
-        type: list
-        items: string
-        required: false
-        description: Sample name references (samples declared at study level).
-        ontology_term: MTBLS:has_sample
+    - name: data_files
+      type: list
+      items: DataFile
+      required: false
+      description: Raw and derived data files
 
-      - name: raw_spectral_data_files
-        codename: raw_spectral_data_files
-        type: list
-        items: RawSpectralData
-        required: false
-        description: Raw data files generated by this assay.
-        ontology_term: MTBLS:has_raw_data
-
-      - name: metabolite_assignments
-        codename: metabolite_assignments
-        type: list
-        items: MetaboliteAssignment
-        required: false
-        description: Metabolite assignments from this assay.
-        ontology_term: MTBLS:has_metabolite_assignment
-
-      # NMR-specific fields (used when assay_type=nmr)
-      - name: nmr_instrument
-        codename: nmr_instrument
-        type: string
-        required: false
-        description: NMR spectrometer instrument name and model.
-        ontology_term: MTBLS:nmr_instrument
-
-      - name: pulse_sequence
-        codename: pulse_sequence
-        type: string
-        required: false
-        description: NMR pulse sequence used (e.g., noesypr1d, cpmgpr1d).
-        ontology_term: MTBLS:pulse_sequence
-
-      - name: magnetic_field_strength
-        codename: magnetic_field_strength
-        type: float
-        required: false
-        description: Magnetic field strength in MHz.
-        ontology_term: MTBLS:magnetic_field_strength
-        constraints:
-          minimum: 0
-
-      - name: acquisition_nucleus
-        codename: acquisition_nucleus
-        type: string
-        required: false
-        description: Nucleus observed in the NMR experiment (e.g., 1H, 13C).
-        ontology_term: MTBLS:acquisition_nucleus
-
-      - name: temperature
-        codename: temperature
-        type: float
-        required: false
-        description: Sample temperature during acquisition in Kelvin.
-        ontology_term: MTBLS:temperature
-        constraints:
-          minimum: 0
-
-      - name: number_of_scans
-        codename: number_of_scans
-        type: integer
-        required: false
-        description: Number of transients acquired.
-        ontology_term: MTBLS:number_of_scans
-        constraints:
-          minimum: 1
-
-      - name: relaxation_delay
-        codename: relaxation_delay
-        type: float
-        required: false
-        description: Relaxation delay between scans in seconds.
-        ontology_term: MTBLS:relaxation_delay
-
-      - name: spectral_width
-        codename: spectral_width
-        type: float
-        required: false
-        description: Spectral width in ppm.
-        ontology_term: MTBLS:spectral_width
-
-      # MS-specific fields (used when assay_type=lcms or gcms)
-      - name: ms_instrument
-        codename: ms_instrument
-        type: string
-        required: false
-        description: Mass spectrometer instrument name and model.
-        ontology_term: MTBLS:ms_instrument
-
-      - name: ionization_mode
-        codename: ionization_mode
-        type: string
-        required: false
-        description: Ionization mode (positive, negative, or alternating).
-        ontology_term: MS:1000465
-
-      - name: ionization_source
-        codename: ionization_source
-        type: string
-        required: false
-        description: Ionization source type (e.g., electrospray ionization, APCI, EI).
-        ontology_term: MS:1000008
-
-      - name: mass_analyzer
-        codename: mass_analyzer
-        type: string
-        required: false
-        description: Type of mass analyzer used.
-        ontology_term: MS:1000443
-
-      - name: scan_polarity
-        codename: scan_polarity
-        type: string
-        required: false
-        description: Scan polarity (positive or negative).
-        ontology_term: MS:1000465
-
-      - name: mass_range_low
-        codename: mass_range_low
-        type: float
-        required: false
-        description: Lower limit of mass range in m/z.
-        ontology_term: MTBLS:mass_range_low
-        constraints:
-          minimum: 0
-
-      - name: mass_range_high
-        codename: mass_range_high
-        type: float
-        required: false
-        description: Upper limit of mass range in m/z.
-        ontology_term: MTBLS:mass_range_high
-        constraints:
-          minimum: 0
-
-      - name: resolution
-        codename: resolution
-        type: float
-        required: false
-        description: Mass resolution (FWHM or resolving power).
-        ontology_term: MS:1000011
-
-      - name: collision_energy
-        codename: collision_energy
-        type: string
-        required: false
-        description: Collision energy for MS/MS (can be fixed value or range).
-        ontology_term: MS:1000045
-
-      # LC-specific fields (used when assay_type=lcms)
-      - name: chromatography_instrument
-        codename: chromatography_instrument
-        type: string
-        required: false
-        description: Liquid chromatography instrument name and model.
-        ontology_term: MTBLS:chromatography_instrument
-
-      - name: column_type
-        codename: column_type
-        type: string
-        required: false
-        description: Type of chromatographic column (e.g., C18 reverse phase, HILIC).
-        ontology_term: MTBLS:column_type
-
-      - name: column_name
-        codename: column_name
-        type: string
-        required: false
-        description: Specific column name and manufacturer.
-        ontology_term: MTBLS:column_name
-
-      # GC-specific fields (used when assay_type=gcms)
-      - name: gc_instrument
-        codename: gc_instrument
-        type: string
-        required: false
-        description: Gas chromatograph instrument name and model.
-        ontology_term: MTBLS:gc_instrument
-
-      - name: derivatization_method
-        codename: derivatization_method
-        type: string
-        required: false
-        description: Chemical derivatization method used.
-        ontology_term: MTBLS:derivatization_method
-
-  Source:
-    ontology_term: MTBLS:source
-    description: >
-      A source represents the original biological material from which samples
-      are derived. This includes organism information and collection details.
-    example:
-      name: arabidopsis-plant-001
-      study_id: s_MTBLS1234
-      organism: Arabidopsis thaliana
-      organism_part: leaf
-    fields:
-      - name: name
-        codename: name
-        type: string
-        required: true
-        description: Unique name for the source material.
-        ontology_term: MTBLS:name
-
-      - name: study_id
-        codename: study_id
-        type: string
-        required: true
-        parent_ref: Study.identifier
-        reference: Study.identifier
-        description: Reference to the parent Study.
-
-      - name: organism
-        codename: organism
-        type: string
-        required: true
-        description: Scientific name of the source organism.
-        ontology_term: OBI:0100026
-
-      - name: organism_part
-        codename: organism_part
-        type: string
-        required: false
-        description: Part of the organism from which the sample was taken.
-        ontology_term: OBI:0000019
-
-      - name: characteristics
-        codename: characteristics
-        type: list
-        items: Characteristic
-        required: false
-        description: Additional characteristics of the source material.
-        ontology_term: MTBLS:has_characteristic
+    - name: metabolite_assignment_file
+      type: string
+      required: false
+      description: Metabolite annotation file (m_*.tsv)
 
   Sample:
-    ontology_term: MTBLS:sample
-    description: >
-      A sample represents material taken from a source that is used in
-      metabolomics analysis. Samples can have factor values associated
-      with experimental conditions.
-    example:
-      name: sample-drought-001
-      study_id: s_MTBLS1234
-      material_type: tissue extract
-      description: Leaf extract from drought-treated Arabidopsis plant 1
-      source_ref: arabidopsis-plant-001
+    ontology_term: mtbls:Sample
+    description: A biological sample used in the study.
     fields:
-      - name: name
-        codename: name
-        type: string
-        required: true
-        description: Unique name for the sample.
-        ontology_term: MTBLS:name
+    - name: name
+      type: string
+      required: true
+      description: Sample name
 
-      - name: study_id
-        codename: study_id
-        type: string
-        required: true
-        parent_ref: Study.identifier
-        reference: Study.identifier
-        description: Reference to the parent Study.
+    - name: organism
+      type: string
+      required: true
+      description: Source organism name
 
-      - name: source_ref
-        codename: source_ref
-        type: string
-        required: false
-        description: Reference to the source material this sample derives from.
-        ontology_term: MTBLS:derives_from
-        reference: Source.name
+    - name: organism_term
+      type: string
+      required: false
+      description: Organism ontology accession
 
-      - name: material_type
-        codename: material_type
-        type: string
-        required: false
-        description: Type of sample material (e.g., tissue extract, plasma, urine).
-        ontology_term: MTBLS:material_type
+    - name: organism_part
+      type: string
+      required: false
+      description: Part of organism sampled
 
-      - name: description
-        codename: description
-        type: string
-        required: false
-        description: Description of the sample.
-        ontology_term: MTBLS:description
+    - name: characteristics
+      type: list
+      items: Characteristic
+      required: false
+      description: Sample characteristics
 
-      - name: factor_values
-        codename: factor_values
-        type: list
-        items: FactorValue
-        required: false
-        description: Factor values qualifying the sample.
-        ontology_term: MTBLS:has_factor_value
+    - name: factor_values
+      type: list
+      items: FactorValue
+      required: false
+      description: Factor values for this sample
 
-      - name: characteristics
-        codename: characteristics
-        type: list
-        items: Characteristic
-        required: false
-        description: Characteristics of the sample.
-        ontology_term: MTBLS:has_characteristic
-
-  Extract:
-    ontology_term: MTBLS:extract
-    description: >
-      An extract represents the result of an extraction process applied
-      to a sample to prepare it for metabolomics analysis.
-    example:
-      name: extract-drought-001-methanol
-      sample_ref: sample-drought-001
-      extraction_method: methanol extraction
-      protocol_ref: extraction-protocol-001
+  Metabolite:
+    ontology_term: mtbls:Metabolite
+    description: An identified or annotated metabolite from the metabolite assignment file.
     fields:
-      - name: name
-        codename: name
-        type: string
-        required: true
-        description: Unique name for the extract.
-        ontology_term: MTBLS:name
+    - name: database_identifier
+      type: string
+      required: false
+      description: Identifier in external database (e.g., CHEBI:12345)
 
-      - name: sample_ref
-        codename: sample_ref
-        type: string
-        required: true
-        description: Reference to the sample this extract derives from.
-        ontology_term: MTBLS:derives_from
-        reference: Sample.name
+    - name: metabolite_identification
+      type: string
+      required: true
+      description: Name or identifier of the metabolite
 
-      - name: extraction_method
-        codename: extraction_method
-        type: string
-        required: false
-        description: Method used for metabolite extraction.
-        ontology_term: MTBLS:extraction_method
+    - name: chemical_formula
+      type: string
+      required: false
+      description: Molecular formula
 
-      - name: protocol_ref
-        codename: protocol_ref
-        type: string
-        required: false
-        description: Reference to the extraction protocol used.
-        ontology_term: MTBLS:protocol_ref
-        reference: Protocol.name
+    - name: smiles
+      type: string
+      required: false
+      description: SMILES notation
 
-      - name: characteristics
-        codename: characteristics
-        type: list
-        items: Characteristic
-        required: false
-        description: Characteristics of the extract.
-        ontology_term: MTBLS:has_characteristic
+    - name: inchi
+      type: string
+      required: false
+      description: InChI string
 
-  Contact:
-    ontology_term: MTBLS:contact
-    description: >
-      A person or contact associated with the investigation or study,
-      including their institutional affiliation and role.
-    example:
-      last_name: Smith
-      first_name: John
-      mid_initials: A
-      email: john.smith@university.edu
-      affiliation: Department of Biochemistry, Example University
-      role: principal investigator
-    fields:
-      - name: last_name
-        codename: last_name
-        type: string
-        required: true
-        description: Last name of the contact person.
-        ontology_term: MTBLS:last_name
+    - name: mass_to_charge
+      type: float
+      required: false
+      description: Mass to charge ratio (m/z)
 
-      - name: first_name
-        codename: first_name
-        type: string
-        required: true
-        description: First name of the contact person.
-        ontology_term: MTBLS:first_name
+    - name: retention_time
+      type: float
+      required: false
+      description: Retention time in minutes
 
-      - name: mid_initials
-        codename: mid_initials
-        type: string
-        required: false
-        description: Middle initials of the contact person.
-        ontology_term: MTBLS:mid_initials
+    - name: charge
+      type: integer
+      required: false
+      description: Charge state
 
-      - name: email
-        codename: email
-        type: string
-        required: false
-        description: Email address of the contact person.
-        ontology_term: MTBLS:email
-
-      - name: phone
-        codename: phone
-        type: string
-        required: false
-        description: Phone number of the contact person.
-        ontology_term: MTBLS:phone
-
-      - name: fax
-        codename: fax
-        type: string
-        required: false
-        description: Fax number of the contact person.
-        ontology_term: MTBLS:fax
-
-      - name: address
-        codename: address
-        type: string
-        required: false
-        description: Postal address of the contact person.
-        ontology_term: MTBLS:address
-
-      - name: affiliation
-        codename: affiliation
-        type: string
-        required: false
-        description: Institutional affiliation of the contact person.
-        ontology_term: MTBLS:affiliation
-
-      - name: role
-        codename: role
-        type: string
-        required: false
-        description: Role of the contact (e.g., principal investigator, submitter).
-        ontology_term: MTBLS:role
-
-      - name: investigation_id
-        codename: investigation_id
-        type: string
-        required: false
-        parent_ref: Investigation.identifier
-        description: Reference to parent Investigation (for investigation contacts).
-
-      - name: study_id
-        codename: study_id
-        type: string
-        required: false
-        parent_ref: Study.identifier
-        description: Reference to parent Study (for study contacts).
-
-  Publication:
-    ontology_term: MTBLS:publication
-    description: >
-      A publication associated with the investigation or study,
-      including bibliographic information.
-    example:
-      pubmed_id: "12345678"
-      doi: 10.1021/acs.jproteome.0c00001
-      title: Metabolomic profiling of Arabidopsis thaliana under drought stress
-      authors: Smith JA, Jones B, Williams C
-      status: published
-    fields:
-      - name: pubmed_id
-        codename: pubmed_id
-        type: string
-        required: false
-        description: PubMed identifier of the publication.
-        ontology_term: MTBLS:pubmed_id
-
-      - name: doi
-        codename: doi
-        type: string
-        required: false
-        description: Digital Object Identifier (DOI) of the publication.
-        ontology_term: MTBLS:doi
-
-      - name: title
-        codename: title
-        type: string
-        required: true
-        description: Title of the publication.
-        ontology_term: MTBLS:title
-
-      - name: authors
-        codename: authors
-        type: string
-        required: false
-        description: List of authors (comma-separated).
-        ontology_term: MTBLS:authors
-
-      - name: status
-        codename: status
-        type: string
-        required: false
-        description: Publication status (e.g., submitted, in preparation, published).
-        ontology_term: MTBLS:publication_status
-        constraints:
-          enum:
-            - submitted
-            - in preparation
-            - published
+    - name: reliability
+      type: string
+      required: false
+      description: Identification reliability level
 
   Protocol:
-    ontology_term: MTBLS:protocol
-    description: >
-      An experimental protocol describing a procedure used in the study,
-      such as sample collection, extraction, or data acquisition.
-    example:
-      name: extraction-protocol-001
-      study_id: s_MTBLS1234
-      type: metabolite extraction
-      description: Metabolites were extracted using 80% methanol at -20C
-      uri: https://protocols.io/view/example
-      version: "1.0"
+    ontology_term: mtbls:Protocol
+    description: A protocol describing a procedure used in the study.
     fields:
-      - name: name
-        codename: name
-        type: string
-        required: true
-        description: Name of the protocol.
-        ontology_term: MTBLS:name
+    - name: name
+      type: string
+      required: true
+      description: Protocol name
 
-      - name: study_id
-        codename: study_id
-        type: string
-        required: true
-        parent_ref: Study.identifier
-        reference: Study.identifier
-        description: Reference to the parent Study.
+    - name: protocol_type
+      type: string
+      required: true
+      description: Type of protocol (extraction, chromatography, mass spectrometry, etc.)
 
-      - name: type
-        codename: type
-        type: string
-        required: true
-        description: Type of protocol (e.g., sample collection, extraction, chromatography).
-        ontology_term: MTBLS:protocol_type
+    - name: description
+      type: string
+      required: false
+      description: Protocol description
 
-      - name: description
-        codename: description
-        type: string
-        required: false
-        description: Detailed description of the protocol procedure.
-        ontology_term: MTBLS:description
+    - name: uri
+      type: uri
+      required: false
+      description: URI to protocol documentation
 
-      - name: uri
-        codename: uri
-        type: uri
-        required: false
-        description: URI pointing to external protocol resources.
-        ontology_term: MTBLS:uri
-
-      - name: version
-        codename: version
-        type: string
-        required: false
-        description: Version of the protocol.
-        ontology_term: MTBLS:version
-
-      - name: parameters
-        codename: parameters
-        type: list
-        items: ProtocolParameter
-        required: false
-        description: Parameters required to execute the protocol.
-        ontology_term: MTBLS:has_parameter
-
-      - name: components
-        codename: components
-        type: list
-        items: ProtocolComponent
-        required: false
-        description: Components used in the protocol (reagents, instruments, software).
-        ontology_term: MTBLS:has_component
+    - name: parameters
+      type: list
+      items: ProtocolParameter
+      required: false
+      description: Protocol parameters
 
   ProtocolParameter:
-    ontology_term: MTBLS:protocol_parameter
-    description: A parameter used in a protocol with its name and optional default value.
-    example:
-      name: extraction solvent
-      value: 80% methanol
+    ontology_term: mtbls:ProtocolParameter
+    description: A parameter used in a protocol.
     fields:
-      - name: name
-        codename: name
-        type: string
-        required: true
-        description: Name of the protocol parameter.
-        ontology_term: MTBLS:name
+    - name: name
+      type: string
+      required: true
+      description: Parameter name
 
-      - name: value
-        codename: value
-        type: string
-        required: false
-        description: Default or typical value for the parameter.
-        ontology_term: MTBLS:value
+    - name: value
+      type: string
+      required: false
+      description: Parameter value
 
-      - name: unit
-        codename: unit
-        type: string
-        required: false
-        description: Unit of measurement for the parameter.
-        ontology_term: MTBLS:unit
-
-  ProtocolComponent:
-    ontology_term: MTBLS:protocol_component
-    description: A component (reagent, instrument, or software) used in a protocol.
-    example:
-      name: methanol
-      type: reagent
-      description: HPLC grade methanol
-    fields:
-      - name: name
-        codename: name
-        type: string
-        required: true
-        description: Name of the component.
-        ontology_term: MTBLS:name
-
-      - name: type
-        codename: type
-        type: string
-        required: false
-        description: Type of component (reagent, instrument, software).
-        ontology_term: MTBLS:component_type
-
-      - name: description
-        codename: description
-        type: string
-        required: false
-        description: Description of the component.
-        ontology_term: MTBLS:description
+    - name: unit
+      type: string
+      required: false
+      description: Unit of measurement
 
   Factor:
-    ontology_term: MTBLS:factor
-    description: >
-      An experimental factor is an independent variable manipulated
-      in the study to observe its effect on metabolite profiles.
-    example:
-      name: treatment
-      study_id: s_MTBLS1234
-      type: experimental condition
+    ontology_term: mtbls:Factor
+    description: An experimental factor or variable.
     fields:
-      - name: name
-        codename: name
-        type: string
-        required: true
-        description: Name of the factor.
-        ontology_term: MTBLS:name
+    - name: name
+      type: string
+      required: true
+      description: Factor name
 
-      - name: study_id
-        codename: study_id
-        type: string
-        required: true
-        parent_ref: Study.identifier
-        reference: Study.identifier
-        description: Reference to the parent Study.
-
-      - name: type
-        codename: type
-        type: string
-        required: false
-        description: Type of factor (ontology term).
-        ontology_term: MTBLS:factor_type
+    - name: factor_type
+      type: string
+      required: true
+      description: Type of factor (ontology term)
 
   FactorValue:
-    ontology_term: MTBLS:factor_value
-    description: A specific value of an experimental factor assigned to a sample.
-    example:
-      factor_name: treatment
-      value: drought stress
-      unit: ""
+    ontology_term: mtbls:FactorValue
+    description: A specific value for an experimental factor.
     fields:
-      - name: factor_name
-        codename: factor_name
-        type: string
-        required: true
-        description: Name of the factor this value belongs to.
-        ontology_term: MTBLS:factor_name
-        reference: Factor.name
+    - name: factor_name
+      type: string
+      required: true
+      description: Name of the factor
 
-      - name: value
-        codename: value
-        type: string
-        required: true
-        description: Value of the factor.
-        ontology_term: MTBLS:value
+    - name: value
+      type: string
+      required: false
+      description: The factor value
 
-      - name: unit
-        codename: unit
-        type: string
-        required: false
-        description: Unit of measurement (if applicable).
-        ontology_term: MTBLS:unit
+    - name: unit
+      type: string
+      required: false
+      description: Unit for numeric values
 
   Characteristic:
-    ontology_term: MTBLS:characteristic
-    description: A characteristic used to describe a property of a source or sample.
-    example:
-      category: age
-      value: "4"
-      unit: weeks
+    ontology_term: mtbls:Characteristic
+    description: A characteristic of a sample or source.
     fields:
-      - name: category
-        codename: category
-        type: string
-        required: true
-        description: Category or name of the characteristic.
-        ontology_term: MTBLS:category
+    - name: category
+      type: string
+      required: true
+      description: Characteristic category
 
-      - name: value
-        codename: value
-        type: string
-        required: true
-        description: Value of the characteristic.
-        ontology_term: MTBLS:value
+    - name: value
+      type: string
+      required: false
+      description: Characteristic value
 
-      - name: unit
-        codename: unit
-        type: string
-        required: false
-        description: Unit of measurement (if applicable).
-        ontology_term: MTBLS:unit
+    - name: unit
+      type: string
+      required: false
+      description: Unit for numeric values
 
-  OntologySource:
-    ontology_term: MTBLS:ontology_source
-    description: Reference to an ontology used in the investigation.
-    example:
-      name: CHEBI
-      file: https://www.ebi.ac.uk/chebi/
-      version: "2024-01"
-      description: Chemical Entities of Biological Interest ontology
+  DataFile:
+    ontology_term: mtbls:DataFile
+    description: A data file associated with an assay.
     fields:
-      - name: name
-        codename: name
-        type: string
-        required: true
-        description: Short name of the ontology.
-        ontology_term: MTBLS:name
+    - name: filename
+      type: string
+      required: true
+      description: Name of the data file
 
-      - name: file
-        codename: file
-        type: string
-        required: false
-        description: URL or file path to the ontology.
-        ontology_term: MTBLS:file
+    - name: file_type
+      type: string
+      required: true
+      description: Type of file (raw, derived, etc.)
 
-      - name: version
-        codename: version
-        type: string
-        required: false
-        description: Version of the ontology.
-        ontology_term: MTBLS:version
+    - name: checksum
+      type: string
+      required: false
+      description: MD5 or SHA256 checksum
 
-      - name: description
-        codename: description
-        type: string
-        required: false
-        description: Description of the ontology.
-        ontology_term: MTBLS:description
-
-  MetaboliteAssignment:
-    ontology_term: MTBLS:metabolite_assignment
-    description: >
-      A metabolite identification from the metabolomics analysis.
-      Contains compound identifiers, structural information, and
-      the MSI confidence level (1-4) for the identification.
-    example:
-      metabolite_name: Proline
-      chebi_id: "CHEBI:26271"
-      inchi: InChI=1S/C5H9NO2/c7-5(8)4-2-1-3-6-4/h4,6H,1-3H2,(H,7,8)/t4-/m0/s1
-      inchi_key: ONIBWKKTOPOVIA-BYPYZUCNSA-N
-      smiles: OC(=O)[C@@H]1CCCN1
-      hmdb_id: HMDB0000162
-      pubchem_cid: "145742"
-      retention_time: 1.25
-      mass_to_charge: 116.0706
-      msi_level: 1
-      description: Identified by matching RT and MS/MS to authentic standard
+  Person:
+    ontology_term: mtbls:Person
+    description: A person associated with the investigation.
     fields:
-      - name: metabolite_name
-        codename: metabolite_name
-        type: string
-        required: true
-        description: Name of the identified metabolite.
-        ontology_term: MTBLS:metabolite_name
+    - name: first_name
+      type: string
+      required: true
+      description: First name
 
-      - name: chebi_id
-        codename: chebi_id
-        type: string
-        required: false
-        description: ChEBI identifier (CHEBI:NNNNN format).
-        ontology_term: CHEBI:identification
+    - name: last_name
+      type: string
+      required: true
+      description: Last name
 
-      - name: inchi
-        codename: inchi
-        type: string
-        required: false
-        description: IUPAC International Chemical Identifier (InChI).
-        ontology_term: MTBLS:inchi
+    - name: email
+      type: string
+      required: true
+      description: Email address
 
-      - name: inchi_key
-        codename: inchi_key
-        type: string
-        required: false
-        description: InChIKey hash of the structure.
-        ontology_term: MTBLS:inchi_key
+    - name: affiliation
+      type: string
+      required: false
+      description: Institutional affiliation
 
-      - name: smiles
-        codename: smiles
-        type: string
-        required: false
-        description: SMILES structure representation.
-        ontology_term: MTBLS:smiles
+    - name: orcid
+      type: string
+      required: false
+      description: ORCID identifier
 
-      - name: hmdb_id
-        codename: hmdb_id
-        type: string
-        required: false
-        description: Human Metabolome Database identifier.
-        ontology_term: MTBLS:hmdb_id
+    - name: roles
+      type: list
+      items: string
+      required: false
+      description: Roles in the investigation
 
-      - name: pubchem_cid
-        codename: pubchem_cid
-        type: string
-        required: false
-        description: PubChem Compound Identifier.
-        ontology_term: MTBLS:pubchem_cid
-
-      - name: kegg_id
-        codename: kegg_id
-        type: string
-        required: false
-        description: KEGG Compound identifier.
-        ontology_term: MTBLS:kegg_id
-
-      - name: lipidmaps_id
-        codename: lipidmaps_id
-        type: string
-        required: false
-        description: LIPID MAPS identifier (for lipids).
-        ontology_term: MTBLS:lipidmaps_id
-
-      - name: retention_time
-        codename: retention_time
-        type: float
-        required: false
-        description: Chromatographic retention time in minutes.
-        ontology_term: MTBLS:retention_time
-        constraints:
-          minimum: 0
-
-      - name: retention_index
-        codename: retention_index
-        type: float
-        required: false
-        description: Retention index (for GC-MS).
-        ontology_term: MTBLS:retention_index
-
-      - name: mass_to_charge
-        codename: mass_to_charge
-        type: float
-        required: false
-        description: Mass-to-charge ratio (m/z) of detected ion.
-        ontology_term: MS:1000040
-
-      - name: chemical_formula
-        codename: chemical_formula
-        type: string
-        required: false
-        description: Molecular formula of the compound.
-        ontology_term: MTBLS:chemical_formula
-
-      - name: msi_level
-        codename: msi_level
-        type: integer
-        required: true
-        description: MSI identification confidence level (1=identified, 2=putatively annotated, 3=putatively characterized compound class, 4=unknown).
-        ontology_term: MTBLS:msi_level
-        constraints:
-          minimum: 1
-          maximum: 4
-
-      - name: description
-        codename: description
-        type: string
-        required: false
-        description: Description of how the identification was made.
-        ontology_term: MTBLS:description
-
-      - name: assay_ref
-        codename: assay_ref
-        type: string
-        required: false
-        description: Reference to the assay that produced this assignment.
-        ontology_term: MTBLS:assay_ref
-        reference: Assay.file_name
-
-  RawSpectralData:
-    ontology_term: MTBLS:raw_spectral_data
-    description: >
-      A raw spectral data file generated by a metabolomics assay.
-      Includes file location and integrity checksum.
-    example:
-      filename: sample-drought-001.mzML
-      file_uri: files/sample-drought-001.mzML
-      format: mzML
-      checksum: d41d8cd98f00b204e9800998ecf8427e
+  Publication:
+    ontology_term: mtbls:Publication
+    description: A publication associated with the investigation.
     fields:
-      - name: filename
-        codename: filename
-        type: string
-        required: true
-        description: Name of the raw data file.
-        ontology_term: MTBLS:filename
+    - name: title
+      type: string
+      required: true
+      description: Publication title
 
-      - name: file_uri
-        codename: file_uri
-        type: string
-        required: false
-        description: Path or URI to the data file.
-        ontology_term: MTBLS:file_uri
+    - name: authors
+      type: string
+      required: false
+      description: Author list
 
-      - name: format
-        codename: format
-        type: string
-        required: true
-        description: File format (e.g., mzML, mzXML, raw, wiff, nmrML).
-        ontology_term: MTBLS:file_format
-        constraints:
-          enum:
-            - mzML
-            - mzXML
-            - mzData
-            - raw
-            - wiff
-            - d
-            - nmrML
-            - FID
-            - 1r
-            - netCDF
-            - CDF
+    - name: doi
+      type: string
+      required: false
+      description: Digital Object Identifier
 
-      - name: checksum
-        codename: checksum
-        type: string
-        required: false
-        description: MD5 checksum for file integrity verification.
-        ontology_term: MTBLS:checksum
+    - name: pubmed_id
+      type: string
+      required: false
+      description: PubMed ID
 
-      - name: checksum_type
-        codename: checksum_type
-        type: string
-        required: false
-        description: Type of checksum (default MD5).
-        ontology_term: MTBLS:checksum_type
-        constraints:
-          enum:
-            - MD5
-            - SHA-256
-
-      - name: assay_ref
-        codename: assay_ref
-        type: string
-        required: false
-        description: Reference to the assay that generated this file.
-        ontology_term: MTBLS:assay_ref
-        reference: Assay.file_name
-
-  ProcessedData:
-    ontology_term: MTBLS:processed_data
-    description: >
-      A processed data file derived from raw spectral data,
-      such as peak lists, quantification tables, or statistical results.
-    example:
-      filename: metabolite_quantification.tsv
-      file_uri: files/metabolite_quantification.tsv
-      format: tsv
-      data_type: quantification matrix
-    fields:
-      - name: filename
-        codename: filename
-        type: string
-        required: true
-        description: Name of the processed data file.
-        ontology_term: MTBLS:filename
-
-      - name: file_uri
-        codename: file_uri
-        type: string
-        required: false
-        description: Path or URI to the data file.
-        ontology_term: MTBLS:file_uri
-
-      - name: format
-        codename: format
-        type: string
-        required: true
-        description: File format (e.g., tsv, csv, xlsx, maf).
-        ontology_term: MTBLS:file_format
-        constraints:
-          enum:
-            - tsv
-            - csv
-            - xlsx
-            - maf
-            - txt
-            - json
-
-      - name: data_type
-        codename: data_type
-        type: string
-        required: false
-        description: Type of processed data (e.g., peak list, quantification matrix).
-        ontology_term: MTBLS:data_type
-
-      - name: description
-        codename: description
-        type: string
-        required: false
-        description: Description of the processed data content.
-        ontology_term: MTBLS:description
-
-      - name: derived_from
-        codename: derived_from
-        type: list
-        items: string
-        required: false
-        description: References to raw data files this was derived from.
-        ontology_term: MTBLS:derived_from
+    - name: status
+      type: string
+      required: false
+      description: Publication status
