@@ -11,6 +11,10 @@ graph TB
         MCP[MCP Server]
     end
 
+    subgraph PublicAPI["Public API"]
+        Client[MetaseedClient]
+    end
+
     subgraph Core["Core Layer"]
         Factory[Model Factory]
         Validators
@@ -29,7 +33,8 @@ graph TB
         Extract[Extraction Context]
     end
 
-    Interfaces --> Core
+    Interfaces --> PublicAPI
+    PublicAPI --> Core
     Core --> Data
     MCP --> Agent
     Agent --> Core
@@ -39,10 +44,11 @@ graph TB
 
 | Component | Responsibility |
 |-----------|----------------|
+| **[MetaseedClient](../api/client.md)** | Clean public API for programmatic access |
 | **Schema Specs** | YAML files defining fields, types, and ontology references |
 | **Model Factory** | Generates Pydantic models from specs at runtime |
 | **Validators** | Cross-field validation, ontology checks, referential integrity |
-| **ProfileFacade** | Fluent API for entity discovery and creation |
+| **ProfileFacade** | Fluent API for entity discovery and creation (internal) |
 | **[Entity Repository](entity-repository.md)** | Unified API for entity CRUD with pluggable backends |
 | **[Metadata Agent](metadata-agent.md)** | AI-assisted metadata extraction via MCP |
 | **CLI** | Command-line interface (Typer) |
@@ -55,8 +61,59 @@ graph TB
 2. **Ontology-backed**: References to PPEO, ISA, PROV-O ontologies
 3. **Validation-focused**: Multiple validation layers
 4. **Interface-agnostic**: Core logic separated from interfaces
+5. **Clean API boundary**: Public API decoupled from internal implementation
 
-## ProfileContext
+## Public API Design
+
+The `MetaseedClient` class provides a clean public API boundary that:
+
+- Wraps `ProfileFacade` to hide internal implementation details
+- Returns immutable domain objects (`Entity`, `EntityNode`, `FieldInfo`) instead of internal types
+- Uses a dedicated exception hierarchy (`MetaseedError` and subclasses)
+- Supports both installed profiles and custom spec dictionaries
+
+```python
+from metaseed import MetaseedClient
+
+client = MetaseedClient("miappe", "1.2")
+inv = client.create_entity("Investigation", {"unique_id": "INV-001", "title": "My Study"})
+result = client.validate()
+```
+
+For interactive use (Jupyter notebooks), the `ProfileFacade` convenience functions remain available:
+
+```python
+from metaseed import miappe
+m = miappe()
+m.Investigation.help()  # Tab completion and help
+```
+
+## Dependency Injection
+
+The codebase uses dependency injection via `ContextVar` for request-scoped state, avoiding module-level globals.
+
+### MCPContext
+
+`MCPContext` holds dependencies for MCP tools:
+
+```python
+from metaseed.agent.mcp.context import MCPContext
+
+context = MCPContext(
+    state=app_state,
+    get_entity_service=lambda: EntityService(repo),
+    dataset_factory=DatasetManagerFactory(),
+)
+set_context(context)
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `state` | `AppState` | Shared application state |
+| `get_entity_service` | `Callable` | Factory for EntityService instances |
+| `dataset_factory` | `DatasetManagerFactory` | Manages dataset persistence |
+
+### ProfileContext
 
 `ProfileContext` is an immutable dataclass that encapsulates the `(profile, version)` pair used throughout the codebase. This reduces parameter passing and provides a consistent cache key.
 

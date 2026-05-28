@@ -1,1 +1,1 @@
-"""Tests for REST API endpoints."""
+"""Tests for metaseed public API."""

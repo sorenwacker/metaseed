@@ -71,6 +71,7 @@ nav:
       - Dataset Repository: architecture/dataset-repository.md
       - UI Helpers: architecture/ui-helpers.md
   - API Reference:
+      - MetaseedClient: api/client.md
       - CLI: api/cli.md
       - Facade: api/facade.md
       - REST API: api/rest.md

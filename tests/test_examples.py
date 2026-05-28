@@ -321,7 +321,8 @@ def find_incomplete_entity_lists(
 
         if field.type == FieldType.LIST and field.items:
             if _is_entity_type(loader, field.items, version, profile):
-                if value is None or value == []:
+                # Only warn about empty lists if the field is required
+                if (value is None or value == []) and field.required:
                     warnings.append(f"Empty entity list: {field_path} (type: {field.items})")
                 elif isinstance(value, list):
                     for i, item in enumerate(value):
