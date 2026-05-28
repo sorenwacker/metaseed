@@ -4041,9 +4041,15 @@ details.sidebar-section summary:hover {
     gap: var(--space-sm);
 }
 
-.yaml-preview-actions .btn {
-    padding: var(--space-xs) var(--space-sm);
+.yaml-preview-actions .btn,
+.yaml-preview-actions a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 12px;
     font-size: 0.8125rem;
+    line-height: 1;
+    height: 28px;
 }
 
 .yaml-content {
