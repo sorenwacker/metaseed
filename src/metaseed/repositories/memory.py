@@ -106,10 +106,19 @@ class MemoryEntityRepository(EntityRepository):
                 raise ValueError(f"Parent entity not found: {parent_id}")
             parent = self._state.nodes_by_id[parent_id]
 
+            # Validate parent-child relationship
+            parent_helper = getattr(facade, parent.entity_type, None)
+            if parent_helper:
+                valid_child_types = list(parent_helper.nested_fields.values())
+                if entity_type not in valid_child_types:
+                    raise ValueError(
+                        f"Invalid parent: {parent.entity_type} cannot contain {entity_type}. "
+                        f"Valid child types: {valid_child_types or 'none'}"
+                    )
+
             # Auto-fill child's reference to parent
             ref_field = find_parent_ref_field(helper, parent.entity_type)
-            if ref_field and ref_field not in data:
-                parent_helper = getattr(facade, parent.entity_type, None)
+            if ref_field and ref_field not in data and parent_helper:
                 parent_identifier = get_identifier_from_instance(parent.instance, parent_helper)
                 if parent_identifier:
                     data[ref_field] = parent_identifier

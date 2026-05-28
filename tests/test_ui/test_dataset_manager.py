@@ -1,4 +1,4 @@
-"""Tests for DatasetManager."""
+"""Tests for DatasetManager and DatasetManagerFactory."""
 
 from unittest.mock import MagicMock, patch
 
@@ -7,9 +7,7 @@ import pytest
 from metaseed.repositories.dataset_repository import DatasetData, DatasetInfo, DatasetRepository
 from metaseed.ui.dataset_manager import (
     DatasetManager,
-    get_manager,
-    reset_manager,
-    set_repository,
+    DatasetManagerFactory,
 )
 from metaseed.ui.state import AppState
 
@@ -58,14 +56,6 @@ class MockDatasetRepository(DatasetRepository):
 
     def exists(self, name: str) -> bool:
         return name in self.datasets
-
-
-@pytest.fixture(autouse=True)
-def reset_module_state():
-    """Reset module-level state before each test."""
-    reset_manager()
-    yield
-    reset_manager()
 
 
 class TestDatasetManager:
@@ -178,64 +168,71 @@ class TestDatasetManager:
         assert manager.current_dataset is None
 
 
-class TestModuleLevelFunctions:
-    """Tests for module-level DI functions."""
+class TestDatasetManagerFactory:
+    """Tests for DatasetManagerFactory class."""
 
-    def test_set_repository(self):
-        """set_repository should configure custom repository."""
-        custom_repo = MockDatasetRepository()
-        set_repository(custom_repo)
-
+    def test_factory_creates_manager(self):
+        """Factory should create manager for state."""
+        factory = DatasetManagerFactory()
         state = AppState(profile="miappe")
-        manager = get_manager(state)
+
+        manager = factory.get_manager(state)
+
+        assert isinstance(manager, DatasetManager)
+        assert manager._state is state
+
+    def test_factory_uses_custom_repository(self):
+        """Factory should use custom repository."""
+        custom_repo = MockDatasetRepository()
+        factory = DatasetManagerFactory(sync_repo=custom_repo)
+        state = AppState(profile="miappe")
+
+        manager = factory.get_manager(state)
 
         assert manager.repository is custom_repo
 
-    def test_get_manager_creates_default(self):
-        """get_manager should create FilesystemDatasetRepository by default."""
-        with patch("metaseed.ui.dataset_manager.FilesystemDatasetRepository") as MockRepo:
-            mock_repo = MagicMock()
-            MockRepo.return_value = mock_repo
-
-            state = AppState(profile="miappe")
-            manager = get_manager(state)
-
-            assert manager.repository is mock_repo
-
-    def test_get_manager_reuses_with_same_state(self):
-        """get_manager should return same instance for same state."""
+    def test_factory_reuses_manager_for_same_state(self):
+        """Factory should return same manager for same state."""
+        factory = DatasetManagerFactory()
         state = AppState(profile="miappe")
 
-        manager1 = get_manager(state)
-        manager2 = get_manager(state)
+        manager1 = factory.get_manager(state)
+        manager2 = factory.get_manager(state)
 
         assert manager1 is manager2
 
-    def test_get_manager_recreates_with_different_state(self):
-        """get_manager should create new instance for different state."""
+    def test_factory_creates_new_manager_for_different_state(self):
+        """Factory should create new manager for different state."""
+        factory = DatasetManagerFactory()
         state1 = AppState(profile="miappe")
         state2 = AppState(profile="isa")
 
-        manager1 = get_manager(state1)
-        manager2 = get_manager(state2)
+        manager1 = factory.get_manager(state1)
+        manager2 = factory.get_manager(state2)
 
         assert manager1 is not manager2
 
-    def test_reset_manager(self):
-        """reset_manager should clear module state."""
-        custom_repo = MockDatasetRepository()
-        set_repository(custom_repo)
-
-        state = AppState(profile="miappe")
-        manager1 = get_manager(state)
-
-        reset_manager()
-
-        # After reset, a new manager with default repo should be created
+    def test_factory_default_repository(self):
+        """Factory should use FilesystemDatasetRepository by default."""
         with patch("metaseed.ui.dataset_manager.FilesystemDatasetRepository") as MockRepo:
             mock_repo = MagicMock()
             MockRepo.return_value = mock_repo
 
-            manager2 = get_manager(state)
+            factory = DatasetManagerFactory()
+            state = AppState(profile="miappe")
+            manager = factory.get_manager(state)
 
-            assert manager2 is not manager1
+            assert manager.repository is mock_repo
+
+    def test_sync_repo_property(self):
+        """Factory should expose sync_repo property."""
+        custom_repo = MockDatasetRepository()
+        factory = DatasetManagerFactory(sync_repo=custom_repo)
+
+        assert factory.sync_repo is custom_repo
+
+    def test_async_repo_property(self):
+        """Factory should expose async_repo property."""
+        factory = DatasetManagerFactory()
+
+        assert factory.async_repo is None

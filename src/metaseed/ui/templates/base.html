@@ -4,17 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Metaseed</title>
-    <link rel="icon" type="image/svg+xml" href="{{ base_url }}/static/images/metaseed-icon.svg">
-    <link rel="icon" type="image/png" sizes="128x128" href="{{ base_url }}/static/images/metaseed-icon-128.png">
+    <link rel="icon" type="image/svg+xml" href="/static/images/metaseed-icon.svg">
+    <link rel="icon" type="image/png" sizes="128x128" href="/static/images/metaseed-icon-128.png">
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
     <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
-    <link rel="stylesheet" href="{{ base_url }}/static/css/style.css?v=69">
+    <link rel="stylesheet" href="/static/css/style.css?v=70">
 </head>
 <body hx-headers='{"X-Requested-With": "XMLHttpRequest"}'>
     <div class="layout">
         <header class="header">
             <h1 class="header-title">
-                <img src="{{ base_url }}/static/images/metaseed-logo-light.svg" alt="Metaseed" class="header-logo">
+                <img src="/static/images/metaseed-logo-light.svg" alt="Metaseed" class="header-logo">
             </h1>
             <nav class="header-nav">
                 <a href="{{ base_url }}/" class="nav-btn active" data-testid="nav-datasets">Datasets</a>
@@ -23,6 +23,9 @@
             </nav>
             <div class="header-actions">
                 {% if tree_nodes %}
+                <button id="validate-btn" class="btn btn-header" onclick="validateDataset()" data-testid="btn-validate" title="Validate all entities">
+                    Validate
+                </button>
                 <button id="graph-toggle" class="btn btn-header" onclick="toggleGraph()" data-testid="btn-graph">
                     Graph
                 </button>
@@ -77,6 +80,14 @@
 
     <div id="notification-container" class="notification-container"></div>
 
+    <div id="validation-panel" class="validation-panel hidden">
+        <div class="validation-panel-header">
+            <h3>Dataset Validation</h3>
+            <button class="validation-panel-close" onclick="closeValidationPanel()">&times;</button>
+        </div>
+        <div id="validation-results" class="validation-panel-content"></div>
+    </div>
+
     {% include "components/lookup_modal.html" %}
 
     <script>
@@ -84,12 +95,12 @@
         const BASE_URL = "{{ base_url }}";
     </script>
     <!-- Modular JS files -->
-    <script src="{{ base_url }}/static/js/core.js?v=1"></script>
-    <script src="{{ base_url }}/static/js/validation.js?v=1"></script>
-    <script src="{{ base_url }}/static/js/table-edit.js?v=1"></script>
-    <script src="{{ base_url }}/static/js/lookup.js?v=1"></script>
-    <script src="{{ base_url }}/static/js/graph.js?v=1"></script>
-    <script src="{{ base_url }}/static/js/mcp.js?v=1"></script>
-    <script src="{{ base_url }}/static/js/dataset.js?v=1"></script>
+    <script src="/static/js/core.js?v=1"></script>
+    <script src="/static/js/validation.js?v=1"></script>
+    <script src="/static/js/table-edit.js?v=1"></script>
+    <script src="/static/js/lookup.js?v=1"></script>
+    <script src="/static/js/graph.js?v=1"></script>
+    <script src="/static/js/mcp.js?v=1"></script>
+    <script src="/static/js/dataset.js?v=1"></script>
 </body>
 </html>

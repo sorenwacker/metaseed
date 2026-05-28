@@ -104,13 +104,42 @@ def register_core_routes(
             Should not have a trailing slash. Defaults to empty string.
     """
 
+    def _get_dataset_manager(state: AppState):
+        """Get the dataset manager from context."""
+        context = getattr(app.state, "mcp_context", None)
+        if context is not None:
+            return context.dataset_factory.get_manager(state)
+
+        # Fallback: create factory directly
+        from ..dataset_manager import DatasetManagerFactory
+
+        factory = DatasetManagerFactory()
+        return factory.get_manager(state)
+
+    def _get_dataset_base_url(state: AppState) -> str:
+        """Get the base URL for the current dataset."""
+        manager = _get_dataset_manager(state)
+        if manager.current_dataset:
+            return f"{base_url}/dataset/{manager.current_dataset}"
+        return base_url
+
+    def _index_context(state: AppState, **extra: Any) -> dict:
+        """Build standard context for index.html rendering."""
+        facade = state.get_or_create_facade()
+        return {
+            "tree_nodes": state.get_tree_data(),
+            "root_types": state.get_root_entity_types()[:3],
+            "current_profile": state.profile,
+            "version": facade.version,
+            "base_url": _get_dataset_base_url(state),
+            **extra,
+        }
+
     @app.get("/", response_class=HTMLResponse)
     async def index(request: Request) -> HTMLResponse:
         """Render the datasets list page."""
-        from ..dataset_manager import get_manager
-
         state = get_state()
-        manager = get_manager(state)
+        manager = _get_dataset_manager(state)
         datasets = manager.list_datasets()
 
         return templates.TemplateResponse(
@@ -136,15 +165,17 @@ def register_core_routes(
     @app.get("/dataset/{name}/edit", response_class=HTMLResponse)
     async def edit_dataset(request: Request, name: str) -> HTMLResponse:
         """Edit a specific dataset."""
-        from ..dataset_manager import get_manager
-
         state = get_state()
-        manager = get_manager(state)
+        manager = _get_dataset_manager(state)
 
         # Load the dataset if not already loaded
         if manager.current_dataset != name:
             try:
                 manager.load_dataset(name)
+                # Sync current dataset name to state for MCP auto-save
+                from ..datasets import set_current_dataset_name
+
+                set_current_dataset_name(state, name)
                 # Clear editing state when switching datasets to prevent auto-redirect
                 state.editing_node_id = None
             except FileNotFoundError:
@@ -558,10 +589,7 @@ def register_entity_crud_routes(
                         "root_types": state.get_root_entity_types()[:3],
                         "current_profile": state.profile,
                         "version": facade.version,
-                        "notification": {
-                            "type": msg_type,
-                            "message": msg,
-                        },
+                        "notification": {"type": msg_type, "message": msg},
                     },
                 )
 
@@ -611,10 +639,7 @@ def register_entity_crud_routes(
                 "root_types": state.get_root_entity_types()[:3],
                 "current_profile": state.profile,
                 "version": facade.version,
-                "notification": {
-                    "type": "warning",
-                    "message": f"Deleted {entity_type}: {label}",
-                },
+                "notification": {"type": "warning", "message": f"Deleted {entity_type}: {label}"},
             },
         )
 

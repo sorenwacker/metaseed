@@ -1,5 +1,31 @@
 # Changelog
 
+## v0.4.0 (2026-05-28)
+
+### Breaking Changes
+- Remove global state management in favor of dependency injection
+- Remove backward-compatibility globals from dataset_manager.py
+- MCPContext now required for MCP tools
+
+### New Features
+- Add full dataset validation in UI (Validate button in header)
+- Add parent-child relationship validation in MCP entity creation
+- Add DatasetManagerFactory for managing dataset managers per AppState
+
+### Bug Fixes
+- Fix state synchronization between MCP and UI (root cause of dataset loading bugs)
+- Fix graph not updating when MCP creates entities
+- Fix Explorer and Spec Builder routing
+
+### MIAPPE Profiles
+- Add events field to ObservationUnit in MIAPPE 1.1 and 1.2 (matches original spec: "0+ per study/observation unit")
+- MIAPPE-HTP already had this field
+
+### Internal
+- Create MCPContext dataclass for explicit dependency injection
+- Centralize state management in app.state.mcp_context
+- Update MCP tool prompts to emphasize importing only explicit data
+
 ## v0.3.9 (2026-05-28)
 
 ### Spec Builder Enhancements

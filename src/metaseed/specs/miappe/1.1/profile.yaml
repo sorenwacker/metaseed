@@ -807,6 +807,12 @@ entities:
       required: false
       description: Samples from this unit.
       ontology_term: PPEO:hasPart
+    - name: events
+      type: list
+      items: Event
+      required: false
+      description: Events affecting this observation unit.
+      ontology_term: PPEO:hasEvent
     - name: external_references
       type: list
       items: string

@@ -24,8 +24,8 @@ def temp_datasets_dir(tmp_path):
     with (
         patch("metaseed.repositories.filesystem_dataset.DEFAULT_DATASETS_DIR", datasets_dir),
         patch("metaseed.ui.datasets.DATASETS_DIR", datasets_dir),
-        patch("metaseed.ui.dataset_manager._repository", None),
-        patch("metaseed.ui.dataset_manager._default_manager", None),
+        # Reset the module-level factory so it picks up the new directory
+        patch("metaseed.ui.datasets._factory", None),
     ):
         yield datasets_dir
 

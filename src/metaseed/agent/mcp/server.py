@@ -25,68 +25,111 @@ Prompts:
 from __future__ import annotations
 
 import json
+from typing import TYPE_CHECKING
 
 from mcp.server.fastmcp import FastMCP
 
 from metaseed.agent.parsers.registry import create_default_registry
 from metaseed.specs.loader import SpecLoader, SpecLoadError
 
-# Global state for MCP server
-# Uses FileEntityRepository for file-based synchronization with UI
-_mcp_state = None
-_entity_service = None
+if TYPE_CHECKING:
+    from metaseed.agent.mcp.context import MCPContext
+
+# Module-level context reference for when context is injected
+_context: MCPContext | None = None
+
+
+def set_context(context: MCPContext) -> None:
+    """Set the MCP context for dependency injection.
+
+    Args:
+        context: MCPContext instance with all dependencies.
+    """
+    global _context
+    _context = context
+
+
+def get_context() -> MCPContext | None:
+    """Get the current MCP context if set."""
+    return _context
 
 
 def get_mcp_state():
-    """Get the shared MCP state, creating it if needed."""
-    global _mcp_state
-    if _mcp_state is None:
-        from metaseed.ui.state import AppState
+    """Get the shared MCP state.
 
-        _mcp_state = AppState()
-    return _mcp_state
+    Prefers context if available, otherwise creates a new AppState.
+    This function maintains backward compatibility for standalone MCP server mode.
+    """
+    if _context is not None:
+        return _context.state
+
+    from metaseed.ui.state import AppState
+
+    return AppState()
 
 
 def set_mcp_state(state):
-    """Set the MCP state (called by UI to share state)."""
-    global _mcp_state, _entity_service
-    _mcp_state = state
-    _entity_service = None  # Reset service to use new state
+    """Set the MCP state for tests and standalone mode.
+
+    Creates a new context with the given state, allowing tests
+    to inject state without going through the full app initialization.
+    """
+    from metaseed.agent.mcp.context import MCPContext
+    from metaseed.repositories.memory import MemoryEntityRepository
+    from metaseed.ui.dataset_manager import DatasetManagerFactory
+    from metaseed.ui.services.entities import EntityService
+
+    context = MCPContext(
+        state=state,
+        get_entity_service=lambda: EntityService(MemoryEntityRepository(state)),
+        dataset_factory=DatasetManagerFactory(),
+    )
+    set_context(context)
 
 
 def get_entity_service():
     """Get the entity service for operations.
 
-    Uses MemoryEntityRepository wrapping the MCP state so that
-    state changes are reflected immediately.
+    Uses context if available, otherwise creates a fresh service.
     """
-    global _entity_service
-    if _entity_service is None:
-        from metaseed.repositories.memory import MemoryEntityRepository
-        from metaseed.ui.services.entities import EntityService
+    if _context is not None:
+        return _context.get_entity_service()
 
-        state = get_mcp_state()
-        repo = MemoryEntityRepository(state)
-        _entity_service = EntityService(repo)
+    from metaseed.repositories.memory import MemoryEntityRepository
+    from metaseed.ui.services.entities import EntityService
 
-    return _entity_service
+    state = get_mcp_state()
+    repo = MemoryEntityRepository(state)
+    return EntityService(repo)
 
 
 def reset_entity_service():
-    """Reset the entity service (called when dataset changes)."""
-    global _entity_service
-    _entity_service = None
+    """Reset the entity service (no-op with context injection).
+
+    With context injection, get_entity_service() creates a fresh service
+    each call, so no reset is needed.
+    """
+    pass
 
 
-def create_server(name: str = "metaseed") -> FastMCP:
+def create_server(
+    name: str = "metaseed",
+    context: MCPContext | None = None,
+) -> FastMCP:
     """Create and configure the MCP server.
 
     Args:
         name: Server name.
+        context: Optional MCPContext for dependency injection.
+            If provided, tools will use context dependencies.
+            If None, tools will use module-level state (backward compatible).
 
     Returns:
         Configured FastMCP server instance.
     """
+    if context is not None:
+        set_context(context)
+
     mcp = FastMCP(name=name)
     _parser_registry = create_default_registry()
 
@@ -174,37 +217,51 @@ def create_server(name: str = "metaseed") -> FastMCP:
         """Guide for extracting metadata from files."""
         return f"""# Metadata Extraction Guide for {profile}
 
+## Critical Rules
+
+1. **Only import explicitly stated information** - Never assume, infer, or make up data
+2. **Leave fields empty if not mentioned** - Don't fill fields with guesses or defaults
+3. **Ask the user when uncertain** - If information is ambiguous, ask for clarification
+4. **Quote source text** - When possible, reference the exact text being extracted
+5. **Validate parent relationships** - Check that entities are placed under valid parents
+
 ## Overview
-This guide helps you extract structured metadata from source files (CSV, Excel, JSON)
-into standardized formats like MIAPPE, ISA, or Darwin Core.
+Extract structured metadata from source files into standardized formats.
 
 ## Workflow
 
-### 1. Discover Available Profiles
-Use `list_profiles` to see available metadata standards.
+### 1. Read the Source File
+Read and understand the source document completely before extracting.
 
-### 2. Understand the Schema
-Use `get_profile_schema` to see entities and their fields.
+### 2. Identify Explicit Information
+List only the facts explicitly stated in the document:
+- Names, IDs, dates mentioned
+- Descriptions and values provided
+- Relationships clearly defined
 
-### 3. Parse Source File
-Use `parse_source_file` to understand the structure of your data.
+### 3. Map to Schema
+Use `get_profile_schema` to see available entities and fields.
+Only create entities for which you have explicit data.
 
-### 4. Analyze Mappings
-Use `analyze_mapping` to get suggested column-to-field mappings.
+### 4. Create Entities with Correct Hierarchy
+- Check parent-child relationships in the schema
+- PhenotypingSample goes under ObservationUnit, not Study
+- Use `get_entity_fields` to see valid parent types
 
-### 5. Extract Entities
-Use `extract_entities` with your mapping to extract data.
+### 5. Validate
+Use `validate_dataset` to check for errors.
 
-### 6. Validate
-Use `validate_extracted` to check for errors.
-
-### 7. Export
-Use `export_metadata` to format the final output.
+## What NOT to Do
+- Don't create placeholder entities without real data
+- Don't guess sample IDs or observation unit IDs
+- Don't assume experimental design if not stated
+- Don't invent dates, locations, or parameters
+- Don't fill optional fields with made-up values
 
 ## Tips
 - Start with the root entity (usually Investigation)
 - Map required fields first
-- Use parent_id references to link nested entities
+- Ask user about missing required fields
 """
 
     @mcp.prompt()

@@ -22,9 +22,9 @@ from __future__ import annotations
 
 import re
 from abc import ABC
-from dataclasses import asdict
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Generic, TypeVar
+from typing import TYPE_CHECKING, Generic, TypeVar
+from weakref import WeakValueDictionary
 
 from metaseed.repositories.dataset_repository import (
     AsyncDatasetRepository,
@@ -343,116 +343,75 @@ class AsyncDatasetManager(BaseDatasetManager[AsyncDatasetRepository]):
             pass
 
 
-_default_manager: DatasetManager | None = None
-_async_manager: AsyncDatasetManager | None = None
-_repository: DatasetRepository | None = None
-_async_repository: AsyncDatasetRepository | None = None
+class DatasetManagerFactory:
+    """Factory for creating DatasetManager instances tied to AppState.
 
+    Manages DatasetManager instances using WeakValueDictionary to allow
+    garbage collection when AppState instances are no longer referenced.
+    This avoids global state by associating each manager with its AppState.
 
-def set_repository(repo: DatasetRepository) -> None:
-    """Set the sync repository for dataset operations.
-
-    Call this before app startup to use a custom repository
-    (e.g., database-backed for metaseed-hub).
-
-    Args:
-        repo: DatasetRepository implementation to use.
+    Usage:
+        factory = DatasetManagerFactory()
+        manager = factory.get_manager(state)
     """
-    global _repository, _default_manager
-    _repository = repo
-    _default_manager = None
 
+    def __init__(
+        self,
+        sync_repo: DatasetRepository | None = None,
+        async_repo: AsyncDatasetRepository | None = None,
+    ) -> None:
+        """Initialize factory with optional custom repositories.
 
-def set_async_repository(repo: AsyncDatasetRepository) -> None:
-    """Set the async repository for dataset operations.
+        Args:
+            sync_repo: Sync repository implementation (default: FilesystemDatasetRepository).
+            async_repo: Async repository implementation (default: None).
+        """
+        self._sync_repo = sync_repo or FilesystemDatasetRepository()
+        self._async_repo = async_repo
+        self._managers: WeakValueDictionary[int, DatasetManager] = WeakValueDictionary()
+        self._async_managers: WeakValueDictionary[int, AsyncDatasetManager] = WeakValueDictionary()
 
-    Call this before app startup to use an async repository
-    (e.g., async SQLAlchemy for metaseed-hub).
+    @property
+    def sync_repo(self) -> DatasetRepository:
+        """Get the sync repository."""
+        return self._sync_repo
 
-    Args:
-        repo: AsyncDatasetRepository implementation to use.
-    """
-    global _async_repository, _async_manager
-    _async_repository = repo
-    _async_manager = None
+    @property
+    def async_repo(self) -> AsyncDatasetRepository | None:
+        """Get the async repository."""
+        return self._async_repo
 
+    def get_manager(self, state: AppState) -> DatasetManager:
+        """Get or create a DatasetManager for the given state.
 
-def get_repository() -> DatasetRepository:
-    """Get the configured sync repository.
+        Args:
+            state: AppState instance to create manager for.
 
-    Returns:
-        The configured repository, or FilesystemDatasetRepository as default.
-    """
-    global _repository
-    if _repository is None:
-        _repository = FilesystemDatasetRepository()
-    return _repository
+        Returns:
+            DatasetManager instance tied to the state.
+        """
+        state_id = id(state)
+        manager = self._managers.get(state_id)
+        if manager is None:
+            manager = DatasetManager(self._sync_repo, state)
+            self._managers[state_id] = manager
+        return manager
 
+    def get_async_manager(self, state: AppState) -> AsyncDatasetManager | None:
+        """Get or create an AsyncDatasetManager for the given state.
 
-def get_async_repository() -> AsyncDatasetRepository | None:
-    """Get the configured async repository.
+        Args:
+            state: AppState instance to create manager for.
 
-    Returns:
-        The configured async repository, or None if not set.
-    """
-    return _async_repository
+        Returns:
+            AsyncDatasetManager instance, or None if no async repository is set.
+        """
+        if self._async_repo is None:
+            return None
 
-
-def get_manager(state: AppState) -> DatasetManager:
-    """Get or create the sync dataset manager.
-
-    Args:
-        state: AppState instance to use.
-
-    Returns:
-        DatasetManager instance.
-    """
-    global _default_manager
-
-    if _default_manager is None or _default_manager._state is not state:
-        repo = _repository or FilesystemDatasetRepository()
-        _default_manager = DatasetManager(repo, state)
-
-    return _default_manager
-
-
-def get_async_manager(state: AppState) -> AsyncDatasetManager | None:
-    """Get or create the async dataset manager.
-
-    Args:
-        state: AppState instance to use.
-
-    Returns:
-        AsyncDatasetManager instance, or None if no async repository is set.
-    """
-    global _async_manager
-
-    if _async_repository is None:
-        return None
-
-    if _async_manager is None or _async_manager._state is not state:
-        _async_manager = AsyncDatasetManager(_async_repository, state)
-
-    return _async_manager
-
-
-def reset_manager() -> None:
-    """Reset all module-level managers.
-
-    Useful for testing or when switching repositories.
-    """
-    global _default_manager, _repository, _async_manager, _async_repository
-    _default_manager = None
-    _repository = None
-    _async_manager = None
-    _async_repository = None
-
-
-def list_datasets_compat() -> list[dict[str, Any]]:
-    """List datasets (backward-compatible dict format).
-
-    Returns:
-        List of dataset info dicts.
-    """
-    repo = get_repository()
-    return [asdict(d) for d in repo.list()]
+        state_id = id(state)
+        manager = self._async_managers.get(state_id)
+        if manager is None:
+            manager = AsyncDatasetManager(self._async_repo, state)
+            self._async_managers[state_id] = manager
+        return manager

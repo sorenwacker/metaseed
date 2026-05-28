@@ -424,6 +424,7 @@ entities:
       required: true
       description: Reference to the parent Investigation.
       ontology_term: PPEO:belongsToInvestigation
+      reference: Investigation.unique_id
     - name: title
       codename: studyName
       type: string
@@ -956,6 +957,13 @@ entities:
       required: false
       description: Samples from this unit.
       ontology_term: PPEO:hasPart
+    - name: events
+      codename: events
+      type: list
+      items: Event
+      required: false
+      description: Events affecting this observation unit.
+      ontology_term: PPEO:hasEvent
     - name: external_references
       codename: externalReferences
       type: list

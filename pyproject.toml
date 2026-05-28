@@ -111,7 +111,6 @@ ignore = [
     "TCH001",  # move import to type-checking block (not always desirable)
     "TCH002",  # move import to type-checking block (not always desirable)
     "TCH003",  # move stdlib import to type-checking block (not always desirable)
-    "PLW0603", # global statement (needed for module-level state)
     "TRY300",  # return in try block (acceptable pattern)
     "PLW2901", # loop variable overwritten (intentional type conversion)
     "PERF401", # list.extend vs append (marginal perf, less readable)

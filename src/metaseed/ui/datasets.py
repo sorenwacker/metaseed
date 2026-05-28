@@ -1,10 +1,7 @@
 """Dataset persistence for the UI.
 
-This module provides backward-compatible functions for dataset operations.
-All operations delegate to DatasetManager for actual implementation.
-
-For new code, prefer using DatasetManager directly via:
-    from metaseed.ui.dataset_manager import get_manager
+This module provides helper functions for dataset operations.
+All operations use DatasetManagerFactory for proper dependency injection.
 """
 
 from __future__ import annotations
@@ -14,12 +11,28 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from metaseed.repositories.dataset_repository import DatasetRepository
-from metaseed.repositories.filesystem_dataset import DEFAULT_DATASETS_DIR
+from metaseed.repositories.filesystem_dataset import (
+    DEFAULT_DATASETS_DIR,
+    FilesystemDatasetRepository,
+)
 
 if TYPE_CHECKING:
     from .state import AppState
 
 DATASETS_DIR = DEFAULT_DATASETS_DIR
+
+# Module-level factory for dataset operations (created on first use)
+_factory = None
+
+
+def _get_factory():
+    """Get or create the module-level factory."""
+    global _factory
+    if _factory is None:
+        from .dataset_manager import DatasetManagerFactory
+
+        _factory = DatasetManagerFactory()
+    return _factory
 
 
 def get_datasets_dir() -> Path:
@@ -46,9 +59,8 @@ def list_datasets() -> list[dict[str, Any]]:
     Returns:
         List of dataset info dicts with name, profile, version, entity_count, modified.
     """
-    from .dataset_manager import list_datasets_compat
-
-    return list_datasets_compat()
+    repo = FilesystemDatasetRepository()
+    return [asdict(d) for d in repo.list()]
 
 
 def save_dataset(state: AppState, name: str) -> dict[str, Any]:
@@ -64,9 +76,8 @@ def save_dataset(state: AppState, name: str) -> dict[str, Any]:
     Raises:
         ValueError: If name is invalid.
     """
-    from .dataset_manager import DatasetManager, get_repository
-
-    manager = DatasetManager(get_repository(), state)
+    factory = _get_factory()
+    manager = factory.get_manager(state)
     result = manager.save_dataset(name)
     return asdict(result)
 
@@ -85,9 +96,8 @@ def load_dataset(state: AppState, name: str) -> dict[str, Any]:
         FileNotFoundError: If dataset doesn't exist.
         ValueError: If dataset is invalid.
     """
-    from .dataset_manager import DatasetManager, get_repository
-
-    manager = DatasetManager(get_repository(), state)
+    factory = _get_factory()
+    manager = factory.get_manager(state)
     result = manager.load_dataset(name)
     return asdict(result)
 
@@ -101,9 +111,8 @@ def delete_dataset(name: str) -> bool:
     Returns:
         True if deleted, False if not found.
     """
-    from .dataset_manager import get_repository
-
-    return get_repository().delete(name)
+    repo = FilesystemDatasetRepository()
+    return repo.delete(name)
 
 
 def get_current_dataset_name(state: AppState) -> str | None:
@@ -129,9 +138,18 @@ def auto_save(state: AppState) -> None:
     Args:
         state: AppState to save.
     """
-    from .dataset_manager import DatasetManager, get_repository
+    # Prefer MCP context factory if available (for test isolation)
+    try:
+        from metaseed.agent.mcp.server import _context
 
-    manager = DatasetManager(get_repository(), state)
+        if _context is not None:
+            factory = _context.dataset_factory
+        else:
+            factory = _get_factory()
+    except ImportError:
+        factory = _get_factory()
+
+    manager = factory.get_manager(state)
     manager._current = get_current_dataset_name(state)
     manager.auto_save()
     set_current_dataset_name(state, manager._current)

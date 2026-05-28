@@ -190,8 +190,8 @@ class TestMCPPrompts:
         result = extraction_guide.fn(profile="miappe")
 
         assert "Metadata Extraction Guide" in result
-        assert "list_profiles" in result
-        assert "parse_source_file" in result
+        assert "Only import explicitly stated information" in result
+        assert "get_profile_schema" in result
 
     def test_field_mapping_help_prompt(self) -> None:
         """Field mapping help prompt returns guidance."""
@@ -415,7 +415,6 @@ class TestMCPIntegration:
         """Test creating hierarchical entities and saving to disk."""
         from metaseed.agent.mcp.server import set_mcp_state
         from metaseed.repositories.filesystem_dataset import FilesystemDatasetRepository
-        from metaseed.ui import dataset_manager
         from metaseed.ui.state import AppState
 
         server = create_server()
@@ -426,9 +425,20 @@ class TestMCPIntegration:
         set_mcp_state(state)
 
         # Create a test repository using tmp_path
+        from metaseed.agent.mcp.context import MCPContext
+        from metaseed.agent.mcp.server import set_context
+        from metaseed.repositories.memory import MemoryEntityRepository
+        from metaseed.ui.dataset_manager import DatasetManagerFactory
+        from metaseed.ui.services.entities import EntityService
+
         test_repo = FilesystemDatasetRepository(datasets_dir=tmp_path)
-        original_repo = dataset_manager._repository
-        dataset_manager._repository = test_repo
+        factory = DatasetManagerFactory(sync_repo=test_repo)
+        context = MCPContext(
+            state=state,
+            get_entity_service=lambda: EntityService(MemoryEntityRepository(state)),
+            dataset_factory=factory,
+        )
+        set_context(context)
         try:
             # 1. Create Investigation
             create_fn = tools.get("create_entity")
@@ -498,7 +508,7 @@ class TestMCPIntegration:
             # Verify Investigation's studies field was updated
             assert "study-hierarchy-test" in saved_inv.get("studies", [])
         finally:
-            dataset_manager._repository = original_repo
+            set_context(None)
 
     def test_get_entity_tree_shows_hierarchy(self):
         """Test that get_entity_tree correctly shows parent-child relationships."""

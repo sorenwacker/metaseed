@@ -190,6 +190,16 @@ class EntityStore:
             if id_value:
                 self._index[str(id_value)] = node.id
 
+        # Also index by the entity's specific identifier field (e.g., investigation_id)
+        try:
+            helper = self._get_helper(entity_type)
+            if helper.identifier_field and helper.identifier_field not in IDENTIFIER_FIELDS:
+                id_value = data.get(helper.identifier_field)
+                if id_value:
+                    self._index[str(id_value)] = node.id
+        except (KeyError, AttributeError):
+            pass
+
         return node
 
     def _resolve_parent(
@@ -264,9 +274,22 @@ class EntityStore:
         if not node:
             return None
 
+        # Get helper for entity-specific identifier field
+        entity_id_field = None
+        try:
+            helper = self._get_helper(node.entity_type)
+            entity_id_field = helper.identifier_field
+        except (KeyError, AttributeError):
+            pass
+
+        # Build list of identifier fields to check
+        id_fields_to_check = list(IDENTIFIER_FIELDS)
+        if entity_id_field and entity_id_field not in id_fields_to_check:
+            id_fields_to_check.append(entity_id_field)
+
         # Remove old index entries
         old_data = node.instance.model_dump() if hasattr(node.instance, "model_dump") else {}
-        for id_field in IDENTIFIER_FIELDS:
+        for id_field in id_fields_to_check:
             old_value = old_data.get(id_field)
             if old_value and str(old_value) in self._index:
                 if self._index[str(old_value)] == node_id:
@@ -276,7 +299,7 @@ class EntityStore:
         node.instance = self._create_instance(node.entity_type, data)
 
         # Add new index entries
-        for id_field in IDENTIFIER_FIELDS:
+        for id_field in id_fields_to_check:
             new_value = data.get(id_field)
             if new_value:
                 self._index[str(new_value)] = node_id
@@ -302,7 +325,20 @@ class EntityStore:
             # Remove from index
             if n.instance and hasattr(n.instance, "model_dump"):
                 data = n.instance.model_dump()
-                for id_field in IDENTIFIER_FIELDS:
+
+                # Build list of identifier fields to check
+                id_fields_to_check = list(IDENTIFIER_FIELDS)
+                try:
+                    helper = self._get_helper(n.entity_type)
+                    if (
+                        helper.identifier_field
+                        and helper.identifier_field not in id_fields_to_check
+                    ):
+                        id_fields_to_check.append(helper.identifier_field)
+                except (KeyError, AttributeError):
+                    pass
+
+                for id_field in id_fields_to_check:
                     id_value = data.get(id_field)
                     if id_value and str(id_value) in self._index:
                         del self._index[str(id_value)]

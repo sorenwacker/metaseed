@@ -317,7 +317,7 @@ def _auto_create_back_reference(
     # Add back-reference to target entity if not exists
     back_ref_name = f"{entity_name.lower()}_id"
     has_back_ref = any(
-        f.parent_ref and f.parent_ref.startswith(f"{entity_name}.") for f in target_entity.fields
+        f.reference and f.reference.startswith(f"{entity_name}.") for f in target_entity.fields
     )
     if not has_back_ref:
         target_entity.fields.insert(
@@ -327,6 +327,6 @@ def _auto_create_back_reference(
                 type=FieldType.STRING,
                 required=True,
                 description=f"Reference to parent {entity_name}",
-                parent_ref=f"{entity_name}.identifier",
+                reference=f"{entity_name}.identifier",
             ),
         )

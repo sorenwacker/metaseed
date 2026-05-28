@@ -16,27 +16,19 @@ if TYPE_CHECKING:
 def find_parent_ref_field(helper: Any, parent_type: str) -> str | None:
     """Find field on child entity that references parent type.
 
-    Searches for common naming patterns like 'investigation_id',
-    'study_identifier', etc.
+    Uses the spec's reference field definitions.
 
     Args:
-        helper: Entity helper with _spec attribute.
+        helper: Entity helper with reference_fields property.
         parent_type: Parent entity type name.
 
     Returns:
         Field name if found, None otherwise.
     """
-    parent_lower = parent_type.lower()
-    patterns = [
-        f"{parent_lower}_id",
-        f"{parent_lower}_identifier",
-        f"{parent_lower}_unique_id",
-        parent_lower,
-    ]
-
-    for field in helper._spec.fields:
-        if field.name.lower() in patterns:
-            return field.name
+    if hasattr(helper, "reference_fields"):
+        for field_name, (target_type, _target_field) in helper.reference_fields.items():
+            if target_type == parent_type:
+                return field_name
     return None
 
 

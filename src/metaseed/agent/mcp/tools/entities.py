@@ -350,27 +350,27 @@ def register_entity_tools(mcp: FastMCP, get_entity_service) -> None:
     ) -> str:
         """Create a new entity in the current dataset.
 
-        Creates an entity of the specified type with the provided data.
+        IMPORTANT: Only include data explicitly stated in source files.
+        Do not assume, infer, or generate placeholder values.
 
-        Parent relationships are handled automatically:
-        - If parent_id is provided, uses that as the parent
-        - Otherwise, auto-detects parent from reference fields (e.g., study_ref, sample_ref)
-        - Automatically adds the new entity to the parent's nested array
+        Parent relationships are validated against the schema:
+        - PhenotypingSample must be under ObservationUnit, not Study
+        - BiologicalMaterial must be under Study, not Investigation
+        - Invalid parent types will return an error
 
         Auto-saves the dataset after creation.
 
         Args:
             entity_type: Entity type (e.g., "Investigation", "Study", "Sample").
-            data: JSON string of field values.
-            parent_id: Optional explicit parent entity ID. If not provided,
-                      parent is auto-detected from reference fields in data.
+            data: JSON string of field values from source (no assumptions).
+            parent_id: Parent entity ID. Must be a valid parent type per schema.
+                      If not provided, auto-detects from reference fields.
             expected_dataset: Optional safety check - if provided, operation fails
                              if current dataset name doesn't match.
 
         Returns:
-            JSON with created entity info including parent relationship and dataset name.
-            On validation error, returns details with field-specific messages,
-            valid_fields, and required_fields for the entity type.
+            JSON with created entity info including parent relationship.
+            On error, returns details about invalid parent type or validation failures.
         """
         # Safety check: verify we're editing the expected dataset
         if expected_dataset:
@@ -574,22 +574,24 @@ def register_entity_tools(mcp: FastMCP, get_entity_service) -> None:
     def batch_create(entities: str, expected_dataset: str | None = None) -> str:
         """Create multiple entities in a single operation.
 
+        IMPORTANT: Only create entities with data explicitly stated in source files.
+        Do not assume, infer, or generate placeholder data.
+
         Creates entities in order. Use parent_id to establish hierarchies.
+        Parent-child relationships are validated against the schema.
         Results include both successes and failures with detailed error info.
-        Auto-saves after all creations complete.
 
         Args:
             entities: JSON array of entity specs, each with:
                 - entity_type: Entity type (e.g., "Investigation", "Study")
-                - data: Field values for the entity
-                - parent_id: Optional parent entity ID
+                - data: Field values explicitly from source (no assumptions)
+                - parent_id: Parent entity ID (must be valid parent type)
             expected_dataset: Optional safety check - if provided, operation fails
                              if current dataset name doesn't match.
 
         Returns:
             JSON with total, created, failed counts, dataset info, and per-entity results.
-            Each result includes index, status ("created" or "error"),
-            id (if created), and message (if error).
+            Failed entities include error messages about invalid parent types.
         """
         # Safety check: verify we're editing the expected dataset
         if expected_dataset:

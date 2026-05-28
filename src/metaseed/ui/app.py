@@ -47,6 +47,11 @@ def create_app(state: AppState | None = None, base_url: str = "") -> FastAPI:
     Returns:
         Configured FastAPI application.
     """
+    from metaseed.agent.mcp.context import MCPContext
+    from metaseed.repositories.memory import MemoryEntityRepository
+    from metaseed.ui.dataset_manager import DatasetManagerFactory
+    from metaseed.ui.services.entities import EntityService
+
     app = FastAPI(title="Metaseed")
 
     if state is None:
@@ -55,17 +60,33 @@ def create_app(state: AppState | None = None, base_url: str = "") -> FastAPI:
     app.state.ui_state = state
     app.state.base_url = base_url
 
-    # Share state with MCP server so both use the same data
-    from metaseed.agent.mcp.server import set_mcp_state
+    # Create dataset manager factory with default filesystem repository
+    dataset_factory = DatasetManagerFactory()
 
-    set_mcp_state(state)
+    # Create entity service factory that always uses current facade
+    def get_entity_service() -> EntityService:
+        return EntityService(MemoryEntityRepository(state))
+
+    # Create MCP context with all dependencies
+    context = MCPContext(
+        state=state,
+        get_entity_service=get_entity_service,
+        dataset_factory=dataset_factory,
+    )
+    app.state.mcp_context = context
+
+    # Set context on MCP server so tools use the same dependencies
+    from metaseed.agent.mcp.server import set_context
+
+    set_context(context)
 
     templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
-    # Add version as a global template variable
+    # Add global template variables
     from metaseed import __version__
 
     templates.env.globals["app_version"] = __version__
+    templates.env.globals["base_url"] = base_url
 
     def format_display(value: Any) -> str:
         """Format a value for display in table cells."""
