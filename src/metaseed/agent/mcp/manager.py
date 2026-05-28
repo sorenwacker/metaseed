@@ -10,6 +10,7 @@ import subprocess
 import sys
 import threading
 import time
+from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import Self
 
@@ -339,13 +340,14 @@ class MCPServerManager:
         return None
 
 
-# Global instance
-_manager: MCPServerManager | None = None
+# Context variable for MCP manager singleton
+_manager_var: ContextVar[MCPServerManager | None] = ContextVar("mcp_manager", default=None)
 
 
 def get_mcp_manager() -> MCPServerManager:
-    """Get the global MCP server manager instance."""
-    global _manager
-    if _manager is None:
-        _manager = MCPServerManager()
-    return _manager
+    """Get the MCP server manager instance."""
+    manager = _manager_var.get()
+    if manager is None:
+        manager = MCPServerManager()
+        _manager_var.set(manager)
+    return manager

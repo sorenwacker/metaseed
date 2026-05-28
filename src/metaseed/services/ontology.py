@@ -22,6 +22,7 @@ import asyncio
 import logging
 import os
 import time
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -628,30 +629,29 @@ class OntologyService:
         return None
 
 
-# Singleton instance
-_service: OntologyService | None = None
-_service_lock = asyncio.Lock()
+# Context variable for ontology service singleton
+_service_var: ContextVar[OntologyService | None] = ContextVar("ontology_service", default=None)
 
 
 def get_ontology_service() -> OntologyService:
-    """Get the global OntologyService singleton.
+    """Get the OntologyService singleton.
 
     Creates the service on first call with configuration from environment
     variables.
 
     Returns:
-        The global OntologyService instance.
+        The OntologyService instance.
     """
-    global _service
-    if _service is None:
-        _service = OntologyService()
-    return _service
+    service = _service_var.get()
+    if service is None:
+        service = OntologyService()
+        _service_var.set(service)
+    return service
 
 
 def reset_ontology_service() -> None:
-    """Reset the global OntologyService singleton.
+    """Reset the OntologyService singleton.
 
     Useful for testing or reconfiguration.
     """
-    global _service
-    _service = None
+    _service_var.set(None)

@@ -25,6 +25,7 @@ Prompts:
 from __future__ import annotations
 
 import json
+from contextvars import ContextVar
 from typing import TYPE_CHECKING
 
 from mcp.server.fastmcp import FastMCP
@@ -35,23 +36,22 @@ from metaseed.specs.loader import SpecLoader, SpecLoadError
 if TYPE_CHECKING:
     from metaseed.agent.mcp.context import MCPContext
 
-# Module-level context reference for when context is injected
-_context: MCPContext | None = None
+# Context variable for request-scoped MCP context
+_context_var: ContextVar[MCPContext | None] = ContextVar("mcp_context", default=None)
 
 
-def set_context(context: MCPContext) -> None:
+def set_context(context: MCPContext | None) -> None:
     """Set the MCP context for dependency injection.
 
     Args:
-        context: MCPContext instance with all dependencies.
+        context: MCPContext instance with all dependencies, or None to clear.
     """
-    global _context
-    _context = context
+    _context_var.set(context)
 
 
 def get_context() -> MCPContext | None:
     """Get the current MCP context if set."""
-    return _context
+    return _context_var.get()
 
 
 def get_mcp_state():
@@ -60,8 +60,9 @@ def get_mcp_state():
     Prefers context if available, otherwise creates a new AppState.
     This function maintains backward compatibility for standalone MCP server mode.
     """
-    if _context is not None:
-        return _context.state
+    ctx = _context_var.get()
+    if ctx is not None:
+        return ctx.state
 
     from metaseed.ui.state import AppState
 
@@ -92,8 +93,9 @@ def get_entity_service():
 
     Uses context if available, otherwise creates a fresh service.
     """
-    if _context is not None:
-        return _context.get_entity_service()
+    ctx = _context_var.get()
+    if ctx is not None:
+        return ctx.get_entity_service()
 
     from metaseed.repositories.memory import MemoryEntityRepository
     from metaseed.ui.services.entities import EntityService

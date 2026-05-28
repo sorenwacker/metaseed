@@ -19,20 +19,23 @@ from metaseed.repositories.filesystem_dataset import (
 if TYPE_CHECKING:
     from .state import AppState
 
+from contextvars import ContextVar
+
 DATASETS_DIR = DEFAULT_DATASETS_DIR
 
-# Module-level factory for dataset operations (created on first use)
-_factory = None
+# Context variable for request-scoped factory
+_factory_var: ContextVar = ContextVar("dataset_factory", default=None)
 
 
 def _get_factory():
-    """Get or create the module-level factory."""
-    global _factory
-    if _factory is None:
+    """Get or create the factory for current context."""
+    factory = _factory_var.get()
+    if factory is None:
         from .dataset_manager import DatasetManagerFactory
 
-        _factory = DatasetManagerFactory()
-    return _factory
+        factory = DatasetManagerFactory()
+        _factory_var.set(factory)
+    return factory
 
 
 def get_datasets_dir() -> Path:
@@ -140,10 +143,11 @@ def auto_save(state: AppState) -> None:
     """
     # Prefer MCP context factory if available (for test isolation)
     try:
-        from metaseed.agent.mcp.server import _context
+        from metaseed.agent.mcp.server import get_context
 
-        if _context is not None:
-            factory = _context.dataset_factory
+        ctx = get_context()
+        if ctx is not None:
+            factory = ctx.dataset_factory
         else:
             factory = _get_factory()
     except ImportError:

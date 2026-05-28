@@ -7,13 +7,10 @@ Both UI routes and MCP tools use this service via dependency injection.
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, Self
+from typing import Any, Self
 
 from metaseed.repositories.base import EntityData, EntityRepository
 from metaseed.repositories.memory import MemoryEntityRepository
-
-if TYPE_CHECKING:
-    from metaseed.ui.state import AppState
 
 logger = logging.getLogger(__name__)
 
@@ -227,76 +224,3 @@ class EntityService:
             )
         except ImportError:
             pass
-
-
-# Backwards compatibility layer for existing code
-# These module-level functions wrap a global service instance
-
-_service: EntityService | None = None
-_state: AppState | None = None
-
-
-def set_state(state: AppState) -> None:
-    """Set the global state reference (backwards compatibility).
-
-    Creates a MemoryEntityRepository to use AppState with EntityService.
-    """
-    global _state, _service
-    _state = state
-    _service = EntityService(MemoryEntityRepository(state))
-    logger.info("Entity service: initialized with memory repository")
-
-
-def set_service(service: EntityService) -> None:
-    """Set the global service instance."""
-    global _service
-    _service = service
-    logger.info("Entity service: initialized with custom repository")
-
-
-def get_service() -> EntityService:
-    """Get the global service instance."""
-    if _service is None:
-        raise RuntimeError("Entity service not initialized")
-    return _service
-
-
-def get_state() -> AppState:
-    """Get the global state (backwards compatibility)."""
-    if _state is None:
-        raise RuntimeError("Entity service not initialized - call set_state first")
-    return _state
-
-
-def list_entities(entity_type: str | None = None) -> dict[str, Any]:
-    """List all entities (backwards compatibility)."""
-    return get_service().list_entities(entity_type)
-
-
-def get_entity(node_id: str) -> dict[str, Any] | None:
-    """Get entity by ID (backwards compatibility)."""
-    return get_service().get_entity(node_id)
-
-
-def create_entity(
-    entity_type: str,
-    data: dict[str, Any],
-    parent_id: str | None = None,
-) -> dict[str, Any]:
-    """Create a new entity (backwards compatibility)."""
-    return get_service().create_entity(entity_type, data, parent_id)
-
-
-def update_entity(node_id: str, data: dict[str, Any]) -> dict[str, Any]:
-    """Update an existing entity (backwards compatibility)."""
-    return get_service().update_entity(node_id, data)
-
-
-def delete_entity(node_id: str) -> dict[str, Any]:
-    """Delete an entity (backwards compatibility)."""
-    return get_service().delete_entity(node_id)
-
-
-def get_tree() -> dict[str, Any]:
-    """Get entity tree structure (backwards compatibility)."""
-    return get_service().get_tree()
