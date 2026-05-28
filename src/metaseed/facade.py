@@ -130,7 +130,28 @@ class EntityStore:
         self._instances: dict[str, EntityNode] = {}
         self._index: dict[str, str] = {}  # identifier value -> node_id
         self._get_helper = helper_getter
-        self._create_instance = instance_creator
+        self._create_instance_callback = instance_creator
+
+    def _create_instance(
+        self: Self,
+        entity_type: str,
+        data: dict[str, Any],
+        skip_validation: bool = False,
+    ) -> BaseModel:
+        """Create a model instance.
+
+        Args:
+            entity_type: Type of entity.
+            data: Field values for the entity.
+            skip_validation: If True, skip Pydantic validation.
+
+        Returns:
+            Model instance.
+        """
+        if skip_validation:
+            helper = self._get_helper(entity_type)
+            return helper.create(skip_validation=True, **data)
+        return self._create_instance_callback(entity_type, data)
 
     def add_entity(
         self: Self,
@@ -138,6 +159,7 @@ class EntityStore:
         data: dict[str, Any],
         node_id: str | None = None,
         parent_id: str | None = None,
+        skip_validation: bool = False,
     ) -> EntityNode:
         """Add an entity instance and auto-link to parent via reference fields.
 
@@ -151,6 +173,8 @@ class EntityStore:
             node_id: Optional node ID. If not provided, generates a UUID.
             parent_id: Optional explicit parent node ID. If not provided,
                       attempts to resolve parent via reference fields.
+            skip_validation: If True, skip Pydantic validation. Use for
+                progressive editing where entities are saved with incomplete data.
 
         Returns:
             The created EntityNode.
@@ -163,7 +187,7 @@ class EntityStore:
             >>> store.add_entity("Sample", {"alias": "sam1", "study_ref": "s1", ...})
             >>> # Sample is auto-linked to Study via study_ref
         """
-        instance = self._create_instance(entity_type, data)
+        instance = self._create_instance(entity_type, data, skip_validation)
 
         # Resolve parent: explicit parent_id takes precedence, then reference fields
         resolved_parent_id = parent_id
@@ -260,12 +284,14 @@ class EntityStore:
         self: Self,
         node_id: str,
         data: dict[str, Any],
+        skip_validation: bool = False,
     ) -> EntityNode | None:
         """Update an existing entity's data.
 
         Args:
             node_id: ID of the node to update.
             data: New field values.
+            skip_validation: If True, skip Pydantic validation.
 
         Returns:
             Updated EntityNode if found, None otherwise.
@@ -296,7 +322,7 @@ class EntityStore:
                     del self._index[str(old_value)]
 
         # Create new instance
-        node.instance = self._create_instance(node.entity_type, data)
+        node.instance = self._create_instance(node.entity_type, data, skip_validation)
 
         # Add new index entries
         for id_field in id_fields_to_check:
@@ -832,10 +858,12 @@ class EntityHelper:
 
         return warnings
 
-    def create(self: Self, **kwargs: Any) -> BaseModel:
+    def create(self: Self, skip_validation: bool = False, **kwargs: Any) -> BaseModel:
         """Create an instance of this entity.
 
         Args:
+            skip_validation: If True, skip Pydantic validation. Use this for
+                progressive editing where entities are saved with incomplete data.
             **kwargs: Field values for the entity.
 
         Returns:
@@ -849,13 +877,25 @@ class EntityHelper:
             Ontology term fields are validated against OLS4. Invalid terms
             generate warnings but do not prevent entity creation.
 
+            When skip_validation=True, the instance is created without type
+            checking. Call validate_entity() separately to check for issues.
+
         Example:
             >>> inv = profile.Investigation.create(
             ...     unique_id="INV-001",
             ...     title="My Investigation",
             ... )
+
+            >>> # Create draft with incomplete data
+            >>> draft = profile.Investigation.create(
+            ...     skip_validation=True,
+            ...     title="Work in progress",
+            ... )
         """
-        instance = self._model(**kwargs)
+        if skip_validation:
+            instance = self._model.model_construct(**kwargs)
+        else:
+            instance = self._model(**kwargs)
         # Validate ontology terms (warnings only, don't block)
         self.validate_ontology_terms(kwargs, warn=True)
         return instance
@@ -961,18 +1001,24 @@ class ProfileFacade:
             return self._entities[entity_type]
         raise KeyError(f"Entity type '{entity_type}' not found")
 
-    def _create_instance(self: Self, entity_type: str, data: dict[str, Any]) -> BaseModel:
-        """Create a validated model instance.
+    def _create_instance(
+        self: Self,
+        entity_type: str,
+        data: dict[str, Any],
+        skip_validation: bool = False,
+    ) -> BaseModel:
+        """Create a model instance.
 
         Args:
             entity_type: Name of the entity type.
             data: Field values for the entity.
+            skip_validation: If True, skip Pydantic validation.
 
         Returns:
-            Validated Pydantic model instance.
+            Pydantic model instance.
         """
         helper = getattr(self, entity_type)
-        return helper.create(**data)
+        return helper.create(skip_validation=skip_validation, **data)
 
     def _load_entities(self: Self) -> None:
         """Load all entity helpers for this profile.
@@ -1023,6 +1069,7 @@ class ProfileFacade:
         data: dict[str, Any],
         node_id: str | None = None,
         parent_id: str | None = None,
+        skip_validation: bool = False,
     ) -> EntityNode:
         """Add an entity instance and auto-link to parent via reference fields.
 
@@ -1036,6 +1083,8 @@ class ProfileFacade:
             node_id: Optional node ID. If not provided, generates a UUID.
             parent_id: Optional explicit parent node ID. If not provided,
                       attempts to resolve parent via reference fields.
+            skip_validation: If True, skip Pydantic validation. Use for
+                progressive editing where entities are saved with incomplete data.
 
         Returns:
             The created EntityNode.
@@ -1049,7 +1098,7 @@ class ProfileFacade:
             >>> facade.add_entity("Sample", {"alias": "sam1", "study_ref": "s1", ...})
             >>> # Sample is auto-linked to Study via study_ref
         """
-        return self._store.add_entity(entity_type, data, node_id, parent_id)
+        return self._store.add_entity(entity_type, data, node_id, parent_id, skip_validation)
 
     def get_entity(self: Self, node_id: str) -> EntityNode | None:
         """Get an entity node by its ID.
@@ -1077,17 +1126,19 @@ class ProfileFacade:
         self: Self,
         node_id: str,
         data: dict[str, Any],
+        skip_validation: bool = False,
     ) -> EntityNode | None:
         """Update an existing entity's data.
 
         Args:
             node_id: ID of the node to update.
             data: New field values.
+            skip_validation: If True, skip Pydantic validation.
 
         Returns:
             Updated EntityNode if found, None otherwise.
         """
-        return self._store.update_entity(node_id, data)
+        return self._store.update_entity(node_id, data, skip_validation)
 
     def delete_entity(self: Self, node_id: str) -> bool:
         """Delete an entity and all its children recursively.

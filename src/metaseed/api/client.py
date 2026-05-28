@@ -132,32 +132,45 @@ class MetaseedClient:
         entity_type: str,
         data: dict[str, Any],
         parent_id: str | None = None,
+        skip_validation: bool = False,
     ) -> Entity:
         """Create a new entity instance.
 
         Creates an entity of the specified type with the provided data.
-        The entity is validated against the schema during creation.
+        By default, the entity is validated against the schema during creation.
 
         Args:
             entity_type: Type of entity to create (e.g., "Investigation").
             data: Field values for the entity.
             parent_id: Optional parent entity ID for hierarchical linking.
+            skip_validation: If True, skip Pydantic validation. Use for
+                progressive editing where entities are saved with incomplete data.
+                Call validate_entity() separately to check for issues.
 
         Returns:
             The created Entity.
 
         Raises:
             EntityTypeNotFoundError: If entity_type not found in profile.
-            ValidationError: If data fails schema validation.
+            ValidationError: If data fails schema validation (unless skip_validation=True).
 
         Example:
             >>> inv = client.create_entity("Investigation", {
             ...     "unique_id": "INV-001",
             ...     "title": "My Study"
             ... })
+
+            >>> # Create draft with incomplete data
+            >>> draft = client.create_entity(
+            ...     "Investigation",
+            ...     {"title": "Work in progress"},
+            ...     skip_validation=True,
+            ... )
         """
         self._validate_entity_type(entity_type)
-        node = self._facade.add_entity(entity_type, data, parent_id=parent_id)
+        node = self._facade.add_entity(
+            entity_type, data, parent_id=parent_id, skip_validation=skip_validation
+        )
         return self._convert_node(node)
 
     def get_entity(self: Self, entity_id: str) -> Entity:
@@ -177,15 +190,21 @@ class MetaseedClient:
             raise EntityNotFoundError(entity_id)
         return self._convert_node(node)
 
-    def update_entity(self: Self, entity_id: str, data: dict[str, Any]) -> Entity:
+    def update_entity(
+        self: Self,
+        entity_id: str,
+        data: dict[str, Any],
+        skip_validation: bool = False,
+    ) -> Entity:
         """Update an existing entity's data.
 
         Replaces all field values with the provided data.
-        The entity is validated against the schema after update.
+        By default, the entity is validated against the schema after update.
 
         Args:
             entity_id: ID of the entity to update.
             data: New field values.
+            skip_validation: If True, skip Pydantic validation.
 
         Returns:
             The updated Entity.
@@ -199,7 +218,7 @@ class MetaseedClient:
             ...     "title": "Updated Title"
             ... })
         """
-        node = self._facade.update_entity(entity_id, data)
+        node = self._facade.update_entity(entity_id, data, skip_validation)
         if node is None:
             raise EntityNotFoundError(entity_id)
         return self._convert_node(node)

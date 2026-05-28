@@ -477,6 +477,67 @@ class TestSchemaIntrospection:
         assert "unique_id" in schema.all_field_names
 
 
+class TestSkipValidation:
+    """Tests for skip_validation mode (permissive editing)."""
+
+    @pytest.fixture
+    def client(self) -> MetaseedClient:
+        """Create client."""
+        return MetaseedClient("miappe", "1.2")
+
+    def test_create_entity_skip_validation(self, client: MetaseedClient) -> None:
+        """Create entity with skip_validation bypasses required field check."""
+        # This would normally fail - Investigation requires unique_id
+        entity = client.create_entity(
+            "Investigation",
+            {"title": "Work in progress"},  # missing unique_id
+            skip_validation=True,
+        )
+
+        assert entity.entity_type == "Investigation"
+        assert entity.data.get("title") == "Work in progress"
+        assert entity.id is not None
+
+    def test_create_entity_without_skip_validation_raises(self, client: MetaseedClient) -> None:
+        """Create entity without skip_validation raises on missing required field."""
+        from pydantic import ValidationError as PydanticValidationError
+
+        with pytest.raises(PydanticValidationError):
+            client.create_entity(
+                "Investigation",
+                {"title": "Incomplete"},  # missing unique_id
+            )
+
+    def test_update_entity_skip_validation(self, client: MetaseedClient) -> None:
+        """Update entity with skip_validation bypasses validation."""
+        # First create a valid entity
+        entity = client.create_entity(
+            "Investigation",
+            {"unique_id": "INV-001", "title": "Original"},
+        )
+
+        # Update with incomplete data using skip_validation
+        updated = client.update_entity(
+            entity.id,
+            {"title": "Updated"},  # missing unique_id
+            skip_validation=True,
+        )
+
+        assert updated.data.get("title") == "Updated"
+
+    def test_validate_entity_with_skip_validation_draft(self, client: MetaseedClient) -> None:
+        """Validate draft entity created with skip_validation shows issues."""
+        entity = client.create_entity(
+            "Investigation",
+            {"title": "Draft"},
+            skip_validation=True,
+        )
+
+        result = client.validate_entity(entity.id)
+        # Should have validation issues since required fields are missing
+        assert isinstance(result, ValidationResult)
+
+
 class TestEntityObject:
     """Tests for Entity domain object."""
 

@@ -80,9 +80,41 @@ entity = client.create_entity("Investigation", {
 # With parent relationship
 child = client.create_entity("Study", {
     "unique_id": "STU-001",
-    "title": "Child Study"
+    "title": "Child Study",
+    "investigation_id": "INV-001"
 }, parent_id=entity.id)
 ```
+
+### Permissive Mode (skip_validation)
+
+For progressive editing where users fill in fields over multiple sessions:
+
+```python
+# Create draft with incomplete data (skips Pydantic validation)
+draft = client.create_entity(
+    "Investigation",
+    {"title": "Work in progress"},  # missing required unique_id
+    skip_validation=True,
+)
+
+# Update draft without validation
+client.update_entity(
+    draft.id,
+    {"title": "Still working on it"},
+    skip_validation=True,
+)
+
+# Validate when ready to check for issues
+result = client.validate_entity(draft.id)
+if not result.valid:
+    for issue in result.issues:
+        print(f"Warning: {issue.field}: {issue.message}")
+```
+
+This is useful for web forms where:
+- Users create entities with minimal data
+- Fields are filled in over multiple sessions
+- Validation warnings are shown but don't block saving
 
 ### Read
 
