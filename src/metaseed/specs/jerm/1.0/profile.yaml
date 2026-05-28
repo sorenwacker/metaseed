@@ -146,7 +146,7 @@ entities:
     - name: project_id
       type: string
       required: true
-      parent_ref: Project.identifier
+      reference: Project.identifier
       description: Reference to the parent Project
     - name: title
       type: string
@@ -201,7 +201,7 @@ entities:
     - name: investigation_id
       type: string
       required: true
-      parent_ref: Investigation.identifier
+      reference: Investigation.identifier
       description: Reference to the parent Investigation
     - name: title
       type: string
@@ -262,7 +262,7 @@ entities:
     - name: study_id
       type: string
       required: true
-      parent_ref: Study.identifier
+      reference: Study.identifier
       description: Reference to the parent Study
     - name: title
       type: string
@@ -409,7 +409,7 @@ entities:
     - name: assay_id
       type: string
       required: false
-      parent_ref: Assay.identifier
+      reference: Assay.identifier
       description: Reference to the parent Assay
     - name: version
       type: integer
@@ -493,7 +493,7 @@ entities:
     - name: assay_id
       type: string
       required: false
-      parent_ref: Assay.identifier
+      reference: Assay.identifier
       description: Reference to associated Assay
     - name: linked_data_files
       type: list
@@ -564,7 +564,7 @@ entities:
     - name: assay_id
       type: string
       required: false
-      parent_ref: Assay.identifier
+      reference: Assay.identifier
       description: Reference to associated Assay
     - name: version
       type: integer
@@ -769,7 +769,7 @@ entities:
     - name: organism_id
       type: string
       required: true
-      parent_ref: Organism.identifier
+      reference: Organism.identifier
       description: Reference to the parent Organism
     - name: synonym
       type: string
@@ -892,7 +892,7 @@ entities:
     - name: institution_id
       type: string
       required: false
-      parent_ref: Institution.title
+      reference: Institution.title
       description: Reference to Institution
     - name: web_page
       type: uri

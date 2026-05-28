@@ -190,8 +190,7 @@ fields:
 | `ontology_term` | no | Ontology reference |
 | `constraints` | no | Validation constraints |
 | `items` | conditional | Element type for `list` or target for `entity` |
-| `parent_ref` | no | Parent entity reference (see Relationships) |
-| `reference` | no | Foreign key reference (see Relationships) |
+| `reference` | no | Entity reference in format "Entity.field" (see Relationships) |
 | `unique_within` | no | Uniqueness scope: "parent" or "global" |
 
 ## Field Types
@@ -266,7 +265,7 @@ constraints:
 
 ### Hierarchical (Parent-Child)
 
-Use `list` type to embed children within a parent:
+Use `list` type in the parent to embed children, and `reference` in the child to link back:
 
 ```yaml
 entities:
@@ -287,17 +286,18 @@ entities:
       - name: investigation_id
         type: string
         required: true
-        parent_ref: Investigation.identifier
+        reference: Investigation.identifier
 ```
 
-The `parent_ref` field is:
+The `reference` field:
+- Links child entities to their parent
 - Auto-filled from parent context when editing nested data
-- Hidden in nested forms (the relationship is implicit)
 - Visible in flat exports (Excel, CSV)
+- Used for MCP auto-detection of parent relationships
 
-### Foreign Key Reference
+### Entity References
 
-Use `reference` for relational-style links:
+Use `reference` for any entity-to-entity link:
 
 ```yaml
 - name: protocol_id
@@ -305,7 +305,7 @@ Use `reference` for relational-style links:
   reference: Protocol.name
 ```
 
-This validates that the referenced Protocol exists.
+This validates that the referenced entity exists and enables auto-linking.
 
 ### One-to-One Embedding
 

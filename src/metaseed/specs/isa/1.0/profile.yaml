@@ -181,7 +181,7 @@ entities:
     - name: investigation_id
       type: string
       required: true
-      parent_ref: Investigation.identifier
+      reference: Investigation.identifier
       description: Reference to the parent Investigation
     - name: title
       type: string
@@ -288,7 +288,7 @@ entities:
     - name: study_id
       type: string
       required: true
-      parent_ref: Study.identifier
+      reference: Study.identifier
       description: Reference to the parent Study
     - name: measurement_type
       type: entity
@@ -397,12 +397,12 @@ entities:
     - name: investigation_id
       type: string
       required: false
-      parent_ref: Investigation.identifier
+      reference: Investigation.identifier
       description: Reference to parent Investigation (for investigation contacts)
     - name: study_id
       type: string
       required: false
-      parent_ref: Study.identifier
+      reference: Study.identifier
       description: Reference to parent Study (for study contacts)
   Publication:
     ontology_term: isaterms:publication
@@ -446,7 +446,7 @@ entities:
     - name: study_id
       type: string
       required: true
-      parent_ref: Study.identifier
+      reference: Study.identifier
       description: Reference to the parent Study
     - name: name
       type: string
@@ -509,7 +509,7 @@ entities:
     - name: study_id
       type: string
       required: true
-      parent_ref: Study.identifier
+      reference: Study.identifier
       description: Reference to the parent Study
     - name: name
       type: string
@@ -534,7 +534,7 @@ entities:
     - name: study_id
       type: string
       required: true
-      parent_ref: Study.identifier
+      reference: Study.identifier
       description: Reference to the parent Study
     - name: name
       type: string
@@ -665,7 +665,7 @@ entities:
     - name: study_id
       type: string
       required: true
-      parent_ref: Study.identifier
+      reference: Study.identifier
       description: Reference to the parent Study
     - name: name
       type: string
@@ -823,7 +823,7 @@ entities:
     - name: assay_id
       type: string
       required: true
-      parent_ref: Assay.filename
+      reference: Assay.filename
       description: Reference to the parent Assay
     - name: filename
       type: string

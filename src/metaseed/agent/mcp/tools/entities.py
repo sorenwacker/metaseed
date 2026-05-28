@@ -16,6 +16,20 @@ if TYPE_CHECKING:
     from mcp.server.fastmcp import FastMCP
 
 
+def _auto_save_dataset() -> None:
+    """Auto-save the current dataset after entity operations."""
+    import logging
+
+    from metaseed.agent.mcp.server import get_mcp_state
+    from metaseed.ui.datasets import auto_save
+
+    try:
+        state = get_mcp_state()
+        auto_save(state)
+    except Exception as e:
+        logging.debug(f"MCP auto-save skipped: {e}")
+
+
 def _get_current_dataset_info() -> dict[str, Any]:
     """Get info about the current dataset for safety checks."""
     from metaseed.agent.mcp.server import get_mcp_state
@@ -401,6 +415,9 @@ def register_entity_tools(mcp: FastMCP, get_entity_service) -> None:
                                 result["linked_via_field"] = field_name
                                 break
 
+            # Auto-save to persist changes
+            _auto_save_dataset()
+
             return json.dumps(result, indent=2)
         except json.JSONDecodeError as e:
             return json.dumps({"error": f"Invalid JSON: {e}"})
@@ -441,6 +458,10 @@ def register_entity_tools(mcp: FastMCP, get_entity_service) -> None:
             updates = json.loads(data)
             result = service.update_entity(node_id, updates)
             result["_dataset"] = _get_current_dataset_info()
+
+            # Auto-save to persist changes
+            _auto_save_dataset()
+
             return json.dumps(result, indent=2)
         except json.JSONDecodeError as e:
             return json.dumps({"error": f"Invalid JSON: {e}"})
@@ -471,6 +492,10 @@ def register_entity_tools(mcp: FastMCP, get_entity_service) -> None:
             service = get_entity_service()
             result = service.delete_entity(node_id)
             result["_dataset"] = _get_current_dataset_info()
+
+            # Auto-save to persist changes
+            _auto_save_dataset()
+
             return json.dumps(result, indent=2)
         except Exception as e:
             return json.dumps({"error": str(e)})
@@ -526,6 +551,9 @@ def register_entity_tools(mcp: FastMCP, get_entity_service) -> None:
                             "message": str(e),
                         }
                     )
+
+            # Auto-save to persist changes
+            _auto_save_dataset()
 
             return json.dumps(
                 {
@@ -624,6 +652,9 @@ def register_entity_tools(mcp: FastMCP, get_entity_service) -> None:
                                 "message": str(e),
                             }
                         )
+
+            # Auto-save to persist changes
+            _auto_save_dataset()
 
             return json.dumps(
                 {

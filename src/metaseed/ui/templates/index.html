@@ -56,9 +56,18 @@
 </div>
 {% else %}
 <div class="welcome">
-    <h2>Empty Dataset</h2>
-    <p>This dataset has no entities yet. Use the profile's root entity to create your first entry.</p>
+    <h2>{{ current_dataset or 'Empty Dataset' }}</h2>
+    <p class="welcome-meta">{{ current_profile }} {{ version }}</p>
+    <p>This dataset has no entities yet. Create your first entity to get started.</p>
     <div class="welcome-actions">
+        {% for root_type in root_types %}
+        <button class="btn btn-primary"
+                hx-get="{{ base_url }}/form/{{ root_type }}"
+                hx-target="#main"
+                hx-swap="innerHTML">
+            New {{ root_type }}
+        </button>
+        {% endfor %}
         <a href="{{ base_url }}/" class="btn btn-secondary">Back to Datasets</a>
     </div>
 </div>

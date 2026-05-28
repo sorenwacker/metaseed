@@ -95,6 +95,10 @@ class MemoryEntityRepository(EntityRepository):
         if not helper:
             raise ValueError(f"Unknown entity type: {entity_type}")
 
+        # Auto-detect parent from reference fields if not explicitly provided
+        if not parent_id:
+            parent_id = self._find_parent_from_references(facade, helper, data)
+
         # Validate parent
         parent = None
         if parent_id:
@@ -208,6 +212,32 @@ class MemoryEntityRepository(EntityRepository):
             parent_id=node.parent_id,
             children=[self._node_to_entity(c) for c in node.children],
         )
+
+    def _find_parent_from_references(
+        self: Self,
+        _facade: Any,
+        helper: Any,
+        data: dict[str, Any],
+    ) -> str | None:
+        """Auto-detect parent from reference fields in data.
+
+        Looks at the entity's reference fields and finds matching parent entities.
+        """
+        for field_name, (target_type, target_field) in helper.reference_fields.items():
+            ref_value = data.get(field_name)
+            if not ref_value:
+                continue
+
+            # Search for entity with matching identifier
+            for node in self._state.nodes_by_id.values():
+                if node.entity_type != target_type:
+                    continue
+
+                node_data = node.instance.model_dump() if node.instance else {}
+                if node_data.get(target_field) == ref_value:
+                    return node.id
+
+        return None
 
     def _update_parent_ref(
         self: Self,

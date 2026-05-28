@@ -424,8 +424,9 @@ class EntityStore:
                 )
                 self._instances[node.id] = node
 
-                # Index by identifier fields
-                entity_id = fields.get("unique_id") or fields.get("alias")
+                # Index by first field (the identifier per spec convention)
+                id_field = helper.identifier_field
+                entity_id = fields.get(id_field) if id_field else None
                 if entity_id:
                     id_to_node[str(entity_id)] = node
                     self._index[str(entity_id)] = node.id
@@ -583,11 +584,12 @@ class EntityHelper:
 
         Returns {field_name: (target_entity, target_field)}.
         Example: {"sample_ref": ("Sample", "alias")}
+
+        Uses the `reference` field in specs (format: "Entity.field").
         """
         refs = {}
         for f in self._spec.fields:
             if f.reference:
-                # Parse "Entity.field" format
                 parts = f.reference.split(".", 1)
                 if len(parts) == 2:
                     refs[f.name] = (parts[0], parts[1])
@@ -597,15 +599,13 @@ class EntityHelper:
     def identifier_field(self: Self) -> str | None:
         """Field name used as display label for this entity.
 
-        By convention, the first non-parent-ref, non-reference field in the entity
-        definition is used as the identifier/label for display purposes.
-        Reference fields (e.g., run_ref, sample_ref) should not be used as identifiers
-        since they point to other entities rather than identifying this one.
+        By convention, the first non-reference field in the entity definition
+        is used as the identifier/label for display purposes.
+        Reference fields (e.g., run_ref, sample_ref) should not be used as
+        identifiers since they point to other entities rather than identifying
+        this one.
         """
         for f in self._spec.fields:
-            # Skip parent reference fields (these are auto-populated)
-            if f.parent_ref:
-                continue
             # Skip reference fields (these point to other entities)
             if f.reference:
                 continue

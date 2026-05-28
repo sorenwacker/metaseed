@@ -555,6 +555,9 @@ def register_entity_crud_routes(
                     "index.html",
                     {
                         "tree_nodes": state.get_tree_data(),
+                        "root_types": state.get_root_entity_types()[:3],
+                        "current_profile": state.profile,
+                        "version": facade.version,
                         "notification": {
                             "type": msg_type,
                             "message": msg,
@@ -599,10 +602,15 @@ def register_entity_crud_routes(
 
         auto_save(state)
 
+        facade = state.get_or_create_facade()
         return templates.TemplateResponse(
             request,
             "index.html",
             {
+                "tree_nodes": state.get_tree_data(),
+                "root_types": state.get_root_entity_types()[:3],
+                "current_profile": state.profile,
+                "version": facade.version,
                 "notification": {
                     "type": "warning",
                     "message": f"Deleted {entity_type}: {label}",

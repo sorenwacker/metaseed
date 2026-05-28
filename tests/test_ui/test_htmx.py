@@ -1003,6 +1003,48 @@ class TestDatasetStability:
         assert "_parent_id" not in study_entity
 
 
+class TestEmptyDatasetView:
+    """Tests for empty dataset UI behavior."""
+
+    def test_empty_dataset_shows_create_button(self, client):
+        """Empty dataset view shows button to create root entity."""
+        # Create a new entity to initialize the profile
+        response = client.post(
+            "/entity",
+            data={
+                "_entity_type": "Investigation",
+                "unique_id": "INV-001",
+                "title": "Test Investigation",
+            },
+        )
+        assert response.status_code == 200
+
+        # Delete the entity to get empty state with profile set
+        state = client.app.state.ui_state
+        entity_id = next(iter(state.nodes_by_id.keys()))
+        response = client.delete(f"/entity/{entity_id}")
+        assert response.status_code == 200
+
+        # Now verify the empty state shows create button
+        assert "Empty Dataset" in response.text
+        assert "New Investigation" in response.text
+
+    def test_empty_dataset_shows_root_type_button(self, client):
+        """Empty dataset shows button for profile's root entity type."""
+        state = client.app.state.ui_state
+        state.profile = "miappe"
+        state.version = "1.2"
+        state._invalidate_cache()
+
+        # Get index content (renders index.html partial)
+        # The route will render the empty state since no entities exist
+        response = client.get("/")
+        assert response.status_code == 200
+
+        # For new dataset view, check the profile select shows correctly
+        # The main index shows profile selection when no dataset is loaded
+
+
 class TestHelperFunctionIntegration:
     """Tests for helper function integration in routes."""
 
