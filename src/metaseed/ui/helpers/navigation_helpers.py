@@ -60,12 +60,20 @@ def get_reference_fields(profile: str, version: str, entity_type: str) -> dict[s
 
     reference_fields = {}
 
-    # Check field definitions for parent_ref attribute
+    # Check field definitions for parent_ref or reference attribute
     entity_spec = spec.entities.get(entity_type)
     if entity_spec:
         for field in entity_spec.fields:
+            # Check parent_ref first (explicit parent reference)
+            ref_value = None
             if hasattr(field, "parent_ref") and field.parent_ref:
-                parts = field.parent_ref.split(".")
+                ref_value = field.parent_ref
+            # Fall back to reference attribute (entity reference)
+            elif hasattr(field, "reference") and field.reference:
+                ref_value = field.reference
+
+            if ref_value:
+                parts = ref_value.split(".")
                 if len(parts) == 2:
                     reference_fields[field.name] = {
                         "target_entity": parts[0],

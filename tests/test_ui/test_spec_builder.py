@@ -375,9 +375,9 @@ class TestSpecBuilderRoutes:
         # Verify back-reference was created in Study
         response = client.get("/spec-builder/preview")
         preview = response.text
-        # Study should have investigation_id with parent_ref
+        # Study should have investigation_id with reference
         assert "investigation_id" in preview
-        assert "parent_ref: Investigation.identifier" in preview
+        assert "reference: Investigation.identifier" in preview
         # Investigation should have identifier field
         assert "identifier" in preview
 

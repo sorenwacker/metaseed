@@ -58,8 +58,8 @@ class TestBuildGraph:
         result = build_graph(state)
         # Should have Investigation and Study nodes
         assert len(result["nodes"]) == 2
-        # Should have one edge connecting them
-        assert len(result["edges"]) == 1
+        # Should have edges: 1 parent-child + 1 investigation_id reference
+        assert len(result["edges"]) == 2
 
     def test_node_labels_truncated(self) -> None:
         """Long labels should be truncated."""
@@ -168,8 +168,8 @@ class TestGraphWithNestedData:
         result = build_graph(state)
         # Should have Investigation, Study, and ObservationUnit
         assert len(result["nodes"]) == 3
-        # Should have edges connecting them (2 parent-child + 1 study_id reference)
-        assert len(result["edges"]) == 3
+        # Should have edges: 2 parent-child + 1 investigation_id ref + 1 study_id ref
+        assert len(result["edges"]) == 4
 
         # Check entity types
         entity_types = {node["group"] for node in result["nodes"]}
