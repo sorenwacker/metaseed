@@ -446,6 +446,132 @@ class TestCoordinatePairRule:
         assert "latitude" in errors[0].message
 
 
+class TestUniquenessRule:
+    """Tests for UniquenessRule."""
+
+    def test_first_value_passes(self) -> None:
+        """First unique value passes."""
+        from metaseed.validators.rules import UniquenessRule
+
+        rule = UniquenessRule(field="identifier", scope="parent")
+        data = {"identifier": "ID-001"}
+        errors = rule.validate(data)
+        assert len(errors) == 0
+
+    def test_duplicate_value_fails(self) -> None:
+        """Duplicate value returns error."""
+        from metaseed.validators.rules import UniquenessRule
+
+        rule = UniquenessRule(field="identifier", scope="parent")
+
+        # First value passes
+        errors = rule.validate({"identifier": "ID-001"})
+        assert len(errors) == 0
+
+        # Same value fails
+        errors = rule.validate({"identifier": "ID-001"})
+        assert len(errors) == 1
+        assert "not unique" in errors[0].message
+
+    def test_different_values_pass(self) -> None:
+        """Different values all pass."""
+        from metaseed.validators.rules import UniquenessRule
+
+        rule = UniquenessRule(field="identifier", scope="parent")
+
+        for i in range(5):
+            errors = rule.validate({"identifier": f"ID-{i:03d}"})
+            assert len(errors) == 0
+
+    def test_missing_field_skipped(self) -> None:
+        """Missing field is skipped."""
+        from metaseed.validators.rules import UniquenessRule
+
+        rule = UniquenessRule(field="identifier", scope="parent")
+        errors = rule.validate({})
+        assert len(errors) == 0
+
+    def test_none_value_skipped(self) -> None:
+        """None value is skipped."""
+        from metaseed.validators.rules import UniquenessRule
+
+        rule = UniquenessRule(field="identifier", scope="parent")
+        errors = rule.validate({"identifier": None})
+        assert len(errors) == 0
+
+    def test_reset_clears_seen_values(self) -> None:
+        """Reset allows reuse of values."""
+        from metaseed.validators.rules import UniquenessRule
+
+        rule = UniquenessRule(field="identifier", scope="parent")
+
+        # First use
+        rule.validate({"identifier": "ID-001"})
+
+        # Reset
+        rule.reset()
+
+        # Same value now passes
+        errors = rule.validate({"identifier": "ID-001"})
+        assert len(errors) == 0
+
+    def test_custom_message(self) -> None:
+        """Custom message is used."""
+        from metaseed.validators.rules import UniquenessRule
+
+        rule = UniquenessRule(
+            field="identifier",
+            scope="parent",
+            message="Identifier must be unique within the study",
+        )
+
+        # Add first value
+        rule.validate({"identifier": "ID-001"})
+
+        # Duplicate should use custom message
+        errors = rule.validate({"identifier": "ID-001"})
+        assert len(errors) == 1
+        assert errors[0].message == "Identifier must be unique within the study"
+
+
+class TestCustomMessages:
+    """Tests for custom error messages in rules."""
+
+    def test_date_range_custom_message(self) -> None:
+        """DateRangeRule uses custom message."""
+        rule = DateRangeRule(
+            start_field="start",
+            end_field="end",
+            message="Project end cannot be before project start",
+        )
+        data = {"start": "2024-12-31", "end": "2024-01-01"}
+        errors = rule.validate(data)
+        assert len(errors) == 1
+        assert errors[0].message == "Project end cannot be before project start"
+
+    def test_conditional_custom_message(self) -> None:
+        """ConditionalRule uses custom message."""
+        rule = ConditionalRule(
+            condition="email OR phone",
+            rule_name="contact_info",
+            message="Please provide either email or phone number",
+        )
+        errors = rule.validate({})
+        assert len(errors) == 1
+        assert errors[0].message == "Please provide either email or phone number"
+
+    def test_coordinate_pair_custom_message(self) -> None:
+        """CoordinatePairRule uses custom message."""
+        rule = CoordinatePairRule(
+            lat_field="lat",
+            lon_field="lon",
+            message="Latitude and longitude must be provided together",
+        )
+        errors = rule.validate({"lat": 45.0})
+        assert len(errors) == 1
+        assert errors[0].message == "Latitude and longitude must be provided together"
+
+
 class TestValidationError:
     """Tests for ValidationError dataclass."""
 

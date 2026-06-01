@@ -2,11 +2,20 @@
 
 import datetime
 
+from metaseed.specs.schema import ValidationRuleSpec
 from metaseed.validators import validate
-from metaseed.validators.engine import ValidationEngine
+from metaseed.validators.engine import (
+    ValidationEngine,
+    _create_rule_from_spec,
+)
 from metaseed.validators.rules import (
+    ConditionalRule,
+    CoordinatePairRule,
     DateRangeRule,
+    EntityReferenceRule,
+    ListCardinalityRule,
     RequiredFieldsRule,
+    UniquenessRule,
 )
 
 
@@ -190,3 +199,179 @@ class TestValidateFunction:
         # Without cascade, should only validate Investigation (which is valid)
         errors = validate(inv, cascade=False)
         assert len(errors) == 0  # Investigation itself is valid
+
+
+class TestExplicitRuleTypes:
+    """Tests for explicit rule type handling in engine."""
+
+    def test_explicit_conditional_type(self) -> None:
+        """Explicit conditional type creates ConditionalRule."""
+        spec = ValidationRuleSpec(
+            name="test_rule",
+            type="conditional",
+            condition="a OR b",
+        )
+        rule = _create_rule_from_spec(spec)
+        assert isinstance(rule, ConditionalRule)
+        assert rule.condition == "a OR b"
+
+    def test_explicit_date_range_type(self) -> None:
+        """Explicit date_range type creates DateRangeRule."""
+        spec = ValidationRuleSpec(
+            name="test_rule",
+            type="date_range",
+            start_field="start_date",
+            end_field="end_date",
+        )
+        rule = _create_rule_from_spec(spec)
+        assert isinstance(rule, DateRangeRule)
+        assert rule.start_field == "start_date"
+        assert rule.end_field == "end_date"
+
+    def test_date_range_from_condition(self) -> None:
+        """date_range type can parse fields from condition."""
+        spec = ValidationRuleSpec(
+            name="test_rule",
+            type="date_range",
+            condition="end_date >= start_date",
+        )
+        rule = _create_rule_from_spec(spec)
+        assert isinstance(rule, DateRangeRule)
+        assert rule.start_field == "start_date"
+        assert rule.end_field == "end_date"
+
+    def test_explicit_coordinate_pair_type(self) -> None:
+        """Explicit coordinate_pair type creates CoordinatePairRule."""
+        spec = ValidationRuleSpec(
+            name="test_rule",
+            type="coordinate_pair",
+            lat_field="site_lat",
+            lon_field="site_lon",
+        )
+        rule = _create_rule_from_spec(spec)
+        assert isinstance(rule, CoordinatePairRule)
+        assert rule.lat_field == "site_lat"
+        assert rule.lon_field == "site_lon"
+
+    def test_coordinate_pair_defaults(self) -> None:
+        """coordinate_pair type uses default field names."""
+        spec = ValidationRuleSpec(
+            name="test_rule",
+            type="coordinate_pair",
+        )
+        rule = _create_rule_from_spec(spec)
+        assert isinstance(rule, CoordinatePairRule)
+        assert rule.lat_field == "latitude"
+        assert rule.lon_field == "longitude"
+
+    def test_explicit_cardinality_type(self) -> None:
+        """Explicit cardinality type creates ListCardinalityRule."""
+        spec = ValidationRuleSpec(
+            name="test_rule",
+            type="cardinality",
+            field="samples",
+            min_items=1,
+            max_items=10,
+        )
+        rule = _create_rule_from_spec(spec)
+        assert isinstance(rule, ListCardinalityRule)
+        assert rule.field == "samples"
+        assert rule.min_items == 1
+        assert rule.max_items == 10
+
+    def test_explicit_uniqueness_type(self) -> None:
+        """Explicit uniqueness type creates UniquenessRule."""
+        spec = ValidationRuleSpec(
+            name="test_rule",
+            type="uniqueness",
+            field="identifier",
+            unique_within="parent",
+        )
+        rule = _create_rule_from_spec(spec)
+        assert isinstance(rule, UniquenessRule)
+        assert rule.field == "identifier"
+        assert rule.scope == "parent"
+
+    def test_explicit_reference_type(self) -> None:
+        """Explicit reference type creates EntityReferenceRule."""
+        available_refs = {"Protocol": {"PROT-001", "PROT-002"}}
+        spec = ValidationRuleSpec(
+            name="test_rule",
+            type="reference",
+            field="protocol_id",
+            reference="Protocol.identifier",
+        )
+        rule = _create_rule_from_spec(spec, available_refs)
+        assert isinstance(rule, EntityReferenceRule)
+        assert rule.field == "protocol_id"
+        assert rule.reference_id_field == "identifier"
+        assert rule.available_ids == {"PROT-001", "PROT-002"}
+
+    def test_custom_message_passed_to_rule(self) -> None:
+        """Custom message is passed to created rule."""
+        spec = ValidationRuleSpec(
+            name="test_rule",
+            type="conditional",
+            condition="a OR b",
+            message="Please provide either A or B",
+        )
+        rule = _create_rule_from_spec(spec)
+        assert isinstance(rule, ConditionalRule)
+        assert rule.custom_message == "Please provide either A or B"
+
+
+class TestInferredRuleTypes:
+    """Tests for backward-compatible rule type inference."""
+
+    def test_infer_uniqueness_from_unique_within(self) -> None:
+        """Rule with unique_within creates UniquenessRule."""
+        spec = ValidationRuleSpec(
+            name="test_rule",
+            field="identifier",
+            unique_within="global",
+        )
+        rule = _create_rule_from_spec(spec)
+        assert isinstance(rule, UniquenessRule)
+        assert rule.scope == "global"
+
+    def test_infer_reference_from_reference_field(self) -> None:
+        """Rule with reference creates EntityReferenceRule."""
+        available_refs = {"Study": {"STU-001"}}
+        spec = ValidationRuleSpec(
+            name="test_rule",
+            field="study_id",
+            reference="Study.identifier",
+        )
+        rule = _create_rule_from_spec(spec, available_refs)
+        assert isinstance(rule, EntityReferenceRule)
+
+    def test_pattern_rule_skipped(self) -> None:
+        """Pattern rules return None (handled by Pydantic)."""
+        spec = ValidationRuleSpec(
+            name="test_rule",
+            field="email",
+            pattern="^[a-z]+@[a-z]+\\.[a-z]+$",
+        )
+        rule = _create_rule_from_spec(spec)
+        assert rule is None
+
+    def test_enum_rule_skipped(self) -> None:
+        """Enum rules return None (handled by Pydantic)."""
+        spec = ValidationRuleSpec(
+            name="test_rule",
+            field="status",
+            enum=["draft", "published"],
+        )
+        rule = _create_rule_from_spec(spec)
+        assert rule is None
+
+    def test_range_rule_skipped(self) -> None:
+        """Range rules return None (handled by Pydantic)."""
+        spec = ValidationRuleSpec(
+            name="test_rule",
+            field="latitude",
+            minimum=-90,
+            maximum=90,
+        )
+        rule = _create_rule_from_spec(spec)
+        assert rule is None

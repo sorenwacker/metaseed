@@ -163,6 +163,10 @@ class ValidationRuleSpec(BaseModel):
     Attributes:
         name: Rule identifier.
         description: What the rule checks.
+        type: Explicit rule type. If not specified, inferred from fields.
+            Supported types: conditional, date_range, coordinate_pair,
+            cardinality, uniqueness, reference.
+        message: Custom error message. If not specified, default message used.
         applies_to: List of entity names or "all".
         field: Field the rule applies to (optional).
         condition: Rule condition expression.
@@ -171,15 +175,21 @@ class ValidationRuleSpec(BaseModel):
         maximum: Maximum value for numeric range rules.
         enum: Allowed values for vocabulary rules.
         reference: Entity.field reference for integrity rules.
-        unique_within: Scope for uniqueness rules (e.g., "parent").
+        unique_within: Scope for uniqueness rules (e.g., "parent", "global").
         min_items: Minimum items for list cardinality rules.
         max_items: Maximum items for list cardinality rules.
+        lat_field: Latitude field name for coordinate_pair rules.
+        lon_field: Longitude field name for coordinate_pair rules.
+        start_field: Start field name for date_range rules.
+        end_field: End field name for date_range rules.
     """
 
     model_config = ConfigDict(extra="forbid")
 
     name: str
     description: str = ""
+    type: str | None = None
+    message: str | None = None
     applies_to: list[str] | str = "all"
     field: str | None = None
     condition: str | None = None
@@ -191,6 +201,10 @@ class ValidationRuleSpec(BaseModel):
     unique_within: str | None = None
     min_items: int | None = None
     max_items: int | None = None
+    lat_field: str | None = None
+    lon_field: str | None = None
+    start_field: str | None = None
+    end_field: str | None = None
 
 
 class OntologyDefinition(BaseModel):

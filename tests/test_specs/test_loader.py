@@ -366,3 +366,149 @@ entities:
         assert profile.ontologies is not None
         assert "OBI" in profile.ontologies
         assert profile.ontologies["OBI"].ols_id == "obi"
+
+
+class TestValidationRuleBackwardCompatibility:
+    """Tests for validation rule backward compatibility.
+
+    Old specs without explicit `type` field should still work via inference.
+    """
+
+    @pytest.fixture
+    def loader(self) -> SpecLoader:
+        """Create a spec loader instance."""
+        return SpecLoader()
+
+    def test_miappe_validation_rules_load_without_type(self, loader: SpecLoader) -> None:
+        """MIAPPE validation rules without explicit type load correctly."""
+        profile = loader.load_profile(version="1.1", profile="miappe")
+
+        # Find date_range rule (uses condition-based inference)
+        # Look for rules with "date_range" in name which use condition
+        date_range_rules = [
+            r
+            for r in profile.validation_rules
+            if r.name == "date_range" and r.condition is not None
+        ]
+        assert len(date_range_rules) > 0
+
+        # These rules should NOT have explicit type (old style)
+        for rule in date_range_rules:
+            assert rule.type is None  # Old specs don't have explicit type
+
+    def test_old_style_rules_create_engine_rules(self, loader: SpecLoader) -> None:
+        """Old-style rules without type create working engine rules."""
+        from metaseed.validators.engine import create_engine_for_entity
+
+        # Create engine for Study which has date_range validation
+        engine = create_engine_for_entity("Study", version="1.1", profile="miappe")
+
+        # Should have rules including date range
+        assert len(engine.rules) > 0
+
+        # Validate with invalid date range
+        import datetime
+
+        errors = engine.validate(
+            {
+                "unique_id": "STU001",
+                "title": "Test Study",
+                "start_date": datetime.date(2024, 12, 31),
+                "end_date": datetime.date(2024, 1, 1),  # Before start
+            }
+        )
+
+        # Should catch the date range error
+        date_errors = [e for e in errors if "date" in e.message.lower()]
+        assert len(date_errors) > 0
+
+    def test_profile_with_new_style_rules(self, tmp_path: Path) -> None:
+        """Profile with spec_version 0.3 and explicit rule types loads correctly."""
+        content = """
+spec_version: "0.3"
+name: test-profile
+version: "1.0"
+entities:
+  Study:
+    fields:
+      - name: identifier
+        type: string
+        required: true
+      - name: start_date
+        type: date
+      - name: end_date
+        type: date
+validation_rules:
+  - name: study_dates
+    type: date_range
+    applies_to: [Study]
+    start_field: start_date
+    end_field: end_date
+    message: "End date must be after start date"
+"""
+        # Create profile structure
+        profile_dir = tmp_path / "test-profile" / "1.0"
+        profile_dir.mkdir(parents=True)
+        (profile_dir / "profile.yaml").write_text(content)
+
+        loader = SpecLoader(profile="test-profile")
+        loader._user_specs_dir = tmp_path
+
+        profile = loader.load_profile(version="1.0", profile="test-profile")
+        assert profile.spec_version == "0.3"
+        assert len(profile.validation_rules) == 1
+
+        rule = profile.validation_rules[0]
+        assert rule.type == "date_range"
+        assert rule.start_field == "start_date"
+        assert rule.end_field == "end_date"
+        assert rule.message == "End date must be after start date"
+
+    def test_mixed_old_new_rules_both_work(self, tmp_path: Path) -> None:
+        """Profile with both old-style and new-style rules works."""
+        content = """
+spec_version: "0.3"
+name: test-profile
+version: "1.0"
+entities:
+  Study:
+    fields:
+      - name: identifier
+        type: string
+        required: true
+      - name: start_date
+        type: date
+      - name: end_date
+        type: date
+      - name: email
+        type: string
+      - name: phone
+        type: string
+validation_rules:
+  # New style with explicit type
+  - name: study_dates
+    type: date_range
+    applies_to: [Study]
+    start_field: start_date
+    end_field: end_date
+  # Old style without type (inferred)
+  - name: contact_info
+    applies_to: [Study]
+    condition: "email OR phone"
+"""
+        profile_dir = tmp_path / "test-profile" / "1.0"
+        profile_dir.mkdir(parents=True)
+        (profile_dir / "profile.yaml").write_text(content)
+
+        loader = SpecLoader(profile="test-profile")
+        loader._user_specs_dir = tmp_path
+
+        profile = loader.load_profile(version="1.0", profile="test-profile")
+        assert len(profile.validation_rules) == 2
+
+        # First rule has explicit type
+        assert profile.validation_rules[0].type == "date_range"
+
+        # Second rule has no explicit type (inferred)
+        assert profile.validation_rules[1].type is None
+        assert profile.validation_rules[1].condition == "email OR phone"

@@ -12,9 +12,11 @@ from metaseed.validators.rules import (
     ConditionalRule,
     CoordinatePairRule,
     DateRangeRule,
+    EntityReferenceRule,
     ListCardinalityRule,
     RequiredFieldsRule,
     UniqueIdPatternRule,
+    UniquenessRule,
 )
 
 
@@ -56,24 +58,119 @@ class ValidationEngine:
         return errors
 
 
-def _create_rule_from_spec(rule_spec: ValidationRuleSpec) -> ValidationRule | None:
-    """Create a ValidationRule instance from a ValidationRuleSpec.
+def _create_rule_by_type(
+    rule_spec: ValidationRuleSpec,
+    available_refs: dict[str, set[str]] | None = None,
+) -> ValidationRule | None:
+    """Create a rule based on explicit type field.
 
     Args:
-        rule_spec: The rule specification from the YAML.
+        rule_spec: The rule specification.
+        available_refs: Optional dict of entity -> available IDs for reference rules.
 
     Returns:
-        A ValidationRule instance, or None if rule type not supported.
-
-    Note:
-        The following rule types are now handled by Pydantic constraints
-        and are skipped here:
-        - Pattern rules (Pydantic pattern constraint)
-        - Numeric range rules (Pydantic ge/le constraints)
-        - Enum rules (Pydantic Literal types)
-        - Cardinality rules (Pydantic min_length/max_length on lists)
+        A ValidationRule instance, or None if type not recognized.
     """
-    # Skip rules now handled by Pydantic constraints
+    rule_type = rule_spec.type
+
+    if rule_type == "conditional":
+        if not rule_spec.condition:
+            return None
+        return ConditionalRule(
+            condition=rule_spec.condition,
+            rule_name=rule_spec.name,
+            message=rule_spec.message,
+        )
+
+    if rule_type == "date_range":
+        # Use explicit fields if provided, else parse from condition
+        start_field = rule_spec.start_field
+        end_field = rule_spec.end_field
+        if not start_field or not end_field:
+            # Try to parse from condition
+            if rule_spec.condition and (">=" in rule_spec.condition or "<=" in rule_spec.condition):
+                parts = rule_spec.condition.replace(">=", " ").replace("<=", " ").split()
+                if len(parts) == 2:
+                    if ">=" in rule_spec.condition:
+                        start_field = parts[1]
+                        end_field = parts[0]
+                    else:
+                        start_field = parts[0]
+                        end_field = parts[1]
+        if not start_field or not end_field:
+            return None
+        return DateRangeRule(
+            start_field=start_field,
+            end_field=end_field,
+            message=rule_spec.message,
+        )
+
+    if rule_type == "coordinate_pair":
+        lat_field = rule_spec.lat_field or "latitude"
+        lon_field = rule_spec.lon_field or "longitude"
+        return CoordinatePairRule(
+            lat_field=lat_field,
+            lon_field=lon_field,
+            rule_name=rule_spec.name,
+            message=rule_spec.message,
+        )
+
+    if rule_type == "cardinality":
+        if not rule_spec.field:
+            return None
+        return ListCardinalityRule(
+            field=rule_spec.field,
+            min_items=rule_spec.min_items,
+            max_items=rule_spec.max_items,
+            rule_name=rule_spec.name,
+            message=rule_spec.message,
+        )
+
+    if rule_type == "uniqueness":
+        if not rule_spec.field:
+            return None
+        return UniquenessRule(
+            field=rule_spec.field,
+            scope=rule_spec.unique_within or "parent",
+            rule_name=rule_spec.name,
+            message=rule_spec.message,
+        )
+
+    if rule_type == "reference":
+        if not rule_spec.field or not rule_spec.reference:
+            return None
+        # Parse Entity.field reference
+        parts = rule_spec.reference.split(".")
+        if len(parts) != 2:
+            return None
+        target_entity, target_field = parts
+        # Get available IDs from context
+        ids = available_refs.get(target_entity, set()) if available_refs else set()
+        return EntityReferenceRule(
+            field=rule_spec.field,
+            reference_id_field=target_field,
+            available_ids=ids,
+            message=rule_spec.message,
+        )
+
+    return None
+
+
+def _infer_rule_type(
+    rule_spec: ValidationRuleSpec,
+    available_refs: dict[str, set[str]] | None = None,
+) -> ValidationRule | None:
+    """Infer rule type from fields (backward compatibility).
+
+    Args:
+        rule_spec: The rule specification.
+        available_refs: Optional dict of entity -> available IDs for reference rules.
+
+    Returns:
+        A ValidationRule instance, or None if type cannot be inferred.
+    """
+    # Skip rules handled by Pydantic constraints (these are documented in the spec
+    # but shouldn't create engine rules)
     if rule_spec.pattern and rule_spec.field:
         return None  # Handled by Pydantic pattern constraint
 
@@ -83,58 +180,113 @@ def _create_rule_from_spec(rule_spec: ValidationRuleSpec) -> ValidationRule | No
     if rule_spec.enum and rule_spec.field:
         return None  # Handled by Pydantic Literal types
 
+    # Cardinality rules
     if (rule_spec.min_items is not None or rule_spec.max_items is not None) and rule_spec.field:
         return ListCardinalityRule(
             field=rule_spec.field,
             min_items=rule_spec.min_items,
             max_items=rule_spec.max_items,
             rule_name=rule_spec.name,
+            message=rule_spec.message,
         )
+
+    # Uniqueness rules
+    if rule_spec.unique_within and rule_spec.field:
+        return UniquenessRule(
+            field=rule_spec.field,
+            scope=rule_spec.unique_within,
+            rule_name=rule_spec.name,
+            message=rule_spec.message,
+        )
+
+    # Reference rules
+    if rule_spec.reference and rule_spec.field:
+        parts = rule_spec.reference.split(".")
+        if len(parts) == 2:
+            target_entity, target_field = parts
+            ids = available_refs.get(target_entity, set()) if available_refs else set()
+            return EntityReferenceRule(
+                field=rule_spec.field,
+                reference_id_field=target_field,
+                available_ids=ids,
+                message=rule_spec.message,
+            )
 
     # Conditional rules
     if rule_spec.condition:
         # Handle special cases first
         if "latitude" in rule_spec.condition and "longitude" in rule_spec.condition:
-            # Coordinate pair rule
-            # Extract field names from condition
+            # Coordinate pair rule - extract field names
             if "biological_material_latitude" in rule_spec.condition:
                 return CoordinatePairRule(
                     lat_field="biological_material_latitude",
                     lon_field="biological_material_longitude",
                     rule_name=rule_spec.name,
+                    message=rule_spec.message,
                 )
             return CoordinatePairRule(
                 lat_field="latitude",
                 lon_field="longitude",
                 rule_name=rule_spec.name,
+                message=rule_spec.message,
             )
 
         # Handle date comparison conditions
         if ">=" in rule_spec.condition or "<=" in rule_spec.condition:
-            # Date range or comparison rule
             parts = rule_spec.condition.replace(">=", " ").replace("<=", " ").split()
             if len(parts) == 2:
                 if ">=" in rule_spec.condition:
-                    # end_date >= start_date means start must be before end
                     return DateRangeRule(
                         start_field=parts[1],
                         end_field=parts[0],
+                        message=rule_spec.message,
                     )
                 return DateRangeRule(
                     start_field=parts[0],
                     end_field=parts[1],
+                    message=rule_spec.message,
                 )
 
         # General conditional rule
         return ConditionalRule(
             condition=rule_spec.condition,
             rule_name=rule_spec.name,
+            message=rule_spec.message,
         )
 
-    # Reference rules are handled separately (need context of available IDs)
-    # Uniqueness rules are handled separately (need context of all entities)
-
     return None
+
+
+def _create_rule_from_spec(
+    rule_spec: ValidationRuleSpec,
+    available_refs: dict[str, set[str]] | None = None,
+) -> ValidationRule | None:
+    """Create a ValidationRule instance from a ValidationRuleSpec.
+
+    Args:
+        rule_spec: The rule specification from the YAML.
+        available_refs: Optional dict mapping entity names to sets of available IDs.
+            Used for reference validation rules.
+
+    Returns:
+        A ValidationRule instance, or None if rule type not supported.
+
+    Note:
+        If `type` field is set, uses explicit type creation.
+        Otherwise, infers type from other fields (backward compatibility).
+
+        The following rule types are handled by Pydantic constraints
+        and return None:
+        - Pattern rules (Pydantic pattern constraint)
+        - Numeric range rules (Pydantic ge/le constraints)
+        - Enum rules (Pydantic Literal types)
+    """
+    # Explicit type takes precedence
+    if rule_spec.type:
+        return _create_rule_by_type(rule_spec, available_refs)
+
+    # Legacy: infer from fields (backward compatibility)
+    return _infer_rule_type(rule_spec, available_refs)
 
 
 def _applies_to_entity(rule_spec: ValidationRuleSpec, entity: str) -> bool:
@@ -163,6 +315,7 @@ def create_engine_for_entity(
     entity: str,
     version: str = "1.1",
     profile: str = "miappe",
+    available_refs: dict[str, set[str]] | None = None,
 ) -> ValidationEngine:
     """Create a validation engine configured for a specific entity.
 
@@ -173,6 +326,9 @@ def create_engine_for_entity(
         entity: Entity name (e.g., "Investigation").
         version: Profile version (e.g., "1.1").
         profile: Profile name (e.g., "miappe", "combined").
+        available_refs: Optional dict mapping entity names to sets of available IDs.
+            Used for reference validation rules. If not provided, reference rules
+            will use empty ID sets.
 
     Returns:
         Configured ValidationEngine instance.
@@ -212,7 +368,7 @@ def create_engine_for_entity(
 
             for rule_spec in profile_spec.validation_rules:
                 if _applies_to_entity(rule_spec, entity):
-                    rule = _create_rule_from_spec(rule_spec)
+                    rule = _create_rule_from_spec(rule_spec, available_refs)
                     if rule:
                         engine.add_rule(rule)
     except SpecLoadError:

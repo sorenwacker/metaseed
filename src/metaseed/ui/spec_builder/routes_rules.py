@@ -24,6 +24,8 @@ class RuleUpdateData(BaseModel):
 
     name: str
     description: str = ""
+    rule_type: str = ""
+    message: str = ""
     applies_to: str = "all"
     field: str = ""
     condition: str = ""
@@ -35,6 +37,10 @@ class RuleUpdateData(BaseModel):
     unique_within: str = ""
     min_items: str = ""
     max_items: str = ""
+    lat_field: str = ""
+    lon_field: str = ""
+    start_field: str = ""
+    end_field: str = ""
 
     def parse_applies_to(self) -> str | list[str]:
         """Parse applies_to into proper format."""
@@ -50,6 +56,8 @@ class RuleUpdateData(BaseModel):
         """Apply update data to a validation rule."""
         rule.name = self.name.strip()
         rule.description = self.description.strip()
+        rule.type = self.rule_type.strip() or None
+        rule.message = self.message.strip() or None
         rule.applies_to = self.parse_applies_to()
         rule.field = self.field.strip() or None
         rule.condition = self.condition.strip() or None
@@ -65,6 +73,10 @@ class RuleUpdateData(BaseModel):
         rule.unique_within = self.unique_within.strip() or None
         rule.min_items = int(self.min_items) if self.min_items.strip() else None
         rule.max_items = int(self.max_items) if self.max_items.strip() else None
+        rule.lat_field = self.lat_field.strip() or None
+        rule.lon_field = self.lon_field.strip() or None
+        rule.start_field = self.start_field.strip() or None
+        rule.end_field = self.end_field.strip() or None
 
 
 def register_rule_routes(
@@ -174,6 +186,8 @@ def register_rule_routes(
         idx: int,
         name: str = Form(...),
         description: str = Form(""),
+        rule_type: str = Form(""),
+        message: str = Form(""),
         applies_to: str = Form("all"),
         field: str = Form(""),
         condition: str = Form(""),
@@ -185,6 +199,10 @@ def register_rule_routes(
         unique_within: str = Form(""),
         min_items: str = Form(""),
         max_items: str = Form(""),
+        lat_field: str = Form(""),
+        lon_field: str = Form(""),
+        start_field: str = Form(""),
+        end_field: str = Form(""),
     ) -> HTMLResponse:
         """Update a validation rule."""
         builder = _require_spec()
@@ -194,6 +212,8 @@ def register_rule_routes(
         update_data = RuleUpdateData(
             name=name,
             description=description,
+            rule_type=rule_type,
+            message=message,
             applies_to=applies_to,
             field=field,
             condition=condition,
@@ -205,6 +225,10 @@ def register_rule_routes(
             unique_within=unique_within,
             min_items=min_items,
             max_items=max_items,
+            lat_field=lat_field,
+            lon_field=lon_field,
+            start_field=start_field,
+            end_field=end_field,
         )
         update_data.apply_to_rule(rule)
 

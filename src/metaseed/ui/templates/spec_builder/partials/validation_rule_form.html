@@ -4,7 +4,26 @@
       hx-on::after-request="hideRuleModal()"
       class="rule-form rule-form-modal">
 
+    <!-- Step 1: Rule Type Selection -->
+    <div class="form-group">
+        <label class="form-label">Rule Type</label>
+        <select name="rule_type"
+                id="rule-type-select"
+                class="form-input"
+                onchange="showRuleTypeFields(this.value)">
+            <option value="" {% if not rule.type %}selected{% endif %}>Auto-detect from fields</option>
+            <option value="conditional" {% if rule.type == 'conditional' %}selected{% endif %}>Conditional (A OR B, A AND B)</option>
+            <option value="date_range" {% if rule.type == 'date_range' %}selected{% endif %}>Date Range</option>
+            <option value="coordinate_pair" {% if rule.type == 'coordinate_pair' %}selected{% endif %}>Coordinate Pair</option>
+            <option value="cardinality" {% if rule.type == 'cardinality' %}selected{% endif %}>List Cardinality</option>
+            <option value="uniqueness" {% if rule.type == 'uniqueness' %}selected{% endif %}>Uniqueness</option>
+            <option value="reference" {% if rule.type == 'reference' %}selected{% endif %}>Reference Integrity</option>
+        </select>
+        <span class="form-help">Select type for explicit behavior, or leave as auto-detect</span>
+    </div>
+
     <div class="rule-form-grid">
+        <!-- Common fields (always shown) -->
         <div class="form-group">
             <label class="form-label">Name <span class="required">*</span></label>
             <input type="text"
@@ -40,95 +59,174 @@
             <span class="form-help">"all" or comma-separated entity names</span>
         </div>
 
-        <div class="form-group">
-            <label class="form-label">Field</label>
+        <div class="form-group span-2">
+            <label class="form-label">Custom Error Message</label>
             <input type="text"
-                   name="field"
+                   name="message"
                    class="form-input"
-                   value="{{ rule.field or '' }}"
-                   placeholder="field_name">
+                   value="{{ rule.message or '' }}"
+                   placeholder="Optional custom error text">
+            <span class="form-help">Override the default error message</span>
         </div>
 
-        <div class="form-group span-2">
+        <!-- Type-specific fields: Conditional -->
+        <div id="fields-conditional" class="form-group span-2 rule-type-fields" {% if rule.type != 'conditional' and not (not rule.type and rule.condition and not rule.field) %}hidden{% endif %}>
             <label class="form-label">Condition</label>
             <input type="text"
                    name="condition"
                    class="form-input"
                    value="{{ rule.condition or '' }}"
-                   placeholder="end_date >= start_date">
+                   placeholder="end_date >= start_date, A OR B, A AND B">
             <span class="form-help">Logical expression using field names</span>
         </div>
 
-        <div class="form-group">
-            <label class="form-label">Pattern</label>
-            <input type="text"
-                   name="pattern"
-                   class="form-input"
-                   value="{{ rule.pattern or '' }}"
-                   placeholder="^[A-Za-z]+$">
+        <!-- Type-specific fields: Date Range -->
+        <div id="fields-date_range" class="rule-type-fields" {% if rule.type != 'date_range' %}hidden{% endif %}>
+            <div class="form-group">
+                <label class="form-label">Start Field</label>
+                <input type="text"
+                       name="start_field"
+                       class="form-input"
+                       value="{{ rule.start_field or '' }}"
+                       placeholder="start_date">
+            </div>
+            <div class="form-group">
+                <label class="form-label">End Field</label>
+                <input type="text"
+                       name="end_field"
+                       class="form-input"
+                       value="{{ rule.end_field or '' }}"
+                       placeholder="end_date">
+            </div>
         </div>
 
-        <div class="form-group">
-            <label class="form-label">Minimum</label>
-            <input type="number"
-                   name="minimum"
-                   class="form-input"
-                   step="any"
-                   value="{{ rule.minimum if rule.minimum is not none else '' }}">
+        <!-- Type-specific fields: Coordinate Pair -->
+        <div id="fields-coordinate_pair" class="rule-type-fields" {% if rule.type != 'coordinate_pair' %}hidden{% endif %}>
+            <div class="form-group">
+                <label class="form-label">Latitude Field</label>
+                <input type="text"
+                       name="lat_field"
+                       class="form-input"
+                       value="{{ rule.lat_field or '' }}"
+                       placeholder="latitude">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Longitude Field</label>
+                <input type="text"
+                       name="lon_field"
+                       class="form-input"
+                       value="{{ rule.lon_field or '' }}"
+                       placeholder="longitude">
+            </div>
         </div>
 
-        <div class="form-group">
-            <label class="form-label">Maximum</label>
-            <input type="number"
-                   name="maximum"
-                   class="form-input"
-                   step="any"
-                   value="{{ rule.maximum if rule.maximum is not none else '' }}">
+        <!-- Type-specific fields: Cardinality -->
+        <div id="fields-cardinality" class="rule-type-fields" {% if rule.type != 'cardinality' and not (not rule.type and (rule.min_items is not none or rule.max_items is not none)) %}hidden{% endif %}>
+            <div class="form-group">
+                <label class="form-label">Field</label>
+                <input type="text"
+                       name="field"
+                       class="form-input"
+                       value="{{ rule.field or '' }}"
+                       placeholder="field_name">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Min Items</label>
+                <input type="number"
+                       name="min_items"
+                       class="form-input"
+                       min="0"
+                       value="{{ rule.min_items if rule.min_items is not none else '' }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Max Items</label>
+                <input type="number"
+                       name="max_items"
+                       class="form-input"
+                       min="0"
+                       value="{{ rule.max_items if rule.max_items is not none else '' }}">
+            </div>
         </div>
 
-        <div class="form-group">
-            <label class="form-label">Reference</label>
-            <input type="text"
-                   name="reference"
-                   class="form-input"
-                   value="{{ rule.reference or '' }}"
-                   placeholder="Entity.field">
-            <span class="form-help">Entity.field for integrity checks</span>
+        <!-- Type-specific fields: Uniqueness -->
+        <div id="fields-uniqueness" class="rule-type-fields" {% if rule.type != 'uniqueness' and not (not rule.type and rule.unique_within) %}hidden{% endif %}>
+            <div class="form-group">
+                <label class="form-label">Field</label>
+                <input type="text"
+                       name="field"
+                       class="form-input"
+                       value="{{ rule.field or '' }}"
+                       placeholder="field_name">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Unique Within</label>
+                <select name="unique_within" class="form-input">
+                    <option value="">Select scope...</option>
+                    <option value="parent" {% if rule.unique_within == 'parent' %}selected{% endif %}>Parent</option>
+                    <option value="global" {% if rule.unique_within == 'global' %}selected{% endif %}>Global</option>
+                </select>
+            </div>
         </div>
 
-        <div class="form-group">
-            <label class="form-label">Unique Within</label>
-            <input type="text"
-                   name="unique_within"
-                   class="form-input"
-                   value="{{ rule.unique_within or '' }}"
-                   placeholder="parent">
+        <!-- Type-specific fields: Reference -->
+        <div id="fields-reference" class="rule-type-fields" {% if rule.type != 'reference' and not (not rule.type and rule.reference) %}hidden{% endif %}>
+            <div class="form-group">
+                <label class="form-label">Field</label>
+                <input type="text"
+                       name="field"
+                       class="form-input"
+                       value="{{ rule.field or '' }}"
+                       placeholder="field_name">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Reference</label>
+                <input type="text"
+                       name="reference"
+                       class="form-input"
+                       value="{{ rule.reference or '' }}"
+                       placeholder="Entity.field">
+                <span class="form-help">Entity.field for integrity checks</span>
+            </div>
         </div>
 
-        <div class="form-group">
-            <label class="form-label">Min Items</label>
-            <input type="number"
-                   name="min_items"
-                   class="form-input"
-                   min="0"
-                   value="{{ rule.min_items if rule.min_items is not none else '' }}">
-        </div>
+        <!-- Legacy fields (shown when auto-detect or for backward compat) -->
+        <div id="fields-legacy" class="rule-type-fields" {% if rule.type %}hidden{% endif %}>
+            <div class="form-group">
+                <label class="form-label">Pattern</label>
+                <input type="text"
+                       name="pattern"
+                       class="form-input"
+                       value="{{ rule.pattern or '' }}"
+                       placeholder="^[A-Za-z]+$">
+                <span class="form-help">Prefer field constraints for patterns</span>
+            </div>
 
-        <div class="form-group">
-            <label class="form-label">Max Items</label>
-            <input type="number"
-                   name="max_items"
-                   class="form-input"
-                   min="0"
-                   value="{{ rule.max_items if rule.max_items is not none else '' }}">
-        </div>
+            <div class="form-group">
+                <label class="form-label">Minimum</label>
+                <input type="number"
+                       name="minimum"
+                       class="form-input"
+                       step="any"
+                       value="{{ rule.minimum if rule.minimum is not none else '' }}">
+            </div>
 
-        <div class="form-group span-2">
-            <label class="form-label">Enum Values (one per line)</label>
-            <textarea name="enum_values"
-                      class="form-input"
-                      rows="2"
-                      placeholder="value1&#10;value2">{% if rule.enum %}{{ rule.enum|join('\n') }}{% endif %}</textarea>
+            <div class="form-group">
+                <label class="form-label">Maximum</label>
+                <input type="number"
+                       name="maximum"
+                       class="form-input"
+                       step="any"
+                       value="{{ rule.maximum if rule.maximum is not none else '' }}">
+            </div>
+
+            <div class="form-group span-2">
+                <label class="form-label">Enum Values (one per line)</label>
+                <textarea name="enum_values"
+                          class="form-input"
+                          rows="2"
+                          placeholder="value1&#10;value2">{% if rule.enum %}{{ rule.enum|join('\n') }}{% endif %}</textarea>
+                <span class="form-help">Prefer field constraints for enums</span>
+            </div>
         </div>
     </div>
 
@@ -143,3 +241,41 @@
         </button>
     </div>
 </form>
+
+<script>
+function showRuleTypeFields(type) {
+    // Hide all type-specific fields first
+    document.querySelectorAll('.rule-type-fields').forEach(el => el.hidden = true);
+
+    // Show fields based on selected type
+    if (type === '' || type === 'conditional') {
+        // Auto-detect or conditional: show condition and legacy fields
+        document.getElementById('fields-conditional').hidden = false;
+        if (type === '') {
+            document.getElementById('fields-legacy').hidden = false;
+            document.getElementById('fields-cardinality').hidden = false;
+            document.getElementById('fields-uniqueness').hidden = false;
+            document.getElementById('fields-reference').hidden = false;
+        }
+    } else if (type === 'date_range') {
+        document.getElementById('fields-date_range').hidden = false;
+        document.getElementById('fields-conditional').hidden = false; // For condition fallback
+    } else if (type === 'coordinate_pair') {
+        document.getElementById('fields-coordinate_pair').hidden = false;
+    } else if (type === 'cardinality') {
+        document.getElementById('fields-cardinality').hidden = false;
+    } else if (type === 'uniqueness') {
+        document.getElementById('fields-uniqueness').hidden = false;
+    } else if (type === 'reference') {
+        document.getElementById('fields-reference').hidden = false;
+    }
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const select = document.getElementById('rule-type-select');
+    if (select) {
+        showRuleTypeFields(select.value);
+    }
+});
+</script>

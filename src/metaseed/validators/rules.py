@@ -16,17 +16,25 @@ class DateRangeRule(ValidationRule):
     Attributes:
         start_field: Name of the start date field.
         end_field: Name of the end date field.
+        custom_message: Optional custom error message.
     """
 
-    def __init__(self: Self, start_field: str, end_field: str) -> None:
+    def __init__(
+        self: Self,
+        start_field: str,
+        end_field: str,
+        message: str | None = None,
+    ) -> None:
         """Initialize the rule.
 
         Args:
             start_field: Name of the start date field.
             end_field: Name of the end date field.
+            message: Optional custom error message.
         """
         self.start_field = start_field
         self.end_field = end_field
+        self.custom_message = message
 
     @property
     def name(self: Self) -> str:
@@ -63,10 +71,14 @@ class DateRangeRule(ValidationRule):
                 end = datetime.date.fromisoformat(end)
 
         if end < start:
+            msg = (
+                self.custom_message
+                or f"{self.end_field} ({end}) must not be before {self.start_field} ({start})"
+            )
             return [
                 ValidationError(
                     field=self.end_field,
-                    message=f"{self.end_field} ({end}) must not be before {self.start_field} ({start})",
+                    message=msg,
                     rule=self.name,
                 )
             ]
@@ -191,6 +203,7 @@ class EntityReferenceRule(ValidationRule):
         reference_id_field: Name of the ID field in the referenced entity.
         available_ids: Set of valid IDs that exist in the collection.
         is_list: Whether the field contains a list of references.
+        custom_message: Optional custom error message.
     """
 
     def __init__(
@@ -199,6 +212,7 @@ class EntityReferenceRule(ValidationRule):
         reference_id_field: str,
         available_ids: set[str],
         is_list: bool = False,
+        message: str | None = None,
     ) -> None:
         """Initialize the rule.
 
@@ -207,11 +221,13 @@ class EntityReferenceRule(ValidationRule):
             reference_id_field: Name of the ID field in referenced entities.
             available_ids: Set of valid entity IDs.
             is_list: True if field contains a list of references.
+            message: Optional custom error message.
         """
         self.field = field
         self.reference_id_field = reference_id_field
         self.available_ids = available_ids
         self.is_list = is_list
+        self.custom_message = message
 
     @property
     def name(self: Self) -> str:
@@ -243,11 +259,15 @@ class EntityReferenceRule(ValidationRule):
                 if isinstance(ref, dict):
                     ref_id = ref.get(self.reference_id_field)
                     if ref_id and ref_id not in self.available_ids:
+                        msg = (
+                            self.custom_message
+                            or f"Reference '{ref_id}' not found in "
+                            f"available {self.reference_id_field}s"
+                        )
                         errors.append(
                             ValidationError(
                                 field=f"{self.field}[{i}]",
-                                message=f"Reference '{ref_id}' not found in "
-                                f"available {self.reference_id_field}s",
+                                message=msg,
                                 rule=self.name,
                             )
                         )
@@ -255,11 +275,14 @@ class EntityReferenceRule(ValidationRule):
         elif isinstance(value, dict):
             ref_id = value.get(self.reference_id_field)
             if ref_id and ref_id not in self.available_ids:
+                msg = (
+                    self.custom_message
+                    or f"Reference '{ref_id}' not found in " f"available {self.reference_id_field}s"
+                )
                 errors.append(
                     ValidationError(
                         field=self.field,
-                        message=f"Reference '{ref_id}' not found in "
-                        f"available {self.reference_id_field}s",
+                        message=msg,
                         rule=self.name,
                     )
                 )
@@ -279,17 +302,25 @@ class ConditionalRule(ValidationRule):
     Attributes:
         condition: Condition expression string.
         rule_name: Name for this specific rule instance.
+        custom_message: Optional custom error message.
     """
 
-    def __init__(self: Self, condition: str, rule_name: str = "conditional") -> None:
+    def __init__(
+        self: Self,
+        condition: str,
+        rule_name: str = "conditional",
+        message: str | None = None,
+    ) -> None:
         """Initialize the rule.
 
         Args:
             condition: Condition expression (e.g., "A OR B").
             rule_name: Name for this rule instance.
+            message: Optional custom error message.
         """
         self.condition = condition
         self.rule_name = rule_name
+        self.custom_message = message
         self._fields = self._extract_fields(condition)
 
     @property
@@ -359,10 +390,11 @@ class ConditionalRule(ValidationRule):
             List with error if condition not met.
         """
         if not self._evaluate(self.condition, data):
+            msg = self.custom_message or f"Condition not satisfied: {self.condition}"
             return [
                 ValidationError(
                     field=", ".join(self._fields),
-                    message=f"Condition not satisfied: {self.condition}",
+                    message=msg,
                     rule=self.name,
                 )
             ]
@@ -377,6 +409,7 @@ class ListCardinalityRule(ValidationRule):
         min_items: Minimum number of items required (None = no minimum).
         max_items: Maximum number of items allowed (None = no maximum).
         rule_name: Name for this specific rule instance.
+        custom_message: Optional custom error message.
     """
 
     def __init__(
@@ -385,6 +418,7 @@ class ListCardinalityRule(ValidationRule):
         min_items: int | None = None,
         max_items: int | None = None,
         rule_name: str = "list_cardinality",
+        message: str | None = None,
     ) -> None:
         """Initialize the rule.
 
@@ -393,11 +427,13 @@ class ListCardinalityRule(ValidationRule):
             min_items: Minimum number of items required.
             max_items: Maximum number of items allowed.
             rule_name: Name for this rule instance.
+            message: Optional custom error message.
         """
         self.field = field
         self.min_items = min_items
         self.max_items = max_items
         self.rule_name = rule_name
+        self.custom_message = message
 
     @property
     def name(self: Self) -> str:
@@ -426,21 +462,27 @@ class ListCardinalityRule(ValidationRule):
         count = len(value)
 
         if self.min_items is not None and count < self.min_items:
+            msg = (
+                self.custom_message
+                or f"'{self.field}' must have at least {self.min_items} item(s), but has {count}"
+            )
             errors.append(
                 ValidationError(
                     field=self.field,
-                    message=f"'{self.field}' must have at least {self.min_items} item(s), "
-                    f"but has {count}",
+                    message=msg,
                     rule=self.name,
                 )
             )
 
         if self.max_items is not None and count > self.max_items:
+            msg = (
+                self.custom_message
+                or f"'{self.field}' must have at most {self.max_items} item(s), but has {count}"
+            )
             errors.append(
                 ValidationError(
                     field=self.field,
-                    message=f"'{self.field}' must have at most {self.max_items} item(s), "
-                    f"but has {count}",
+                    message=msg,
                     rule=self.name,
                 )
             )
@@ -455,6 +497,7 @@ class CoordinatePairRule(ValidationRule):
         lat_field: Name of the latitude field.
         lon_field: Name of the longitude field.
         rule_name: Name for this specific rule instance.
+        custom_message: Optional custom error message.
     """
 
     def __init__(
@@ -462,6 +505,7 @@ class CoordinatePairRule(ValidationRule):
         lat_field: str = "latitude",
         lon_field: str = "longitude",
         rule_name: str = "coordinate_pair",
+        message: str | None = None,
     ) -> None:
         """Initialize the rule.
 
@@ -469,10 +513,12 @@ class CoordinatePairRule(ValidationRule):
             lat_field: Name of the latitude field.
             lon_field: Name of the longitude field.
             rule_name: Name for this rule instance.
+            message: Optional custom error message.
         """
         self.lat_field = lat_field
         self.lon_field = lon_field
         self.rule_name = rule_name
+        self.custom_message = message
 
     @property
     def name(self: Self) -> str:
@@ -494,13 +540,88 @@ class CoordinatePairRule(ValidationRule):
         if has_lat != has_lon:
             missing = self.lon_field if has_lat else self.lat_field
             present = self.lat_field if has_lat else self.lon_field
+            msg = self.custom_message or f"'{missing}' is required when '{present}' is provided"
             return [
                 ValidationError(
                     field=missing,
-                    message=f"'{missing}' is required when '{present}' is provided",
+                    message=msg,
                     rule=self.name,
                 )
             ]
+        return []
+
+
+class UniquenessRule(ValidationRule):
+    """Validates field uniqueness within a scope.
+
+    Tracks seen values and reports duplicates.
+
+    Attributes:
+        field: Name of the field to check for uniqueness.
+        scope: Uniqueness scope ("parent" or "global").
+        rule_name: Name for this specific rule instance.
+        custom_message: Optional custom error message.
+    """
+
+    def __init__(
+        self: Self,
+        field: str,
+        scope: str = "parent",
+        rule_name: str = "uniqueness",
+        message: str | None = None,
+    ) -> None:
+        """Initialize the rule.
+
+        Args:
+            field: Name of the field to check.
+            scope: Uniqueness scope ("parent" or "global").
+            rule_name: Name for this rule instance.
+            message: Optional custom error message.
+        """
+        self.field = field
+        self.scope = scope
+        self.rule_name = rule_name
+        self.custom_message = message
+        self._seen_values: set[str] = set()
+
+    @property
+    def name(self: Self) -> str:
+        """Return the rule name."""
+        return self.rule_name
+
+    def reset(self: Self) -> None:
+        """Reset seen values for a new validation context."""
+        self._seen_values.clear()
+
+    def validate(self: Self, data: dict[str, Any]) -> list[ValidationError]:
+        """Validate field value is unique within scope.
+
+        Args:
+            data: Dictionary to validate.
+
+        Returns:
+            List with error if value is duplicate.
+        """
+        value = data.get(self.field)
+
+        # Skip if field is missing or None
+        if value is None:
+            return []
+
+        # Convert to string for consistent comparison
+        str_value = str(value)
+
+        if str_value in self._seen_values:
+            msg = self.custom_message or f"Value '{value}' is not unique within {self.scope}"
+            return [
+                ValidationError(
+                    field=self.field,
+                    message=msg,
+                    rule=self.name,
+                )
+            ]
+
+        self._seen_values.add(str_value)
         return []
 
 
@@ -512,4 +633,5 @@ __all__ = [
     "ListCardinalityRule",
     "RequiredFieldsRule",
     "UniqueIdPatternRule",
+    "UniquenessRule",
 ]

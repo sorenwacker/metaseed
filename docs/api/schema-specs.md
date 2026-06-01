@@ -74,6 +74,7 @@ The `spec_version` field indicates which version of the specification language f
 |--------------|-------------|
 | `0.1` | Initial format. Implicit default for existing specs. |
 | `0.2` | Adds `ontologies` section for structured ontology definitions. |
+| `0.3` | Adds explicit `type` and `message` fields to validation rules, plus `lat_field`, `lon_field`, `start_field`, `end_field` for explicit field configuration. |
 
 Existing specs without `spec_version` are automatically treated as version `0.1`.
 
@@ -317,58 +318,168 @@ Use `entity` type for single nested objects:
   items: OntologyAnnotation
 ```
 
+## Validation: Field Constraints vs Rules
+
+Metaseed provides two validation mechanisms. Choose based on your needs:
+
+### Field Constraints (Pydantic Layer)
+
+Use for **single-field** validation at **model creation time**:
+
+- Pattern matching (regex)
+- Numeric ranges (min/max)
+- Enum/vocabulary restrictions
+- String length limits
+- List item counts
+
+```yaml
+fields:
+  - name: latitude
+    type: float
+    constraints:
+      minimum: -90
+      maximum: 90
+
+  - name: status
+    type: string
+    constraints:
+      enum: ["draft", "submitted", "published"]
+
+  - name: email
+    type: string
+    constraints:
+      pattern: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+```
+
+Field constraints are enforced by Pydantic when creating model instances. Invalid data raises a validation error immediately.
+
+### Validation Rules (Engine Layer)
+
+Use for **cross-field** or **cross-entity** validation:
+
+- Date range comparisons (start before end)
+- Conditional requirements (A OR B)
+- Coordinate pairs (lat/lon together)
+- Uniqueness constraints
+- Reference integrity
+
+```yaml
+validation_rules:
+  - name: date_range
+    type: date_range
+    applies_to: [Study]
+    start_field: start_date
+    end_field: end_date
+    message: "Study end date cannot be before start date"
+
+  - name: coordinates_together
+    type: coordinate_pair
+    applies_to: [Location]
+    lat_field: latitude
+    lon_field: longitude
+
+  - name: identifier_unique
+    type: uniqueness
+    applies_to: all
+    field: identifier
+    unique_within: parent
+```
+
+Validation rules run after model creation via the validation engine. They can check relationships between fields and entities.
+
+### When to Use Which
+
+| Scenario | Use |
+|----------|-----|
+| Email format | Field constraint (`pattern`) |
+| Latitude range | Field constraint (`minimum`, `maximum`) |
+| Status vocabulary | Field constraint (`enum`) |
+| End date after start date | Validation rule (`date_range`) |
+| Either DOI or PubMed ID required | Validation rule (`conditional`) |
+| Lat/lon both present or both absent | Validation rule (`coordinate_pair`) |
+| Unique identifier within parent | Validation rule (`uniqueness`) |
+| Reference points to existing entity | Validation rule (`reference`) |
+
 ## Validation Rules
 
 Validation rules define cross-field or cross-entity constraints.
 
 ```yaml
 validation_rules:
-  # Pattern validation
-  - name: email_format
-    applies_to: [Person]
-    field: email
-    pattern: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+  # Explicit type (recommended)
+  - name: study_date_range
+    type: date_range
+    applies_to: [Study]
+    start_field: start_date
+    end_field: end_date
+    message: "End date must be after start date"
 
   # Conditional requirement
   - name: publication_identifier
+    type: conditional
     description: Must have doi, pubmed_id, or title
     applies_to: [Publication]
     condition: "doi OR pubmed_id OR title"
 
-  # Cross-field validation
-  - name: date_range
-    description: End date must be after start date
-    applies_to: [Study]
-    condition: "end_date >= start_date"
+  # Coordinate pair
+  - name: location_coordinates
+    type: coordinate_pair
+    applies_to: [Location]
+    lat_field: latitude
+    lon_field: longitude
 
   # Cardinality
   - name: at_least_one_sample
+    type: cardinality
     applies_to: [Study]
     field: samples
     min_items: 1
 
+  # Uniqueness
+  - name: unique_sample_id
+    type: uniqueness
+    applies_to: [Sample]
+    field: identifier
+    unique_within: parent
+
   # Referential integrity
   - name: protocol_exists
+    type: reference
     applies_to: [Process]
     field: executes_protocol
     reference: Protocol.name
 ```
 
+### Rule Types
+
+| Type | Description | Required Fields |
+|------|-------------|-----------------|
+| `conditional` | Boolean condition (A OR B, A AND B) | `condition` |
+| `date_range` | Date comparison | `start_field`, `end_field` (or `condition`) |
+| `coordinate_pair` | Lat/lon pair validation | `lat_field`, `lon_field` (optional, defaults to latitude/longitude) |
+| `cardinality` | List min/max items | `field`, `min_items` and/or `max_items` |
+| `uniqueness` | Unique within scope | `field`, `unique_within` |
+| `reference` | Entity reference integrity | `field`, `reference` |
+
+### Rule Fields
+
 | Field | Required | Description |
 |-------|----------|-------------|
 | `name` | yes | Rule identifier |
+| `type` | no | Explicit rule type (recommended). If omitted, inferred from other fields |
 | `description` | no | What the rule checks |
+| `message` | no | Custom error message (overrides default) |
 | `applies_to` | no | Entity names or `"all"` (default: `"all"`) |
-| `field` | no | Specific field for single-field rules |
-| `condition` | no | Boolean condition expression |
-| `pattern` | no | Regex for pattern validation |
-| `minimum` | no | Min value for range validation |
-| `maximum` | no | Max value for range validation |
-| `enum` | no | Allowed values |
-| `reference` | no | Entity.field for integrity checks |
-| `unique_within` | no | `"parent"` = unique within parent |
-| `min_items` | no | Minimum list items |
-| `max_items` | no | Maximum list items |
+| `field` | conditional | Target field for single-field rules |
+| `condition` | conditional | Boolean condition expression |
+| `reference` | conditional | Entity.field for integrity checks |
+| `unique_within` | conditional | `"parent"` or `"global"` for uniqueness scope |
+| `min_items` | no | Minimum list items (cardinality) |
+| `max_items` | no | Maximum list items (cardinality) |
+| `start_field` | conditional | Start field for date_range |
+| `end_field` | conditional | End field for date_range |
+| `lat_field` | no | Latitude field for coordinate_pair (default: `latitude`) |
+| `lon_field` | no | Longitude field for coordinate_pair (default: `longitude`) |
 
 ### Condition Syntax
 
@@ -382,6 +493,19 @@ field1 OR field2              # At least one has value
 (a AND b) OR (NOT a AND NOT b)  # Complex logic
 field1 >= field2              # Comparison (dates, numbers)
 ```
+
+### Backward Compatibility
+
+Rules without a `type` field continue to work. The engine infers the type from other fields:
+
+- `condition` with comparison operators -> `date_range`
+- `condition` with lat/lon fields -> `coordinate_pair`
+- `condition` with AND/OR -> `conditional`
+- `min_items`/`max_items` with `field` -> `cardinality`
+- `unique_within` with `field` -> `uniqueness`
+- `reference` with `field` -> `reference`
+
+Using explicit `type` is recommended for clarity and to avoid ambiguity.
 
 ## Design Patterns
 
