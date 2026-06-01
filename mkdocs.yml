@@ -50,6 +50,7 @@ nav:
       - Quick Start: getting-started/quickstart.md
   - Guides:
       - Spec Builder: guides/spec-builder.md
+      - Ontology Lookup: guides/ontology-lookup.md
       - Profile Comparison: guides/spec-merge.md
       - Logging: guides/logging.md
   - Profiles:

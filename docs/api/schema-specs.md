@@ -209,6 +209,19 @@ fields:
 | `list` | Collection | `list[T]` | See below |
 | `entity` | Single nested object | nested model | See below |
 
+### Ontology Term Fields
+
+Fields with `type: ontology_term` enable OLS4 (Ontology Lookup Service) integration in the UI:
+
+```yaml
+- name: organism
+  type: ontology_term
+  ontology_id: ncbitaxon  # Optional: scope to specific ontology
+  description: Organism from NCBI Taxonomy
+```
+
+See [Ontology Lookup Guide](../guides/ontology-lookup.md) for details on autocomplete, modal search, and configuration.
+
 ### List Fields
 
 Lists contain multiple items. Use `items` to specify the element type:
