@@ -434,6 +434,58 @@ class TestSpecBuilderRoutes:
         assert response.status_code == 200
         assert "to_delete" not in response.text
 
+    def test_move_field_up(self, client):
+        """Move field up in the list."""
+        client.get("/spec-builder/new")
+        client.post("/spec-builder/entity", data={"name": "TestEntity"})
+        client.post(
+            "/spec-builder/entity/TestEntity/field",
+            data={"name": "first_field", "field_type": "string"},
+        )
+        client.post(
+            "/spec-builder/entity/TestEntity/field",
+            data={"name": "second_field", "field_type": "string"},
+        )
+        # Move second field up
+        response = client.post("/spec-builder/entity/TestEntity/field/1/move-up")
+        assert response.status_code == 200
+        # second_field should now be first (check order in HTML)
+        first_pos = response.text.find("second_field")
+        second_pos = response.text.find("first_field")
+        assert first_pos < second_pos
+
+    def test_move_field_down(self, client):
+        """Move field down in the list."""
+        client.get("/spec-builder/new")
+        client.post("/spec-builder/entity", data={"name": "TestEntity"})
+        client.post(
+            "/spec-builder/entity/TestEntity/field",
+            data={"name": "first_field", "field_type": "string"},
+        )
+        client.post(
+            "/spec-builder/entity/TestEntity/field",
+            data={"name": "second_field", "field_type": "string"},
+        )
+        # Move first field down
+        response = client.post("/spec-builder/entity/TestEntity/field/0/move-down")
+        assert response.status_code == 200
+        # first_field should now be second
+        first_pos = response.text.find("second_field")
+        second_pos = response.text.find("first_field")
+        assert first_pos < second_pos
+
+    def test_move_field_up_at_top_noop(self, client):
+        """Moving first field up does nothing."""
+        client.get("/spec-builder/new")
+        client.post("/spec-builder/entity", data={"name": "TestEntity"})
+        client.post(
+            "/spec-builder/entity/TestEntity/field",
+            data={"name": "only_field", "field_type": "string"},
+        )
+        response = client.post("/spec-builder/entity/TestEntity/field/0/move-up")
+        assert response.status_code == 200
+        assert "only_field" in response.text
+
     def test_add_validation_rule(self, client):
         """Add validation rule."""
         client.get("/spec-builder/new")

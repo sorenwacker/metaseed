@@ -3884,6 +3884,29 @@ details.sidebar-section summary:hover {
     color: var(--clr-moss);
 }
 
+.field-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.btn-icon.move {
+    font-size: 0.625rem;
+    padding: 2px 4px;
+    color: var(--clr-moss);
+}
+
+.btn-icon.move:hover:not(:disabled) {
+    color: var(--clr-ink);
+    background: var(--clr-mist);
+}
+
+.btn-icon.move:disabled,
+.btn-icon.move.disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
 /* Add field inline form */
 .add-field-inline {
     display: flex;

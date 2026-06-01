@@ -273,6 +273,38 @@ def register_field_routes(
 
         return _entity_editor_response(request, builder, entity_name)
 
+    @router.post("/entity/{entity_name}/field/{idx}/move-up", response_class=HTMLResponse)
+    async def move_field_up(request: Request, entity_name: str, idx: int) -> HTMLResponse:
+        """Move a field up in the list."""
+        builder = _require_spec()
+        entity = _require_entity(builder, entity_name)
+        _require_field(entity, idx)
+
+        if idx > 0:
+            entity.fields[idx], entity.fields[idx - 1] = (
+                entity.fields[idx - 1],
+                entity.fields[idx],
+            )
+            builder.mark_changed()
+
+        return _entity_editor_response(request, builder, entity_name)
+
+    @router.post("/entity/{entity_name}/field/{idx}/move-down", response_class=HTMLResponse)
+    async def move_field_down(request: Request, entity_name: str, idx: int) -> HTMLResponse:
+        """Move a field down in the list."""
+        builder = _require_spec()
+        entity = _require_entity(builder, entity_name)
+        _require_field(entity, idx)
+
+        if idx < len(entity.fields) - 1:
+            entity.fields[idx], entity.fields[idx + 1] = (
+                entity.fields[idx + 1],
+                entity.fields[idx],
+            )
+            builder.mark_changed()
+
+        return _entity_editor_response(request, builder, entity_name)
+
 
 def _auto_create_back_reference(
     builder: SpecBuilderState,

@@ -62,14 +62,34 @@
                         <span class="field-required-dot" title="Required"></span>
                         {% endif %}
                     </div>
-                    <button class="btn-icon danger"
-                            hx-delete="/spec-builder/entity/{{ entity_name }}/field/{{ loop.index0 }}"
-                            hx-target="#editor-content"
-                            hx-swap="innerHTML"
-                            hx-confirm="Delete field '{{ field.name }}'?"
-                            onclick="event.stopPropagation();">
-                        &times;
-                    </button>
+                    <div class="field-card-actions">
+                        <button class="btn-icon move{% if loop.first %} disabled{% endif %}"
+                                hx-post="/spec-builder/entity/{{ entity_name }}/field/{{ loop.index0 }}/move-up"
+                                hx-target="#editor-content"
+                                hx-swap="innerHTML"
+                                onclick="event.stopPropagation();"
+                                title="Move up"
+                                {% if loop.first %}disabled{% endif %}>
+                            &#9650;
+                        </button>
+                        <button class="btn-icon move{% if loop.last %} disabled{% endif %}"
+                                hx-post="/spec-builder/entity/{{ entity_name }}/field/{{ loop.index0 }}/move-down"
+                                hx-target="#editor-content"
+                                hx-swap="innerHTML"
+                                onclick="event.stopPropagation();"
+                                title="Move down"
+                                {% if loop.last %}disabled{% endif %}>
+                            &#9660;
+                        </button>
+                        <button class="btn-icon danger"
+                                hx-delete="/spec-builder/entity/{{ entity_name }}/field/{{ loop.index0 }}"
+                                hx-target="#editor-content"
+                                hx-swap="innerHTML"
+                                hx-confirm="Delete field '{{ field.name }}'?"
+                                onclick="event.stopPropagation();">
+                            &times;
+                        </button>
+                    </div>
                 </div>
                 {% if field.items %}
                 <div class="field-card-meta">
