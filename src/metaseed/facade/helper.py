@@ -211,27 +211,27 @@ class EntityHelper:
 
     def help(self: Self) -> None:
         """Print detailed help for this entity."""
-        print(f"\n{'=' * 60}")
-        print(f"{self._name} ({self._profile} v{self._version})")
-        print("=" * 60)
+        print(f"\n{'=' * 60}")  # noqa: T201
+        print(f"{self._name} ({self._profile} v{self._version})")  # noqa: T201
+        print("=" * 60)  # noqa: T201
 
         if self._spec.description:
-            print(f"\n{self._spec.description}")
+            print(f"\n{self._spec.description}")  # noqa: T201
 
         if self._spec.ontology_term:
-            print(f"\nOntology: {self._spec.ontology_term}")
+            print(f"\nOntology: {self._spec.ontology_term}")  # noqa: T201
 
-        print(f"\n--- Required Fields ({len(self.required_fields)}) ---")
+        print(f"\n--- Required Fields ({len(self.required_fields)}) ---")  # noqa: T201
         for f in self._spec.fields:
             if f.required:
                 self._print_field(f)
 
-        print(f"\n--- Optional Fields ({len(self.optional_fields)}) ---")
+        print(f"\n--- Optional Fields ({len(self.optional_fields)}) ---")  # noqa: T201
         for f in self._spec.fields:
             if not f.required:
                 self._print_field(f)
 
-        print()
+        print()  # noqa: T201
 
     def _print_field(self: Self, f: FieldSpec) -> None:
         """Print a single field's information."""
@@ -240,17 +240,17 @@ class EntityHelper:
             type_str = f"list[{f.items}]" if f.type == FieldType.LIST else f.items
 
         req = "*" if f.required else " "
-        print(f"  {req} {f.name}: {type_str}")
+        print(f"  {req} {f.name}: {type_str}")  # noqa: T201
         if f.description:
             # Wrap long descriptions
             desc = f.description[:70] + "..." if len(f.description) > 70 else f.description
-            print(f"      {desc}")
+            print(f"      {desc}")  # noqa: T201
 
     def example(self: Self) -> None:
         """Print example code for creating this entity."""
-        print(f"\n# Create a {self._name}")
-        print(f"{self._name} = profile.{self._name}")
-        print()
+        print(f"\n# Create a {self._name}")  # noqa: T201
+        print(f"{self._name} = profile.{self._name}")  # noqa: T201
+        print()  # noqa: T201
 
         # Use spec example if available
         spec_example = self._spec.example or {}
@@ -282,9 +282,9 @@ class EntityHelper:
                     args.append(f'{f.name}="..."')
 
         args_str = ",\n    ".join(args)
-        print(f"instance = {self._name}.create(")
-        print(f"    {args_str}")
-        print(")")
+        print(f"instance = {self._name}.create(")  # noqa: T201
+        print(f"    {args_str}")  # noqa: T201
+        print(")")  # noqa: T201
 
     def validate_ontology_terms(self: Self, data: dict | BaseModel, warn: bool = True) -> list[str]:
         """Validate ontology term fields in entity data.

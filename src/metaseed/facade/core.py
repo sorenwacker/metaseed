@@ -491,24 +491,24 @@ class ProfileFacade:
             helper.help()
             return
 
-        print(f"\n{'=' * 60}")
-        print(f"{self._profile.upper()} Profile v{self._version}")
-        print("=" * 60)
+        print(f"\n{'=' * 60}")  # noqa: T201
+        print(f"{self._profile.upper()} Profile v{self._version}")  # noqa: T201
+        print("=" * 60)  # noqa: T201
 
-        print(f"\nEntities ({len(self._entities)}):")
+        print(f"\nEntities ({len(self._entities)}):")  # noqa: T201
         for name in sorted(self._entities.keys()):
             helper = self._entities[name]
             req = len(helper.required_fields)
             opt = len(helper.optional_fields)
-            print(f"  {name}: {req} required, {opt} optional fields")
+            print(f"  {name}: {req} required, {opt} optional fields")  # noqa: T201
 
-        print("\nUsage:")
-        print("  profile.Investigation.help()    # Show Investigation fields")
-        print("  profile.Investigation.example() # Show example code")
-        print("  inv = profile.Investigation(    # Create an instance")
-        print("      unique_id='...', title='...'")
-        print("  )")
-        print()
+        print("\nUsage:")  # noqa: T201
+        print("  profile.Investigation.help()    # Show Investigation fields")  # noqa: T201
+        print("  profile.Investigation.example() # Show example code")  # noqa: T201
+        print("  inv = profile.Investigation(    # Create an instance")  # noqa: T201
+        print("      unique_id='...', title='...'")  # noqa: T201
+        print("  )")  # noqa: T201
+        print()  # noqa: T201
 
     def search(self: Self, query: str) -> list[str]:
         """Search for entities or fields containing the query string.
