@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Self
 
 from metaseed.repositories.dataset_repository import (
     DatasetData,
@@ -37,15 +37,15 @@ class FilesystemDatasetRepository(DatasetRepository):
         self._dir = datasets_dir or DEFAULT_DATASETS_DIR
         self._ensure_dir()
 
-    def _ensure_dir(self) -> None:
+    def _ensure_dir(self: Self) -> None:
         """Ensure the datasets directory exists."""
         self._dir.mkdir(parents=True, exist_ok=True)
 
-    def _get_path(self, name: str) -> Path:
+    def _get_path(self: Self, name: str) -> Path:
         """Get the file path for a dataset."""
         return self._dir / f"{name}.json"
 
-    def list(self) -> list[DatasetInfo]:
+    def list(self: Self) -> list[DatasetInfo]:
         """List all saved datasets.
 
         Returns:
@@ -76,7 +76,7 @@ class FilesystemDatasetRepository(DatasetRepository):
         datasets.sort(key=lambda d: d.modified, reverse=True)
         return datasets
 
-    def save(self, name: str, data: DatasetData) -> DatasetInfo:
+    def save(self: Self, name: str, data: DatasetData) -> DatasetInfo:
         """Save a dataset to a JSON file.
 
         Args:
@@ -117,7 +117,7 @@ class FilesystemDatasetRepository(DatasetRepository):
             modified=modified,
         )
 
-    def load(self, name: str) -> DatasetData:
+    def load(self: Self, name: str) -> DatasetData:
         """Load a dataset from a JSON file.
 
         Args:
@@ -145,7 +145,7 @@ class FilesystemDatasetRepository(DatasetRepository):
             modified=data.get("modified", ""),
         )
 
-    def delete(self, name: str) -> bool:
+    def delete(self: Self, name: str) -> bool:
         """Delete a dataset file.
 
         Args:
@@ -161,7 +161,7 @@ class FilesystemDatasetRepository(DatasetRepository):
             return True
         return False
 
-    def exists(self, name: str) -> bool:
+    def exists(self: Self, name: str) -> bool:
         """Check if a dataset file exists.
 
         Args:

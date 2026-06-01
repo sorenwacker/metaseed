@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Self
 
 from metaseed.agent.parsers.registry import ParsedContent, ParsedTable
 
@@ -15,11 +15,11 @@ class JSONParser:
     extensions = [".json"]
     mime_types = ["application/json"]
 
-    def can_parse(self, path: Path) -> bool:
+    def can_parse(self: Self, path: Path) -> bool:
         """Check if this parser can handle the file."""
         return path.suffix.lower() in self.extensions
 
-    def parse(self, path: Path) -> ParsedContent:
+    def parse(self: Self, path: Path) -> ParsedContent:
         """Parse JSON file into structured content."""
         with open(path, encoding="utf-8") as f:
             data = json.load(f)
@@ -51,7 +51,7 @@ class JSONParser:
             metadata={"structure": "array" if isinstance(data, list) else "object"},
         )
 
-    def _list_to_table(self, items: list[Any], name: str) -> ParsedTable | None:
+    def _list_to_table(self: Self, items: list[Any], name: str) -> ParsedTable | None:
         """Convert list of dicts to table."""
         if not items:
             return None
@@ -79,7 +79,7 @@ class JSONParser:
             rows=rows,
         )
 
-    def _serialize_value(self, value: Any) -> Any:
+    def _serialize_value(self: Self, value: Any) -> Any:
         """Serialize a value for table storage."""
         if value is None:
             return ""

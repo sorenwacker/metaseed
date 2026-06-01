@@ -23,7 +23,7 @@ from __future__ import annotations
 import re
 from abc import ABC
 from datetime import datetime
-from typing import TYPE_CHECKING, Generic, TypeVar
+from typing import TYPE_CHECKING, Generic, Self, TypeVar
 from weakref import WeakValueDictionary
 
 from metaseed.repositories.dataset_repository import (
@@ -81,7 +81,7 @@ class BaseDatasetManager(ABC, Generic[R]):
         """Set the current dataset name."""
         self._current = name
 
-    def _get_default_dataset_name(self) -> str:
+    def _get_default_dataset_name(self: Self) -> str:
         """Get a default dataset name from the first entity's label."""
         if self._state.entity_tree:
             label = self._state.entity_tree[0].label
@@ -91,7 +91,7 @@ class BaseDatasetManager(ABC, Generic[R]):
                     return name
         return "autosave"
 
-    def _build_dataset_data(self, name: str) -> DatasetData:
+    def _build_dataset_data(self: Self, name: str) -> DatasetData:
         """Build DatasetData from current state.
 
         Delegates to facade.to_dict() for entity serialization.
@@ -106,7 +106,7 @@ class BaseDatasetManager(ABC, Generic[R]):
             modified=datetime.now().isoformat(),
         )
 
-    def _restore_state_from_data(self, data: DatasetData) -> int:
+    def _restore_state_from_data(self: Self, data: DatasetData) -> int:
         """Restore state from DatasetData, returns loaded count.
 
         Delegates to facade.load_from_dict() for entity loading and linking.
@@ -136,7 +136,7 @@ class DatasetManager(BaseDatasetManager[DatasetRepository]):
     high-level dataset operations including state synchronization.
     """
 
-    def list_datasets(self) -> list[DatasetInfo]:
+    def list_datasets(self: Self) -> list[DatasetInfo]:
         """List all saved datasets.
 
         Returns:
@@ -144,7 +144,7 @@ class DatasetManager(BaseDatasetManager[DatasetRepository]):
         """
         return self._repo.list()
 
-    def save_dataset(self, name: str) -> DatasetInfo:
+    def save_dataset(self: Self, name: str) -> DatasetInfo:
         """Save current state as a named dataset.
 
         Args:
@@ -165,7 +165,7 @@ class DatasetManager(BaseDatasetManager[DatasetRepository]):
         self._current = name
         return result
 
-    def load_dataset(self, name: str) -> DatasetInfo:
+    def load_dataset(self: Self, name: str) -> DatasetInfo:
         """Load a dataset into the state.
 
         Args:
@@ -189,7 +189,7 @@ class DatasetManager(BaseDatasetManager[DatasetRepository]):
             modified=data.modified,
         )
 
-    def delete_dataset(self, name: str) -> bool:
+    def delete_dataset(self: Self, name: str) -> bool:
         """Delete a dataset.
 
         Args:
@@ -203,7 +203,7 @@ class DatasetManager(BaseDatasetManager[DatasetRepository]):
             self._current = None
         return result
 
-    def dataset_exists(self, name: str) -> bool:
+    def dataset_exists(self: Self, name: str) -> bool:
         """Check if a dataset exists.
 
         Args:
@@ -214,7 +214,7 @@ class DatasetManager(BaseDatasetManager[DatasetRepository]):
         """
         return self._repo.exists(name)
 
-    def auto_save(self) -> None:
+    def auto_save(self: Self) -> None:
         """Auto-save the current state.
 
         Saves to the current dataset if one is loaded, otherwise derives
@@ -243,7 +243,7 @@ class AsyncDatasetManager(BaseDatasetManager[AsyncDatasetRepository]):
     high-level async dataset operations for database backends.
     """
 
-    async def list_datasets(self) -> list[DatasetInfo]:
+    async def list_datasets(self: Self) -> list[DatasetInfo]:
         """List all saved datasets.
 
         Returns:
@@ -251,7 +251,7 @@ class AsyncDatasetManager(BaseDatasetManager[AsyncDatasetRepository]):
         """
         return await self._repo.list()
 
-    async def save_dataset(self, name: str) -> DatasetInfo:
+    async def save_dataset(self: Self, name: str) -> DatasetInfo:
         """Save current state as a named dataset.
 
         Args:
@@ -272,7 +272,7 @@ class AsyncDatasetManager(BaseDatasetManager[AsyncDatasetRepository]):
         self._current = name
         return result
 
-    async def load_dataset(self, name: str) -> DatasetInfo:
+    async def load_dataset(self: Self, name: str) -> DatasetInfo:
         """Load a dataset into the state.
 
         Args:
@@ -296,7 +296,7 @@ class AsyncDatasetManager(BaseDatasetManager[AsyncDatasetRepository]):
             modified=data.modified,
         )
 
-    async def delete_dataset(self, name: str) -> bool:
+    async def delete_dataset(self: Self, name: str) -> bool:
         """Delete a dataset.
 
         Args:
@@ -310,7 +310,7 @@ class AsyncDatasetManager(BaseDatasetManager[AsyncDatasetRepository]):
             self._current = None
         return result
 
-    async def dataset_exists(self, name: str) -> bool:
+    async def dataset_exists(self: Self, name: str) -> bool:
         """Check if a dataset exists.
 
         Args:
@@ -321,7 +321,7 @@ class AsyncDatasetManager(BaseDatasetManager[AsyncDatasetRepository]):
         """
         return await self._repo.exists(name)
 
-    async def auto_save(self) -> None:
+    async def auto_save(self: Self) -> None:
         """Auto-save the current state.
 
         Saves to the current dataset if one is loaded, otherwise derives
@@ -381,7 +381,7 @@ class DatasetManagerFactory:
         """Get the async repository."""
         return self._async_repo
 
-    def get_manager(self, state: AppState) -> DatasetManager:
+    def get_manager(self: Self, state: AppState) -> DatasetManager:
         """Get or create a DatasetManager for the given state.
 
         Args:
@@ -397,7 +397,7 @@ class DatasetManagerFactory:
             self._managers[state_id] = manager
         return manager
 
-    def get_async_manager(self, state: AppState) -> AsyncDatasetManager | None:
+    def get_async_manager(self: Self, state: AppState) -> AsyncDatasetManager | None:
         """Get or create an AsyncDatasetManager for the given state.
 
         Args:

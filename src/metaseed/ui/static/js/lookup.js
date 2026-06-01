@@ -666,6 +666,14 @@ function updateOntologyInput() {
 // Add ontology value to selection
 function addOntologySelectedValue(value) {
     if (ontologyModalSelectedValues.has(value)) return;
+
+    // Check if multi-select is allowed (default: single select)
+    var isMulti = ontologyModalInput && ontologyModalInput.dataset.multi === 'true';
+    if (!isMulti) {
+        // Single select: clear existing values
+        ontologyModalSelectedValues.clear();
+    }
+
     ontologyModalSelectedValues.add(value);
     renderOntologySelectedItems();
     updateOntologyInput();

@@ -12,24 +12,24 @@ ProfileFacade serves as the single source of truth for:
 This enables reuse across JupyterLab, CLI, MCP, and UI without
 duplicating relationship logic.
 
-Note:
-    This module re-exports from the metaseed.facade package for backward
-    compatibility. New code should import directly from metaseed.facade.
-
 Example:
     >>> from metaseed.facade import ProfileFacade
     >>> miappe = ProfileFacade("miappe", "1.1")
     >>> miappe.entities  # List all entities
     >>> miappe.Investigation.help()  # Show help for Investigation
     >>> inv = miappe.Investigation(unique_id="INV-001", title="My Investigation")
+
+Convenience functions:
+    >>> from metaseed.facade import miappe, isa, ena
+    >>> m = miappe()
+    >>> i = isa()
+    >>> e = ena()
 """
 
-from metaseed.facade import (
-    IDENTIFIER_FIELDS,
-    EntityHelper,
-    EntityNode,
-    EntityStore,
-    ProfileFacade,
+from metaseed.facade.core import ProfileFacade
+from metaseed.facade.helper import EntityHelper, validate_ontology_term
+from metaseed.facade.node import IDENTIFIER_FIELDS, EntityNode
+from metaseed.facade.profiles import (
     darwin_core,
     dissco,
     ena,
@@ -37,8 +37,8 @@ from metaseed.facade import (
     metabolights,
     miappe,
     pride,
-    validate_ontology_term,
 )
+from metaseed.facade.store import EntityStore
 
 __all__ = [
     "IDENTIFIER_FIELDS",

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Protocol, runtime_checkable
+from typing import Any, Protocol, Self, runtime_checkable
 
 from pydantic import BaseModel, Field
 
@@ -63,18 +63,18 @@ class ParserRegistry:
     def __init__(self) -> None:
         self._parsers: list[FileParser] = []
 
-    def register(self, parser: FileParser) -> None:
+    def register(self: Self, parser: FileParser) -> None:
         """Register a parser."""
         self._parsers.append(parser)
 
-    def get_parser(self, path: Path) -> FileParser | None:
+    def get_parser(self: Self, path: Path) -> FileParser | None:
         """Get parser for a file."""
         for parser in self._parsers:
             if parser.can_parse(path):
                 return parser
         return None
 
-    def parse(self, path: Path) -> ParsedContent:
+    def parse(self: Self, path: Path) -> ParsedContent:
         """Parse file using appropriate parser.
 
         Args:
@@ -91,7 +91,7 @@ class ParserRegistry:
             raise ValueError(f"No parser found for: {path}")
         return parser.parse(path)
 
-    def supported_extensions(self) -> list[str]:
+    def supported_extensions(self: Self) -> list[str]:
         """List all supported file extensions."""
         extensions = []
         for parser in self._parsers:

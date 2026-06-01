@@ -20,7 +20,7 @@ Example usage:
 """
 
 import logging
-from typing import Any
+from typing import Any, Self
 
 import httpx
 
@@ -58,7 +58,7 @@ class LLMService:
         """Check if LLM service is configured."""
         return bool(self.api_url)
 
-    def build_system_prompt(self, profile: str, version: str) -> str:
+    def build_system_prompt(self: Self, profile: str, version: str) -> str:
         """Build system prompt with profile schema context.
 
         Args:
@@ -110,7 +110,7 @@ You help users fill in metadata according to the {spec.display_name or profile} 
 6. Keep responses focused and practical.
 """
 
-    def _build_fallback_prompt(self, profile: str, version: str) -> str:
+    def _build_fallback_prompt(self: Self, profile: str, version: str) -> str:
         """Build a minimal prompt when profile can't be loaded."""
         return f"""You are a metadata assistant for scientific data management.
 You help users fill in metadata according to the {profile} v{version} standard.
@@ -120,7 +120,7 @@ When suggesting values, explain why they fit typical schema requirements.
 """
 
     async def get_response(
-        self,
+        self: Self,
         message: str,
         profile: str,
         version: str,
@@ -200,7 +200,7 @@ When suggesting values, explain why they fit typical schema requirements.
             raise RuntimeError("Invalid response from LLM service") from e
 
     def get_response_sync(
-        self,
+        self: Self,
         message: str,
         profile: str,
         version: str,

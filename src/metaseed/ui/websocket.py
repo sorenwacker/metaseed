@@ -9,7 +9,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from typing import Any
+from typing import Any, Self
 
 from fastapi import WebSocket
 
@@ -24,21 +24,21 @@ class ConnectionManager:
         self._lock = asyncio.Lock()
         self._pending_tasks: set[asyncio.Task[None]] = set()
 
-    async def connect(self, websocket: WebSocket) -> None:
+    async def connect(self: Self, websocket: WebSocket) -> None:
         """Accept and register a new WebSocket connection."""
         await websocket.accept()
         async with self._lock:
             self.active_connections.append(websocket)
         logger.info("WebSocket client connected (%d total)", len(self.active_connections))
 
-    async def disconnect(self, websocket: WebSocket) -> None:
+    async def disconnect(self: Self, websocket: WebSocket) -> None:
         """Remove a WebSocket connection."""
         async with self._lock:
             if websocket in self.active_connections:
                 self.active_connections.remove(websocket)
         logger.info("WebSocket client disconnected (%d remaining)", len(self.active_connections))
 
-    async def broadcast(self, message: dict[str, Any]) -> None:
+    async def broadcast(self: Self, message: dict[str, Any]) -> None:
         """Broadcast a message to all connected clients."""
         if not self.active_connections:
             return
@@ -57,7 +57,7 @@ class ConnectionManager:
         for conn in disconnected:
             await self.disconnect(conn)
 
-    def broadcast_sync(self, message: dict[str, Any]) -> None:
+    def broadcast_sync(self: Self, message: dict[str, Any]) -> None:
         """Broadcast from synchronous code (creates event loop if needed)."""
         if not self.active_connections:
             return

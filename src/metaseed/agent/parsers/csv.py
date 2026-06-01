@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import csv
 from pathlib import Path
-from typing import Any
+from typing import Any, Self
 
 from metaseed.agent.parsers.registry import ParsedContent, ParsedTable
 
@@ -15,11 +15,11 @@ class CSVParser:
     extensions = [".csv", ".tsv"]
     mime_types = ["text/csv", "text/tab-separated-values"]
 
-    def can_parse(self, path: Path) -> bool:
+    def can_parse(self: Self, path: Path) -> bool:
         """Check if this parser can handle the file."""
         return path.suffix.lower() in self.extensions
 
-    def parse(self, path: Path) -> ParsedContent:
+    def parse(self: Self, path: Path) -> ParsedContent:
         """Parse CSV file into structured content."""
         # Detect delimiter
         delimiter = "\t" if path.suffix.lower() == ".tsv" else ","

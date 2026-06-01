@@ -8,7 +8,7 @@ spec_builder_helpers.py and SpecLoader.
 from __future__ import annotations
 
 import copy
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Self
 
 from metaseed.specs.loader import SpecLoader, SpecLoadError
 from metaseed.ui.spec_persistence import SpecPersistence
@@ -30,7 +30,7 @@ class FilesystemSpecPersistence(SpecPersistence):
         """Initialize the filesystem persistence layer."""
         self._loader = SpecLoader()
 
-    async def save(self, spec: ProfileSpec, name: str | None = None) -> str:
+    async def save(self: Self, spec: ProfileSpec, name: str | None = None) -> str:
         """Save a spec to the filesystem.
 
         Saves to specs/<name>/<version>/profile.yaml structure in the user
@@ -51,7 +51,7 @@ class FilesystemSpecPersistence(SpecPersistence):
         path = save_spec(spec, name)
         return str(path)
 
-    async def delete(self, name: str, version: str | None = None) -> bool:
+    async def delete(self: Self, name: str, version: str | None = None) -> bool:
         """Delete a user-created spec from the filesystem.
 
         Args:
@@ -69,7 +69,7 @@ class FilesystemSpecPersistence(SpecPersistence):
 
         return delete_user_spec(name, version)
 
-    async def list_user_specs(self) -> list[dict]:
+    async def list_user_specs(self: Self) -> list[dict]:
         """List all user-created specs from the filesystem.
 
         Returns:
@@ -83,7 +83,7 @@ class FilesystemSpecPersistence(SpecPersistence):
 
         return list_user_specs()
 
-    async def list_templates(self) -> list[dict]:
+    async def list_templates(self: Self) -> list[dict]:
         """List available built-in templates from the filesystem.
 
         Returns:
@@ -97,7 +97,7 @@ class FilesystemSpecPersistence(SpecPersistence):
 
         return list_available_templates()
 
-    async def load_template(self, profile: str, version: str) -> ProfileSpec:
+    async def load_template(self: Self, profile: str, version: str) -> ProfileSpec:
         """Load a template spec for cloning.
 
         Args:
@@ -119,7 +119,7 @@ class FilesystemSpecPersistence(SpecPersistence):
         except SpecLoadError as e:
             raise FileNotFoundError(str(e)) from e
 
-    def is_builtin_name(self, name: str) -> bool:
+    def is_builtin_name(self: Self, name: str) -> bool:
         """Check if a name conflicts with a built-in spec.
 
         Args:
@@ -146,7 +146,7 @@ class FilesystemSpecProvider(SpecProvider):
         """Initialize the filesystem provider."""
         self._loader = SpecLoader()
 
-    async def list_profiles(self) -> list[str]:
+    async def list_profiles(self: Self) -> list[str]:
         """List all available profile names from the filesystem.
 
         Returns:
@@ -154,7 +154,7 @@ class FilesystemSpecProvider(SpecProvider):
         """
         return self._loader.list_profiles()
 
-    async def list_versions(self, profile: str) -> list[str]:
+    async def list_versions(self: Self, profile: str) -> list[str]:
         """List available versions for a profile.
 
         Args:
@@ -173,7 +173,7 @@ class FilesystemSpecProvider(SpecProvider):
         # Return in descending order (newest first)
         return sorted(versions, reverse=True)
 
-    async def get_spec(self, profile: str, version: str) -> ProfileSpec:
+    async def get_spec(self: Self, profile: str, version: str) -> ProfileSpec:
         """Load a specific spec from the filesystem.
 
         Args:
@@ -194,7 +194,7 @@ class FilesystemSpecProvider(SpecProvider):
         except SpecLoadError as e:
             raise FileNotFoundError(str(e)) from e
 
-    async def get_display_name(self, profile: str) -> str:
+    async def get_display_name(self: Self, profile: str) -> str:
         """Get the display name for a profile.
 
         Loads the latest version of the profile and returns its display_name.

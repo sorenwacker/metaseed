@@ -24,7 +24,7 @@ import os
 import time
 from contextvars import ContextVar
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Self
 
 import httpx
 
@@ -44,7 +44,7 @@ class CacheEntry:
     value: Any
     expires_at: float
 
-    def is_expired(self) -> bool:
+    def is_expired(self: Self) -> bool:
         """Check if this cache entry has expired."""
         return time.time() >= self.expires_at
 
@@ -60,7 +60,7 @@ class OntologySearchResult:
     iri: str | None = None
     short_form: str | None = None
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self: Self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
             "term_id": self.term_id,
@@ -85,7 +85,7 @@ class OntologyTerm:
     parents: list[str] = field(default_factory=list)
     children: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self: Self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
             "term_id": self.term_id,
@@ -117,7 +117,7 @@ class RateLimiter:
         self._request_times: list[float] = []
         self._lock = asyncio.Lock()
 
-    async def acquire(self) -> None:
+    async def acquire(self: Self) -> None:
         """Wait until a request can be made within rate limits."""
         async with self._lock:
             now = time.time()
@@ -140,7 +140,7 @@ class RateLimiter:
 
             self._request_times.append(time.time())
 
-    def acquire_sync(self) -> None:
+    def acquire_sync(self: Self) -> None:
         """Synchronous version of acquire for non-async contexts."""
         now = time.time()
         cutoff = now - self._window_seconds
@@ -208,7 +208,7 @@ class OntologyService:
             self.rate_limit,
         )
 
-    def _get_cached(self, key: str) -> Any | None:
+    def _get_cached(self: Self, key: str) -> Any | None:
         """Get a value from the cache if not expired.
 
         Args:
@@ -225,7 +225,7 @@ class OntologyService:
             return None
         return entry.value
 
-    def _set_cached(self, key: str, value: Any) -> None:
+    def _set_cached(self: Self, key: str, value: Any) -> None:
         """Store a value in the cache.
 
         Args:
@@ -237,12 +237,12 @@ class OntologyService:
             expires_at=time.time() + self.cache_ttl,
         )
 
-    def clear_cache(self) -> None:
+    def clear_cache(self: Self) -> None:
         """Clear all cached entries."""
         self._cache.clear()
         logger.debug("Ontology cache cleared")
 
-    def get_cache_stats(self) -> dict[str, int]:
+    def get_cache_stats(self: Self) -> dict[str, int]:
         """Get cache statistics.
 
         Returns:
@@ -258,7 +258,7 @@ class OntologyService:
         }
 
     async def search(
-        self,
+        self: Self,
         query: str,
         ontology: str | None = None,
         rows: int = 10,
@@ -338,7 +338,7 @@ class OntologyService:
         return results
 
     def search_sync(
-        self,
+        self: Self,
         query: str,
         ontology: str | None = None,
         rows: int = 10,
@@ -417,7 +417,7 @@ class OntologyService:
 
         return results
 
-    async def get_term(self, term_id: str) -> OntologyTerm | None:
+    async def get_term(self: Self, term_id: str) -> OntologyTerm | None:
         """Get detailed information about an ontology term.
 
         Args:
@@ -484,7 +484,7 @@ class OntologyService:
 
         return term
 
-    def get_term_sync(self, term_id: str) -> OntologyTerm | None:
+    def get_term_sync(self: Self, term_id: str) -> OntologyTerm | None:
         """Synchronous version of get_term.
 
         Args:
@@ -550,7 +550,7 @@ class OntologyService:
 
         return term
 
-    async def validate_term(self, term_id: str) -> tuple[bool, str | None]:
+    async def validate_term(self: Self, term_id: str) -> tuple[bool, str | None]:
         """Validate that an ontology term exists.
 
         Args:
@@ -574,7 +574,7 @@ class OntologyService:
 
         return False, f"Ontology term '{term_id}' not found in OLS4"
 
-    def validate_term_sync(self, term_id: str) -> tuple[bool, str | None]:
+    def validate_term_sync(self: Self, term_id: str) -> tuple[bool, str | None]:
         """Synchronous version of validate_term.
 
         Args:
@@ -596,7 +596,7 @@ class OntologyService:
 
         return False, f"Ontology term '{term_id}' not found in OLS4"
 
-    def _parse_ontology_from_term_id(self, term_id: str) -> str | None:
+    def _parse_ontology_from_term_id(self: Self, term_id: str) -> str | None:
         """Extract ontology prefix from a term ID.
 
         Args:
@@ -611,7 +611,7 @@ class OntologyService:
             return term_id.split("_", maxsplit=1)[0].lower()
         return None
 
-    def _construct_iri(self, term_id: str) -> str | None:
+    def _construct_iri(self: Self, term_id: str) -> str | None:
         """Construct OBO IRI from term ID.
 
         Args:

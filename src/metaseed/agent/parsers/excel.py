@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Self
 
 from openpyxl import load_workbook
 
@@ -19,11 +19,11 @@ class ExcelParser:
         "application/vnd.ms-excel",
     ]
 
-    def can_parse(self, path: Path) -> bool:
+    def can_parse(self: Self, path: Path) -> bool:
         """Check if this parser can handle the file."""
         return path.suffix.lower() in self.extensions
 
-    def parse(self, path: Path) -> ParsedContent:
+    def parse(self: Self, path: Path) -> ParsedContent:
         """Parse Excel file into structured content.
 
         Reads all sheets from the workbook. Each sheet becomes a separate
@@ -56,7 +56,7 @@ class ExcelParser:
             },
         )
 
-    def _parse_sheet(self, sheet: Any, sheet_name: str) -> ParsedTable | None:
+    def _parse_sheet(self: Self, sheet: Any, sheet_name: str) -> ParsedTable | None:
         """Parse a single sheet into a table.
 
         Args:
@@ -96,7 +96,7 @@ class ExcelParser:
             source_location=f"sheet:{sheet_name}",
         )
 
-    def _cell_value(self, cell: Any) -> Any:
+    def _cell_value(self: Self, cell: Any) -> Any:
         """Extract value from a cell.
 
         Args:

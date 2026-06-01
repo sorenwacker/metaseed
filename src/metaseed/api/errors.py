@@ -1,7 +1,29 @@
 """Public API exception hierarchy for metaseed.
 
-This module defines a clean exception hierarchy for the public API.
-Internal exceptions are caught and re-raised as these public exceptions.
+This module defines the exception hierarchy for the public API
+(`MetaseedClient` and related interfaces). External code should catch
+these exceptions, not internal ones from `metaseed.core.exceptions`.
+
+Hierarchy:
+    MetaseedError (base)
+    ├── ProfileNotFoundError - Profile or version not found
+    ├── EntityNotFoundError - Entity ID not found in store
+    ├── EntityTypeNotFoundError - Entity type not in profile
+    └── ValidationError - Validation failed with details
+
+Usage:
+    >>> from metaseed import MetaseedClient
+    >>> from metaseed.api.errors import ProfileNotFoundError
+    >>>
+    >>> try:
+    ...     client = MetaseedClient("nonexistent", "1.0")
+    ... except ProfileNotFoundError as e:
+    ...     print(f"Profile '{e.profile}' not found")
+
+Design:
+    - Each exception includes structured attributes (not just messages)
+    - Exceptions are specific to user-facing error conditions
+    - Internal errors are caught at the API boundary and translated
 """
 
 from __future__ import annotations
