@@ -25,7 +25,7 @@ class Settings(BaseSettings):
         case_sensitive=False,
     )
 
-    default_version: str = "1.1"
+    default_version: str = "1.2"
     debug: bool = False
     log_level: str = "INFO"
 

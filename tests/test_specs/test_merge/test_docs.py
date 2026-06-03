@@ -299,7 +299,9 @@ class TestDocumentedReportGenerators:
         """Get a comparison result."""
         return compare([("isa", "1.0"), ("jerm", "1.0")])
 
-    def test_markdown_generator_has_generate(self, comparison: ComparisonResult) -> None:
+    def test_markdown_generator_has_generate(
+        self, comparison: ComparisonResult
+    ) -> None:
         """Documented: MarkdownReportGenerator(result).generate()."""
         generator = MarkdownReportGenerator(comparison)
         report = generator.generate()

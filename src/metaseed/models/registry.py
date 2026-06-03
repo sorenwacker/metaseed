@@ -64,7 +64,9 @@ class ModelRegistry:
         """
         return (name, version) in self._models
 
-    def list_models(self: Self, version: str | None = None) -> list[tuple[str, str]] | list[str]:
+    def list_models(
+        self: Self, version: str | None = None
+    ) -> list[tuple[str, str]] | list[str]:
         """List registered models.
 
         Args:

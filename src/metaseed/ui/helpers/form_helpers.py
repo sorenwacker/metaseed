@@ -192,7 +192,9 @@ def format_validation_errors(e: ValidationError) -> str:
         # Make common error messages more user-friendly
         if "pattern" in msg.lower() and "email" in field.lower():
             msg = "Invalid email format"
-        elif "pattern" in msg.lower() and ("date" in field.lower() or "date" in msg.lower()):
+        elif "pattern" in msg.lower() and (
+            "date" in field.lower() or "date" in msg.lower()
+        ):
             msg = "Invalid date format (use YYYY-MM-DD)"
         elif "pattern" in msg.lower() and "orcid" in field.lower():
             msg = "Invalid ORCID format (use XXXX-XXXX-XXXX-XXXX)"

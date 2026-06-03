@@ -173,7 +173,9 @@ class FilesystemDatasetRepository(DatasetRepository):
         return self._get_path(name).exists()
 
 
-def serialize_tree_node(node: Any, parent_unique_id: str | None = None) -> list[dict[str, Any]]:
+def serialize_tree_node(
+    node: Any, parent_unique_id: str | None = None
+) -> list[dict[str, Any]]:
     """Serialize a TreeNode and its children to entity dicts.
 
     Uses unique_id for parent references for stability across reloads.

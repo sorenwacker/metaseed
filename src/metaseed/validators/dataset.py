@@ -49,7 +49,9 @@ class DatasetValidationResult:
         self.warnings.extend(other.warnings)
         self.files_checked.extend(other.files_checked)
         for entity_type, count in other.entity_counts.items():
-            self.entity_counts[entity_type] = self.entity_counts.get(entity_type, 0) + count
+            self.entity_counts[entity_type] = (
+                self.entity_counts.get(entity_type, 0) + count
+            )
 
 
 class IdRegistry:
@@ -189,7 +191,9 @@ class DatasetValidator:
             return str(data["_type"]).lower()
         if "studies" in data and isinstance(data.get("studies"), list):
             return "investigation"
-        if "observation_units" in data and isinstance(data.get("observation_units"), list):
+        if "observation_units" in data and isinstance(
+            data.get("observation_units"), list
+        ):
             return "study"
         return None
 
@@ -231,8 +235,12 @@ class DatasetValidator:
                 item_entity = self._to_snake_case(f.items)
                 for i, item in enumerate(items):
                     if isinstance(item, dict):
-                        item_path = f"{path}.{f.name}[{i}]" if path else f"{f.name}[{i}]"
-                        self._traverse_entity_tree(item, item_entity, visitor, item_path)
+                        item_path = (
+                            f"{path}.{f.name}[{i}]" if path else f"{f.name}[{i}]"
+                        )
+                        self._traverse_entity_tree(
+                            item, item_entity, visitor, item_path
+                        )
 
     def _collect_ids(
         self: Self,

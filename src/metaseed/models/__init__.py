@@ -49,7 +49,9 @@ def _to_snake_case(name: str) -> str:
     return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
 
 
-def get_model(name: str, version: str = "1.1", profile: str = "miappe") -> type[BaseModel]:
+def get_model(
+    name: str, version: str = "1.2", profile: str = "miappe"
+) -> type[BaseModel]:
     """Get a model by name, version, and profile.
 
     Models are cached after first generation. If the model is not in the

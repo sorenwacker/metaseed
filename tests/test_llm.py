@@ -74,7 +74,9 @@ class TestLLMService:
         )
 
         mock_response = MagicMock()
-        mock_response.json.return_value = {"choices": [{"message": {"content": "Test response"}}]}
+        mock_response.json.return_value = {
+            "choices": [{"message": {"content": "Test response"}}]
+        }
         mock_response.raise_for_status = MagicMock()
 
         with patch("httpx.AsyncClient") as mock_client:
@@ -202,7 +204,9 @@ class TestLLMService:
         )
 
         mock_response = MagicMock()
-        mock_response.json.return_value = {"choices": [{"message": {"content": "Sync response"}}]}
+        mock_response.json.return_value = {
+            "choices": [{"message": {"content": "Sync response"}}]
+        }
         mock_response.raise_for_status = MagicMock()
 
         with patch("httpx.AsyncClient") as mock_client:

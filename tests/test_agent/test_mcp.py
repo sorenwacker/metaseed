@@ -82,7 +82,9 @@ class TestMCPServer:
 
         # Create test CSV with MIAPPE-like columns
         csv_file = tmp_path / "investigations.csv"
-        csv_file.write_text("identifier,title,description\nINV-001,Test,A test investigation\n")
+        csv_file.write_text(
+            "identifier,title,description\nINV-001,Test,A test investigation\n"
+        )
 
         tools = server._tool_manager._tools
         analyze_fn = None
@@ -114,7 +116,9 @@ class TestMCPServer:
         export_fn = get_tool(server, "export_metadata")
         assert export_fn is not None
 
-        input_data = json.dumps({"Investigation": [{"identifier": "INV-001", "title": "Test"}]})
+        input_data = json.dumps(
+            {"Investigation": [{"identifier": "INV-001", "title": "Test"}]}
+        )
         result = export_fn(data=input_data, output_format="yaml")
 
         assert "Investigation:" in result
@@ -296,7 +300,8 @@ class TestMCPDatasetTools:
 
         with patch("metaseed.ui.datasets.auto_save"):
             result = create_fn.fn(
-                entity_type="Investigation", data='{"unique_id": "INV-001", "title": "Test"}'
+                entity_type="Investigation",
+                data='{"unique_id": "INV-001", "title": "Test"}',
             )
             data = json.loads(result)
 
@@ -801,7 +806,10 @@ class TestMCPBatchCreate:
         entities = json.dumps(
             [
                 {"data": {"unique_id": "FAIL-1"}},  # Missing entity_type
-                {"entity_type": "Investigation", "data": {"unique_id": "INV-OK", "title": "Valid"}},
+                {
+                    "entity_type": "Investigation",
+                    "data": {"unique_id": "INV-OK", "title": "Valid"},
+                },
             ]
         )
 
@@ -1155,7 +1163,8 @@ class TestMCPDatasetSafety:
 
         with patch("metaseed.ui.datasets.auto_save"):
             with patch(
-                "metaseed.ui.datasets.get_current_dataset_name", return_value="actual-dataset"
+                "metaseed.ui.datasets.get_current_dataset_name",
+                return_value="actual-dataset",
             ):
                 result = create_fn.fn(
                     entity_type="Investigation",
@@ -1182,7 +1191,10 @@ class TestMCPDatasetSafety:
         set_mcp_state(state)
 
         with patch("metaseed.ui.datasets.auto_save"):
-            with patch("metaseed.ui.datasets.get_current_dataset_name", return_value="my-dataset"):
+            with patch(
+                "metaseed.ui.datasets.get_current_dataset_name",
+                return_value="my-dataset",
+            ):
                 result = create_fn.fn(
                     entity_type="Investigation",
                     data='{"unique_id": "INV-001", "title": "Test"}',
@@ -1209,7 +1221,10 @@ class TestMCPDatasetSafety:
         state = AppState(profile="miappe")
         set_mcp_state(state)
 
-        with patch("metaseed.ui.datasets.get_current_dataset_name", return_value="actual-dataset"):
+        with patch(
+            "metaseed.ui.datasets.get_current_dataset_name",
+            return_value="actual-dataset",
+        ):
             result = batch_fn.fn(
                 entities='[{"entity_type": "Investigation", "data": {"unique_id": "INV-001"}}]',
                 expected_dataset="wrong-dataset",
@@ -1232,7 +1247,9 @@ class TestMCPDatasetSafety:
         set_mcp_state(state)
 
         with patch("metaseed.ui.datasets.auto_save"):
-            with patch("metaseed.ui.datasets.get_current_dataset_name", return_value="test-ds"):
+            with patch(
+                "metaseed.ui.datasets.get_current_dataset_name", return_value="test-ds"
+            ):
                 result = create_fn.fn(
                     entity_type="Investigation",
                     data='{"unique_id": "INV-001", "title": "Test"}',

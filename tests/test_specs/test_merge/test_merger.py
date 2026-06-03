@@ -51,7 +51,9 @@ class TestSpecMerger:
 
         # Verify entities from MIAPPE exist (case-insensitive check)
         entity_names_lower = [e.lower() for e in entity_names]
-        assert "investigation" in entity_names_lower, "Missing Investigation from MIAPPE"
+        assert (
+            "investigation" in entity_names_lower
+        ), "Missing Investigation from MIAPPE"
         assert "study" in entity_names_lower, "Missing Study from MIAPPE"
 
         # Verify entities from ISA exist
@@ -120,7 +122,12 @@ class TestMergeFunction:
 
     def test_merge_with_different_strategies(self) -> None:
         """Test merge with different strategies."""
-        strategies = ["first_wins", "last_wins", "most_restrictive", "least_restrictive"]
+        strategies = [
+            "first_wins",
+            "last_wins",
+            "most_restrictive",
+            "least_restrictive",
+        ]
 
         for strategy in strategies:
             result = merge(

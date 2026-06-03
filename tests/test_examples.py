@@ -102,7 +102,9 @@ def get_all_inline_examples() -> list[tuple[str, str, str, dict]]:
                 profile_spec = loader.load_profile(version, profile)
                 for entity_name, entity_def in profile_spec.entities.items():
                     if entity_def.example:
-                        examples.append((profile, version, entity_name, entity_def.example))
+                        examples.append(
+                            (profile, version, entity_name, entity_def.example)
+                        )
             except (KeyError, FileNotFoundError, yaml.YAMLError, SpecLoadError):
                 # Skip profiles that fail to load
                 continue
@@ -214,7 +216,9 @@ def traverse_entity_tree(
 
         elif field.type == FieldType.ENTITY and field.items and isinstance(value, dict):
             results.extend(
-                traverse_entity_tree(value, profile, version, field.items, visitor, field_path)
+                traverse_entity_tree(
+                    value, profile, version, field.items, visitor, field_path
+                )
             )
 
     return results
@@ -253,7 +257,9 @@ def _check_type_mismatch_visitor(
     # Check entity fields - should be dict, not string
     if field.type == FieldType.ENTITY and field.items:
         if isinstance(value, str):
-            errors.append(f"{path}: expected {field.items} object, got string '{value}'")
+            errors.append(
+                f"{path}: expected {field.items} object, got string '{value}'"
+            )
 
     # Check list fields with entity items - items should be dicts, not strings
     elif field.type == FieldType.LIST and field.items and isinstance(value, list):
@@ -261,7 +267,9 @@ def _check_type_mismatch_visitor(
             if isinstance(item, str):
                 # This will be checked only if items is an entity type
                 # The traversal handles this, but we flag strings in entity lists
-                errors.append(f"{path}[{i}]: expected {field.items} object, got string '{item}'")
+                errors.append(
+                    f"{path}[{i}]: expected {field.items} object, got string '{item}'"
+                )
 
     return errors
 
@@ -323,7 +331,9 @@ def find_incomplete_entity_lists(
             if _is_entity_type(loader, field.items, version, profile):
                 # Only warn about empty lists if the field is required
                 if (value is None or value == []) and field.required:
-                    warnings.append(f"Empty entity list: {field_path} (type: {field.items})")
+                    warnings.append(
+                        f"Empty entity list: {field_path} (type: {field.items})"
+                    )
                 elif isinstance(value, list):
                     for i, item in enumerate(value):
                         if isinstance(item, dict):
@@ -336,7 +346,9 @@ def find_incomplete_entity_lists(
 
         elif field.type == FieldType.ENTITY and field.items and isinstance(value, dict):
             warnings.extend(
-                find_incomplete_entity_lists(value, profile, version, field.items, field_path)
+                find_incomplete_entity_lists(
+                    value, profile, version, field.items, field_path
+                )
             )
 
     return warnings
@@ -375,7 +387,9 @@ def find_entity_field_type_mismatches(
 
         if field.type == FieldType.ENTITY and field.items:
             if isinstance(value, str):
-                errors.append(f"{field_path}: expected {field.items} object, got string '{value}'")
+                errors.append(
+                    f"{field_path}: expected {field.items} object, got string '{value}'"
+                )
             elif isinstance(value, dict):
                 errors.extend(
                     find_entity_field_type_mismatches(
@@ -439,10 +453,14 @@ class TestExampleFilesHaveRequiredFields:
         get_all_example_files(),
         ids=lambda x: str(x) if isinstance(x, Path) else x,
     )
-    def test_example_has_identifier(self, profile: str, version: str, example_file: Path) -> None:
+    def test_example_has_identifier(
+        self, profile: str, version: str, example_file: Path
+    ) -> None:
         """Each example should have a unique identifier field."""
         data = load_example_data(example_file)
-        has_identifier = any(field in data and data[field] for field in IDENTIFIER_FIELDS)
+        has_identifier = any(
+            field in data and data[field] for field in IDENTIFIER_FIELDS
+        )
         assert has_identifier, f"Example {example_file.name} missing identifier field"
 
     @pytest.mark.parametrize(
@@ -450,7 +468,9 @@ class TestExampleFilesHaveRequiredFields:
         get_all_example_files(),
         ids=lambda x: str(x) if isinstance(x, Path) else x,
     )
-    def test_example_has_title(self, profile: str, version: str, example_file: Path) -> None:
+    def test_example_has_title(
+        self, profile: str, version: str, example_file: Path
+    ) -> None:
         """Each example should have a title field (except certain profiles)."""
         if profile in PROFILES_WITHOUT_TITLE:
             pytest.skip(f"{profile} root entity doesn't have a standard title field")
@@ -567,7 +587,9 @@ class TestInlineEntityExamples:
         except (KeyError, ValueError, FileNotFoundError, SpecLoadError) as e:
             pytest.skip(f"Could not get model for {entity_name}: {e}")
 
-        data_with_refs = add_placeholder_parent_refs(example_data, profile, version, entity_name)
+        data_with_refs = add_placeholder_parent_refs(
+            example_data, profile, version, entity_name
+        )
 
         try:
             instance = Model(**data_with_refs)
@@ -587,7 +609,9 @@ class TestInlineEntityExamples:
     ) -> None:
         """Each inline entity example should have all required fields."""
         required_fields = get_required_field_names(profile, version, entity_name)
-        missing = [f for f in required_fields if f not in example_data or not example_data[f]]
+        missing = [
+            f for f in required_fields if f not in example_data or not example_data[f]
+        ]
 
         if missing:
             pytest.fail(

@@ -153,7 +153,9 @@ def main():
     """CLI entry point."""
     import argparse
 
-    parser = argparse.ArgumentParser(description="Migrate specs from parent_ref to reference")
+    parser = argparse.ArgumentParser(
+        description="Migrate specs from parent_ref to reference"
+    )
     parser.add_argument(
         "--dry-run",
         action="store_true",

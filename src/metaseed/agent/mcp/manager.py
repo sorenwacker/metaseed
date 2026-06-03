@@ -143,7 +143,9 @@ class MCPServerManager:
                     error=f"Server failed to start: {stderr}",
                 )
 
-            logger.info("MCP server started on %s:%d (pid=%d)", host, port, self._process.pid)
+            logger.info(
+                "MCP server started on %s:%d (pid=%d)", host, port, self._process.pid
+            )
 
             return self.status()
 
@@ -285,7 +287,9 @@ class MCPServerManager:
                 import os
                 import signal
 
-                logger.info("Killing orphaned MCP server on port %d (pid=%d)", port, pid)
+                logger.info(
+                    "Killing orphaned MCP server on port %d (pid=%d)", port, pid
+                )
                 os.kill(pid, signal.SIGTERM)
                 time.sleep(0.5)
                 # Check if it's still there
@@ -341,7 +345,9 @@ class MCPServerManager:
 
 
 # Context variable for MCP manager singleton
-_manager_var: ContextVar[MCPServerManager | None] = ContextVar("mcp_manager", default=None)
+_manager_var: ContextVar[MCPServerManager | None] = ContextVar(
+    "mcp_manager", default=None
+)
 
 
 def get_mcp_manager() -> MCPServerManager:

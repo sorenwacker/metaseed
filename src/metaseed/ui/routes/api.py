@@ -26,7 +26,9 @@ if TYPE_CHECKING:
     from ..state import AppState
 
 
-def _parse_profile_strings(profiles: list[str]) -> tuple[list[tuple[str, str]], str | None]:
+def _parse_profile_strings(
+    profiles: list[str],
+) -> tuple[list[tuple[str, str]], str | None]:
     """Parse profile strings into tuples.
 
     Args:
@@ -324,8 +326,12 @@ def register_api_routes(
     async def merge_profiles(
         profiles: list[str] = Body(..., description="List of profile/version strings"),
         strategy: str = Body(default="first_wins", description="Merge strategy"),
-        output_name: str = Body(default="merged", description="Name for merged profile"),
-        output_version: str = Body(default="1.0", description="Version for merged profile"),
+        output_name: str = Body(
+            default="merged", description="Name for merged profile"
+        ),
+        output_version: str = Body(
+            default="1.0", description="Version for merged profile"
+        ),
     ) -> JSONResponse:
         """Merge multiple profile specifications into one.
 

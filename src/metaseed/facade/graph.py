@@ -112,7 +112,9 @@ def to_graph(
                 lines.append("...")
                 break
             formatted = format_value(value)
-            if (formatted and not isinstance(value, list)) or (isinstance(value, list) and value):
+            if (formatted and not isinstance(value, list)) or (
+                isinstance(value, list) and value
+            ):
                 lines.append(f"{key}: {formatted}")
                 shown += 1
         return "\n".join(lines)

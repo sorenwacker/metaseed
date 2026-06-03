@@ -157,7 +157,9 @@ class SpecComparator:
         )
 
         logger.info(
-            "Explore complete: %d entities, %d fields", stats.total_entities, stats.total_fields
+            "Explore complete: %d entities, %d fields",
+            stats.total_entities,
+            stats.total_fields,
         )
 
         return ComparisonResult(
@@ -180,7 +182,13 @@ class SpecComparator:
         Returns:
             Dictionary of metadata field -> profile values.
         """
-        metadata_fields = ["name", "display_name", "description", "ontology", "root_entity"]
+        metadata_fields = [
+            "name",
+            "display_name",
+            "description",
+            "ontology",
+            "root_entity",
+        ]
         diffs: dict[str, dict[str, str | None]] = {}
 
         for field_name in metadata_fields:
@@ -195,7 +203,9 @@ class SpecComparator:
 
         return diffs
 
-    def _compare_entities(self: Self, profile_specs: dict[str, ProfileSpec]) -> list[EntityDiff]:
+    def _compare_entities(
+        self: Self, profile_specs: dict[str, ProfileSpec]
+    ) -> list[EntityDiff]:
         """Compare entities across all profiles.
 
         Args:
@@ -236,7 +246,9 @@ class SpecComparator:
             all_profile_ids = list(profile_specs.keys())
             base_profile = all_profile_ids[0]
             in_base = entity_presence.get(base_profile, False)
-            in_others = any(v for pid, v in entity_presence.items() if pid != base_profile)
+            in_others = any(
+                v for pid, v in entity_presence.items() if pid != base_profile
+            )
 
             if in_base and in_others:
                 diff_type = DiffType.UNCHANGED
@@ -314,7 +326,9 @@ class SpecComparator:
             field_specs: dict[str, FieldSpec | None] = {}
             for profile_id in all_profile_ids:
                 if profile_id in entity_specs:
-                    field_specs[profile_id] = field_by_profile.get(profile_id, {}).get(field_key)
+                    field_specs[profile_id] = field_by_profile.get(profile_id, {}).get(
+                        field_key
+                    )
                 else:
                     field_specs[profile_id] = None
 
@@ -508,7 +522,9 @@ class SpecComparator:
         unique = {str(v) for v in values.values() if v is not None}
         return len(unique) > 1
 
-    def _calculate_statistics(self: Self, result: ComparisonResult) -> ComparisonStatistics:
+    def _calculate_statistics(
+        self: Self, result: ComparisonResult
+    ) -> ComparisonStatistics:
         """Calculate summary statistics for a comparison.
 
         Args:

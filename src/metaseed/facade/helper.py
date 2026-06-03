@@ -7,6 +7,7 @@ and provides tab completion, field information, and guided entity creation.
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from typing import Any, Self
 
 from pydantic import BaseModel
@@ -49,6 +50,7 @@ class EntityHelper:
         model: type[BaseModel],
         profile: str,
         version: str,
+        store_callback: Callable[[str, dict[str, Any]], Any] | None = None,
     ) -> None:
         """Initialize the entity helper.
 
@@ -58,12 +60,16 @@ class EntityHelper:
             model: Generated Pydantic model class.
             profile: Profile name (e.g., "miappe", "isa").
             version: Profile version (e.g., "1.1").
+            store_callback: Optional callback to store created entities.
         """
         self._name = entity_name
         self._spec = spec
         self._model = model
         self._profile = profile
         self._version = version
+        self._store_callback = store_callback
+        # Set dynamic docstring for Jupyter ? support
+        self.__doc__ = self._build_docstring()
 
     @property
     def name(self: Self) -> str:
@@ -177,7 +183,9 @@ class EntityHelper:
                     info["items"] = f.items
                 if f.constraints:
                     info["constraints"] = {
-                        k: v for k, v in f.constraints.model_dump().items() if v is not None
+                        k: v
+                        for k, v in f.constraints.model_dump().items()
+                        if v is not None
                     }
                 return info
         raise KeyError(f"Field '{field_name}' not found in {self._name}")
@@ -243,7 +251,9 @@ class EntityHelper:
         print(f"  {req} {f.name}: {type_str}")  # noqa: T201
         if f.description:
             # Wrap long descriptions
-            desc = f.description[:70] + "..." if len(f.description) > 70 else f.description
+            desc = (
+                f.description[:70] + "..." if len(f.description) > 70 else f.description
+            )
             print(f"      {desc}")  # noqa: T201
 
     def example(self: Self) -> None:
@@ -286,7 +296,9 @@ class EntityHelper:
         print(f"    {args_str}")  # noqa: T201
         print(")")  # noqa: T201
 
-    def validate_ontology_terms(self: Self, data: dict | BaseModel, warn: bool = True) -> list[str]:
+    def validate_ontology_terms(
+        self: Self, data: dict | BaseModel, warn: bool = True
+    ) -> list[str]:
         """Validate ontology term fields in entity data.
 
         Checks that ontology term values exist in OLS4. Uses caching to
@@ -368,12 +380,62 @@ class EntityHelper:
         return instance
 
     def __call__(self: Self, **kwargs: Any) -> BaseModel:
-        """Create an instance (shorthand for create()).
+        """Create an instance and store it automatically.
 
         Example:
-            >>> inv = profile.Investigation(unique_id="INV-001", title="My Investigation")
+            >>> inv = m.Investigation(unique_id="INV-001", title="My Investigation")
+            >>> m.list_entities("Investigation")  # inv is stored
         """
+        if self._store_callback:
+            node = self._store_callback(self._name, kwargs)
+            return node.instance
         return self.create(**kwargs)
 
     def __repr__(self: Self) -> str:
         return f"<{self._name}: {len(self.required_fields)} required, {len(self.optional_fields)} optional fields>"
+
+    def _build_docstring(self: Self) -> str:
+        """Build a docstring with field information for Jupyter ? support."""
+        lines = [
+            f"{self._name} ({self._profile} v{self._version})",
+            "",
+            self._spec.description or "",
+            "",
+        ]
+
+        if self._spec.ontology_term:
+            lines.append(f"Ontology: {self._spec.ontology_term}")
+            lines.append("")
+
+        # Required fields
+        required = [f for f in self._spec.fields if f.required]
+        if required:
+            lines.append("Required Fields:")
+            for field in required:
+                field_type = self._format_field_type(field)
+                lines.append(f"    {field.name}: {field_type}")
+            lines.append("")
+
+        # Optional fields
+        optional = [f for f in self._spec.fields if not f.required]
+        if optional:
+            lines.append("Optional Fields:")
+            for field in optional:
+                field_type = self._format_field_type(field)
+                lines.append(f"    {field.name}: {field_type}")
+            lines.append("")
+
+        lines.append("Usage:")
+        lines.append(f"    inv = m.{self._name}(field=value, ...)")
+        lines.append(f"    m.{self._name}.help()  # Detailed field info")
+
+        return "\n".join(lines)
+
+    def _format_field_type(self: Self, field: FieldSpec) -> str:
+        """Format field type for display."""
+        if field.type == FieldType.LIST:
+            item_type = field.items or "any"
+            return f"list[{item_type}]"
+        if field.type == FieldType.ENTITY:
+            return field.items or "entity"
+        return field.type.value

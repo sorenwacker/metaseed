@@ -68,7 +68,9 @@ class TestDatasetValidationResult:
         from metaseed.validators.base import ValidationError
 
         result = DatasetValidationResult()
-        result.errors.append(ValidationError(field="test", message="error", rule="test_rule"))
+        result.errors.append(
+            ValidationError(field="test", message="error", rule="test_rule")
+        )
         assert not result.is_valid
 
     def test_is_valid_with_warnings_only(self) -> None:
@@ -76,7 +78,9 @@ class TestDatasetValidationResult:
         from metaseed.validators.base import ValidationError
 
         result = DatasetValidationResult()
-        result.warnings.append(ValidationError(field="test", message="warning", rule="test_rule"))
+        result.warnings.append(
+            ValidationError(field="test", message="warning", rule="test_rule")
+        )
         assert result.is_valid
 
     def test_merge(self) -> None:
@@ -84,12 +88,16 @@ class TestDatasetValidationResult:
         from metaseed.validators.base import ValidationError
 
         result1 = DatasetValidationResult()
-        result1.errors.append(ValidationError(field="a", message="error1", rule="rule1"))
+        result1.errors.append(
+            ValidationError(field="a", message="error1", rule="rule1")
+        )
         result1.entity_counts["study"] = 2
         result1.files_checked.append(Path("file1.yaml"))
 
         result2 = DatasetValidationResult()
-        result2.errors.append(ValidationError(field="b", message="error2", rule="rule2"))
+        result2.errors.append(
+            ValidationError(field="b", message="error2", rule="rule2")
+        )
         result2.entity_counts["study"] = 1
         result2.entity_counts["investigation"] = 1
         result2.files_checked.append(Path("file2.yaml"))
@@ -151,7 +159,9 @@ unique_id: INV001
         result = validator.validate_file(file_path)
 
         assert not result.is_valid
-        assert any("title" in e.field or "title" in e.message.lower() for e in result.errors)
+        assert any(
+            "title" in e.field or "title" in e.message.lower() for e in result.errors
+        )
 
     def test_validate_file_invalid_yaml(self, tmp_path: Path) -> None:
         """Validate file with invalid YAML syntax."""

@@ -317,7 +317,9 @@ class TestProfileSpecVersioning:
         )
         assert profile.ontologies is not None
         assert len(profile.ontologies) == 2
-        assert profile.ontologies["OBI"].name == "Ontology for Biomedical Investigations"
+        assert (
+            profile.ontologies["OBI"].name == "Ontology for Biomedical Investigations"
+        )
         assert profile.ontologies["OBI"].ols_id == "obi"
         assert profile.ontologies["ENVO"].ols_id == "envo"
 

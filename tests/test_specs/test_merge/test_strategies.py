@@ -112,7 +112,9 @@ class TestFirstWinsStrategy:
             diff_type=DiffType.ADDED,
             profiles={
                 "profile_a": None,
-                "profile_b": FieldSpec(name="test", type=FieldType.STRING, description="B"),
+                "profile_b": FieldSpec(
+                    name="test", type=FieldType.STRING, description="B"
+                ),
             },
         )
         resolved = strategy.resolve_field(diff, ["profile_a", "profile_b"])
@@ -317,8 +319,12 @@ class TestPreferProfileStrategy:
             field_name="test",
             diff_type=DiffType.CONFLICT,
             profiles={
-                "profile_a": FieldSpec(name="test", type=FieldType.STRING, description="A"),
-                "profile_b": FieldSpec(name="test", type=FieldType.STRING, description="B"),
+                "profile_a": FieldSpec(
+                    name="test", type=FieldType.STRING, description="A"
+                ),
+                "profile_b": FieldSpec(
+                    name="test", type=FieldType.STRING, description="B"
+                ),
             },
         )
         resolved = strategy.resolve_field(diff, ["profile_a", "profile_b"])
@@ -332,7 +338,9 @@ class TestPreferProfileStrategy:
             field_name="test",
             diff_type=DiffType.ADDED,
             profiles={
-                "profile_a": FieldSpec(name="test", type=FieldType.STRING, description="A"),
+                "profile_a": FieldSpec(
+                    name="test", type=FieldType.STRING, description="A"
+                ),
                 "profile_b": None,
             },
         )

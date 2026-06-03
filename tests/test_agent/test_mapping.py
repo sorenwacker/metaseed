@@ -245,7 +245,9 @@ class TestMappingToDictAndBack:
             entity_name="Test",
             fields=[
                 FieldMapping(field_name="a", source_column="col_a", confidence=0.8),
-                FieldMapping(field_name="b", source_column=None, default_value="default"),
+                FieldMapping(
+                    field_name="b", source_column=None, default_value="default"
+                ),
             ],
             source_table=0,
         )

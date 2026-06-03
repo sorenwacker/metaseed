@@ -169,7 +169,9 @@ def register_profile_tools(mcp: FastMCP) -> None:
                 if field.ontology_term:
                     field_info["ontology_term"] = field.ontology_term
                 if field.constraints:
-                    field_info["constraints"] = field.constraints.model_dump(exclude_none=True)
+                    field_info["constraints"] = field.constraints.model_dump(
+                        exclude_none=True
+                    )
                 if field.items:
                     field_info["items"] = field.items
                 if hasattr(field, "example") and field.example:

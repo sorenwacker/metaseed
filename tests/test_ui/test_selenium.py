@@ -170,7 +170,10 @@ def get_element_text(driver, testid: str) -> str:
 
 
 def start_new_investigation(
-    driver, profile: str = "miappe", version: str = "1.2", dataset_name: str = "test-dataset"
+    driver,
+    profile: str = "miappe",
+    version: str = "1.2",
+    dataset_name: str = "test-dataset",
 ):
     """Start creating a new Investigation by clicking button and selecting profile.
 
@@ -200,8 +203,12 @@ def fill_inline_cell(driver, field_name: str, row_idx: int, col: str, value: str
     """
     # Click the cell display to enter edit mode (adds 'editing' class)
     cell_display_testid = f"cell-display-{field_name}-{row_idx}-{col}"
-    cell_display = driver.find_element(By.CSS_SELECTOR, f"[data-testid='{cell_display_testid}']")
-    driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", cell_display)
+    cell_display = driver.find_element(
+        By.CSS_SELECTOR, f"[data-testid='{cell_display_testid}']"
+    )
+    driver.execute_script(
+        "arguments[0].scrollIntoView({block: 'center'});", cell_display
+    )
     time.sleep(0.1)
     cell_display.click()
     time.sleep(0.1)
@@ -239,7 +246,9 @@ def fill_inline_person(driver, field_name: str = "contacts", row_idx: int = 0):
     """
     fill_inline_cell(driver, field_name, row_idx, "name", PERSON_EXAMPLE["name"])
     fill_inline_cell(driver, field_name, row_idx, "email", PERSON_EXAMPLE["email"])
-    fill_inline_cell(driver, field_name, row_idx, "institution", PERSON_EXAMPLE["institution"])
+    fill_inline_cell(
+        driver, field_name, row_idx, "institution", PERSON_EXAMPLE["institution"]
+    )
     fill_inline_cell(driver, field_name, row_idx, "role", PERSON_EXAMPLE["role"])
     fill_inline_cell(driver, field_name, row_idx, "orcid", PERSON_EXAMPLE["orcid"])
 
@@ -252,14 +261,20 @@ def fill_inline_study(driver, field_name: str = "studies", row_idx: int = 0):
         field_name: The inline table field name
         row_idx: Row index
     """
-    fill_inline_cell(driver, field_name, row_idx, "unique_id", STUDY_EXAMPLE["unique_id"])
+    fill_inline_cell(
+        driver, field_name, row_idx, "unique_id", STUDY_EXAMPLE["unique_id"]
+    )
     fill_inline_cell(driver, field_name, row_idx, "title", STUDY_EXAMPLE["title"])
     # Optional fields
     fill_inline_cell(
         driver, field_name, row_idx, "description", STUDY_EXAMPLE.get("description", "")
     )
-    fill_inline_cell(driver, field_name, row_idx, "start_date", STUDY_EXAMPLE.get("start_date", ""))
-    fill_inline_cell(driver, field_name, row_idx, "end_date", STUDY_EXAMPLE.get("end_date", ""))
+    fill_inline_cell(
+        driver, field_name, row_idx, "start_date", STUDY_EXAMPLE.get("start_date", "")
+    )
+    fill_inline_cell(
+        driver, field_name, row_idx, "end_date", STUDY_EXAMPLE.get("end_date", "")
+    )
 
 
 def fill_all_study_fields(driver, row_idx: int = 0):
@@ -272,13 +287,24 @@ def fill_all_study_fields(driver, row_idx: int = 0):
     prefix = f"cell-{row_idx}-"
 
     # Required fields
-    fill_field(driver, f"{prefix}unique_id", STUDY_EXAMPLE["unique_id"], trigger_change=True)
+    fill_field(
+        driver, f"{prefix}unique_id", STUDY_EXAMPLE["unique_id"], trigger_change=True
+    )
     fill_field(driver, f"{prefix}title", STUDY_EXAMPLE["title"], trigger_change=True)
 
     # All optional fields from YAML example
-    fill_field(driver, f"{prefix}description", STUDY_EXAMPLE["description"], trigger_change=True)
-    fill_field(driver, f"{prefix}start_date", STUDY_EXAMPLE["start_date"], trigger_change=True)
-    fill_field(driver, f"{prefix}end_date", STUDY_EXAMPLE["end_date"], trigger_change=True)
+    fill_field(
+        driver,
+        f"{prefix}description",
+        STUDY_EXAMPLE["description"],
+        trigger_change=True,
+    )
+    fill_field(
+        driver, f"{prefix}start_date", STUDY_EXAMPLE["start_date"], trigger_change=True
+    )
+    fill_field(
+        driver, f"{prefix}end_date", STUDY_EXAMPLE["end_date"], trigger_change=True
+    )
     fill_field(
         driver,
         f"{prefix}contact_institution",
@@ -291,9 +317,18 @@ def fill_all_study_fields(driver, row_idx: int = 0):
         STUDY_EXAMPLE["experimental_site_name"],
         trigger_change=True,
     )
-    fill_field(driver, f"{prefix}latitude", str(STUDY_EXAMPLE["latitude"]), trigger_change=True)
-    fill_field(driver, f"{prefix}longitude", str(STUDY_EXAMPLE["longitude"]), trigger_change=True)
-    fill_field(driver, f"{prefix}altitude", str(STUDY_EXAMPLE["altitude"]), trigger_change=True)
+    fill_field(
+        driver, f"{prefix}latitude", str(STUDY_EXAMPLE["latitude"]), trigger_change=True
+    )
+    fill_field(
+        driver,
+        f"{prefix}longitude",
+        str(STUDY_EXAMPLE["longitude"]),
+        trigger_change=True,
+    )
+    fill_field(
+        driver, f"{prefix}altitude", str(STUDY_EXAMPLE["altitude"]), trigger_change=True
+    )
     fill_field(
         driver,
         f"{prefix}growth_facility_type",
@@ -356,7 +391,12 @@ def fill_all_person_fields(driver, row_idx: int = 0):
 
     # All optional fields from YAML example
     fill_field(driver, f"{prefix}email", PERSON_EXAMPLE["email"], trigger_change=True)
-    fill_field(driver, f"{prefix}institution", PERSON_EXAMPLE["institution"], trigger_change=True)
+    fill_field(
+        driver,
+        f"{prefix}institution",
+        PERSON_EXAMPLE["institution"],
+        trigger_change=True,
+    )
     fill_field(driver, f"{prefix}role", PERSON_EXAMPLE["role"], trigger_change=True)
     fill_field(driver, f"{prefix}orcid", PERSON_EXAMPLE["orcid"], trigger_change=True)
 
@@ -371,12 +411,18 @@ def fill_all_biological_material_fields(driver, row_idx: int = 0):
     prefix = f"cell-{row_idx}-"
 
     # Required field
-    fill_field(driver, f"{prefix}unique_id", BIO_MAT_EXAMPLE["unique_id"], trigger_change=True)
+    fill_field(
+        driver, f"{prefix}unique_id", BIO_MAT_EXAMPLE["unique_id"], trigger_change=True
+    )
 
     # All optional fields from YAML example
-    fill_field(driver, f"{prefix}organism", BIO_MAT_EXAMPLE["organism"], trigger_change=True)
+    fill_field(
+        driver, f"{prefix}organism", BIO_MAT_EXAMPLE["organism"], trigger_change=True
+    )
     fill_field(driver, f"{prefix}genus", BIO_MAT_EXAMPLE["genus"], trigger_change=True)
-    fill_field(driver, f"{prefix}species", BIO_MAT_EXAMPLE["species"], trigger_change=True)
+    fill_field(
+        driver, f"{prefix}species", BIO_MAT_EXAMPLE["species"], trigger_change=True
+    )
     fill_field(
         driver,
         f"{prefix}infraspecific_name",
@@ -429,7 +475,12 @@ def fill_all_biological_material_fields(driver, row_idx: int = 0):
     # List field: external_references (one per line in textarea)
     ext_refs = BIO_MAT_EXAMPLE.get("external_references", [])
     if ext_refs:
-        fill_field(driver, f"{prefix}external_references", "\n".join(ext_refs), trigger_change=True)
+        fill_field(
+            driver,
+            f"{prefix}external_references",
+            "\n".join(ext_refs),
+            trigger_change=True,
+        )
 
 
 def fill_all_observation_unit_fields(driver, row_idx: int = 0):
@@ -437,7 +488,9 @@ def fill_all_observation_unit_fields(driver, row_idx: int = 0):
     prefix = f"cell-{row_idx}-"
 
     # Required field
-    fill_field(driver, f"{prefix}unique_id", OBS_UNIT_EXAMPLE["unique_id"], trigger_change=True)
+    fill_field(
+        driver, f"{prefix}unique_id", OBS_UNIT_EXAMPLE["unique_id"], trigger_change=True
+    )
 
     # Optional fields
     fill_field(
@@ -488,7 +541,12 @@ def fill_all_observation_unit_fields(driver, row_idx: int = 0):
         OBS_UNIT_EXAMPLE["observation_unit_replicate"],
         trigger_change=True,
     )
-    fill_field(driver, f"{prefix}entry_type", OBS_UNIT_EXAMPLE["entry_type"], trigger_change=True)
+    fill_field(
+        driver,
+        f"{prefix}entry_type",
+        OBS_UNIT_EXAMPLE["entry_type"],
+        trigger_change=True,
+    )
     fill_field(
         driver,
         f"{prefix}observation_level",
@@ -505,7 +563,12 @@ def fill_all_observation_unit_fields(driver, row_idx: int = 0):
     # List field
     ext_refs = OBS_UNIT_EXAMPLE.get("external_references", [])
     if ext_refs:
-        fill_field(driver, f"{prefix}external_references", "\n".join(ext_refs), trigger_change=True)
+        fill_field(
+            driver,
+            f"{prefix}external_references",
+            "\n".join(ext_refs),
+            trigger_change=True,
+        )
 
 
 def fill_all_observed_variable_fields(driver, row_idx: int = 0):
@@ -513,7 +576,9 @@ def fill_all_observed_variable_fields(driver, row_idx: int = 0):
     prefix = f"cell-{row_idx}-"
 
     # Required fields
-    fill_field(driver, f"{prefix}unique_id", OBS_VAR_EXAMPLE["unique_id"], trigger_change=True)
+    fill_field(
+        driver, f"{prefix}unique_id", OBS_VAR_EXAMPLE["unique_id"], trigger_change=True
+    )
     fill_field(driver, f"{prefix}name", OBS_VAR_EXAMPLE["name"], trigger_change=True)
 
     # Optional fields
@@ -530,7 +595,9 @@ def fill_all_observed_variable_fields(driver, row_idx: int = 0):
         OBS_VAR_EXAMPLE["trait_description"],
         trigger_change=True,
     )
-    fill_field(driver, f"{prefix}method", OBS_VAR_EXAMPLE["method"], trigger_change=True)
+    fill_field(
+        driver, f"{prefix}method", OBS_VAR_EXAMPLE["method"], trigger_change=True
+    )
     fill_field(
         driver,
         f"{prefix}method_accession_number",
@@ -556,8 +623,15 @@ def fill_all_observed_variable_fields(driver, row_idx: int = 0):
         OBS_VAR_EXAMPLE["scale_description"],
         trigger_change=True,
     )
-    fill_field(driver, f"{prefix}time_scale", OBS_VAR_EXAMPLE["time_scale"], trigger_change=True)
-    fill_field(driver, f"{prefix}reference", OBS_VAR_EXAMPLE["reference"], trigger_change=True)
+    fill_field(
+        driver,
+        f"{prefix}time_scale",
+        OBS_VAR_EXAMPLE["time_scale"],
+        trigger_change=True,
+    )
+    fill_field(
+        driver, f"{prefix}reference", OBS_VAR_EXAMPLE["reference"], trigger_change=True
+    )
 
 
 def fill_all_factor_fields(driver, row_idx: int = 0):
@@ -565,12 +639,24 @@ def fill_all_factor_fields(driver, row_idx: int = 0):
     prefix = f"cell-{row_idx}-"
 
     # Required fields
-    fill_field(driver, f"{prefix}unique_id", FACTOR_EXAMPLE["unique_id"], trigger_change=True)
+    fill_field(
+        driver, f"{prefix}unique_id", FACTOR_EXAMPLE["unique_id"], trigger_change=True
+    )
     fill_field(driver, f"{prefix}name", FACTOR_EXAMPLE["name"], trigger_change=True)
 
     # Optional fields
-    fill_field(driver, f"{prefix}description", FACTOR_EXAMPLE["description"], trigger_change=True)
-    fill_field(driver, f"{prefix}factor_type", FACTOR_EXAMPLE["factor_type"], trigger_change=True)
+    fill_field(
+        driver,
+        f"{prefix}description",
+        FACTOR_EXAMPLE["description"],
+        trigger_change=True,
+    )
+    fill_field(
+        driver,
+        f"{prefix}factor_type",
+        FACTOR_EXAMPLE["factor_type"],
+        trigger_change=True,
+    )
 
 
 def fill_all_factor_value_fields(driver, row_idx: int = 0):
@@ -578,13 +664,28 @@ def fill_all_factor_value_fields(driver, row_idx: int = 0):
     prefix = f"cell-{row_idx}-"
 
     # Required fields
-    fill_field(driver, f"{prefix}unique_id", FACTOR_VALUE_EXAMPLE["unique_id"], trigger_change=True)
-    fill_field(driver, f"{prefix}value", FACTOR_VALUE_EXAMPLE["value"], trigger_change=True)
+    fill_field(
+        driver,
+        f"{prefix}unique_id",
+        FACTOR_VALUE_EXAMPLE["unique_id"],
+        trigger_change=True,
+    )
+    fill_field(
+        driver, f"{prefix}value", FACTOR_VALUE_EXAMPLE["value"], trigger_change=True
+    )
 
     # Optional fields
-    fill_field(driver, f"{prefix}factor_id", FACTOR_VALUE_EXAMPLE["factor_id"], trigger_change=True)
     fill_field(
-        driver, f"{prefix}description", FACTOR_VALUE_EXAMPLE["description"], trigger_change=True
+        driver,
+        f"{prefix}factor_id",
+        FACTOR_VALUE_EXAMPLE["factor_id"],
+        trigger_change=True,
+    )
+    fill_field(
+        driver,
+        f"{prefix}description",
+        FACTOR_VALUE_EXAMPLE["description"],
+        trigger_change=True,
     )
 
 
@@ -593,13 +694,24 @@ def fill_all_event_fields(driver, row_idx: int = 0):
     prefix = f"cell-{row_idx}-"
 
     # Required fields
-    fill_field(driver, f"{prefix}unique_id", EVENT_EXAMPLE["unique_id"], trigger_change=True)
-    fill_field(driver, f"{prefix}event_type", EVENT_EXAMPLE["event_type"], trigger_change=True)
+    fill_field(
+        driver, f"{prefix}unique_id", EVENT_EXAMPLE["unique_id"], trigger_change=True
+    )
+    fill_field(
+        driver, f"{prefix}event_type", EVENT_EXAMPLE["event_type"], trigger_change=True
+    )
 
     # Optional fields
     fill_field(driver, f"{prefix}date", EVENT_EXAMPLE["date"], trigger_change=True)
-    fill_field(driver, f"{prefix}end_date", EVENT_EXAMPLE["end_date"], trigger_change=True)
-    fill_field(driver, f"{prefix}description", EVENT_EXAMPLE["description"], trigger_change=True)
+    fill_field(
+        driver, f"{prefix}end_date", EVENT_EXAMPLE["end_date"], trigger_change=True
+    )
+    fill_field(
+        driver,
+        f"{prefix}description",
+        EVENT_EXAMPLE["description"],
+        trigger_change=True,
+    )
     fill_field(
         driver,
         f"{prefix}event_accession_number",
@@ -610,7 +722,12 @@ def fill_all_event_fields(driver, row_idx: int = 0):
     # List field
     ou_ids = EVENT_EXAMPLE.get("observation_unit_ids", [])
     if ou_ids:
-        fill_field(driver, f"{prefix}observation_unit_ids", "\n".join(ou_ids), trigger_change=True)
+        fill_field(
+            driver,
+            f"{prefix}observation_unit_ids",
+            "\n".join(ou_ids),
+            trigger_change=True,
+        )
 
 
 def fill_all_environment_fields(driver, row_idx: int = 0):
@@ -618,8 +735,18 @@ def fill_all_environment_fields(driver, row_idx: int = 0):
     prefix = f"cell-{row_idx}-"
 
     # Required fields
-    fill_field(driver, f"{prefix}unique_id", ENVIRONMENT_EXAMPLE["unique_id"], trigger_change=True)
-    fill_field(driver, f"{prefix}parameter", ENVIRONMENT_EXAMPLE["parameter"], trigger_change=True)
+    fill_field(
+        driver,
+        f"{prefix}unique_id",
+        ENVIRONMENT_EXAMPLE["unique_id"],
+        trigger_change=True,
+    )
+    fill_field(
+        driver,
+        f"{prefix}parameter",
+        ENVIRONMENT_EXAMPLE["parameter"],
+        trigger_change=True,
+    )
 
     # Optional fields
     fill_field(
@@ -628,11 +755,20 @@ def fill_all_environment_fields(driver, row_idx: int = 0):
         ENVIRONMENT_EXAMPLE["parameter_accession_number"],
         trigger_change=True,
     )
-    fill_field(driver, f"{prefix}value", ENVIRONMENT_EXAMPLE["value"], trigger_change=True)
-    fill_field(driver, f"{prefix}unit", ENVIRONMENT_EXAMPLE["unit"], trigger_change=True)
-    fill_field(driver, f"{prefix}date", ENVIRONMENT_EXAMPLE["date"], trigger_change=True)
     fill_field(
-        driver, f"{prefix}description", ENVIRONMENT_EXAMPLE["description"], trigger_change=True
+        driver, f"{prefix}value", ENVIRONMENT_EXAMPLE["value"], trigger_change=True
+    )
+    fill_field(
+        driver, f"{prefix}unit", ENVIRONMENT_EXAMPLE["unit"], trigger_change=True
+    )
+    fill_field(
+        driver, f"{prefix}date", ENVIRONMENT_EXAMPLE["date"], trigger_change=True
+    )
+    fill_field(
+        driver,
+        f"{prefix}description",
+        ENVIRONMENT_EXAMPLE["description"],
+        trigger_change=True,
     )
 
 
@@ -641,7 +777,9 @@ def fill_all_sample_fields(driver, row_idx: int = 0):
     prefix = f"cell-{row_idx}-"
 
     # Required field
-    fill_field(driver, f"{prefix}unique_id", SAMPLE_EXAMPLE["unique_id"], trigger_change=True)
+    fill_field(
+        driver, f"{prefix}unique_id", SAMPLE_EXAMPLE["unique_id"], trigger_change=True
+    )
 
     # Optional fields
     fill_field(
@@ -663,14 +801,27 @@ def fill_all_sample_fields(driver, row_idx: int = 0):
         trigger_change=True,
     )
     fill_field(
-        driver, f"{prefix}collection_date", SAMPLE_EXAMPLE["collection_date"], trigger_change=True
+        driver,
+        f"{prefix}collection_date",
+        SAMPLE_EXAMPLE["collection_date"],
+        trigger_change=True,
     )
-    fill_field(driver, f"{prefix}description", SAMPLE_EXAMPLE["description"], trigger_change=True)
+    fill_field(
+        driver,
+        f"{prefix}description",
+        SAMPLE_EXAMPLE["description"],
+        trigger_change=True,
+    )
 
     # List field
     ext_refs = SAMPLE_EXAMPLE.get("external_references", [])
     if ext_refs:
-        fill_field(driver, f"{prefix}external_references", "\n".join(ext_refs), trigger_change=True)
+        fill_field(
+            driver,
+            f"{prefix}external_references",
+            "\n".join(ext_refs),
+            trigger_change=True,
+        )
 
 
 def fill_all_data_file_fields(driver, row_idx: int = 0):
@@ -678,16 +829,31 @@ def fill_all_data_file_fields(driver, row_idx: int = 0):
     prefix = f"cell-{row_idx}-"
 
     # Required fields
-    fill_field(driver, f"{prefix}unique_id", DATA_FILE_EXAMPLE["unique_id"], trigger_change=True)
+    fill_field(
+        driver,
+        f"{prefix}unique_id",
+        DATA_FILE_EXAMPLE["unique_id"],
+        trigger_change=True,
+    )
     fill_field(driver, f"{prefix}name", DATA_FILE_EXAMPLE["name"], trigger_change=True)
 
     # Optional fields
     fill_field(driver, f"{prefix}link", DATA_FILE_EXAMPLE["link"], trigger_change=True)
     fill_field(
-        driver, f"{prefix}description", DATA_FILE_EXAMPLE["description"], trigger_change=True
+        driver,
+        f"{prefix}description",
+        DATA_FILE_EXAMPLE["description"],
+        trigger_change=True,
     )
-    fill_field(driver, f"{prefix}version", DATA_FILE_EXAMPLE["version"], trigger_change=True)
-    fill_field(driver, f"{prefix}file_type", DATA_FILE_EXAMPLE["file_type"], trigger_change=True)
+    fill_field(
+        driver, f"{prefix}version", DATA_FILE_EXAMPLE["version"], trigger_change=True
+    )
+    fill_field(
+        driver,
+        f"{prefix}file_type",
+        DATA_FILE_EXAMPLE["file_type"],
+        trigger_change=True,
+    )
 
 
 def expand_optional_fields(driver):
@@ -768,7 +934,9 @@ class TestCreateInvestigationAllFields:
         # Note: miappe_version is auto-populated and readonly, so we skip it
         fill_field(browser, "input-description", INV_EXAMPLE["description"])
         fill_field(browser, "input-submission-date", INV_EXAMPLE["submission_date"])
-        fill_field(browser, "input-public-release-date", INV_EXAMPLE["public_release_date"])
+        fill_field(
+            browser, "input-public-release-date", INV_EXAMPLE["public_release_date"]
+        )
         fill_field(browser, "input-license", INV_EXAMPLE["license"])
 
         # Fill associated_publications (textarea, one per line)
@@ -844,7 +1012,9 @@ class TestAutoPopulatedFields:
         expand_optional_fields(browser)
 
         # Find a date input
-        date_input = browser.find_element(By.CSS_SELECTOR, "[data-testid='input-submission-date']")
+        date_input = browser.find_element(
+            By.CSS_SELECTOR, "[data-testid='input-submission-date']"
+        )
 
         # Verify it uses text type with pattern
         assert (
@@ -891,7 +1061,9 @@ class TestAutoPopulatedFields:
         lat_cell_display = browser.find_element(
             By.CSS_SELECTOR, "[data-testid='cell-display-studies-0-latitude']"
         )
-        browser.execute_script("arguments[0].scrollIntoView({block: 'center'});", lat_cell_display)
+        browser.execute_script(
+            "arguments[0].scrollIntoView({block: 'center'});", lat_cell_display
+        )
         lat_cell_display.click()
         time.sleep(0.1)
 
@@ -902,19 +1074,23 @@ class TestAutoPopulatedFields:
         lat_input.send_keys("43333")
         # Trigger input event to invoke validation
         browser.execute_script(
-            "arguments[0].dispatchEvent(new Event('input', {bubbles: true}));", lat_input
+            "arguments[0].dispatchEvent(new Event('input', {bubbles: true}));",
+            lat_input,
         )
         time.sleep(0.5)
 
         # Verify the input has the 'invalid' class (red background)
         classes = lat_input.get_attribute("class")
-        assert "invalid" in classes, f"Invalid latitude should be highlighted. Classes: {classes}"
+        assert (
+            "invalid" in classes
+        ), f"Invalid latitude should be highlighted. Classes: {classes}"
 
         # Now enter a valid latitude
         lat_input.clear()
         lat_input.send_keys("52.5")
         browser.execute_script(
-            "arguments[0].dispatchEvent(new Event('input', {bubbles: true}));", lat_input
+            "arguments[0].dispatchEvent(new Event('input', {bubbles: true}));",
+            lat_input,
         )
         time.sleep(0.5)
 
@@ -986,7 +1162,9 @@ class TestEditInvestigation:
         assert element_exists(browser, "btn-update")
 
         # Modify the title
-        title_field = browser.find_element(By.CSS_SELECTOR, "[data-testid='input-title']")
+        title_field = browser.find_element(
+            By.CSS_SELECTOR, "[data-testid='input-title']"
+        )
         title_field.clear()
         title_field.send_keys("Updated Title")
         time.sleep(FILL_DELAY)
@@ -1109,7 +1287,9 @@ class TestValidation:
 
         # Verify validation errors are displayed
         assert element_exists(browser, "validation-errors")
-        errors_div = browser.find_element(By.CSS_SELECTOR, "[data-testid='validation-errors']")
+        errors_div = browser.find_element(
+            By.CSS_SELECTOR, "[data-testid='validation-errors']"
+        )
         assert "Validation failed" in errors_div.text
 
         # Verify specific field error for title
@@ -1128,7 +1308,9 @@ class TestValidation:
         start_new_investigation(browser)
 
         # Fill required fields
-        fill_field(browser, "input-unique-id", "INVALID ID WITH SPACES!")  # Invalid pattern
+        fill_field(
+            browser, "input-unique-id", "INVALID ID WITH SPACES!"
+        )  # Invalid pattern
         fill_field(browser, "input-title", "Test Investigation")
 
         # Click Validate button
@@ -1138,7 +1320,9 @@ class TestValidation:
         assert element_exists(browser, "validation-errors")
         assert element_exists(browser, "validation-error-unique_id")
 
-    @pytest.mark.skip(reason="Complex validation workflow needs rework for inline tables")
+    @pytest.mark.skip(
+        reason="Complex validation workflow needs rework for inline tables"
+    )
     def test_validate_then_fix_and_revalidate(self, browser):
         """Validate with errors, fix them, and revalidate successfully.
 
@@ -1203,7 +1387,9 @@ class TestValidation:
         start_new_investigation(browser)
 
         # Check if unique_id field has required attribute
-        unique_id = browser.find_element(By.CSS_SELECTOR, "[data-testid='input-unique-id']")
+        unique_id = browser.find_element(
+            By.CSS_SELECTOR, "[data-testid='input-unique-id']"
+        )
         assert unique_id.get_attribute("required") is not None
 
         # Check if title field has required attribute
@@ -1281,7 +1467,9 @@ class TestNestedEntityEditing:
         assert STUDY_EXAMPLE["title"] in breadcrumb.text  # Study title
 
         # Verify the Study form has the correct values from YAML example
-        unique_id_field = browser.find_element(By.CSS_SELECTOR, "[data-testid='input-unique-id']")
+        unique_id_field = browser.find_element(
+            By.CSS_SELECTOR, "[data-testid='input-unique-id']"
+        )
         assert unique_id_field.get_attribute("value") == STUDY_EXAMPLE["unique_id"]
 
         # Verify back button exists
@@ -1375,7 +1563,9 @@ class TestNestedEntityEditing:
         assert BIO_MAT_EXAMPLE["unique_id"] in breadcrumb_text  # BiologicalMaterial id
 
         # Verify BiologicalMaterial form fields from YAML example
-        unique_id_field = browser.find_element(By.CSS_SELECTOR, "[data-testid='input-unique-id']")
+        unique_id_field = browser.find_element(
+            By.CSS_SELECTOR, "[data-testid='input-unique-id']"
+        )
         assert unique_id_field.get_attribute("value") == BIO_MAT_EXAMPLE["unique_id"]
 
         # Deep nesting was successful - we can navigate to a BiologicalMaterial
@@ -1383,7 +1573,9 @@ class TestNestedEntityEditing:
 
 
 @pytest.mark.ui
-@pytest.mark.skip(reason="Complex nested entity creation needs rework for inline table UI")
+@pytest.mark.skip(
+    reason="Complex nested entity creation needs rework for inline table UI"
+)
 class TestCreateAllEntityTypes:
     """Test creating ALL entity types from YAML examples in one comprehensive test."""
 
@@ -1414,7 +1606,9 @@ class TestCreateAllEntityTypes:
         expand_optional_fields(browser)
         fill_field(browser, "input-description", INV_EXAMPLE["description"])
         fill_field(browser, "input-submission-date", INV_EXAMPLE["submission_date"])
-        fill_field(browser, "input-public-release-date", INV_EXAMPLE["public_release_date"])
+        fill_field(
+            browser, "input-public-release-date", INV_EXAMPLE["public_release_date"]
+        )
         fill_field(browser, "input-license", INV_EXAMPLE["license"])
         # Note: miappe_version is auto-populated and readonly, so we skip it
 
@@ -1726,7 +1920,9 @@ class TestExcelExport:
         ), f"Missing Investigation sheet. Sheets: {wb.sheetnames}"
 
         # Verify Person sheet (contacts)
-        assert "Person" in wb.sheetnames, f"Missing Person sheet. Sheets: {wb.sheetnames}"
+        assert (
+            "Person" in wb.sheetnames
+        ), f"Missing Person sheet. Sheets: {wb.sheetnames}"
 
         # Verify Study sheet
         assert "Study" in wb.sheetnames, f"Missing Study sheet. Sheets: {wb.sheetnames}"

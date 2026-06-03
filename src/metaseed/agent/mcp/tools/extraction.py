@@ -59,7 +59,9 @@ def register_extraction_tools(mcp: FastMCP, parser_registry: ParserRegistry) -> 
                     "source_path": content.source_path,
                     "format": content.format,
                     "tables": tables,
-                    "text_blocks": content.text_blocks[:5] if content.text_blocks else [],
+                    "text_blocks": content.text_blocks[:5]
+                    if content.text_blocks
+                    else [],
                     "metadata": content.metadata,
                 },
                 indent=2,

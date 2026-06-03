@@ -94,7 +94,7 @@ class LLMService:
 You help users fill in metadata according to the {spec.display_name or profile} v{version} standard.
 
 ## Profile: {spec.display_name or profile}
-{spec.description or ''}
+{spec.description or ""}
 
 ## Available Entities
 
@@ -190,7 +190,9 @@ When suggesting values, explain why they fit typical schema requirements.
                 return data["choices"][0]["message"]["content"]
 
         except httpx.HTTPStatusError as e:
-            logger.exception("LLM API error: %s - %s", e.response.status_code, e.response.text)
+            logger.exception(
+                "LLM API error: %s - %s", e.response.status_code, e.response.text
+            )
             raise RuntimeError(f"LLM API error: {e.response.status_code}") from e
         except httpx.RequestError as e:
             logger.exception("LLM request error")

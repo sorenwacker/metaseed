@@ -262,7 +262,9 @@ def _format_validation_error(
     return result
 
 
-def _handle_validation_error(error: Exception, entity_type: str) -> dict[str, Any] | None:
+def _handle_validation_error(
+    error: Exception, entity_type: str
+) -> dict[str, Any] | None:
     """Check if exception is or wraps a ValidationError and format it.
 
     Args:

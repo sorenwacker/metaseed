@@ -62,7 +62,9 @@ class SpecLoader:
         self._profile_cache: dict[str, ProfileSpec] = {}
         self._default_profile = profile.lower()
 
-    def _find_profile_file(self: Self, version: str, profile: str | None = None) -> Path | None:
+    def _find_profile_file(
+        self: Self, version: str, profile: str | None = None
+    ) -> Path | None:
         """Find profile file for a version.
 
         Searches user specs first, then built-in specs.
@@ -89,7 +91,9 @@ class SpecLoader:
         profile = (profile or self._default_profile).lower()
         return f"{profile}:{version}"
 
-    def _load_profile(self: Self, version: str, profile: str | None = None) -> ProfileSpec | None:
+    def _load_profile(
+        self: Self, version: str, profile: str | None = None
+    ) -> ProfileSpec | None:
         """Load unified profile spec for a version.
 
         Args:
@@ -122,7 +126,9 @@ class SpecLoader:
             loaded_profile = ProfileSpec.model_validate(data)
             self._profile_cache[cache_key] = loaded_profile
             logger.debug(
-                "Loaded profile %s with %d entities", cache_key, len(loaded_profile.entities)
+                "Loaded profile %s with %d entities",
+                cache_key,
+                len(loaded_profile.entities),
             )
             return loaded_profile
         except (yaml.YAMLError, ValidationError) as e:
@@ -180,7 +186,7 @@ class SpecLoader:
 
     def load_profile(
         self: Self,
-        version: str = "1.1",
+        version: str = "1.2",
         profile: str | None = None,
         *,
         ctx: ProfileContext | None = None,
@@ -212,7 +218,7 @@ class SpecLoader:
     def load_entity(
         self: Self,
         entity: str,
-        version: str = "1.1",
+        version: str = "1.2",
         profile: str | None = None,
         *,
         ctx: ProfileContext | None = None,
@@ -251,7 +257,7 @@ class SpecLoader:
 
     def list_entities(
         self: Self,
-        version: str = "1.1",
+        version: str = "1.2",
         profile: str | None = None,
         *,
         ctx: ProfileContext | None = None,
@@ -327,7 +333,10 @@ class SpecLoader:
                 if item.is_dir() and not item.name.startswith("_"):
                     # Check if any subdirectory has a profile.yaml
                     for version_dir in item.iterdir():
-                        if version_dir.is_dir() and (version_dir / "profile.yaml").exists():
+                        if (
+                            version_dir.is_dir()
+                            and (version_dir / "profile.yaml").exists()
+                        ):
                             profiles.add(item.name)
                             break
 
@@ -335,7 +344,7 @@ class SpecLoader:
 
     def get_profile_path(
         self: Self,
-        version: str = "1.1",
+        version: str = "1.2",
         profile: str | None = None,
         *,
         ctx: ProfileContext | None = None,

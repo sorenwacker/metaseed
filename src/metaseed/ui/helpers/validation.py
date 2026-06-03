@@ -81,7 +81,9 @@ def _format_validation_error(_entity_type: str, error: ValidationError) -> str:
         missing = [str(e["loc"][0]) for e in error.errors() if e["type"] == "missing"]
         return f"Missing required: {', '.join(missing)}"
     if err_type == "extra_forbidden":
-        extra = [str(e["loc"][0]) for e in error.errors() if e["type"] == "extra_forbidden"]
+        extra = [
+            str(e["loc"][0]) for e in error.errors() if e["type"] == "extra_forbidden"
+        ]
         return f"Unknown fields: {', '.join(extra)}"
     return err.get("msg", str(error))
 
@@ -112,7 +114,10 @@ def _find_existing_child_node(
     for node in state.nodes_by_id.values():
         if node.entity_type == child_type:
             node_data = node.instance.model_dump() if node.instance else {}
-            if node_data.get("alias") == item_id or node_data.get("unique_id") == item_id:
+            if (
+                node_data.get("alias") == item_id
+                or node_data.get("unique_id") == item_id
+            ):
                 return node
 
     return None
@@ -136,7 +141,11 @@ def _clean_item_for_child_entity(
         Cleaned dict with only valid fields and parent reference set.
     """
     valid_fields = set(child_helper.all_fields)
-    cleaned = {k: v for k, v in item.items() if not k.startswith("_") and v and k in valid_fields}
+    cleaned = {
+        k: v
+        for k, v in item.items()
+        if not k.startswith("_") and v and k in valid_fields
+    }
 
     if parent_ref_field and parent_identifier:
         cleaned[parent_ref_field] = parent_identifier
@@ -247,11 +256,25 @@ def _process_child_items(
 
         if existing_node:
             _update_existing_child(
-                state, existing_node, child_type, child_helper, cleaned, field_name, item, result
+                state,
+                existing_node,
+                child_type,
+                child_helper,
+                cleaned,
+                field_name,
+                item,
+                result,
             )
         else:
             _create_new_child(
-                state, child_type, child_helper, cleaned, node_id, field_name, item, result
+                state,
+                child_type,
+                child_helper,
+                cleaned,
+                node_id,
+                field_name,
+                item,
+                result,
             )
 
 
@@ -342,7 +365,9 @@ def rebuild_nested_items_with_failures(
 
     updated_node = state.nodes_by_id.get(node_id)
     if updated_node:
-        state.current_nested_items = get_nested_items_for_edit(updated_node, helper, facade)
+        state.current_nested_items = get_nested_items_for_edit(
+            updated_node, helper, facade
+        )
     else:
         # Fallback - shouldn't happen but handle gracefully
         instance = state.nodes_by_id.get(node_id)

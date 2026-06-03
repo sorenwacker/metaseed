@@ -110,7 +110,9 @@ class EntityTypeNotFoundError(MetaseedError):
         """
         self.entity_type = entity_type
         self.profile = profile
-        super().__init__(f"Entity type '{entity_type}' not found in profile '{profile}'")
+        super().__init__(
+            f"Entity type '{entity_type}' not found in profile '{profile}'"
+        )
 
 
 class ValidationError(MetaseedError):
@@ -123,7 +125,7 @@ class ValidationError(MetaseedError):
         errors: List of validation error details.
     """
 
-    def __init__(self, errors: list[dict]) -> None:
+    def __init__(self, errors: list[dict[str, str]]) -> None:
         """Initialize the error.
 
         Args:

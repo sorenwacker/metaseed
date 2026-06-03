@@ -46,25 +46,32 @@ def register_example_routes(
         profile_factory = ProfileFactory()
 
         if profile_name not in profile_factory.list_profiles():
-            raise HTTPException(status_code=400, detail=f"Unknown profile: {profile_name}")
+            raise HTTPException(
+                status_code=400, detail=f"Unknown profile: {profile_name}"
+            )
 
         version_dir = EXAMPLES_DIR / profile_name / version
 
         if not version_dir.exists():
             raise HTTPException(
-                status_code=404, detail=f"No example available for {profile_name} v{version}"
+                status_code=404,
+                detail=f"No example available for {profile_name} v{version}",
             )
 
         yaml_files = list(version_dir.glob("*.yaml"))
         if not yaml_files:
-            raise HTTPException(status_code=404, detail=f"No example file found in {version_dir}")
+            raise HTTPException(
+                status_code=404, detail=f"No example file found in {version_dir}"
+            )
 
         example_file = yaml_files[0]
 
         try:
             example_data = yaml.safe_load(example_file.read_text(encoding="utf-8"))
         except yaml.YAMLError as e:
-            raise HTTPException(status_code=500, detail=f"Error loading example: {e}") from e
+            raise HTTPException(
+                status_code=500, detail=f"Error loading example: {e}"
+            ) from e
 
         state.reset()
         state.profile = profile_name

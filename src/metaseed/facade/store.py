@@ -132,7 +132,10 @@ class EntityStore:
         # Also index by the entity's specific identifier field (e.g., investigation_id)
         try:
             helper = self._get_helper(entity_type)
-            if helper.identifier_field and helper.identifier_field not in IDENTIFIER_FIELDS:
+            if (
+                helper.identifier_field
+                and helper.identifier_field not in IDENTIFIER_FIELDS
+            ):
                 id_value = data.get(helper.identifier_field)
                 if id_value:
                     self._index[str(id_value)] = node.id
@@ -229,7 +232,9 @@ class EntityStore:
             id_fields_to_check.append(entity_id_field)
 
         # Remove old index entries
-        old_data = node.instance.model_dump() if hasattr(node.instance, "model_dump") else {}
+        old_data = (
+            node.instance.model_dump() if hasattr(node.instance, "model_dump") else {}
+        )
         for id_field in id_fields_to_check:
             old_value = old_data.get(id_field)
             if old_value and str(old_value) in self._index:
@@ -326,7 +331,9 @@ class EntityStore:
         """
         entities: list[dict] = []
 
-        def serialize_node(node: EntityNode, parent_unique_id: str | None = None) -> None:
+        def serialize_node(
+            node: EntityNode, parent_unique_id: str | None = None
+        ) -> None:
             if node.instance and hasattr(node.instance, "model_dump"):
                 data = node.instance.model_dump(exclude_none=True)
             else:

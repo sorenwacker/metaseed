@@ -74,7 +74,9 @@ class ProfileFacade:
         self._custom_loader = loader is not None
 
         # Use provided loader or create default
-        self._loader = loader if loader is not None else SpecLoader(profile=self._profile)
+        self._loader = (
+            loader if loader is not None else SpecLoader(profile=self._profile)
+        )
 
         # Determine version
         if spec is not None:
@@ -131,6 +133,18 @@ class ProfileFacade:
         helper = getattr(self, entity_type)
         return helper.create(skip_validation=skip_validation, **data)
 
+    def _store_entity(self: Self, entity_type: str, data: dict[str, Any]) -> EntityNode:
+        """Store an entity (callback for EntityHelper).
+
+        Args:
+            entity_type: Name of the entity type.
+            data: Field values for the entity.
+
+        Returns:
+            EntityNode for the stored entity.
+        """
+        return self._store.add_entity(entity_type, data)
+
     def _load_entities(self: Self) -> None:
         """Load all entity helpers for this profile.
 
@@ -168,6 +182,7 @@ class ProfileFacade:
                 model=model,
                 profile=self._profile,
                 version=self._version,
+                store_callback=self._store_entity,
             )
 
     # ========================================================================
@@ -209,7 +224,9 @@ class ProfileFacade:
             >>> facade.add_entity("Sample", {"alias": "sam1", "study_ref": "s1", ...})
             >>> # Sample is auto-linked to Study via study_ref
         """
-        return self._store.add_entity(entity_type, data, node_id, parent_id, skip_validation)
+        return self._store.add_entity(
+            entity_type, data, node_id, parent_id, skip_validation
+        )
 
     def get_entity(self: Self, node_id: str) -> EntityNode | None:
         """Get an entity node by its ID.
@@ -280,6 +297,24 @@ class ProfileFacade:
             List of root EntityNodes.
         """
         return self._store.get_roots()
+
+    def list_entities(self: Self, entity_type: str | None = None) -> list[EntityNode]:
+        """List all stored entities, optionally filtered by type.
+
+        Args:
+            entity_type: Optional entity type to filter by (e.g., "Investigation").
+
+        Returns:
+            List of EntityNodes matching the filter.
+
+        Example:
+            >>> m.list_entities()  # All entities
+            >>> m.list_entities("Investigation")  # Only Investigations
+        """
+        all_nodes = list(self._store._instances.values())
+        if entity_type:
+            return [n for n in all_nodes if n.entity_type == entity_type]
+        return all_nodes
 
     def to_dict(self: Self) -> list[dict]:
         """Export all entities for serialization.

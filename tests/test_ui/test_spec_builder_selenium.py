@@ -4,6 +4,9 @@ These tests verify the frontend form submission and state persistence
 work correctly with the browser.
 """
 
+import os
+import socket
+import subprocess
 import time
 
 import pytest
@@ -15,8 +18,43 @@ from selenium.webdriver.support.ui import WebDriverWait
 BASE_URL = "http://127.0.0.1:8765"
 
 
+@pytest.fixture(scope="module")
+def server():
+    """Start the server for testing."""
+    cwd = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+    proc = subprocess.Popen(
+        ["uv", "run", "uvicorn", "metaseed.ui.app:app", "--port", "8765"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        cwd=cwd,
+    )
+
+    max_attempts = 30
+    for _ in range(max_attempts):
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(1)
+            result = sock.connect_ex(("127.0.0.1", 8765))
+            sock.close()
+            if result == 0:
+                break
+        except Exception:
+            pass
+        time.sleep(0.5)
+    else:
+        output = proc.stdout.read().decode() if proc.stdout else ""
+        proc.terminate()
+        raise RuntimeError(f"Server failed to start: {output}")
+
+    time.sleep(0.5)
+    yield proc
+    proc.terminate()
+    proc.wait()
+
+
 @pytest.fixture
-def driver():
+def driver(server):
     """Create a Chrome WebDriver with console logging enabled."""
     options = webdriver.ChromeOptions()
     options.add_argument("--headless")

@@ -5,7 +5,9 @@ from pathlib import Path
 import yaml
 
 
-def load_spec_examples(profile: str = "miappe", version: str | None = None) -> dict[str, dict]:
+def load_spec_examples(
+    profile: str = "miappe", version: str | None = None
+) -> dict[str, dict]:
     """Load example values for all entities from the YAML spec.
 
     Args:

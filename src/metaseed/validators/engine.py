@@ -88,8 +88,12 @@ def _create_rule_by_type(
         end_field = rule_spec.end_field
         if not start_field or not end_field:
             # Try to parse from condition
-            if rule_spec.condition and (">=" in rule_spec.condition or "<=" in rule_spec.condition):
-                parts = rule_spec.condition.replace(">=", " ").replace("<=", " ").split()
+            if rule_spec.condition and (
+                ">=" in rule_spec.condition or "<=" in rule_spec.condition
+            ):
+                parts = (
+                    rule_spec.condition.replace(">=", " ").replace("<=", " ").split()
+                )
                 if len(parts) == 2:
                     if ">=" in rule_spec.condition:
                         start_field = parts[1]
@@ -174,14 +178,18 @@ def _infer_rule_type(
     if rule_spec.pattern and rule_spec.field:
         return None  # Handled by Pydantic pattern constraint
 
-    if (rule_spec.minimum is not None or rule_spec.maximum is not None) and rule_spec.field:
+    if (
+        rule_spec.minimum is not None or rule_spec.maximum is not None
+    ) and rule_spec.field:
         return None  # Handled by Pydantic ge/le constraints
 
     if rule_spec.enum and rule_spec.field:
         return None  # Handled by Pydantic Literal types
 
     # Cardinality rules
-    if (rule_spec.min_items is not None or rule_spec.max_items is not None) and rule_spec.field:
+    if (
+        rule_spec.min_items is not None or rule_spec.max_items is not None
+    ) and rule_spec.field:
         return ListCardinalityRule(
             field=rule_spec.field,
             min_items=rule_spec.min_items,
@@ -313,7 +321,7 @@ def _applies_to_entity(rule_spec: ValidationRuleSpec, entity: str) -> bool:
 
 def create_engine_for_entity(
     entity: str,
-    version: str = "1.1",
+    version: str = "1.2",
     profile: str = "miappe",
     available_refs: dict[str, set[str]] | None = None,
 ) -> ValidationEngine:
@@ -383,7 +391,7 @@ def create_engine_for_entity(
 
 
 def create_engine_from_profile(
-    version: str = "1.1",
+    version: str = "1.2",
     profile: str = "miappe",
 ) -> dict[str, ValidationEngine]:
     """Create validation engines for all entities in a profile.
@@ -411,7 +419,7 @@ def create_engine_from_profile(
 def validate(
     data: dict[str, Any],
     entity: str,
-    version: str = "1.1",
+    version: str = "1.2",
     profile: str = "miappe",
 ) -> list[ValidationError]:
     """Validate data against entity rules.

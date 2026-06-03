@@ -34,8 +34,10 @@ from metaseed.facade.profiles import (
     dissco,
     ena,
     isa,
+    jerm,
     metabolights,
     miappe,
+    miappe_htp,
     pride,
 )
 from metaseed.facade.store import EntityStore
@@ -50,8 +52,10 @@ __all__ = [
     "dissco",
     "ena",
     "isa",
+    "jerm",
     "metabolights",
     "miappe",
+    "miappe_htp",
     "pride",
     "validate_ontology_term",
 ]

@@ -28,7 +28,10 @@ def temp_datasets_dir(tmp_path):
     token = _factory_var.set(None)
     try:
         with (
-            patch("metaseed.repositories.filesystem_dataset.DEFAULT_DATASETS_DIR", datasets_dir),
+            patch(
+                "metaseed.repositories.filesystem_dataset.DEFAULT_DATASETS_DIR",
+                datasets_dir,
+            ),
             patch("metaseed.ui.datasets.DATASETS_DIR", datasets_dir),
         ):
             yield datasets_dir
@@ -115,7 +118,9 @@ class TestListDatasets:
     def test_skips_invalid_files(self, temp_datasets_dir):
         """Should skip invalid JSON files."""
         (temp_datasets_dir / "valid.json").write_text(
-            json.dumps({"name": "valid", "profile": "miappe", "version": "1.0", "entities": []})
+            json.dumps(
+                {"name": "valid", "profile": "miappe", "version": "1.0", "entities": []}
+            )
         )
         (temp_datasets_dir / "invalid.json").write_text("not json")
 

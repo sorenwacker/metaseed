@@ -31,7 +31,9 @@ class TestFileEntityRepositoryInit:
         data = {
             "profile": "miappe",
             "version": "1.2",
-            "entities": [{"id": "abc123", "entity_type": "Investigation", "label": "Test"}],
+            "entities": [
+                {"id": "abc123", "entity_type": "Investigation", "label": "Test"}
+            ],
         }
         path.write_text(json.dumps(data))
 
@@ -95,7 +97,9 @@ class TestGetEntity:
         data = {
             "profile": "miappe",
             "version": "1.2",
-            "entities": [{"id": "abc123", "entity_type": "Investigation", "label": "Test"}],
+            "entities": [
+                {"id": "abc123", "entity_type": "Investigation", "label": "Test"}
+            ],
         }
         path.write_text(json.dumps(data))
         repo = FileEntityRepository(dataset_path=path)
@@ -347,7 +351,9 @@ class TestReload:
         initial_data = {
             "profile": "miappe",
             "version": "1.2",
-            "entities": [{"id": "abc", "entity_type": "Investigation", "label": "Init"}],
+            "entities": [
+                {"id": "abc", "entity_type": "Investigation", "label": "Init"}
+            ],
         }
         path.write_text(json.dumps(initial_data))
         repo = FileEntityRepository(dataset_path=path)

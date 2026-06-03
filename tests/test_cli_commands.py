@@ -56,13 +56,19 @@ class TestValidateCommand:
             "unique_id": "INV-001",
             "title": "Test Investigation",
             "studies": [
-                {"unique_id": "STU-001", "title": "Study 1", "investigation_id": "INV-001"}
+                {
+                    "unique_id": "STU-001",
+                    "title": "Study 1",
+                    "investigation_id": "INV-001",
+                }
             ],
             "contacts": [{"name": "John Doe", "investigation_id": "INV-001"}],
         }
         valid_yaml.write_text(yaml.dump(data), encoding="utf-8")
 
-        result = runner.invoke(app, ["validate", str(valid_yaml), "-e", "investigation"])
+        result = runner.invoke(
+            app, ["validate", str(valid_yaml), "-e", "investigation"]
+        )
         assert result.exit_code == 0
         assert "Validation passed" in result.output
 
@@ -72,7 +78,9 @@ class TestValidateCommand:
         data = {"description": "Missing required fields"}
         invalid_yaml.write_text(yaml.dump(data), encoding="utf-8")
 
-        result = runner.invoke(app, ["validate", str(invalid_yaml), "-e", "investigation"])
+        result = runner.invoke(
+            app, ["validate", str(invalid_yaml), "-e", "investigation"]
+        )
         assert result.exit_code == 1
         assert "Validation failed" in result.output
 
@@ -83,7 +91,11 @@ class TestValidateCommand:
             "unique_id": "INV-001",
             "title": "Test Investigation",
             "studies": [
-                {"unique_id": "STU-001", "title": "Study 1", "investigation_id": "INV-001"}
+                {
+                    "unique_id": "STU-001",
+                    "title": "Study 1",
+                    "investigation_id": "INV-001",
+                }
             ],
             "contacts": [{"name": "John Doe", "investigation_id": "INV-001"}],
         }
@@ -116,7 +128,9 @@ class TestTemplateCommand:
     def test_template_writes_to_file(self, tmp_path):
         """Template writes to output file."""
         output_file = tmp_path / "template.yaml"
-        result = runner.invoke(app, ["template", "investigation", "-o", str(output_file)])
+        result = runner.invoke(
+            app, ["template", "investigation", "-o", str(output_file)]
+        )
         assert result.exit_code == 0
         assert output_file.exists()
         assert "Template written to" in result.output
@@ -124,7 +138,9 @@ class TestTemplateCommand:
     def test_template_creates_parent_directories(self, tmp_path):
         """Template creates parent directories for output."""
         output_file = tmp_path / "nested" / "dir" / "template.yaml"
-        result = runner.invoke(app, ["template", "investigation", "-o", str(output_file)])
+        result = runner.invoke(
+            app, ["template", "investigation", "-o", str(output_file)]
+        )
         assert result.exit_code == 0
         assert output_file.exists()
 
@@ -184,7 +200,8 @@ class TestConvertCommand:
     def test_convert_file_not_found(self, tmp_path):
         """Convert returns error for missing input file."""
         result = runner.invoke(
-            app, ["convert", str(tmp_path / "missing.yaml"), str(tmp_path / "output.json")]
+            app,
+            ["convert", str(tmp_path / "missing.yaml"), str(tmp_path / "output.json")],
         )
         assert result.exit_code == 2  # EXIT_INPUT_ERROR
         output = result.output + (result.stderr or "")
@@ -195,7 +212,9 @@ class TestConvertCommand:
         input_file = tmp_path / "input.txt"
         input_file.write_text("data", encoding="utf-8")
 
-        result = runner.invoke(app, ["convert", str(input_file), str(tmp_path / "output.json")])
+        result = runner.invoke(
+            app, ["convert", str(input_file), str(tmp_path / "output.json")]
+        )
         assert result.exit_code == 1
         assert "Unknown input format" in result.output
 
@@ -206,7 +225,9 @@ class TestConvertCommand:
             yaml.dump({"unique_id": "INV-001", "title": "Test"}), encoding="utf-8"
         )
 
-        result = runner.invoke(app, ["convert", str(input_file), str(tmp_path / "output.txt")])
+        result = runner.invoke(
+            app, ["convert", str(input_file), str(tmp_path / "output.txt")]
+        )
         assert result.exit_code == 1
         assert "Unknown output format" in result.output
 
@@ -216,7 +237,14 @@ class TestConvertCommand:
         input_file.write_text(yaml.dump({"unique_id": "TEST-001"}), encoding="utf-8")
 
         result = runner.invoke(
-            app, ["convert", str(input_file), str(tmp_path / "output.json"), "-e", "unknown"]
+            app,
+            [
+                "convert",
+                str(input_file),
+                str(tmp_path / "output.json"),
+                "-e",
+                "unknown",
+            ],
         )
         assert result.exit_code == 3  # EXIT_CONFIG_ERROR
         output = result.output + (result.stderr or "")
@@ -228,7 +256,14 @@ class TestConvertCommand:
         input_file.write_text("invalid: yaml: ][", encoding="utf-8")
 
         result = runner.invoke(
-            app, ["convert", str(input_file), str(tmp_path / "output.json"), "-e", "investigation"]
+            app,
+            [
+                "convert",
+                str(input_file),
+                str(tmp_path / "output.json"),
+                "-e",
+                "investigation",
+            ],
         )
         assert result.exit_code == 2  # EXIT_INPUT_ERROR
 
@@ -337,7 +372,9 @@ class TestCompareCommand:
     def test_compare_output_to_file(self, tmp_path):
         """Compare writes to output file."""
         output_file = tmp_path / "comparison.md"
-        result = runner.invoke(app, ["compare", "miappe/1.1", "isa/1.0", "-o", str(output_file)])
+        result = runner.invoke(
+            app, ["compare", "miappe/1.1", "isa/1.0", "-o", str(output_file)]
+        )
         assert result.exit_code == 0
         assert output_file.exists()
         content = output_file.read_text()
@@ -347,7 +384,8 @@ class TestCompareCommand:
         """Compare outputs CSV format."""
         output_file = tmp_path / "comparison.csv"
         result = runner.invoke(
-            app, ["compare", "miappe/1.1", "isa/1.0", "-f", "csv", "-o", str(output_file)]
+            app,
+            ["compare", "miappe/1.1", "isa/1.0", "-f", "csv", "-o", str(output_file)],
         )
         assert result.exit_code == 0
         assert output_file.exists()
@@ -358,7 +396,8 @@ class TestCompareCommand:
         """Compare outputs HTML format."""
         output_file = tmp_path / "comparison.html"
         result = runner.invoke(
-            app, ["compare", "miappe/1.1", "isa/1.0", "-f", "html", "-o", str(output_file)]
+            app,
+            ["compare", "miappe/1.1", "isa/1.0", "-f", "html", "-o", str(output_file)],
         )
         assert result.exit_code == 0
         assert output_file.exists()
@@ -378,7 +417,9 @@ class TestMergeCommand:
     def test_merge_two_profiles(self, tmp_path):
         """Merge two profiles creates YAML output."""
         output_file = tmp_path / "merged.yaml"
-        result = runner.invoke(app, ["merge", "miappe/1.1", "isa/1.0", "-o", str(output_file)])
+        result = runner.invoke(
+            app, ["merge", "miappe/1.1", "isa/1.0", "-o", str(output_file)]
+        )
         assert result.exit_code == 0
         assert output_file.exists()
         assert "Merged profile written to" in result.output
@@ -418,7 +459,15 @@ class TestMergeCommand:
         output_file = tmp_path / "merged.yaml"
         result = runner.invoke(
             app,
-            ["merge", "miappe/1.1", "isa/1.0", "-n", "my-custom-profile", "-o", str(output_file)],
+            [
+                "merge",
+                "miappe/1.1",
+                "isa/1.0",
+                "-n",
+                "my-custom-profile",
+                "-o",
+                str(output_file),
+            ],
         )
         assert result.exit_code == 0
 
@@ -446,7 +495,15 @@ class TestMergeCommand:
         output_file = tmp_path / "merged.yaml"
         result = runner.invoke(
             app,
-            ["merge", "miappe/1.1", "isa/1.0", "-s", "invalid_strategy", "-o", str(output_file)],
+            [
+                "merge",
+                "miappe/1.1",
+                "isa/1.0",
+                "-s",
+                "invalid_strategy",
+                "-o",
+                str(output_file),
+            ],
         )
         assert result.exit_code != 0
 

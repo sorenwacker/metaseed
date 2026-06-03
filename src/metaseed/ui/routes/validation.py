@@ -127,7 +127,8 @@ def _get_validation_rules_for_entity(
                     rules.append(
                         ValidationRule(
                             name=f"{entity_type}: {rule_spec.name}",
-                            description=rule_spec.description or "Custom validation rule",
+                            description=rule_spec.description
+                            or "Custom validation rule",
                         )
                     )
     except FileNotFoundError:
@@ -190,10 +191,14 @@ def _validate_entity_deep(
         _validate_with_pydantic(model_class, simple_values, path_prefix, error_list)
 
         # Run custom validation rules
-        _validate_with_custom_rules(values, entity_type, version, profile, path_prefix, error_list)
+        _validate_with_custom_rules(
+            values, entity_type, version, profile, path_prefix, error_list
+        )
 
         # Recursively validate nested entities
-        _validate_nested_entities(nested_fields, profile, version, path_prefix, error_list, rules)
+        _validate_nested_entities(
+            nested_fields, profile, version, path_prefix, error_list, rules
+        )
 
     except FileNotFoundError:
         error_list.append(
@@ -213,7 +218,9 @@ def _validate_entity_deep(
             )
         )
     except PydanticValidationError as e:
-        logger.warning("Pydantic validation error for %s: %s", entity_type, e, exc_info=True)
+        logger.warning(
+            "Pydantic validation error for %s: %s", entity_type, e, exc_info=True
+        )
         error_list.append(
             ValidationError(
                 field=path_prefix.rstrip(".") or entity_type,

@@ -1,6 +1,6 @@
 """Core routes for app setup, home, and profile selection.
 
-Provides the main page, profile switching, and form rendering routes.
+Provides the main page, profile switching, and shared helper functions.
 """
 
 from __future__ import annotations
@@ -11,24 +11,10 @@ from typing import TYPE_CHECKING, Any
 from fastapi import HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from pydantic import ValidationError
 from starlette.requests import Request
 
 from metaseed.profiles import ProfileFactory
 from metaseed.specs.loader import SpecLoader, SpecLoadError
-
-from ..helpers import (
-    FormContext,
-    build_inline_tables,
-    collect_form_values,
-    extract_nested_items,
-    filter_fields,
-    format_validation_errors,
-    get_field_data,
-    get_nested_items_for_edit,
-    process_reference_linked_children,
-    rebuild_nested_items_with_failures,
-)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -43,7 +29,7 @@ UI_DIR = Path(__file__).parent.parent
 EXAMPLES_DIR = UI_DIR.parent.parent.parent / "examples"
 
 
-def get_profile_display_info(factory: ProfileFactory) -> list[dict]:
+def get_profile_display_info(factory: ProfileFactory) -> list[dict[str, Any]]:
     """Get display information for all available profiles.
 
     Reads metadata from profile.yaml files.
@@ -52,9 +38,10 @@ def get_profile_display_info(factory: ProfileFactory) -> list[dict]:
         factory: ProfileFactory instance.
 
     Returns:
-        List of profile info dicts with name, display_name, description, root_entity, and versions.
+        List of profile info dicts with name, display_name, description,
+        root_entity, and versions.
     """
-    profiles = []
+    profiles: list[dict[str, Any]] = []
     for name in factory.list_profiles():
         loader = SpecLoader(profile=name)
         versions = loader.list_versions(name)
@@ -68,7 +55,9 @@ def get_profile_display_info(factory: ProfileFactory) -> list[dict]:
                 {
                     "name": name,
                     "display_name": profile_spec.display_name or name.upper(),
-                    "description": profile_spec.description or f"{name} metadata profile.",
+                    "description": (
+                        profile_spec.description or f"{name} metadata profile."
+                    ),
                     "root_entity": profile_spec.root_entity,
                     "versions": versions,
                     "latest_version": latest_version,
@@ -88,6 +77,28 @@ def get_profile_display_info(factory: ProfileFactory) -> list[dict]:
     return profiles
 
 
+def build_inline_tables(
+    state: AppState,
+    facade: ProfileFacade,
+    entity_type: str,
+) -> dict[str, Any]:
+    """Build inline table data for child entities.
+
+    Args:
+        state: Application state.
+        facade: Profile facade.
+        entity_type: Current entity type.
+
+    Returns:
+        Dictionary mapping field names to inline table data.
+    """
+    from ..helpers.table_helpers import (
+        build_inline_tables as _build_inline_tables,
+    )
+
+    return _build_inline_tables(state, facade, entity_type)
+
+
 def register_core_routes(
     app: FastAPI,
     templates: Jinja2Templates,
@@ -104,13 +115,12 @@ def register_core_routes(
             Should not have a trailing slash. Defaults to empty string.
     """
 
-    def _get_dataset_manager(state: AppState):
+    def _get_dataset_manager(state: AppState) -> Any:
         """Get the dataset manager from context."""
         context = getattr(app.state, "mcp_context", None)
         if context is not None:
             return context.dataset_factory.get_manager(state)
 
-        # Fallback: create factory directly
         from ..dataset_manager import DatasetManagerFactory
 
         factory = DatasetManagerFactory()
@@ -123,7 +133,7 @@ def register_core_routes(
             return f"{base_url}/dataset/{manager.current_dataset}"
         return base_url
 
-    def _index_context(state: AppState, **extra: Any) -> dict:
+    def _index_context(state: AppState, **extra: Any) -> dict[str, Any]:
         """Build standard context for index.html rendering."""
         facade = state.get_or_create_facade()
         return {
@@ -168,18 +178,17 @@ def register_core_routes(
         state = get_state()
         manager = _get_dataset_manager(state)
 
-        # Load the dataset if not already loaded
         if manager.current_dataset != name:
             try:
                 manager.load_dataset(name)
-                # Sync current dataset name to state for MCP auto-save
                 from ..datasets import set_current_dataset_name
 
                 set_current_dataset_name(state, name)
-                # Clear editing state when switching datasets to prevent auto-redirect
                 state.editing_node_id = None
             except FileNotFoundError:
-                raise HTTPException(status_code=404, detail=f"Dataset not found: {name}") from None
+                raise HTTPException(
+                    status_code=404, detail=f"Dataset not found: {name}"
+                ) from None
 
         facade = state.get_or_create_facade()
         profile_factory = ProfileFactory()
@@ -198,7 +207,9 @@ def register_core_routes(
                 "root_types": state.get_root_entity_types()[:3],
                 "tree_nodes": state.get_tree_data(),
                 "editing_node_id": state.editing_node_id,
-                "editing_node_type": editing_node.entity_type if editing_node else None,
+                "editing_node_type": (
+                    editing_node.entity_type if editing_node else None
+                ),
                 "current_dataset": name,
                 "base_url": base_url,
             },
@@ -236,529 +247,3 @@ def register_core_routes(
         state = get_state()
         state.reset()
         return HTMLResponse(content="OK")
-
-
-def register_form_routes(
-    app: FastAPI,
-    templates: Jinja2Templates,
-    get_state: Callable[[], AppState],
-) -> None:
-    """Register entity form routes on the FastAPI app.
-
-    Args:
-        app: FastAPI application instance.
-        templates: Jinja2Templates instance.
-        get_state: Callable returning AppState.
-    """
-
-    @app.get("/form/{entity_type}", response_class=HTMLResponse)
-    async def new_entity_form(request: Request, entity_type: str) -> HTMLResponse:
-        """Render a new entity form."""
-        state = get_state()
-        profile_factory = ProfileFactory()
-
-        profile = request.query_params.get("profile")
-
-        if not profile:
-            profiles_info = get_profile_display_info(profile_factory)
-            root_entities = {p["root_entity"] for p in profiles_info}
-            if entity_type in root_entities:
-                return templates.TemplateResponse(
-                    request,
-                    "partials/profile_select.html",
-                    {"profiles": profiles_info},
-                )
-
-        version = request.query_params.get("version")
-        dataset = request.query_params.get("dataset")
-
-        if profile and profile in profile_factory.list_profiles():
-            state.profile = profile
-            state.version = version
-            state.facade = None
-            state.reset()  # Clear existing entities when starting fresh
-
-            # Set the dataset name if provided
-            if dataset:
-                from ..datasets import set_current_dataset_name
-
-                set_current_dataset_name(state, dataset)
-
-        facade = state.get_or_create_facade()
-
-        try:
-            helper = getattr(facade, entity_type)
-        except AttributeError as e:
-            raise HTTPException(
-                status_code=404, detail=f"Entity type not found: {entity_type}"
-            ) from e
-
-        state.editing_node_id = None
-        state.current_nested_items = {}
-
-        fields = get_field_data(helper)
-
-        auto_values = {}
-        if "miappe_version" in helper.all_fields:
-            auto_values["miappe_version"] = facade.version
-
-        example_exists = (EXAMPLES_DIR / state.profile / facade.version).exists()
-
-        return templates.TemplateResponse(
-            request,
-            "partials/form.html",
-            {
-                "entity_type": entity_type,
-                "is_edit": False,
-                "node_id": None,
-                "description": helper.description,
-                "ontology_term": helper.ontology_term,
-                "required_fields": filter_fields(fields, required=True),
-                "optional_fields": filter_fields(fields, required=False, exclude_nested=True),
-                "nested_fields": filter_fields(fields, nested_only=True),
-                "values": auto_values,
-                "auto_fields": set(auto_values.keys()),
-                "current_profile": state.profile,
-                "current_version": facade.version,
-                "example_available": example_exists,
-            },
-        )
-
-    @app.get("/form/child/{parent_id}/{child_entity_type}", response_class=HTMLResponse)
-    async def new_child_entity_form(
-        request: Request, parent_id: str, child_entity_type: str
-    ) -> HTMLResponse:
-        """Render a form for creating a child entity linked to a parent."""
-        state = get_state()
-        facade = state.get_or_create_facade()
-
-        parent_node = state.nodes_by_id.get(parent_id)
-        if not parent_node:
-            raise HTTPException(status_code=404, detail=f"Parent node not found: {parent_id}")
-
-        try:
-            helper = getattr(facade, child_entity_type)
-        except AttributeError as e:
-            raise HTTPException(
-                status_code=404, detail=f"Entity type not found: {child_entity_type}"
-            ) from e
-
-        state.editing_node_id = None
-        state.current_nested_items = {}
-
-        # Get fields, excluding parent reference fields (they'll be auto-filled)
-        fields = get_field_data(helper, exclude_parent_ref=parent_node.entity_type)
-
-        auto_values = {}
-        auto_fields = set()
-
-        if "miappe_version" in helper.all_fields:
-            auto_values["miappe_version"] = facade.version
-            auto_fields.add("miappe_version")
-
-        return templates.TemplateResponse(
-            request,
-            "partials/form.html",
-            {
-                "entity_type": child_entity_type,
-                "is_edit": False,
-                "node_id": None,
-                "parent_id": parent_id,
-                "parent_label": f"{parent_node.entity_type}: {parent_node.label}",
-                "description": helper.description,
-                "ontology_term": helper.ontology_term,
-                "required_fields": filter_fields(fields, required=True),
-                "optional_fields": filter_fields(fields, required=False, exclude_nested=True),
-                "nested_fields": filter_fields(fields, nested_only=True),
-                "values": auto_values,
-                "auto_fields": auto_fields,
-            },
-        )
-
-    @app.get("/form/{entity_type}/{node_id}", response_class=HTMLResponse)
-    async def edit_entity_form(request: Request, entity_type: str, node_id: str) -> HTMLResponse:
-        """Render an edit form for an existing entity."""
-        state = get_state()
-        facade = state.get_or_create_facade()
-
-        node = state.nodes_by_id.get(node_id)
-        if not node:
-            raise HTTPException(status_code=404, detail=f"Node not found: {node_id}")
-
-        try:
-            helper = getattr(facade, entity_type)
-        except AttributeError as e:
-            raise HTTPException(
-                status_code=404, detail=f"Entity type not found: {entity_type}"
-            ) from e
-
-        # Check if we're switching to a different entity
-        switching_entity = state.editing_node_id != node_id
-
-        state.editing_node_id = node_id
-        state.nested_edit_stack = []
-
-        # Always refresh nested items when switching entities or if empty
-        if switching_entity or not state.current_nested_items:
-            state.current_nested_items = get_nested_items_for_edit(node, helper, facade)
-
-        fields = get_field_data(helper)
-        values = {}
-        if node.instance and hasattr(node.instance, "model_dump"):
-            values = node.instance.model_dump(exclude_none=True)
-
-        for field_name, items in state.current_nested_items.items():
-            if items:
-                values[field_name] = items
-
-        auto_fields = set()
-        if "miappe_version" in helper.all_fields:
-            values["miappe_version"] = facade.version
-            auto_fields.add("miappe_version")
-
-        inline_tables = build_inline_tables(state, facade, entity_type)
-
-        # Get child entity types that can be created under this entity
-        child_entity_types = list(helper.nested_fields.values())
-
-        return templates.TemplateResponse(
-            request,
-            "partials/form.html",
-            {
-                "entity_type": entity_type,
-                "is_edit": True,
-                "node_id": node_id,
-                "node_label": node.label,
-                "description": helper.description,
-                "ontology_term": helper.ontology_term,
-                "required_fields": filter_fields(fields, required=True),
-                "optional_fields": filter_fields(fields, required=False, exclude_nested=True),
-                "nested_fields": filter_fields(fields, nested_only=True),
-                "values": values,
-                "auto_fields": auto_fields,
-                "inline_tables": inline_tables,
-                "child_entity_types": child_entity_types,
-            },
-        )
-
-
-def register_entity_crud_routes(
-    app: FastAPI,
-    templates: Jinja2Templates,
-    get_state: Callable[[], AppState],
-) -> None:
-    """Register entity CRUD routes on the FastAPI app.
-
-    Args:
-        app: FastAPI application instance.
-        templates: Jinja2Templates instance.
-        get_state: Callable returning AppState.
-    """
-    from ..helpers import error_response
-
-    @app.post("/entity", response_class=HTMLResponse)
-    async def create_entity(request: Request) -> HTMLResponse:
-        """Create a new entity."""
-        state = get_state()
-        facade = state.get_or_create_facade()
-
-        form_data = await request.form()
-        entity_type = form_data.get("_entity_type")
-        parent_id = form_data.get("_parent_id")
-
-        if not entity_type:
-            return error_response(request, templates, "Entity type is required")
-
-        try:
-            helper = getattr(facade, entity_type)
-        except AttributeError:
-            return error_response(request, templates, f"Unknown entity type: {entity_type}")
-
-        values = collect_form_values(dict(form_data), helper)
-
-        try:
-            instance = helper.create(**values)
-            node = state.add_node(entity_type, instance, parent_id=parent_id)
-            state.editing_node_id = node.id
-
-            state.current_nested_items = extract_nested_items(instance, helper)
-
-            # Auto-save to persist changes
-            from ..datasets import auto_save
-
-            auto_save(state)
-
-            return render_entity_form(
-                request,
-                templates,
-                facade,
-                helper,
-                entity_type,
-                node.id,
-                instance,
-                f"Created {entity_type}: {node.label}",
-                state,
-            )
-
-        except ValidationError as e:
-            return render_form_with_errors(
-                request, templates, facade, helper, entity_type, None, values, e
-            )
-
-    @app.put("/entity/{node_id}", response_class=HTMLResponse)
-    async def update_entity(request: Request, node_id: str) -> HTMLResponse:
-        """Update an existing entity."""
-        state = get_state()
-        facade = state.get_or_create_facade()
-
-        node = state.nodes_by_id.get(node_id)
-        if not node:
-            return error_response(request, templates, f"Node not found: {node_id}")
-
-        form_data = await request.form()
-        entity_type = node.entity_type
-
-        try:
-            helper = getattr(facade, entity_type)
-        except AttributeError:
-            return error_response(request, templates, f"Unknown entity type: {entity_type}")
-
-        values = collect_form_values(dict(form_data), helper)
-
-        # Merge spec-defined nested fields from current_nested_items
-        for field_name, items in state.current_nested_items.items():
-            if field_name in helper.nested_fields and items:
-                cleaned_items = []
-                for item in items:
-                    if isinstance(item, dict):
-                        cleaned = {k: v for k, v in item.items() if not k.startswith("_") and v}
-                        if cleaned:
-                            cleaned_items.append(cleaned)
-                if cleaned_items:
-                    values[field_name] = cleaned_items
-
-        try:
-            instance = helper.create(**values)
-            state.update_node(node_id, instance)
-
-            # Get parent identifier for reference-linked children
-            parent_data = instance.model_dump() if hasattr(instance, "model_dump") else {}
-            parent_identifier = parent_data.get("alias") or parent_data.get("unique_id")
-
-            # Process reference-linked children (e.g., files added to Run via run_ref)
-            validation_result = process_reference_linked_children(
-                state=state,
-                facade=facade,
-                node_id=node_id,
-                helper=helper,
-                entity_type=entity_type,
-                parent_identifier=parent_identifier,
-            )
-
-            # Rebuild nested items including failed items for user correction
-            rebuild_nested_items_with_failures(
-                state=state,
-                node_id=node_id,
-                helper=helper,
-                facade=facade,
-                failed_items=validation_result.failed_items,
-            )
-
-            # Only auto-save if there were no validation errors
-            if not validation_result.has_errors():
-                from ..datasets import auto_save
-
-                auto_save(state)
-
-            action = form_data.get("_action", "")
-
-            # Build appropriate message based on validation results
-            if validation_result.has_errors():
-                msg = f"Validation errors - please fix: {'; '.join(validation_result.errors)}"
-                msg_type = "error"
-            else:
-                msg = f"Saved {entity_type}: {node.label}"
-                msg_type = "success"
-
-            if action == "back":
-                return templates.TemplateResponse(
-                    request,
-                    "index.html",
-                    {
-                        "tree_nodes": state.get_tree_data(),
-                        "root_types": state.get_root_entity_types()[:3],
-                        "current_profile": state.profile,
-                        "version": facade.version,
-                        "notification": {"type": msg_type, "message": msg},
-                    },
-                )
-
-            return render_entity_form(
-                request,
-                templates,
-                facade,
-                helper,
-                entity_type,
-                node_id,
-                instance,
-                msg,
-                state,
-                message_type=msg_type,
-            )
-
-        except ValidationError as e:
-            return render_form_with_errors(
-                request, templates, facade, helper, entity_type, node_id, values, e
-            )
-
-    @app.delete("/entity/{node_id}", response_class=HTMLResponse)
-    async def delete_entity(request: Request, node_id: str) -> HTMLResponse:
-        """Delete an entity."""
-        state = get_state()
-
-        node = state.nodes_by_id.get(node_id)
-        if not node:
-            return error_response(request, templates, f"Node not found: {node_id}")
-
-        entity_type = node.entity_type
-        label = node.label
-
-        state.delete_node(node_id)
-
-        # Auto-save to persist changes
-        from ..datasets import auto_save
-
-        auto_save(state)
-
-        facade = state.get_or_create_facade()
-        return templates.TemplateResponse(
-            request,
-            "index.html",
-            {
-                "tree_nodes": state.get_tree_data(),
-                "root_types": state.get_root_entity_types()[:3],
-                "current_profile": state.profile,
-                "version": facade.version,
-                "notification": {"type": "warning", "message": f"Deleted {entity_type}: {label}"},
-            },
-        )
-
-
-def _build_form_context(
-    helper: Any,
-    entity_type: str,
-    values: dict,
-    node_id: str | None,
-    facade: ProfileFacade,
-    state: AppState | None = None,
-) -> FormContext:
-    """Build a FormContext with auto-populated fields.
-
-    Args:
-        helper: Entity helper from facade.
-        entity_type: Entity type name.
-        values: Form values dict.
-        node_id: Node ID if editing, None if creating.
-        facade: Profile facade.
-        state: App state for inline tables.
-
-    Returns:
-        Populated FormContext instance.
-    """
-    auto_fields = set()
-    if "miappe_version" in helper.all_fields:
-        values["miappe_version"] = facade.version
-        auto_fields.add("miappe_version")
-
-    inline_tables = {}
-    if state:
-        inline_tables = build_inline_tables(state, facade, entity_type)
-
-    return FormContext(
-        entity_type=entity_type,
-        helper=helper,
-        values=values,
-        node_id=node_id,
-        auto_fields=auto_fields,
-        inline_tables=inline_tables,
-    )
-
-
-def render_entity_form(
-    request: Request,
-    templates: Jinja2Templates,
-    facade: ProfileFacade,
-    helper: Any,
-    entity_type: str,
-    node_id: str,
-    instance: Any,
-    message: str,
-    state: AppState | None = None,
-    message_type: str = "success",
-) -> HTMLResponse:
-    """Render entity form after successful create/update."""
-    values = instance.model_dump(exclude_none=True) if hasattr(instance, "model_dump") else {}
-    ctx = _build_form_context(helper, entity_type, values, node_id, facade, state)
-
-    node_label = ""
-    if state and node_id and node_id in state.nodes_by_id:
-        node_label = state.nodes_by_id[node_id].label
-
-    # Get child entity types that can be created under this entity
-    child_entity_types = list(helper.nested_fields.values())
-
-    response = templates.TemplateResponse(
-        request,
-        "partials/form.html",
-        {
-            "entity_type": ctx.entity_type,
-            "is_edit": ctx.is_edit,
-            "node_id": ctx.node_id,
-            "node_label": node_label,
-            "description": ctx.description,
-            "ontology_term": ctx.ontology_term,
-            "required_fields": ctx.get_required_fields(),
-            "optional_fields": ctx.get_optional_fields(),
-            "nested_fields": ctx.get_nested_fields(),
-            "values": ctx.values,
-            "auto_fields": ctx.auto_fields,
-            "notification": {"type": message_type, "message": message} if message else None,
-            "inline_tables": ctx.inline_tables,
-            "child_entity_types": child_entity_types,
-        },
-    )
-    response.headers["HX-Trigger"] = "entityCreated" if "Created" in message else "entityUpdated"
-    return response
-
-
-def render_form_with_errors(
-    request: Request,
-    templates: Jinja2Templates,
-    facade: ProfileFacade,
-    helper: Any,
-    entity_type: str,
-    node_id: str | None,
-    values: dict,
-    error: ValidationError,
-) -> HTMLResponse:
-    """Render form with validation errors."""
-    errors = format_validation_errors(error)
-    ctx = _build_form_context(helper, entity_type, values, node_id, facade)
-
-    return templates.TemplateResponse(
-        request,
-        "partials/form.html",
-        {
-            "entity_type": ctx.entity_type,
-            "is_edit": ctx.is_edit,
-            "node_id": ctx.node_id,
-            "description": ctx.description,
-            "ontology_term": ctx.ontology_term,
-            "required_fields": ctx.get_required_fields(),
-            "optional_fields": ctx.get_optional_fields(),
-            "nested_fields": ctx.get_nested_fields(),
-            "values": ctx.values,
-            "auto_fields": ctx.auto_fields,
-            "error_message": f"Validation error: {errors}",
-        },
-    )

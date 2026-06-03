@@ -24,7 +24,12 @@ from metaseed.api.errors import (
 
 # Re-export the FastAPI app for backward compatibility
 from metaseed.api.rest import app
-from metaseed.api.schema import EntitySchema, FieldInfo, ValidationIssue, ValidationResult
+from metaseed.api.schema import (
+    EntitySchema,
+    FieldInfo,
+    ValidationIssue,
+    ValidationResult,
+)
 
 __all__ = [
     "Entity",

@@ -4,7 +4,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from metaseed.repositories.dataset_repository import DatasetData, DatasetInfo, DatasetRepository
+from metaseed.repositories.dataset_repository import (
+    DatasetData,
+    DatasetInfo,
+    DatasetRepository,
+)
 from metaseed.ui.dataset_manager import (
     DatasetManager,
     DatasetManagerFactory,
@@ -214,7 +218,9 @@ class TestDatasetManagerFactory:
 
     def test_factory_default_repository(self):
         """Factory should use FilesystemDatasetRepository by default."""
-        with patch("metaseed.ui.dataset_manager.FilesystemDatasetRepository") as MockRepo:
+        with patch(
+            "metaseed.ui.dataset_manager.FilesystemDatasetRepository"
+        ) as MockRepo:
             mock_repo = MagicMock()
             MockRepo.return_value = mock_repo
 

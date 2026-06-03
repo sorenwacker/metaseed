@@ -18,7 +18,9 @@ if TYPE_CHECKING:
     from metaseed.ui.state import AppState
 
 
-def error_response(request: Request, templates: Jinja2Templates, message: str) -> HTMLResponse:
+def error_response(
+    request: Request, templates: Jinja2Templates, message: str
+) -> HTMLResponse:
     """Create an error response with notification."""
     return templates.TemplateResponse(
         request,
@@ -30,7 +32,9 @@ def error_response(request: Request, templates: Jinja2Templates, message: str) -
     )
 
 
-def get_reference_fields(profile: str, version: str, entity_type: str) -> dict[str, dict]:
+def get_reference_fields(
+    profile: str, version: str, entity_type: str
+) -> dict[str, dict]:
     """Get all reference fields for an entity type.
 
     Checks two sources:
@@ -121,7 +125,9 @@ def get_parent_id_fields(
     return parent_id_fields
 
 
-def get_parent_identifier(state: AppState, parent_entity_type: str, target_field: str) -> str:
+def get_parent_identifier(
+    state: AppState, parent_entity_type: str, target_field: str
+) -> str:
     """Get the parent entity's identifier value.
 
     Args:
@@ -135,7 +141,11 @@ def get_parent_identifier(state: AppState, parent_entity_type: str, target_field
     # Check if we're editing a root node
     if state.editing_node_id:
         node = state.nodes_by_id.get(state.editing_node_id)
-        if node and node.entity_type == parent_entity_type and hasattr(node.instance, "model_dump"):
+        if (
+            node
+            and node.entity_type == parent_entity_type
+            and hasattr(node.instance, "model_dump")
+        ):
             data = node.instance.model_dump(exclude_none=True)
             return str(data.get(target_field, ""))
 

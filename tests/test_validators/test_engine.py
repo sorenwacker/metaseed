@@ -92,7 +92,11 @@ class TestValidateFunction:
             "title": "Test Investigation",
             "contacts": [{"name": "Test Contact"}],
             "studies": [
-                {"unique_id": "STU001", "title": "Test Study", "investigation_id": "INV001"}
+                {
+                    "unique_id": "STU001",
+                    "title": "Test Study",
+                    "investigation_id": "INV001",
+                }
             ],
         }
         errors = validate(data, "investigation", version="1.1")
@@ -136,7 +140,9 @@ class TestValidateFunction:
             unique_id="INV001",
             title="Test",
             contacts=[Person(name="Test Contact")],
-            studies=[Study(unique_id="STU001", title="Test Study", investigation_id="INV001")],
+            studies=[
+                Study(unique_id="STU001", title="Test Study", investigation_id="INV001")
+            ],
         )
 
         # Entity type is auto-detected from model class name

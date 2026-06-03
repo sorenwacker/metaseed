@@ -128,7 +128,9 @@ class EntityService:
         self._notify_change("created", entity)
         return result
 
-    def update_entity(self: Self, entity_id: str, data: dict[str, Any]) -> dict[str, Any]:
+    def update_entity(
+        self: Self, entity_id: str, data: dict[str, Any]
+    ) -> dict[str, Any]:
         """Update an existing entity.
 
         Args:

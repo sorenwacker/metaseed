@@ -77,7 +77,11 @@ def register_main_routes(
         return templates.TemplateResponse(
             request,
             "spec_builder/start.html",
-            {"templates": available_templates, "user_specs": user_specs, "base_url": base_url},
+            {
+                "templates": available_templates,
+                "user_specs": user_specs,
+                "base_url": base_url,
+            },
         )
 
     @router.get("/new", response_class=HTMLResponse)
@@ -102,7 +106,9 @@ def register_main_routes(
         )
 
     @router.get("/clone/{profile}/{version}", response_class=HTMLResponse)
-    async def clone_template(request: Request, profile: str, version: str) -> HTMLResponse:
+    async def clone_template(
+        request: Request, profile: str, version: str
+    ) -> HTMLResponse:
         """Clone an existing spec as a template."""
         from metaseed.specs.loader import SpecLoader
 
@@ -149,7 +155,11 @@ def register_main_routes(
         return templates.TemplateResponse(
             request,
             "spec_builder/start.html",
-            {"templates": available_templates, "user_specs": user_specs, "base_url": base_url},
+            {
+                "templates": available_templates,
+                "user_specs": user_specs,
+                "base_url": base_url,
+            },
         )
 
     @router.get("/select", response_class=HTMLResponse)
@@ -160,7 +170,11 @@ def register_main_routes(
         return templates.TemplateResponse(
             request,
             "spec_builder/start.html",
-            {"templates": available_templates, "user_specs": user_specs, "base_url": base_url},
+            {
+                "templates": available_templates,
+                "user_specs": user_specs,
+                "base_url": base_url,
+            },
         )
 
     @router.get("/profile-metadata", response_class=HTMLResponse)

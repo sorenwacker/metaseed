@@ -142,7 +142,9 @@ def build_inline_tables(
     # Also include reference-linked children from source (e.g., files linked via run_ref)
     for field_name in source:
         if field_name not in field_to_type:
-            inferred_type = infer_entity_type_from_field(facade, entity_type, field_name)
+            inferred_type = infer_entity_type_from_field(
+                facade, entity_type, field_name
+            )
             if inferred_type:
                 field_to_type[field_name] = inferred_type
 
@@ -183,7 +185,9 @@ def build_inline_tables(
     return inline_tables
 
 
-def get_items_store(state: AppState, parent_entity_type: str, field_name: str) -> tuple[dict, list]:
+def get_items_store(
+    state: AppState, parent_entity_type: str, field_name: str
+) -> tuple[dict, list]:
     """Get the correct items store and items list based on context.
 
     Returns (items_store dict, items list for field_name).

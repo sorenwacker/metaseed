@@ -94,7 +94,9 @@ class TestProfileFactoryInfo:
             assert "versions" in profile_info
             assert "latest" in profile_info
 
-    def test_get_profile_info_includes_all_profiles(self, factory: ProfileFactory) -> None:
+    def test_get_profile_info_includes_all_profiles(
+        self, factory: ProfileFactory
+    ) -> None:
         """get_profile_info includes all profiles from list_profiles."""
         info = factory.get_profile_info()
         profile_names = {p["name"] for p in info}
@@ -127,7 +129,9 @@ class TestProfileFactoryCreate:
         facade = factory.create("miappe", "1.1")
         assert facade.version == "1.1"
 
-    def test_create_uses_latest_version_by_default(self, factory: ProfileFactory) -> None:
+    def test_create_uses_latest_version_by_default(
+        self, factory: ProfileFactory
+    ) -> None:
         """create uses latest version when version not specified."""
         facade = factory.create("miappe")
         expected_latest = factory.get_latest_version("miappe")

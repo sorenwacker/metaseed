@@ -74,7 +74,9 @@ class TreeNode:
         )
 
     @classmethod
-    def from_entity_node(cls, entity_node: EntityNode, facade: ProfileFacade) -> TreeNode:
+    def from_entity_node(
+        cls, entity_node: EntityNode, facade: ProfileFacade
+    ) -> TreeNode:
         """Create TreeNode from EntityNode for backward compatibility.
 
         Args:
@@ -123,7 +125,9 @@ class NestedEditContext:
     row_idx: int  # Index in the parent's list
     entity_type: str  # Entity type being edited (e.g., "Study")
     parent_entity_type: str  # Parent entity type (e.g., "Investigation")
-    nested_items: dict[str, list] = field(default_factory=dict)  # This item's nested fields
+    nested_items: dict[str, list] = field(
+        default_factory=dict
+    )  # This item's nested fields
 
 
 @dataclass
@@ -259,7 +263,9 @@ class AppState:
         else:
             # Fall back to loading from disk
             try:
-                spec = facade._loader.load_profile(version=facade.version, profile=self.profile)
+                spec = facade._loader.load_profile(
+                    version=facade.version, profile=self.profile
+                )
                 root = spec.root_entity
                 if root and root in facade.entities:
                     return [root]
@@ -302,7 +308,9 @@ class AppState:
             data = {}
 
         # Add to facade
-        entity_node = facade.add_entity(entity_type, data, node_id=node_id, parent_id=parent_id)
+        entity_node = facade.add_entity(
+            entity_type, data, node_id=node_id, parent_id=parent_id
+        )
 
         # Create TreeNode wrapper for backward compatibility
         helper = getattr(facade, entity_type, None)

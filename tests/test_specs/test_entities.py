@@ -34,7 +34,9 @@ class TestAllEntitySpecs:
     def test_all_entities_exist(self, loader: SpecLoader) -> None:
         """All 14 MIAPPE entities have specs."""
         entities = loader.list_entities(version="1.1")
-        assert len(entities) >= 14, f"Expected at least 14 entities, got {len(entities)}"
+        assert (
+            len(entities) >= 14
+        ), f"Expected at least 14 entities, got {len(entities)}"
 
         # Check case-insensitively since profile may use PascalCase
         entities_lower = [e.lower() for e in entities]
@@ -123,7 +125,9 @@ class TestEntityRelationships:
         loader = SpecLoader()
         spec = loader.load_entity("sample", version="1.1")
 
-        ou_field = next((f for f in spec.fields if f.name == "observation_unit_id"), None)
+        ou_field = next(
+            (f for f in spec.fields if f.name == "observation_unit_id"), None
+        )
         assert ou_field is not None
 
 
@@ -159,7 +163,9 @@ class TestISAMaterialFlowChain:
         assert derives_from is not None
         assert derives_from.items == "Extract"
 
-    def test_datafile_derives_from_labeled_extract(self, isa_loader: SpecLoader) -> None:
+    def test_datafile_derives_from_labeled_extract(
+        self, isa_loader: SpecLoader
+    ) -> None:
         """DataFile.derives_from uses string references to LabeledExtract names."""
         spec = isa_loader.load_entity("DataFile", version="1.0")
 
@@ -184,11 +190,15 @@ class TestISAMaterialFlowChain:
 
         for entity_name, expected_derives_from in expected_chain:
             spec = isa_loader.load_entity(entity_name, version="1.0")
-            derives_from = next((f for f in spec.fields if f.name == "derives_from"), None)
+            derives_from = next(
+                (f for f in spec.fields if f.name == "derives_from"), None
+            )
 
             if expected_derives_from is None:
                 # Source should not have derives_from
-                assert derives_from is None, f"{entity_name} should not have derives_from"
+                assert (
+                    derives_from is None
+                ), f"{entity_name} should not have derives_from"
             else:
                 assert derives_from is not None, f"{entity_name} missing derives_from"
                 assert (
@@ -204,13 +214,17 @@ class TestMIAPPEEntityReferences:
         """Create MIAPPE spec loader."""
         return SpecLoader(profile="miappe")
 
-    def test_study_geographic_location_references_location(self, miappe_loader: SpecLoader) -> None:
+    def test_study_geographic_location_references_location(
+        self, miappe_loader: SpecLoader
+    ) -> None:
         """Study.geographic_location references Location entity."""
         from metaseed.specs.schema import FieldType
 
         spec = miappe_loader.load_entity("Study", version="1.1")
 
-        geo_field = next((f for f in spec.fields if f.name == "geographic_location"), None)
+        geo_field = next(
+            (f for f in spec.fields if f.name == "geographic_location"), None
+        )
         assert geo_field is not None, "Study must have geographic_location field"
         assert (
             geo_field.type == FieldType.ENTITY
@@ -225,7 +239,9 @@ class TestMIAPPEEntityReferences:
 
         spec = miappe_loader.load_entity("BiologicalMaterial", version="1.1")
 
-        source_field = next((f for f in spec.fields if f.name == "material_source"), None)
+        source_field = next(
+            (f for f in spec.fields if f.name == "material_source"), None
+        )
         assert source_field is not None, "BiologicalMaterial must have material_source"
         assert (
             source_field.type == FieldType.ENTITY

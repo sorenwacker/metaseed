@@ -24,7 +24,11 @@ def miappe_example_data() -> dict:
                 "persons": [{"name": "John Doe", "email": "john@example.com"}],
                 "biological_materials": [{"unique_id": "BM001", "genus": "Triticum"}],
                 "factors": [
-                    {"unique_id": "FAC001", "name": "Temperature", "values": [{"value": "25C"}]}
+                    {
+                        "unique_id": "FAC001",
+                        "name": "Temperature",
+                        "values": [{"value": "25C"}],
+                    }
                 ],
                 "observed_variables": [{"unique_id": "OV001", "name": "Height"}],
                 "observation_units": [
@@ -36,7 +40,9 @@ def miappe_example_data() -> dict:
                     }
                 ],
                 "events": [{"unique_id": "EVT001", "type": "Sowing"}],
-                "environments": [{"unique_id": "ENV001", "parameter": "Air temperature"}],
+                "environments": [
+                    {"unique_id": "ENV001", "parameter": "Air temperature"}
+                ],
                 "data_files": [{"unique_id": "DF001", "link": "data.csv"}],
                 "protocols": [{"unique_id": "PROT001", "name": "Sampling"}],
                 "sources": [{"unique_id": "SRC001", "name": "Field"}],

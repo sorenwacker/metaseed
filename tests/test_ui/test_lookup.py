@@ -42,7 +42,10 @@ class TestGetReferenceFields:
         ref_fields = get_reference_fields("miappe", "1.1", "ObservationUnit")
 
         assert "biological_material_id" in ref_fields
-        assert ref_fields["biological_material_id"]["target_entity"] == "BiologicalMaterial"
+        assert (
+            ref_fields["biological_material_id"]["target_entity"]
+            == "BiologicalMaterial"
+        )
         assert ref_fields["biological_material_id"]["target_field"] == "unique_id"
 
     def test_event_has_observation_unit_ids_reference(self):

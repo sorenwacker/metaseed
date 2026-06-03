@@ -155,4 +155,7 @@ class TestJsonStorageWithNested:
         storage.save(inv, file_path)
 
         loaded = storage.load(file_path, Model)
-        assert loaded.associated_publications == ["doi:10.1234/test1", "doi:10.1234/test2"]
+        assert loaded.associated_publications == [
+            "doi:10.1234/test1",
+            "doi:10.1234/test2",
+        ]

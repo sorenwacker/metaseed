@@ -74,8 +74,12 @@ class TestEdgeColoring:
                     field_name="children",
                     diff_type=DiffType.UNCHANGED,
                     profiles={
-                        base_profile: self._make_field_spec("children", "list", "Child"),
-                        compare_profile: self._make_field_spec("children", "list", "Child"),
+                        base_profile: self._make_field_spec(
+                            "children", "list", "Child"
+                        ),
+                        compare_profile: self._make_field_spec(
+                            "children", "list", "Child"
+                        ),
                     },
                 ),
             ],
@@ -100,12 +104,18 @@ class TestEdgeColoring:
         child_node_id = next(n["id"] for n in graph["nodes"] if n["label"] == "Child")
 
         edge = next(
-            (e for e in graph["edges"] if e["from"] == parent_node_id and e["to"] == child_node_id),
+            (
+                e
+                for e in graph["edges"]
+                if e["from"] == parent_node_id and e["to"] == child_node_id
+            ),
             None,
         )
 
         assert edge is not None, "Edge from Parent to Child should exist"
-        assert edge["color"]["color"] == "#666666", "Edge in both profiles should be gray"
+        assert (
+            edge["color"]["color"] == "#666666"
+        ), "Edge in both profiles should be gray"
 
     def test_edge_only_in_base_is_red(self, visualizer: DiffVisualizer) -> None:
         """Edge present only in base profile should be red (removed)."""
@@ -123,7 +133,9 @@ class TestEdgeColoring:
                     field_name="children",
                     diff_type=DiffType.REMOVED,
                     profiles={
-                        base_profile: self._make_field_spec("children", "list", "Child"),
+                        base_profile: self._make_field_spec(
+                            "children", "list", "Child"
+                        ),
                         compare_profile: None,  # Field removed in compare
                     },
                 ),
@@ -148,12 +160,18 @@ class TestEdgeColoring:
         child_node_id = next(n["id"] for n in graph["nodes"] if n["label"] == "Child")
 
         edge = next(
-            (e for e in graph["edges"] if e["from"] == parent_node_id and e["to"] == child_node_id),
+            (
+                e
+                for e in graph["edges"]
+                if e["from"] == parent_node_id and e["to"] == child_node_id
+            ),
             None,
         )
 
         assert edge is not None, "Edge from Parent to Child should exist"
-        assert edge["color"]["color"] == "#f44336", "Edge only in base should be red (removed)"
+        assert (
+            edge["color"]["color"] == "#f44336"
+        ), "Edge only in base should be red (removed)"
 
     def test_edge_only_in_compare_is_green(self, visualizer: DiffVisualizer) -> None:
         """Edge present only in compare profile should be green (added)."""
@@ -172,7 +190,9 @@ class TestEdgeColoring:
                     diff_type=DiffType.ADDED,
                     profiles={
                         base_profile: None,  # Field doesn't exist in base
-                        compare_profile: self._make_field_spec("children", "list", "Child"),
+                        compare_profile: self._make_field_spec(
+                            "children", "list", "Child"
+                        ),
                     },
                 ),
             ],
@@ -196,12 +216,18 @@ class TestEdgeColoring:
         child_node_id = next(n["id"] for n in graph["nodes"] if n["label"] == "Child")
 
         edge = next(
-            (e for e in graph["edges"] if e["from"] == parent_node_id and e["to"] == child_node_id),
+            (
+                e
+                for e in graph["edges"]
+                if e["from"] == parent_node_id and e["to"] == child_node_id
+            ),
             None,
         )
 
         assert edge is not None, "Edge from Parent to Child should exist"
-        assert edge["color"]["color"] == "#4caf50", "Edge only in compare should be green (added)"
+        assert (
+            edge["color"]["color"] == "#4caf50"
+        ), "Edge only in compare should be green (added)"
 
     def test_edge_to_added_entity_is_green(self, visualizer: DiffVisualizer) -> None:
         """Edge to an entity that only exists in compare should be green."""
@@ -219,7 +245,9 @@ class TestEdgeColoring:
                     diff_type=DiffType.ADDED,
                     profiles={
                         base_profile: None,
-                        compare_profile: self._make_field_spec("children", "list", "Child"),
+                        compare_profile: self._make_field_spec(
+                            "children", "list", "Child"
+                        ),
                     },
                 ),
             ],
@@ -243,12 +271,18 @@ class TestEdgeColoring:
         child_node_id = next(n["id"] for n in graph["nodes"] if n["label"] == "Child")
 
         edge = next(
-            (e for e in graph["edges"] if e["from"] == parent_node_id and e["to"] == child_node_id),
+            (
+                e
+                for e in graph["edges"]
+                if e["from"] == parent_node_id and e["to"] == child_node_id
+            ),
             None,
         )
 
         assert edge is not None, "Edge from Parent to Child should exist"
-        assert edge["color"]["color"] == "#4caf50", "Edge to added entity should be green"
+        assert (
+            edge["color"]["color"] == "#4caf50"
+        ), "Edge to added entity should be green"
 
     def test_edge_from_removed_entity_is_red(self, visualizer: DiffVisualizer) -> None:
         """Edge from an entity that only exists in base should be red."""
@@ -265,7 +299,9 @@ class TestEdgeColoring:
                     field_name="children",
                     diff_type=DiffType.REMOVED,
                     profiles={
-                        base_profile: self._make_field_spec("children", "list", "Child"),
+                        base_profile: self._make_field_spec(
+                            "children", "list", "Child"
+                        ),
                         compare_profile: None,
                     },
                 ),
@@ -290,12 +326,18 @@ class TestEdgeColoring:
         child_node_id = next(n["id"] for n in graph["nodes"] if n["label"] == "Child")
 
         edge = next(
-            (e for e in graph["edges"] if e["from"] == parent_node_id and e["to"] == child_node_id),
+            (
+                e
+                for e in graph["edges"]
+                if e["from"] == parent_node_id and e["to"] == child_node_id
+            ),
             None,
         )
 
         assert edge is not None, "Edge from Parent to Child should exist"
-        assert edge["color"]["color"] == "#f44336", "Edge from removed entity should be red"
+        assert (
+            edge["color"]["color"] == "#f44336"
+        ), "Edge from removed entity should be red"
 
 
 class TestNodeColoring:

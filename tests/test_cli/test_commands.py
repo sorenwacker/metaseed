@@ -43,7 +43,9 @@ studies:
         file_path = tmp_path / "investigation.yaml"
         file_path.write_text(content)
 
-        result = runner.invoke(app, ["validate", str(file_path), "--entity", "investigation"])
+        result = runner.invoke(
+            app, ["validate", str(file_path), "--entity", "investigation"]
+        )
         assert result.exit_code == 0
         assert "validation passed" in result.stdout.lower()
 
@@ -56,7 +58,9 @@ unique_id: INV001
         file_path = tmp_path / "investigation.yaml"
         file_path.write_text(content)
 
-        result = runner.invoke(app, ["validate", str(file_path), "--entity", "investigation"])
+        result = runner.invoke(
+            app, ["validate", str(file_path), "--entity", "investigation"]
+        )
         assert "title" in result.stdout.lower()
 
     def test_validate_nonexistent_file(self) -> None:
@@ -82,7 +86,9 @@ class TestTemplateCommand:
     def test_template_to_file(self, tmp_path: Path) -> None:
         """Generate template to file."""
         output_path = tmp_path / "template.yaml"
-        result = runner.invoke(app, ["template", "investigation", "-o", str(output_path)])
+        result = runner.invoke(
+            app, ["template", "investigation", "-o", str(output_path)]
+        )
         assert result.exit_code == 0
         assert output_path.exists()
         content = output_path.read_text()
@@ -93,7 +99,8 @@ class TestTemplateCommand:
         """Generate template in JSON format."""
         output_path = tmp_path / "template.json"
         result = runner.invoke(
-            app, ["template", "investigation", "-o", str(output_path), "--format", "json"]
+            app,
+            ["template", "investigation", "-o", str(output_path), "--format", "json"],
         )
         assert result.exit_code == 0
         content = output_path.read_text()
@@ -171,7 +178,9 @@ unique_id: INV001
         file_path = tmp_path / "invalid.yaml"
         file_path.write_text(content)
 
-        result = runner.invoke(app, ["validate", str(file_path), "--entity", "investigation"])
+        result = runner.invoke(
+            app, ["validate", str(file_path), "--entity", "investigation"]
+        )
         assert result.exit_code != 0
 
     def test_validate_empty_yaml(self, tmp_path: Path) -> None:
@@ -179,7 +188,9 @@ unique_id: INV001
         file_path = tmp_path / "empty.yaml"
         file_path.write_text("")
 
-        result = runner.invoke(app, ["validate", str(file_path), "--entity", "investigation"])
+        result = runner.invoke(
+            app, ["validate", str(file_path), "--entity", "investigation"]
+        )
         # Empty should fail validation (missing required fields)
         assert "title" in result.stdout.lower() or result.exit_code != 0
 
@@ -189,7 +200,9 @@ unique_id: INV001
         file_path = tmp_path / "test.yaml"
         file_path.write_text(content)
 
-        result = runner.invoke(app, ["validate", str(file_path), "--entity", "nonexistent"])
+        result = runner.invoke(
+            app, ["validate", str(file_path), "--entity", "nonexistent"]
+        )
         assert result.exit_code != 0
 
 
@@ -224,7 +237,13 @@ class TestConvertCommandEdgeCases:
 
         result = runner.invoke(
             app,
-            ["convert", "/nonexistent/input.yaml", str(output_path), "--entity", "investigation"],
+            [
+                "convert",
+                "/nonexistent/input.yaml",
+                str(output_path),
+                "--entity",
+                "investigation",
+            ],
         )
         assert result.exit_code != 0
 

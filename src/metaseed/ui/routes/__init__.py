@@ -1,7 +1,9 @@
 """Routes package for the UI module.
 
 This package contains route handlers split by domain:
-- core: App setup, home, profile selection, entity CRUD
+- core: App setup, home, profile selection
+- forms: Entity form rendering
+- crud: Entity create, update, delete
 - table: Table routes for nested entity lists
 - nested: Nested entity editing
 - import_export: Data import/export
@@ -12,16 +14,15 @@ This package contains route handlers split by domain:
 """
 
 from .api import register_api_routes
-from .core import (
-    get_profile_display_info,
-    register_core_routes,
+from .core import get_profile_display_info, register_core_routes
+from .crud import (
     register_entity_crud_routes,
-    register_form_routes,
     render_entity_form,
     render_form_with_errors,
 )
 from .examples import register_example_routes
 from .explore import register_explore_routes
+from .forms import register_form_routes
 from .import_export import register_export_routes
 from .nested import register_nested_routes
 from .table import register_table_routes

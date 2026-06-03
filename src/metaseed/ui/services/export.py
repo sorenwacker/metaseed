@@ -135,6 +135,8 @@ def generate_filename(state: AppState) -> str:
         root_node = root_nodes[0]
         root_data = to_dict(root_node.instance) or {}
         if root_data.get("unique_id"):
-            entity_id = str(root_data["unique_id"]).replace("/", "-").replace(":", "-")[:30]
+            entity_id = (
+                str(root_data["unique_id"]).replace("/", "-").replace(":", "-")[:30]
+            )
 
     return f"{date_str}-{state.profile}-{version_str}-{entity_id}.xlsx"

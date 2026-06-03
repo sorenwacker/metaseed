@@ -12,7 +12,7 @@ class TestSettings:
     def test_default_values(self):
         """Settings have expected default values."""
         settings = Settings()
-        assert settings.default_version == "1.1"
+        assert settings.default_version == "1.2"
         assert settings.debug is False
         assert settings.log_level == "INFO"
 

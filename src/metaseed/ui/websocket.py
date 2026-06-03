@@ -29,14 +29,18 @@ class ConnectionManager:
         await websocket.accept()
         async with self._lock:
             self.active_connections.append(websocket)
-        logger.info("WebSocket client connected (%d total)", len(self.active_connections))
+        logger.info(
+            "WebSocket client connected (%d total)", len(self.active_connections)
+        )
 
     async def disconnect(self: Self, websocket: WebSocket) -> None:
         """Remove a WebSocket connection."""
         async with self._lock:
             if websocket in self.active_connections:
                 self.active_connections.remove(websocket)
-        logger.info("WebSocket client disconnected (%d remaining)", len(self.active_connections))
+        logger.info(
+            "WebSocket client disconnected (%d remaining)", len(self.active_connections)
+        )
 
     async def broadcast(self: Self, message: dict[str, Any]) -> None:
         """Broadcast a message to all connected clients."""

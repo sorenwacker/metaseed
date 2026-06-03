@@ -30,7 +30,7 @@ class ModelContext:
         version: Current profile version (e.g., "1.1").
     """
 
-    def __init__(self, profile: str = "miappe", version: str = "1.1") -> None:
+    def __init__(self, profile: str = "miappe", version: str = "1.2") -> None:
         """Initialize the model context.
 
         Args:
@@ -62,7 +62,9 @@ class ModelContext:
         self._profile = profile
         self._version = version
 
-    def set_loader(self: Self, loader: Callable[[str, str, str], type[BaseModel]]) -> None:
+    def set_loader(
+        self: Self, loader: Callable[[str, str, str], type[BaseModel]]
+    ) -> None:
         """Set the model loader function.
 
         Args:
@@ -71,7 +73,11 @@ class ModelContext:
         self._loader = loader
 
     def register(
-        self: Self, name: str, model: type[BaseModel], profile: str = "", version: str = ""
+        self: Self,
+        name: str,
+        model: type[BaseModel],
+        profile: str = "",
+        version: str = "",
     ) -> None:
         """Register a model for nested entity resolution.
 
@@ -141,7 +147,9 @@ def set_model_context(profile: str, version: str) -> None:
     _global_context.set_context(profile, version)
 
 
-def register_model(name: str, model: type[BaseModel], profile: str = "", version: str = "") -> None:
+def register_model(
+    name: str, model: type[BaseModel], profile: str = "", version: str = ""
+) -> None:
     """Register a model for nested entity resolution.
 
     Args:
@@ -165,7 +173,9 @@ def get_registered_model(name: str) -> type[BaseModel] | None:
     return _global_context.get(name)
 
 
-def _coerce_string_to_entity(value: str, model_class: type[BaseModel]) -> BaseModel | str:
+def _coerce_string_to_entity(
+    value: str, model_class: type[BaseModel]
+) -> BaseModel | str:
     """Coerce a string value to an entity model if appropriate.
 
     Only coerces when the target model has a simple primary field pattern:
@@ -191,7 +201,9 @@ def _coerce_string_to_entity(value: str, model_class: type[BaseModel]) -> BaseMo
     for field_name in simple_primary_fields:
         if field_name in model_fields:
             # Check if this is the only required field (simple entity)
-            required_fields = [name for name, info in model_fields.items() if info.is_required()]
+            required_fields = [
+                name for name, info in model_fields.items() if info.is_required()
+            ]
             if len(required_fields) <= 1:
                 try:
                     return model_class.model_validate({field_name: value})
@@ -367,7 +379,9 @@ def _create_field_definition(field: FieldSpec) -> tuple[type, Any]:
             return (annotated_type, ...)
         return (annotated_type | None, None)
 
-    annotated_type = Annotated[python_type, Field(**constraints)] if constraints else python_type
+    annotated_type = (
+        Annotated[python_type, Field(**constraints)] if constraints else python_type
+    )
 
     if field.required:
         if constraints:

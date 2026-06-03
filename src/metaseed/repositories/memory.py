@@ -119,7 +119,9 @@ class MemoryEntityRepository(EntityRepository):
             # Auto-fill child's reference to parent
             ref_field = find_parent_ref_field(helper, parent.entity_type)
             if ref_field and ref_field not in data and parent_helper:
-                parent_identifier = get_identifier_from_instance(parent.instance, parent_helper)
+                parent_identifier = get_identifier_from_instance(
+                    parent.instance, parent_helper
+                )
                 if parent_identifier:
                     data[ref_field] = parent_identifier
 

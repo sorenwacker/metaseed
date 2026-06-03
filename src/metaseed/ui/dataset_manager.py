@@ -369,7 +369,9 @@ class DatasetManagerFactory:
         self._sync_repo = sync_repo or FilesystemDatasetRepository()
         self._async_repo = async_repo
         self._managers: WeakValueDictionary[int, DatasetManager] = WeakValueDictionary()
-        self._async_managers: WeakValueDictionary[int, AsyncDatasetManager] = WeakValueDictionary()
+        self._async_managers: WeakValueDictionary[int, AsyncDatasetManager] = (
+            WeakValueDictionary()
+        )
 
     @property
     def sync_repo(self) -> DatasetRepository:

@@ -64,7 +64,9 @@ def register_nested_routes(
             ) from e
 
         if field_name not in parent_helper.nested_fields:
-            raise HTTPException(status_code=404, detail=f"Field not found: {field_name}")
+            raise HTTPException(
+                status_code=404, detail=f"Field not found: {field_name}"
+            )
 
         nested_entity_type = parent_helper.nested_fields[field_name]
         nested_helper = getattr(facade, nested_entity_type, None)
@@ -137,7 +139,9 @@ def register_nested_routes(
                 "description": nested_helper.description if nested_helper else "",
                 "ontology_term": nested_helper.ontology_term if nested_helper else "",
                 "required_fields": filter_fields(fields, required=True),
-                "optional_fields": filter_fields(fields, required=False, exclude_nested=True),
+                "optional_fields": filter_fields(
+                    fields, required=False, exclude_nested=True
+                ),
                 "nested_fields": filter_fields(fields, nested_only=True),
                 "values": values,
                 "auto_fields": set(),
@@ -163,8 +167,12 @@ def register_nested_routes(
         go_back = form_data.get("_action") == "back"
 
         parent_helper = getattr(facade, parent_type, None)
-        nested_entity_type = parent_helper.nested_fields.get(field_name) if parent_helper else None
-        nested_helper = getattr(facade, nested_entity_type, None) if nested_entity_type else None
+        nested_entity_type = (
+            parent_helper.nested_fields.get(field_name) if parent_helper else None
+        )
+        nested_helper = (
+            getattr(facade, nested_entity_type, None) if nested_entity_type else None
+        )
 
         item = items[idx]
         if isinstance(item, dict):
@@ -172,7 +180,9 @@ def register_nested_routes(
                 if not key.startswith("_"):
                     if nested_helper:
                         info = (
-                            nested_helper.field_info(key) if key in nested_helper.all_fields else {}
+                            nested_helper.field_info(key)
+                            if key in nested_helper.all_fields
+                            else {}
                         )
                         if info.get("type") == "integer" and value:
                             with contextlib.suppress(ValueError):
@@ -241,7 +251,9 @@ def register_nested_routes(
                 "description": nested_helper.description if nested_helper else "",
                 "ontology_term": nested_helper.ontology_term if nested_helper else "",
                 "required_fields": filter_fields(fields, required=True),
-                "optional_fields": filter_fields(fields, required=False, exclude_nested=True),
+                "optional_fields": filter_fields(
+                    fields, required=False, exclude_nested=True
+                ),
                 "nested_fields": filter_fields(fields, nested_only=True),
                 "values": values,
                 "auto_fields": set(),

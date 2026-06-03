@@ -147,7 +147,9 @@ def save_spec(spec: ProfileSpec, name: str | None = None) -> Path:
 
     # Check if name conflicts with a built-in spec
     loader = SpecLoader()
-    builtin_profiles = [p.lower() for p in loader.list_profiles() if not loader.is_user_defined(p)]
+    builtin_profiles = [
+        p.lower() for p in loader.list_profiles() if not loader.is_user_defined(p)
+    ]
     if safe_name in builtin_profiles:
         raise ValueError(
             f"Cannot save with name '{profile_name}' - conflicts with built-in spec. "
@@ -165,7 +167,9 @@ def save_spec(spec: ProfileSpec, name: str | None = None) -> Path:
     return profile_path
 
 
-def _list_specs(include_user_defined: bool, default_display_name_fn: callable) -> list[dict]:
+def _list_specs(
+    include_user_defined: bool, default_display_name_fn: callable
+) -> list[dict]:
     """Common logic for listing specs.
 
     Args:
@@ -197,7 +201,8 @@ def _list_specs(include_user_defined: bool, default_display_name_fn: callable) -
             result.append(
                 {
                     "name": profile_name,
-                    "display_name": spec.display_name or default_display_name_fn(profile_name),
+                    "display_name": spec.display_name
+                    or default_display_name_fn(profile_name),
                     "description": spec.description or "",
                     "versions": versions,
                 }

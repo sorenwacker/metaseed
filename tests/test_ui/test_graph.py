@@ -98,7 +98,9 @@ class TestGraphAPI:
     @pytest.mark.asyncio
     async def test_graph_endpoint_returns_json(self, app, state: AppState) -> None:
         """Graph endpoint should return JSON response."""
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
             response = await client.get("/api/graph")
 
         assert response.status_code == 200
@@ -107,7 +109,9 @@ class TestGraphAPI:
     @pytest.mark.asyncio
     async def test_graph_endpoint_empty_state(self, app, state: AppState) -> None:
         """Graph endpoint with empty state returns empty arrays."""
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
             response = await client.get("/api/graph")
 
         data = response.json()
@@ -124,7 +128,9 @@ class TestGraphAPI:
         )
         state.add_node("Investigation", instance)
 
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
             response = await client.get("/api/graph")
 
         data = response.json()

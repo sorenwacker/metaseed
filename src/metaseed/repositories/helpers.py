@@ -32,7 +32,9 @@ def find_parent_ref_field(helper: Any, parent_type: str) -> str | None:
     return None
 
 
-def get_identifier(data: dict[str, Any], helper: EntityHelper | None = None) -> str | None:
+def get_identifier(
+    data: dict[str, Any], helper: EntityHelper | None = None
+) -> str | None:
     """Get identifier value from entity data.
 
     By convention, the first field in the spec is the identifier.
@@ -51,7 +53,9 @@ def get_identifier(data: dict[str, Any], helper: EntityHelper | None = None) -> 
     return None
 
 
-def get_identifier_from_instance(instance: Any, helper: EntityHelper | None = None) -> str | None:
+def get_identifier_from_instance(
+    instance: Any, helper: EntityHelper | None = None
+) -> str | None:
     """Get identifier from a Pydantic model instance.
 
     Args:

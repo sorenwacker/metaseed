@@ -65,7 +65,9 @@ def register_export_routes(
                 "fields": [
                     {
                         "name": f.name,
-                        "type": f.type.value if hasattr(f.type, "value") else str(f.type),
+                        "type": f.type.value
+                        if hasattr(f.type, "value")
+                        else str(f.type),
                         "required": f.required,
                         "items": f.items,
                         "reference": f.reference,
@@ -161,13 +163,17 @@ def register_export_routes(
             )
 
     @router.delete("/user-spec/{name}/{version}", response_class=HTMLResponse)
-    async def delete_user_spec_route(_request: Request, name: str, version: str) -> Response:
+    async def delete_user_spec_route(
+        _request: Request, name: str, version: str
+    ) -> Response:
         """Delete a user-created specification."""
         try:
             deleted = await persistence.delete(name, version)
             if deleted:
                 return Response(status_code=200)
-            raise HTTPException(status_code=404, detail=f"Spec {name} v{version} not found")
+            raise HTTPException(
+                status_code=404, detail=f"Spec {name} v{version} not found"
+            )
         except ValueError as e:
             raise HTTPException(status_code=403, detail=str(e)) from e
         except OSError as e:

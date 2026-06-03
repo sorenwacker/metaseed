@@ -41,7 +41,15 @@ class TestDocumentedCompareCommand:
             output = Path(tmpdir) / "diff.md"
             result = runner.invoke(
                 app,
-                ["compare", "miappe/1.1", "isa/1.0", "-o", str(output), "-f", "markdown"],
+                [
+                    "compare",
+                    "miappe/1.1",
+                    "isa/1.0",
+                    "-o",
+                    str(output),
+                    "-f",
+                    "markdown",
+                ],
             )
             assert result.exit_code == 0
 
@@ -163,7 +171,15 @@ class TestDocumentedMergeCommand:
             output = Path(tmpdir) / "last.yaml"
             result = runner.invoke(
                 app,
-                ["merge", "miappe/1.1", "isa/1.0", "-s", "last_wins", "-o", str(output)],
+                [
+                    "merge",
+                    "miappe/1.1",
+                    "isa/1.0",
+                    "-s",
+                    "last_wins",
+                    "-o",
+                    str(output),
+                ],
             )
             assert result.exit_code == 0
             assert "last_wins" in result.stdout

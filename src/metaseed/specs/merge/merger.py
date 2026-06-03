@@ -83,7 +83,9 @@ class SpecMerger:
         )
 
         # Resolve strategy
-        merge_strategy = get_strategy(strategy) if isinstance(strategy, str) else strategy
+        merge_strategy = (
+            get_strategy(strategy) if isinstance(strategy, str) else strategy
+        )
 
         # Compare profiles
         comparison = self._comparator.compare(profiles)
@@ -141,7 +143,9 @@ class SpecMerger:
             )
 
         # Merge validation rules
-        merged_rules = self._merge_validation_rules(comparison.profile_specs, profile_order)
+        merged_rules = self._merge_validation_rules(
+            comparison.profile_specs, profile_order
+        )
 
         # Build merged profile metadata
         first_spec = comparison.profile_specs[profile_order[0]]
@@ -185,7 +189,10 @@ class SpecMerger:
         Returns:
             Dictionary keyed by (entity, field, attribute).
         """
-        return {(r.entity_name.lower(), r.field_name.lower(), r.attribute): r for r in resolutions}
+        return {
+            (r.entity_name.lower(), r.field_name.lower(), r.attribute): r
+            for r in resolutions
+        }
 
     def _merge_entity_fields(
         self: Self,
@@ -231,7 +238,9 @@ class SpecMerger:
                 )
 
                 if manual:
-                    resolved_spec = self._apply_manual_resolution(field_diff, manual, profile_order)
+                    resolved_spec = self._apply_manual_resolution(
+                        field_diff, manual, profile_order
+                    )
                     merged_fields.append(resolved_spec)
                     resolutions_applied.extend(manual)
                     warnings.append(
@@ -245,7 +254,9 @@ class SpecMerger:
                 else:
                     # Use strategy to resolve
                     try:
-                        resolved_spec = strategy.resolve_field(field_diff, profile_order)
+                        resolved_spec = strategy.resolve_field(
+                            field_diff, profile_order
+                        )
                         merged_fields.append(resolved_spec)
                         warnings.append(
                             MergeWarning(
@@ -379,7 +390,9 @@ class SpecMerger:
 
         return list(rules_by_name.values())
 
-    def _find_entity_name(self: Self, spec: ProfileSpec, target_name: str) -> str | None:
+    def _find_entity_name(
+        self: Self, spec: ProfileSpec, target_name: str
+    ) -> str | None:
         """Find entity name in spec (case-insensitive).
 
         Args:

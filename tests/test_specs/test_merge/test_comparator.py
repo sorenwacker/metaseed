@@ -13,7 +13,9 @@ class TestSpecComparator:
         """Create comparator instance."""
         return SpecComparator()
 
-    def test_compare_requires_at_least_one_profile(self, comparator: SpecComparator) -> None:
+    def test_compare_requires_at_least_one_profile(
+        self, comparator: SpecComparator
+    ) -> None:
         """Comparison requires at least 1 profile."""
         with pytest.raises(ValueError, match="At least 1 profile"):
             comparator.compare([])
@@ -68,9 +70,13 @@ class TestSpecComparator:
 
         # Both should have Investigation
         common = result.common_entities
-        assert "Investigation" in common or "investigation" in [c.lower() for c in common]
+        assert "Investigation" in common or "investigation" in [
+            c.lower() for c in common
+        ]
 
-    def test_compare_identifies_common_entities(self, comparator: SpecComparator) -> None:
+    def test_compare_identifies_common_entities(
+        self, comparator: SpecComparator
+    ) -> None:
         """Comparison identifies entities present in all profiles."""
         result = comparator.compare(
             [
@@ -82,7 +88,9 @@ class TestSpecComparator:
         assert result.statistics.common_entities > 0
         assert result.statistics.total_entities >= result.statistics.common_entities
 
-    def test_compare_identifies_unique_entities(self, comparator: SpecComparator) -> None:
+    def test_compare_identifies_unique_entities(
+        self, comparator: SpecComparator
+    ) -> None:
         """Comparison identifies entities unique to one profile."""
         result = comparator.compare(
             [

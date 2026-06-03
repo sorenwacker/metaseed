@@ -111,7 +111,9 @@ def create_app(state: AppState | None = None, base_url: str = "") -> FastAPI:
     # Mount spec builder routes
     from .spec_builder import create_spec_builder_router
 
-    spec_builder_router = create_spec_builder_router(templates, get_state, base_url=base_url)
+    spec_builder_router = create_spec_builder_router(
+        templates, get_state, base_url=base_url
+    )
     app.include_router(spec_builder_router)
 
     # Register all route modules

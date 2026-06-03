@@ -49,7 +49,12 @@ class TestMetaseedClientInit:
                 "Sample": {
                     "description": "A test sample",
                     "fields": [
-                        {"name": "id", "type": "string", "required": True, "description": "ID"},
+                        {
+                            "name": "id",
+                            "type": "string",
+                            "required": True,
+                            "description": "ID",
+                        },
                         {
                             "name": "name",
                             "type": "string",
@@ -444,7 +449,9 @@ class TestSchemaIntrospection:
         assert "unique_id" in field_names
         assert "title" in field_names
 
-    def test_get_entity_fields_invalid_type_raises(self, client: MetaseedClient) -> None:
+    def test_get_entity_fields_invalid_type_raises(
+        self, client: MetaseedClient
+    ) -> None:
         """Getting fields for invalid type raises EntityTypeNotFoundError."""
         with pytest.raises(EntityTypeNotFoundError):
             client.get_entity_fields("NonexistentType")
@@ -530,7 +537,9 @@ class TestSerializationFormats:
         assert "children" in root
         assert len(root["children"]) == 1
 
-    def test_load_auto_detects_flat_format(self, client_with_data: MetaseedClient) -> None:
+    def test_load_auto_detects_flat_format(
+        self, client_with_data: MetaseedClient
+    ) -> None:
         """Load auto-detects flat format."""
         data = client_with_data.serialize(format="flat")
 
@@ -540,7 +549,9 @@ class TestSerializationFormats:
         assert count == 2
         assert len(new_client.get_roots()) == 1
 
-    def test_load_auto_detects_tree_format(self, client_with_data: MetaseedClient) -> None:
+    def test_load_auto_detects_tree_format(
+        self, client_with_data: MetaseedClient
+    ) -> None:
         """Load auto-detects tree format."""
         data = client_with_data.serialize(format="tree")
 
@@ -609,7 +620,9 @@ class TestSkipValidation:
         assert entity.data.get("title") == "Work in progress"
         assert entity.id is not None
 
-    def test_create_entity_without_skip_validation_raises(self, client: MetaseedClient) -> None:
+    def test_create_entity_without_skip_validation_raises(
+        self, client: MetaseedClient
+    ) -> None:
         """Create entity without skip_validation raises on missing required field."""
         from pydantic import ValidationError as PydanticValidationError
 
@@ -636,7 +649,9 @@ class TestSkipValidation:
 
         assert updated.data.get("title") == "Updated"
 
-    def test_validate_entity_with_skip_validation_draft(self, client: MetaseedClient) -> None:
+    def test_validate_entity_with_skip_validation_draft(
+        self, client: MetaseedClient
+    ) -> None:
         """Validate draft entity created with skip_validation shows issues."""
         entity = client.create_entity(
             "Investigation",

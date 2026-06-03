@@ -104,7 +104,9 @@ def register_entity_routes(
             return _entity_list_response(request, builder, error)
 
         if name in builder.spec.entities:
-            return _entity_list_response(request, builder, f"Entity '{name}' already exists")
+            return _entity_list_response(
+                request, builder, f"Entity '{name}' already exists"
+            )
 
         builder.spec.entities[name] = EntityDefSpec(
             ontology_term=None,
@@ -201,7 +203,9 @@ def register_entity_routes(
         return _entity_list_response(request, builder)
 
 
-def _update_entity_references(builder: SpecBuilderState, old_name: str, new_name: str) -> None:
+def _update_entity_references(
+    builder: SpecBuilderState, old_name: str, new_name: str
+) -> None:
     """Update all references to an entity after rename.
 
     Args:

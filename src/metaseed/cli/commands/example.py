@@ -26,7 +26,9 @@ def _export_example_to_excel(data: dict[str, Any], output: Path) -> None:
 
     # Header style
     header_font = Font(bold=True)
-    header_fill = PatternFill(start_color="E0E0E0", end_color="E0E0E0", fill_type="solid")
+    header_fill = PatternFill(
+        start_color="E0E0E0", end_color="E0E0E0", fill_type="solid"
+    )
 
     def flatten_entity(
         entity_data: dict[str, Any], parent_fields: dict[str, Any] | None = None
@@ -41,7 +43,9 @@ def _export_example_to_excel(data: dict[str, Any], output: Path) -> None:
                 "external_references",
             ]:
                 flat[key] = (
-                    value if not isinstance(value, list) else ", ".join(str(v) for v in value)
+                    value
+                    if not isinstance(value, list)
+                    else ", ".join(str(v) for v in value)
                 )
         return flat
 
@@ -125,20 +129,28 @@ def _export_example_to_excel(data: dict[str, Any], output: Path) -> None:
                 for f in study["factors"]:
                     all_factors.append(flatten_entity(f))
                     if "values" in f:
-                        all_factor_values.extend(flatten_entity(fv) for fv in f["values"])
+                        all_factor_values.extend(
+                            flatten_entity(fv) for fv in f["values"]
+                        )
             if "observed_variables" in study:
-                all_obs_variables.extend(flatten_entity(ov) for ov in study["observed_variables"])
+                all_obs_variables.extend(
+                    flatten_entity(ov) for ov in study["observed_variables"]
+                )
             if "observation_units" in study:
                 for ou in study["observation_units"]:
                     all_obs_units.append(flatten_entity(ou))
                     if "samples" in ou:
                         all_samples.extend(flatten_entity(s) for s in ou["samples"])
                     if "factor_values" in ou:
-                        all_factor_values.extend(flatten_entity(fv) for fv in ou["factor_values"])
+                        all_factor_values.extend(
+                            flatten_entity(fv) for fv in ou["factor_values"]
+                        )
             if "events" in study:
                 all_events.extend(flatten_entity(e) for e in study["events"])
             if "environments" in study:
-                all_environments.extend(flatten_entity(env) for env in study["environments"])
+                all_environments.extend(
+                    flatten_entity(env) for env in study["environments"]
+                )
             if "data_files" in study:
                 all_data_files.extend(flatten_entity(df) for df in study["data_files"])
             if "protocols" in study:
@@ -186,10 +198,12 @@ def _export_example_to_excel(data: dict[str, Any], output: Path) -> None:
 
 def export_example(
     profile: Annotated[
-        str | None, typer.Argument(help="Profile name (miappe, isa, isa-miappe-combined)")
+        str | None,
+        typer.Argument(help="Profile name (miappe, isa, isa-miappe-combined)"),
     ] = None,
     output: Annotated[
-        Path | None, typer.Option("--output", "-o", help="Output file path (.xlsx or .yaml)")
+        Path | None,
+        typer.Option("--output", "-o", help="Output file path (.xlsx or .yaml)"),
     ] = None,
     list_examples: Annotated[
         bool, typer.Option("--list", "-l", help="List available examples")
@@ -277,7 +291,11 @@ def export_example(
 
     if output is None:
         # Print to stdout as YAML
-        typer.echo(yaml.dump(data, default_flow_style=False, sort_keys=False, allow_unicode=True))
+        typer.echo(
+            yaml.dump(
+                data, default_flow_style=False, sort_keys=False, allow_unicode=True
+            )
+        )
         return
 
     output_suffix = output.suffix.lower()
@@ -286,7 +304,9 @@ def export_example(
         # Copy YAML file
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(
-            yaml.dump(data, default_flow_style=False, sort_keys=False, allow_unicode=True),
+            yaml.dump(
+                data, default_flow_style=False, sort_keys=False, allow_unicode=True
+            ),
             encoding="utf-8",
         )
         echo_success(f"Example exported to {output}")
@@ -297,14 +317,20 @@ def export_example(
             _export_example_to_excel(data, output)
             echo_success(f"Example exported to {output}")
         except ImportError:
-            echo_error("openpyxl is required for Excel export. Install with: pip install openpyxl")
+            echo_error(
+                "openpyxl is required for Excel export. Install with: pip install openpyxl"
+            )
             raise typer.Exit(EXIT_CONFIG_ERROR) from None
 
     elif output_suffix == ".json":
         output.parent.mkdir(parents=True, exist_ok=True)
-        output.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+        output.write_text(
+            json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8"
+        )
         echo_success(f"Example exported to {output}")
 
     else:
-        echo_error(f"Unknown output format: {output_suffix}. Use .xlsx, .yaml, or .json")
+        echo_error(
+            f"Unknown output format: {output_suffix}. Use .xlsx, .yaml, or .json"
+        )
         raise typer.Exit(EXIT_INPUT_ERROR)

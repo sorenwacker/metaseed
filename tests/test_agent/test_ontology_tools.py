@@ -63,7 +63,10 @@ class TestOntologyTools:
             }
         }
 
-        with patch("metaseed.agent.mcp.tools.ontology._make_request", return_value=mock_response):
+        with patch(
+            "metaseed.agent.mcp.tools.ontology._make_request",
+            return_value=mock_response,
+        ):
             result = search_fn(query="temperature", ontology="pato")
             data = json.loads(result)
 
@@ -79,7 +82,9 @@ class TestOntologyTools:
         """Search ontology handles API errors."""
         search_fn = get_tool(server, "search_ontology")
 
-        with patch("metaseed.agent.mcp.tools.ontology._make_request", return_value=None):
+        with patch(
+            "metaseed.agent.mcp.tools.ontology._make_request", return_value=None
+        ):
             result = search_fn(query="test")
             data = json.loads(result)
 
@@ -99,7 +104,10 @@ class TestOntologyTools:
             "is_obsolete": False,
         }
 
-        with patch("metaseed.agent.mcp.tools.ontology._make_request", return_value=mock_response):
+        with patch(
+            "metaseed.agent.mcp.tools.ontology._make_request",
+            return_value=mock_response,
+        ):
             result = get_fn(term_id="PATO:0000015")
             data = json.loads(result)
 
@@ -120,7 +128,10 @@ class TestOntologyTools:
             "iri": "http://purl.obolibrary.org/obo/GO_0008150",
         }
 
-        with patch("metaseed.agent.mcp.tools.ontology._make_request", return_value=mock_response):
+        with patch(
+            "metaseed.agent.mcp.tools.ontology._make_request",
+            return_value=mock_response,
+        ):
             result = get_fn(term_id="http://purl.obolibrary.org/obo/GO_0008150")
             data = json.loads(result)
 
@@ -141,7 +152,9 @@ class TestOntologyTools:
         """Get ontology term handles not found."""
         get_fn = get_tool(server, "get_ontology_term")
 
-        with patch("metaseed.agent.mcp.tools.ontology._make_request", return_value=None):
+        with patch(
+            "metaseed.agent.mcp.tools.ontology._make_request", return_value=None
+        ):
             result = get_fn(term_id="PATO:9999999")
             data = json.loads(result)
 
@@ -176,7 +189,10 @@ class TestOntologyTools:
             "page": {"totalElements": 2},
         }
 
-        with patch("metaseed.agent.mcp.tools.ontology._make_request", return_value=mock_response):
+        with patch(
+            "metaseed.agent.mcp.tools.ontology._make_request",
+            return_value=mock_response,
+        ):
             result = list_fn(rows=10)
             data = json.loads(result)
 
@@ -190,7 +206,9 @@ class TestOntologyTools:
         """List ontologies handles API errors."""
         list_fn = get_tool(server, "list_ontologies")
 
-        with patch("metaseed.agent.mcp.tools.ontology._make_request", return_value=None):
+        with patch(
+            "metaseed.agent.mcp.tools.ontology._make_request", return_value=None
+        ):
             result = list_fn()
             data = json.loads(result)
 
@@ -217,7 +235,10 @@ class TestOntologyTools:
             }
         }
 
-        with patch("metaseed.agent.mcp.tools.ontology._make_request", return_value=mock_response):
+        with patch(
+            "metaseed.agent.mcp.tools.ontology._make_request",
+            return_value=mock_response,
+        ):
             result = suggest_fn(query="temp", ontology="pato")
             data = json.loads(result)
 

@@ -163,7 +163,9 @@ class MostRestrictiveStrategy(MergeStrategy):
 
         return merged
 
-    def _merge_constraints_restrictive(self: Self, specs: list[FieldSpec]) -> Constraints | None:
+    def _merge_constraints_restrictive(
+        self: Self, specs: list[FieldSpec]
+    ) -> Constraints | None:
         """Merge constraints using most restrictive values.
 
         Args:
@@ -186,7 +188,9 @@ class MostRestrictiveStrategy(MergeStrategy):
                 break
 
         # Min values: use highest (most restrictive)
-        min_lengths = [c.min_length for c in all_constraints if c.min_length is not None]
+        min_lengths = [
+            c.min_length for c in all_constraints if c.min_length is not None
+        ]
         if min_lengths:
             merged.min_length = max(min_lengths)
 
@@ -199,7 +203,9 @@ class MostRestrictiveStrategy(MergeStrategy):
             merged.min_items = max(min_items)
 
         # Max values: use lowest (most restrictive)
-        max_lengths = [c.max_length for c in all_constraints if c.max_length is not None]
+        max_lengths = [
+            c.max_length for c in all_constraints if c.max_length is not None
+        ]
         if max_lengths:
             merged.max_length = min(max_lengths)
 
@@ -268,7 +274,9 @@ class LeastRestrictiveStrategy(MergeStrategy):
 
         return merged
 
-    def _merge_constraints_permissive(self: Self, specs: list[FieldSpec]) -> Constraints | None:
+    def _merge_constraints_permissive(
+        self: Self, specs: list[FieldSpec]
+    ) -> Constraints | None:
         """Merge constraints using least restrictive values.
 
         Args:
@@ -290,7 +298,9 @@ class LeastRestrictiveStrategy(MergeStrategy):
                 break
 
         # Min values: use lowest (least restrictive)
-        min_lengths = [c.min_length for c in all_constraints if c.min_length is not None]
+        min_lengths = [
+            c.min_length for c in all_constraints if c.min_length is not None
+        ]
         if min_lengths:
             merged.min_length = min(min_lengths)
 
@@ -303,7 +313,9 @@ class LeastRestrictiveStrategy(MergeStrategy):
             merged.min_items = min(min_items)
 
         # Max values: use highest (least restrictive)
-        max_lengths = [c.max_length for c in all_constraints if c.max_length is not None]
+        max_lengths = [
+            c.max_length for c in all_constraints if c.max_length is not None
+        ]
         if max_lengths:
             merged.max_length = max(max_lengths)
 

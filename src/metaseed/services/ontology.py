@@ -196,7 +196,9 @@ class OntologyService:
         self.rate_limit = rate_limit or int(
             os.environ.get("METASEED_OLS_RATE_LIMIT", DEFAULT_RATE_LIMIT)
         )
-        self.base_url = base_url or os.environ.get("METASEED_OLS_BASE_URL", DEFAULT_BASE_URL)
+        self.base_url = base_url or os.environ.get(
+            "METASEED_OLS_BASE_URL", DEFAULT_BASE_URL
+        )
 
         self._cache: dict[str, CacheEntry] = {}
         self._rate_limiter = RateLimiter(self.rate_limit)
@@ -306,7 +308,9 @@ class OntologyService:
                 response.raise_for_status()
                 data = response.json()
         except httpx.HTTPStatusError as e:
-            logger.warning("OLS4 search error: %s %s", e.response.status_code, e.response.text)
+            logger.warning(
+                "OLS4 search error: %s %s", e.response.status_code, e.response.text
+            )
             return []
         except httpx.RequestError as e:
             logger.warning("OLS4 search request failed: %s", e)
@@ -386,7 +390,9 @@ class OntologyService:
                 response.raise_for_status()
                 data = response.json()
         except httpx.HTTPStatusError as e:
-            logger.warning("OLS4 search error: %s %s", e.response.status_code, e.response.text)
+            logger.warning(
+                "OLS4 search error: %s %s", e.response.status_code, e.response.text
+            )
             return []
         except httpx.RequestError as e:
             logger.warning("OLS4 search request failed: %s", e)
@@ -472,7 +478,9 @@ class OntologyService:
         term = OntologyTerm(
             term_id=data.get("obo_id") or data.get("short_form") or term_id,
             label=data.get("label", ""),
-            description=(data.get("description") or [""])[0] if data.get("description") else None,
+            description=(data.get("description") or [""])[0]
+            if data.get("description")
+            else None,
             ontology=data.get("ontology_prefix") or data.get("ontology_name"),
             iri=data.get("iri"),
             synonyms=data.get("synonyms", []),
@@ -538,7 +546,9 @@ class OntologyService:
         term = OntologyTerm(
             term_id=data.get("obo_id") or data.get("short_form") or term_id,
             label=data.get("label", ""),
-            description=(data.get("description") or [""])[0] if data.get("description") else None,
+            description=(data.get("description") or [""])[0]
+            if data.get("description")
+            else None,
             ontology=data.get("ontology_prefix") or data.get("ontology_name"),
             iri=data.get("iri"),
             synonyms=data.get("synonyms", []),
@@ -630,7 +640,9 @@ class OntologyService:
 
 
 # Context variable for ontology service singleton
-_service_var: ContextVar[OntologyService | None] = ContextVar("ontology_service", default=None)
+_service_var: ContextVar[OntologyService | None] = ContextVar(
+    "ontology_service", default=None
+)
 
 
 def get_ontology_service() -> OntologyService:

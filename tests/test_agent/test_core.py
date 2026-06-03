@@ -31,7 +31,9 @@ class TestParseFile:
     def test_parse_json(self, tmp_path: Path) -> None:
         """Parse a JSON file with array of objects."""
         json_file = tmp_path / "test.json"
-        json_file.write_text(json.dumps([{"name": "foo", "value": 1}, {"name": "bar", "value": 2}]))
+        json_file.write_text(
+            json.dumps([{"name": "foo", "value": 1}, {"name": "bar", "value": 2}])
+        )
 
         content = parse_file(json_file)
 
@@ -104,7 +106,9 @@ class TestSuggestMapping:
         mappings = suggest_mapping(columns, entity, threshold=0.8)
 
         # With high threshold, shouldn't match random columns
-        matched = [m for m in mappings if m.source_column is not None and m.confidence >= 0.8]
+        matched = [
+            m for m in mappings if m.source_column is not None and m.confidence >= 0.8
+        ]
         assert len(matched) == 0
 
 
@@ -157,7 +161,9 @@ class TestExtractionContext:
     def test_extract_entities(self, tmp_path: Path) -> None:
         """Extract entities using a mapping."""
         csv_file = tmp_path / "data.csv"
-        csv_file.write_text("unique_id,title\nINV-001,My Investigation\nINV-002,Another\n")
+        csv_file.write_text(
+            "unique_id,title\nINV-001,My Investigation\nINV-002,Another\n"
+        )
 
         try:
             ctx = ExtractionContext.from_profile("miappe", "1.1")
@@ -170,7 +176,9 @@ class TestExtractionContext:
         mapping = ColumnMapping(
             entity_name="Investigation",
             fields=[
-                FieldMapping(field_name="unique_id", source_column="unique_id", confidence=1.0),
+                FieldMapping(
+                    field_name="unique_id", source_column="unique_id", confidence=1.0
+                ),
                 FieldMapping(field_name="title", source_column="title", confidence=1.0),
             ],
         )

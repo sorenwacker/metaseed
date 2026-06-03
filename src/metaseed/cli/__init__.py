@@ -51,7 +51,9 @@ EXIT_INPUT_ERROR = 2
 EXIT_CONFIG_ERROR = 3
 
 
-def resolve_profile_version(profile: str | None, version: str | None) -> tuple[str, str]:
+def resolve_profile_version(
+    profile: str | None, version: str | None
+) -> tuple[str, str]:
     """Resolve profile and version with smart defaults.
 
     Args:
@@ -118,9 +120,15 @@ def profiles(
 @app.command()
 def validate(
     file: Annotated[Path, typer.Argument(help="Path to the file to validate")],
-    entity: Annotated[str, typer.Option("--entity", "-e", help="Entity type")] = "investigation",
-    profile: Annotated[str | None, typer.Option("--profile", "-p", help="Profile name")] = None,
-    version: Annotated[str | None, typer.Option("--version", "-v", help="Profile version")] = None,
+    entity: Annotated[
+        str, typer.Option("--entity", "-e", help="Entity type")
+    ] = "investigation",
+    profile: Annotated[
+        str | None, typer.Option("--profile", "-p", help="Profile name")
+    ] = None,
+    version: Annotated[
+        str | None, typer.Option("--version", "-v", help="Profile version")
+    ] = None,
 ) -> None:
     """Validate a metadata file against a profile."""
     profile, version = resolve_profile_version(profile, version)
@@ -151,10 +159,18 @@ def validate(
 @app.command()
 def template(
     entity: Annotated[str, typer.Argument(help="Entity type to generate template for")],
-    output: Annotated[Path | None, typer.Option("--output", "-o", help="Output file path")] = None,
-    format: Annotated[str, typer.Option("--format", "-f", help="Output format")] = "yaml",
-    profile: Annotated[str | None, typer.Option("--profile", "-p", help="Profile name")] = None,
-    version: Annotated[str | None, typer.Option("--version", "-v", help="Profile version")] = None,
+    output: Annotated[
+        Path | None, typer.Option("--output", "-o", help="Output file path")
+    ] = None,
+    format: Annotated[
+        str, typer.Option("--format", "-f", help="Output format")
+    ] = "yaml",
+    profile: Annotated[
+        str | None, typer.Option("--profile", "-p", help="Profile name")
+    ] = None,
+    version: Annotated[
+        str | None, typer.Option("--version", "-v", help="Profile version")
+    ] = None,
 ) -> None:
     """Generate a template file for an entity."""
     profile, version = resolve_profile_version(profile, version)
@@ -210,9 +226,15 @@ def template(
 def convert(
     input_file: Annotated[Path, typer.Argument(help="Input file path")],
     output_file: Annotated[Path, typer.Argument(help="Output file path")],
-    entity: Annotated[str, typer.Option("--entity", "-e", help="Entity type")] = "investigation",
-    profile: Annotated[str | None, typer.Option("--profile", "-p", help="Profile name")] = None,
-    version: Annotated[str | None, typer.Option("--version", "-v", help="Profile version")] = None,
+    entity: Annotated[
+        str, typer.Option("--entity", "-e", help="Entity type")
+    ] = "investigation",
+    profile: Annotated[
+        str | None, typer.Option("--profile", "-p", help="Profile name")
+    ] = None,
+    version: Annotated[
+        str | None, typer.Option("--version", "-v", help="Profile version")
+    ] = None,
 ) -> None:
     """Convert between YAML and JSON formats."""
     profile, version = resolve_profile_version(profile, version)
@@ -258,8 +280,12 @@ def convert(
 
 @app.command()
 def entities(
-    profile: Annotated[str | None, typer.Option("--profile", "-p", help="Profile name")] = None,
-    version: Annotated[str | None, typer.Option("--version", "-v", help="Profile version")] = None,
+    profile: Annotated[
+        str | None, typer.Option("--profile", "-p", help="Profile name")
+    ] = None,
+    version: Annotated[
+        str | None, typer.Option("--version", "-v", help="Profile version")
+    ] = None,
 ) -> None:
     """List available entities for a profile."""
     profile, version = resolve_profile_version(profile, version)
@@ -279,10 +305,18 @@ def entities(
 @app.command()
 def check(
     path: Annotated[Path, typer.Argument(help="Path to file or directory to check")],
-    profile: Annotated[str | None, typer.Option("--profile", "-p", help="Profile name")] = None,
-    version: Annotated[str | None, typer.Option("--version", "-v", help="Profile version")] = None,
-    verbose: Annotated[bool, typer.Option("--verbose", help="Show detailed information")] = False,
-    quiet: Annotated[bool, typer.Option("--quiet", "-q", help="Suppress non-error output")] = False,
+    profile: Annotated[
+        str | None, typer.Option("--profile", "-p", help="Profile name")
+    ] = None,
+    version: Annotated[
+        str | None, typer.Option("--version", "-v", help="Profile version")
+    ] = None,
+    verbose: Annotated[
+        bool, typer.Option("--verbose", help="Show detailed information")
+    ] = False,
+    quiet: Annotated[
+        bool, typer.Option("--quiet", "-q", help="Suppress non-error output")
+    ] = False,
 ) -> None:
     """Validate dataset with reference integrity checking.
 
@@ -300,7 +334,11 @@ def check(
     validator = DatasetValidator(profile=profile, version=version)
     output_formatter = CheckOutput(verbose=verbose, quiet=quiet)
 
-    result = validator.validate_file(path) if path.is_file() else validator.validate_directory(path)
+    result = (
+        validator.validate_file(path)
+        if path.is_file()
+        else validator.validate_directory(path)
+    )
 
     output_formatter.print_result(result)
 
@@ -310,7 +348,9 @@ def check(
 
 @app.command(name="ui")
 def web_ui(
-    host: Annotated[str, typer.Option("--host", "-h", help="Host to bind to")] = "127.0.0.1",
+    host: Annotated[
+        str, typer.Option("--host", "-h", help="Host to bind to")
+    ] = "127.0.0.1",
     port: Annotated[int, typer.Option("--port", "-p", help="Port to bind to")] = 8080,
 ) -> None:
     """Launch the web interface."""
@@ -334,7 +374,9 @@ def mcp_server(
     host: Annotated[
         str, typer.Option("--host", "-h", help="Host for HTTP transport")
     ] = "127.0.0.1",
-    port: Annotated[int, typer.Option("--port", "-p", help="Port for HTTP transport")] = 8000,
+    port: Annotated[
+        int, typer.Option("--port", "-p", help="Port for HTTP transport")
+    ] = 8000,
 ) -> None:
     """Start the MCP (Model Context Protocol) server.
 

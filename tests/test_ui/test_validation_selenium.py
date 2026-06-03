@@ -150,7 +150,9 @@ class TestValidationRulesDisplay:
         assert element_exists(browser, "validation-errors")
 
         # Verify error mentions title
-        errors_div = browser.find_element(By.CSS_SELECTOR, "[data-testid='validation-errors']")
+        errors_div = browser.find_element(
+            By.CSS_SELECTOR, "[data-testid='validation-errors']"
+        )
         assert "title" in errors_div.text.lower()
 
     def test_validation_shows_pattern_error(self, browser):
@@ -159,7 +161,9 @@ class TestValidationRulesDisplay:
         time.sleep(1)
 
         start_new_investigation(browser)
-        fill_field(browser, "input-unique-id", "INV INVALID!")  # Invalid pattern (has spaces)
+        fill_field(
+            browser, "input-unique-id", "INV INVALID!"
+        )  # Invalid pattern (has spaces)
         fill_field(browser, "input-title", "Test Investigation")
 
         click_button(browser, "btn-validate")
@@ -236,7 +240,9 @@ class TestCreateInvestigationAllFields:
         # Fill all optional scalar fields from YAML example
         fill_field(browser, "input-description", INV_EXAMPLE["description"])
         fill_field(browser, "input-submission-date", INV_EXAMPLE["submission_date"])
-        fill_field(browser, "input-public-release-date", INV_EXAMPLE["public_release_date"])
+        fill_field(
+            browser, "input-public-release-date", INV_EXAMPLE["public_release_date"]
+        )
         fill_field(browser, "input-license", INV_EXAMPLE["license"])
 
         # Fill associated_publications (textarea, one per line)
@@ -252,16 +258,22 @@ class TestCreateInvestigationAllFields:
         assert element_exists(browser, "btn-update")
 
         # Verify all fields were saved by checking they appear in the form
-        unique_id_field = browser.find_element(By.CSS_SELECTOR, "[data-testid='input-unique-id']")
+        unique_id_field = browser.find_element(
+            By.CSS_SELECTOR, "[data-testid='input-unique-id']"
+        )
         assert unique_id_field.get_attribute("value") == INV_EXAMPLE["unique_id"]
 
-        title_field = browser.find_element(By.CSS_SELECTOR, "[data-testid='input-title']")
+        title_field = browser.find_element(
+            By.CSS_SELECTOR, "[data-testid='input-title']"
+        )
         assert title_field.get_attribute("value") == INV_EXAMPLE["title"]
 
         # Expand optional fields to verify they persisted
         expand_optional_fields(browser)
 
-        desc_field = browser.find_element(By.CSS_SELECTOR, "[data-testid='input-description']")
+        desc_field = browser.find_element(
+            By.CSS_SELECTOR, "[data-testid='input-description']"
+        )
         assert INV_EXAMPLE["description"] in desc_field.get_attribute("value")
 
     def test_update_investigation_fields(self, browser):
@@ -279,7 +291,9 @@ class TestCreateInvestigationAllFields:
         assert element_exists(browser, "btn-update")
 
         # Update the title
-        title_field = browser.find_element(By.CSS_SELECTOR, "[data-testid='input-title']")
+        title_field = browser.find_element(
+            By.CSS_SELECTOR, "[data-testid='input-title']"
+        )
         title_field.clear()
         title_field.send_keys("Updated Title")
         time.sleep(FILL_DELAY)
@@ -289,7 +303,9 @@ class TestCreateInvestigationAllFields:
         time.sleep(1)
 
         # Verify title was updated
-        title_field = browser.find_element(By.CSS_SELECTOR, "[data-testid='input-title']")
+        title_field = browser.find_element(
+            By.CSS_SELECTOR, "[data-testid='input-title']"
+        )
         assert title_field.get_attribute("value") == "Updated Title"
 
     def test_miappe_version_auto_populated(self, browser):

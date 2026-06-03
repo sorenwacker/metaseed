@@ -130,7 +130,9 @@ class FilesystemSpecPersistence(SpecPersistence):
         """
         safe_name = name.lower().strip()
         builtin_profiles = [
-            p.lower() for p in self._loader.list_profiles() if not self._loader.is_user_defined(p)
+            p.lower()
+            for p in self._loader.list_profiles()
+            if not self._loader.is_user_defined(p)
         ]
         return safe_name in builtin_profiles
 

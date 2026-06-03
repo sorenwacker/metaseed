@@ -21,3 +21,19 @@ repos:
       - id: ruff-format
         args: [.]
         pass_filenames: false
+
+  - repo: local
+    hooks:
+      - id: vulture
+        name: vulture dead code
+        entry: uv run vulture
+        language: system
+        types: [python]
+        args: [src/, --min-confidence=80]
+        pass_filenames: false
+
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v3.27.0
+    hooks:
+      - id: commitizen
+        stages: [commit-msg]

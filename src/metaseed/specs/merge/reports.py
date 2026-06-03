@@ -209,7 +209,9 @@ class MarkdownReportGenerator(ReportGenerator):
             for fd in ed.conflicting_fields:
                 lines.append(f"**{fd.field_name}**")
                 lines.append("")
-                lines.append(f"- Changed attributes: {', '.join(fd.attributes_changed)}")
+                lines.append(
+                    f"- Changed attributes: {', '.join(fd.attributes_changed)}"
+                )
 
                 for attr in fd.attributes_changed:
                     if attr in fd.values:
@@ -228,7 +230,9 @@ class MarkdownReportGenerator(ReportGenerator):
         """
         for ed in self.comparison.entity_diffs:
             modified = [
-                fd for fd in ed.field_diffs if fd.diff_type in [DiffType.MODIFIED, DiffType.ADDED]
+                fd
+                for fd in ed.field_diffs
+                if fd.diff_type in [DiffType.MODIFIED, DiffType.ADDED]
             ]
             if not modified:
                 continue
@@ -425,7 +429,9 @@ class HTMLReportGenerator(ReportGenerator):
             css_class = ed.diff_type.value
             lines.append(f"<tr class='{css_class}'>")
             lines.append(f"<td>{ed.entity_name}</td>")
-            lines.append(f"<td><span class='badge {css_class}'>{ed.diff_type.value}</span></td>")
+            lines.append(
+                f"<td><span class='badge {css_class}'>{ed.diff_type.value}</span></td>"
+            )
 
             for profile_id in self.comparison.profiles:
                 present = ed.profiles.get(profile_id, False)
@@ -450,7 +456,9 @@ class HTMLReportGenerator(ReportGenerator):
             lines.append(f"<h3>{ed.entity_name}</h3>")
 
             for fd in ed.conflicting_fields:
-                lines.append("<div class='conflict' style='padding: 12px; margin-bottom: 12px;'>")
+                lines.append(
+                    "<div class='conflict' style='padding: 12px; margin-bottom: 12px;'>"
+                )
                 lines.append(f"<strong>{fd.field_name}</strong>")
                 lines.append(f"<p>Changed: {', '.join(fd.attributes_changed)}</p>")
 

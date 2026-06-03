@@ -316,7 +316,9 @@ class ProfileSpec(BaseModel):
                     example=entity_def.example,
                 )
 
-        raise KeyError(f"Entity '{entity_name}' not found in profile {self.name} v{self.version}")
+        raise KeyError(
+            f"Entity '{entity_name}' not found in profile {self.name} v{self.version}"
+        )
 
     def list_entities(self: Self) -> list[str]:
         """List all entity names in the profile.

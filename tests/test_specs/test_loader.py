@@ -123,7 +123,9 @@ fields:
         assert spec.ontology_term == "ppeo:investigation"
         assert len(spec.fields) == 7
 
-    def test_load_fields_parsed_correctly(self, loader: SpecLoader, valid_spec_yaml: Path) -> None:
+    def test_load_fields_parsed_correctly(
+        self, loader: SpecLoader, valid_spec_yaml: Path
+    ) -> None:
         """Fields are parsed with correct types and constraints."""
         spec = loader.load(valid_spec_yaml)
 
@@ -159,7 +161,10 @@ fields:
         """Invalid YAML raises SpecLoadError."""
         with pytest.raises(SpecLoadError) as exc_info:
             loader.load(invalid_yaml)
-        assert "parse" in str(exc_info.value).lower() or "yaml" in str(exc_info.value).lower()
+        assert (
+            "parse" in str(exc_info.value).lower()
+            or "yaml" in str(exc_info.value).lower()
+        )
 
     def test_missing_required_raises(
         self, loader: SpecLoader, missing_required_fields_yaml: Path
@@ -324,7 +329,9 @@ class TestSpecVersionBackwardCompatibility:
         """Create a spec loader instance."""
         return SpecLoader()
 
-    def test_existing_profiles_have_default_spec_version(self, loader: SpecLoader) -> None:
+    def test_existing_profiles_have_default_spec_version(
+        self, loader: SpecLoader
+    ) -> None:
         """Existing profiles without spec_version get default 0.1."""
         profile = loader.load_profile(version="1.1", profile="miappe")
         assert profile.spec_version == "0.1"
@@ -379,7 +386,9 @@ class TestValidationRuleBackwardCompatibility:
         """Create a spec loader instance."""
         return SpecLoader()
 
-    def test_miappe_validation_rules_load_without_type(self, loader: SpecLoader) -> None:
+    def test_miappe_validation_rules_load_without_type(
+        self, loader: SpecLoader
+    ) -> None:
         """MIAPPE validation rules without explicit type load correctly."""
         profile = loader.load_profile(version="1.1", profile="miappe")
 

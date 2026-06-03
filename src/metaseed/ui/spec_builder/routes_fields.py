@@ -172,7 +172,9 @@ def register_field_routes(
         return _entity_editor_response(request, builder, entity_name)
 
     @router.get("/entity/{entity_name}/field/{idx}", response_class=HTMLResponse)
-    async def get_field_form(request: Request, entity_name: str, idx: int) -> HTMLResponse:
+    async def get_field_form(
+        request: Request, entity_name: str, idx: int
+    ) -> HTMLResponse:
         """Get field editor form."""
         builder = _require_spec()
         entity = _require_entity(builder, entity_name)
@@ -262,7 +264,9 @@ def register_field_routes(
         return _entity_editor_response(request, builder, entity_name, success=True)
 
     @router.delete("/entity/{entity_name}/field/{idx}", response_class=HTMLResponse)
-    async def delete_field(request: Request, entity_name: str, idx: int) -> HTMLResponse:
+    async def delete_field(
+        request: Request, entity_name: str, idx: int
+    ) -> HTMLResponse:
         """Delete a field from an entity."""
         builder = _require_spec()
         entity = _require_entity(builder, entity_name)
@@ -273,8 +277,12 @@ def register_field_routes(
 
         return _entity_editor_response(request, builder, entity_name)
 
-    @router.post("/entity/{entity_name}/field/{idx}/move-up", response_class=HTMLResponse)
-    async def move_field_up(request: Request, entity_name: str, idx: int) -> HTMLResponse:
+    @router.post(
+        "/entity/{entity_name}/field/{idx}/move-up", response_class=HTMLResponse
+    )
+    async def move_field_up(
+        request: Request, entity_name: str, idx: int
+    ) -> HTMLResponse:
         """Move a field up in the list."""
         builder = _require_spec()
         entity = _require_entity(builder, entity_name)
@@ -289,8 +297,12 @@ def register_field_routes(
 
         return _entity_editor_response(request, builder, entity_name)
 
-    @router.post("/entity/{entity_name}/field/{idx}/move-down", response_class=HTMLResponse)
-    async def move_field_down(request: Request, entity_name: str, idx: int) -> HTMLResponse:
+    @router.post(
+        "/entity/{entity_name}/field/{idx}/move-down", response_class=HTMLResponse
+    )
+    async def move_field_down(
+        request: Request, entity_name: str, idx: int
+    ) -> HTMLResponse:
         """Move a field down in the list."""
         builder = _require_spec()
         entity = _require_entity(builder, entity_name)
@@ -349,7 +361,8 @@ def _auto_create_back_reference(
     # Add back-reference to target entity if not exists
     back_ref_name = f"{entity_name.lower()}_id"
     has_back_ref = any(
-        f.reference and f.reference.startswith(f"{entity_name}.") for f in target_entity.fields
+        f.reference and f.reference.startswith(f"{entity_name}.")
+        for f in target_entity.fields
     )
     if not has_back_ref:
         target_entity.fields.insert(

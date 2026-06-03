@@ -44,8 +44,10 @@ from metaseed.facade import (
     dissco,
     ena,
     isa,
+    jerm,
     metabolights,
     miappe,
+    miappe_htp,
     pride,
 )
 
@@ -81,8 +83,10 @@ __all__ = [
     "ena",
     "get_model",
     "isa",
+    "jerm",
     "metabolights",
     "miappe",
+    "miappe_htp",
     "pride",
     "validate",
 ]

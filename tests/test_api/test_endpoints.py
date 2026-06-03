@@ -78,7 +78,11 @@ class TestValidateEndpoint:
                 "title": "Test Investigation",
                 "contacts": [{"investigation_id": "INV001", "name": "Test Contact"}],
                 "studies": [
-                    {"unique_id": "STU001", "investigation_id": "INV001", "title": "Test Study"}
+                    {
+                        "unique_id": "STU001",
+                        "investigation_id": "INV001",
+                        "title": "Test Study",
+                    }
                 ],
             },
         }

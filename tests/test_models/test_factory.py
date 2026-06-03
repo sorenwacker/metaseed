@@ -89,9 +89,13 @@ class TestCreateModelFromSpec:
                 FieldSpec(name="float_field", type=FieldType.FLOAT, description=""),
                 FieldSpec(name="bool_field", type=FieldType.BOOLEAN, description=""),
                 FieldSpec(name="date_field", type=FieldType.DATE, description=""),
-                FieldSpec(name="datetime_field", type=FieldType.DATETIME, description=""),
+                FieldSpec(
+                    name="datetime_field", type=FieldType.DATETIME, description=""
+                ),
                 FieldSpec(name="uri_field", type=FieldType.URI, description=""),
-                FieldSpec(name="onto_field", type=FieldType.ONTOLOGY_TERM, description=""),
+                FieldSpec(
+                    name="onto_field", type=FieldType.ONTOLOGY_TERM, description=""
+                ),
             ],
         )
 
@@ -390,8 +394,12 @@ class TestCreateModelFromSpec:
         Study = get_model("Study")
 
         inv = Investigation(unique_id="INV-001", title="Test")
-        inv.studies.append(Study(unique_id="STU-001", investigation_id="INV-001", title="Study 1"))
-        inv.studies.append(Study(unique_id="STU-002", investigation_id="INV-001", title="Study 2"))
+        inv.studies.append(
+            Study(unique_id="STU-001", investigation_id="INV-001", title="Study 1")
+        )
+        inv.studies.append(
+            Study(unique_id="STU-002", investigation_id="INV-001", title="Study 2")
+        )
 
         assert len(inv.studies) == 2
         assert inv.studies[0].unique_id == "STU-001"

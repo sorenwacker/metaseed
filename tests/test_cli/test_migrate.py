@@ -64,7 +64,9 @@ class TestMigrateDataset:
         assert len(report["changes"]) >= 1
 
         # Check the parent ID was identified for migration
-        parent_change = next((c for c in report["changes"] if c["field"] == "_parent_id"), None)
+        parent_change = next(
+            (c for c in report["changes"] if c["field"] == "_parent_id"), None
+        )
         assert parent_change is not None
         assert "STU001" in parent_change["new"]
 
@@ -111,7 +113,9 @@ class TestMigrateDataset:
 
         # Verify file was updated
         updated_data = json.loads(path.read_text())
-        sample = next(e for e in updated_data["entities"] if e.get("unique_id") == "SAM001")
+        sample = next(
+            e for e in updated_data["entities"] if e.get("unique_id") == "SAM001"
+        )
         assert "_parent_id" not in sample
         assert "_parent_unique_id" in sample
         assert sample["_parent_unique_id"] == "STU001"
@@ -134,7 +138,9 @@ class TestMigrateDataset:
 
         report = migrate_dataset(path, dry_run=True)
 
-        ref_change = next((c for c in report["changes"] if c["field"] == "material_source"), None)
+        ref_change = next(
+            (c for c in report["changes"] if c["field"] == "material_source"), None
+        )
         assert ref_change is not None
         assert ref_change["old"] == "aabbccdd"
         assert ref_change["new"] == "STU001"
@@ -215,7 +221,12 @@ class TestPrintMigrationReport:
                 "dataset": "test",
                 "entity_count": 2,
                 "changes": [
-                    {"entity": "SAM001", "field": "_parent_id", "old": "abc", "new": "STU001"}
+                    {
+                        "entity": "SAM001",
+                        "field": "_parent_id",
+                        "old": "abc",
+                        "new": "STU001",
+                    }
                 ],
                 "saved": False,
             }

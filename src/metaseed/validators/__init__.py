@@ -70,7 +70,9 @@ def _validate_nested(
     for error in engine.validate(data):
         # Prefix field with path for nested errors
         field = f"{path}.{error.field}" if path else error.field
-        errors.append(ValidationError(field=field, message=error.message, rule=error.rule))
+        errors.append(
+            ValidationError(field=field, message=error.message, rule=error.rule)
+        )
 
     # Find and validate nested list fields
     loader = SpecLoader(profile=profile)
@@ -98,8 +100,12 @@ def _validate_nested(
             # Validate each item in the list
             for i, item in enumerate(items):
                 if isinstance(item, dict):
-                    item_path = f"{path}.{field.name}[{i}]" if path else f"{field.name}[{i}]"
-                    errors.extend(_validate_nested(item, item_entity, version, profile, item_path))
+                    item_path = (
+                        f"{path}.{field.name}[{i}]" if path else f"{field.name}[{i}]"
+                    )
+                    errors.extend(
+                        _validate_nested(item, item_entity, version, profile, item_path)
+                    )
 
     return errors
 
@@ -107,7 +113,7 @@ def _validate_nested(
 def validate(
     data: dict[str, Any] | BaseModel,
     entity: str | None = None,
-    version: str = "1.1",
+    version: str = "1.2",
     profile: str = "miappe",
     cascade: bool = True,
 ) -> list[ValidationError]:

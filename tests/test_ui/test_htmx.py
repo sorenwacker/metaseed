@@ -279,7 +279,8 @@ class TestAppState:
         """Add node to tree."""
         state = AppState()
         facade = state.get_or_create_facade()
-        instance = facade.Investigation(unique_id="INV-001", title="Test")
+        # Use .create() to avoid auto-storing (facade.Investigation() auto-stores)
+        instance = facade.Investigation.create(unique_id="INV-001", title="Test")
         node = state.add_node("Investigation", instance)
 
         assert node.id in state.nodes_by_id
@@ -291,10 +292,13 @@ class TestAppState:
         """Update existing node."""
         state = AppState()
         facade = state.get_or_create_facade()
-        instance = facade.Investigation(unique_id="INV-001", title="Original")
+        # Use .create() to avoid auto-storing
+        instance = facade.Investigation.create(unique_id="INV-001", title="Original")
         node = state.add_node("Investigation", instance)
 
-        updated_instance = facade.Investigation(unique_id="INV-002", title="Updated")
+        updated_instance = facade.Investigation.create(
+            unique_id="INV-002", title="Updated"
+        )
         state.update_node(node.id, updated_instance)
 
         # By convention, first field (unique_id) is used as label
@@ -304,7 +308,8 @@ class TestAppState:
         """Delete node from tree."""
         state = AppState()
         facade = state.get_or_create_facade()
-        instance = facade.Investigation(unique_id="INV-001", title="Test")
+        # Use .create() to avoid auto-storing
+        instance = facade.Investigation.create(unique_id="INV-001", title="Test")
         node = state.add_node("Investigation", instance)
 
         result = state.delete_node(node.id)
@@ -329,7 +334,10 @@ class TestAppState:
         """Get tree data with an entity."""
         state = AppState()
         facade = state.get_or_create_facade()
-        instance = facade.Investigation(unique_id="INV-001", title="Test Investigation")
+        # Use .create() to avoid auto-storing
+        instance = facade.Investigation.create(
+            unique_id="INV-001", title="Test Investigation"
+        )
         state.add_node("Investigation", instance)
 
         tree_data = state.get_tree_data()
@@ -348,22 +356,22 @@ class TestAppState:
         state.profile = "isa"
         facade = state.get_or_create_facade()
 
-        # Create Investigation node
-        inv_instance = facade.Investigation(
+        # Create Investigation node (use .create() to avoid auto-storing)
+        inv_instance = facade.Investigation.create(
             identifier="INV-001",
             title="Test Investigation",
         )
         inv_node = state.add_node("Investigation", inv_instance)
 
         # Create Studies as children of Investigation
-        study1 = facade.Study(
+        study1 = facade.Study.create(
             identifier="STU-001",
             title="Study One",
             investigation_id="INV-001",
         )
         state.add_node("Study", study1, parent_id=inv_node.id)
 
-        study2 = facade.Study(
+        study2 = facade.Study.create(
             identifier="STU-002",
             title="Study Two",
             investigation_id="INV-001",
@@ -553,7 +561,9 @@ class TestNestedFormRoutes:
     def client_with_nested(self, client_with_entity):
         """Client with entity containing nested items."""
         state = client_with_entity.app.state.ui_state
-        state.current_nested_items["studies"] = [{"title": "Nested Study", "unique_id": "STU-001"}]
+        state.current_nested_items["studies"] = [
+            {"title": "Nested Study", "unique_id": "STU-001"}
+        ]
         return client_with_entity
 
     def test_edit_nested_item(self, client_with_nested):
@@ -650,7 +660,9 @@ class TestUpdateEntity:
         """Update entity merges nested items."""
         state = client_with_entity.app.state.ui_state
         node_id = next(iter(state.nodes_by_id.keys()))
-        state.current_nested_items["studies"] = [{"unique_id": "STU-001", "title": "Test Study"}]
+        state.current_nested_items["studies"] = [
+            {"unique_id": "STU-001", "title": "Test Study"}
+        ]
 
         response = client_with_entity.put(
             f"/entity/{node_id}",
@@ -720,7 +732,9 @@ class TestExportEdgeCases:
         state = client_with_entity.app.state.ui_state
 
         # Add nested items via current_nested_items (doesn't require model validation)
-        state.current_nested_items["studies"] = [{"unique_id": "STU-001", "title": "Study 1"}]
+        state.current_nested_items["studies"] = [
+            {"unique_id": "STU-001", "title": "Study 1"}
+        ]
 
         response = client_with_entity.get("/export")
         assert response.status_code == 200
@@ -741,7 +755,9 @@ class TestEditFormEdgeCases:
         assert response.status_code == 200
 
         # Now update state with nested items
-        state.current_nested_items["studies"] = [{"unique_id": "STU-001", "title": "Study 1"}]
+        state.current_nested_items["studies"] = [
+            {"unique_id": "STU-001", "title": "Study 1"}
+        ]
         state.current_nested_items = {}  # Clear to test loading
 
         # Get form again - should still work
@@ -785,7 +801,9 @@ class TestCreateEntityEdgeCases:
     def test_create_entity_with_nested(self, client):
         """Create entity with nested items in state."""
         state = client.app.state.ui_state
-        state.current_nested_items = {"studies": [{"unique_id": "STU-001", "title": "Study"}]}
+        state.current_nested_items = {
+            "studies": [{"unique_id": "STU-001", "title": "Study"}]
+        }
 
         response = client.post(
             "/entity",
@@ -805,7 +823,9 @@ class TestNestedFormEdgeCases:
     def client_with_nested(self, client_with_entity):
         """Client with entity containing nested items."""
         state = client_with_entity.app.state.ui_state
-        state.current_nested_items["studies"] = [{"title": "Nested Study", "unique_id": "STU-001"}]
+        state.current_nested_items["studies"] = [
+            {"title": "Nested Study", "unique_id": "STU-001"}
+        ]
         return client_with_entity
 
     def test_save_nested_with_type_conversion(self, client_with_nested):

@@ -258,7 +258,9 @@ class ExtractionContext:
 
         for row_idx, row in enumerate(table.rows):
             row_dict = dict(zip(table.headers, row, strict=False))
-            instance = self._extract_row(row_dict, entity_spec, mapping, row_idx, errors)
+            instance = self._extract_row(
+                row_dict, entity_spec, mapping, row_idx, errors
+            )
             if instance:
                 instances.append(instance)
 
@@ -322,7 +324,9 @@ class ExtractionContext:
 
         return instance or None
 
-    def _find_field(self: Self, entity_spec: EntitySpec, field_name: str) -> FieldSpec | None:
+    def _find_field(
+        self: Self, entity_spec: EntitySpec, field_name: str
+    ) -> FieldSpec | None:
         """Find field spec by name."""
         for field in entity_spec.fields:
             if field.name == field_name:
@@ -365,7 +369,9 @@ class ExtractionContext:
 
         return errors
 
-    def _validate_field(self: Self, value: Any, field_spec: FieldSpec) -> list[ValidationError]:
+    def _validate_field(
+        self: Self, value: Any, field_spec: FieldSpec
+    ) -> list[ValidationError]:
         """Validate a single field value."""
         errors: list[ValidationError] = []
 
@@ -449,7 +455,9 @@ class ExtractionContext:
         else:
             data = self.extracted
 
-        return yaml.dump(data, default_flow_style=False, sort_keys=False, allow_unicode=True)
+        return yaml.dump(
+            data, default_flow_style=False, sort_keys=False, allow_unicode=True
+        )
 
     def export_json(self: Self, entity_name: str | None = None) -> str:
         """Export extracted entities to JSON.

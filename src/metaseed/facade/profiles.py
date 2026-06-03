@@ -16,17 +16,19 @@ __all__ = [
     "dissco",
     "ena",
     "isa",
+    "jerm",
     "metabolights",
     "miappe",
+    "miappe_htp",
     "pride",
 ]
 
 
-def miappe(version: str = "1.1") -> ProfileFacade:
+def miappe(version: str | None = None) -> ProfileFacade:
     """Get MIAPPE profile facade.
 
     Args:
-        version: MIAPPE version (default: "1.1").
+        version: MIAPPE version. If None, uses the latest available version.
 
     Returns:
         ProfileFacade for MIAPPE.
@@ -41,11 +43,48 @@ def miappe(version: str = "1.1") -> ProfileFacade:
     return ProfileFacade("miappe", version)
 
 
-def isa(version: str = "1.0") -> ProfileFacade:
+def miappe_htp(version: str | None = None) -> ProfileFacade:
+    """Get MIAPPE-HTP profile facade.
+
+    Args:
+        version: MIAPPE-HTP version. If None, uses the latest available version.
+
+    Returns:
+        ProfileFacade for MIAPPE-HTP (High Throughput Phenotyping).
+
+    Example:
+        >>> from metaseed import miappe_htp
+        >>> m = miappe_htp()
+        >>> m.Investigation.help()
+    """
+    from metaseed.facade.core import ProfileFacade
+
+    return ProfileFacade("miappe-htp", version)
+
+
+def jerm(version: str | None = None) -> ProfileFacade:
+    """Get JERM profile facade.
+
+    Args:
+        version: JERM version. If None, uses the latest available version.
+
+    Returns:
+        ProfileFacade for JERM (Just Enough Results Model).
+
+    Example:
+        >>> from metaseed import jerm
+        >>> j = jerm()
+    """
+    from metaseed.facade.core import ProfileFacade
+
+    return ProfileFacade("jerm", version)
+
+
+def isa(version: str | None = None) -> ProfileFacade:
     """Get ISA profile facade.
 
     Args:
-        version: ISA version (default: "1.0").
+        version: ISA version. If None, uses the latest available version.
 
     Returns:
         ProfileFacade for ISA.
@@ -60,11 +99,11 @@ def isa(version: str = "1.0") -> ProfileFacade:
     return ProfileFacade("isa", version)
 
 
-def ena(version: str = "1.0") -> ProfileFacade:
+def ena(version: str | None = None) -> ProfileFacade:
     """Get ENA profile facade.
 
     Args:
-        version: ENA version (default: "1.0").
+        version: ENA version. If None, uses the latest available version.
 
     Returns:
         ProfileFacade for ENA (European Nucleotide Archive).
@@ -79,11 +118,11 @@ def ena(version: str = "1.0") -> ProfileFacade:
     return ProfileFacade("ena", version)
 
 
-def pride(version: str = "1.0") -> ProfileFacade:
+def pride(version: str | None = None) -> ProfileFacade:
     """Get PRIDE profile facade.
 
     Args:
-        version: PRIDE version (default: "1.0").
+        version: PRIDE version. If None, uses the latest available version.
 
     Returns:
         ProfileFacade for PRIDE (ProteomeXchange).
@@ -98,11 +137,11 @@ def pride(version: str = "1.0") -> ProfileFacade:
     return ProfileFacade("pride", version)
 
 
-def metabolights(version: str = "1.0") -> ProfileFacade:
+def metabolights(version: str | None = None) -> ProfileFacade:
     """Get MetaboLights profile facade.
 
     Args:
-        version: MetaboLights version (default: "1.0").
+        version: MetaboLights version. If None, uses the latest available version.
 
     Returns:
         ProfileFacade for MetaboLights.
@@ -117,11 +156,11 @@ def metabolights(version: str = "1.0") -> ProfileFacade:
     return ProfileFacade("metabolights", version)
 
 
-def dissco(version: str = "0.4") -> ProfileFacade:
+def dissco(version: str | None = None) -> ProfileFacade:
     """Get DiSSCo profile facade.
 
     Args:
-        version: DiSSCo version (default: "0.4").
+        version: DiSSCo version. If None, uses the latest available version.
 
     Returns:
         ProfileFacade for DiSSCo.
@@ -136,11 +175,11 @@ def dissco(version: str = "0.4") -> ProfileFacade:
     return ProfileFacade("dissco", version)
 
 
-def darwin_core(version: str = "1.0") -> ProfileFacade:
+def darwin_core(version: str | None = None) -> ProfileFacade:
     """Get Darwin Core profile facade.
 
     Args:
-        version: Darwin Core version (default: "1.0").
+        version: Darwin Core version. If None, uses the latest available version.
 
     Returns:
         ProfileFacade for Darwin Core.

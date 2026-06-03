@@ -46,7 +46,9 @@ def register_table_routes(
     """
 
     @app.get("/table/{entity_type}/{field_name}", response_class=HTMLResponse)
-    async def table_view(request: Request, entity_type: str, field_name: str) -> HTMLResponse:
+    async def table_view(
+        request: Request, entity_type: str, field_name: str
+    ) -> HTMLResponse:
         """Render the nested table view for a list field."""
         state = get_state()
         facade = state.get_or_create_facade()
@@ -65,7 +67,9 @@ def register_table_routes(
 
         nested_fields = helper.nested_fields
         if field_name not in nested_fields:
-            raise HTTPException(status_code=404, detail=f"Field not found: {field_name}")
+            raise HTTPException(
+                status_code=404, detail=f"Field not found: {field_name}"
+            )
 
         nested_entity_type = nested_fields[field_name]
         col_info = get_table_column_info(facade, nested_entity_type)
@@ -98,11 +102,15 @@ def register_table_routes(
                 "parent_entity_type": entity_type,
                 "editing_node_id": state.editing_node_id,
                 "breadcrumb": build_breadcrumb(state),
-                "nested_context": state.nested_edit_stack[-1] if state.nested_edit_stack else None,
+                "nested_context": state.nested_edit_stack[-1]
+                if state.nested_edit_stack
+                else None,
             },
         )
 
-    @app.post("/table/{parent_entity_type}/{field_name}/row", response_class=HTMLResponse)
+    @app.post(
+        "/table/{parent_entity_type}/{field_name}/row", response_class=HTMLResponse
+    )
     async def add_table_row(
         request: Request, parent_entity_type: str, field_name: str
     ) -> HTMLResponse:
@@ -112,7 +120,9 @@ def register_table_routes(
 
         _, items = get_items_store(state, parent_entity_type, field_name)
 
-        entity_type = infer_entity_type_from_field(facade, parent_entity_type, field_name)
+        entity_type = infer_entity_type_from_field(
+            facade, parent_entity_type, field_name
+        )
         col_info = get_table_column_info(facade, entity_type)
 
         reference_fields = (
@@ -138,7 +148,9 @@ def register_table_routes(
                 elif state.nested_edit_stack:
                     for ctx in reversed(state.nested_edit_stack):
                         if ctx.entity_type == parent_entity_type:
-                            parent_items = state.current_nested_items.get(ctx.field_name, [])
+                            parent_items = state.current_nested_items.get(
+                                ctx.field_name, []
+                            )
                             if ctx.row_idx < len(parent_items):
                                 parent_data = parent_items[ctx.row_idx]
                             break
@@ -161,7 +173,9 @@ def register_table_routes(
         hx_target = request.headers.get("hx-target", "")
         is_inline = "inline" in hx_target
 
-        template_name = "partials/inline_table_row.html" if is_inline else "partials/table_row.html"
+        template_name = (
+            "partials/inline_table_row.html" if is_inline else "partials/table_row.html"
+        )
 
         display_columns = [c for c in col_info["columns"] if c not in parent_id_fields]
 
@@ -182,8 +196,13 @@ def register_table_routes(
             },
         )
 
-    @app.delete("/table/{parent_entity_type}/{field_name}/row/{idx}", response_class=HTMLResponse)
-    async def delete_table_row(parent_entity_type: str, field_name: str, idx: int) -> HTMLResponse:
+    @app.delete(
+        "/table/{parent_entity_type}/{field_name}/row/{idx}",
+        response_class=HTMLResponse,
+    )
+    async def delete_table_row(
+        parent_entity_type: str, field_name: str, idx: int
+    ) -> HTMLResponse:
         """Delete a row from the nested table."""
         state = get_state()
         _, items = get_items_store(state, parent_entity_type, field_name)
@@ -197,7 +216,8 @@ def register_table_routes(
         return HTMLResponse(content="")
 
     @app.post(
-        "/table/{parent_entity_type}/{field_name}/row/{idx}/cell", response_class=HTMLResponse
+        "/table/{parent_entity_type}/{field_name}/row/{idx}/cell",
+        response_class=HTMLResponse,
     )
     async def update_table_cell(
         request: Request, parent_entity_type: str, field_name: str, idx: int
@@ -208,7 +228,9 @@ def register_table_routes(
         _, items = get_items_store(state, parent_entity_type, field_name)
 
         # Get valid fields for the child entity type
-        entity_type = infer_entity_type_from_field(facade, parent_entity_type, field_name)
+        entity_type = infer_entity_type_from_field(
+            facade, parent_entity_type, field_name
+        )
         valid_fields: set[str] = set()
         if entity_type:
             child_helper = getattr(facade, entity_type, None)
@@ -221,12 +243,16 @@ def register_table_routes(
             if isinstance(item, dict):
                 for key, value in form_data.items():
                     # Only accept valid child entity fields
-                    if not key.startswith("_") and (not valid_fields or key in valid_fields):
+                    if not key.startswith("_") and (
+                        not valid_fields or key in valid_fields
+                    ):
                         item[key] = value
 
         return HTMLResponse(content="")
 
-    @app.post("/table/{parent_entity_type}/{field_name}/bulk", response_class=HTMLResponse)
+    @app.post(
+        "/table/{parent_entity_type}/{field_name}/bulk", response_class=HTMLResponse
+    )
     async def bulk_update_rows(
         request: Request, parent_entity_type: str, field_name: str
     ) -> HTMLResponse:
@@ -292,7 +318,9 @@ def register_table_routes(
                 "parent_entity_type": parent_entity_type,
                 "editing_node_id": state.editing_node_id,
                 "breadcrumb": build_breadcrumb(state),
-                "nested_context": state.nested_edit_stack[-1] if state.nested_edit_stack else None,
+                "nested_context": state.nested_edit_stack[-1]
+                if state.nested_edit_stack
+                else None,
                 "notification": {
                     "type": "success",
                     "message": f"Updated {updated_count} rows",
@@ -301,7 +329,9 @@ def register_table_routes(
         )
         return response
 
-    @app.post("/table/{parent_entity_type}/{field_name}/paste", response_class=HTMLResponse)
+    @app.post(
+        "/table/{parent_entity_type}/{field_name}/paste", response_class=HTMLResponse
+    )
     async def paste_cells(
         request: Request, parent_entity_type: str, field_name: str
     ) -> HTMLResponse:

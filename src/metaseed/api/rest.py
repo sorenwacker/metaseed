@@ -48,7 +48,7 @@ class ValidationRequest(BaseModel):
     """Validation request body."""
 
     entity: str
-    version: str = "1.1"
+    version: str = "1.2"
     data: dict[str, Any]
 
 
@@ -106,7 +106,9 @@ def list_entities(version: str) -> EntitiesResponse:
     try:
         entities = loader.list_entities(version)
     except SpecLoadError:
-        raise HTTPException(status_code=404, detail=f"Version not found: {version}") from None
+        raise HTTPException(
+            status_code=404, detail=f"Version not found: {version}"
+        ) from None
     return EntitiesResponse(version=version, entities=entities)
 
 

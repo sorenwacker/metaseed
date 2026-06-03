@@ -79,7 +79,9 @@ class TestBulkUpdateEndpoint:
         assert response.status_code == 200
 
         state = client_with_studies.app.state.ui_state
-        assert all(s["title"] == "Bulk Updated" for s in state.current_nested_items["studies"])
+        assert all(
+            s["title"] == "Bulk Updated" for s in state.current_nested_items["studies"]
+        )
 
     def test_bulk_update_partial_indices(self, client_with_studies):
         """Bulk update works for subset of rows."""
@@ -252,7 +254,9 @@ class TestPasteEndpoint:
             data={"changes": json.dumps(changes)},
         )
         assert response.status_code == 200
-        assert "notification" in response.text.lower() or "pasted" in response.text.lower()
+        assert (
+            "notification" in response.text.lower() or "pasted" in response.text.lower()
+        )
 
 
 class TestTableSelectionUI:

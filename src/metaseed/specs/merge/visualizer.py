@@ -123,7 +123,9 @@ class DiffVisualizer:
                     break
 
             # Determine which profiles have this field
-            field_profiles = [pid for pid, spec in fd.profiles.items() if spec is not None]
+            field_profiles = [
+                pid for pid, spec in fd.profiles.items() if spec is not None
+            ]
 
             fields_data.append(
                 {
@@ -189,7 +191,9 @@ class DiffVisualizer:
             ]
 
             if field_diff.attributes_changed:
-                title_lines.append(f"Changed: {', '.join(field_diff.attributes_changed)}")
+                title_lines.append(
+                    f"Changed: {', '.join(field_diff.attributes_changed)}"
+                )
 
             # Get type info
             for profile_id, spec in field_diff.profiles.items():
@@ -263,7 +267,9 @@ class DiffVisualizer:
                     # Check for nested entity relationships (entity/list types)
                     target = None
                     is_reference = False
-                    if spec.type.value == "entity" or (spec.type.value == "list" and spec.items):
+                    if spec.type.value == "entity" or (
+                        spec.type.value == "list" and spec.items
+                    ):
                         target = spec.items
 
                     # Check for reference relationships (reference property)
@@ -365,7 +371,9 @@ class DiffVisualizer:
             },
         ]
 
-    def _create_statistics_summary(self: Self, comparison: ComparisonResult) -> dict[str, Any]:
+    def _create_statistics_summary(
+        self: Self, comparison: ComparisonResult
+    ) -> dict[str, Any]:
         """Create statistics summary for the visualization.
 
         Args:
@@ -454,7 +462,9 @@ class DiffVisualizer:
                     target = spec.items or None
                     if target and target.lower() in entity_names:
                         to_id = target.replace(" ", "_")
-                        lines.append(f"    {from_id} -->|{field_diff.field_name}| {to_id}")
+                        lines.append(
+                            f"    {from_id} -->|{field_diff.field_name}| {to_id}"
+                        )
                     break
 
         return "\n".join(lines)

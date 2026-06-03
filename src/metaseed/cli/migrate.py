@@ -165,7 +165,7 @@ def print_migration_report(reports: list[dict[str, Any]]) -> None:
             else:
                 print("  [DRY RUN - not saved]")
 
-    print(f"\n{'='*40}")
+    print(f"\n{'=' * 40}")
     print(
         f"Total: {len(reports)} datasets, {migrated_count} need migration, {total_changes} changes"
     )

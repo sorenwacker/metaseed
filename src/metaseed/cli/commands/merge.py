@@ -28,7 +28,9 @@ def _parse_profile_spec(spec: str) -> tuple[str, str]:
         typer.Exit: If format is invalid.
     """
     if "/" not in spec:
-        echo_error(f"Invalid profile format: '{spec}'. Use 'profile/version' (e.g., 'miappe/1.1')")
+        echo_error(
+            f"Invalid profile format: '{spec}'. Use 'profile/version' (e.g., 'miappe/1.1')"
+        )
         raise typer.Exit(EXIT_INPUT_ERROR)
 
     parts = spec.split("/", 1)
@@ -39,7 +41,9 @@ def compare_profiles(
     profiles: Annotated[
         list[str], typer.Argument(help="Profiles to compare (format: profile/version)")
     ],
-    output: Annotated[Path | None, typer.Option("--output", "-o", help="Output file path")] = None,
+    output: Annotated[
+        Path | None, typer.Option("--output", "-o", help="Output file path")
+    ] = None,
     format: Annotated[
         str, typer.Option("--format", "-f", help="Output format: markdown, csv, html")
     ] = "markdown",
@@ -91,8 +95,12 @@ def compare_profiles(
         stats = result.statistics
         typer.echo("")
         typer.echo(f"Compared {len(profiles)} profiles:")
-        typer.echo(f"  Entities: {stats.total_entities} total, {stats.common_entities} common")
-        typer.echo(f"  Fields: {stats.total_fields} total, {stats.conflicting_fields} conflicts")
+        typer.echo(
+            f"  Entities: {stats.total_entities} total, {stats.common_entities} common"
+        )
+        typer.echo(
+            f"  Fields: {stats.total_fields} total, {stats.conflicting_fields} conflicts"
+        )
 
     except SpecLoadError as e:
         echo_error(str(e))
@@ -106,9 +114,9 @@ def merge_profiles(
     profiles: Annotated[
         list[str], typer.Argument(help="Profiles to merge (format: profile/version)")
     ],
-    output: Annotated[Path, typer.Option("--output", "-o", help="Output YAML file path")] = Path(
-        "merged.yaml"
-    ),
+    output: Annotated[
+        Path, typer.Option("--output", "-o", help="Output YAML file path")
+    ] = Path("merged.yaml"),
     strategy: Annotated[
         str, typer.Option("--strategy", "-s", help="Merge strategy")
     ] = "first_wins",

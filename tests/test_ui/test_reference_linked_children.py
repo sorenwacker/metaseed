@@ -151,7 +151,9 @@ class TestReferenceLinkedChildren:
         run_node = state.add_node("Run", run_instance)
 
         # Simulate save: first update the node (which invalidates cache)
-        updated_run = facade.Run.create(alias="run1", experiment_ref="exp1", center_name="Test")
+        updated_run = facade.Run.create(
+            alias="run1", experiment_ref="exp1", center_name="Test"
+        )
         state.update_node(run_node.id, updated_run)
 
         # Then add a new child (File)
@@ -231,7 +233,9 @@ class TestReferenceLinkedChildren:
             checksum_method="MD5",
             checksum="existing123",
         )
-        _existing_file_node = state.add_node("File", existing_file, parent_id=run_node.id)
+        _existing_file_node = state.add_node(
+            "File", existing_file, parent_id=run_node.id
+        )
 
         # Simulate user opening edit form for Run
         state.editing_node_id = run_node.id
@@ -239,7 +243,9 @@ class TestReferenceLinkedChildren:
         run_helper = facade.Run
 
         # get_nested_items_for_edit called when opening form
-        state.current_nested_items = get_nested_items_for_edit(run_tree_node, run_helper, facade)
+        state.current_nested_items = get_nested_items_for_edit(
+            run_tree_node, run_helper, facade
+        )
 
         assert "files" in state.current_nested_items
         assert len(state.current_nested_items["files"]) == 1
@@ -258,7 +264,9 @@ class TestReferenceLinkedChildren:
         # === SAVE FLOW (from update_entity in core.py) ===
 
         # 1. Update the Run node (invalidates cache)
-        updated_run = facade.Run.create(alias="run1", experiment_ref="exp1", center_name="Updated")
+        updated_run = facade.Run.create(
+            alias="run1", experiment_ref="exp1", center_name="Updated"
+        )
         state.update_node(run_node.id, updated_run)
 
         # 2. For each item in current_nested_items["files"]:
@@ -292,7 +300,9 @@ class TestReferenceLinkedChildren:
         updated_run_node = state.nodes_by_id.get(run_node.id)
         assert updated_run_node is not None
 
-        state.current_nested_items = get_nested_items_for_edit(updated_run_node, run_helper, facade)
+        state.current_nested_items = get_nested_items_for_edit(
+            updated_run_node, run_helper, facade
+        )
 
         # After save, should have both files
         assert "files" in state.current_nested_items, (
@@ -401,14 +411,18 @@ class TestReferenceLinkedChildren:
         # Now simulate editing the Run
         state.editing_node_id = run_entity.id
         run_helper = facade.Run
-        state.current_nested_items = get_nested_items_for_edit(run_tree_node, run_helper, facade)
+        state.current_nested_items = get_nested_items_for_edit(
+            run_tree_node, run_helper, facade
+        )
 
         assert "files" in state.current_nested_items
         assert len(state.current_nested_items["files"]) == 2
 
         # Verify Files have _node_id
         for file_dict in state.current_nested_items["files"]:
-            assert "_node_id" in file_dict, f"File dict should have _node_id: {file_dict}"
+            assert (
+                "_node_id" in file_dict
+            ), f"File dict should have _node_id: {file_dict}"
 
     def test_lookup_existing_file_by_node_id(self):
         """Test that we can look up existing Files by _node_id during save."""
@@ -439,7 +453,9 @@ class TestReferenceLinkedChildren:
         run_helper = facade.Run
 
         state.editing_node_id = run_entity.id
-        state.current_nested_items = get_nested_items_for_edit(run_tree_node, run_helper, facade)
+        state.current_nested_items = get_nested_items_for_edit(
+            run_tree_node, run_helper, facade
+        )
 
         # Get the File's _node_id from current_nested_items
         file_dict = state.current_nested_items["files"][0]
@@ -447,7 +463,9 @@ class TestReferenceLinkedChildren:
         assert file_node_id is not None
 
         # Now simulate save: update Run (invalidates cache)
-        updated_run = facade.Run.create(alias="run1", experiment_ref="exp1", center_name="Updated")
+        updated_run = facade.Run.create(
+            alias="run1", experiment_ref="exp1", center_name="Updated"
+        )
         state.update_node(run_entity.id, updated_run)
 
         # Try to look up the File by _node_id (this triggers cache rebuild)
@@ -489,7 +507,9 @@ class TestReferenceLinkedChildren:
         run_helper = facade.Run
 
         state.editing_node_id = run_entity.id
-        state.current_nested_items = get_nested_items_for_edit(run_tree_node, run_helper, facade)
+        state.current_nested_items = get_nested_items_for_edit(
+            run_tree_node, run_helper, facade
+        )
 
         # Verify initial state
         assert len(state.current_nested_items["files"]) == 1
@@ -506,7 +526,9 @@ class TestReferenceLinkedChildren:
 
         # === SAVE FLOW ===
         # 1. Update Run
-        updated_run = facade.Run.create(alias="run1", experiment_ref="exp1", center_name="Updated")
+        updated_run = facade.Run.create(
+            alias="run1", experiment_ref="exp1", center_name="Updated"
+        )
         state.update_node(run_entity.id, updated_run)
 
         # 2. Process each file
@@ -534,7 +556,9 @@ class TestReferenceLinkedChildren:
 
         # 3. Rebuild nested items
         updated_run_node = state.nodes_by_id.get(run_entity.id)
-        state.current_nested_items = get_nested_items_for_edit(updated_run_node, run_helper, facade)
+        state.current_nested_items = get_nested_items_for_edit(
+            updated_run_node, run_helper, facade
+        )
 
         # Verify both files are in nested items
         assert (
@@ -576,7 +600,8 @@ class TestReferenceLinkedChildren:
 
         # Update Run
         facade.update_entity(
-            run_node.id, {"alias": "run1", "experiment_ref": "exp1", "center_name": "Updated"}
+            run_node.id,
+            {"alias": "run1", "experiment_ref": "exp1", "center_name": "Updated"},
         )
 
         # Children should still be there
@@ -631,7 +656,9 @@ class TestReferenceLinkedChildren:
         exp_helper = facade.Experiment
 
         state.editing_node_id = exp_node.id
-        state.current_nested_items = get_nested_items_for_edit(exp_tree_node, exp_helper, facade)
+        state.current_nested_items = get_nested_items_for_edit(
+            exp_tree_node, exp_helper, facade
+        )
 
         # Experiment should have "runs" in nested items
         assert "runs" in state.current_nested_items

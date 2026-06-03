@@ -105,7 +105,9 @@ studies:
         file_path = tmp_path / "test.yaml"
         file_path.write_text(content)
 
-        result = runner.invoke(app, ["check", str(file_path), "--profile", "nonexistent_profile"])
+        result = runner.invoke(
+            app, ["check", str(file_path), "--profile", "nonexistent_profile"]
+        )
         assert result.exit_code == 3
         # Error message is in stderr
         assert result.stderr is not None
@@ -130,7 +132,9 @@ studies:
         result = runner.invoke(app, ["check", str(file_path), "--verbose"])
         assert result.exit_code == 0
         # Verbose should show files checked and/or entity counts
-        assert "files" in result.stdout.lower() or "investigation" in result.stdout.lower()
+        assert (
+            "files" in result.stdout.lower() or "investigation" in result.stdout.lower()
+        )
 
     def test_check_quiet_valid(self, tmp_path: Path) -> None:
         """Check with quiet option suppresses success output."""
@@ -243,5 +247,7 @@ studies:
         file_path = tmp_path / "test.yaml"
         file_path.write_text(content)
 
-        result = runner.invoke(app, ["check", str(file_path), "--profile", "nonexistent"])
+        result = runner.invoke(
+            app, ["check", str(file_path), "--profile", "nonexistent"]
+        )
         assert result.exit_code == 3

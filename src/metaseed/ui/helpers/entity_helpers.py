@@ -96,13 +96,16 @@ def extract_nested_items(instance: Any, helper: Any) -> dict[str, list[dict]]:
             items = data[field_name]
             if isinstance(items, list):
                 result[field_name] = [
-                    item.model_dump() if hasattr(item, "model_dump") else item for item in items
+                    item.model_dump() if hasattr(item, "model_dump") else item
+                    for item in items
                 ]
 
     return result
 
 
-def extract_nested_from_tree(node: Any, helper: Any, facade: Any = None) -> dict[str, list[dict]]:
+def extract_nested_from_tree(
+    node: Any, helper: Any, facade: Any = None
+) -> dict[str, list[dict]]:
     """Extract nested items from tree children.
 
     When entities are created via MCP with parent_id, child entities are
@@ -142,7 +145,9 @@ def extract_nested_from_tree(node: Any, helper: Any, facade: Any = None) -> dict
             child_helper = getattr(facade, child.entity_type, None)
             if child_helper:
                 for field in child_helper._spec.fields:
-                    if field.reference and field.reference.startswith(f"{parent_type}."):
+                    if field.reference and field.reference.startswith(
+                        f"{parent_type}."
+                    ):
                         # This child type references our parent type
                         # Use pluralized entity type as field name
                         field_name = child.entity_type.lower() + "s"
@@ -166,7 +171,9 @@ def extract_nested_from_tree(node: Any, helper: Any, facade: Any = None) -> dict
     return result
 
 
-def get_nested_items_for_edit(node: Any, helper: Any, facade: Any = None) -> dict[str, list[dict]]:
+def get_nested_items_for_edit(
+    node: Any, helper: Any, facade: Any = None
+) -> dict[str, list[dict]]:
     """Get all nested items for editing, combining instance data and tree children.
 
     This is the canonical function for getting nested items when editing an entity.
@@ -191,7 +198,9 @@ def get_nested_items_for_edit(node: Any, helper: Any, facade: Any = None) -> dic
         for field_name, items in instance_items.items():
             # Only include actual dicts, not string references
             result[field_name] = [
-                item for item in items if isinstance(item, dict) and not isinstance(item, str)
+                item
+                for item in items
+                if isinstance(item, dict) and not isinstance(item, str)
             ]
 
     # Then, add items from tree children (includes reference-linked children if facade provided)
@@ -208,7 +217,9 @@ def get_nested_items_for_edit(node: Any, helper: Any, facade: Any = None) -> dic
     return result
 
 
-def collect_entities_by_type(state: AppState, facade: ProfileFacade) -> dict[str, list[dict]]:
+def collect_entities_by_type(
+    state: AppState, facade: ProfileFacade
+) -> dict[str, list[dict]]:
     """Collect all entities (root and nested) organized by type.
 
     Traverses nodes_by_id and nested items to extract all entities.
@@ -252,7 +263,9 @@ def collect_entities_by_type(state: AppState, facade: ProfileFacade) -> dict[str
             entities_by_type[entity_type] = []
 
         identifier, label = _extract_label(data)
-        entities_by_type[entity_type].append({"value": identifier, "label": label, "data": data})
+        entities_by_type[entity_type].append(
+            {"value": identifier, "label": label, "data": data}
+        )
 
     # Process root nodes and their nested entities
     for node in state.nodes_by_id.values():
@@ -260,7 +273,9 @@ def collect_entities_by_type(state: AppState, facade: ProfileFacade) -> dict[str
         add_entity(node.entity_type, data)
 
         # Add all nested entities using shared walker
-        for nested_type, nested_data in walk_nested_entities(data, node.entity_type, facade):
+        for nested_type, nested_data in walk_nested_entities(
+            data, node.entity_type, facade
+        ):
             add_entity(nested_type, nested_data)
 
     # Process current_nested_items (in-progress edits)
@@ -273,7 +288,9 @@ def collect_entities_by_type(state: AppState, facade: ProfileFacade) -> dict[str
                     if field_name in helper.nested_fields:
                         nested_type = helper.nested_fields[field_name]
                         for item in items:
-                            item_data = to_dict(item) if not isinstance(item, dict) else item
+                            item_data = (
+                                to_dict(item) if not isinstance(item, dict) else item
+                            )
                             if item_data:
                                 add_entity(nested_type, item_data)
                                 for sub_type, sub_data in walk_nested_entities(

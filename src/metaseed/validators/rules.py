@@ -277,7 +277,7 @@ class EntityReferenceRule(ValidationRule):
             if ref_id and ref_id not in self.available_ids:
                 msg = (
                     self.custom_message
-                    or f"Reference '{ref_id}' not found in " f"available {self.reference_id_field}s"
+                    or f"Reference '{ref_id}' not found in available {self.reference_id_field}s"
                 )
                 errors.append(
                     ValidationError(
@@ -351,7 +351,11 @@ class ConditionalRule(ValidationRule):
                 break
             inner = condition[start + 1 : end]
             result = self._evaluate(inner, data)
-            condition = condition[:start] + ("TRUE" if result else "FALSE") + condition[end + 1 :]
+            condition = (
+                condition[:start]
+                + ("TRUE" if result else "FALSE")
+                + condition[end + 1 :]
+            )
 
         # Handle NOT
         condition = condition.replace("NOT TRUE", "FALSE")
@@ -540,7 +544,10 @@ class CoordinatePairRule(ValidationRule):
         if has_lat != has_lon:
             missing = self.lon_field if has_lat else self.lat_field
             present = self.lat_field if has_lat else self.lon_field
-            msg = self.custom_message or f"'{missing}' is required when '{present}' is provided"
+            msg = (
+                self.custom_message
+                or f"'{missing}' is required when '{present}' is provided"
+            )
             return [
                 ValidationError(
                     field=missing,
@@ -612,7 +619,10 @@ class UniquenessRule(ValidationRule):
         str_value = str(value)
 
         if str_value in self._seen_values:
-            msg = self.custom_message or f"Value '{value}' is not unique within {self.scope}"
+            msg = (
+                self.custom_message
+                or f"Value '{value}' is not unique within {self.scope}"
+            )
             return [
                 ValidationError(
                     field=self.field,

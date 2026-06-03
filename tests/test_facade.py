@@ -11,9 +11,19 @@ from metaseed.facade import (
     miappe,
     validate_ontology_term,
 )
-from metaseed.services.ontology import OntologyService, get_ontology_service, reset_ontology_service
+from metaseed.services.ontology import (
+    OntologyService,
+    get_ontology_service,
+    reset_ontology_service,
+)
 from metaseed.specs.loader import SpecLoader
-from metaseed.specs.schema import EntityDefSpec, EntitySpec, FieldSpec, FieldType, ProfileSpec
+from metaseed.specs.schema import (
+    EntityDefSpec,
+    EntitySpec,
+    FieldSpec,
+    FieldType,
+    ProfileSpec,
+)
 
 
 class TestProfileFacade:
@@ -202,7 +212,9 @@ class TestEntityHelper:
         assert "required" in repr_str
         assert "optional" in repr_str
 
-    def test_get_label_uses_first_field(self, investigation_helper: EntityHelper) -> None:
+    def test_get_label_uses_first_field(
+        self, investigation_helper: EntityHelper
+    ) -> None:
         """get_label uses first field (unique_id for Investigation) by convention."""
         inv = investigation_helper.create(
             unique_id="INV-001",
@@ -219,7 +231,9 @@ class TestEntityHelper:
         # By convention, first field (unique_id) is used as label
         assert label == "INV-002"
 
-    def test_get_label_with_only_first_field(self, investigation_helper: EntityHelper) -> None:
+    def test_get_label_with_only_first_field(
+        self, investigation_helper: EntityHelper
+    ) -> None:
         """get_label uses first field value."""
         data = {"unique_id": "INV-003"}
         label = investigation_helper.get_label(data)
@@ -443,7 +457,9 @@ class TestDependencyInjection:
             description="Test entity",
             ontology_term=None,
             fields=[
-                FieldSpec(name="id", type=FieldType.STRING, required=True, description="ID"),
+                FieldSpec(
+                    name="id", type=FieldType.STRING, required=True, description="ID"
+                ),
             ],
             example=None,
         )
@@ -667,7 +683,9 @@ class TestOntologyValidation:
             version="1.0",
             fields=[
                 FieldSpec(name="identifier", type=FieldType.STRING, required=True),
-                FieldSpec(name="organism", type=FieldType.ONTOLOGY_TERM, required=False),
+                FieldSpec(
+                    name="organism", type=FieldType.ONTOLOGY_TERM, required=False
+                ),
             ],
         )
         import time

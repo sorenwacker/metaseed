@@ -633,6 +633,7 @@ User-created specs are saved to:
 
 ## See Also
 
+- [Quick Start](../getting-started/quickstart.md) - Launch the web UI with `metaseed ui`
 - [Spec Builder Tutorial](../guides/spec-builder.md) - Visual tool for creating specs
 - [Model Factory](../architecture/model-factory.md) - How specs become Pydantic models
 - [Profiles](../profiles/isa.md) - Available built-in profiles

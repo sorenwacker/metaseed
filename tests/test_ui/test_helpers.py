@@ -143,7 +143,11 @@ class TestCollectFormValues:
         """Convert newline-separated string list."""
         helper = MagicMock()
         helper.all_fields = ["tags"]
-        helper.field_info.return_value = {"type": "list", "items": "string", "required": False}
+        helper.field_info.return_value = {
+            "type": "list",
+            "items": "string",
+            "required": False,
+        }
 
         form_data = {"tags": "tag1\ntag2\n\ntag3"}
         values = collect_form_values(form_data, helper)
@@ -170,21 +174,27 @@ class TestFormatValidationErrors:
         """Format email pattern error with friendly message."""
         # Simulate an email validation error
         error = MagicMock()
-        error.errors.return_value = [{"loc": ("email",), "msg": "String should match pattern"}]
+        error.errors.return_value = [
+            {"loc": ("email",), "msg": "String should match pattern"}
+        ]
         result = format_validation_errors(error)
         assert "Invalid email format" in result
 
     def test_format_date_pattern_error(self):
         """Format date pattern error with friendly message."""
         error = MagicMock()
-        error.errors.return_value = [{"loc": ("start_date",), "msg": "String should match pattern"}]
+        error.errors.return_value = [
+            {"loc": ("start_date",), "msg": "String should match pattern"}
+        ]
         result = format_validation_errors(error)
         assert "Invalid date format" in result
 
     def test_format_orcid_pattern_error(self):
         """Format ORCID pattern error with friendly message."""
         error = MagicMock()
-        error.errors.return_value = [{"loc": ("orcid",), "msg": "String should match pattern"}]
+        error.errors.return_value = [
+            {"loc": ("orcid",), "msg": "String should match pattern"}
+        ]
         result = format_validation_errors(error)
         assert "Invalid ORCID format" in result
 
@@ -302,7 +312,9 @@ class TestFormatTableRows:
     def test_format_model_items(self):
         """Format Pydantic model items."""
         facade = ProfileFacade("miappe")
-        study = facade.Study(unique_id="STU-001", title="Test Study", investigation_id="INV-001")
+        study = facade.Study(
+            unique_id="STU-001", title="Test Study", investigation_id="INV-001"
+        )
         items = [study]
 
         rows = format_table_rows(items)
