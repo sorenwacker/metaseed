@@ -12,10 +12,13 @@ class TestBuildGraph:
     """Tests for build_graph function."""
 
     def test_empty_state_returns_empty_graph(self) -> None:
-        """Empty state should return empty nodes and edges."""
+        """Empty state should return empty nodes and edges with entity types."""
         state = AppState(profile="miappe")
         result = build_graph(state)
-        assert result == {"nodes": [], "edges": []}
+        assert result["nodes"] == []
+        assert result["edges"] == []
+        assert "entity_types" in result
+        assert len(result["entity_types"]) > 0
 
     def test_single_entity_creates_node(self) -> None:
         """Single entity should create one node with no edges."""
@@ -108,14 +111,16 @@ class TestGraphAPI:
 
     @pytest.mark.asyncio
     async def test_graph_endpoint_empty_state(self, app, state: AppState) -> None:
-        """Graph endpoint with empty state returns empty arrays."""
+        """Graph endpoint with empty state returns empty arrays with entity types."""
         async with AsyncClient(
             transport=ASGITransport(app=app), base_url="http://test"
         ) as client:
             response = await client.get("/api/graph")
 
         data = response.json()
-        assert data == {"nodes": [], "edges": []}
+        assert data["nodes"] == []
+        assert data["edges"] == []
+        assert "entity_types" in data
 
     @pytest.mark.asyncio
     async def test_graph_endpoint_with_entity(self, app, state: AppState) -> None:

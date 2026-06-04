@@ -24,11 +24,20 @@ def build_graph(state: AppState) -> dict:
     - Parent-child containment edges
     - Reference field edges (dashed)
 
+    Also includes all entity types from the spec for legend generation,
+    so the legend shows all possible types even if no instances exist.
+
     Args:
         state: The current AppState containing the entity tree.
 
     Returns:
-        Dictionary with 'nodes' and 'edges' lists for vis.js.
+        Dictionary with 'nodes', 'edges', and 'entity_types' lists for vis.js.
     """
     facade = state.get_or_create_facade()
-    return facade.to_graph()
+    graph_data = facade.to_graph()
+
+    # Add all entity types from spec for legend (in spec order)
+    entity_types = list(facade._entities.keys())
+    graph_data["entity_types"] = entity_types
+
+    return graph_data

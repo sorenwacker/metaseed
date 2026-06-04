@@ -166,10 +166,8 @@ def register_api_routes(
         state = get_state()
         manager = _get_dataset_manager(state)
 
-        # Get current dataset from state or manager
-        current_dataset = get_current_dataset_name(state) or manager.current_dataset
-
         # Reload from disk to pick up MCP changes
+        current_dataset = get_current_dataset_name(state) or manager.current_dataset
         if current_dataset:
             with contextlib.suppress(FileNotFoundError):
                 manager.load_dataset(current_dataset)

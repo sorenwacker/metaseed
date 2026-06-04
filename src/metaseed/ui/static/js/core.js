@@ -68,8 +68,16 @@ document.addEventListener('htmx:afterRequest', function(e) {
 var graphPollingInterval = null;
 
 function startGraphPolling() {
-    // Polling disabled - UI and MCP share state, no need for constant refresh
-    // Graph updates when user interacts or via htmx swaps
+    // Poll for MCP changes from external processes (Claude Code via stdio)
+    // The /api/graph endpoint reloads from disk to pick up changes
+    if (graphPollingInterval) return;
+
+    graphPollingInterval = setInterval(function() {
+        var graphContainer = document.getElementById('graph-container');
+        if (graphContainer && !graphContainer.classList.contains('hidden')) {
+            loadGraph();
+        }
+    }, 2000);
 }
 
 function stopGraphPolling() {

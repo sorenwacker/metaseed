@@ -16,17 +16,19 @@ def _get_dataset_manager():
     Returns:
         DatasetManager instance from context.
     """
-    from metaseed.agent.mcp.server import get_context, get_mcp_state
+    from metaseed.agent.mcp.server import (
+        get_context,
+        get_mcp_state,
+        get_standalone_factory,
+    )
 
     context = get_context()
     if context is not None:
         return context.dataset_factory.get_manager(context.state)
 
-    # Fallback: create factory directly for standalone MCP server mode
-    from metaseed.ui.dataset_manager import DatasetManagerFactory
-
+    # Fallback: use cached factory from standalone state holder
     state = get_mcp_state()
-    factory = DatasetManagerFactory()
+    factory = get_standalone_factory()
     return factory.get_manager(state)
 
 
@@ -224,9 +226,10 @@ def register_dataset_tools(mcp: FastMCP, get_mcp_state, reset_entity_service) ->
         Returns:
             JSON with current dataset information.
         """
+        from metaseed.ui.datasets import get_current_dataset_name
+
         try:
             state = get_mcp_state()
-            manager = _get_dataset_manager()
 
             entity_counts: dict[str, int] = {}
             for node in state.entity_tree:
@@ -235,7 +238,7 @@ def register_dataset_tools(mcp: FastMCP, get_mcp_state, reset_entity_service) ->
 
             return json.dumps(
                 {
-                    "dataset_name": manager.current_dataset,
+                    "dataset_name": get_current_dataset_name(state),
                     "profile": state.profile,
                     "version": state.version,
                     "entity_counts": entity_counts,

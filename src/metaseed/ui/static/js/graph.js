@@ -313,6 +313,29 @@ function updateGraphIncremental(newNodes, newEdges) {
         graphData.edges.add(edgesToAdd);
     }
 
+    // Update sizes for all nodes if edges changed
+    if (edgesToAdd.length > 0 || edgesToRemove.length > 0) {
+        var allEdges = graphData.edges.get();
+        var edgeCount = {};
+        allEdges.forEach(function(e) {
+            edgeCount[e.from] = (edgeCount[e.from] || 0) + 1;
+            edgeCount[e.to] = (edgeCount[e.to] || 0) + 1;
+        });
+        var minSize = 12, maxSize = 30;
+        var maxEdges = Math.max.apply(null, Object.values(edgeCount).concat([1]));
+        var updates = [];
+        graphData.nodes.forEach(function(node) {
+            var edges = edgeCount[node.id] || 0;
+            var newSize = minSize + (edges / maxEdges) * (maxSize - minSize);
+            if (node.size !== newSize) {
+                updates.push({ id: node.id, size: newSize });
+            }
+        });
+        if (updates.length > 0) {
+            graphData.nodes.update(updates);
+        }
+    }
+
     return true;
 }
 
@@ -327,13 +350,9 @@ function loadGraph() {
     fetch('/api/graph')
         .then(function(response) { return response.json(); })
         .then(function(data) {
+            // Show empty graph canvas even with no entities
             if (!data.nodes || data.nodes.length === 0) {
-                if (graphView) {
-                    graphView.innerHTML = '<div class="graph-empty">No entities to display. Create an entity to see it in the graph.</div>';
-                }
-                graphNetwork = null;
-                graphData = null;
-                return;
+                data = { nodes: [], edges: [] };
             }
 
             // Check if this is initial load
@@ -346,16 +365,34 @@ function loadGraph() {
             // Only initialize visible groups on first load
             if (isFirstLoad) {
                 visibleGroups.clear();
+                // Use entity types from spec if available, otherwise from nodes
+                var types = data.entity_types || [];
+                types.forEach(function(t) { visibleGroups.add(t); });
+                // Also add any types from nodes (in case spec is incomplete)
                 allGraphNodes.forEach(function(n) { visibleGroups.add(n.group); });
+            }
+
+            // Check for new entity types before preparing data
+            var hadNewTypes = false;
+            if (!isFirstLoad) {
+                data.nodes.forEach(function(n) {
+                    if (!visibleGroups.has(n.group)) {
+                        visibleGroups.add(n.group);
+                        hadNewTypes = true;
+                    }
+                });
             }
 
             // Prepare node styling
             data = prepareGraphData(data);
 
-            // If graph exists, update incrementally (don't touch legend)
-            // updateGraphIncremental respects visibleGroups filter
+            // If graph exists, update incrementally
             if (!isFirstLoad) {
-                updateGraphIncremental(data.nodes, data.edges);
+                var hasChanges = updateGraphIncremental(data.nodes, data.edges);
+                // Update legend if new entity types appeared
+                if (hadNewTypes) {
+                    renderGraphLegend(data);
+                }
             } else {
                 // Initial render
                 renderGraph(data);
@@ -389,36 +426,38 @@ function renderGraphLegend(data) {
     var legendContainer = document.getElementById('graph-legend');
     if (!legendContainer) return;
 
-    var types = {};
+    // Count nodes per type
+    var typeCounts = {};
     data.nodes.forEach(function(node) {
         if (node.group) {
-            if (!types[node.group]) {
-                var display = getEntityDisplay(node.group);
-                types[node.group] = {
-                    color: display.color,
-                    shape: display.shape,
-                    order: display.order,
-                    count: 0
-                };
-            }
-            types[node.group].count++;
+            typeCounts[node.group] = (typeCounts[node.group] || 0) + 1;
         }
     });
 
-    // Sort by assigned order
-    var sortedTypes = Object.keys(types).sort(function(a, b) {
-        return types[a].order - types[b].order;
-    });
+    // Use entity_types from spec (maintains spec order), fallback to node groups
+    var entityTypes = data.entity_types || Object.keys(typeCounts);
+
+    // Assign colors/shapes to all spec types
+    assignEntityDisplay(new Set(entityTypes));
 
     var html = '';
-    sortedTypes.forEach(function(type) {
-        var info = types[type];
+    entityTypes.forEach(function(type, index) {
+        var count = typeCounts[type] || 0;
+        var display = getEntityDisplay(type);
         var isVisible = visibleGroups.has(type);
-        var itemClass = 'graph-legend-item' + (isVisible ? '' : ' legend-hidden');
+        var isEmpty = count === 0;
+        var itemClass = 'graph-legend-item';
+        if (!isVisible) itemClass += ' legend-hidden';
+        if (isEmpty) itemClass += ' legend-empty';
+
         html += '<label class="' + itemClass + '" data-type="' + type + '">';
         html += '<input type="checkbox" ' + (isVisible ? 'checked' : '') + ' onchange="toggleNodeType(\'' + type + '\')">';
-        html += getLegendShapeSvg(info.shape, info.color);
-        html += '<span class="graph-legend-label">' + type + ' (' + info.count + ')</span>';
+        html += getLegendShapeSvg(display.shape, display.color);
+        html += '<span class="graph-legend-label">' + type;
+        if (count > 0) {
+            html += ' (' + count + ')';
+        }
+        html += '</span>';
         html += '</label>';
     });
 

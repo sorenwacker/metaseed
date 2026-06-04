@@ -8,7 +8,7 @@
     <link rel="icon" type="image/png" sizes="128x128" href="/static/images/metaseed-icon-128.png">
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
     <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
-    <link rel="stylesheet" href="/static/css/style.css?v=70">
+    <link rel="stylesheet" href="/static/css/style.css?v=90">
 </head>
 <body hx-headers='{"X-Requested-With": "XMLHttpRequest"}'>
     <div class="layout">
@@ -23,7 +23,6 @@
                 <a href="https://sorenwacker.github.io/metaseed/" class="nav-btn" data-testid="nav-docs" target="_blank" rel="noopener">Docs</a>
             </nav>
             <div class="header-actions">
-                {% if tree_nodes %}
                 <button id="validate-btn" class="btn btn-header" onclick="validateDataset()" data-testid="btn-validate" title="Validate all entities">
                     Validate
                 </button>
@@ -31,7 +30,6 @@
                     Graph
                 </button>
                 <span class="header-divider"></span>
-                {% endif %}
                 <button id="mcp-toggle" class="btn btn-header" onclick="toggleMCP()" data-testid="btn-mcp" title="MCP Server">
                     <span id="mcp-status-indicator" class="status-indicator status-off"></span>
                     MCP
@@ -96,12 +94,12 @@
         const BASE_URL = "{{ base_url }}";
     </script>
     <!-- Modular JS files -->
-    <script src="/static/js/core.js?v=1"></script>
-    <script src="/static/js/validation.js?v=1"></script>
-    <script src="/static/js/table-edit.js?v=1"></script>
-    <script src="/static/js/lookup.js?v=1"></script>
-    <script src="/static/js/graph.js?v=1"></script>
-    <script src="/static/js/mcp.js?v=1"></script>
-    <script src="/static/js/dataset.js?v=1"></script>
+    <script src="/static/js/core.js?v=9"></script>
+    <script src="/static/js/validation.js?v=9"></script>
+    <script src="/static/js/table-edit.js?v=9"></script>
+    <script src="/static/js/lookup.js?v=9"></script>
+    <script src="/static/js/graph.js?v=9"></script>
+    <script src="/static/js/mcp.js?v=9"></script>
+    <script src="/static/js/dataset.js?v=9"></script>
 </body>
 </html>

@@ -2274,6 +2274,14 @@ body::before {
     opacity: 0.4;
 }
 
+.graph-legend-item.legend-empty {
+    opacity: 0.5;
+}
+
+.graph-legend-item.legend-empty .graph-legend-label {
+    font-style: italic;
+}
+
 .graph-legend-item input[type="checkbox"] {
     cursor: pointer;
     accent-color: var(--clr-moss);

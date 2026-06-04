@@ -14,6 +14,16 @@ from pydantic import BaseModel
 
 from metaseed.facade.node import IDENTIFIER_FIELDS, EntityNode
 
+
+def _generate_node_id() -> str:
+    """Generate a unique node ID.
+
+    Returns:
+        8-character hex string ID.
+    """
+    return uuid4().hex[:8]
+
+
 if TYPE_CHECKING:
     from metaseed.facade.helper import EntityHelper
 
@@ -110,7 +120,7 @@ class EntityStore:
             resolved_parent_id = self._resolve_parent(entity_type, data)
 
         node = EntityNode(
-            id=node_id or uuid4().hex[:8],
+            id=node_id or _generate_node_id(),
             entity_type=entity_type,
             instance=instance,
             parent_id=resolved_parent_id,
@@ -340,6 +350,7 @@ class EntityStore:
                 data = {}
 
             data["_type"] = node.entity_type
+            data["_node_id"] = node.id
             if parent_unique_id:
                 data["_parent_unique_id"] = parent_unique_id
 
@@ -400,8 +411,14 @@ class EntityStore:
 
                 # Create node without auto-linking (we'll link in passes below)
                 instance = self._create_instance(entity_type, fields)
+
+                # Use first field (identifier) as node ID
+                id_field = helper.identifier_field
+                entity_id = fields.get(id_field) if id_field else None
+                node_id = str(entity_id) if entity_id else _generate_node_id()
+
                 node = EntityNode(
-                    id=old_node_id or uuid4().hex[:8],
+                    id=node_id,
                     entity_type=entity_type,
                     instance=instance,
                     parent_id=None,

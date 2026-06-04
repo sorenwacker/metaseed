@@ -507,8 +507,8 @@ class TestMCPIntegration:
             assert saved_inv is not None, "Investigation not found in saved data"
             assert saved_study is not None, "Study not found in saved data"
 
-            # Verify parent reference
-            assert saved_study.get("_parent_id") == saved_inv.get("_node_id")
+            # Verify parent reference (uses _parent_unique_id for stable references)
+            assert saved_study.get("_parent_unique_id") == saved_inv.get("unique_id")
 
             # Verify Investigation's studies field was updated
             assert "study-hierarchy-test" in saved_inv.get("studies", [])
@@ -1353,3 +1353,184 @@ class TestEntityLabelFields:
         label = derive_label("Investigation", data, spec=spec)
         assert len(label) == 50
         assert label == long_id[:50]
+
+
+class TestMCPStandaloneMode:
+    """Tests for standalone MCP mode (without context injection).
+
+    These tests verify that state is shared correctly across MCP tool calls
+    when running in standalone mode (no web UI, no context injection).
+
+    These are regression tests for bugs where:
+    - create_dataset ignored the profile parameter
+    - get_dataset_info returned wrong profile
+    - create_entity used default profile instead of loaded profile
+    """
+
+    @pytest.fixture(autouse=True)
+    def reset_standalone_state(self):
+        """Reset standalone state before and after each test."""
+        from metaseed.agent.mcp.server import reset_mcp_state
+
+        reset_mcp_state()
+        yield
+        reset_mcp_state()
+
+    def test_create_dataset_preserves_profile(self):
+        """create_dataset should save with the specified profile, not default.
+
+        Regression test for: create_dataset ignoring profile parameter.
+        """
+        from metaseed.agent.mcp.server import create_server
+
+        server = create_server()
+        tools = server._tool_manager._tools
+
+        create_fn = tools.get("create_dataset")
+        get_info_fn = tools.get("get_dataset_info")
+
+        with patch("metaseed.ui.datasets.auto_save"):
+            # Create dataset with MIAPPE 1.1 (not default 1.2)
+            result = create_fn.fn(
+                name="test-profile-dataset", profile="miappe", version="1.1"
+            )
+            data = json.loads(result)
+
+            assert "error" not in data, f"create_dataset failed: {data}"
+            assert data["status"] == "created"
+            assert data["profile"] == "miappe"
+            assert data["version"] == "1.1"
+
+            # Verify get_dataset_info returns the same profile
+            result = get_info_fn.fn()
+            info = json.loads(result)
+
+            assert (
+                info["profile"] == "miappe"
+            ), f"Expected 'miappe' but got {info['profile']}"
+            assert info["version"] == "1.1", f"Expected '1.1' but got {info['version']}"
+
+    def test_get_dataset_info_returns_dataset_name(self):
+        """get_dataset_info should return dataset_name after create_dataset.
+
+        Regression test for: get_dataset_info returning dataset_name=None.
+        """
+        from metaseed.agent.mcp.server import create_server
+
+        server = create_server()
+        tools = server._tool_manager._tools
+
+        create_fn = tools.get("create_dataset")
+        get_info_fn = tools.get("get_dataset_info")
+
+        with patch("metaseed.ui.datasets.auto_save"):
+            # Create dataset
+            result = create_fn.fn(
+                name="my-test-dataset", profile="miappe", version="1.2"
+            )
+            data = json.loads(result)
+
+            assert "error" not in data, f"create_dataset failed: {data}"
+
+            # Verify get_dataset_info returns the dataset name
+            result = get_info_fn.fn()
+            info = json.loads(result)
+
+            assert info["dataset_name"] == "my-test-dataset", (
+                f"Expected 'my-test-dataset' but got {info['dataset_name']}. "
+                "dataset_name should be set after create_dataset."
+            )
+
+    def test_create_entity_uses_correct_profile(self):
+        """create_entity should use the profile from create_dataset.
+
+        Regression test for: create_entity using default profile instead of specified.
+        """
+        from metaseed.agent.mcp.server import create_server
+
+        server = create_server()
+        tools = server._tool_manager._tools
+
+        create_dataset_fn = tools.get("create_dataset")
+        create_entity_fn = tools.get("create_entity")
+        get_info_fn = tools.get("get_dataset_info")
+
+        with patch("metaseed.ui.datasets.auto_save"):
+            # Create dataset with MIAPPE profile
+            result = create_dataset_fn.fn(
+                name="test-entity-profile", profile="miappe", version="1.2"
+            )
+            data = json.loads(result)
+
+            assert "error" not in data, f"create_dataset failed: {data}"
+
+            # Verify we're using correct profile
+            result = get_info_fn.fn()
+            info = json.loads(result)
+            assert (
+                info["profile"] == "miappe"
+            ), f"Profile should be 'miappe', got {info['profile']}"
+
+            # Create entity - should use MIAPPE schema
+            result = create_entity_fn.fn(
+                entity_type="Investigation",
+                data=json.dumps(
+                    {
+                        "unique_id": "INV-001",
+                        "title": "Test Investigation",
+                    }
+                ),
+            )
+            entity_data = json.loads(result)
+
+            assert entity_data.get("status") == "created", (
+                f"Expected 'created' but got: {entity_data}. "
+                "Entity creation should succeed with MIAPPE profile."
+            )
+
+    def test_state_persists_across_tool_calls(self):
+        """State should be shared across multiple tool calls.
+
+        Verifies the fix for: each tool call creating new state object.
+        """
+        from metaseed.agent.mcp.server import create_server
+
+        server = create_server()
+        tools = server._tool_manager._tools
+
+        create_dataset_fn = tools.get("create_dataset")
+        create_entity_fn = tools.get("create_entity")
+        list_entities_fn = tools.get("list_entities")
+
+        with patch("metaseed.ui.datasets.auto_save"):
+            # Create dataset
+            result = create_dataset_fn.fn(
+                name="test-persistence", profile="miappe", version="1.2"
+            )
+            data = json.loads(result)
+            assert "error" not in data, f"create_dataset failed: {data}"
+
+            # Create first entity
+            result = create_entity_fn.fn(
+                entity_type="Investigation",
+                data='{"unique_id": "INV-1", "title": "First"}',
+            )
+            data = json.loads(result)
+            assert data.get("status") == "created", f"First entity failed: {data}"
+
+            # Create second entity
+            result = create_entity_fn.fn(
+                entity_type="Investigation",
+                data='{"unique_id": "INV-2", "title": "Second"}',
+            )
+            data = json.loads(result)
+            assert data.get("status") == "created", f"Second entity failed: {data}"
+
+            # List entities - should see both
+            result = list_entities_fn.fn()
+            data = json.loads(result)
+
+            assert data["total"] == 2, (
+                f"Expected 2 entities but got {data['total']}. "
+                "State is not being shared across tool calls."
+            )

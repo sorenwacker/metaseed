@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import json
 from contextvars import ContextVar
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from mcp.server.fastmcp import FastMCP
@@ -35,6 +36,44 @@ from metaseed.specs.loader import SpecLoader, SpecLoadError
 
 if TYPE_CHECKING:
     from metaseed.agent.mcp.context import MCPContext
+    from metaseed.ui.dataset_manager import DatasetManagerFactory
+    from metaseed.ui.state import AppState
+
+
+@dataclass
+class _MCPStateHolder:
+    """Singleton holder for MCP standalone state.
+
+    Avoids global variables by encapsulating state in a class instance.
+    """
+
+    state: AppState | None = None
+    factory: DatasetManagerFactory | None = field(default=None)
+
+    def get_or_create_state(self) -> AppState:
+        """Get cached state or create new one."""
+        if self.state is None:
+            from metaseed.ui.state import AppState
+
+            self.state = AppState()
+        return self.state
+
+    def get_or_create_factory(self) -> DatasetManagerFactory:
+        """Get cached factory or create new one."""
+        if self.factory is None:
+            from metaseed.ui.dataset_manager import DatasetManagerFactory
+
+            self.factory = DatasetManagerFactory()
+        return self.factory
+
+    def reset(self) -> None:
+        """Reset all cached state."""
+        self.state = None
+        self.factory = None
+
+
+# Single instance for standalone mode
+_standalone = _MCPStateHolder()
 
 # Context variable for request-scoped MCP context
 _context_var: ContextVar[MCPContext | None] = ContextVar("mcp_context", default=None)
@@ -57,16 +96,22 @@ def get_context() -> MCPContext | None:
 def get_mcp_state():
     """Get the shared MCP state.
 
-    Prefers context if available, otherwise creates a new AppState.
+    Prefers context if available, otherwise uses a cached standalone state.
     This function maintains backward compatibility for standalone MCP server mode.
+
+    The standalone state is cached to ensure all MCP tools share the same state
+    across calls (e.g., create_dataset followed by create_entity).
     """
     ctx = _context_var.get()
     if ctx is not None:
         return ctx.state
 
-    from metaseed.ui.state import AppState
+    return _standalone.get_or_create_state()
 
-    return AppState()
+
+def get_standalone_factory() -> DatasetManagerFactory:
+    """Get the standalone dataset factory."""
+    return _standalone.get_or_create_factory()
 
 
 def set_mcp_state(state):
@@ -86,6 +131,17 @@ def set_mcp_state(state):
         dataset_factory=DatasetManagerFactory(),
     )
     set_context(context)
+    # Also update standalone state for consistency
+    _standalone.state = state
+
+
+def reset_mcp_state():
+    """Reset the MCP state (for tests).
+
+    Clears both the context and standalone state cache.
+    """
+    _standalone.reset()
+    set_context(None)
 
 
 def get_entity_service():
