@@ -30,6 +30,60 @@ validation_rules:
   field: orcid
   pattern: ^[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X]$
 
+- name: doi_format
+  description: DOI must follow standard format
+  applies_to: [Publication]
+  field: doi
+  pattern: ^10\.\d{4,}/.*$
+
+- name: pubmed_format
+  description: PubMed ID must be numeric
+  applies_to: [Publication]
+  field: pubmed_id
+  pattern: ^[0-9]+$
+
+- name: ncbi_taxonomy_format
+  description: NCBI Taxonomy ID must be numeric
+  applies_to: [Sample, Species]
+  field: ncbi_taxonomy_id
+  pattern: ^[0-9]+$
+
+- name: cv_accession_format
+  description: CV accession must follow MS or MOD pattern
+  applies_to: [Instrument, Modification]
+  field: cv_accession
+  pattern: ^(MS|MOD|UNIMOD):[0-9]+$
+
+- name: contacts_required
+  description: Dataset must have submitter and lab head contacts
+  applies_to: [Dataset]
+  field: contacts
+  min_items: 2
+
+- name: species_required
+  description: Dataset must have at least one species
+  applies_to: [Dataset]
+  field: species
+  min_items: 1
+
+- name: instruments_required
+  description: Dataset must have at least one instrument
+  applies_to: [Dataset]
+  field: instruments
+  min_items: 1
+
+- name: files_required
+  description: Dataset must have data files
+  applies_to: [Dataset]
+  field: files
+  min_items: 1
+
+- name: samples_required
+  description: Dataset must have at least one sample
+  applies_to: [Dataset]
+  field: samples
+  min_items: 1
+
 entities:
   Dataset:
     ontology_term: pride:Dataset
@@ -39,6 +93,9 @@ entities:
       type: string
       required: true
       description: A locally unique identifier for the dataset
+      constraints:
+        min_length: 1
+        max_length: 100
 
     - name: accession
       type: string
@@ -49,21 +106,30 @@ entities:
       type: string
       required: true
       description: A concise descriptive title for the dataset
+      constraints:
+        min_length: 10
+        max_length: 500
 
     - name: description
       type: string
       required: true
       description: Detailed description of the dataset and experimental goals
+      constraints:
+        min_length: 50
 
     - name: sample_processing_protocol
       type: string
       required: true
       description: Description of sample processing and preparation
+      constraints:
+        min_length: 50
 
     - name: data_processing_protocol
       type: string
       required: true
       description: Description of data processing and analysis methods
+      constraints:
+        min_length: 50
 
     - name: submission_type
       type: string
@@ -242,16 +308,23 @@ entities:
       type: float
       required: false
       description: Mass delta in Daltons
+      constraints:
+        minimum: -500
+        maximum: 500
 
     - name: residues
       type: string
       required: false
       description: Target amino acid residues
+      constraints:
+        pattern: ^[ACDEFGHIKLMNPQRSTVWY]+$
 
     - name: position
       type: string
       required: false
       description: Position specificity (anywhere, N-term, C-term)
+      constraints:
+        enum: [Anywhere, Any N-term, Any C-term, Protein N-term, Protein C-term]
 
   Contact:
     ontology_term: pride:Contact
@@ -333,11 +406,15 @@ entities:
       type: string
       required: false
       description: MD5 checksum
+      constraints:
+        pattern: ^[a-fA-F0-9]{32}$
 
     - name: file_size
       type: integer
       required: false
       description: File size in bytes
+      constraints:
+        minimum: 1
 
     - name: sample_refs
       type: list
