@@ -115,21 +115,21 @@ function validateDataset() {
             html += '</div>';
 
             if (data.invalid > 0) {
-                html += '<div class="validation-errors">';
+                html += '<div class="validation-errors" data-testid="validation-errors">';
                 data.results.forEach(function(r) {
                     if (!r.valid) {
                         html += '<div class="validation-item invalid">';
                         html += '<strong>' + r.entity_type + ': ' + r.label + '</strong>';
                         html += '<ul>';
                         r.errors.forEach(function(e) {
-                            html += '<li><code>' + e.field + '</code>: ' + e.message + '</li>';
+                            html += '<li data-testid="validation-error-' + e.field + '"><code>' + e.field + '</code>: ' + e.message + '</li>';
                         });
                         html += '</ul></div>';
                     }
                 });
                 html += '</div>';
             } else {
-                html += '<div class="validation-success">All entities are valid!</div>';
+                html += '<div class="validation-success" data-testid="validation-success">All entities are valid!</div>';
             }
 
             results.innerHTML = html;

@@ -350,7 +350,6 @@ class EntityStore:
                 data = {}
 
             data["_type"] = node.entity_type
-            data["_node_id"] = node.id
             if parent_unique_id:
                 data["_parent_unique_id"] = parent_unique_id
 
