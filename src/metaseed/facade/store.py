@@ -183,6 +183,26 @@ class EntityStore:
 
         return None
 
+    def _get_identifier_fields(self: Self, entity_type: str) -> list[str]:
+        """Get all identifier fields for an entity type.
+
+        Combines common identifier fields with entity-specific identifier field.
+
+        Args:
+            entity_type: Type of entity.
+
+        Returns:
+            List of identifier field names.
+        """
+        fields = list(IDENTIFIER_FIELDS)
+        try:
+            helper = self._get_helper(entity_type)
+            if helper.identifier_field and helper.identifier_field not in fields:
+                fields.append(helper.identifier_field)
+        except (KeyError, AttributeError):
+            pass
+        return fields
+
     def get_entity(self: Self, node_id: str) -> EntityNode | None:
         """Get an entity node by its ID.
 
@@ -228,18 +248,7 @@ class EntityStore:
         if not node:
             return None
 
-        # Get helper for entity-specific identifier field
-        entity_id_field = None
-        try:
-            helper = self._get_helper(node.entity_type)
-            entity_id_field = helper.identifier_field
-        except (KeyError, AttributeError):
-            pass
-
-        # Build list of identifier fields to check
-        id_fields_to_check = list(IDENTIFIER_FIELDS)
-        if entity_id_field and entity_id_field not in id_fields_to_check:
-            id_fields_to_check.append(entity_id_field)
+        id_fields_to_check = self._get_identifier_fields(node.entity_type)
 
         # Remove old index entries
         old_data = (
@@ -281,20 +290,7 @@ class EntityStore:
             # Remove from index
             if n.instance and hasattr(n.instance, "model_dump"):
                 data = n.instance.model_dump()
-
-                # Build list of identifier fields to check
-                id_fields_to_check = list(IDENTIFIER_FIELDS)
-                try:
-                    helper = self._get_helper(n.entity_type)
-                    if (
-                        helper.identifier_field
-                        and helper.identifier_field not in id_fields_to_check
-                    ):
-                        id_fields_to_check.append(helper.identifier_field)
-                except (KeyError, AttributeError):
-                    pass
-
-                for id_field in id_fields_to_check:
+                for id_field in self._get_identifier_fields(n.entity_type):
                     id_value = data.get(id_field)
                     if id_value and str(id_value) in self._index:
                         del self._index[str(id_value)]
@@ -381,79 +377,109 @@ class EntityStore:
         """
         self.clear()
 
-        id_to_node: dict[str, EntityNode] = {}  # unique_id/alias -> node
-        old_id_to_node: dict[str, EntityNode] = {}  # old _node_id -> node
+        id_to_node: dict[str, EntityNode] = {}
+        old_id_to_node: dict[str, EntityNode] = {}
         nodes_with_parent: list[tuple[EntityNode, str, bool]] = []
 
+        # Phase 1: Create all nodes
         for entity_data in entities:
-            entity_type = entity_data.get("_type")
-            if not entity_type:
-                continue
+            result = self._create_node_from_dict(entity_data)
+            if result:
+                node, id_to_node_entry, old_id_entry, parent_entry = result
+                if id_to_node_entry:
+                    id_to_node[id_to_node_entry] = node
+                if old_id_entry:
+                    old_id_to_node[old_id_entry] = node
+                if parent_entry:
+                    nodes_with_parent.append(parent_entry)
 
-            try:
-                helper = self._get_helper(entity_type)
-            except (KeyError, AttributeError):
-                continue
+        # Phase 2: Link nodes to parents
+        self._link_by_stored_refs(nodes_with_parent, id_to_node, old_id_to_node)
+        self._link_by_nested_arrays(id_to_node)
+        self._link_by_reference_fields(id_to_node)
 
-            try:
-                parent_unique_id = entity_data.get("_parent_unique_id")
-                old_parent_id = entity_data.get("_parent_id")
-                old_node_id = entity_data.get("_node_id")
+        return len(self._instances)
 
-                # Filter to valid fields only (lenient loading)
-                valid_fields = set(helper.all_fields)
-                fields = {
-                    k: v
-                    for k, v in entity_data.items()
-                    if not k.startswith("_") and k in valid_fields
-                }
+    def _create_node_from_dict(
+        self: Self, entity_data: dict
+    ) -> tuple[EntityNode, str | None, str | None, tuple | None] | None:
+        """Create a single node from serialized data.
 
-                # Create node without auto-linking (we'll link in passes below)
-                instance = self._create_instance(entity_type, fields)
+        Returns:
+            Tuple of (node, id_for_index, old_node_id, parent_tuple) or None.
+        """
+        entity_type = entity_data.get("_type")
+        if not entity_type:
+            return None
 
-                # Use first field (identifier) as node ID
-                id_field = helper.identifier_field
-                entity_id = fields.get(id_field) if id_field else None
-                node_id = str(entity_id) if entity_id else _generate_node_id()
+        try:
+            helper = self._get_helper(entity_type)
+        except (KeyError, AttributeError):
+            return None
 
-                node = EntityNode(
-                    id=node_id,
-                    entity_type=entity_type,
-                    instance=instance,
-                    parent_id=None,
-                )
-                self._instances[node.id] = node
+        try:
+            parent_unique_id = entity_data.get("_parent_unique_id")
+            old_parent_id = entity_data.get("_parent_id")
+            old_node_id = entity_data.get("_node_id")
 
-                # Index by first field (the identifier per spec convention)
-                id_field = helper.identifier_field
-                entity_id = fields.get(id_field) if id_field else None
-                if entity_id:
-                    id_to_node[str(entity_id)] = node
-                    self._index[str(entity_id)] = node.id
+            # Filter to valid fields only (lenient loading)
+            valid_fields = set(helper.all_fields)
+            fields = {
+                k: v
+                for k, v in entity_data.items()
+                if not k.startswith("_") and k in valid_fields
+            }
 
-                if old_node_id:
-                    old_id_to_node[old_node_id] = node
+            instance = self._create_instance(entity_type, fields)
 
-                if parent_unique_id:
-                    nodes_with_parent.append((node, parent_unique_id, True))
-                elif old_parent_id:
-                    nodes_with_parent.append((node, old_parent_id, False))
+            # Use identifier as node ID
+            id_field = helper.identifier_field
+            entity_id = fields.get(id_field) if id_field else None
+            node_id = str(entity_id) if entity_id else _generate_node_id()
 
-            except Exception:  # noqa: S112
-                continue
+            node = EntityNode(
+                id=node_id,
+                entity_type=entity_type,
+                instance=instance,
+                parent_id=None,
+            )
+            self._instances[node.id] = node
 
-        # Link nodes to parents by stored references
+            # Build return values
+            id_for_index = str(entity_id) if entity_id else None
+            if id_for_index:
+                self._index[id_for_index] = node.id
+
+            parent_entry = None
+            if parent_unique_id:
+                parent_entry = (node, parent_unique_id, True)
+            elif old_parent_id:
+                parent_entry = (node, old_parent_id, False)
+
+            return (node, id_for_index, old_node_id, parent_entry)
+
+        except Exception:
+            return None
+
+    def _link_by_stored_refs(
+        self: Self,
+        nodes_with_parent: list[tuple[EntityNode, str, bool]],
+        id_to_node: dict[str, EntityNode],
+        old_id_to_node: dict[str, EntityNode],
+    ) -> None:
+        """Link nodes to parents by stored _parent_unique_id or _parent_id."""
         for node, parent_ref, is_unique_id in nodes_with_parent:
-            if is_unique_id:
-                parent_node = id_to_node.get(parent_ref)
-            else:
-                parent_node = old_id_to_node.get(parent_ref)
-
+            parent_node = (
+                id_to_node.get(parent_ref)
+                if is_unique_id
+                else old_id_to_node.get(parent_ref)
+            )
             if parent_node:
                 node.parent_id = parent_node.id
                 parent_node.children.append(node)
 
-        # Link children via parent's nested arrays
+    def _link_by_nested_arrays(self: Self, id_to_node: dict[str, EntityNode]) -> None:
+        """Link children via parent's nested array fields."""
         for node in list(self._instances.values()):
             if node.parent_id:
                 continue
@@ -476,7 +502,10 @@ class EntityStore:
                         child_node.parent_id = node.id
                         node.children.append(child_node)
 
-        # Link via reference fields
+    def _link_by_reference_fields(
+        self: Self, id_to_node: dict[str, EntityNode]
+    ) -> None:
+        """Link orphan nodes to parents via reference fields."""
         for node in list(self._instances.values()):
             if node.parent_id:
                 continue
@@ -498,8 +527,6 @@ class EntityStore:
                     node.parent_id = parent_node.id
                     parent_node.children.append(node)
                     break
-
-        return len(self._instances)
 
     def clear(self: Self) -> None:
         """Clear all stored entity instances."""

@@ -137,14 +137,7 @@ class MemoryEntityRepository(EntityRepository):
 
         auto_save(self._state)
 
-        validated_data = instance.model_dump(mode="json", exclude_none=True)
-        return EntityData(
-            id=node.id,
-            entity_type=entity_type,
-            label=node.label,
-            data=validated_data,
-            parent_id=parent_id,
-        )
+        return self._node_to_entity(node, include_children=False)
 
     def update_entity(self: Self, entity_id: str, data: dict[str, Any]) -> EntityData:
         """Update entity in AppState."""
@@ -173,14 +166,7 @@ class MemoryEntityRepository(EntityRepository):
 
         auto_save(self._state)
 
-        validated_data = instance.model_dump(mode="json", exclude_none=True)
-        return EntityData(
-            id=node.id,
-            entity_type=node.entity_type,
-            label=node.label,
-            data=validated_data,
-            parent_id=node.parent_id,
-        )
+        return self._node_to_entity(node, include_children=False)
 
     def delete_entity(self: Self, entity_id: str) -> bool:
         """Delete entity from AppState."""
@@ -209,8 +195,18 @@ class MemoryEntityRepository(EntityRepository):
         self._state.version = version
         self._state.facade = None
 
-    def _node_to_entity(self: Self, node: TreeNode) -> EntityData:
-        """Convert TreeNode to EntityData."""
+    def _node_to_entity(
+        self: Self, node: TreeNode, include_children: bool = True
+    ) -> EntityData:
+        """Convert TreeNode to EntityData.
+
+        Args:
+            node: TreeNode to convert.
+            include_children: Whether to recursively include children.
+
+        Returns:
+            EntityData representation of the node.
+        """
         data = {}
         if node.instance and hasattr(node.instance, "model_dump"):
             data = node.instance.model_dump(mode="json", exclude_none=True)
@@ -221,7 +217,9 @@ class MemoryEntityRepository(EntityRepository):
             label=node.label,
             data=data,
             parent_id=node.parent_id,
-            children=[self._node_to_entity(c) for c in node.children],
+            children=[self._node_to_entity(c) for c in node.children]
+            if include_children
+            else [],
         )
 
     def _find_parent_from_references(
