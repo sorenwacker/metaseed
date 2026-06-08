@@ -345,7 +345,7 @@ class EntityStore:
             node: EntityNode, parent_unique_id: str | None = None
         ) -> None:
             if node.instance and hasattr(node.instance, "model_dump"):
-                data = node.instance.model_dump(exclude_none=True)
+                data = node.instance.model_dump(mode="json", exclude_none=True)
             else:
                 data = {}
 

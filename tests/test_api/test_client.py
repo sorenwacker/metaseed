@@ -1,5 +1,7 @@
 """Tests for MetaseedClient public API."""
 
+import json
+
 import pytest
 
 from metaseed import MetaseedClient
@@ -573,6 +575,70 @@ class TestSerializationFormats:
 
         new_tree = new_client.get_tree()
         assert len(new_tree) == len(original_tree)
+
+    def test_serialize_flat_is_json_serializable(self) -> None:
+        """Flat format output is JSON-serializable (dates, URLs are strings)."""
+        client = MetaseedClient("isa", "1.0")
+        client.create_entity(
+            "Investigation",
+            {
+                "identifier": "test-inv",
+                "title": "Test",
+                "submission_date": "2024-01-15",
+            },
+        )
+
+        data = client.serialize(format="flat")
+        # Should not raise TypeError for date objects
+        result = json.dumps(data)
+        assert "2024-01-15" in result
+
+    def test_serialize_tree_is_json_serializable(self) -> None:
+        """Tree format output is JSON-serializable (dates, URLs are strings)."""
+        client = MetaseedClient("isa", "1.0")
+        client.create_entity(
+            "Investigation",
+            {
+                "identifier": "test-inv",
+                "title": "Test",
+                "submission_date": "2024-01-15",
+            },
+        )
+
+        data = client.serialize(format="tree")
+        # Should not raise TypeError for date objects
+        result = json.dumps(data)
+        assert "2024-01-15" in result
+
+    def test_serialize_with_uri_is_json_serializable(self) -> None:
+        """Serialization handles URI/URL types correctly."""
+        client = MetaseedClient("isa", "1.0")
+        inv = client.create_entity(
+            "Investigation",
+            {"identifier": "test-inv", "title": "Test"},
+        )
+        study = client.create_entity(
+            "Study",
+            {
+                "identifier": "test-study",
+                "title": "Test Study",
+                "investigation_id": "test-inv",
+            },
+            parent_id=inv.id,
+        )
+        client.create_entity(
+            "Protocol",
+            {
+                "name": "Test Protocol",
+                "study_id": "test-study",
+                "uri": "http://example.org/protocol",
+            },
+            parent_id=study.id,
+        )
+
+        data = client.serialize(format="flat")
+        result = json.dumps(data)
+        assert "http://example.org/protocol" in result
 
 
 class TestEntityLabel:

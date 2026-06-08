@@ -43,7 +43,7 @@ class MemoryEntityRepository(EntityRepository):
             if entity_type is None or node.entity_type == entity_type:
                 data = {}
                 if node.instance and hasattr(node.instance, "model_dump"):
-                    data = node.instance.model_dump(exclude_none=True)
+                    data = node.instance.model_dump(mode="json", exclude_none=True)
                 result.append(
                     EntityData(
                         id=node.id,
@@ -69,7 +69,7 @@ class MemoryEntityRepository(EntityRepository):
 
         data = {}
         if node.instance and hasattr(node.instance, "model_dump"):
-            data = node.instance.model_dump(exclude_none=True)
+            data = node.instance.model_dump(mode="json", exclude_none=True)
 
         return EntityData(
             id=node.id,
@@ -137,7 +137,7 @@ class MemoryEntityRepository(EntityRepository):
 
         auto_save(self._state)
 
-        validated_data = instance.model_dump(exclude_none=True)
+        validated_data = instance.model_dump(mode="json", exclude_none=True)
         return EntityData(
             id=node.id,
             entity_type=entity_type,
@@ -162,7 +162,7 @@ class MemoryEntityRepository(EntityRepository):
         # Merge data
         existing = {}
         if node.instance and hasattr(node.instance, "model_dump"):
-            existing = node.instance.model_dump(exclude_none=True)
+            existing = node.instance.model_dump(mode="json", exclude_none=True)
 
         # Normalize reference fields in update data (convert embedded objects to IDs)
         data = normalize_reference_fields(data, helper, facade)
@@ -173,7 +173,7 @@ class MemoryEntityRepository(EntityRepository):
 
         auto_save(self._state)
 
-        validated_data = instance.model_dump(exclude_none=True)
+        validated_data = instance.model_dump(mode="json", exclude_none=True)
         return EntityData(
             id=node.id,
             entity_type=node.entity_type,
@@ -213,7 +213,7 @@ class MemoryEntityRepository(EntityRepository):
         """Convert TreeNode to EntityData."""
         data = {}
         if node.instance and hasattr(node.instance, "model_dump"):
-            data = node.instance.model_dump(exclude_none=True)
+            data = node.instance.model_dump(mode="json", exclude_none=True)
 
         return EntityData(
             id=node.id,
@@ -259,11 +259,13 @@ class MemoryEntityRepository(EntityRepository):
         """Update parent's reference field to include child."""
         parent_data = {}
         if parent_node.instance and hasattr(parent_node.instance, "model_dump"):
-            parent_data = parent_node.instance.model_dump(exclude_none=True)
+            parent_data = parent_node.instance.model_dump(
+                mode="json", exclude_none=True
+            )
 
         child_data = {}
         if child_node.instance and hasattr(child_node.instance, "model_dump"):
-            child_data = child_node.instance.model_dump(exclude_none=True)
+            child_data = child_node.instance.model_dump(mode="json", exclude_none=True)
 
         updated_field = update_parent_reference(
             facade,

@@ -193,7 +193,7 @@ def serialize_tree_node(
         return entities
 
     if hasattr(node.instance, "model_dump"):
-        data = node.instance.model_dump(exclude_none=True)
+        data = node.instance.model_dump(mode="json", exclude_none=True)
     else:
         return entities
 

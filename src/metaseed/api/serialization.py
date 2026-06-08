@@ -155,6 +155,6 @@ class SerializationMixin:
             Data dictionary or empty dict if instance is None/invalid.
         """
         if instance and hasattr(instance, "model_dump"):
-            result: dict[str, Any] = instance.model_dump(exclude_none=True)
+            result: dict[str, Any] = instance.model_dump(mode="json", exclude_none=True)
             return result
         return {}
