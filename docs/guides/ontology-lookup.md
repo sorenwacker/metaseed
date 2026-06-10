@@ -9,6 +9,7 @@ Fields with `type: ontology_term` automatically get:
 - **Autocomplete**: Type-ahead suggestions as you type
 - **Modal search**: Full search interface via Tab key or search button
 - **OLS4 integration**: Real-time queries to the EBI Ontology Lookup Service
+- **Smart display**: Selected terms show as "label (ID)" for readability
 
 ## Field Configuration
 
@@ -23,26 +24,37 @@ fields:
 
 This creates an input that searches across all ontologies in OLS4.
 
-### Scoped to Specific Ontology
+### Scoped to Specific Ontologies
 
-Use `ontology_id` to restrict searches to a specific ontology:
+Use `ontologies` to restrict searches to specific ontology IDs:
 
 ```yaml
 fields:
+  # Single ontology
   - name: organism
     type: ontology_term
-    ontology_id: ncbitaxon
+    ontologies: ["ncbitaxon"]
     description: Organism from NCBI Taxonomy
+
+  # Multiple ontologies
+  - name: trait
+    type: ontology_term
+    ontologies: ["pato", "to"]
+    description: Trait from PATO or Trait Ontology
 ```
 
 Common ontology IDs:
-- `ncbitaxon` - NCBI Taxonomy (organisms)
-- `pato` - Phenotype and Trait Ontology
-- `envo` - Environment Ontology
-- `go` - Gene Ontology
-- `obi` - Ontology for Biomedical Investigations
-- `po` - Plant Ontology
-- `uo` - Units of Measurement Ontology
+
+| ID | Ontology |
+|----|----------|
+| `ncbitaxon` | NCBI Taxonomy (organisms) |
+| `pato` | Phenotype and Trait Ontology |
+| `envo` | Environment Ontology |
+| `go` | Gene Ontology |
+| `obi` | Ontology for Biomedical Investigations |
+| `po` | Plant Ontology |
+| `chebi` | Chemical Entities of Biological Interest |
+| `uo` | Units of Measurement Ontology |
 
 ## User Interface
 
@@ -61,6 +73,15 @@ Each suggestion shows:
 - Label (e.g., "quality")
 - Source ontology
 - Description (truncated)
+
+### Display Format
+
+After selection, terms display as **"label (ID)"** for readability:
+
+- `centimeter (UO:0000015)` instead of `UO:0000015`
+- `temperature (PATO:0000146)` instead of `PATO:0000146`
+
+The underlying data stores only the ID for interoperability.
 
 ### Modal Search
 
@@ -85,7 +106,7 @@ GET /api/ontology/search?q=temperature&ontology=pato
 
 **Parameters:**
 - `q` (required): Search query
-- `ontology` (optional): Ontology ID to filter results
+- `ontology` (optional): Ontology ID(s) to filter results (comma-separated)
 
 **Response:**
 ```json
@@ -95,7 +116,7 @@ GET /api/ontology/search?q=temperature&ontology=pato
       "value": "PATO:0000146",
       "label": "temperature",
       "description": "A physical quality...",
-      "ontology": "pato"
+      "ontology": "PATO"
     }
   ]
 }
@@ -106,7 +127,7 @@ GET /api/ontology/search?q=temperature&ontology=pato
 Define available ontologies in your profile's `ontologies` section:
 
 ```yaml
-spec_version: "0.2"
+spec_version: "0.4"
 name: my-profile
 version: "1.0"
 
@@ -125,10 +146,10 @@ entities:
     fields:
       - name: quality
         type: ontology_term
-        ontology_id: pato
+        ontologies: ["pato"]
       - name: environment
         type: ontology_term
-        ontology_id: envo
+        ontologies: ["envo"]
 ```
 
 The `ols_id` field maps to the OLS4 ontology identifier used for API queries.
@@ -146,7 +167,7 @@ For developers extending the UI:
 
 Data attributes:
 - `data-lookup-type="ontology"` - Identifies ontology lookup
-- `data-ontology-id="pato"` - Scopes to specific ontology
+- `data-ontologies="pato,envo"` - Scopes to specific ontologies (comma-separated)
 
 ## Keyboard Shortcuts
 

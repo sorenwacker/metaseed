@@ -207,15 +207,39 @@ entities:
 5. For `list` or `entity` types, set **Items/Target** to the entity name
 6. Click **Save Field**
 
+### Type-Specific Settings
+
+For certain field types, additional settings appear:
+
+| Field Type | Settings |
+|------------|----------|
+| `list`, `entity` | Items/Target - the entity to embed |
+| `ontology_term` | Ontologies - OLS IDs to search (e.g., `po, chebi`) |
+
+### Constraints
+
+The Constraints section shows options relevant to the selected field type:
+
+**String/URI fields:**
+- Pattern (with presets for Email, URL, ORCID, DOI)
+- Min/Max Length
+- Allowed Values (enum)
+
+**Numeric fields (integer/float):**
+- Minimum/Maximum value
+
+**List fields:**
+- Min/Max Items
+
 ### Advanced Field Options
 
 Expand the **Advanced** section to access:
 
-- **Ontology**: Link to ontology term (e.g., `MIAPPE:DM-1`)
+- **Codename**: Alternative name for code generation (camelCase)
+- **Ontology Term**: Semantic reference (e.g., `MIAPPE:DM-1`)
 - **Unique Within**: Enforce uniqueness (`parent` or `global`)
 - **Parent Ref**: Auto-fill from parent (`Entity.field`)
 - **Reference**: Foreign key validation (`Entity.field`)
-- **Constraints**: Pattern, min/max values, allowed values
 
 ## Validation Rules
 
