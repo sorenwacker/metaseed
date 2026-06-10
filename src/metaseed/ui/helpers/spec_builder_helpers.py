@@ -60,8 +60,12 @@ def clone_spec(profile: str, version: str) -> ProfileSpec:
 
     # Deep copy to ensure independence from cached version
     cloned = copy.deepcopy(spec)
-    # Mark as development version based on original
-    cloned.version = f"{spec.version}-dev"
+    # Mark as development version with short hash for uniqueness
+    import secrets
+
+    base_version = spec.version.split("-dev")[0]  # Strip existing -dev suffix
+    short_hash = secrets.token_hex(3)  # 6 char hex
+    cloned.version = f"{base_version}-dev-{short_hash}"
     return cloned
 
 
