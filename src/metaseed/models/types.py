@@ -4,42 +4,34 @@ This module defines custom Pydantic types used in generated models.
 """
 
 import re
-from typing import Annotated
-
-from pydantic import AfterValidator
 
 # Pattern for ontology terms: prefix:id, prefix_id, or URL
 # Prefix can contain letters, digits, and underscores (e.g., CO_321, GO, PATO)
-_ONTOLOGY_TERM_PATTERN = re.compile(
+ONTOLOGY_TERM_PATTERN = re.compile(
     r"^([A-Za-z][A-Za-z0-9_]*[:_][A-Za-z0-9_]+|https?://.+)$"
 )
 
 
-def _validate_ontology_term(value: str) -> str:
-    """Validate ontology term format.
+def is_valid_ontology_term(value: str) -> bool:
+    """Check if a string is a valid ontology term format.
 
     Args:
         value: The ontology term string.
 
     Returns:
-        The validated string.
-
-    Raises:
-        ValueError: If the term doesn't match expected patterns.
+        True if valid format, False otherwise.
     """
     if not value:
-        raise ValueError("Ontology term cannot be empty")
-    if not _ONTOLOGY_TERM_PATTERN.match(value):
-        raise ValueError(
-            f"Invalid ontology term format: {value}. Expected format: PREFIX:ID, PREFIX_ID, or URL"
-        )
-    return value
+        return False
+    return bool(ONTOLOGY_TERM_PATTERN.match(value))
 
 
-OntologyTerm = Annotated[str, AfterValidator(_validate_ontology_term)]
-"""Custom type for ontology term references.
+# OntologyTerm is just a string - validation is done separately in UI
+# This allows saving drafts with incomplete/invalid ontology terms
+OntologyTerm = str
+"""Type alias for ontology term references.
 
-Accepts formats:
+Expected formats (validated separately, not on save):
 - PREFIX:ID (e.g., GO:0001234)
 - PREFIX_ID (e.g., PPEO_0000001)
 - URL (e.g., http://purl.org/ppeo/PPEO.owl#investigation)

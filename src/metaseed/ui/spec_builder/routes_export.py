@@ -10,7 +10,13 @@ from typing import TYPE_CHECKING
 
 import yaml
 from fastapi import APIRouter, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse, Response, StreamingResponse
+from fastapi.responses import (
+    HTMLResponse,
+    JSONResponse,
+    RedirectResponse,
+    Response,
+    StreamingResponse,
+)
 from fastapi.templating import Jinja2Templates
 
 from metaseed.specs.schema import ProfileSpec
@@ -259,9 +265,9 @@ def register_export_routes(
             builder.mark_changed()
 
             # Redirect to spec builder
-            return Response(
+            return RedirectResponse(
+                url=f"{router.prefix or '/spec-builder'}",
                 status_code=303,
-                headers={"HX-Redirect": f"{router.prefix or '/spec-builder'}"},
             )
 
         except yaml.YAMLError as e:
