@@ -481,14 +481,18 @@ function openOntologyModal(inputId, ontologies) {
     resultsDiv.innerHTML = '<div class="lookup-modal-empty">Start typing to search ontology terms</div>';
 
     // Parse existing values (stored as IDs only, labels unknown)
+    // In single-select mode, only load first value
+    var isMulti = input.dataset.multi === 'true';
     var existingValue = input.value.trim();
     if (existingValue) {
-        existingValue.split(',').forEach(function(v) {
-            var trimmed = v.trim();
+        var values = existingValue.split(',');
+        var maxValues = isMulti ? values.length : 1;
+        for (var i = 0; i < Math.min(values.length, maxValues); i++) {
+            var trimmed = values[i].trim();
             if (trimmed && trimmed !== '[]') {
                 ontologyModalSelectedValues.set(trimmed, null); // label unknown for existing values
             }
-        });
+        }
     }
 
     modal.classList.remove('hidden');
@@ -613,8 +617,12 @@ function addOntologySelectedValue(value, label) {
     // Check if multi-select is allowed (default: single select)
     var isMulti = ontologyModalInput && ontologyModalInput.dataset.multi === 'true';
     if (!isMulti) {
-        // Single select: clear existing values
+        // Single select: clear existing values and auto-close modal
         ontologyModalSelectedValues = new Map();
+        ontologyModalSelectedValues.set(value, label);
+        updateOntologyInput();
+        closeOntologyModal();
+        return;
     }
 
     ontologyModalSelectedValues.set(value, label);
