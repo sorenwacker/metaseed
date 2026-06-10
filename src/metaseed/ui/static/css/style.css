@@ -2026,48 +2026,21 @@ body::before {
    ONTOLOGY LOOKUP STYLES
    ============================================ */
 
-/* Ontology autocomplete dropdown */
-.ontology-autocomplete {
-    min-width: 300px;
-    max-width: 450px;
-}
-
-.ontology-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--space-xs);
-    padding: var(--space-sm) var(--space-md);
-}
-
-.ontology-item-main {
-    display: flex;
-    align-items: baseline;
-    gap: var(--space-sm);
-    width: 100%;
-}
-
+/* Ontology term display (used in modal) */
 .ontology-term-id {
     font-family: var(--font-mono);
     font-size: 0.8rem;
     font-weight: 600;
     color: var(--clr-forest);
     background: var(--clr-success-bg);
-    padding: 1px 6px;
+    padding: 2px 8px;
     border-radius: var(--radius-sm);
 }
 
 .ontology-term-label {
     font-weight: 500;
     color: var(--clr-ink);
-    font-size: 0.875rem;
-}
-
-.ontology-item-meta {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-    flex-wrap: wrap;
-    width: 100%;
+    font-size: 0.9rem;
 }
 
 .ontology-source {
@@ -2088,11 +2061,38 @@ body::before {
 
 /* Ontology modal specific styles */
 .ontology-modal-content {
-    max-width: 600px;
+    max-width: 640px;
+    width: 90vw;
+}
+
+/* Ontology modal search input - prominent styling */
+#ontology-modal-search {
+    display: block;
+    width: 100%;
+    max-width: none;
+    box-sizing: border-box;
+    padding: var(--space-md) var(--space-lg);
+    font-size: 1.1rem;
+    border: 2px solid var(--clr-parchment);
+    border-radius: var(--radius-md);
+    background: var(--clr-paper);
+    transition: all var(--transition-fast);
+}
+
+#ontology-modal-search:focus {
+    outline: none;
+    border-color: var(--clr-forest);
+    background: white;
+    box-shadow: 0 0 0 3px rgba(26, 58, 47, 0.1);
+}
+
+#ontology-modal-search::placeholder {
+    color: var(--clr-ink-light);
 }
 
 .ontology-results {
     max-height: 350px;
+    margin-top: var(--space-md);
 }
 
 .ontology-modal-item {
@@ -2100,6 +2100,11 @@ body::before {
     align-items: stretch;
     padding: var(--space-md);
     gap: var(--space-sm);
+    border-radius: var(--radius-sm);
+}
+
+.ontology-modal-item:hover {
+    background: var(--clr-success-bg);
 }
 
 .ontology-modal-item-info {
@@ -5269,13 +5274,6 @@ details.sidebar-section summary:hover {
     color: white;
 }
 
-#dataset-name {
-    max-width: 120px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
 /* Dataset name input on profile select */
 .dataset-name-input {
     margin-bottom: var(--space-lg);
@@ -5284,7 +5282,8 @@ details.sidebar-section summary:hover {
 }
 
 .dataset-name-input .form-input {
-    max-width: 300px;
+    max-width: none;
+    width: 100%;
 }
 
 .dataset-name-input .form-hint {
