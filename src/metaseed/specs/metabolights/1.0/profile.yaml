@@ -277,9 +277,11 @@ entities:
       description: Source organism name
 
     - name: organism_term
-      type: string
+      type: ontology_term
       required: false
       description: Organism ontology accession
+      ontologies:
+        - ncbitaxon
 
     - name: organism_part
       type: string

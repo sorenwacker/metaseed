@@ -1029,9 +1029,10 @@ entities:
       ontology_term: PPEO:hasTrait
     - name: trait_accession_number
       codename: traitDbId
-      type: string
+      type: ontology_term
+      ontologies: ["to", "co_321"]
       required: false
-      description: Trait ontology accession.
+      description: Trait ontology accession (Trait Ontology or Crop Ontology).
       ontology_term: PPEO:hasExternalIdentifier
     - name: trait_description
       codename: traitDescription
@@ -1047,9 +1048,10 @@ entities:
       ontology_term: PPEO:hasEntity
     - name: trait_entity_accession_number
       codename: traitEntityDbId
-      type: string
+      type: ontology_term
+      ontologies: ["po"]
       required: false
-      description: Ontology accession for the trait entity (e.g., PO term).
+      description: Ontology accession for the trait entity (Plant Ontology).
       ontology_term: PPEO:hasExternalIdentifier
     - name: trait_characteristic
       codename: traitAttribute
@@ -1059,9 +1061,10 @@ entities:
       ontology_term: PPEO:hasAttribute
     - name: trait_characteristic_accession_number
       codename: traitAttributeDbId
-      type: string
+      type: ontology_term
+      ontologies: ["pato"]
       required: false
-      description: Ontology accession for the characteristic (e.g., PATO term).
+      description: Ontology accession for the characteristic (PATO).
       ontology_term: PPEO:hasExternalIdentifier
     - name: method
       codename: methodName
@@ -1095,9 +1098,10 @@ entities:
       ontology_term: PPEO:hasScale
     - name: scale_accession_number
       codename: scaleDbId
-      type: string
+      type: ontology_term
+      ontologies: ["uo"]
       required: false
-      description: Scale ontology accession.
+      description: Scale ontology accession (Unit Ontology).
       ontology_term: PPEO:hasExternalIdentifier
     - name: scale_description
       codename: scaleDescription

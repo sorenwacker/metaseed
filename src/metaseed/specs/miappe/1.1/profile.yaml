@@ -867,10 +867,13 @@ entities:
       description: The trait being measured.
       ontology_term: PPEO:hasTrait
     - name: trait_accession_number
-      type: string
+      type: ontology_term
       required: false
       description: Trait ontology accession.
       ontology_term: PPEO:hasExternalIdentifier
+      ontologies:
+        - to
+        - co_321
     - name: trait_description
       type: string
       required: false
@@ -882,10 +885,12 @@ entities:
       description: Measurement method.
       ontology_term: PPEO:hasMethod
     - name: method_accession_number
-      type: string
+      type: ontology_term
       required: false
       description: Method ontology accession.
       ontology_term: PPEO:hasExternalIdentifier
+      ontologies:
+        - co_321
     - name: method_description
       type: string
       required: false
@@ -897,10 +902,12 @@ entities:
       description: Scale or unit of measurement.
       ontology_term: PPEO:hasScale
     - name: scale_accession_number
-      type: string
+      type: ontology_term
       required: false
       description: Scale ontology accession.
       ontology_term: PPEO:hasExternalIdentifier
+      ontologies:
+        - uo
     - name: scale_description
       type: string
       required: false
@@ -1061,10 +1068,12 @@ entities:
       ontology_term: PPEO:hasObservedSubject
       reference: ObservationUnit.unique_id
     - name: event_accession_number
-      type: string
+      type: ontology_term
       required: false
       description: Event type ontology accession.
       ontology_term: PPEO:hasExternalIdentifier
+      ontologies:
+        - co_715
   Environment:
     ontology_term: PPEO:environment
     description: Environmental conditions recorded during a study.
@@ -1102,10 +1111,12 @@ entities:
         min_length: 1
         max_length: 255
     - name: parameter_accession_number
-      type: string
+      type: ontology_term
       required: false
       description: Parameter ontology accession.
       ontology_term: PPEO:hasExternalIdentifier
+      ontologies:
+        - envo
     - name: value
       type: string
       required: false

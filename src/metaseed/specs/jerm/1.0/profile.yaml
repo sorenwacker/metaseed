@@ -1175,7 +1175,7 @@ entities:
       required: false
       description: URI of the ontology term
     - name: term_accession
-      type: string
+      type: ontology_term
       required: false
       description: Accession number of the term
     - name: ontology_name

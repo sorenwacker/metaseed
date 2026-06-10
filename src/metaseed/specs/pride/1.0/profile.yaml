@@ -216,9 +216,11 @@ entities:
       description: Tissue type
 
     - name: tissue_accession
-      type: string
+      type: ontology_term
       required: false
       description: Tissue ontology accession
+      ontologies:
+        - uberon
 
     - name: cell_type
       type: string

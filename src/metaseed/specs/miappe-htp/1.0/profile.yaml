@@ -989,7 +989,10 @@ entities:
       ontology_term: PPEO:hasDescription
     - name: accession_number
       codename: traitAccessionNumber
-      type: string
+      type: ontology_term
       required: false
       description: Ontology accession.
       ontology_term: PPEO:hasExternalIdentifier
+      ontologies:
+        - to
+        - co_321
