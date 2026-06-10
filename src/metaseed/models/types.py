@@ -9,8 +9,9 @@ from typing import Annotated
 from pydantic import AfterValidator
 
 # Pattern for ontology terms: prefix:id, prefix_id, or URL
+# Prefix can contain letters, digits, and underscores (e.g., CO_321, GO, PATO)
 _ONTOLOGY_TERM_PATTERN = re.compile(
-    r"^([A-Za-z][A-Za-z0-9]*[:_][A-Za-z0-9_]+|https?://.+)$"
+    r"^([A-Za-z][A-Za-z0-9_]*[:_][A-Za-z0-9_]+|https?://.+)$"
 )
 
 
