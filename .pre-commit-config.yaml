@@ -37,3 +37,13 @@ repos:
     hooks:
       - id: commitizen
         stages: [commit-msg]
+
+  - repo: local
+    hooks:
+      - id: pytest
+        name: run tests before push
+        entry: uv run python -m pytest -x -q --tb=short
+        language: system
+        stages: [pre-push]
+        pass_filenames: false
+        always_run: true
