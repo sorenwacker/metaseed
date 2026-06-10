@@ -125,6 +125,35 @@ class TestFieldSpec:
                 description="Test",
             )
 
+    def test_ontology_term_field_with_ontologies(self) -> None:
+        """Ontology term field can specify which ontologies to search."""
+        field = FieldSpec(
+            name="tissue",
+            type=FieldType.ONTOLOGY_TERM,
+            ontologies=["po"],
+            description="Plant tissue from Plant Ontology",
+        )
+        assert field.ontologies == ["po"]
+
+    def test_ontology_term_field_with_multiple_ontologies(self) -> None:
+        """Ontology term field can specify multiple ontologies."""
+        field = FieldSpec(
+            name="trait",
+            type=FieldType.ONTOLOGY_TERM,
+            ontologies=["pato", "to"],
+            description="Trait from PATO or Trait Ontology",
+        )
+        assert field.ontologies == ["pato", "to"]
+
+    def test_ontologies_defaults_to_none(self) -> None:
+        """Ontologies field defaults to None when not specified."""
+        field = FieldSpec(
+            name="term",
+            type=FieldType.ONTOLOGY_TERM,
+            description="Any ontology term",
+        )
+        assert field.ontologies is None
+
 
 class TestEntitySpec:
     """Tests for EntitySpec model."""

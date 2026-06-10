@@ -203,6 +203,7 @@ def register_field_routes(
         required: bool = Form(False),
         description: str = Form(""),
         ontology_term: str = Form(""),
+        ontologies: str = Form(""),
         codename: str = Form(""),
         items: str = Form(""),
         parent_ref: str = Form(""),
@@ -251,6 +252,9 @@ def register_field_routes(
         field.required = update_data.required
         field.description = update_data.description.strip()
         field.ontology_term = update_data.ontology_term.strip() or None
+        # Parse ontologies from comma-separated string
+        ontologies_list = [o.strip() for o in ontologies.split(",") if o.strip()]
+        field.ontologies = ontologies_list if ontologies_list else None
         field.codename = update_data.codename.strip() or None
         field.items = update_data.items.strip() or None
         field.parent_ref = update_data.parent_ref.strip() or None

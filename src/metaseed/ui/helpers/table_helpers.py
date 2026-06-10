@@ -81,17 +81,22 @@ def get_table_column_info(facade: ProfileFacade, entity_type: str) -> dict:
 
     column_types = {}
     column_constraints = {}
+    column_ontologies = {}
     for col in columns:
         info = helper.field_info(col)
         column_types[col] = info.get("type", "string")
         constraints = info.get("constraints", {})
         if constraints:
             column_constraints[col] = constraints
+        ontologies = info.get("ontologies")
+        if ontologies:
+            column_ontologies[col] = ontologies
 
     return {
         "columns": columns,
         "column_types": column_types,
         "column_constraints": column_constraints,
+        "column_ontologies": column_ontologies,
         "required_columns": set(helper.required_fields),
         "has_nested_children": bool(helper.nested_fields),
     }

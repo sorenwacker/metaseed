@@ -572,13 +572,17 @@ def register_api_routes(
     @app.get("/api/ontology/search")
     async def search_ontology_terms(
         q: str = Query(default="", description="Search query"),
-        ontology: str | None = Query(default=None, description="Ontology ID to filter"),
+        ontology: str | None = Query(
+            default=None,
+            description="Ontology ID(s) to filter, comma-separated (e.g., 'po,pato')",
+        ),
     ) -> JSONResponse:
         """Search OLS4 for ontology terms.
 
         Args:
             q: Search query to find matching ontology terms.
-            ontology: Optional ontology ID to restrict search (e.g., "pato", "go").
+            ontology: Optional ontology ID(s) to restrict search.
+                Supports comma-separated values (e.g., "po,pato").
 
         Returns:
             JSON with results list containing value, label, description, and ontology.
@@ -595,6 +599,7 @@ def register_api_routes(
         }
 
         if ontology:
+            # OLS4 supports comma-separated ontology IDs
             params["ontology"] = ontology.lower()
 
         data = _make_request("/search", params)

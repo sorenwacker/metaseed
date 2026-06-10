@@ -75,6 +75,7 @@ The `spec_version` field indicates which version of the specification language f
 | `0.1` | Initial format. Implicit default for existing specs. |
 | `0.2` | Adds `ontologies` section for structured ontology definitions. |
 | `0.3` | Adds explicit `type` and `message` fields to validation rules, plus `lat_field`, `lon_field`, `start_field`, `end_field` for explicit field configuration. |
+| `0.4` | Adds `ontologies` field to FieldSpec for scoping `ontology_term` type fields to specific OLS ontologies. |
 
 Existing specs without `spec_version` are automatically treated as version `0.1`.
 
@@ -188,7 +189,8 @@ fields:
 | `type` | yes | Data type (see Field Types) |
 | `required` | no | Whether mandatory (default: false) |
 | `description` | no | Human-readable description |
-| `ontology_term` | no | Ontology reference |
+| `ontology_term` | no | Semantic ontology reference (e.g., `MIAPPE:DM-1`) |
+| `ontologies` | no | List of OLS IDs to search for `ontology_term` type fields |
 | `constraints` | no | Validation constraints |
 | `items` | conditional | Element type for `list` or target for `entity` |
 | `reference` | no | Entity reference in format "Entity.field" (see Relationships) |
@@ -211,14 +213,28 @@ fields:
 
 ### Ontology Term Fields
 
-Fields with `type: ontology_term` enable OLS4 (Ontology Lookup Service) integration in the UI:
+Fields with `type: ontology_term` enable OLS4 (Ontology Lookup Service) integration in the UI. Use the optional `ontologies` field to scope lookups to specific ontologies:
 
 ```yaml
-- name: organism
+# Search only Plant Ontology
+- name: tissue
   type: ontology_term
-  ontology_id: ncbitaxon  # Optional: scope to specific ontology
-  description: Organism from NCBI Taxonomy
+  ontologies: ["po"]
+  description: Plant tissue type
+
+# Search multiple ontologies
+- name: trait
+  type: ontology_term
+  ontologies: ["pato", "to"]
+  description: Trait from PATO or Trait Ontology
+
+# Search all ontologies (default when ontologies not specified)
+- name: any_term
+  type: ontology_term
+  description: Any ontology term
 ```
+
+The `ontologies` field accepts a list of OLS IDs (e.g., `po`, `pato`, `ncbitaxon`). When omitted, searches across all available ontologies.
 
 See [Ontology Lookup Guide](../guides/ontology-lookup.md) for details on autocomplete, modal search, and configuration.
 
@@ -250,30 +266,72 @@ Single nested object (one-to-one relationship):
 
 ## Constraints
 
-Constraints define validation rules for individual fields.
+Constraints define validation rules for individual fields. Different constraints apply to different field types.
+
+### String Constraints
 
 ```yaml
-constraints:
-  pattern: "^[A-Z]{2}[0-9]{4}$"    # Regex pattern
-  min_length: 1                     # Minimum string length
-  max_length: 100                   # Maximum string length
-  minimum: 0                        # Minimum numeric value
-  maximum: 100                      # Maximum numeric value
-  min_items: 1                      # Minimum list items
-  max_items: 10                     # Maximum list items
-  enum: ["draft", "submitted", "published"]  # Allowed values
+- name: identifier
+  type: string
+  constraints:
+    pattern: "^[A-Z]{2}[0-9]{4}$"  # Regex pattern
+    min_length: 1                   # Minimum characters
+    max_length: 100                 # Maximum characters
+    enum: ["draft", "submitted"]    # Allowed values
 ```
 
-| Constraint | Applies To | Description |
-|------------|------------|-------------|
-| `pattern` | string | Regex pattern |
-| `min_length` | string | Minimum length |
-| `max_length` | string | Maximum length |
-| `minimum` | integer, float | Minimum value (inclusive) |
-| `maximum` | integer, float | Maximum value (inclusive) |
-| `min_items` | list | Minimum items |
-| `max_items` | list | Maximum items |
-| `enum` | string | List of allowed values |
+| Constraint | Description |
+|------------|-------------|
+| `pattern` | Regular expression the value must match |
+| `min_length` | Minimum character count |
+| `max_length` | Maximum character count |
+| `enum` | List of allowed values |
+
+Common patterns:
+- Email: `^[\w.-]+@[\w.-]+\.[a-z]{2,}$`
+- URL: `^https?://.*`
+- ORCID: `^\d{4}-\d{4}-\d{4}-\d{3}[0-9X]$`
+- DOI: `^10\.\d{4,}/.*$`
+
+### Numeric Constraints
+
+```yaml
+- name: temperature
+  type: float
+  constraints:
+    minimum: -273.15  # Absolute zero
+    maximum: 1000.0
+```
+
+| Constraint | Description |
+|------------|-------------|
+| `minimum` | Inclusive lower bound |
+| `maximum` | Inclusive upper bound |
+
+### List Constraints
+
+```yaml
+- name: keywords
+  type: list
+  items: string
+  constraints:
+    min_items: 1   # At least one keyword
+    max_items: 10  # Maximum 10 keywords
+```
+
+| Constraint | Description |
+|------------|-------------|
+| `min_items` | Minimum number of items |
+| `max_items` | Maximum number of items |
+
+### Constraints by Field Type
+
+| Field Type | Available Constraints |
+|------------|----------------------|
+| `string`, `uri` | pattern, min_length, max_length, enum |
+| `integer`, `float` | minimum, maximum |
+| `list` | min_items, max_items |
+| `boolean`, `date`, `datetime`, `entity`, `ontology_term` | none |
 
 ## Relationships
 

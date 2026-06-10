@@ -1,45 +1,54 @@
 <div class="field-edit-form">
     <form onsubmit="return updateField(event, '{{ entity_name }}', {{ field_idx }})">
 
-        <div class="field-form-row">
-            <div class="form-group">
-                <label class="form-label">Name</label>
-                <input type="text"
-                       name="name"
-                       class="form-input"
-                       value="{{ field.name }}"
-                       required
-                       pattern="[a-z_][a-z0-9_-]*">
+        <!-- Basic Info -->
+        <fieldset class="form-section">
+            <legend>Basic</legend>
+            <div class="field-form-row">
+                <div class="form-group">
+                    <label class="form-label" title="Snake_case identifier for this field">Name</label>
+                    <input type="text"
+                           name="name"
+                           class="form-input"
+                           value="{{ field.name }}"
+                           required
+                           pattern="[a-z_][a-z0-9_-]*">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" title="Data type for validation and UI rendering">Type</label>
+                    <select name="field_type" class="form-input" onchange="updateConstraintVisibility(this.value)">
+                        {% for ft in field_types %}
+                        <option value="{{ ft }}" {% if field.type == ft %}selected{% endif %}>{{ ft }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group form-group-checkbox">
+                    <label class="form-checkbox" title="Field must have a value">
+                        <input type="checkbox"
+                               name="required"
+                               value="true"
+                               {% if field.required %}checked{% endif %}>
+                        Required
+                    </label>
+                </div>
             </div>
-            <div class="form-group">
-                <label class="form-label">Type</label>
-                <select name="field_type" class="form-input">
-                    {% for ft in field_types %}
-                    <option value="{{ ft }}" {% if field.type == ft %}selected{% endif %}>{{ ft }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="form-group form-group-checkbox">
-                <label class="form-checkbox">
-                    <input type="checkbox"
-                           name="required"
-                           value="true"
-                           {% if field.required %}checked{% endif %}>
-                    Required
-                </label>
-            </div>
-        </div>
 
-        <div class="form-group">
-            <label class="form-label">Description</label>
-            <textarea name="description"
-                      class="form-input"
-                      rows="2">{{ field.description or '' }}</textarea>
-        </div>
-
-        <div class="field-form-row">
             <div class="form-group">
-                <label class="form-label">Items/Target</label>
+                <label class="form-label" title="Human-readable explanation shown in UI">Description</label>
+                <textarea name="description"
+                          class="form-input"
+                          rows="2"
+                          placeholder="Explain what this field captures...">{{ field.description or '' }}</textarea>
+            </div>
+        </fieldset>
+
+        <!-- Type-specific settings -->
+        <fieldset class="form-section" id="type-settings">
+            <legend>Type Settings</legend>
+
+            <!-- Entity/List target -->
+            <div class="form-group type-setting" data-field-types="list,entity">
+                <label class="form-label" title="Target entity type for list items or entity reference">Items/Target Entity</label>
                 <input type="text"
                        name="items"
                        class="form-input"
@@ -52,128 +61,144 @@
                     {% endfor %}
                 </datalist>
             </div>
-            <div class="form-group">
-                <label class="form-label">Codename</label>
+
+            <!-- Ontology lookup filter -->
+            <div class="form-group type-setting" data-field-types="ontology_term">
+                <label class="form-label" title="Restrict OLS lookup to specific ontologies (e.g., po, chebi, pato)">Ontologies</label>
                 <input type="text"
-                       name="codename"
+                       name="ontologies"
                        class="form-input"
-                       value="{{ field.codename or '' }}"
-                       placeholder="camelCase">
+                       value="{{ field.ontologies|join(', ') if field.ontologies else '' }}"
+                       placeholder="po, chebi, pato">
             </div>
-        </div>
 
-        <details class="field-advanced">
-            <summary>Advanced</summary>
-            <div class="field-advanced-content">
-                <div class="field-form-row">
-                    <div class="form-group">
-                        <label class="form-label">Ontology</label>
-                        <input type="text"
-                               name="ontology_term"
-                               class="form-input"
-                               value="{{ field.ontology_term or '' }}"
-                               placeholder="MIAPPE:DM-1">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Unique Within</label>
-                        <select name="unique_within" class="form-input">
-                            <option value="">Not unique</option>
-                            <option value="parent" {% if field.unique_within == 'parent' %}selected{% endif %}>Parent entity</option>
-                            <option value="global" {% if field.unique_within == 'global' %}selected{% endif %}>Globally</option>
-                        </select>
-                    </div>
-                </div>
+            <!-- No settings message -->
+            <div class="type-setting type-setting-none" data-field-types="string,integer,float,boolean,date,datetime,uri">
+                <p class="text-muted">No type-specific settings needed.</p>
+            </div>
+        </fieldset>
 
-                <div class="field-form-row">
-                    <div class="form-group">
-                        <label class="form-label">Parent Ref</label>
-                        <input type="text"
-                               name="parent_ref"
-                               class="form-input"
-                               value="{{ field.parent_ref or '' }}"
-                               placeholder="Entity.field">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Reference</label>
-                        <input type="text"
-                               name="reference"
-                               class="form-input"
-                               value="{{ field.reference or '' }}"
-                               placeholder="Entity.field">
-                    </div>
-                </div>
+        <!-- Constraints -->
+        <fieldset class="form-section" id="constraints-section">
+            <legend>Constraints</legend>
 
-                <div class="field-form-row">
-                    <div class="form-group">
-                        <label class="form-label">Pattern</label>
+            <!-- String/URI constraints -->
+            <div class="constraint-group" data-field-types="string,uri">
+                <div class="form-group">
+                    <label class="form-label" title="Regular expression pattern to validate input">Pattern</label>
+                    <div class="input-with-presets">
                         <input type="text"
                                name="pattern"
+                               id="pattern-input"
                                class="form-input"
-                               value="{{ field.constraints.pattern if field.constraints else '' }}">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Min</label>
-                        <input type="number"
-                               name="minimum"
-                               class="form-input"
-                               step="any"
-                               value="{{ field.constraints.minimum if field.constraints and field.constraints.minimum is not none else '' }}">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Max</label>
-                        <input type="number"
-                               name="maximum"
-                               class="form-input"
-                               step="any"
-                               value="{{ field.constraints.maximum if field.constraints and field.constraints.maximum is not none else '' }}">
+                               value="{{ field.constraints.pattern if field.constraints else '' }}"
+                               placeholder="^[A-Z].*">
+                        <div class="preset-buttons">
+                            <button type="button" class="preset-btn" onclick="setPattern('^[\\\\w.-]+@[\\\\w.-]+\\\\.[a-z]{2,}$')" title="Email address pattern">Email</button>
+                            <button type="button" class="preset-btn" onclick="setPattern('^https?://.*')" title="URL pattern">URL</button>
+                            <button type="button" class="preset-btn" onclick="setPattern('^\\\\d{4}-\\\\d{4}-\\\\d{4}-\\\\d{3}[0-9X]$')" title="ORCID identifier">ORCID</button>
+                            <button type="button" class="preset-btn" onclick="setPattern('^10\\\\.\\\\d{4,}/.*$')" title="Digital Object Identifier">DOI</button>
+                        </div>
                     </div>
                 </div>
-
                 <div class="field-form-row">
                     <div class="form-group">
-                        <label class="form-label">Min Length</label>
-                        <input type="number"
-                               name="min_length"
-                               class="form-input"
-                               min="0"
+                        <label class="form-label" title="Minimum character count">Min Length</label>
+                        <input type="number" name="min_length" class="form-input" min="0"
                                value="{{ field.constraints.min_length if field.constraints and field.constraints.min_length else '' }}">
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Max Length</label>
-                        <input type="number"
-                               name="max_length"
-                               class="form-input"
-                               min="0"
+                        <label class="form-label" title="Maximum character count">Max Length</label>
+                        <input type="number" name="max_length" class="form-input" min="0"
                                value="{{ field.constraints.max_length if field.constraints and field.constraints.max_length else '' }}">
                     </div>
                 </div>
+            </div>
 
+            <!-- Numeric constraints -->
+            <div class="constraint-group" data-field-types="integer,float">
                 <div class="field-form-row">
                     <div class="form-group">
-                        <label class="form-label">Min Items (lists)</label>
-                        <input type="number"
-                               name="min_items"
-                               class="form-input"
-                               min="0"
-                               value="{{ field.constraints.min_items if field.constraints and field.constraints.min_items else '' }}"
-                               placeholder="e.g., 1">
+                        <label class="form-label" title="Inclusive lower bound">Minimum</label>
+                        <input type="number" name="minimum" class="form-input" step="any"
+                               value="{{ field.constraints.minimum if field.constraints and field.constraints.minimum is not none else '' }}">
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Max Items (lists)</label>
-                        <input type="number"
-                               name="max_items"
-                               class="form-input"
-                               min="0"
+                        <label class="form-label" title="Inclusive upper bound">Maximum</label>
+                        <input type="number" name="maximum" class="form-input" step="any"
+                               value="{{ field.constraints.maximum if field.constraints and field.constraints.maximum is not none else '' }}">
+                    </div>
+                </div>
+            </div>
+
+            <!-- List constraints -->
+            <div class="constraint-group" data-field-types="list">
+                <div class="field-form-row">
+                    <div class="form-group">
+                        <label class="form-label" title="Minimum number of items in list">Min Items</label>
+                        <input type="number" name="min_items" class="form-input" min="0"
+                               value="{{ field.constraints.min_items if field.constraints and field.constraints.min_items else '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" title="Maximum number of items in list">Max Items</label>
+                        <input type="number" name="max_items" class="form-input" min="0"
                                value="{{ field.constraints.max_items if field.constraints and field.constraints.max_items else '' }}">
                     </div>
                 </div>
+            </div>
 
+            <!-- Enum values -->
+            <div class="constraint-group" data-field-types="string,integer,float">
                 <div class="form-group">
-                    <label class="form-label">Allowed Values (one per line)</label>
+                    <label class="form-label" title="Restrict to specific values (leave empty for any value)">Allowed Values</label>
                     <textarea name="enum_values"
                               class="form-input"
                               rows="2"
                               placeholder="value1&#10;value2&#10;value3">{% if field.constraints and field.constraints.enum %}{{ field.constraints.enum|join('\n') }}{% endif %}</textarea>
+                </div>
+            </div>
+
+            <!-- No constraints -->
+            <div class="constraint-group constraint-none" data-field-types="boolean,date,datetime,entity,ontology_term">
+                <p class="text-muted">No constraints for this field type.</p>
+            </div>
+        </fieldset>
+
+        <!-- Advanced (collapsible) -->
+        <details class="form-section-collapsible">
+            <summary>Advanced</summary>
+            <div class="form-section-content">
+                <div class="field-form-row">
+                    <div class="form-group">
+                        <label class="form-label" title="Alternative name for code generation (camelCase)">Codename</label>
+                        <input type="text" name="codename" class="form-input"
+                               value="{{ field.codename or '' }}" placeholder="camelCase">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" title="Semantic ontology reference (e.g., MIAPPE:DM-1)">Ontology Term</label>
+                        <input type="text" name="ontology_term" class="form-input"
+                               value="{{ field.ontology_term or '' }}" placeholder="MIAPPE:DM-1">
+                    </div>
+                </div>
+                <div class="field-form-row">
+                    <div class="form-group">
+                        <label class="form-label" title="Enforce uniqueness within parent or globally">Unique Within</label>
+                        <select name="unique_within" class="form-input">
+                            <option value="">Not unique</option>
+                            <option value="parent" {% if field.unique_within == 'parent' %}selected{% endif %}>Parent</option>
+                            <option value="global" {% if field.unique_within == 'global' %}selected{% endif %}>Global</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" title="Reference to another entity's field (Entity.field)">Reference</label>
+                        <input type="text" name="reference" class="form-input"
+                               value="{{ field.reference or '' }}" placeholder="Entity.field">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" title="Parent reference for nested entities (deprecated, use reference)">Parent Ref</label>
+                    <input type="text" name="parent_ref" class="form-input"
+                           value="{{ field.parent_ref or '' }}" placeholder="Entity.field">
                 </div>
             </div>
         </details>
@@ -190,3 +215,103 @@
         </div>
     </form>
 </div>
+
+<script>
+function updateConstraintVisibility(fieldType) {
+    document.querySelectorAll('.constraint-group, .type-setting').forEach(function(el) {
+        var types = el.dataset.fieldTypes ? el.dataset.fieldTypes.split(',') : [];
+        el.style.display = types.includes(fieldType) ? '' : 'none';
+    });
+}
+
+function setPattern(pattern) {
+    var input = document.getElementById('pattern-input');
+    if (input) { input.value = pattern; input.focus(); }
+}
+
+// Initialize visibility
+(function() {
+    var sel = document.querySelector('select[name="field_type"]');
+    if (sel) updateConstraintVisibility(sel.value);
+})();
+</script>
+
+<style>
+.form-section {
+    border: 1px solid var(--border-color, #e0e0e0);
+    border-radius: 6px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    background: var(--bg-subtle, #fafafa);
+}
+.form-section legend {
+    font-weight: 600;
+    font-size: 0.85em;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted, #666);
+    padding: 0 6px;
+}
+.form-section-collapsible {
+    border: 1px solid var(--border-color, #e0e0e0);
+    border-radius: 6px;
+    margin-bottom: 12px;
+}
+.form-section-collapsible summary {
+    padding: 8px 14px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.85em;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted, #666);
+    background: var(--bg-subtle, #fafafa);
+    border-radius: 6px;
+}
+.form-section-collapsible[open] summary {
+    border-radius: 6px 6px 0 0;
+    border-bottom: 1px solid var(--border-color, #e0e0e0);
+}
+.form-section-content {
+    padding: 12px 14px;
+}
+.form-label {
+    cursor: help;
+}
+.form-label[title]:hover {
+    text-decoration: underline dotted;
+}
+.text-muted {
+    color: var(--text-muted, #888);
+    font-size: 0.9em;
+    font-style: italic;
+    margin: 0;
+}
+.input-with-presets {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.preset-buttons {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+.preset-btn {
+    padding: 2px 8px;
+    font-size: 0.75em;
+    border: 1px solid var(--border-color, #ccc);
+    border-radius: 3px;
+    background: var(--bg-white, #fff);
+    cursor: pointer;
+}
+.preset-btn:hover {
+    background: var(--bg-hover, #f0f0f0);
+}
+.constraint-group {
+    margin-bottom: 12px;
+}
+.constraint-group:last-child {
+    margin-bottom: 0;
+}
+</style>

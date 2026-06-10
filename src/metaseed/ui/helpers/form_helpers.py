@@ -125,6 +125,7 @@ def get_field_data(helper: Any, exclude_parent_ref: str | None = None) -> list[d
                 "required": info["required"],
                 "description": info.get("description", ""),
                 "items": info.get("items"),
+                "ontologies": info.get("ontologies"),
             }
         )
     return fields

@@ -67,6 +67,7 @@ class FieldSpec(BaseModel):
         required: Whether the field is mandatory.
         description: Human-readable description.
         ontology_term: Reference to ontology term (e.g., MIAPPE:DM-1).
+        ontologies: List of OLS IDs to search for ontology_term type fields.
         constraints: Validation constraints.
         items: For list type, the entity type of list items.
         parent_ref: Parent entity reference in format "Entity.field" (e.g., "Study.identifier").
@@ -83,6 +84,7 @@ class FieldSpec(BaseModel):
     required: bool = False
     description: str = ""
     ontology_term: str | None = None
+    ontologies: list[str] | None = None
     constraints: Constraints | None = None
     items: str | None = None
     parent_ref: str | None = None

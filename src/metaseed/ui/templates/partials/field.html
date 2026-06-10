@@ -78,7 +78,7 @@
                class="form-input lookup-input"
                value="{{ value }}"
                data-lookup-type="ontology"
-               {% if field.ontology_id %}data-ontology-id="{{ field.ontology_id }}"{% endif %}
+               {% if field.ontologies %}data-ontologies="{{ field.ontologies|join(',') }}"{% endif %}
                autocomplete="off"
                placeholder="Search ontology terms..."
                {% if field.required %}required{% endif %}
@@ -86,7 +86,7 @@
         <button type="button"
                 class="ontology-lookup-btn"
                 data-input="input-{{ field.name|replace('_', '-') }}"
-                {% if field.ontology_id %}data-ontology-id="{{ field.ontology_id }}"{% endif %}
+                {% if field.ontologies %}data-ontologies="{{ field.ontologies|join(',') }}"{% endif %}
                 title="Browse ontology">
             &#128269;
         </button>

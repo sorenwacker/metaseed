@@ -179,6 +179,8 @@ class EntityHelper:
                 }
                 if f.ontology_term:
                     info["ontology_term"] = f.ontology_term
+                if f.ontologies:
+                    info["ontologies"] = f.ontologies
                 if f.items:
                     info["items"] = f.items
                 if f.constraints:

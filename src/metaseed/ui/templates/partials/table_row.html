@@ -10,6 +10,7 @@
     <td class="editable-cell{% if is_parent_id %} readonly-cell{% endif %}" data-col="{{ col }}" data-row="{{ row._idx }}">
         {% set col_type = column_types.get(col, 'string') if column_types else 'string' %}
         {% set constraints = column_constraints.get(col, {}) if column_constraints else {} %}
+        {% set ontologies = column_ontologies.get(col, []) if column_ontologies else [] %}
         {% set ref_info = reference_fields.get(col, {}) if reference_fields else {} %}
         {% set is_ontology = col_type == 'ontology_term' %}
         {% set show_lookup = (ref_info and not is_parent_id) or is_ontology %}
@@ -24,7 +25,7 @@
                    title="Auto-filled from parent"
                    {% elif is_ontology %}
                    data-lookup-type="ontology"
-                   {% if constraints.get('ontology_id') %}data-ontology-id="{{ constraints.ontology_id }}"{% endif %}
+                   {% if ontologies %}data-ontologies="{{ ontologies|join(',') }}"{% endif %}
                    autocomplete="off"
                    placeholder="Search terms..."
                    title="Press Tab to search ontology terms"
@@ -56,7 +57,7 @@
             <button type="button"
                     class="ontology-lookup-btn"
                     data-input="cell-{{ row._idx }}-{{ col }}"
-                    {% if constraints.get('ontology_id') %}data-ontology-id="{{ constraints.ontology_id }}"{% endif %}
+                    {% if ontologies %}data-ontologies="{{ ontologies|join(',') }}"{% endif %}
                     title="Browse ontology"
                     data-testid="ontology-btn-{{ row._idx }}-{{ col }}">
                 &#128269;
