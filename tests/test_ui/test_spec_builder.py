@@ -158,7 +158,9 @@ class TestSpecBuilderHelpers:
         spec = clone_spec("miappe", "1.1")
         assert isinstance(spec, ProfileSpec)
         assert spec.name == "miappe"
-        assert spec.version == "1.1-dev"  # Based on 1.1, in development
+        assert spec.version.startswith(
+            "1.1-dev-"
+        )  # Based on 1.1, in development with unique hash
         assert "Investigation" in spec.entities
         # Verify it's a copy
         spec.name = "modified"
