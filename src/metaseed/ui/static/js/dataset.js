@@ -179,6 +179,37 @@ function validateDatasetName() {
     return true;
 }
 
+// Filter datasets by name or profile
+function filterDatasets(query) {
+    var cards = document.querySelectorAll('.dataset-card');
+    var q = query.toLowerCase().trim();
+
+    cards.forEach(function(card) {
+        var name = card.dataset.name || '';
+        var profile = card.dataset.profile || '';
+        var matches = !q || name.includes(q) || profile.includes(q);
+        card.style.display = matches ? '' : 'none';
+    });
+
+    // Show "no results" message if all hidden
+    var grid = document.querySelector('.datasets-grid');
+    var visibleCount = document.querySelectorAll('.dataset-card[style=""], .dataset-card:not([style])').length;
+    var noResults = document.getElementById('filter-no-results');
+
+    if (q && visibleCount === 0) {
+        if (!noResults) {
+            noResults = document.createElement('div');
+            noResults.id = 'filter-no-results';
+            noResults.className = 'datasets-filter-empty';
+            noResults.textContent = 'No datasets match your filter';
+            grid.parentNode.insertBefore(noResults, grid.nextSibling);
+        }
+        noResults.style.display = '';
+    } else if (noResults) {
+        noResults.style.display = 'none';
+    }
+}
+
 // Load datasets on page load
 document.addEventListener('DOMContentLoaded', function() {
     loadDatasets();

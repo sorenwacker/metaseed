@@ -5326,6 +5326,24 @@ details.sidebar-section summary:hover {
     gap: var(--space-sm);
 }
 
+.datasets-filter {
+    margin-bottom: var(--space-md);
+}
+
+.datasets-filter-input {
+    width: 100%;
+    max-width: 400px;
+    padding: var(--space-sm) var(--space-md);
+    font-size: 0.95rem;
+}
+
+.datasets-filter-empty {
+    padding: var(--space-xl);
+    text-align: center;
+    color: var(--clr-ink-light);
+    font-style: italic;
+}
+
 .datasets-grid {
     display: flex;
     flex-direction: column;
