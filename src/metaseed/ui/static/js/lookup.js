@@ -35,15 +35,15 @@ function handleLookupInput(e) {
     var entityType = input.dataset.lookup;
     var query = input.value;
 
+    // Ontology fields use modal only - no inline autocomplete
+    if (lookupType === 'ontology') {
+        return;
+    }
+
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(function() {
         if (query.length > 0) {
-            if (lookupType === 'ontology') {
-                var ontologies = input.dataset.ontologies || null;
-                fetchOntologySuggestions(input, query, ontologies);
-            } else {
-                fetchLookupSuggestions(input, entityType, query);
-            }
+            fetchLookupSuggestions(input, entityType, query);
         } else {
             hideAutocomplete();
         }
@@ -57,13 +57,13 @@ function handleLookupFocus(e) {
     var entityType = input.dataset.lookup;
     var query = input.value;
 
+    // Ontology fields use modal only - no inline autocomplete
+    if (lookupType === 'ontology') {
+        return;
+    }
+
     if (query.length > 0) {
-        if (lookupType === 'ontology') {
-            var ontologies = input.dataset.ontologies || null;
-            fetchOntologySuggestions(input, query, ontologies);
-        } else {
-            fetchLookupSuggestions(input, entityType, query);
-        }
+        fetchLookupSuggestions(input, entityType, query);
     }
 }
 
@@ -169,82 +169,6 @@ function fetchLookupSuggestions(input, entityType, query) {
         .catch(function(error) {
             console.error('Lookup error:', error);
         });
-}
-
-// Fetch ontology suggestions from OLS4 API
-function fetchOntologySuggestions(input, query, ontologies) {
-    var url = '/api/ontology/search?q=' + encodeURIComponent(query);
-    if (ontologies) {
-        // Pass comma-separated ontologies to API
-        url += '&ontology=' + encodeURIComponent(ontologies);
-    }
-
-    fetch(url)
-        .then(function(response) {
-            return response.json();
-        })
-        .then(function(data) {
-            showOntologyAutocomplete(input, data.results);
-        })
-        .catch(function(error) {
-            console.error('Ontology lookup error:', error);
-        });
-}
-
-// Show ontology autocomplete dropdown with enhanced display
-function showOntologyAutocomplete(input, results) {
-    hideAutocomplete();
-
-    if (!results || results.length === 0) return;
-
-    var dropdown = document.createElement('div');
-    dropdown.className = 'autocomplete-dropdown ontology-autocomplete';
-    dropdown.setAttribute('data-testid', 'ontology-autocomplete-dropdown');
-
-    results.forEach(function(result, index) {
-        var item = document.createElement('div');
-        item.className = 'autocomplete-item ontology-item';
-        if (index === 0) item.classList.add('active');
-        item.dataset.value = result.value;
-
-        var html = '<div class="ontology-item-main">' +
-            '<span class="ontology-term-id">' + escapeHtml(result.value) + '</span>' +
-            '<span class="ontology-term-label">' + escapeHtml(result.label) + '</span>' +
-            '</div>';
-
-        if (result.ontology || result.description) {
-            html += '<div class="ontology-item-meta">';
-            if (result.ontology) {
-                html += '<span class="ontology-source">' + escapeHtml(result.ontology) + '</span>';
-            }
-            if (result.description) {
-                var desc = result.description.length > 80
-                    ? result.description.substring(0, 80) + '...'
-                    : result.description;
-                html += '<span class="ontology-description">' + escapeHtml(desc) + '</span>';
-            }
-            html += '</div>';
-        }
-
-        item.innerHTML = html;
-
-        item.addEventListener('mousedown', function(e) {
-            e.preventDefault();
-            selectLookupValue(input, result.value, result.label);
-        });
-
-        dropdown.appendChild(item);
-    });
-
-    // Position dropdown below input
-    var wrapper = input.closest('.cell-input-wrapper');
-    if (wrapper) {
-        wrapper.appendChild(dropdown);
-    } else {
-        input.parentElement.appendChild(dropdown);
-    }
-
-    activeAutocomplete = dropdown;
 }
 
 // Show simple autocomplete dropdown (no inline search - use Tab for modal)
