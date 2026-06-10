@@ -254,7 +254,7 @@ def register_field_routes(
         field.ontology_term = update_data.ontology_term.strip() or None
         # Parse ontologies from comma-separated string
         ontologies_list = [o.strip() for o in ontologies.split(",") if o.strip()]
-        field.ontologies = ontologies_list if ontologies_list else None
+        field.ontologies = ontologies_list or None
         field.codename = update_data.codename.strip() or None
         field.items = update_data.items.strip() or None
         field.parent_ref = update_data.parent_ref.strip() or None
