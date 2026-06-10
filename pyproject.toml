@@ -204,6 +204,7 @@ addopts = "-v --tb=short"
 asyncio_mode = "auto"
 markers = [
     "ui: marks tests as UI tests",
+    "network: marks tests requiring external network (OLS4 API)",
 ]
 
 [tool.coverage.run]

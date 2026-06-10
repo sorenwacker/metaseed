@@ -258,8 +258,9 @@ class TestTableRowWithLookup:
         # Row should be rendered successfully
 
 
+@pytest.mark.network
 class TestOntologySearchAPI:
-    """Tests for the ontology search API endpoint."""
+    """Tests for the ontology search API endpoint (requires OLS4 API)."""
 
     def test_ontology_search_returns_json(self, client):
         """Ontology search endpoint returns valid JSON."""
