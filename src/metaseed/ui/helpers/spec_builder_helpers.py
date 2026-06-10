@@ -200,8 +200,9 @@ def _list_specs(
             spec = loader.load_profile(version=latest, profile=profile_name)
             result.append(
                 {
-                    "name": profile_name,
+                    "name": profile_name,  # Use directory name for routing
                     "display_name": spec.display_name
+                    or spec.name  # Use spec.name to preserve case
                     or default_display_name_fn(profile_name),
                     "description": spec.description or "",
                     "versions": versions,

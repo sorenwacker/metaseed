@@ -715,6 +715,7 @@ entities:
         response = client.post(
             "/spec-builder/import",
             files={"file": ("test-spec.yaml", yaml_content, "application/x-yaml")},
+            follow_redirects=False,
         )
         # Should redirect to spec builder
         assert response.status_code == 303

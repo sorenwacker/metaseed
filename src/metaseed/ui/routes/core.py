@@ -54,7 +54,7 @@ def get_profile_display_info(factory: ProfileFactory) -> list[dict[str, Any]]:
             profiles.append(
                 {
                     "name": name,
-                    "display_name": profile_spec.display_name or name.upper(),
+                    "display_name": profile_spec.display_name or name,
                     "description": (
                         profile_spec.description or f"{name} metadata profile."
                     ),
@@ -67,7 +67,7 @@ def get_profile_display_info(factory: ProfileFactory) -> list[dict[str, Any]]:
             profiles.append(
                 {
                     "name": name,
-                    "display_name": name.upper(),
+                    "display_name": name,
                     "description": f"{name} metadata profile.",
                     "root_entity": "Investigation",
                     "versions": versions,
