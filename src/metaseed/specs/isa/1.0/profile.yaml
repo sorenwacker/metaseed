@@ -45,6 +45,12 @@ validation_rules:
   applies_to:
   - Publication
   condition: doi OR pubmed_id OR title
+- name: ontology_accession_format
+  description: Ontology term accession must be PREFIX:ID or URI format
+  applies_to:
+  - OntologyAnnotation
+  field: term_accession
+  pattern: ^[A-Za-z]+:[0-9]+$|^https?://.*$
 - name: person_name_required
   description: Person must have name OR (first_name AND last_name)
   applies_to:
