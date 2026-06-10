@@ -240,7 +240,8 @@ class AppState:
         """Get existing facade or create new one."""
         from metaseed.facade import ProfileFacade
 
-        if self.facade is None or self.facade.profile != self.profile:
+        # Case-insensitive comparison since ProfileFacade lowercases profile names
+        if self.facade is None or self.facade.profile.lower() != self.profile.lower():
             self.facade = ProfileFacade(self.profile, self.version)
             self._invalidate_cache()
         return self.facade
