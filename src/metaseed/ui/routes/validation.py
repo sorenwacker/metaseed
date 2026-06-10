@@ -14,9 +14,9 @@ from pydantic import ValidationError as PydanticValidationError
 from starlette.requests import Request
 
 from metaseed.facade import ProfileFacade
-from metaseed.models import create_model_from_spec
 from metaseed.specs.loader import SpecLoader, SpecLoadError
 from metaseed.validators import validate as validate_data
+from metaseed.validators import validate_entity_with_report
 
 from ..helpers import collect_form_values
 
@@ -45,6 +45,15 @@ class ValidationError(TypedDict):
     field: str
     message: str
     rule: str
+
+
+class ValidationCheckResult(TypedDict):
+    """A validation check result to display to the user."""
+
+    field: str
+    check: str
+    passed: bool
+    message: str | None
 
 
 def _describe_constraints(constraints: Constraints) -> list[str]:
@@ -163,7 +172,7 @@ def _validate_entity_deep(
     profile: str,
     version: str,
     path_prefix: str = "",
-) -> tuple[list[ValidationError], list[ValidationRule]]:
+) -> tuple[list[ValidationError], list[ValidationRule], list[ValidationCheckResult]]:
     """Recursively validate an entity and all nested entities.
 
     Args:
@@ -174,30 +183,49 @@ def _validate_entity_deep(
         path_prefix: Path prefix for nested errors (e.g., "samples[0].").
 
     Returns:
-        Tuple of (error_list, rules_list).
+        Tuple of (error_list, rules_list, checks_list).
     """
     error_list: list[ValidationError] = []
+    check_list: list[ValidationCheckResult] = []
     rules = _get_validation_rules_for_entity(entity_type, profile, version)
     loader = SpecLoader(profile=profile)
 
     try:
         entity_spec = loader.load_entity(entity_type, version)
-        model_class = create_model_from_spec(entity_spec)
 
-        # Separate simple and nested fields
-        simple_values, nested_fields = _separate_field_values(entity_spec, values)
-
-        # Validate simple fields with Pydantic
-        _validate_with_pydantic(model_class, simple_values, path_prefix, error_list)
-
-        # Run custom validation rules
-        _validate_with_custom_rules(
-            values, entity_type, version, profile, path_prefix, error_list
+        # Use validate_entity_with_report for detailed checks
+        validation_checks = validate_entity_with_report(
+            data=values,
+            entity_type=entity_type,
+            profile=profile,
+            version=version,
         )
 
+        for check in validation_checks:
+            field = f"{path_prefix}{check.field}" if path_prefix else check.field
+            check_list.append(
+                ValidationCheckResult(
+                    field=field,
+                    check=check.check,
+                    passed=check.passed,
+                    message=check.message,
+                )
+            )
+            if not check.passed:
+                error_list.append(
+                    ValidationError(
+                        field=field,
+                        message=check.message or f"{check.check} check failed",
+                        rule=check.check,
+                    )
+                )
+
+        # Separate nested fields for recursive validation
+        _, nested_fields = _separate_field_values(entity_spec, values)
+
         # Recursively validate nested entities
-        _validate_nested_entities(
-            nested_fields, profile, version, path_prefix, error_list, rules
+        _validate_nested_entities_with_checks(
+            nested_fields, profile, version, path_prefix, error_list, rules, check_list
         )
 
     except FileNotFoundError:
@@ -208,6 +236,14 @@ def _validate_entity_deep(
                 rule="error",
             )
         )
+        check_list.append(
+            ValidationCheckResult(
+                field=path_prefix.rstrip(".") or entity_type,
+                check="load_spec",
+                passed=False,
+                message=f"Unknown entity type: {entity_type}",
+            )
+        )
     except SpecLoadError as e:
         logger.warning("Validation error for %s: %s", entity_type, e, exc_info=True)
         error_list.append(
@@ -215,6 +251,14 @@ def _validate_entity_deep(
                 field=path_prefix.rstrip(".") or entity_type,
                 message=str(e),
                 rule="error",
+            )
+        )
+        check_list.append(
+            ValidationCheckResult(
+                field=path_prefix.rstrip(".") or entity_type,
+                check="load_spec",
+                passed=False,
+                message=str(e),
             )
         )
     except PydanticValidationError as e:
@@ -228,8 +272,16 @@ def _validate_entity_deep(
                 rule="error",
             )
         )
+        check_list.append(
+            ValidationCheckResult(
+                field=path_prefix.rstrip(".") or entity_type,
+                check="constraint",
+                passed=False,
+                message=str(e),
+            )
+        )
 
-    return error_list, rules
+    return error_list, rules, check_list
 
 
 def _separate_field_values(
@@ -340,10 +392,50 @@ def _validate_nested_entities(
             if not isinstance(item, dict):
                 continue
             nested_path = f"{path_prefix}{field_name}[{idx}]."
-            nested_errors, nested_rules = _validate_entity_deep(
+            nested_errors, nested_rules, _ = _validate_entity_deep(
                 item, nested_type, profile, version, nested_path
             )
             error_list.extend(nested_errors)
+            # Add rules from nested entities (avoid duplicates)
+            for rule in nested_rules:
+                if rule not in rules:
+                    rules.append(rule)
+
+
+def _validate_nested_entities_with_checks(
+    nested_fields: dict[str, tuple[str, Any]],
+    profile: str,
+    version: str,
+    path_prefix: str,
+    error_list: list[ValidationError],
+    rules: list[ValidationRule],
+    check_list: list[ValidationCheckResult],
+) -> None:
+    """Recursively validate nested entity fields with check tracking.
+
+    Args:
+        nested_fields: Map of field_name to (nested_type, nested_items).
+        profile: Profile name.
+        version: Profile version.
+        path_prefix: Path prefix for error fields.
+        error_list: List to append errors to.
+        rules: List to append rules to.
+        check_list: List to append checks to.
+    """
+    for field_name, (nested_type, nested_items) in nested_fields.items():
+        if not nested_items or not nested_type:
+            continue
+
+        items_list = nested_items if isinstance(nested_items, list) else [nested_items]
+        for idx, item in enumerate(items_list):
+            if not isinstance(item, dict):
+                continue
+            nested_path = f"{path_prefix}{field_name}[{idx}]."
+            nested_errors, nested_rules, nested_checks = _validate_entity_deep(
+                item, nested_type, profile, version, nested_path
+            )
+            error_list.extend(nested_errors)
+            check_list.extend(nested_checks)
             # Add rules from nested entities (avoid duplicates)
             for rule in nested_rules:
                 if rule not in rules:
@@ -397,12 +489,17 @@ def register_validation_routes(
                 values[field_name] = items
 
         # Perform deep validation of entity and all nested entities
-        error_list, rules = _validate_entity_deep(
+        error_list, rules, check_list = _validate_entity_deep(
             values, entity_type, state.profile, facade.version
         )
 
         return templates.TemplateResponse(
             request,
             "components/validation_result.html",
-            {"valid": len(error_list) == 0, "errors": error_list, "rules": rules},
+            {
+                "valid": len(error_list) == 0,
+                "errors": error_list,
+                "rules": rules,
+                "checks": check_list,
+            },
         )

@@ -83,6 +83,8 @@ def register_validation_tools(mcp: FastMCP, get_mcp_state) -> None:
         Returns:
             JSON with validation results.
         """
+        from metaseed.validators import validate_entity_with_report
+
         state = get_mcp_state()
 
         try:
@@ -101,16 +103,33 @@ def register_validation_tools(mcp: FastMCP, get_mcp_state) -> None:
                 return json.dumps({"error": f"Unknown entity type: {node.entity_type}"})
 
             data = node.instance.model_dump(exclude_none=True)
-            errors = []
 
-            # Check required fields
-            for field in helper._spec.fields:
-                if field.required and field.name not in data:
+            # Use comprehensive validation with check reporting
+            validation_checks = validate_entity_with_report(
+                data=data,
+                entity_type=node.entity_type,
+                profile=facade.profile,
+                version=facade.version,
+            )
+
+            # Build checks and errors lists
+            checks = []
+            errors = []
+            for check in validation_checks:
+                check_dict = {
+                    "field": check.field,
+                    "check": check.check,
+                    "passed": check.passed,
+                }
+                if check.message:
+                    check_dict["message"] = check.message
+                checks.append(check_dict)
+                if not check.passed:
                     errors.append(
                         {
-                            "field": field.name,
-                            "message": "Required field missing",
-                            "value": None,
+                            "field": check.field,
+                            "message": check.message or f"{check.check} check failed",
+                            "rule": check.check,
                         }
                     )
 
@@ -119,6 +138,7 @@ def register_validation_tools(mcp: FastMCP, get_mcp_state) -> None:
                     "id": node.id,
                     "entity_type": node.entity_type,
                     "valid": len(errors) == 0,
+                    "checks": checks,
                     "errors": errors,
                 },
                 indent=2,
@@ -172,29 +192,39 @@ def _validate_node_recursive(node, facade, results: list) -> None:
         facade: ProfileFacade instance.
         results: List to append results to.
     """
-    from metaseed.validators import validate_entity
+    from metaseed.validators import validate_entity_with_report
 
+    checks = []
     errors = []
 
     if node.instance:
         data = node.instance.model_dump(exclude_none=True)
 
-        # Use comprehensive validation from validators module
-        validation_errors = validate_entity(
+        # Use comprehensive validation with check reporting
+        validation_checks = validate_entity_with_report(
             data=data,
             entity_type=node.entity_type,
             profile=facade.profile,
             version=facade.version,
         )
 
-        for err in validation_errors:
-            errors.append(
-                {
-                    "field": err.field,
-                    "message": err.message,
-                    "rule": getattr(err, "rule", "constraint"),
-                }
-            )
+        for check in validation_checks:
+            check_dict = {
+                "field": check.field,
+                "check": check.check,
+                "passed": check.passed,
+            }
+            if check.message:
+                check_dict["message"] = check.message
+            checks.append(check_dict)
+            if not check.passed:
+                errors.append(
+                    {
+                        "field": check.field,
+                        "message": check.message or f"{check.check} check failed",
+                        "rule": check.check,
+                    }
+                )
 
     results.append(
         {
@@ -202,6 +232,7 @@ def _validate_node_recursive(node, facade, results: list) -> None:
             "entity_type": node.entity_type,
             "label": node.label,
             "valid": len(errors) == 0,
+            "checks": checks,
             "errors": errors,
         }
     )

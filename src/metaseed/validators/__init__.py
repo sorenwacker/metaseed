@@ -10,7 +10,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from metaseed.validators.base import ValidationError, ValidationRule
+from metaseed.validators.base import ValidationCheck, ValidationError, ValidationRule
 from metaseed.validators.dataset import DatasetValidationResult, DatasetValidator
 from metaseed.validators.engine import ValidationEngine, create_engine_for_entity
 from metaseed.validators.rules import (
@@ -27,12 +27,14 @@ __all__ = [
     "DateRangeRule",
     "RequiredFieldsRule",
     "UniqueIdPatternRule",
+    "ValidationCheck",
     "ValidationEngine",
     "ValidationError",
     "ValidationRule",
     "create_engine_for_entity",
     "validate",
     "validate_entity",
+    "validate_entity_with_report",
 ]
 
 
@@ -244,3 +246,209 @@ def validate_entity(
     errors.extend(engine.validate(data))
 
     return errors
+
+
+def validate_entity_with_report(
+    data: dict[str, Any],
+    entity_type: str,
+    profile: str = "miappe",
+    version: str = "1.2",
+) -> list[ValidationCheck]:
+    """Validate an entity and return detailed check results.
+
+    Like validate_entity(), but returns both passed and failed checks
+    for comprehensive reporting. Skips checks for empty optional fields.
+
+    Combines Pydantic model validation (type checking, constraints) with
+    custom validation rules from the profile spec.
+
+    Args:
+        data: Entity data dictionary to validate.
+        entity_type: Entity type name (e.g., "Investigation", "Study").
+        profile: Profile name (e.g., "miappe", "isa").
+        version: Profile version.
+
+    Returns:
+        List of ValidationCheck instances showing all checks performed.
+
+    Example:
+        >>> checks = validate_entity_with_report(
+        ...     {"unique_id": "INV001", "title": "Test"},
+        ...     entity_type="Investigation",
+        ...     profile="miappe",
+        ...     version="1.2",
+        ... )
+        >>> for check in checks:
+        ...     print(f"{check.field}: {check.check} - {'PASS' if check.passed else 'FAIL'}")
+    """
+    from pydantic import ValidationError as PydanticValidationError
+
+    from metaseed.models.factory import create_model_from_spec
+    from metaseed.specs.loader import SpecLoader, SpecLoadError
+
+    checks: list[ValidationCheck] = []
+    loader = SpecLoader(profile=profile)
+
+    try:
+        entity_spec = loader.load_entity(entity_type, version)
+    except (FileNotFoundError, SpecLoadError) as e:
+        checks.append(
+            ValidationCheck(
+                field=entity_type,
+                check="load_spec",
+                passed=False,
+                message=f"Unknown entity type: {entity_type} - {e}",
+            )
+        )
+        return checks
+
+    # Build set of required fields and optional fields with values
+    required_fields = {f.name for f in entity_spec.get_required_fields()}
+    optional_fields_with_values = {
+        f.name
+        for f in entity_spec.fields
+        if not f.required and _field_has_value(data, f.name)
+    }
+    fields_to_check = required_fields | optional_fields_with_values
+
+    # Get nested field names (to exclude from Pydantic validation)
+    nested_field_names = {
+        f.name for f in entity_spec.fields if f.type.value == "list" and f.items
+    }
+
+    # 1. Pydantic validation - checks types, patterns, ranges, etc.
+    try:
+        model_class = create_model_from_spec(entity_spec)
+
+        simple_data = {
+            key: value
+            for key, value in data.items()
+            if key not in nested_field_names and not key.startswith("_")
+        }
+
+        model_class(**simple_data)
+
+        # All Pydantic checks passed - record them
+        for field in entity_spec.fields:
+            if field.name in nested_field_names:
+                continue
+            if field.name not in fields_to_check:
+                continue
+
+            # Record type check pass
+            checks.append(
+                ValidationCheck(
+                    field=field.name,
+                    check="type",
+                    passed=True,
+                )
+            )
+
+            # Record constraint checks if applicable
+            if field.constraints:
+                if field.constraints.pattern:
+                    checks.append(
+                        ValidationCheck(
+                            field=field.name,
+                            check="pattern",
+                            passed=True,
+                        )
+                    )
+                if field.constraints.min_length is not None:
+                    checks.append(
+                        ValidationCheck(
+                            field=field.name,
+                            check="min_length",
+                            passed=True,
+                        )
+                    )
+                if field.constraints.max_length is not None:
+                    checks.append(
+                        ValidationCheck(
+                            field=field.name,
+                            check="max_length",
+                            passed=True,
+                        )
+                    )
+                if field.constraints.minimum is not None:
+                    checks.append(
+                        ValidationCheck(
+                            field=field.name,
+                            check="minimum",
+                            passed=True,
+                        )
+                    )
+                if field.constraints.maximum is not None:
+                    checks.append(
+                        ValidationCheck(
+                            field=field.name,
+                            check="maximum",
+                            passed=True,
+                        )
+                    )
+                if field.constraints.enum:
+                    checks.append(
+                        ValidationCheck(
+                            field=field.name,
+                            check="enum",
+                            passed=True,
+                        )
+                    )
+
+    except PydanticValidationError as e:
+        # Record failed checks from Pydantic errors
+        failed_fields: set[str] = set()
+        for err in e.errors():
+            field_path = ".".join(str(loc) for loc in err["loc"])
+            failed_fields.add(field_path)
+            checks.append(
+                ValidationCheck(
+                    field=field_path,
+                    check="constraint",
+                    passed=False,
+                    message=err["msg"],
+                )
+            )
+
+        # Record passed checks for fields that didn't fail
+        for field in entity_spec.fields:
+            if field.name in nested_field_names:
+                continue
+            if field.name not in fields_to_check:
+                continue
+            if field.name in failed_fields:
+                continue
+
+            checks.append(
+                ValidationCheck(
+                    field=field.name,
+                    check="type",
+                    passed=True,
+                )
+            )
+
+    # 2. Custom rule validation from profile spec
+    engine = create_engine_for_entity(entity_type, version, profile=profile)
+    checks.extend(engine.validate_with_report(data))
+
+    return checks
+
+
+def _field_has_value(data: dict[str, Any], field: str) -> bool:
+    """Check if a field has a non-empty value.
+
+    Args:
+        data: Dictionary to check.
+        field: Field name to check.
+
+    Returns:
+        True if the field exists and has a non-empty value.
+    """
+    value = data.get(field)
+    if value is None:
+        return False
+    if isinstance(value, str) and value == "":
+        return False
+    if isinstance(value, list) and len(value) == 0:
+        return False
+    return True

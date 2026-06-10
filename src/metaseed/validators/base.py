@@ -29,6 +29,33 @@ def has_value(data: dict[str, Any], field: str) -> bool:
 
 
 @dataclass
+class ValidationCheck:
+    """Represents an individual validation check result.
+
+    Tracks pass/fail status for each validation check performed,
+    allowing detailed reporting of what was validated.
+
+    Attributes:
+        field: Name of the field being validated.
+        check: Type of check performed (e.g., "required", "pattern", "min_length").
+        passed: Whether the check passed.
+        message: Error message if failed, None if passed.
+    """
+
+    field: str
+    check: str
+    passed: bool
+    message: str | None = None
+
+    def __str__(self: Self) -> str:
+        """Return string representation of the check."""
+        status = "passed" if self.passed else "failed"
+        if self.message:
+            return f"{self.field}.{self.check}: {status} - {self.message}"
+        return f"{self.field}.{self.check}: {status}"
+
+
+@dataclass
 class ValidationError:
     """Represents a validation error.
 

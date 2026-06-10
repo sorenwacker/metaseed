@@ -7,7 +7,7 @@ from typing import Any, Self
 
 from metaseed.specs.loader import SpecLoader, SpecLoadError
 from metaseed.specs.schema import ValidationRuleSpec
-from metaseed.validators.base import ValidationError, ValidationRule
+from metaseed.validators.base import ValidationCheck, ValidationError, ValidationRule
 from metaseed.validators.rules import (
     ConditionalRule,
     CoordinatePairRule,
@@ -56,6 +56,74 @@ class ValidationEngine:
         for rule in self.rules:
             errors.extend(rule.validate(data))
         return errors
+
+    def validate_with_report(self: Self, data: dict[str, Any]) -> list[ValidationCheck]:
+        """Run all rules and return detailed check results.
+
+        Unlike validate(), this returns both passed and failed checks,
+        allowing for comprehensive reporting.
+
+        Args:
+            data: Dictionary to validate.
+
+        Returns:
+            List of ValidationCheck instances for all checks performed.
+        """
+        checks: list[ValidationCheck] = []
+        for rule in self.rules:
+            errors = rule.validate(data)
+            rule_name = rule.name
+
+            if errors:
+                for error in errors:
+                    checks.append(
+                        ValidationCheck(
+                            field=error.field,
+                            check=rule_name,
+                            passed=False,
+                            message=error.message,
+                        )
+                    )
+            else:
+                # Rule passed - determine which field(s) were checked
+                fields = self._get_rule_fields(rule)
+                for field in fields:
+                    checks.append(
+                        ValidationCheck(
+                            field=field,
+                            check=rule_name,
+                            passed=True,
+                            message=None,
+                        )
+                    )
+        return checks
+
+    def _get_rule_fields(self: Self, rule: ValidationRule) -> list[str]:
+        """Get field names that a rule applies to.
+
+        Args:
+            rule: The validation rule.
+
+        Returns:
+            List of field names the rule validates.
+        """
+        # Check for common field attributes on rules
+        if hasattr(rule, "fields"):
+            # RequiredFieldsRule has fields attribute
+            return list(rule.fields)
+        if hasattr(rule, "field"):
+            # Single-field rules like UniqueIdPatternRule
+            return [rule.field]
+        if hasattr(rule, "start_field") and hasattr(rule, "end_field"):
+            # DateRangeRule
+            return [rule.start_field, rule.end_field]
+        if hasattr(rule, "lat_field") and hasattr(rule, "lon_field"):
+            # CoordinatePairRule
+            return [rule.lat_field, rule.lon_field]
+        if hasattr(rule, "_fields"):
+            # ConditionalRule extracts fields from condition
+            return list(rule._fields)
+        return []
 
 
 def _create_rule_by_type(

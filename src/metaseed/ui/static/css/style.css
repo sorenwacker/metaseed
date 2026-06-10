@@ -1110,6 +1110,90 @@ body::before {
     color: var(--clr-ink);
 }
 
+/* Validation Checks Display */
+.validation-checks-summary {
+    margin-top: var(--space-md);
+    font-size: 0.875rem;
+}
+
+.validation-checks-summary summary {
+    cursor: pointer;
+    padding: var(--space-sm);
+    border-radius: var(--radius-sm);
+}
+
+.validation-checks-summary summary:hover {
+    background: var(--clr-bg-alt);
+}
+
+.validation-checks-list {
+    list-style: none;
+    padding: 0;
+    margin: var(--space-sm) 0 0 0;
+}
+
+.validation-checks-detail {
+    margin-top: var(--space-md);
+}
+
+.validation-field-group {
+    margin-bottom: var(--space-md);
+    padding: var(--space-sm) var(--space-md);
+    background: var(--clr-bg-alt);
+    border-radius: var(--radius-sm);
+}
+
+.validation-field-group > strong {
+    display: block;
+    margin-bottom: var(--space-xs);
+    color: var(--clr-ink);
+    font-size: 0.9375rem;
+}
+
+.validation-field-checks {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.validation-check-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-xs) 0;
+    font-size: 0.8125rem;
+}
+
+.check-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.25em;
+    height: 1.25em;
+    font-weight: 700;
+    font-size: 0.875rem;
+}
+
+.check-icon.check-passed {
+    color: var(--clr-success);
+}
+
+.check-icon.check-failed {
+    color: var(--clr-error);
+}
+
+.check-name {
+    color: var(--clr-ink);
+}
+
+.validation-check-failed .check-name {
+    font-weight: 500;
+}
+
+.check-message {
+    font-size: 0.75rem;
+}
+
 /* Validation Panel (full dataset validation) */
 .validation-panel {
     position: fixed;

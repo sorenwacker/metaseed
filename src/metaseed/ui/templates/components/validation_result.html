@@ -2,7 +2,28 @@
 <div class="notification notification-success" data-testid="validation-success">
     Validation passed - all fields are valid.
 </div>
-{% if rules %}
+{% if checks %}
+<details class="validation-checks-summary" data-testid="validation-checks" open>
+    <summary class="text-muted">{{ checks|length }} check(s) passed</summary>
+    <ul class="validation-checks-list">
+        {% set ns = namespace(current_field='') %}
+        {% for check in checks|sort(attribute='field') %}
+        {% if check.field != ns.current_field %}
+        {% if ns.current_field != '' %}</ul></li>{% endif %}
+        {% set ns.current_field = check.field %}
+        <li class="validation-field-group">
+            <strong>{{ check.field }}</strong>
+            <ul class="validation-field-checks">
+        {% endif %}
+        <li class="validation-check-item validation-check-passed">
+            <span class="check-icon check-passed" title="Passed">&#x2713;</span>
+            <span class="check-name">{{ check.check }}</span>
+        </li>
+        {% endfor %}
+        {% if ns.current_field != '' %}</ul></li>{% endif %}
+    </ul>
+</details>
+{% elif rules %}
 <details class="validation-rules-summary" data-testid="validation-rules">
     <summary class="text-muted">{{ rules|length }} rule(s) checked</summary>
     <ul class="validation-rules-list">
@@ -24,6 +45,32 @@
     <div class="notification notification-error mb-2">
         Validation failed - {{ errors|length }} error(s) found:
     </div>
+    {% if checks %}
+    <div class="validation-checks-detail" data-testid="validation-checks">
+        <ul class="validation-checks-list">
+            {% set ns = namespace(current_field='') %}
+            {% for check in checks|sort(attribute='field') %}
+            {% if check.field != ns.current_field %}
+            {% if ns.current_field != '' %}</ul></li>{% endif %}
+            {% set ns.current_field = check.field %}
+            <li class="validation-field-group" {% if not check.passed %}data-testid="validation-error-{{ check.field }}"{% endif %}>
+                <strong>{{ check.field }}</strong>
+                <ul class="validation-field-checks">
+            {% endif %}
+            <li class="validation-check-item {% if check.passed %}validation-check-passed{% else %}validation-check-failed{% endif %}" {% if not check.passed %}data-testid="validation-error-{{ check.field }}"{% endif %}>
+                {% if check.passed %}
+                <span class="check-icon check-passed" title="Passed">&#x2713;</span>
+                {% else %}
+                <span class="check-icon check-failed" title="Failed">&#x2717;</span>
+                {% endif %}
+                <span class="check-name">{{ check.check }}</span>
+                {% if check.message %}<span class="check-message text-muted">- {{ check.message }}</span>{% endif %}
+            </li>
+            {% endfor %}
+            {% if ns.current_field != '' %}</ul></li>{% endif %}
+        </ul>
+    </div>
+    {% else %}
     <ul class="validation-error-list">
         {% for error in errors %}
         <li class="validation-error-item" data-testid="validation-error-{{ error.field }}" data-field="{{ error.field }}">
@@ -32,6 +79,7 @@
         </li>
         {% endfor %}
     </ul>
+    {% endif %}
     {% if rules %}
     <details class="validation-rules-summary mt-2" data-testid="validation-rules">
         <summary class="text-muted">{{ rules|length }} rule(s) checked</summary>
