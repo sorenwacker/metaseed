@@ -55,6 +55,11 @@ Common ontology IDs:
 | `po` | Plant Ontology |
 | `chebi` | Chemical Entities of Biological Interest |
 | `uo` | Units of Measurement Ontology |
+| `co_321` | Crop Ontology - Wheat traits |
+| `agro` | Agronomy Ontology |
+| `peco` | Plant Experimental Conditions Ontology |
+
+Browse all available ontologies at [OLS4 Ontologies](https://www.ebi.ac.uk/ols4/ontologies). The lowercase ontology ID shown in the URL (e.g., `ncbitaxon` from `/ols4/ontologies/ncbitaxon`) is the value to use in the `ontologies` field.
 
 ## User Interface
 
@@ -183,3 +188,5 @@ Data attributes:
 
 - [Schema Specification](../api/schema-specs.md) - Field type reference
 - [REST API](../api/rest.md) - API endpoint documentation
+- [OLS4 Ontologies Browser](https://www.ebi.ac.uk/ols4/ontologies) - Browse all available ontologies
+- [OLS4 API Documentation](https://www.ebi.ac.uk/ols4/docs/api) - OLS4 REST API reference
