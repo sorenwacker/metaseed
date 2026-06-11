@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a3a2f"/>
+      <stop offset="100%" style="stop-color:#234536"/>
+    </linearGradient>
+    <linearGradient id="seed1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6b9b5e"/>
+      <stop offset="100%" style="stop-color:#4a7c59"/>
+    </linearGradient>
+    <linearGradient id="seed2" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#87a878"/>
+      <stop offset="100%" style="stop-color:#5a8a4d"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#c9a86c"/>
+      <stop offset="100%" style="stop-color:#a68542"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="512" height="512" rx="102" fill="url(#bg)"/>
+
+  <!-- Left seed half -->
+  <path d="M236 96
+           C 140 120, 80 200, 80 296
+           C 80 380, 140 432, 236 432
+           L 236 96Z"
+        fill="url(#seed1)"/>
+
+  <!-- Right seed half -->
+  <path d="M276 96
+           C 372 120, 432 200, 432 296
+           C 432 380, 372 432, 276 432
+           L 276 96Z"
+        fill="url(#seed2)"/>
+
+  <!-- Center gap (data channel) -->
+  <rect x="240" y="120" width="32" height="288" fill="#1a3a2f" rx="16"/>
+
+  <!-- Data nodes in center -->
+  <circle cx="256" cy="168" r="14" fill="url(#accent)"/>
+  <circle cx="256" cy="224" r="14" fill="url(#accent)"/>
+  <circle cx="256" cy="280" r="14" fill="url(#accent)"/>
+  <circle cx="256" cy="336" r="14" fill="url(#accent)"/>
+  <circle cx="256" cy="392" r="14" fill="#7a6434"/>
+
+  <!-- Connection lines -->
+  <line x1="256" y1="182" x2="256" y2="210" stroke="#1a3a2f" stroke-width="4"/>
+  <line x1="256" y1="238" x2="256" y2="266" stroke="#1a3a2f" stroke-width="4"/>
+  <line x1="256" y1="294" x2="256" y2="322" stroke="#1a3a2f" stroke-width="4"/>
+  <line x1="256" y1="350" x2="256" y2="378" stroke="#1a3a2f" stroke-width="4"/>
+
+  <!-- Seed highlights -->
+  <ellipse cx="160" cy="260" rx="30" ry="80" fill="#8ab87a" opacity="0.3"/>
+  <ellipse cx="352" cy="260" rx="30" ry="80" fill="#9dc48f" opacity="0.3"/>
+
+  <!-- Top sprout detail -->
+  <path d="M256 96 L256 60" stroke="#6b9b5e" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="256" cy="52" r="12" fill="#87a878"/>
+</svg>

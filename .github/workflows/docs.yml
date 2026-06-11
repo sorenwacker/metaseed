@@ -34,8 +34,21 @@ jobs:
       - name: Install dependencies
         run: uv sync --extra docs
 
+      - name: Install Quarto
+        uses: quarto-dev/quarto-actions/setup@v2
+
+      - name: Build presentation
+        run: |
+          cd docs/slides
+          quarto render index.qmd
+
       - name: Build documentation
         run: uv run mkdocs build --strict
+
+      - name: Copy presentation to site
+        run: |
+          mkdir -p site/slides
+          cp -r docs/slides/index.html docs/slides/index_files docs/slides/images site/slides/
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

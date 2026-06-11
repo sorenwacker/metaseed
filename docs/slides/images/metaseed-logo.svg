@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 120">
+  <defs>
+    <linearGradient id="logoBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a3a2f"/>
+      <stop offset="100%" style="stop-color:#234536"/>
+    </linearGradient>
+    <linearGradient id="logoSeed1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6b9b5e"/>
+      <stop offset="100%" style="stop-color:#4a7c59"/>
+    </linearGradient>
+    <linearGradient id="logoSeed2" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#87a878"/>
+      <stop offset="100%" style="stop-color:#5a8a4d"/>
+    </linearGradient>
+    <linearGradient id="logoAccent" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#c9a86c"/>
+      <stop offset="100%" style="stop-color:#a68542"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Icon background -->
+  <rect x="10" y="10" width="100" height="100" rx="20" fill="url(#logoBg)"/>
+
+  <!-- Left seed half -->
+  <path d="M53 28
+           C 30 32, 20 50, 20 68
+           C 20 86, 30 95, 53 95
+           L 53 28Z"
+        fill="url(#logoSeed1)"/>
+
+  <!-- Right seed half -->
+  <path d="M67 28
+           C 90 32, 100 50, 100 68
+           C 100 86, 90 95, 67 95
+           L 67 28Z"
+        fill="url(#logoSeed2)"/>
+
+  <!-- Center gap -->
+  <rect x="55" y="32" width="10" height="58" fill="#1a3a2f" rx="5"/>
+
+  <!-- Data nodes -->
+  <circle cx="60" cy="42" r="4" fill="url(#logoAccent)"/>
+  <circle cx="60" cy="55" r="4" fill="url(#logoAccent)"/>
+  <circle cx="60" cy="68" r="4" fill="url(#logoAccent)"/>
+  <circle cx="60" cy="81" r="4" fill="url(#logoAccent)"/>
+
+  <!-- Sprout -->
+  <path d="M60 28 L60 18" stroke="#6b9b5e" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="60" cy="15" r="4" fill="#87a878"/>
+
+  <!-- Wordmark: metaseed (light version for dark backgrounds) -->
+  <text x="125" y="75" font-family="'DM Sans', -apple-system, sans-serif" font-size="42" font-weight="500">
+    <tspan fill="#faf8f5">meta</tspan><tspan fill="#87a878">seed</tspan>
+  </text>
+</svg>

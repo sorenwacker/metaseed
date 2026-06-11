@@ -45,6 +45,7 @@ markdown_extensions:
 
 nav:
   - Home: index.md
+  - Introduction: slides/index.html
   - Getting Started:
       - Installation: getting-started/installation.md
       - Quick Start: getting-started/quickstart.md
