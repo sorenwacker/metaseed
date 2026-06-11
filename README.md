@@ -7,7 +7,7 @@
 
 Schema-driven metadata management from YAML specifications.
 
-[Documentation](https://sorenwacker.github.io/metaseed/)
+[Documentation](https://sorenwacker.github.io/metaseed/) | [Introduction Slides](https://sorenwacker.github.io/metaseed/slides/)
 
 ## Overview
 

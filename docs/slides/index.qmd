@@ -500,11 +500,7 @@ metaseed ui
 metaseed mcp --transport stdio
 ```
 
-# Thanks {visibility="hidden"}
-
-## Thanks
-
-![](images/metaseed-logo-dark.svg){fig-align="center" width="100px"}
+## Resources
 
 **metaseed** (core library)
 
