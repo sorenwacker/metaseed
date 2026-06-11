@@ -9,105 +9,194 @@ Schema-driven metadata management from YAML specifications.
 
 [Documentation](https://sorenwacker.github.io/metaseed/) | [Introduction Slides](https://sorenwacker.github.io/metaseed/slides/)
 
-## Overview
+## What is Metaseed?
 
-Metaseed provides tools for creating, editing, and validating structured metadata from schema specifications.
+A **schema-driven metadata management system** that:
 
-### Features
+- Defines entity schemas in human-readable YAML
+- Generates Pydantic models dynamically at runtime
+- Validates with composable rules
+- Supports multiple metadata standards (MIAPPE, ISA, Darwin Core, ...)
 
-- **Schema-driven**: YAML specifications define metadata structures
-- **Ontology-backed**: Reference external ontologies via URIs
-- **Factory pattern**: Dynamically generates Pydantic models from specs
-- **Multiple interfaces**: REST API (FastAPI), CLI (Typer), and web UI (HTMX)
-- **Validation**: Composable validation rules from schema definitions
-
-## Capabilities
-
-### What Metaseed Can Do
-
-- Define entity schemas in YAML with nested tree structures
-- Generate Pydantic models dynamically from specs
-- Validate with composable rules (patterns, ranges, enums, conditionals, cross-field)
-- Serialize to JSON/YAML
-- Serve via REST API, CLI, or Python API
-- Support multiple schema versions
-
-### What Metaseed Cannot Do
-
-- Arbitrary graph relationships (trees only)
-- Database storage (file-based only)
-- Binary/blob types, maps with arbitrary keys, union types
-- Custom code execution in validation
-- Query/search/filter operations
-- Export to CSV, XML, Excel
+```
+YAML specs → Pydantic models → Validation → Serialization
+```
 
 ## Installation
 
-Requires Python 3.11+ and [UV](https://docs.astral.sh/uv/).
+Requires Python 3.11+
 
 ```bash
+# Install from GitHub
+uv tool install git+https://github.com/sorenwacker/metaseed.git
+
+# Or for development
 git clone https://github.com/sorenwacker/metaseed.git
 cd metaseed
-
-# Install dependencies
-uv sync --extra dev --extra docs
+uv sync --extra dev
 ```
 
-## Usage
+## Supported Profiles
+
+| Profile | Version | Entities | Fields | Domain |
+|---------|---------|----------|--------|--------|
+| MIAPPE | 1.2 | 14 | 163 | Plant phenotyping |
+| ISA | 1.0 | 22 | 139 | Life science |
+| Darwin Core | 1.0 | 10 | 189 | Biodiversity |
+| DiSSCo | 0.4 | 16 | 261 | Digital specimens |
+| ENA | 1.0 | 11 | 109 | Nucleotide archive |
+| JERM | 1.0 | 24 | 229 | Systems biology |
+
+User-defined profiles supported in `~/.local/share/metaseed/specs/`
+
+## Modi Operandi
+
+Metaseed operates in **four modes**:
+
+| Mode | Interface | Use Case |
+|------|-----------|----------|
+| CLI | `metaseed` | Script automation |
+| Web UI | Browser | Visual editing |
+| REST API | HTTP | System integration |
+| Python API | Library | Programmatic access |
+| MCP Server | AI | Claude integration |
+
+### CLI Mode
+
+```bash
+# List entities in a profile
+metaseed entities miappe 1.2
+
+# Generate entity template
+metaseed template miappe 1.2 Investigation
+
+# Validate a dataset
+metaseed validate dataset.yaml --profile miappe --version 1.2
+
+# Start web UI
+metaseed ui
+
+# Start MCP server (for Claude Desktop)
+metaseed mcp --transport stdio
+```
+
+### Python API
 
 ```python
 from metaseed import MetaseedClient
 
 client = MetaseedClient("miappe", "1.2")
 
-# Create entities
+# Create root entity
 inv = client.create_entity("Investigation", {
     "unique_id": "INV001",
-    "title": "Drought study"
+    "title": "Drought Tolerance Study",
+    "description": "Multi-year field trial..."
 })
 
-# Validate
-result = client.validate()
+# Create child with parent linkage
+study = client.create_entity("Study", {
+    "unique_id": "STU001",
+    "title": "Field Trial 2024",
+    "start_date": "2024-03-01"
+}, parent_id=inv.id)
 
-# Serialize
-data = client.serialize()
+# Validate entire dataset
+result = client.validate()
+print(f"Valid: {result.is_valid}, Errors: {len(result.errors)}")
 ```
+
+## Architecture
+
+```mermaid
+graph LR
+    subgraph interfaces["Interfaces"]
+        direction RL
+        CLI["CLI"]
+        UI["Web UI"]
+        API["REST API"]
+        MCP["MCP Server"]
+    end
+
+    subgraph core["Core"]
+        Client["MetaseedClient"]
+        Facade["ProfileFacade"]
+        Factory["Model Factory"]
+        Validators["Validation Engine"]
+    end
+
+    subgraph data["Data Layer"]
+        Specs["YAML Specs"]
+        Repo["Entity Storage"]
+        Storage["JSON/YAML Files"]
+    end
+
+    interfaces --> Client
+    Client --> Facade
+    Facade --> Factory
+    Facade --> Validators
+    Factory --> Specs
+    Validators --> Repo
+    Repo --> Storage
+```
+
+## Validation
+
+Composable validation rules defined in YAML:
+
+- Required field checking
+- Pattern matching (regex)
+- Range validation (min/max)
+- Date range validation
+- Coordinate pair validation
+- Uniqueness constraints (within parent or global)
+- Referential integrity (foreign keys)
+- Conditional rules
+
+```yaml
+validation:
+  - type: uniqueness
+    entity: Study
+    field: unique_id
+    scope: parent
+
+  - type: referential_integrity
+    entity: ObservationUnit
+    field: study_id
+    references:
+      entity: Study
+      field: unique_id
+```
+
+## MCP Integration
+
+Model Context Protocol enables AI-assisted metadata extraction with Claude.
+
+**Tool categories:**
+- Profile Discovery — `list_profiles`, `get_profile_schema`
+- File Extraction — `parse_source_file`, `extract_entities`
+- Entity CRUD — `create_entity`, `update_entity`, `delete_entity`
+- Validation — `validate_entity`, `validate_dataset`
+- Ontology — `search_ontology`, `suggest_ontology_term`
+
+## Technology Stack
+
+| Layer | Technologies |
+|-------|-------------|
+| Core | Python 3.11+, Pydantic 2.0+ |
+| Interfaces | FastAPI, Typer, HTMX, Jinja2 |
+| Data | PyYAML, openpyxl |
+| Agent | mcp, FastMCP |
+| Dev | uv, pytest, ruff, pre-commit |
 
 ## Development
 
 ```bash
-# Setup development environment
-make dev
-
-# Run tests
-make test
-
-# Run linter
-make lint
-
-# Format code
-make format
-
-# Serve documentation locally
-make docs-serve
-```
-
-Run `make help` to see all available targets.
-
-## Architecture
-
-```
-src/metaseed/
-├── api/          # FastAPI REST endpoints
-├── cli/          # Typer CLI commands
-├── core/         # Shared utilities
-├── importers/    # ISA-Tab and other format importers
-├── models/       # Generated Pydantic models
-├── profiles/     # User profile configurations
-├── specs/        # YAML schema specifications
-├── storage/      # Persistence layer
-├── ui/           # HTMX web interface
-└── validators/   # Validation logic
+make setup    # Install dependencies + pre-commit hooks
+make dev      # Start development server
+make test     # Run tests
+make lint     # Run linter
+make docs     # Serve documentation locally
 ```
 
 ## License
