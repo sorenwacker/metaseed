@@ -12,6 +12,9 @@ format:
     slide-level: 2
     logo: images/metaseed-icon.svg
     footer: "[sorenwacker.github.io/metaseed](https://sorenwacker.github.io/metaseed/)"
+    view-distance: 10
+    mobile-view-distance: 10
+    preload-iframes: true
     mermaid:
       theme: neutral
 ---
