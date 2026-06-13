@@ -6,11 +6,12 @@ All operations use DatasetManagerFactory for proper dependency injection.
 
 from __future__ import annotations
 
+import json
 from dataclasses import asdict
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from metaseed.repositories.dataset_repository import DatasetRepository
+from metaseed.repositories.dataset_repository import DatasetData, DatasetRepository
 from metaseed.repositories.filesystem_dataset import (
     DEFAULT_DATASETS_DIR,
     FilesystemDatasetRepository,
@@ -103,6 +104,52 @@ def load_dataset(state: AppState, name: str) -> dict[str, Any]:
     manager = factory.get_manager(state)
     result = manager.load_dataset(name)
     return asdict(result)
+
+
+def import_dataset(state: AppState, raw: bytes | str) -> dict[str, Any]:
+    """Import a dataset from raw JSON content into the state.
+
+    The expected JSON shape matches a saved dataset file: an object with
+    ``profile`` and ``entities`` (a list), and optionally ``name``, ``version``
+    and ``modified``. The imported dataset replaces the current state but is
+    not persisted to storage.
+
+    Args:
+        state: AppState to load the imported dataset into.
+        raw: Raw JSON content (bytes or str) from an uploaded file.
+
+    Returns:
+        Dict with imported dataset info (name, profile, version, entity_count).
+
+    Raises:
+        ValueError: If the content is not a valid dataset JSON document.
+    """
+    try:
+        payload = json.loads(raw)
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise ValueError(f"Invalid JSON: {exc}") from exc
+
+    if not isinstance(payload, dict):
+        raise ValueError("Dataset JSON must be an object")  # noqa: TRY004
+
+    profile = payload.get("profile")
+    entities = payload.get("entities")
+    if not profile or entities is None:
+        raise ValueError("Dataset JSON must contain 'profile' and 'entities'")
+    if not isinstance(entities, list):
+        raise ValueError("Dataset 'entities' must be a list")  # noqa: TRY004
+
+    data = DatasetData(
+        name=payload.get("name", ""),
+        profile=profile,
+        version=payload.get("version") or "",
+        entities=entities,
+        modified=payload.get("modified", ""),
+    )
+
+    factory = _get_factory()
+    manager = factory.get_manager(state)
+    return asdict(manager.import_data(data))
 
 
 def delete_dataset(name: str) -> bool:

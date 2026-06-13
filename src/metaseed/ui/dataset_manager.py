@@ -128,6 +128,27 @@ class BaseDatasetManager(ABC, Generic[R]):
 
         return loaded_count
 
+    def import_data(self: Self, data: DatasetData) -> DatasetInfo:
+        """Restore state from in-memory dataset data, e.g. an uploaded file.
+
+        Unlike load_dataset, the data does not originate from the repository
+        and is not marked as the current saved dataset.
+
+        Args:
+            data: Parsed dataset contents to load into the state.
+
+        Returns:
+            DatasetInfo summarizing the imported dataset.
+        """
+        loaded_count = self._restore_state_from_data(data)
+        return DatasetInfo(
+            name=data.name,
+            profile=data.profile,
+            version=data.version,
+            entity_count=loaded_count,
+            modified=data.modified,
+        )
+
 
 class DatasetManager(BaseDatasetManager[DatasetRepository]):
     """Manages dataset operations with DI support.
