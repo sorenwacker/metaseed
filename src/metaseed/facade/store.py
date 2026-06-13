@@ -292,7 +292,11 @@ class EntityStore:
                 data = n.instance.model_dump()
                 for id_field in self._get_identifier_fields(n.entity_type):
                     id_value = data.get(id_field)
-                    if id_value and str(id_value) in self._index:
+                    if (
+                        id_value
+                        and str(id_value) in self._index
+                        and self._index[str(id_value)] == n.id
+                    ):
                         del self._index[str(id_value)]
             self._instances.pop(n.id, None)
 

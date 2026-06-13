@@ -709,3 +709,50 @@ class TestOntologyValidation:
 
         assert len(warnings) == 1
         assert "INVALID:9999" in warnings[0]
+
+
+class TestEntityStoreIndex:
+    """Tests for EntityStore identifier-index management."""
+
+    @staticmethod
+    def _make_store():
+        """Build an EntityStore whose helper exposes no extra identifier field."""
+        from pydantic import BaseModel
+
+        from metaseed.facade.store import EntityStore
+
+        class _Model(BaseModel):
+            alias: str | None = None
+            unique_id: str | None = None
+            study_ref: str | None = None
+
+        helper = MagicMock()
+        helper.identifier_field = None
+        helper.reference_fields = ["study_ref"]
+
+        def create_instance(_entity_type, data):
+            return _Model(**{k: v for k, v in data.items() if k in _Model.model_fields})
+
+        return EntityStore(
+            helper_getter=lambda _entity_type: helper,
+            instance_creator=create_instance,
+        )
+
+    def test_delete_entity_preserves_index_owned_by_other_node(self) -> None:
+        """Deleting a node must not drop an index entry owned by a surviving node.
+
+        When two nodes share an identifier value, the index points at whichever
+        was added last. Deleting the earlier node must leave that index entry
+        intact so the surviving node stays resolvable via get_entity_by_ref.
+        """
+        store = self._make_store()
+
+        first = store.add_entity("Study", {"alias": "shared"})
+        second = store.add_entity("Study", {"alias": "shared"})
+
+        assert store._index["shared"] == second.id
+
+        store.delete_entity(first.id)
+
+        assert store.get_entity_by_ref("shared") is not None
+        assert store._index["shared"] == second.id

@@ -55,13 +55,3 @@ class EntityNode:
                 return str(value)[:50]
 
         return f"New {self.entity_type}"
-
-    def to_dict(self) -> dict:
-        """Convert node to dictionary for template rendering."""
-        return {
-            "id": self.id,
-            "entity_type": self.entity_type,
-            "label": self.label,
-            "has_children": bool(self.children),
-            "children": [c.to_dict() for c in self.children],
-        }

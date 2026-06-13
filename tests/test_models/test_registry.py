@@ -175,3 +175,31 @@ class TestGlobalRegistry:
         # snake_case should also work
         model = get_model("biological_material", version="1.1")
         assert "unique_id" in model.model_fields
+
+    def test_registry_key_equals_class_name_for_multi_word_names(self) -> None:
+        """The registry caches multi-word models under their PascalCase class name.
+
+        Previously the key was built with str.title(), which mangled
+        already-PascalCase names (e.g. "BiologicalMaterial" -> "Biologicalmaterial").
+        The cache key must equal the model's real __name__ (spec.name).
+        """
+        from metaseed.models import get_global_registry, get_model
+
+        registry = get_global_registry()
+        cache_version = "miappe:1.1"
+
+        model = get_model("BiologicalMaterial", version="1.1")
+
+        assert model.__name__ == "BiologicalMaterial"
+        assert registry.has("BiologicalMaterial", cache_version)
+        # The mangled key must not be used.
+        assert not registry.has("Biologicalmaterial", cache_version)
+
+    def test_get_model_snake_and_pascal_share_cache(self) -> None:
+        """snake_case and PascalCase inputs resolve to the same cached model."""
+        from metaseed.models import get_model
+
+        pascal = get_model("BiologicalMaterial", version="1.1")
+        snake = get_model("biological_material", version="1.1")
+
+        assert pascal is snake

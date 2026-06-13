@@ -81,27 +81,25 @@ def get_model(
     """
     registry = get_global_registry()
 
-    # Normalize name to PascalCase for registry lookup
-    normalized_name = name.title().replace("_", "")
-
     # Include profile in cache key
     cache_version = f"{profile.lower()}:{version}"
 
     # Set context for nested entity resolution
     set_model_context(profile.lower(), version)
 
-    # Check if already cached
-    if registry.has(normalized_name, cache_version):
-        return registry.get(normalized_name, cache_version)
-
-    # Load spec and create model
+    # Load the spec so the registry key equals the real class name (spec.name).
+    # Profile specs are cached by the loader, so this is cheap on cache hits.
     loader = SpecLoader(profile=profile)
-    # Convert CamelCase to snake_case for file lookup
+    # Convert CamelCase to snake_case for case-insensitive file lookup
     entity_name = _to_snake_case(name)
     spec = loader.load_entity(entity_name, version)
 
+    # Check if already cached, keyed by the spec's PascalCase name
+    if registry.has(spec.name, cache_version):
+        return registry.get(spec.name, cache_version)
+
     model = create_model_from_spec(spec)
-    registry.register(normalized_name, cache_version, model)
+    registry.register(spec.name, cache_version, model)
 
     return model
 
