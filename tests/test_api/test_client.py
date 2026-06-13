@@ -118,6 +118,17 @@ class TestEntityCRUD:
         assert exc_info.value.entity_type == "NonexistentType"
         assert exc_info.value.profile == "miappe"
 
+    def test_create_entity_miscased_type_stored_canonical(
+        self, client: MetaseedClient
+    ) -> None:
+        """Mis-cased entity types are stored under the canonical name."""
+        entity = client.create_entity(
+            "investigation",
+            {"unique_id": "INV-001", "title": "Test"},
+        )
+        assert entity.entity_type == "Investigation"
+        assert client.get_entity(entity.id).entity_type == "Investigation"
+
     def test_get_entity(self, client: MetaseedClient) -> None:
         """Get an entity by ID."""
         created = client.create_entity(

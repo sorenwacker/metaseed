@@ -190,7 +190,7 @@ class MetaseedClient(SerializationMixin, ValidationMixin):
             ...     "title": "My Study"
             ... })
         """
-        self._validate_entity_type(entity_type)
+        entity_type = self._validate_entity_type(entity_type)
         try:
             node = self._facade.add_entity(
                 entity_type, data, parent_id=parent_id, skip_validation=skip_validation
@@ -352,7 +352,7 @@ class MetaseedClient(SerializationMixin, ValidationMixin):
             >>> for f in fields:
             ...     print(f"{f.name}: {f.type}")
         """
-        self._validate_entity_type(entity_type)
+        entity_type = self._validate_entity_type(entity_type)
         helper = getattr(self._facade, entity_type)
 
         fields = []
@@ -383,7 +383,7 @@ class MetaseedClient(SerializationMixin, ValidationMixin):
         Raises:
             EntityTypeNotFoundError: If entity type not found.
         """
-        self._validate_entity_type(entity_type)
+        entity_type = self._validate_entity_type(entity_type)
         helper = getattr(self._facade, entity_type)
 
         fields = tuple(self.get_entity_fields(entity_type))
@@ -432,7 +432,7 @@ class MetaseedClient(SerializationMixin, ValidationMixin):
         Raises:
             EntityTypeNotFoundError: If entity type not found.
         """
-        self._validate_entity_type(entity_type)
+        entity_type = self._validate_entity_type(entity_type)
         helper = getattr(self._facade, entity_type)
         return helper._model
 
@@ -463,13 +463,28 @@ class MetaseedClient(SerializationMixin, ValidationMixin):
         ]
         return ValidationError(errors)
 
-    def _validate_entity_type(self: Self, entity_type: str) -> None:
-        """Validate that an entity type exists in the profile."""
-        if entity_type not in self._facade.entities:
-            for name in self._facade.entities:
-                if name.lower() == entity_type.lower():
-                    return
-            raise EntityTypeNotFoundError(entity_type, self._facade.profile)
+    def _validate_entity_type(self: Self, entity_type: str) -> str:
+        """Validate an entity type and return its canonical name.
+
+        Entity types are matched case-insensitively, but the canonical
+        (exact-case) name from the profile is returned so callers store and
+        query entities consistently.
+
+        Args:
+            entity_type: The entity type name to validate, in any casing.
+
+        Returns:
+            The canonical entity-type name as defined in the profile.
+
+        Raises:
+            EntityTypeNotFoundError: If no entity type matches, ignoring case.
+        """
+        if entity_type in self._facade.entities:
+            return entity_type
+        for name in self._facade.entities:
+            if name.lower() == entity_type.lower():
+                return name
+        raise EntityTypeNotFoundError(entity_type, self._facade.profile)
 
     def _convert_node(self: Self, node: InternalEntityNode) -> Entity:
         """Convert internal EntityNode to public Entity."""
