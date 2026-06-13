@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from ..state import AppState
 
 UI_DIR = Path(__file__).parent.parent
-EXAMPLES_DIR = UI_DIR.parent.parent.parent / "examples"
+EXAMPLES_DIR = UI_DIR.parent / "examples"
 
 
 def register_form_routes(

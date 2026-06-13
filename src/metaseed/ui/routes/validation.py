@@ -13,9 +13,7 @@ from fastapi.templating import Jinja2Templates
 from pydantic import ValidationError as PydanticValidationError
 from starlette.requests import Request
 
-from metaseed.facade import ProfileFacade
 from metaseed.specs.loader import SpecLoader, SpecLoadError
-from metaseed.validators import validate as validate_data
 from metaseed.validators import validate_entity_with_report
 
 from ..helpers import collect_form_values
@@ -308,100 +306,6 @@ def _separate_field_values(
     return simple_values, nested_fields
 
 
-def _validate_with_pydantic(
-    model_class,
-    values: dict[str, Any],
-    path_prefix: str,
-    error_list: list[ValidationError],
-) -> None:
-    """Validate values using Pydantic model.
-
-    Args:
-        model_class: The Pydantic model class.
-        values: Values to validate.
-        path_prefix: Path prefix for error fields.
-        error_list: List to append errors to.
-    """
-    try:
-        model_class(**values)
-    except PydanticValidationError as e:
-        for err in e.errors():
-            field = ".".join(str(loc) for loc in err["loc"])
-            error_list.append(
-                ValidationError(
-                    field=f"{path_prefix}{field}",
-                    message=err["msg"],
-                    rule="constraint",
-                )
-            )
-
-
-def _validate_with_custom_rules(
-    values: dict[str, Any],
-    entity_type: str,
-    version: str,
-    profile: str,
-    path_prefix: str,
-    error_list: list[ValidationError],
-) -> None:
-    """Run custom validation rules on entity values.
-
-    Args:
-        values: Values to validate.
-        entity_type: Entity type name.
-        version: Profile version.
-        profile: Profile name.
-        path_prefix: Path prefix for error fields.
-        error_list: List to append errors to.
-    """
-    errors = validate_data(values, entity_type, version=version, profile=profile)
-    for e in errors:
-        error_list.append(
-            ValidationError(
-                field=f"{path_prefix}{e.field}",
-                message=e.message,
-                rule=e.rule,
-            )
-        )
-
-
-def _validate_nested_entities(
-    nested_fields: dict[str, tuple[str, Any]],
-    profile: str,
-    version: str,
-    path_prefix: str,
-    error_list: list[ValidationError],
-    rules: list[ValidationRule],
-) -> None:
-    """Recursively validate nested entity fields.
-
-    Args:
-        nested_fields: Map of field_name to (nested_type, nested_items).
-        profile: Profile name.
-        version: Profile version.
-        path_prefix: Path prefix for error fields.
-        error_list: List to append errors to.
-        rules: List to append rules to.
-    """
-    for field_name, (nested_type, nested_items) in nested_fields.items():
-        if not nested_items or not nested_type:
-            continue
-
-        items_list = nested_items if isinstance(nested_items, list) else [nested_items]
-        for idx, item in enumerate(items_list):
-            if not isinstance(item, dict):
-                continue
-            nested_path = f"{path_prefix}{field_name}[{idx}]."
-            nested_errors, nested_rules, _ = _validate_entity_deep(
-                item, nested_type, profile, version, nested_path
-            )
-            error_list.extend(nested_errors)
-            # Add rules from nested entities (avoid duplicates)
-            for rule in nested_rules:
-                if rule not in rules:
-                    rules.append(rule)
-
-
 def _validate_nested_entities_with_checks(
     nested_fields: dict[str, tuple[str, Any]],
     profile: str,
@@ -479,7 +383,7 @@ def register_validation_routes(
                 },
             )
 
-        facade = ProfileFacade(profile=state.profile)
+        facade = state.get_or_create_facade()
         helper = getattr(facade, entity_type)
         values = collect_form_values(dict(form_data), helper)
 

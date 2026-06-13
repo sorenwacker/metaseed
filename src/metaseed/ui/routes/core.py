@@ -126,25 +126,6 @@ def register_core_routes(
         factory = DatasetManagerFactory()
         return factory.get_manager(state)
 
-    def _get_dataset_base_url(state: AppState) -> str:
-        """Get the base URL for the current dataset."""
-        manager = _get_dataset_manager(state)
-        if manager.current_dataset:
-            return f"{base_url}/dataset/{manager.current_dataset}"
-        return base_url
-
-    def _index_context(state: AppState, **extra: Any) -> dict[str, Any]:
-        """Build standard context for index.html rendering."""
-        facade = state.get_or_create_facade()
-        return {
-            "tree_nodes": state.get_tree_data(),
-            "root_types": state.get_root_entity_types()[:3],
-            "current_profile": state.profile,
-            "version": facade.version,
-            "base_url": _get_dataset_base_url(state),
-            **extra,
-        }
-
     @app.get("/", response_class=HTMLResponse)
     async def index(request: Request) -> HTMLResponse:
         """Render the datasets list page."""

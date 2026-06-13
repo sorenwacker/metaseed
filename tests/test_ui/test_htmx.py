@@ -87,6 +87,17 @@ class TestForm:
         response = client.get("/form/UnknownEntity?profile=miappe")
         assert response.status_code == 404
 
+    def test_new_form_offers_example_when_shipped(self, client):
+        """Form offers to load an example when one ships for the profile/version.
+
+        Regression test for EXAMPLES_DIR resolving to a non-existent repo-root
+        path: examples live under src/metaseed/examples, so the affordance must
+        appear for a profile that ships one (miappe).
+        """
+        response = client.get("/form/Investigation?profile=miappe")
+        assert response.status_code == 200
+        assert 'data-testid="btn-load-example"' in response.text
+
 
 class TestCreateEntity:
     """Tests for entity creation."""
@@ -494,6 +505,39 @@ class TestValidateForm:
             },
         )
         assert response.status_code == 200
+
+    def test_validate_honors_selected_version(self, client, monkeypatch):
+        """Validation uses the version selected in state, not the latest.
+
+        Regression test for validate_form building ProfileFacade without the
+        version, which defaulted to the latest spec and ignored state.version.
+        """
+        from metaseed.ui.routes import validation as validation_module
+
+        state = client.app.state.ui_state
+        state.profile = "miappe"
+        state.version = "1.1"
+        state.facade = None
+
+        captured: dict[str, str] = {}
+        original = validation_module._validate_entity_deep
+
+        def _capture(values, entity_type, profile, version, path_prefix=""):
+            captured["version"] = version
+            return original(values, entity_type, profile, version, path_prefix)
+
+        monkeypatch.setattr(validation_module, "_validate_entity_deep", _capture)
+
+        response = client.post(
+            "/validate",
+            data={
+                "_entity_type": "Investigation",
+                "unique_id": "INV-001",
+                "title": "Test Investigation",
+            },
+        )
+        assert response.status_code == 200
+        assert captured["version"] == "1.1"
 
 
 class TestTableRowOperations:
