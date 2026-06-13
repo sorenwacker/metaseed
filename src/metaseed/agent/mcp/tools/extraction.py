@@ -193,7 +193,7 @@ def register_extraction_tools(mcp: FastMCP, parser_registry: ParserRegistry) -> 
                 indent=2,
             )
 
-        except (ValueError, SpecLoadError, json.JSONDecodeError) as e:
+        except (ValueError, SpecLoadError, json.JSONDecodeError, IndexError) as e:
             return json.dumps({"error": str(e)})
 
     @mcp.tool()

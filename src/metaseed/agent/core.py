@@ -311,9 +311,9 @@ class ExtractionContext:
 
             # Convert value based on field type
             converted = self._convert_value(value, field_spec)
-            if converted is not None or not field_spec.required:
+            if converted is not None:
                 instance[field_spec.name] = converted
-            elif field_spec.required and converted is None and value:
+            elif field_spec.required and value:
                 errors.append(
                     ValidationError(
                         field=field_spec.name,

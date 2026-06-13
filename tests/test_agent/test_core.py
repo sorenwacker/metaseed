@@ -191,6 +191,36 @@ class TestExtractionContext:
         assert result.instances[0]["unique_id"] == "INV-001"
         assert result.instances[1]["unique_id"] == "INV-002"
 
+    def test_extract_entities_skips_empty_optional_fields(self, tmp_path: Path) -> None:
+        """Optional fields with empty/missing values are not written as null keys."""
+        csv_file = tmp_path / "data.csv"
+        # 'description' is an optional MIAPPE Investigation field; leave it blank.
+        csv_file.write_text("unique_id,title,description\nINV-001,My Investigation,\n")
+
+        try:
+            ctx = ExtractionContext.from_profile("miappe", "1.1")
+        except Exception:
+            pytest.skip("MIAPPE 1.1 profile not available")
+
+        ctx.add_source(csv_file)
+        mapping = ColumnMapping(
+            entity_name="Investigation",
+            fields=[
+                FieldMapping(field_name="unique_id", source_column="unique_id"),
+                FieldMapping(field_name="title", source_column="title"),
+                FieldMapping(field_name="description", source_column="description"),
+            ],
+        )
+        ctx.set_mapping("Investigation", mapping)
+
+        result = ctx.extract_entities(0, "Investigation")
+
+        assert len(result.instances) == 1
+        instance = result.instances[0]
+        # The empty optional field must be skipped entirely, not stored as None.
+        assert "description" not in instance
+        assert instance["unique_id"] == "INV-001"
+
     def test_validate_instance(self) -> None:
         """Validate an extracted instance."""
         try:

@@ -196,10 +196,8 @@ class MCPServerManager:
         # First check our process reference
         if self._process is not None:
             if self._process.poll() is None:
-                # Process is running, verify it's responding
-                if self._check_mcp_responding(host, port):
-                    return True
-                # Process running but not responding - might be starting up
+                # Process is alive; treat it as running (it may still be
+                # starting up and not yet responding to requests).
                 return True
             # Process has exited
             self._process = None

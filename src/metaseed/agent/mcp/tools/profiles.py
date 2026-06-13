@@ -6,7 +6,7 @@ import json
 from typing import TYPE_CHECKING
 
 from metaseed.specs.loader import SpecLoader, SpecLoadError
-from metaseed.specs.schema import EntityDefSpec
+from metaseed.specs.schema import EntityDefSpec, FieldSpec
 
 if TYPE_CHECKING:
     from mcp.server.fastmcp import FastMCP
@@ -36,7 +36,7 @@ def _load_entity_def(
         return None, str(e)
 
 
-def _field_to_dict(field: any) -> dict:
+def _field_to_dict(field: FieldSpec) -> dict:
     """Convert a FieldSpec to a dictionary for JSON serialization.
 
     Args:

@@ -13,7 +13,7 @@ class AnthropicProvider:
 
     def __init__(
         self,
-        model: str = "claude-sonnet-4-20250514",
+        model: str = "claude-opus-4-8",
         api_key: str | None = None,
     ):
         """Initialize Anthropic provider.

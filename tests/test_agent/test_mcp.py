@@ -110,6 +110,30 @@ class TestMCPServer:
             assert data["entity"] == "Investigation"
             assert len(data["mappings"]) > 0
 
+    def test_extract_entities_out_of_range_table_index(self, tmp_path: Path) -> None:
+        """An out-of-range table_index returns a JSON error, not an IndexError."""
+        server = create_server()
+        extract_fn = get_tool(server, "extract_entities")
+        assert extract_fn is not None
+
+        csv_file = tmp_path / "data.csv"
+        csv_file.write_text("unique_id,title\nINV-001,Test\n")
+
+        mapping = json.dumps(
+            {"mappings": [{"field": "unique_id", "column": "unique_id"}]}
+        )
+
+        result = extract_fn(
+            file_path=str(csv_file),
+            profile="miappe",
+            version="1.1",
+            entity="Investigation",
+            mapping=mapping,
+            table_index=99,
+        )
+        data = json.loads(result)
+        assert "error" in data
+
     def test_export_metadata_yaml(self) -> None:
         """Export metadata tool outputs YAML."""
         server = create_server()
