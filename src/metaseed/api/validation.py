@@ -97,17 +97,3 @@ class ValidationMixin:
         if issues:
             return ValidationResult.failure(issues)
         return ValidationResult.success()
-
-    def _get_instance_data(self: Self, instance: Any) -> dict[str, Any]:
-        """Extract data dictionary from a model instance.
-
-        Args:
-            instance: Pydantic model instance or None.
-
-        Returns:
-            Data dictionary or empty dict if instance is None/invalid.
-        """
-        if instance and hasattr(instance, "model_dump"):
-            result: dict[str, Any] = instance.model_dump(exclude_none=True)
-            return result
-        return {}

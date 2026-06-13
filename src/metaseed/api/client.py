@@ -20,11 +20,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Self
 
+from pydantic import ValidationError as PydanticValidationError
+
 from metaseed.api.entities import Entity, EntityNode
 from metaseed.api.errors import (
     EntityNotFoundError,
     EntityTypeNotFoundError,
     ProfileNotFoundError,
+    ValidationError,
 )
 from metaseed.api.schema import EntitySchema, FieldInfo
 from metaseed.api.serialization import SerializationMixin
@@ -188,9 +191,12 @@ class MetaseedClient(SerializationMixin, ValidationMixin):
             ... })
         """
         self._validate_entity_type(entity_type)
-        node = self._facade.add_entity(
-            entity_type, data, parent_id=parent_id, skip_validation=skip_validation
-        )
+        try:
+            node = self._facade.add_entity(
+                entity_type, data, parent_id=parent_id, skip_validation=skip_validation
+            )
+        except PydanticValidationError as e:
+            raise self._translate_validation_error(e) from e
         return self._convert_node(node)
 
     def get_entity(self: Self, entity_id: str) -> Entity:
@@ -230,6 +236,7 @@ class MetaseedClient(SerializationMixin, ValidationMixin):
 
         Raises:
             EntityNotFoundError: If entity not found.
+            ValidationError: If data fails schema validation.
 
         Example:
             >>> client.update_entity(inv.id, {
@@ -237,7 +244,10 @@ class MetaseedClient(SerializationMixin, ValidationMixin):
             ...     "title": "Updated Title"
             ... })
         """
-        node = self._facade.update_entity(entity_id, data, skip_validation)
+        try:
+            node = self._facade.update_entity(entity_id, data, skip_validation)
+        except PydanticValidationError as e:
+            raise self._translate_validation_error(e) from e
         if node is None:
             raise EntityNotFoundError(entity_id)
         return self._convert_node(node)
@@ -429,6 +439,29 @@ class MetaseedClient(SerializationMixin, ValidationMixin):
     # ========================================================================
     # Private Helpers
     # ========================================================================
+
+    @staticmethod
+    def _translate_validation_error(
+        error: PydanticValidationError,
+    ) -> ValidationError:
+        """Translate a pydantic ValidationError into the public ValidationError.
+
+        Args:
+            error: The pydantic validation error raised by model construction.
+
+        Returns:
+            A public ``metaseed.api.errors.ValidationError`` carrying structured
+            per-field error details.
+        """
+        errors = [
+            {
+                "field": ".".join(str(loc) for loc in err["loc"]),
+                "message": err["msg"],
+                "rule": err["type"],
+            }
+            for err in error.errors()
+        ]
+        return ValidationError(errors)
 
     def _validate_entity_type(self: Self, entity_type: str) -> None:
         """Validate that an entity type exists in the profile."""

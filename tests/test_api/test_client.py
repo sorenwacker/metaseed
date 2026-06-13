@@ -14,6 +14,7 @@ from metaseed.api import (
     FieldInfo,
     MetaseedError,
     ProfileNotFoundError,
+    ValidationError,
     ValidationIssue,
     ValidationResult,
 )
@@ -154,6 +155,31 @@ class TestEntityCRUD:
         """Updating nonexistent entity raises EntityNotFoundError."""
         with pytest.raises(EntityNotFoundError):
             client.update_entity("nonexistent-id", {"title": "Test"})
+
+    def test_create_entity_invalid_data_raises_api_validation_error(
+        self, client: MetaseedClient
+    ) -> None:
+        """Missing required field raises the public api ValidationError."""
+        with pytest.raises(ValidationError) as exc_info:
+            client.create_entity("Investigation", {"title": "no unique_id"})
+
+        error = exc_info.value
+        assert isinstance(error, MetaseedError)
+        assert any(detail["field"] == "unique_id" for detail in error.errors)
+
+    def test_update_entity_invalid_data_raises_api_validation_error(
+        self, client: MetaseedClient
+    ) -> None:
+        """Updating with invalid data raises the public api ValidationError."""
+        entity = client.create_entity(
+            "Investigation",
+            {"unique_id": "INV-001", "title": "Original"},
+        )
+
+        with pytest.raises(ValidationError) as exc_info:
+            client.update_entity(entity.id, {"title": "missing unique_id"})
+
+        assert any(detail["field"] == "unique_id" for detail in exc_info.value.errors)
 
     def test_delete_entity(self, client: MetaseedClient) -> None:
         """Delete an entity."""
@@ -689,10 +715,13 @@ class TestSkipValidation:
     def test_create_entity_without_skip_validation_raises(
         self, client: MetaseedClient
     ) -> None:
-        """Create entity without skip_validation raises on missing required field."""
-        from pydantic import ValidationError as PydanticValidationError
+        """Create entity without skip_validation raises on missing required field.
 
-        with pytest.raises(PydanticValidationError):
+        The public boundary translates pydantic errors into the documented
+        ``metaseed.api.errors.ValidationError`` rather than leaking the
+        internal pydantic exception.
+        """
+        with pytest.raises(ValidationError):
             client.create_entity(
                 "Investigation",
                 {"title": "Incomplete"},  # missing unique_id
