@@ -106,6 +106,21 @@ class TestTemplateCommand:
         content = output_path.read_text()
         assert "{" in content  # JSON has braces
 
+    def test_template_json_omits_comment_keys(self) -> None:
+        """JSON template must not contain YAML-style '# ' comment keys."""
+        import json
+
+        result = runner.invoke(app, ["template", "investigation", "--format", "json"])
+        assert result.exit_code == 0
+        data = json.loads(result.stdout)
+        assert all(not key.startswith("# ") for key in data), data
+
+    def test_template_yaml_keeps_optional_field_comments(self) -> None:
+        """YAML template keeps commented optional fields."""
+        result = runner.invoke(app, ["template", "investigation"])
+        assert result.exit_code == 0
+        assert "# " in result.stdout
+
 
 class TestConvertCommand:
     """Tests for convert command."""

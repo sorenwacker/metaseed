@@ -94,7 +94,7 @@ def version() -> None:
 @app.command()
 def profiles(
     verbose: Annotated[
-        bool, typer.Option("--verbose", "-v", help="Show detailed information")
+        bool, typer.Option("--verbose", "-V", help="Show detailed information")
     ] = False,
 ) -> None:
     """List available profiles and versions."""
@@ -182,7 +182,10 @@ def template(
         echo_error(str(e))
         raise typer.Exit(EXIT_CONFIG_ERROR) from None
 
-    # Build template with empty/example values
+    # Build template with empty/example values.
+    # The "# name" comment-key technique is YAML-specific, so optional fields
+    # are only represented for YAML output and omitted for JSON.
+    is_yaml = format.lower() != "json"
     template_data = {}
     for field in spec.fields:
         if field.required:
@@ -202,17 +205,17 @@ def template(
                 template_data[field.name] = []
             else:
                 template_data[field.name] = None
-        else:
-            # Add commented example for optional fields
+        elif is_yaml:
+            # Add commented example for optional fields (YAML only)
             template_data[f"# {field.name}"] = None
 
     # Generate output
-    if format.lower() == "json":
+    if is_yaml:
+        content = yaml.dump(template_data, default_flow_style=False, sort_keys=False)
+    else:
         import json
 
         content = json.dumps(template_data, indent=2)
-    else:
-        content = yaml.dump(template_data, default_flow_style=False, sort_keys=False)
 
     if output:
         output.parent.mkdir(parents=True, exist_ok=True)

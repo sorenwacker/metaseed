@@ -204,6 +204,15 @@ class TestProfilesCommand:
         assert result.exit_code == 0
         assert "default" in result.stdout.lower()
 
+    def test_profiles_verbose_short_flag_is_uppercase_v(self) -> None:
+        """-V enables verbose; -v is reserved for --version and is rejected."""
+        result = runner.invoke(app, ["profiles", "-V"])
+        assert result.exit_code == 0
+        assert "version" in result.stdout.lower()
+
+        rejected = runner.invoke(app, ["profiles", "-v"])
+        assert rejected.exit_code != 0
+
 
 class TestExitCodes:
     """Tests for CLI exit codes."""
