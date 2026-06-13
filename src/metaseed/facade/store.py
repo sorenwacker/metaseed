@@ -10,9 +10,12 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, Self
 from uuid import uuid4
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from metaseed.facade.node import IDENTIFIER_FIELDS, EntityNode
+from metaseed.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 def _generate_node_id() -> str:
@@ -409,8 +412,17 @@ class EntityStore:
     ) -> tuple[EntityNode, str | None, str | None, tuple | None] | None:
         """Create a single node from serialized data.
 
+        Malformed entities (those raising ValidationError, ValueError, or
+        TypeError during instance creation) are skipped and logged at warning
+        level rather than aborting the load. This keeps ``load_from_dict``
+        resilient while making dropped entities visible.
+
+        Args:
+            entity_data: Serialized entity dictionary with ``_type`` metadata.
+
         Returns:
-            Tuple of (node, id_for_index, old_node_id, parent_tuple) or None.
+            Tuple of (node, id_for_index, old_node_id, parent_tuple), or None
+            if the entity has no type, an unknown type, or is malformed.
         """
         entity_type = entity_data.get("_type")
         if not entity_type:
@@ -462,7 +474,21 @@ class EntityStore:
 
             return (node, id_for_index, old_node_id, parent_entry)
 
-        except Exception:
+        except (ValidationError, ValueError, TypeError) as exc:
+            identifier = entity_data.get("_node_id")
+            if identifier is None:
+                for id_field in IDENTIFIER_FIELDS:
+                    if entity_data.get(id_field) is not None:
+                        identifier = entity_data[id_field]
+                        break
+                else:
+                    identifier = "<unknown>"
+            logger.warning(
+                "Skipping malformed entity of type %r (identifier=%r): %s",
+                entity_type,
+                identifier,
+                exc,
+            )
             return None
 
     def _link_by_stored_refs(
