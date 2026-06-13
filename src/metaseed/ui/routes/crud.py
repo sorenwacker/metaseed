@@ -36,6 +36,7 @@ def register_entity_crud_routes(
     app: FastAPI,
     templates: Jinja2Templates,
     get_state: Callable[[], AppState],
+    base_url: str = "",
 ) -> None:
     """Register entity CRUD routes on the FastAPI app.
 
@@ -43,6 +44,8 @@ def register_entity_crud_routes(
         app: FastAPI application instance.
         templates: Jinja2Templates instance.
         get_state: Callable returning AppState.
+        base_url: Base URL prefix for the application (e.g., "/hub").
+            Should not have a trailing slash. Defaults to empty string.
     """
     from ..helpers import error_response
 
@@ -196,6 +199,7 @@ def register_entity_crud_routes(
                         "current_profile": state.profile,
                         "version": facade.version,
                         "notification": {"type": msg_type, "message": msg},
+                        "base_url": base_url,
                     },
                 )
 
@@ -248,6 +252,7 @@ def register_entity_crud_routes(
                     "type": "warning",
                     "message": f"Deleted {entity_type}: {label}",
                 },
+                "base_url": base_url,
             },
         )
 

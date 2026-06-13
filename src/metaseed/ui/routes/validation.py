@@ -384,7 +384,24 @@ def register_validation_routes(
             )
 
         facade = state.get_or_create_facade()
-        helper = getattr(facade, entity_type)
+        try:
+            helper = getattr(facade, entity_type)
+        except AttributeError:
+            return templates.TemplateResponse(
+                request,
+                "components/validation_result.html",
+                {
+                    "valid": False,
+                    "errors": [
+                        ValidationError(
+                            field="_entity_type",
+                            message=f"Unknown entity type: {entity_type}",
+                            rule="error",
+                        )
+                    ],
+                    "rules": [],
+                },
+            )
         values = collect_form_values(dict(form_data), helper)
 
         # Add nested items from state

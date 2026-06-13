@@ -187,6 +187,65 @@ class TestDeleteEntity:
         assert "Node not found: nonexistent" in response.text
 
 
+class TestBaseUrlPrefix:
+    """Tests that CRUD partial re-renders honor a non-empty base_url."""
+
+    def _make_client(self) -> TestClient:
+        """Create a test client whose app is mounted under /hub."""
+        state = AppState()
+        app = create_app(state, base_url="/hub")
+        return TestClient(app)
+
+    def test_delete_partial_includes_base_url_prefix(self):
+        """Delete re-render emits index.html links with the base_url prefix."""
+        client = self._make_client()
+        for unique_id in ("INV-001", "INV-002"):
+            response = client.post(
+                "/entity",
+                data={
+                    "_entity_type": "Investigation",
+                    "unique_id": unique_id,
+                    "title": unique_id,
+                },
+            )
+            assert response.status_code == 200
+
+        # Delete one of two entities so the populated branch (with
+        # export/import/form/delete links) is exercised on re-render.
+        node_id = next(iter(client.app.state.ui_state.nodes_by_id.keys()))
+        delete_response = client.delete(f"/entity/{node_id}")
+        assert delete_response.status_code == 200
+        assert 'href="/hub/export"' in delete_response.text
+        assert 'hx-post="/hub/import"' in delete_response.text
+        assert 'hx-delete="/hub/entity/' in delete_response.text
+
+    def test_update_back_partial_includes_base_url_prefix(self):
+        """Update 'back' action re-render emits links with the base_url prefix."""
+        client = self._make_client()
+        create_response = client.post(
+            "/entity",
+            data={
+                "_entity_type": "Investigation",
+                "unique_id": "INV-001",
+                "title": "Test Investigation",
+            },
+        )
+        assert create_response.status_code == 200
+
+        node_id = next(iter(client.app.state.ui_state.nodes_by_id.keys()))
+        update_response = client.put(
+            f"/entity/{node_id}",
+            data={
+                "unique_id": "INV-001",
+                "title": "Updated Investigation",
+                "_action": "back",
+            },
+        )
+        assert update_response.status_code == 200
+        assert 'href="/hub/export"' in update_response.text
+        assert 'hx-post="/hub/import"' in update_response.text
+
+
 class TestProfileSwitch:
     """Tests for profile switching."""
 
@@ -493,6 +552,15 @@ class TestValidateForm:
         response = client.post("/validate", data={})
         assert response.status_code == 200
         assert "Entity type is required" in response.text
+
+    def test_validate_unknown_entity_type(self, client):
+        """Validate with an unknown entity type returns a graceful error."""
+        response = client.post(
+            "/validate",
+            data={"_entity_type": "NotARealEntity", "title": "x"},
+        )
+        assert response.status_code == 200
+        assert "Unknown entity type: NotARealEntity" in response.text
 
     def test_validate_valid_entity(self, client):
         """Validate valid entity data succeeds."""
