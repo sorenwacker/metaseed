@@ -539,6 +539,54 @@ class TestMCPIntegration:
         finally:
             set_context(None)
 
+    def test_create_entity_auto_detects_parent_from_reference(self):
+        """A child with a reference value but no parent_id links to the parent.
+
+        Exercises _find_parent_from_references / _auto_fill_reference_fields,
+        which resolve the parent from the facade's reference_fields map.
+        """
+        from metaseed.agent.mcp.server import set_mcp_state
+        from metaseed.ui.state import AppState
+
+        server = create_server()
+        tools = server._tool_manager._tools
+
+        state = AppState(profile="miappe")
+        set_mcp_state(state)
+
+        with patch("metaseed.ui.datasets.auto_save"):
+            create_fn = tools.get("create_entity")
+            inv = json.loads(
+                create_fn.fn(
+                    entity_type="Investigation",
+                    data='{"unique_id": "inv-auto", "title": "Auto Detect"}',
+                )
+            )
+            if "error" in inv:
+                pytest.skip(f"Profile not available: {inv['error']}")
+            inv_id = inv["id"]
+
+            # No parent_id given; only the investigation_id reference value.
+            study = json.loads(
+                create_fn.fn(
+                    entity_type="Study",
+                    data=(
+                        '{"unique_id": "study-auto", "title": "Child", '
+                        '"investigation_id": "inv-auto"}'
+                    ),
+                )
+            )
+
+            assert study["status"] == "created"
+            assert study.get("parent_id") == inv_id
+            assert study.get("linked_via_field") == "studies"
+
+            # The state hierarchy reflects the auto-detected parent link.
+            assert len(state.entity_tree) == 1
+            assert state.entity_tree[0].id == inv_id
+            assert len(state.entity_tree[0].children) == 1
+            assert state.entity_tree[0].children[0].id == study["id"]
+
     def test_get_entity_tree_shows_hierarchy(self):
         """Test that get_entity_tree correctly shows parent-child relationships."""
         from metaseed.agent.mcp.server import set_mcp_state

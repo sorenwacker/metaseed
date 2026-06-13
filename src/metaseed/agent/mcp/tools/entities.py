@@ -115,28 +115,22 @@ def _auto_fill_reference_fields(
         if not helper:
             return entity_data
 
-        # Check each reference field
-        for field in helper._spec.fields:
-            if not field.reference:
-                continue
-
+        # Check each reference field, using the facade's parsed reference map
+        # ({field_name: (target_entity, target_field)}) rather than re-parsing specs.
+        for field_name, (
+            target_entity_type,
+            target_field,
+        ) in helper.reference_fields.items():
             # Skip if already set
-            if entity_data.get(field.name):
+            if entity_data.get(field_name):
                 continue
-
-            # Parse reference format: "EntityType.field"
-            parts = field.reference.split(".", 1)
-            if len(parts) != 2:
-                continue
-
-            target_entity_type, target_field = parts
 
             # Get all entities of target type
             all_entities = service.list_entities(target_entity_type)
             entities_list = all_entities.get("entities", {}).get(target_entity_type, [])
 
             logger.info(
-                f"Auto-fill check: {entity_type}.{field.name} -> {target_entity_type}, "
+                f"Auto-fill check: {entity_type}.{field_name} -> {target_entity_type}, "
                 f"found {len(entities_list)} candidates"
             )
 
@@ -145,8 +139,8 @@ def _auto_fill_reference_fields(
                 parent_data = entities_list[0].get("data", {})
                 ref_value = parent_data.get(target_field)
                 if ref_value:
-                    entity_data[field.name] = ref_value
-                    logger.info(f"Auto-filled {field.name}={ref_value}")
+                    entity_data[field_name] = ref_value
+                    logger.info(f"Auto-filled {field_name}={ref_value}")
 
     except Exception as e:
         logger.warning(f"Auto-fill failed: {e}")
@@ -181,20 +175,14 @@ def _find_parent_from_references(
         if not helper:
             return None, None
 
-        # Check each field for references
-        for field in helper._spec.fields:
-            if not field.reference:
-                continue
-
-            # Parse reference format: "EntityType.field"
-            parts = field.reference.split(".", 1)
-            if len(parts) != 2:
-                continue
-
-            target_entity_type, target_field = parts
-
+        # Check each reference field, using the facade's parsed reference map
+        # ({field_name: (target_entity, target_field)}) rather than re-parsing specs.
+        for field_name, (
+            target_entity_type,
+            target_field,
+        ) in helper.reference_fields.items():
             # Get the reference value from entity data
-            ref_value = entity_data.get(field.name)
+            ref_value = entity_data.get(field_name)
             if not ref_value:
                 continue
 
