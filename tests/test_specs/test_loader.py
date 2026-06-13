@@ -374,6 +374,47 @@ entities:
         assert "OBI" in profile.ontologies
         assert profile.ontologies["OBI"].ols_id == "obi"
 
+    def test_malformed_profile_raises_not_not_found(self, tmp_path: Path) -> None:
+        """A present-but-invalid profile raises SpecLoadError, not 'not found'.
+
+        A schema-invalid profile.yaml must surface the validation error rather
+        than being reported as a missing profile.
+        """
+        content = """
+name: broken-profile
+version: "1.0"
+entities:
+  Sample:
+    fields:
+      - name: id
+        type: not_a_real_type
+        required: true
+"""
+        profile_dir = tmp_path / "broken-profile" / "1.0"
+        profile_dir.mkdir(parents=True)
+        (profile_dir / "profile.yaml").write_text(content)
+
+        loader = SpecLoader(profile="broken-profile")
+        loader._user_specs_dir = tmp_path
+
+        with pytest.raises(SpecLoadError) as exc_info:
+            loader.load_profile(version="1.0", profile="broken-profile")
+        message = str(exc_info.value)
+        assert "Invalid profile" in message
+        assert "not found" not in message.lower()
+
+    def test_malformed_yaml_profile_raises(self, tmp_path: Path) -> None:
+        """A profile with unparseable YAML raises SpecLoadError."""
+        profile_dir = tmp_path / "bad-yaml" / "1.0"
+        profile_dir.mkdir(parents=True)
+        (profile_dir / "profile.yaml").write_text("name: x\n  bad: : indent")
+
+        loader = SpecLoader(profile="bad-yaml")
+        loader._user_specs_dir = tmp_path
+
+        with pytest.raises(SpecLoadError):
+            loader.load_profile(version="1.0", profile="bad-yaml")
+
 
 class TestValidationRuleBackwardCompatibility:
     """Tests for validation rule backward compatibility.

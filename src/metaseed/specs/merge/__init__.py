@@ -78,7 +78,9 @@ def compare(
         ComparisonResult with detailed differences.
 
     Raises:
-        ValueError: If fewer than 2 profiles provided.
+        ValueError: If no profiles are provided. A single profile returns an
+            explore-mode ComparisonResult with all entities/fields marked
+            UNCHANGED.
 
     Example:
         >>> result = compare([("miappe", "1.1"), ("isa", "1.0")])

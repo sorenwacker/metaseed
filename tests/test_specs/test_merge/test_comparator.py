@@ -3,6 +3,7 @@
 import pytest
 
 from metaseed.specs.merge import ComparisonResult, DiffType, SpecComparator, compare
+from metaseed.specs.schema import ProfileSpec, ValidationRuleSpec
 
 
 class TestSpecComparator:
@@ -164,6 +165,45 @@ class TestCompareFunction:
         assert result is not None
         assert len(result.profiles) == 2
         assert result.statistics.total_entities > 0
+
+
+class TestValidationRuleComparison:
+    """Tests for validation-rule comparison behavior."""
+
+    @pytest.fixture
+    def comparator(self) -> SpecComparator:
+        """Create comparator instance."""
+        return SpecComparator()
+
+    @staticmethod
+    def _profile(rule: ValidationRuleSpec) -> ProfileSpec:
+        """Build a minimal profile carrying a single validation rule."""
+        return ProfileSpec(version="1.0", name="p", validation_rules=[rule])
+
+    def test_same_name_different_content_is_reported(
+        self, comparator: SpecComparator
+    ) -> None:
+        """Rules present in all profiles but differing in content are diffed."""
+        spec_a = self._profile(
+            ValidationRuleSpec(name="r", type="conditional", condition="a == 1")
+        )
+        spec_b = self._profile(
+            ValidationRuleSpec(name="r", type="conditional", condition="a == 2")
+        )
+
+        diffs = comparator._compare_validation_rules({"a": spec_a, "b": spec_b})
+
+        assert "r" in diffs
+
+    def test_identical_rules_are_not_reported(self, comparator: SpecComparator) -> None:
+        """Rules present in all profiles with identical content are not diffed."""
+        rule = ValidationRuleSpec(name="r", type="conditional", condition="a == 1")
+        spec_a = self._profile(rule.model_copy(deep=True))
+        spec_b = self._profile(rule.model_copy(deep=True))
+
+        diffs = comparator._compare_validation_rules({"a": spec_a, "b": spec_b})
+
+        assert "r" not in diffs
 
 
 class TestEntityDiff:

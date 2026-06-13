@@ -101,7 +101,11 @@ class SpecLoader:
             profile: Profile name. Uses default if None.
 
         Returns:
-            ProfileSpec or None if no unified profile exists.
+            ProfileSpec or None if no profile file exists for this version.
+
+        Raises:
+            SpecLoadError: If the profile file exists but is malformed
+                (invalid YAML or fails schema validation).
         """
         cache_key = self._cache_key(version, profile)
         if cache_key in self._profile_cache:
@@ -111,29 +115,41 @@ class SpecLoader:
         if profile_path is None:
             return None
 
+        logger.debug("Loading profile from %s", profile_path)
+        content = profile_path.read_text(encoding="utf-8")
         try:
-            logger.debug("Loading profile from %s", profile_path)
-            content = profile_path.read_text(encoding="utf-8")
             data = yaml.safe_load(content)
-            if data is None:
-                logger.warning("Empty profile file: %s", profile_path)
-                return None
+        except yaml.YAMLError as e:
+            raise SpecLoadError(f"Failed to parse profile {profile_path}: {e}") from e
 
-            # Set default spec_version for backward compatibility with old specs
-            if "spec_version" not in data:
-                data["spec_version"] = "0.1"
-
-            loaded_profile = ProfileSpec.model_validate(data)
-            self._profile_cache[cache_key] = loaded_profile
-            logger.debug(
-                "Loaded profile %s with %d entities",
-                cache_key,
-                len(loaded_profile.entities),
-            )
-            return loaded_profile
-        except (yaml.YAMLError, ValidationError) as e:
-            logger.warning("Failed to load profile %s: %s", profile_path, e)
+        if data is None:
+            logger.warning("Empty profile file: %s", profile_path)
             return None
+
+        # Set default spec_version for backward compatibility with old specs
+        if "spec_version" not in data:
+            data["spec_version"] = "0.1"
+
+        try:
+            loaded_profile = ProfileSpec.model_validate(data)
+        except ValidationError as e:
+            errors = e.errors()
+            if errors:
+                first_error = errors[0]
+                loc = ".".join(str(part) for part in first_error["loc"])
+                msg = first_error["msg"]
+                raise SpecLoadError(
+                    f"Invalid profile {profile_path} at {loc}: {msg}"
+                ) from e
+            raise SpecLoadError(f"Invalid profile {profile_path}: {e}") from e
+
+        self._profile_cache[cache_key] = loaded_profile
+        logger.debug(
+            "Loaded profile %s with %d entities",
+            cache_key,
+            len(loaded_profile.entities),
+        )
+        return loaded_profile
 
     def load(self: Self, path: Path) -> EntitySpec:
         """Load an entity spec from a YAML file.
@@ -342,29 +358,6 @@ class SpecLoader:
 
         return sorted(profiles)
 
-    def get_profile_path(
-        self: Self,
-        version: str = "1.2",
-        profile: str | None = None,
-        *,
-        ctx: ProfileContext | None = None,
-    ) -> Path | None:
-        """Get path to the profile YAML file.
-
-        Args:
-            version: Version string. Ignored if ctx is provided.
-            profile: Profile name. Uses default if None. Ignored if ctx is provided.
-            ctx: Optional ProfileContext containing profile and version.
-                If provided, takes precedence over version and profile args.
-
-        Returns:
-            Path to profile file or None.
-        """
-        if ctx is not None:
-            profile = ctx.profile
-            version = ctx.version
-        return self._find_profile_file(version, profile)
-
     def is_user_defined(self: Self, profile: str, version: str | None = None) -> bool:
         """Check if a profile (or specific version) is user-defined.
 
@@ -390,35 +383,3 @@ class SpecLoader:
                 return True
 
         return False
-
-    def get_user_specs_dir(self: Self) -> Path:
-        """Get the user specs directory path.
-
-        Returns:
-            Path to user specs directory.
-        """
-        return self._user_specs_dir
-
-    def save_user_profile(self: Self, profile: str, version: str, content: str) -> Path:
-        """Save a profile to the user specs directory.
-
-        Args:
-            profile: Profile name.
-            version: Version string.
-            content: YAML content to save.
-
-        Returns:
-            Path to the saved profile file.
-        """
-        profile = profile.lower()
-        profile_dir = self._user_specs_dir / profile / version
-        profile_dir.mkdir(parents=True, exist_ok=True)
-
-        profile_path = profile_dir / "profile.yaml"
-        profile_path.write_text(content, encoding="utf-8")
-
-        # Clear cache to pick up new profile
-        cache_key = self._cache_key(version, profile)
-        self._profile_cache.pop(cache_key, None)
-
-        return profile_path

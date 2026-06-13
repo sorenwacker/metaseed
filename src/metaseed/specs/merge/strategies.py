@@ -40,28 +40,6 @@ class MergeStrategy(ABC):
             Resolved FieldSpec.
         """
 
-    def resolve_attribute(
-        self: Self,
-        _attribute: str,
-        values: dict[str, Any],
-        profile_order: list[str],
-    ) -> Any:
-        """Resolve a single attribute conflict.
-
-        Args:
-            _attribute: Name of the attribute (unused in base implementation).
-            values: Mapping of profile ID to value.
-            profile_order: Ordered list of profile IDs.
-
-        Returns:
-            Resolved value.
-        """
-        # Default: use first non-None value
-        for profile_id in profile_order:
-            if profile_id in values and values[profile_id] is not None:
-                return values[profile_id]
-        return None
-
 
 class FirstWinsStrategy(MergeStrategy):
     """Use the first profile's value for conflicts.

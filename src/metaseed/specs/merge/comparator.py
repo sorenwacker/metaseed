@@ -503,12 +503,31 @@ class SpecComparator:
             for profile_id in profile_specs:
                 values[profile_id] = rules_by_profile.get(profile_id, {}).get(rule_name)
 
-            # Only include if rules differ across profiles
+            # Include if the rule is absent from some profile, or if profiles
+            # define it with differing contents (e.g. condition, pattern, bounds).
             present_count = sum(1 for v in values.values() if v is not None)
-            if present_count != len(profile_specs):
+            if present_count != len(profile_specs) or self._rule_contents_differ(
+                values
+            ):
                 diffs[rule_name] = values
 
         return diffs
+
+    def _rule_contents_differ(
+        self: Self, values: dict[str, ValidationRuleSpec | None]
+    ) -> bool:
+        """Check whether validation rules differ in content across profiles.
+
+        Args:
+            values: Mapping of profile ID to ValidationRuleSpec (all non-None
+                when this is called).
+
+        Returns:
+            True if any two rules have differing serialized contents.
+        """
+        dumps = [v.model_dump() for v in values.values() if v is not None]
+        first = dumps[0]
+        return any(other != first for other in dumps[1:])
 
     def _values_differ(self: Self, values: dict[str, object]) -> bool:
         """Check if values differ across a dictionary.
