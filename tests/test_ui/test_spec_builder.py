@@ -759,3 +759,70 @@ random_data: 123
         )
         assert response.status_code == 400
         assert "Failed to parse" in response.json()["detail"]
+
+    def test_import_non_mapping_yaml_keeps_specific_detail(self, client):
+        """A non-mapping root must surface its own message, not a re-wrapped one.
+
+        The intentional HTTPException is raised inside the try block and must
+        not be re-wrapped by the broad ``except Exception`` into a
+        ``Failed to parse spec: 400: ...`` message.
+        """
+        non_mapping = "- just\n- a\n- list\n"
+        response = client.post(
+            "/spec-builder/import",
+            files={"file": ("list.yaml", non_mapping, "application/x-yaml")},
+        )
+        assert response.status_code == 400
+        detail = response.json()["detail"]
+        assert detail == "Invalid YAML: root must be a mapping"
+        assert "Failed to parse" not in detail
+
+    def test_import_does_not_overload_template_source(self):
+        """Import must leave template_source as a (profile, version) tuple or None.
+
+        template_source is consumed by the template via index access, so it must
+        never be set to a free-form string on import.
+        """
+        state = AppState()
+        app = create_app(state)
+        client = TestClient(app)
+
+        yaml_content = """
+version: '1.0'
+name: imported-spec
+display_name: Imported Spec
+description: A spec imported from YAML
+root_entity: Document
+entities:
+  Document:
+    description: A document entity
+    fields:
+      - name: identifier
+        type: string
+        required: true
+        description: Unique identifier
+"""
+        response = client.post(
+            "/spec-builder/import",
+            files={"file": ("test-spec.yaml", yaml_content, "application/x-yaml")},
+            follow_redirects=False,
+        )
+        assert response.status_code == 303
+        assert state.spec_builder is not None
+        assert state.spec_builder.template_source is None
+
+
+class TestSpecBuilderApplyYaml:
+    """Tests for applying edited YAML to the current spec."""
+
+    def test_apply_non_mapping_yaml_keeps_specific_detail(self, client):
+        """A non-mapping root must keep its own error detail, not a re-wrapped one."""
+        client.get("/spec-builder/new")
+        response = client.post(
+            "/spec-builder/apply-yaml",
+            content="- just\n- a\n- list\n",
+        )
+        assert response.status_code == 400
+        detail = response.json()["detail"]
+        assert detail == "Invalid YAML: root must be a mapping"
+        assert "Failed to parse" not in detail

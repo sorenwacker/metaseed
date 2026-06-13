@@ -6,6 +6,7 @@ references between entities are valid.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Self
@@ -208,7 +209,7 @@ class DatasetValidator:
         self: Self,
         data: dict[str, Any],
         entity_type: str,
-        visitor: callable,
+        visitor: Callable[[dict[str, Any], str, str], None],
         path: str = "",
     ) -> None:
         """Traverse entity tree recursively, calling visitor at each node.

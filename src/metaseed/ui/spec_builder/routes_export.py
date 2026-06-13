@@ -216,6 +216,8 @@ def register_export_routes(
 
             return Response(status_code=200, content="YAML applied successfully")
 
+        except HTTPException:
+            raise
         except yaml.YAMLError as e:
             raise HTTPException(
                 status_code=400,
@@ -258,10 +260,12 @@ def register_export_routes(
             # Parse into ProfileSpec
             spec = ProfileSpec.model_validate(data)
 
-            # Load into builder state
+            # Load into builder state. The imported spec is not cloned from a
+            # profile template, so clear any previous template_source rather than
+            # overloading the (profile, version) tuple with a free-form string.
             builder = get_builder_state()
             builder.spec = spec
-            builder.template_source = f"Imported: {file.filename}"
+            builder.template_source = None
             builder.mark_changed()
 
             # Redirect to spec builder
@@ -270,6 +274,8 @@ def register_export_routes(
                 status_code=303,
             )
 
+        except HTTPException:
+            raise
         except yaml.YAMLError as e:
             raise HTTPException(
                 status_code=400,

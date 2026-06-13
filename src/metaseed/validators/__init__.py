@@ -10,7 +10,12 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from metaseed.validators.base import ValidationCheck, ValidationError, ValidationRule
+from metaseed.validators.base import (
+    ValidationCheck,
+    ValidationError,
+    ValidationRule,
+    has_value,
+)
 from metaseed.validators.dataset import DatasetValidationResult, DatasetValidator
 from metaseed.validators.engine import ValidationEngine, create_engine_for_entity
 from metaseed.validators.rules import (
@@ -305,9 +310,7 @@ def validate_entity_with_report(
     # Build set of required fields and optional fields with values
     required_fields = {f.name for f in entity_spec.get_required_fields()}
     optional_fields_with_values = {
-        f.name
-        for f in entity_spec.fields
-        if not f.required and _field_has_value(data, f.name)
+        f.name for f in entity_spec.fields if not f.required and has_value(data, f.name)
     }
     fields_to_check = required_fields | optional_fields_with_values
 
@@ -432,23 +435,3 @@ def validate_entity_with_report(
     checks.extend(engine.validate_with_report(data))
 
     return checks
-
-
-def _field_has_value(data: dict[str, Any], field: str) -> bool:
-    """Check if a field has a non-empty value.
-
-    Args:
-        data: Dictionary to check.
-        field: Field name to check.
-
-    Returns:
-        True if the field exists and has a non-empty value.
-    """
-    value = data.get(field)
-    if value is None:
-        return False
-    if isinstance(value, str) and value == "":
-        return False
-    if isinstance(value, list) and len(value) == 0:
-        return False
-    return True
