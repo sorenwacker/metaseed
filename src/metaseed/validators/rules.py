@@ -559,13 +559,24 @@ class CoordinatePairRule(ValidationRule):
 
 
 class UniquenessRule(ValidationRule):
-    """Validates field uniqueness within a scope.
+    """Detects duplicate field values across calls to a single rule instance.
 
-    Tracks seen values and reports duplicates.
+    The rule accumulates values it has seen in ``_seen_values`` and reports an
+    error when a value recurs. Detection therefore spans only the sequence of
+    records passed to the *same* instance; it does not span records validated by
+    different instances. ``ValidationEngine`` (and ``DatasetValidator``, which
+    builds a fresh engine per entity node) constructs a new instance per record,
+    so within those callers each invocation sees exactly one value and no
+    duplicate is ever flagged.
+
+    Dataset-wide cross-record identifier uniqueness and reference integrity are
+    enforced separately by ``DatasetValidator`` via ``IdRegistry``, not by this
+    rule. This rule is useful only to callers that deliberately reuse one
+    instance across a sibling collection and call :meth:`reset` between scopes.
 
     Attributes:
         field: Name of the field to check for uniqueness.
-        scope: Uniqueness scope ("parent" or "global").
+        scope: Label for the intended uniqueness scope, used only in messages.
         rule_name: Name for this specific rule instance.
         custom_message: Optional custom error message.
     """
@@ -597,17 +608,26 @@ class UniquenessRule(ValidationRule):
         return self.rule_name
 
     def reset(self: Self) -> None:
-        """Reset seen values for a new validation context."""
+        """Clear accumulated values so the instance can be reused for a new scope.
+
+        Callers that reuse a single instance across a sibling collection call
+        this between scopes. The validation engine constructs a fresh instance
+        per record and never calls it.
+        """
         self._seen_values.clear()
 
     def validate(self: Self, data: dict[str, Any]) -> list[ValidationError]:
-        """Validate field value is unique within scope.
+        """Report an error if this field's value was already seen by this instance.
+
+        The check is stateful across calls to the same instance; the first
+        occurrence of a value passes and subsequent occurrences fail.
 
         Args:
             data: Dictionary to validate.
 
         Returns:
-            List with error if value is duplicate.
+            List with one error if the value duplicates a previously seen value
+            on this instance, otherwise an empty list.
         """
         value = data.get(self.field)
 

@@ -533,6 +533,22 @@ class TestUniquenessRule:
         assert len(errors) == 1
         assert errors[0].message == "Identifier must be unique within the study"
 
+    def test_fresh_instance_never_flags_duplicate(self) -> None:
+        """Duplicate detection requires reuse; fresh instances each see one value.
+
+        This locks the honest behavior documented on the rule: because the
+        validation engine builds a new instance per record, the same value
+        passing through separate instances is never reported as a duplicate.
+        """
+        from metaseed.validators.rules import UniquenessRule
+
+        # A fresh instance per record (as create_engine_for_entity does) never
+        # accumulates state, so an identical value passes every time.
+        for _ in range(3):
+            rule = UniquenessRule(field="identifier", scope="parent")
+            errors = rule.validate({"identifier": "ID-001"})
+            assert errors == []
+
 
 class TestCustomMessages:
     """Tests for custom error messages in rules."""
