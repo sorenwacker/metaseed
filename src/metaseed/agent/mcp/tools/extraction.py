@@ -222,4 +222,4 @@ def register_extraction_tools(mcp: FastMCP, parser_registry: ParserRegistry) -> 
             )
 
         except json.JSONDecodeError as e:
-            return f"Error parsing data: {e}"
+            return json.dumps({"error": f"Invalid JSON: {e}"})

@@ -126,6 +126,25 @@ class TestYamlStorage:
         with pytest.raises(StorageError):
             storage.load(file_path, investigation_model)
 
+    def test_save_serialization_error_raises_storage_error(
+        self,
+        storage: YamlStorage,
+        sample_investigation,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Serialization failures during save are wrapped in StorageError."""
+        from metaseed.storage.base import StorageError
+
+        def _raise_representer_error(*_args, **_kwargs):
+            raise yaml.representer.RepresenterError("cannot represent object")
+
+        monkeypatch.setattr(yaml, "dump", _raise_representer_error)
+
+        file_path = tmp_path / "investigation.yaml"
+        with pytest.raises(StorageError):
+            storage.save(sample_investigation, file_path)
+
     def test_url_fields_serialized_as_strings(
         self,
         storage: YamlStorage,

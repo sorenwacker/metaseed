@@ -1,6 +1,6 @@
 """YAML storage backend.
 
-This module provides YAML file storage for MIAPPE entities.
+This module provides YAML file storage for Pydantic metadata models.
 """
 
 from pathlib import Path
@@ -17,9 +17,7 @@ T = TypeVar("T", bound=BaseModel)
 class YamlStorage(StorageBackend):
     """YAML file storage backend.
 
-    Saves and loads Pydantic models as YAML files. YAML is more
-    human-readable than JSON and is the preferred format for
-    configuration and metadata files.
+    Saves and loads Pydantic models as YAML files.
     """
 
     def save(self: Self, entity: BaseModel, path: Path) -> None:
@@ -45,7 +43,7 @@ class YamlStorage(StorageBackend):
                 sort_keys=False,
             )
             path.write_text(yaml_str, encoding="utf-8")
-        except OSError as e:
+        except (OSError, yaml.YAMLError, TypeError, ValueError) as e:
             raise StorageError(f"Failed to save to {path}: {e}") from e
 
     def load(self: Self, path: Path, model: type[T]) -> T:

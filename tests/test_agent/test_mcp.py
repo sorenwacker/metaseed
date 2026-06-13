@@ -161,6 +161,18 @@ class TestMCPServer:
         assert "Investigation" in data
         assert data["Investigation"][0]["identifier"] == "INV-001"
 
+    def test_export_metadata_invalid_json_returns_json_error(self) -> None:
+        """Export metadata returns a JSON error object on invalid input."""
+        server = create_server()
+        export_fn = get_tool(server, "export_metadata")
+        assert export_fn is not None
+
+        result = export_fn(data="{not valid json", output_format="json")
+
+        error = json.loads(result)
+        assert "error" in error
+        assert "Invalid JSON" in error["error"]
+
     def test_validate_extracted_tool(self) -> None:
         """Validate extracted tool checks data validity."""
         server = create_server()

@@ -24,7 +24,7 @@ OLS4_BASE_URL = "https://www.ebi.ac.uk/ols4/api"
 DEFAULT_TIMEOUT = 30.0
 
 
-def _make_request(endpoint: str, params: dict | None = None) -> dict | list | None:
+def _make_request(endpoint: str, params: dict | None = None) -> dict | None:
     """Make a request to the OLS4 API.
 
     Args:

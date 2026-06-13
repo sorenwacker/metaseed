@@ -289,6 +289,38 @@ class TestCreateModelFromSpec:
             Model(status="unknown")
         assert "status" in str(exc_info.value)
 
+    def test_enum_constraint_on_list_field(self) -> None:
+        """Enum on a list field produces list[Literal], not a scalar Literal."""
+        spec = EntitySpec(
+            name="WithEnumList",
+            version="1.0",
+            description="Test enum constraint on a list field",
+            fields=[
+                FieldSpec(
+                    name="tags",
+                    type=FieldType.LIST,
+                    required=True,
+                    description="Tags",
+                    constraints=Constraints(enum=["red", "green", "blue"]),
+                ),
+            ],
+        )
+
+        Model = create_model_from_spec(spec)
+
+        # A list of allowed enum values is accepted.
+        instance = Model(tags=["red", "blue"])
+        assert instance.tags == ["red", "blue"]
+
+        # A bare allowed scalar value is rejected (the field is a list).
+        with pytest.raises(ValidationError):
+            Model(tags="red")
+
+        # A list containing a disallowed value is rejected.
+        with pytest.raises(ValidationError) as exc_info:
+            Model(tags=["red", "purple"])
+        assert "tags" in str(exc_info.value)
+
     def test_extra_field_rejection(self) -> None:
         """Extra fields not in spec are rejected (ConfigDict extra='forbid')."""
         spec = EntitySpec(

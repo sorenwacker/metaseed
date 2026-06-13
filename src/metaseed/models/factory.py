@@ -128,11 +128,11 @@ def get_global_context() -> ModelContext:
     return _global_context
 
 
-def set_model_loader(loader: Any) -> None:
+def set_model_loader(loader: Callable[[str, str, str], type[BaseModel]]) -> None:
     """Set the model loader function for lazy loading nested entities.
 
     Args:
-        loader: Function to load models on demand.
+        loader: Function to load models on demand. Takes (name, version, profile).
     """
     _global_context.set_loader(loader)
 
@@ -216,10 +216,12 @@ def _coerce_string_to_entity(
 
 
 class MIAPPEBaseModel(BaseModel):
-    """Base model for all MIAPPE/ISA entities.
+    """Base model for all generated profile entities.
 
-    Provides validation on assignment, JSON serialization mode, and
-    automatic nested entity deserialization.
+    Used as the base for every dynamically generated model regardless of
+    profile (MIAPPE, ISA, DiSSCo, Darwin Core, ENA, PRIDE, etc.). Provides
+    validation on assignment, JSON serialization mode, and automatic nested
+    entity deserialization.
     """
 
     model_config = ConfigDict(
@@ -364,12 +366,16 @@ def _create_field_definition(field: FieldSpec) -> tuple[type, Any]:
     python_type = _build_field_type(field)
     constraints = _build_field_constraints(field)
 
-    if field.constraints and field.constraints.enum:
-        python_type = _build_enum_type(field.constraints.enum)
+    has_enum = bool(field.constraints and field.constraints.enum)
 
     if field.type == FieldType.LIST:
+        if has_enum:
+            python_type = list[_build_enum_type(field.constraints.enum)]  # type: ignore[misc]
         constraints["default_factory"] = list
         return (Annotated[python_type, Field(**constraints)], ...)
+
+    if has_enum:
+        python_type = _build_enum_type(field.constraints.enum)
 
     if field.type == FieldType.ENTITY:
         annotated_type = (
