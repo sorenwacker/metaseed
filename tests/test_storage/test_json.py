@@ -122,6 +122,29 @@ class TestJsonStorage:
         with pytest.raises(StorageError):
             storage.load(file_path, investigation_model)
 
+    def test_save_serialization_error_raises_storage_error(
+        self,
+        storage: JsonStorage,
+        sample_investigation,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Serialization failures during save are wrapped in StorageError."""
+        from metaseed.storage.base import StorageError
+
+        def _raise_serialization_error(*_args, **_kwargs):
+            raise TypeError("cannot serialize object")
+
+        monkeypatch.setattr(
+            type(sample_investigation),
+            "model_dump_json",
+            _raise_serialization_error,
+        )
+
+        file_path = tmp_path / "investigation.json"
+        with pytest.raises(StorageError):
+            storage.save(sample_investigation, file_path)
+
     def test_save_with_pretty_print(
         self,
         storage: JsonStorage,

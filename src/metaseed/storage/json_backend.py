@@ -1,6 +1,6 @@
 """JSON storage backend.
 
-This module provides JSON file storage for MIAPPE entities.
+This module provides JSON file storage for Pydantic metadata models.
 """
 
 import json
@@ -47,7 +47,7 @@ class JsonStorage(StorageBackend):
             path.parent.mkdir(parents=True, exist_ok=True)
             json_str = entity.model_dump_json(indent=self.indent, exclude_none=True)
             path.write_text(json_str, encoding="utf-8")
-        except OSError as e:
+        except (OSError, TypeError, ValueError) as e:
             raise StorageError(f"Failed to save to {path}: {e}") from e
 
     def load(self: Self, path: Path, model: type[T]) -> T:
