@@ -4,7 +4,9 @@ Per-file consistency and correctness review of all `src/metaseed` Python modules
 
 ## Status
 
-All 47 confirmed findings listed below have been **resolved** (commits `868c2b1`..`ddb22e5`), each paired with tests. The three originally deferred design/feature items were also addressed: the unused `agent/llm` package was removed, dataset JSON import (`/import`) was implemented, and the MCP parent-detection duplication was refactored onto the facade's `reference_fields` map. The full suite passes (1509 tests). The only remaining open items are the lower-confidence, unverified leads in the appendix, which were not put through verification and may include false positives.
+All 47 confirmed findings listed below have been **resolved** (commits `868c2b1`..`ddb22e5`), each paired with tests. The three originally deferred design/feature items were also addressed: the unused `agent/llm` package was removed, dataset JSON import (`/import`) was implemented, and the MCP parent-detection duplication was refactored onto the facade's `reference_fields` map.
+
+The appendix leads were subsequently put through the same adversarial verification: of 71 checked, 13 were refuted, 5 were upgraded to medium and fixed (`14d5a32`..`9134cc8`), and 53 were confirmed low. Of those, the in-scope safe subset (docstrings, typing, internal dead code, small robustness fixes) was applied (`4f3ed24`..`2845eb9`), and the public-API dead code — verified unused in both this repo and `metaseed-hub`, the sole consumer — was removed (`9db4cd2`, `350208d`). What remains open is a small set of design-smell items (ContextVar/singleton patterns, a private-attribute access, a public-class rename, `PRIMITIVE_TYPES`/`FieldType` alignment, `_to_snake_case` dedup) recorded as backlog. The full suite passes (1506 tests).
 
 ## Baseline (objective gates)
 
