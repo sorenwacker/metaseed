@@ -25,6 +25,7 @@ import time
 from contextvars import ContextVar
 from dataclasses import dataclass, field
 from typing import Any, Self
+from urllib.parse import quote
 
 import httpx
 
@@ -35,6 +36,28 @@ DEFAULT_CACHE_TTL = 600  # 10 minutes
 DEFAULT_RATE_LIMIT = 60  # requests per minute
 DEFAULT_BASE_URL = "https://www.ebi.ac.uk/ols4/api"
 DEFAULT_TIMEOUT = 30.0
+
+
+class _MissingSentinel:
+    """Sentinel type marking a cache miss, distinct from a cached ``None``."""
+
+    __slots__ = ()
+
+    def __repr__(self) -> str:
+        return "<MISSING>"
+
+
+# Sentinel distinguishing "key absent/expired" from a cached negative result.
+_MISSING = _MissingSentinel()
+
+
+class OntologyServiceError(Exception):
+    """Raised when an OLS4 request fails for a non-404 (transport/server) reason.
+
+    This is distinct from a genuine 404 (term absent). It lets callers honor a
+    fail-open contract: treat unreachable-service errors as inconclusive rather
+    than as proof a term does not exist.
+    """
 
 
 @dataclass
@@ -210,21 +233,24 @@ class OntologyService:
             self.rate_limit,
         )
 
-    def _get_cached(self: Self, key: str) -> Any | None:
+    def _get_cached(self: Self, key: str) -> Any:
         """Get a value from the cache if not expired.
 
         Args:
             key: Cache key.
 
         Returns:
-            Cached value or None if not found/expired.
+            The cached value (which may legitimately be ``None`` for a cached
+            negative result), or the ``_MISSING`` sentinel if the key is absent
+            or expired. Callers must compare against ``_MISSING`` rather than
+            ``None`` so a cached negative is not mistaken for a cache miss.
         """
         entry = self._cache.get(key)
         if entry is None:
-            return None
+            return _MISSING
         if entry.is_expired():
             del self._cache[key]
-            return None
+            return _MISSING
         return entry.value
 
     def _set_cached(self: Self, key: str, value: Any) -> None:
@@ -284,7 +310,7 @@ class OntologyService:
 
         # Check cache
         cached = self._get_cached(cache_key)
-        if cached is not None:
+        if cached is not _MISSING:
             logger.debug("Cache hit for search: %s", query)
             return cached
 
@@ -366,7 +392,7 @@ class OntologyService:
 
         # Check cache
         cached = self._get_cached(cache_key)
-        if cached is not None:
+        if cached is not _MISSING:
             logger.debug("Cache hit for search: %s", query)
             return cached
 
@@ -430,7 +456,13 @@ class OntologyService:
             term_id: Ontology term ID (e.g., "PATO:0000001", "GO:0008150").
 
         Returns:
-            OntologyTerm object or None if not found.
+            OntologyTerm object, or None if the term genuinely does not exist
+            (HTTP 404).
+
+        Raises:
+            OntologyServiceError: If the OLS4 service is unreachable or returns
+                a non-404 error. This is distinct from a missing term so callers
+                can fail open rather than treat an outage as proof of absence.
         """
         if not term_id:
             return None
@@ -439,7 +471,7 @@ class OntologyService:
 
         # Check cache
         cached = self._get_cached(cache_key)
-        if cached is not None:
+        if cached is not _MISSING:
             logger.debug("Cache hit for term: %s", term_id)
             return cached
 
@@ -452,9 +484,10 @@ class OntologyService:
         # Rate limit
         await self._rate_limiter.acquire()
 
-        # Construct IRI
+        # Construct the OLS4 term path. The endpoint expects the full IRI
+        # double-URL-encoded as a single path segment.
         iri = self._construct_iri(term_id)
-        encoded_iri = httpx.URL(iri).raw_path.decode() if iri else ""
+        encoded_iri = quote(quote(iri, safe=""), safe="") if iri else ""
 
         try:
             async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
@@ -469,10 +502,14 @@ class OntologyService:
                 self._set_cached(cache_key, None)
                 return None
             logger.warning("OLS4 term lookup error: %s", e)
-            return None
+            raise OntologyServiceError(
+                f"OLS4 term lookup failed for '{term_id}': {e}"
+            ) from e
         except httpx.RequestError as e:
             logger.warning("OLS4 term request failed: %s", e)
-            return None
+            raise OntologyServiceError(
+                f"OLS4 term request failed for '{term_id}': {e}"
+            ) from e
 
         # Parse result
         term = OntologyTerm(
@@ -499,7 +536,13 @@ class OntologyService:
             term_id: Ontology term ID.
 
         Returns:
-            OntologyTerm object or None if not found.
+            OntologyTerm object, or None if the term genuinely does not exist
+            (HTTP 404).
+
+        Raises:
+            OntologyServiceError: If the OLS4 service is unreachable or returns
+                a non-404 error. This is distinct from a missing term so callers
+                can fail open rather than treat an outage as proof of absence.
         """
         if not term_id:
             return None
@@ -508,7 +551,7 @@ class OntologyService:
 
         # Check cache
         cached = self._get_cached(cache_key)
-        if cached is not None:
+        if cached is not _MISSING:
             logger.debug("Cache hit for term: %s", term_id)
             return cached
 
@@ -521,9 +564,10 @@ class OntologyService:
         # Rate limit
         self._rate_limiter.acquire_sync()
 
-        # Construct IRI
+        # Construct the OLS4 term path. The endpoint expects the full IRI
+        # double-URL-encoded as a single path segment.
         iri = self._construct_iri(term_id)
-        encoded_iri = httpx.URL(iri).raw_path.decode() if iri else ""
+        encoded_iri = quote(quote(iri, safe=""), safe="") if iri else ""
 
         try:
             with httpx.Client(timeout=DEFAULT_TIMEOUT) as client:
@@ -537,10 +581,14 @@ class OntologyService:
                 self._set_cached(cache_key, None)
                 return None
             logger.warning("OLS4 term lookup error: %s", e)
-            return None
+            raise OntologyServiceError(
+                f"OLS4 term lookup failed for '{term_id}': {e}"
+            ) from e
         except httpx.RequestError as e:
             logger.warning("OLS4 term request failed: %s", e)
-            return None
+            raise OntologyServiceError(
+                f"OLS4 term request failed for '{term_id}': {e}"
+            ) from e
 
         # Parse result
         term = OntologyTerm(
@@ -563,6 +611,10 @@ class OntologyService:
     async def validate_term(self: Self, term_id: str) -> tuple[bool, str | None]:
         """Validate that an ontology term exists.
 
+        Network or service errors are treated as valid (fail-open) so a
+        transient OLS4 outage does not flag every term as invalid. Only a
+        genuine 404 (term absent) yields ``(False, ...)``.
+
         Args:
             term_id: Ontology term ID to validate.
 
@@ -577,7 +629,11 @@ class OntologyService:
             # Can't determine ontology, skip validation
             return True, None
 
-        term = await self.get_term(term_id)
+        try:
+            term = await self.get_term(term_id)
+        except OntologyServiceError:
+            # Service unreachable: fail open, cannot prove the term is absent.
+            return True, None
 
         if term is not None:
             return True, None
@@ -586,6 +642,10 @@ class OntologyService:
 
     def validate_term_sync(self: Self, term_id: str) -> tuple[bool, str | None]:
         """Synchronous version of validate_term.
+
+        Network or service errors are treated as valid (fail-open) so a
+        transient OLS4 outage does not flag every term as invalid. Only a
+        genuine 404 (term absent) yields ``(False, ...)``.
 
         Args:
             term_id: Ontology term ID to validate.
@@ -599,7 +659,11 @@ class OntologyService:
         if ":" not in term_id and "_" not in term_id:
             return True, None
 
-        term = self.get_term_sync(term_id)
+        try:
+            term = self.get_term_sync(term_id)
+        except OntologyServiceError:
+            # Service unreachable: fail open, cannot prove the term is absent.
+            return True, None
 
         if term is not None:
             return True, None

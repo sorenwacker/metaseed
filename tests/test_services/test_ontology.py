@@ -2,12 +2,16 @@
 
 import time
 
+import httpx
 import pytest
 
+from metaseed.services import ontology as ontology_module
 from metaseed.services.ontology import (
+    _MISSING,
     CacheEntry,
     OntologySearchResult,
     OntologyService,
+    OntologyServiceError,
     OntologyTerm,
     RateLimiter,
     get_ontology_service,
@@ -124,7 +128,7 @@ class TestOntologyService:
 
         service._set_cached("key1", "value1")
         assert service._get_cached("key1") == "value1"
-        assert service._get_cached("nonexistent") is None
+        assert service._get_cached("nonexistent") is _MISSING
 
     def test_cache_expiry(self) -> None:
         """Cache entries expire after TTL."""
@@ -136,7 +140,7 @@ class TestOntologyService:
             expires_at=time.time() - 1,  # Already expired
         )
 
-        assert service._get_cached("key1") is None
+        assert service._get_cached("key1") is _MISSING
 
     def test_clear_cache(self) -> None:
         """Cache can be cleared."""
@@ -146,8 +150,8 @@ class TestOntologyService:
 
         service.clear_cache()
 
-        assert service._get_cached("key1") is None
-        assert service._get_cached("key2") is None
+        assert service._get_cached("key1") is _MISSING
+        assert service._get_cached("key2") is _MISSING
 
     def test_cache_stats(self) -> None:
         """Cache stats are accurate."""
@@ -219,6 +223,106 @@ class TestOntologyService:
         is_valid, warning = service.validate_term_sync("INVALID:9999")
         assert is_valid is False
         assert "not found" in warning
+
+    def test_get_cached_distinguishes_miss_from_cached_none(self) -> None:
+        """A cached None negative result is distinct from an absent key."""
+        service = OntologyService()
+
+        # Absent key returns the miss sentinel, not None.
+        assert service._get_cached("absent") is _MISSING
+
+        # A cached negative (None) is returned as None, not the sentinel.
+        service._set_cached("neg", None)
+        assert service._get_cached("neg") is None
+        assert service._get_cached("neg") is not _MISSING
+
+    def test_get_term_sync_double_encodes_iri_in_url(self, monkeypatch) -> None:
+        """get_term_sync requests the term with a double-URL-encoded full IRI."""
+        service = OntologyService()
+        captured: dict[str, str] = {}
+
+        class _FakeResponse:
+            def raise_for_status(self) -> None:
+                return None
+
+            def json(self) -> dict[str, object]:
+                return {
+                    "obo_id": "PATO:0000001",
+                    "label": "quality",
+                    "iri": "http://purl.obolibrary.org/obo/PATO_0000001",
+                }
+
+        class _FakeClient:
+            def __init__(self, *args, **kwargs) -> None:
+                pass
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args) -> None:
+                return None
+
+            def get(self, url: str):
+                captured["url"] = url
+                return _FakeResponse()
+
+        monkeypatch.setattr(ontology_module.httpx, "Client", _FakeClient)
+
+        term = service.get_term_sync("PATO:0000001")
+
+        assert term is not None
+        # Full IRI must be present double-encoded: ':' -> %253A, '/' -> %252F.
+        assert (
+            "http%253A%252F%252Fpurl.obolibrary.org%252Fobo%252FPATO_0000001"
+            in (captured["url"])
+        )
+        # No stray double slash from the old raw_path approach.
+        assert "/terms//" not in captured["url"]
+
+    def test_get_term_sync_raises_on_network_error(self, monkeypatch) -> None:
+        """get_term_sync raises OntologyServiceError on transport failure."""
+        service = OntologyService()
+
+        class _FailingClient:
+            def __init__(self, *args, **kwargs) -> None:
+                pass
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args) -> None:
+                return None
+
+            def get(self, url: str):
+                raise httpx.ConnectError("boom")
+
+        monkeypatch.setattr(ontology_module.httpx, "Client", _FailingClient)
+
+        with pytest.raises(OntologyServiceError):
+            service.get_term_sync("PATO:0000001")
+
+    def test_validate_term_sync_fails_open_on_network_error(self, monkeypatch) -> None:
+        """Network failures are treated as valid (fail-open), not 'not found'."""
+        service = OntologyService()
+
+        class _FailingClient:
+            def __init__(self, *args, **kwargs) -> None:
+                pass
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args) -> None:
+                return None
+
+            def get(self, url: str):
+                raise httpx.ConnectError("boom")
+
+        monkeypatch.setattr(ontology_module.httpx, "Client", _FailingClient)
+
+        is_valid, warning = service.validate_term_sync("PATO:0000001")
+        assert is_valid is True
+        assert warning is None
 
     @pytest.mark.asyncio
     async def test_search_empty_query(self) -> None:
