@@ -168,6 +168,31 @@ class TestCreateEntity:
         assert child.parent_id == parent.id
         assert child in parent.children
 
+    def test_create_derives_label_from_data(self, empty_repo):
+        """Created entity label is derived from the spec's first field."""
+        entity = empty_repo.create_entity(
+            entity_type="Investigation",
+            data={"unique_id": "INV-001", "title": "Test Investigation"},
+        )
+
+        assert entity.label == "INV-001"
+
+    def test_create_child_auto_fills_parent_reference(self, empty_repo):
+        """Child's reference field is auto-filled with the parent's identifier."""
+        parent = empty_repo.create_entity(
+            entity_type="Investigation",
+            data={"unique_id": "INV-001", "title": "Parent"},
+        )
+
+        # Omit the reference field so auto-fill must populate it.
+        child = empty_repo.create_entity(
+            entity_type="Study",
+            data={"unique_id": "STU-001", "title": "Child Study"},
+            parent_id=parent.id,
+        )
+
+        assert child.data["investigation_id"] == "INV-001"
+
     def test_create_invalid_type_raises(self, empty_repo):
         """Raises error for invalid entity type."""
         with pytest.raises(ValueError, match="Unknown entity type"):
@@ -407,4 +432,6 @@ class TestParseEntities:
         repo = FileEntityRepository(dataset_path=path)
 
         entity = repo._entities["abc"]
-        assert entity.label  # Should have derived label
+        # Label is derived from the spec's first field (unique_id), not the
+        # generic "New {entity_type}" fallback.
+        assert entity.label == "INV-001"

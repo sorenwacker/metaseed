@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Self
+from typing import Self
 
 from metaseed.repositories.dataset_repository import (
     DatasetData,
@@ -171,41 +171,3 @@ class FilesystemDatasetRepository(DatasetRepository):
             True if exists, False otherwise.
         """
         return self._get_path(name).exists()
-
-
-def serialize_tree_node(
-    node: Any, parent_unique_id: str | None = None
-) -> list[dict[str, Any]]:
-    """Serialize a TreeNode and its children to entity dicts.
-
-    Uses unique_id for parent references for stability across reloads.
-
-    Args:
-        node: TreeNode to serialize.
-        parent_unique_id: Parent's unique_id for relationship tracking.
-
-    Returns:
-        List of serialized entity dicts (node and all descendants).
-    """
-    entities: list[dict[str, Any]] = []
-
-    if not node.instance:
-        return entities
-
-    if hasattr(node.instance, "model_dump"):
-        data = node.instance.model_dump(mode="json", exclude_none=True)
-    else:
-        return entities
-
-    data["_type"] = node.entity_type
-    if parent_unique_id:
-        data["_parent_unique_id"] = parent_unique_id
-
-    entities.append(data)
-
-    node_unique_id = data.get("unique_id")
-
-    for child in node.children:
-        entities.extend(serialize_tree_node(child, node_unique_id))
-
-    return entities

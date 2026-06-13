@@ -158,7 +158,9 @@ class FileEntityRepository(EntityRepository):
 
             # Derive label if not present
             if not entity.label:
-                entity.label = derive_label(entity.entity_type, entity.data)
+                helper = getattr(self._get_facade(), entity.entity_type, None)
+                spec = helper._spec if helper else None
+                entity.label = derive_label(entity.entity_type, entity.data, spec=spec)
 
             entities[entity.id] = entity
 
@@ -271,7 +273,8 @@ class FileEntityRepository(EntityRepository):
             # Auto-fill child's reference to parent
             ref_field = find_parent_ref_field(helper, parent.entity_type)
             if ref_field and ref_field not in data:
-                parent_identifier = get_identifier(parent.data)
+                parent_helper = getattr(facade, parent.entity_type, None)
+                parent_identifier = get_identifier(parent.data, parent_helper)
                 if parent_identifier:
                     data[ref_field] = parent_identifier
 
@@ -283,7 +286,7 @@ class FileEntityRepository(EntityRepository):
         entity = EntityData(
             id=str(uuid.uuid4())[:8],
             entity_type=entity_type,
-            label=derive_label(entity_type, validated_data),
+            label=derive_label(entity_type, validated_data, spec=helper._spec),
             data=validated_data,
             parent_id=parent_id,
         )
@@ -328,7 +331,9 @@ class FileEntityRepository(EntityRepository):
 
         # Update entity
         entity.data = validated_data
-        entity.label = derive_label(entity.entity_type, validated_data)
+        entity.label = derive_label(
+            entity.entity_type, validated_data, spec=helper._spec
+        )
 
         self._save()
         return entity
