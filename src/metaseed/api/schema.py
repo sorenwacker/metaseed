@@ -26,7 +26,6 @@ class FieldInfo:
         ontology_term: Optional ontology term reference.
         items: For list/entity types, the type of items.
         constraints: Optional validation constraints dict.
-        reference: Entity.field reference for integrity validation.
     """
 
     name: str
@@ -36,7 +35,6 @@ class FieldInfo:
     ontology_term: str | None = None
     items: str | None = None
     constraints: dict[str, Any] | None = None
-    reference: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

@@ -19,16 +19,12 @@ from metaseed.agent.mapping import (
     mapping_to_dict,
     suggest_mapping,
 )
-from metaseed.agent.questions import Answer, Question, QuestionType
 
 __all__ = [
-    "Answer",
     "ColumnMapping",
     "ExtractionContext",
     "ExtractionResult",
     "FieldMapping",
-    "Question",
-    "QuestionType",
     "ValidationError",
     "create_mapping",
     "extract_instances",

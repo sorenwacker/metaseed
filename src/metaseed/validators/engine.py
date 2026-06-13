@@ -458,32 +458,6 @@ def create_engine_for_entity(
     return engine
 
 
-def create_engine_from_profile(
-    version: str = "1.2",
-    profile: str = "miappe",
-) -> dict[str, ValidationEngine]:
-    """Create validation engines for all entities in a profile.
-
-    Args:
-        version: Profile version (e.g., "1.1").
-        profile: Profile name (e.g., "miappe", "combined").
-
-    Returns:
-        Dictionary mapping entity names to configured ValidationEngine instances.
-    """
-    loader = SpecLoader()
-    engines: dict[str, ValidationEngine] = {}
-
-    try:
-        entities = loader.list_entities(version, profile)
-        for entity in entities:
-            engines[entity] = create_engine_for_entity(entity, version, profile)
-    except SpecLoadError:
-        pass
-
-    return engines
-
-
 def validate(
     data: dict[str, Any],
     entity: str,

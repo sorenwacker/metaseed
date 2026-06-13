@@ -26,29 +26,6 @@ class EntityData:
     parent_id: str | None = None
     children: list["EntityData"] = field(default_factory=list)
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for serialization."""
-        return {
-            "id": self.id,
-            "entity_type": self.entity_type,
-            "label": self.label,
-            "data": self.data,
-            "parent_id": self.parent_id,
-            "children": [c.to_dict() for c in self.children],
-        }
-
-    @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> "EntityData":
-        """Create from dictionary."""
-        return cls(
-            id=d["id"],
-            entity_type=d["entity_type"],
-            label=d["label"],
-            data=d.get("data", {}),
-            parent_id=d.get("parent_id"),
-            children=[cls.from_dict(c) for c in d.get("children", [])],
-        )
-
 
 class EntityRepository(ABC):
     """Abstract interface for entity persistence.

@@ -30,7 +30,6 @@ class FieldDiff:
         diff_type: Type of difference (added, removed, modified, etc.).
         profiles: Mapping of profile identifier to field spec or None.
         attributes_changed: List of attribute names that differ.
-        base_value: Original value in the base profile (if applicable).
         values: Mapping of profile identifier to attribute values that differ.
     """
 
@@ -38,7 +37,6 @@ class FieldDiff:
     diff_type: DiffType
     profiles: dict[str, FieldSpec | None] = field(default_factory=dict)
     attributes_changed: list[str] = field(default_factory=list)
-    base_value: Any = None
     values: dict[str, Any] = field(default_factory=dict)
 
     @property
