@@ -5,7 +5,7 @@ when merging profile specifications.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Self
+from typing import Self
 
 from metaseed.specs.schema import Constraints, FieldSpec
 
@@ -355,13 +355,12 @@ class PreferProfileStrategy(MergeStrategy):
         raise ValueError(f"No field spec found for {field_diff.field_name}")
 
 
-def get_strategy(name: str, **_kwargs: Any) -> MergeStrategy:
+def get_strategy(name: str) -> MergeStrategy:
     """Get a merge strategy by name.
 
     Args:
         name: Strategy name. One of: first_wins, last_wins,
             most_restrictive, least_restrictive, prefer_<profile>.
-        **kwargs: Additional arguments for strategy construction.
 
     Returns:
         MergeStrategy instance.

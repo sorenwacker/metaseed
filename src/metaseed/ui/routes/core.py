@@ -5,7 +5,6 @@ Provides the main page, profile switching, and shared helper functions.
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException
@@ -24,9 +23,6 @@ if TYPE_CHECKING:
     from metaseed.facade import ProfileFacade
 
     from ..state import AppState
-
-UI_DIR = Path(__file__).parent.parent
-EXAMPLES_DIR = UI_DIR.parent.parent.parent / "examples"
 
 
 def get_profile_display_info(factory: ProfileFactory) -> list[dict[str, Any]]:

@@ -7,6 +7,7 @@ objects used by the spec builder UI.
 from __future__ import annotations
 
 import copy
+from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -160,7 +161,7 @@ def save_spec(spec: ProfileSpec, name: str | None = None) -> Path:
 
 
 def _list_specs(
-    include_user_defined: bool, default_display_name_fn: callable
+    include_user_defined: bool, default_display_name_fn: Callable[[str], str]
 ) -> list[dict]:
     """Common logic for listing specs.
 

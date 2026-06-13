@@ -19,12 +19,10 @@ class ProfileFactory:
     the need for hardcoded profile lists.
 
     Example:
-        >>> factory = ProfileFactory()
-        >>> factory.list_profiles()
-        ['isa', 'isa-miappe-combined', 'miappe']
-        >>> factory.list_versions('miappe')
-        ['1.1']
-        >>> facade = factory.create('miappe', '1.1')
+        factory = ProfileFactory()
+        factory.list_profiles()  # sorted list of available profile names
+        factory.list_versions('miappe')  # sorted list of version strings
+        facade = factory.create('miappe', '1.1')
     """
 
     def __init__(self: Self) -> None:
@@ -35,7 +33,7 @@ class ProfileFactory:
         """List all available profile names.
 
         Returns:
-            Sorted list of profile names (e.g., ['isa', 'isa-miappe-combined', 'miappe']).
+            Sorted list of available profile names.
         """
         return self._loader.list_profiles()
 
@@ -46,7 +44,7 @@ class ProfileFactory:
             profile: Profile name (e.g., 'miappe', 'isa').
 
         Returns:
-            Sorted list of version strings (e.g., ['1.0', '1.1']).
+            Sorted list of version strings for the profile.
         """
         loader = SpecLoader(profile=profile)
         return loader.list_versions()
@@ -67,8 +65,8 @@ class ProfileFactory:
         """Get information about all available profiles.
 
         Returns:
-            List of dictionaries with profile info:
-            [{'name': 'miappe', 'versions': ['1.1'], 'latest': '1.1'}, ...]
+            List of dictionaries with profile info, each containing
+            'name', 'versions', and 'latest' keys.
         """
         profiles = []
         for name in self.list_profiles():

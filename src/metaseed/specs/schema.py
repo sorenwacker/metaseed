@@ -1,7 +1,7 @@
-"""Pydantic models for MIAPPE specification schema.
+"""Pydantic models for profile specification schema.
 
 This module defines the structure of YAML specification files that describe
-MIAPPE entities and their fields.
+profile entities and their fields.
 """
 
 from enum import StrEnum
@@ -108,11 +108,11 @@ class FieldSpec(BaseModel):
 
 
 class EntitySpec(BaseModel):
-    """Specification for a MIAPPE entity.
+    """Specification for a profile entity.
 
     Attributes:
         name: Entity name (PascalCase).
-        version: MIAPPE version (e.g., "1.1").
+        version: Profile version (e.g., "1.1").
         ontology_term: Reference to PPEO ontology term.
         description: Human-readable description.
         fields: List of field specifications.

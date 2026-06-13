@@ -9,6 +9,7 @@ This package provides FastAPI routes organized by resource type:
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from fastapi import APIRouter
@@ -30,7 +31,7 @@ __all__ = ["SpecBuilderState", "create_spec_builder_router"]
 
 def create_spec_builder_router(
     templates: Jinja2Templates,
-    get_state: callable,
+    get_state: Callable[[], AppState],
     persistence: SpecPersistence | None = None,
     base_url: str = "",
 ) -> APIRouter:

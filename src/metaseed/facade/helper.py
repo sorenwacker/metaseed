@@ -132,13 +132,13 @@ class EntityHelper:
 
     @property
     def identifier_field(self: Self) -> str | None:
-        """Field name used as display label for this entity.
+        """Field name used as the entity identifier (for indexing/node IDs).
 
         By convention, the first non-reference field in the entity definition
-        is used as the identifier/label for display purposes.
-        Reference fields (e.g., run_ref, sample_ref) should not be used as
-        identifiers since they point to other entities rather than identifying
-        this one.
+        is used as the identifier. This value is consumed for index keys and
+        node IDs; display labels are handled separately by derive_label /
+        get_label. Reference fields (e.g., run_ref, sample_ref) are skipped
+        since they point to other entities rather than identifying this one.
         """
         for f in self._spec.fields:
             # Skip reference fields (these point to other entities)

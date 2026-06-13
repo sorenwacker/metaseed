@@ -303,7 +303,9 @@ def collect_entities_by_type(
 
 __all__ = [
     "collect_entities_by_type",
+    "extract_nested_from_tree",
     "extract_nested_items",
+    "get_nested_items_for_edit",
     "to_dict",
     "walk_nested_entities",
 ]

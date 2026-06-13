@@ -1,8 +1,13 @@
 """Centralized ontology lookup service with caching and rate limiting.
 
-This module provides a centralized `OntologyService` class that manages all
-OLS4 API requests with caching and rate limiting. This prevents overwhelming
-the external API when multiple users/tools perform lookups simultaneously.
+This module provides an `OntologyService` class that manages OLS4 API requests
+with caching and rate limiting to reduce load on the external API.
+
+The service instance is context-scoped via a ``ContextVar`` (see
+`get_ontology_service`): the cache and rate limiter are shared within a given
+execution context, but a new asyncio task or thread that does not inherit the
+context variable creates its own instance with a separate cache and rate
+limiter. It is therefore not a guaranteed process-wide singleton.
 
 Configuration via environment variables:
 - METASEED_OLS_CACHE_TTL: Cache TTL in seconds (default: 600)
@@ -190,9 +195,12 @@ class OntologyService:
     """Centralized ontology lookup service with caching and rate limiting.
 
     Provides methods for searching and retrieving ontology terms from OLS4
-    with automatic caching and rate limiting to prevent API abuse.
+    with automatic caching and rate limiting to reduce load on the API.
 
-    The service is designed to be used as a singleton via `get_ontology_service()`.
+    The service is intended to be obtained via `get_ontology_service()`, which
+    caches one instance per execution context (a ``ContextVar``). The cache and
+    rate limiter are shared only within that context, not guaranteed across all
+    tasks or threads.
 
     Attributes:
         cache_ttl: Time-to-live for cache entries in seconds.
@@ -225,7 +233,6 @@ class OntologyService:
 
         self._cache: dict[str, CacheEntry] = {}
         self._rate_limiter = RateLimiter(self.rate_limit)
-        self._lock = asyncio.Lock()
 
         logger.debug(
             "OntologyService initialized: cache_ttl=%d, rate_limit=%d/min",
@@ -703,20 +710,22 @@ class OntologyService:
         return None
 
 
-# Context variable for ontology service singleton
+# Context-scoped variable holding the ontology service instance.
 _service_var: ContextVar[OntologyService | None] = ContextVar(
     "ontology_service", default=None
 )
 
 
 def get_ontology_service() -> OntologyService:
-    """Get the OntologyService singleton.
+    """Get the context-scoped OntologyService instance.
 
-    Creates the service on first call with configuration from environment
-    variables.
+    Creates the service on first call within the current execution context,
+    using configuration from environment variables. The instance (and its
+    cache and rate limiter) is shared within that context but not guaranteed
+    across other tasks or threads.
 
     Returns:
-        The OntologyService instance.
+        The OntologyService instance for the current context.
     """
     service = _service_var.get()
     if service is None:
@@ -726,7 +735,7 @@ def get_ontology_service() -> OntologyService:
 
 
 def reset_ontology_service() -> None:
-    """Reset the OntologyService singleton.
+    """Reset the context-scoped OntologyService instance.
 
     Useful for testing or reconfiguration.
     """

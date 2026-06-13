@@ -8,6 +8,7 @@ column mappings, and extracted entities.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any, Self
 
@@ -388,8 +389,6 @@ class ExtractionContext:
                 )
 
             if constraints.pattern and isinstance(value, str):
-                import re
-
                 if not re.match(constraints.pattern, value):
                     errors.append(
                         ValidationError(

@@ -8,6 +8,8 @@ Submodules:
 - form: Form context, value collection, and field filtering
 - navigation: Breadcrumbs, error responses, and reference fields
 - table: Inline table building and formatting
+- spec_builder: Spec creation/conversion helpers, imported directly by the
+  spec builder routes rather than re-exported here
 """
 
 from __future__ import annotations

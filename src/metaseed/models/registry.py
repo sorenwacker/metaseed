@@ -17,7 +17,7 @@ class ModelRegistry:
     """Registry for storing and retrieving generated models.
 
     Models are keyed by (name, version) tuples to support multiple
-    MIAPPE versions.
+    profile versions.
     """
 
     def __init__(self: Self) -> None:
@@ -29,7 +29,7 @@ class ModelRegistry:
 
         Args:
             name: Model name (e.g., "Investigation").
-            version: MIAPPE version (e.g., "1.1").
+            version: Profile version (e.g., "1.1").
             model: Pydantic model class to register.
         """
         self._models[(name, version)] = model
@@ -39,7 +39,7 @@ class ModelRegistry:
 
         Args:
             name: Model name.
-            version: MIAPPE version.
+            version: Profile version.
 
         Returns:
             The registered model class.
@@ -57,7 +57,7 @@ class ModelRegistry:
 
         Args:
             name: Model name.
-            version: MIAPPE version.
+            version: Profile version.
 
         Returns:
             True if the model is registered, False otherwise.

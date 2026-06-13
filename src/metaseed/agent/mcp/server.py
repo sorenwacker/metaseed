@@ -9,13 +9,10 @@ Resources:
     - profile://{name}/{version}/entity/{entity} - Get entity definition
 
 Tools:
-    - list_profiles - List available profiles with versions
-    - get_profile_schema - Get full profile schema
-    - parse_file - Parse a file and return structure
-    - analyze_mapping - Suggest column mappings for an entity
-    - extract_entities - Extract entity instances from file
-    - validate_extracted - Validate extracted data
-    - export_metadata - Export to YAML/JSON
+    Registered via register_*_tools at server construction. Groups include
+    profile, dataset, entity, extraction (parse_source_file, analyze_mapping,
+    extract_entities, validate_extracted, export_metadata), validation, and
+    ontology tools. See the tools subpackage for the authoritative list.
 
 Prompts:
     - extraction_guide - Instructions for metadata extraction

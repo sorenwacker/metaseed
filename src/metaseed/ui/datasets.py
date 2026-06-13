@@ -18,6 +18,7 @@ from metaseed.repositories.filesystem_dataset import (
 )
 
 if TYPE_CHECKING:
+    from .dataset_manager import DatasetManagerFactory
     from .state import AppState
 
 from contextvars import ContextVar
@@ -25,10 +26,12 @@ from contextvars import ContextVar
 DATASETS_DIR = DEFAULT_DATASETS_DIR
 
 # Context variable for request-scoped factory
-_factory_var: ContextVar = ContextVar("dataset_factory", default=None)
+_factory_var: ContextVar[DatasetManagerFactory | None] = ContextVar(
+    "dataset_factory", default=None
+)
 
 
-def _get_factory():
+def _get_factory() -> DatasetManagerFactory:
     """Get or create the factory for current context."""
     factory = _factory_var.get()
     if factory is None:
@@ -201,6 +204,6 @@ def auto_save(state: AppState) -> None:
         factory = _get_factory()
 
     manager = factory.get_manager(state)
-    manager._current = get_current_dataset_name(state)
+    manager.current_dataset = get_current_dataset_name(state)
     manager.auto_save()
-    set_current_dataset_name(state, manager._current)
+    set_current_dataset_name(state, manager.current_dataset)

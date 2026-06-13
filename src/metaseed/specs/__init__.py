@@ -1,7 +1,7 @@
 """Schema specification module.
 
 This module provides the spec loader and schema models for parsing
-MIAPPE YAML specifications.
+profile YAML specifications.
 """
 
 from metaseed.specs.loader import SpecLoader, SpecLoadError

@@ -1,7 +1,7 @@
-"""Storage module for MIAPPE entities.
+"""Storage module for metadata entities.
 
-This module provides storage backends for persisting MIAPPE models
-to different file formats.
+This module provides storage backends for persisting Pydantic metadata
+models to different file formats.
 """
 
 from metaseed.storage.base import StorageBackend, StorageError
