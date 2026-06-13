@@ -361,7 +361,7 @@ def rebuild_nested_items_with_failures(
         facade: Profile facade.
         failed_items: Dict of field_name -> list of failed items to preserve.
     """
-    from .entity_helpers import extract_nested_items, get_nested_items_for_edit
+    from .entity_helpers import get_nested_items_for_edit
 
     updated_node = state.nodes_by_id.get(node_id)
     if updated_node:
@@ -369,12 +369,8 @@ def rebuild_nested_items_with_failures(
             updated_node, helper, facade
         )
     else:
-        # Fallback - shouldn't happen but handle gracefully
-        instance = state.nodes_by_id.get(node_id)
-        if instance:
-            state.current_nested_items = extract_nested_items(instance, helper)
-        else:
-            state.current_nested_items = {}
+        # Fallback - node missing after update; reset to empty.
+        state.current_nested_items = {}
 
     # Add back any items that failed validation so user can fix them
     for field_name, items in failed_items.items():

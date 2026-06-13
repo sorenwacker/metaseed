@@ -149,13 +149,6 @@ def get_parent_identifier(
             data = node.instance.model_dump(exclude_none=True)
             return str(data.get(target_field, ""))
 
-    # Check nested edit stack for parent context
-    for ctx in reversed(state.nested_edit_stack):
-        if ctx.entity_type == parent_entity_type:
-            # The parent is in the nested stack, get its data
-            # This would be the item at ctx.row_idx in the parent's nested items
-            pass
-
     return ""
 
 

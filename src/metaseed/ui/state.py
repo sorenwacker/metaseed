@@ -9,7 +9,6 @@ UI-specific state (editing_node_id, current_nested_items, etc.).
 
 from __future__ import annotations
 
-import uuid
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Self
 
@@ -40,38 +39,6 @@ class TreeNode:
     label: str
     children: list[TreeNode] = field(default_factory=list)
     parent_id: str | None = None
-
-    @classmethod
-    def create(
-        cls,
-        entity_type: str,
-        instance: Any,
-        parent_id: str | None = None,
-        node_id: str | None = None,
-        spec: Any = None,
-    ) -> TreeNode:
-        """Create a new tree node from an entity instance.
-
-        Args:
-            entity_type: Type of entity.
-            instance: The entity instance (Pydantic model).
-            parent_id: Optional parent node ID.
-            node_id: Optional node ID to preserve (for loading saved datasets).
-                    If not provided, a new UUID is generated.
-            spec: Optional EntityDefSpec for label derivation.
-        """
-        from metaseed.repositories.helpers import derive_label
-
-        data = instance.model_dump() if hasattr(instance, "model_dump") else {}
-        label = derive_label(entity_type, data, spec)
-
-        return cls(
-            id=node_id or str(uuid.uuid4())[:8],
-            entity_type=entity_type,
-            instance=instance,
-            label=label,
-            parent_id=parent_id,
-        )
 
     @classmethod
     def from_entity_node(

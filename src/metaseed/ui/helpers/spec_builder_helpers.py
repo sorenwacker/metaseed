@@ -98,18 +98,6 @@ def spec_to_yaml(spec: ProfileSpec) -> str:
     )
 
 
-def spec_to_dict(spec: ProfileSpec) -> dict:
-    """Convert a ProfileSpec to a dictionary.
-
-    Args:
-        spec: The ProfileSpec to convert.
-
-    Returns:
-        Dictionary representation of the spec.
-    """
-    return spec.model_dump(exclude_none=True, exclude_defaults=False)
-
-
 def get_custom_specs_dir() -> Path:
     """Get the directory for saving custom specs.
 

@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from metaseed.facade import ProfileFacade
 
-    from .state import AppState
+    from ..state import AppState
 
 
 def infer_entity_type_from_field(
