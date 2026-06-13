@@ -6,13 +6,7 @@ from typing import Annotated, Any
 import typer
 import yaml
 
-from metaseed.cli.output import echo_error, echo_success
-
-# Exit codes
-EXIT_SUCCESS = 0
-EXIT_VALIDATION_ERROR = 1
-EXIT_INPUT_ERROR = 2
-EXIT_CONFIG_ERROR = 3
+from metaseed.cli.output import ExitCode, echo_error, echo_success
 
 
 def _export_example_to_excel(data: dict[str, Any], output: Path) -> None:
@@ -233,7 +227,7 @@ def export_example(
 
     if not examples_dir.exists():
         echo_error(f"Examples directory not found at {examples_dir}")
-        raise typer.Exit(EXIT_CONFIG_ERROR)
+        raise typer.Exit(ExitCode.CONFIG_ERROR)
 
     # Get available examples (profile/version/example.yaml structure)
     example_files: dict[str, Path] = {}
@@ -268,26 +262,26 @@ def export_example(
             echo_error(
                 f"No examples for profile '{profile_input}'. Available: {', '.join(sorted(example_files.keys()))}"
             )
-            raise typer.Exit(EXIT_CONFIG_ERROR)
+            raise typer.Exit(ExitCode.CONFIG_ERROR)
         example_key = sorted(matching)[-1]  # Latest version
 
     if example_key not in example_files:
         echo_error(
             f"Example not found: '{example_key}'. Available: {', '.join(sorted(example_files.keys()))}"
         )
-        raise typer.Exit(EXIT_CONFIG_ERROR)
+        raise typer.Exit(ExitCode.CONFIG_ERROR)
 
     example_file = example_files[example_key]
     if not example_file.exists():
         echo_error(f"Example file not found: {example_file}")
-        raise typer.Exit(EXIT_INPUT_ERROR)
+        raise typer.Exit(ExitCode.INPUT_ERROR)
 
     # Load example data
     try:
         data = yaml.safe_load(example_file.read_text(encoding="utf-8"))
     except yaml.YAMLError as e:
         echo_error(f"Invalid YAML in example: {e}")
-        raise typer.Exit(EXIT_INPUT_ERROR) from None
+        raise typer.Exit(ExitCode.INPUT_ERROR) from None
 
     if output is None:
         # Print to stdout as YAML
@@ -320,7 +314,7 @@ def export_example(
             echo_error(
                 "openpyxl is required for Excel export. Install with: pip install openpyxl"
             )
-            raise typer.Exit(EXIT_CONFIG_ERROR) from None
+            raise typer.Exit(ExitCode.CONFIG_ERROR) from None
 
     elif output_suffix == ".json":
         output.parent.mkdir(parents=True, exist_ok=True)
@@ -333,4 +327,4 @@ def export_example(
         echo_error(
             f"Unknown output format: {output_suffix}. Use .xlsx, .yaml, or .json"
         )
-        raise typer.Exit(EXIT_INPUT_ERROR)
+        raise typer.Exit(ExitCode.INPUT_ERROR)

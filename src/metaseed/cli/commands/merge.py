@@ -5,14 +5,8 @@ from typing import Annotated
 
 import typer
 
-from metaseed.cli.output import echo_error, echo_success
+from metaseed.cli.output import ExitCode, echo_error, echo_success
 from metaseed.specs.loader import SpecLoadError
-
-# Exit codes
-EXIT_SUCCESS = 0
-EXIT_VALIDATION_ERROR = 1
-EXIT_INPUT_ERROR = 2
-EXIT_CONFIG_ERROR = 3
 
 
 def _parse_profile_spec(spec: str) -> tuple[str, str]:
@@ -31,7 +25,7 @@ def _parse_profile_spec(spec: str) -> tuple[str, str]:
         echo_error(
             f"Invalid profile format: '{spec}'. Use 'profile/version' (e.g., 'miappe/1.1')"
         )
-        raise typer.Exit(EXIT_INPUT_ERROR)
+        raise typer.Exit(ExitCode.INPUT_ERROR)
 
     parts = spec.split("/", 1)
     return parts[0], parts[1]
@@ -59,7 +53,7 @@ def compare_profiles(
     """
     if len(profiles) < 2:
         echo_error("At least 2 profiles required for comparison")
-        raise typer.Exit(EXIT_INPUT_ERROR)
+        raise typer.Exit(ExitCode.INPUT_ERROR)
 
     # Parse profile specs
     profile_tuples = []
@@ -104,10 +98,10 @@ def compare_profiles(
 
     except SpecLoadError as e:
         echo_error(str(e))
-        raise typer.Exit(EXIT_CONFIG_ERROR) from None
+        raise typer.Exit(ExitCode.CONFIG_ERROR) from None
     except ValueError as e:
         echo_error(str(e))
-        raise typer.Exit(EXIT_INPUT_ERROR) from None
+        raise typer.Exit(ExitCode.INPUT_ERROR) from None
 
 
 def merge_profiles(
@@ -145,7 +139,7 @@ def merge_profiles(
     """
     if len(profiles) < 2:
         echo_error("At least 2 profiles required for merge")
-        raise typer.Exit(EXIT_INPUT_ERROR)
+        raise typer.Exit(ExitCode.INPUT_ERROR)
 
     # Parse profile specs
     profile_tuples = []
@@ -186,7 +180,7 @@ def merge_profiles(
 
     except SpecLoadError as e:
         echo_error(str(e))
-        raise typer.Exit(EXIT_CONFIG_ERROR) from None
+        raise typer.Exit(ExitCode.CONFIG_ERROR) from None
     except ValueError as e:
         echo_error(str(e))
-        raise typer.Exit(EXIT_INPUT_ERROR) from None
+        raise typer.Exit(ExitCode.INPUT_ERROR) from None

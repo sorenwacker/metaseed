@@ -11,7 +11,7 @@ from metaseed import __version__
 # Import commands from submodules
 from metaseed.cli.commands.example import export_example
 from metaseed.cli.commands.merge import compare_profiles, merge_profiles
-from metaseed.cli.output import CheckOutput, echo_error, echo_success
+from metaseed.cli.output import CheckOutput, ExitCode, echo_error, echo_success
 from metaseed.logging import configure_logging
 from metaseed.models import get_model
 from metaseed.profiles import ProfileFactory
@@ -44,13 +44,6 @@ def main(
     _configure_logging_callback(verbose)
 
 
-# Exit codes
-EXIT_SUCCESS = 0
-EXIT_VALIDATION_ERROR = 1
-EXIT_INPUT_ERROR = 2
-EXIT_CONFIG_ERROR = 3
-
-
 def resolve_profile_version(
     profile: str | None, version: str | None
 ) -> tuple[str, str]:
@@ -73,13 +66,13 @@ def resolve_profile_version(
 
     if profile not in factory.list_profiles():
         echo_error(f"Unknown profile '{profile}'")
-        raise typer.Exit(EXIT_CONFIG_ERROR)
+        raise typer.Exit(ExitCode.CONFIG_ERROR)
 
     if version is None:
         latest = factory.get_latest_version(profile)
         if latest is None:
             echo_error(f"No versions found for profile '{profile}'")
-            raise typer.Exit(EXIT_CONFIG_ERROR)
+            raise typer.Exit(ExitCode.CONFIG_ERROR)
         version = latest
 
     return profile, version
@@ -135,7 +128,7 @@ def validate(
 
     if not file.exists():
         echo_error(f"File not found: {file}")
-        raise typer.Exit(EXIT_INPUT_ERROR)
+        raise typer.Exit(ExitCode.INPUT_ERROR)
 
     try:
         content = file.read_text(encoding="utf-8")
@@ -144,7 +137,7 @@ def validate(
             data = {}
     except yaml.YAMLError as e:
         echo_error(f"Invalid YAML: {e}")
-        raise typer.Exit(EXIT_INPUT_ERROR) from None
+        raise typer.Exit(ExitCode.INPUT_ERROR) from None
 
     errors = validate_data(data, entity, version, profile=profile)
 
@@ -152,7 +145,7 @@ def validate(
         typer.echo(f"Validation failed with {len(errors)} error(s):")
         for error in errors:
             typer.echo(f"  - {error.field}: {error.message}")
-        raise typer.Exit(EXIT_VALIDATION_ERROR)
+        raise typer.Exit(ExitCode.VALIDATION_ERROR)
     echo_success(f"Validation passed. File is valid {entity} ({profile} v{version}).")
 
 
@@ -180,7 +173,7 @@ def template(
         spec = loader.load_entity(entity.lower(), version)
     except SpecLoadError as e:
         echo_error(str(e))
-        raise typer.Exit(EXIT_CONFIG_ERROR) from None
+        raise typer.Exit(ExitCode.CONFIG_ERROR) from None
 
     # Build template with empty/example values.
     # The "# name" comment-key technique is YAML-specific, so optional fields
@@ -244,13 +237,13 @@ def convert(
 
     if not input_file.exists():
         echo_error(f"File not found: {input_file}")
-        raise typer.Exit(EXIT_INPUT_ERROR)
+        raise typer.Exit(ExitCode.INPUT_ERROR)
 
     try:
         Model = get_model(entity, version)
     except SpecLoadError as e:
         echo_error(str(e))
-        raise typer.Exit(EXIT_CONFIG_ERROR) from None
+        raise typer.Exit(ExitCode.CONFIG_ERROR) from None
 
     # Determine input format
     input_suffix = input_file.suffix.lower()
@@ -278,7 +271,7 @@ def convert(
         echo_success(f"Converted {input_file} to {output_file}")
     except StorageError as e:
         echo_error(str(e))
-        raise typer.Exit(EXIT_INPUT_ERROR) from None
+        raise typer.Exit(ExitCode.INPUT_ERROR) from None
 
 
 @app.command()
@@ -298,7 +291,7 @@ def entities(
         entity_list = loader.list_entities(version)
     except SpecLoadError as e:
         echo_error(str(e))
-        raise typer.Exit(EXIT_CONFIG_ERROR) from None
+        raise typer.Exit(ExitCode.CONFIG_ERROR) from None
 
     typer.echo(f"Available entities ({profile} v{version}):")
     for entity in sorted(entity_list):
@@ -332,7 +325,7 @@ def check(
 
     if not path.exists():
         echo_error(f"Path not found: {path}")
-        raise typer.Exit(EXIT_INPUT_ERROR)
+        raise typer.Exit(ExitCode.INPUT_ERROR)
 
     validator = DatasetValidator(profile=profile, version=version)
     output_formatter = CheckOutput(verbose=verbose, quiet=quiet)
@@ -346,7 +339,7 @@ def check(
     output_formatter.print_result(result)
 
     if not result.is_valid:
-        raise typer.Exit(EXIT_VALIDATION_ERROR)
+        raise typer.Exit(ExitCode.VALIDATION_ERROR)
 
 
 @app.command(name="ui")

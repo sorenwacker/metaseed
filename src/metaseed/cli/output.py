@@ -6,12 +6,21 @@ for consistent CLI user experience.
 
 from __future__ import annotations
 
+from enum import IntEnum
 from typing import TYPE_CHECKING, Self
 
 import typer
 
 if TYPE_CHECKING:
     from metaseed.validators.dataset import DatasetValidationResult
+
+
+class ExitCode(IntEnum):
+    """Process exit codes used by the Metaseed CLI commands."""
+
+    VALIDATION_ERROR = 1
+    INPUT_ERROR = 2
+    CONFIG_ERROR = 3
 
 
 def echo_error(message: str) -> None:
