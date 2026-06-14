@@ -241,6 +241,53 @@ class TestMostRestrictiveStrategy:
         assert resolved.constraints is not None
         assert set(resolved.constraints.enum) == {"y", "z"}
 
+    def test_disjoint_enum_yields_empty_not_none(
+        self, strategy: MostRestrictiveStrategy
+    ) -> None:
+        """Disjoint enums intersect to an empty list, not None (no constraint)."""
+        diff = FieldDiff(
+            field_name="test",
+            diff_type=DiffType.CONFLICT,
+            profiles={
+                "a": FieldSpec(
+                    name="test",
+                    type=FieldType.STRING,
+                    constraints=Constraints(enum=["x"]),
+                ),
+                "b": FieldSpec(
+                    name="test",
+                    type=FieldType.STRING,
+                    constraints=Constraints(enum=["y"]),
+                ),
+            },
+        )
+        resolved = strategy.resolve_field(diff, ["a", "b"])
+        assert resolved.constraints is not None
+        assert resolved.constraints.enum == []
+
+    def test_ontologies_preserved(self, strategy: MostRestrictiveStrategy) -> None:
+        """The base spec's ontologies list survives the merge."""
+        diff = FieldDiff(
+            field_name="test",
+            diff_type=DiffType.CONFLICT,
+            profiles={
+                "a": FieldSpec(
+                    name="test",
+                    type=FieldType.ONTOLOGY_TERM,
+                    required=False,
+                    ontologies=["AGRO", "PO"],
+                ),
+                "b": FieldSpec(
+                    name="test",
+                    type=FieldType.ONTOLOGY_TERM,
+                    required=True,
+                ),
+            },
+        )
+        resolved = strategy.resolve_field(diff, ["a", "b"])
+        assert resolved.ontologies == ["AGRO", "PO"]
+        assert resolved.required is True
+
 
 class TestLeastRestrictiveStrategy:
     """Tests for LeastRestrictiveStrategy."""
@@ -306,6 +353,29 @@ class TestLeastRestrictiveStrategy:
         resolved = strategy.resolve_field(diff, ["a", "b"])
         assert resolved.constraints is not None
         assert set(resolved.constraints.enum) == {"x", "y", "z"}
+
+    def test_ontologies_preserved(self, strategy: LeastRestrictiveStrategy) -> None:
+        """The base spec's ontologies list survives the merge."""
+        diff = FieldDiff(
+            field_name="test",
+            diff_type=DiffType.CONFLICT,
+            profiles={
+                "a": FieldSpec(
+                    name="test",
+                    type=FieldType.ONTOLOGY_TERM,
+                    required=True,
+                    ontologies=["AGRO", "PO"],
+                ),
+                "b": FieldSpec(
+                    name="test",
+                    type=FieldType.ONTOLOGY_TERM,
+                    required=False,
+                ),
+            },
+        )
+        resolved = strategy.resolve_field(diff, ["a", "b"])
+        assert resolved.ontologies == ["AGRO", "PO"]
+        assert resolved.required is False
 
 
 class TestPreferProfileStrategy:

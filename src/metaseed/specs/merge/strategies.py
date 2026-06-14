@@ -124,22 +124,14 @@ class MostRestrictiveStrategy(MergeStrategy):
         # Collect all specs
         all_specs = [spec for spec in field_diff.profiles.values() if spec is not None]
 
-        # Build merged field
-        merged = FieldSpec(
-            name=base_spec.name,
-            codename=base_spec.codename,
-            type=base_spec.type,
-            required=any(s.required for s in all_specs),  # True if any requires
-            description=base_spec.description,
-            ontology_term=base_spec.ontology_term,
-            items=base_spec.items,
-            parent_ref=base_spec.parent_ref,
-            unique_within=base_spec.unique_within,
-            reference=base_spec.reference,
-            constraints=self._merge_constraints_restrictive(all_specs),
+        # Copy the base spec so every FieldSpec attribute (including ontologies)
+        # is preserved, overriding only the values this strategy recomputes.
+        return base_spec.model_copy(
+            update={
+                "required": any(s.required for s in all_specs),  # True if any requires
+                "constraints": self._merge_constraints_restrictive(all_specs),
+            }
         )
-
-        return merged
 
     def _merge_constraints_restrictive(
         self: Self, specs: list[FieldSpec]
@@ -195,13 +187,15 @@ class MostRestrictiveStrategy(MergeStrategy):
         if max_items:
             merged.max_items = min(max_items)
 
-        # Enum: intersect values
+        # Enum: intersect values. An empty intersection (disjoint enums) is the
+        # most restrictive outcome - nothing is allowed - so keep it as an empty
+        # list rather than falling back to None, which would drop the constraint.
         enums = [set(c.enum) for c in all_constraints if c.enum is not None]
         if enums:
             intersection = enums[0]
             for e in enums[1:]:
                 intersection = intersection & e
-            merged.enum = sorted(intersection) if intersection else None
+            merged.enum = sorted(intersection)
 
         return merged
 
@@ -236,21 +230,14 @@ class LeastRestrictiveStrategy(MergeStrategy):
 
         all_specs = [spec for spec in field_diff.profiles.values() if spec is not None]
 
-        merged = FieldSpec(
-            name=base_spec.name,
-            codename=base_spec.codename,
-            type=base_spec.type,
-            required=all(s.required for s in all_specs),  # False if any optional
-            description=base_spec.description,
-            ontology_term=base_spec.ontology_term,
-            items=base_spec.items,
-            parent_ref=base_spec.parent_ref,
-            unique_within=base_spec.unique_within,
-            reference=base_spec.reference,
-            constraints=self._merge_constraints_permissive(all_specs),
+        # Copy the base spec so every FieldSpec attribute (including ontologies)
+        # is preserved, overriding only the values this strategy recomputes.
+        return base_spec.model_copy(
+            update={
+                "required": all(s.required for s in all_specs),  # False if any optional
+                "constraints": self._merge_constraints_permissive(all_specs),
+            }
         )
-
-        return merged
 
     def _merge_constraints_permissive(
         self: Self, specs: list[FieldSpec]

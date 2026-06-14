@@ -175,8 +175,8 @@ class DiffVisualizer:
             List of edge dictionaries.
         """
         edges: list[dict[str, Any]] = []
-        # Track (from, to, label) -> set of profile_ids that have this edge
-        edge_profiles: dict[tuple[int, int, str], set[str]] = {}
+        # Track (from, to, label, is_reference) -> set of profile_ids with this edge
+        edge_profiles: dict[tuple[int, int, str, bool], set[str]] = {}
 
         for entity_diff in entity_diffs:
             entity_lower = entity_diff.entity_name.lower()

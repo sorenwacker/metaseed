@@ -400,6 +400,7 @@ class SpecComparator:
             "required",
             "description",
             "ontology_term",
+            "ontologies",
             "items",
             "parent_ref",
             "unique_within",

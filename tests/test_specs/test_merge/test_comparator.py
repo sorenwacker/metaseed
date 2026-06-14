@@ -3,7 +3,12 @@
 import pytest
 
 from metaseed.specs.merge import ComparisonResult, DiffType, SpecComparator, compare
-from metaseed.specs.schema import ProfileSpec, ValidationRuleSpec
+from metaseed.specs.schema import (
+    FieldSpec,
+    FieldType,
+    ProfileSpec,
+    ValidationRuleSpec,
+)
 
 
 class TestSpecComparator:
@@ -41,6 +46,26 @@ class TestSpecComparator:
         assert result.statistics.conflicting_fields == 0
         assert result.statistics.common_entities == result.statistics.total_entities
         assert result.statistics.common_fields == result.statistics.total_fields
+
+    def test_differing_ontologies_detected_as_modified(
+        self, comparator: SpecComparator
+    ) -> None:
+        """A field differing only in its ontologies list is flagged MODIFIED."""
+        field_specs: dict[str, FieldSpec | None] = {
+            "a": FieldSpec(
+                name="organism",
+                type=FieldType.ONTOLOGY_TERM,
+                ontologies=["NCBITAXON"],
+            ),
+            "b": FieldSpec(
+                name="organism",
+                type=FieldType.ONTOLOGY_TERM,
+                ontologies=["PO"],
+            ),
+        }
+        diff_type, changed, _ = comparator._analyze_field_diff(field_specs, ["a", "b"])
+        assert diff_type == DiffType.MODIFIED
+        assert "ontologies" in changed
 
     def test_compare_miappe_versions(self, comparator: SpecComparator) -> None:
         """Compare two versions of MIAPPE."""
