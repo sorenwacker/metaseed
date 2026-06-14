@@ -207,6 +207,7 @@ When suggesting values, explain why they fit typical schema requirements.
         profile: str,
         version: str,
         entity_context: dict[str, Any] | None = None,
+        conversation_history: list[dict[str, str]] | None = None,
     ) -> str:
         """Synchronous version of get_response for CLI usage.
 
@@ -215,13 +216,22 @@ When suggesting values, explain why they fit typical schema requirements.
             profile: Profile name.
             version: Profile version.
             entity_context: Optional context about current entity being edited.
+            conversation_history: Optional list of previous messages for context.
 
         Returns:
             Assistant response text.
         """
         import asyncio
 
-        return asyncio.run(self.get_response(message, profile, version, entity_context))
+        return asyncio.run(
+            self.get_response(
+                message,
+                profile,
+                version,
+                entity_context,
+                conversation_history,
+            )
+        )
 
 
 __all__ = ["LLMService"]

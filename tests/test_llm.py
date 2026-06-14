@@ -221,3 +221,34 @@ class TestLLMService:
             )
 
             assert result == "Sync response"
+
+    def test_get_response_sync_forwards_conversation_history(self) -> None:
+        """Test sync wrapper forwards conversation_history to get_response."""
+        service = LLMService(
+            api_url="http://localhost:11434/v1",
+            model="test-model",
+        )
+
+        history = [
+            {"role": "user", "content": "What is Investigation?"},
+            {"role": "assistant", "content": "Investigation is..."},
+        ]
+
+        with patch.object(
+            service, "get_response", new=AsyncMock(return_value="ok")
+        ) as mock_get_response:
+            result = service.get_response_sync(
+                message="Tell me more",
+                profile="miappe",
+                version="1.2",
+                conversation_history=history,
+            )
+
+            assert result == "ok"
+            mock_get_response.assert_awaited_once_with(
+                "Tell me more",
+                "miappe",
+                "1.2",
+                None,
+                history,
+            )
