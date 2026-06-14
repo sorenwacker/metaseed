@@ -37,7 +37,7 @@ def build_graph(state: AppState) -> dict:
     graph_data = facade.to_graph()
 
     # Add all entity types from spec for legend (in spec order)
-    entity_types = list(facade._entities.keys())
+    entity_types = facade.entities
     graph_data["entity_types"] = entity_types
 
     return graph_data
