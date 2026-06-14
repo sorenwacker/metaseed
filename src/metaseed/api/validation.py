@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Self
 
+from metaseed.api.base import InstanceDataMixin
 from metaseed.api.errors import EntityNotFoundError
 from metaseed.api.schema import ValidationIssue, ValidationResult
 
@@ -14,7 +15,7 @@ if TYPE_CHECKING:
     from metaseed.facade import ProfileFacade
 
 
-class ValidationMixin:
+class ValidationMixin(InstanceDataMixin):
     """Mixin providing validation capabilities for MetaseedClient."""
 
     _facade: ProfileFacade

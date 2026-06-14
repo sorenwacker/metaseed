@@ -7,11 +7,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Self
 
+from metaseed.api.base import InstanceDataMixin
+
 if TYPE_CHECKING:
     from metaseed.facade import ProfileFacade
 
 
-class SerializationMixin:
+class SerializationMixin(InstanceDataMixin):
     """Mixin providing serialization capabilities for MetaseedClient."""
 
     _facade: ProfileFacade
@@ -144,17 +146,3 @@ class SerializationMixin:
     def clear(self: Self) -> None:
         """Clear all entities from the client."""
         self._facade.clear()
-
-    def _get_instance_data(self: Self, instance: Any) -> dict[str, Any]:
-        """Extract data dictionary from a model instance.
-
-        Args:
-            instance: Pydantic model instance or None.
-
-        Returns:
-            Data dictionary or empty dict if instance is None/invalid.
-        """
-        if instance and hasattr(instance, "model_dump"):
-            result: dict[str, Any] = instance.model_dump(mode="json", exclude_none=True)
-            return result
-        return {}
