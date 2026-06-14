@@ -1,7 +1,8 @@
 """Serialization utilities for Pydantic models.
 
-This module provides safe serialization helpers that ensure JSON-compatible
-output from Pydantic models. Use these instead of calling model_dump() directly.
+This module provides a convenience helper for JSON-compatible output from
+Pydantic models. It wraps the standard ``model_dump(mode="json")`` call and
+also tolerates ``None`` and non-model inputs.
 """
 
 from __future__ import annotations
@@ -16,8 +17,10 @@ def to_json_dict(
 ) -> dict[str, Any]:
     """Serialize a Pydantic model instance to a JSON-compatible dictionary.
 
-    This is the ONLY safe way to serialize entity instances for JSON/YAML output.
-    It ensures dates, URLs, and other complex types are converted to strings.
+    Convenience wrapper around ``instance.model_dump(mode="json", ...)`` that
+    additionally returns an empty dict for ``None`` or non-model inputs. The
+    ``mode="json"`` conversion turns dates, URLs, and other complex types into
+    JSON-serializable values.
 
     Args:
         instance: Pydantic model instance to serialize, or None.
