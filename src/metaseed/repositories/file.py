@@ -18,6 +18,7 @@ from metaseed.repositories.helpers import (
     derive_label,
     find_parent_ref_field,
     get_identifier,
+    normalize_reference_fields,
     update_parent_reference,
 )
 
@@ -263,6 +264,10 @@ class FileEntityRepository(EntityRepository):
         if not helper:
             raise ValueError(f"Unknown entity type: {entity_type}")
 
+        # Auto-detect parent from reference fields if not explicitly provided
+        if not parent_id:
+            parent_id = self._find_parent_from_references(helper, data)
+
         # Validate parent
         parent = None
         if parent_id:
@@ -270,13 +275,26 @@ class FileEntityRepository(EntityRepository):
             if not parent:
                 raise ValueError(f"Parent entity not found: {parent_id}")
 
+            # Validate parent-child relationship
+            parent_helper = getattr(facade, parent.entity_type, None)
+            if parent_helper:
+                valid_child_types = list(parent_helper.nested_fields.values())
+                if entity_type not in valid_child_types:
+                    raise ValueError(
+                        f"Invalid parent: {parent.entity_type} cannot contain "
+                        f"{entity_type}. Valid child types: "
+                        f"{valid_child_types or 'none'}"
+                    )
+
             # Auto-fill child's reference to parent
             ref_field = find_parent_ref_field(helper, parent.entity_type)
-            if ref_field and ref_field not in data:
-                parent_helper = getattr(facade, parent.entity_type, None)
+            if ref_field and ref_field not in data and parent_helper:
                 parent_identifier = get_identifier(parent.data, parent_helper)
                 if parent_identifier:
                     data[ref_field] = parent_identifier
+
+        # Normalize reference fields (convert embedded objects to IDs)
+        data = normalize_reference_fields(data, helper, facade)
 
         # Create Pydantic instance for validation
         instance = helper.create(**data)
@@ -322,6 +340,9 @@ class FileEntityRepository(EntityRepository):
         if not helper:
             raise ValueError(f"Unknown entity type: {entity.entity_type}")
 
+        # Normalize reference fields (convert embedded objects to IDs)
+        data = normalize_reference_fields(data, helper, facade)
+
         # Merge data
         merged = {**entity.data, **data}
 
@@ -337,6 +358,35 @@ class FileEntityRepository(EntityRepository):
 
         self._save()
         return entity
+
+    def _find_parent_from_references(
+        self: Self, helper: Any, data: dict[str, Any]
+    ) -> str | None:
+        """Auto-detect a parent from the entity's reference fields.
+
+        Mirrors the memory backend: for each reference field present in the
+        data, find an existing entity of the referenced type whose target
+        field matches the reference value.
+
+        Args:
+            helper: EntityHelper for the entity being created.
+            data: Entity data containing potential reference values.
+
+        Returns:
+            The matching parent entity id, or None if no match is found.
+        """
+        for field_name, (target_type, target_field) in helper.reference_fields.items():
+            ref_value = data.get(field_name)
+            if not ref_value:
+                continue
+
+            for entity in self._entities.values():
+                if entity.entity_type != target_type:
+                    continue
+                if entity.data.get(target_field) == ref_value:
+                    return entity.id
+
+        return None
 
     def delete_entity(self: Self, entity_id: str) -> bool:
         """Delete an entity and its children."""
