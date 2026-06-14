@@ -62,6 +62,24 @@ class SpecLoader:
         self._profile_cache: dict[str, ProfileSpec] = {}
         self._default_profile = profile.lower()
 
+    def find_profile_file(
+        self: Self, version: str, profile: str | None = None
+    ) -> Path | None:
+        """Resolve the path to a profile's ``profile.yaml`` for a version.
+
+        Public path-resolution API for callers that need the spec directory
+        (e.g. to read sibling files such as ``notes.md``). Searches user specs
+        first, then built-in specs.
+
+        Args:
+            version: Version string (e.g., "1.1").
+            profile: Profile name (e.g., "miappe", "isa"). Uses default if None.
+
+        Returns:
+            Path to profile file or None if not found.
+        """
+        return self._find_profile_file(version, profile)
+
     def _find_profile_file(
         self: Self, version: str, profile: str | None = None
     ) -> Path | None:

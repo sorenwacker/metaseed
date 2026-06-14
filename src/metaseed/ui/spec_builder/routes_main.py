@@ -125,7 +125,7 @@ def register_main_routes(
 
         # Load notes if they exist
         loader = SpecLoader()
-        spec_path = loader._find_profile_file(version, profile)
+        spec_path = loader.find_profile_file(version, profile)
         if spec_path:
             notes_path = spec_path.parent / "notes.md"
             if notes_path.exists():
