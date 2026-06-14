@@ -15,6 +15,7 @@ from fastapi.responses import JSONResponse
 from metaseed.specs.loader import SpecLoadError
 from metaseed.specs.merge import compare, merge
 
+from ..dataset_manager import resolve_dataset_manager
 from ..helpers import collect_entities_by_type, get_reference_fields
 from ..websocket import manager
 
@@ -138,18 +139,6 @@ def register_api_routes(
 
         return JSONResponse(content=ref_fields)
 
-    def _get_dataset_manager(state):
-        """Get the dataset manager from context."""
-        context = getattr(app.state, "mcp_context", None)
-        if context is not None:
-            return context.dataset_factory.get_manager(state)
-
-        # Fallback: create factory directly
-        from ..dataset_manager import DatasetManagerFactory
-
-        factory = DatasetManagerFactory()
-        return factory.get_manager(state)
-
     @app.get("/api/graph")
     async def get_graph() -> JSONResponse:
         """Return graph data for visualization.
@@ -164,7 +153,7 @@ def register_api_routes(
         from metaseed.ui.services.graph import build_graph
 
         state = get_state()
-        manager = _get_dataset_manager(state)
+        manager = resolve_dataset_manager(app, state)
 
         # Reload from disk to pick up MCP changes
         current_dataset = get_current_dataset_name(state) or manager.current_dataset
@@ -185,7 +174,7 @@ def register_api_routes(
         from metaseed.validators import validate_entity
 
         state = get_state()
-        manager = _get_dataset_manager(state)
+        manager = resolve_dataset_manager(app, state)
 
         # Reload from disk to pick up MCP changes
         current_dataset = get_current_dataset_name(state) or manager.current_dataset
@@ -486,7 +475,7 @@ def register_api_routes(
         from dataclasses import asdict
 
         state = get_state()
-        manager = _get_dataset_manager(state)
+        manager = resolve_dataset_manager(app, state)
         datasets = [asdict(d) for d in manager.list_datasets()]
 
         return JSONResponse(
@@ -511,7 +500,7 @@ def register_api_routes(
         from dataclasses import asdict
 
         state = get_state()
-        manager = _get_dataset_manager(state)
+        manager = resolve_dataset_manager(app, state)
 
         try:
             result = manager.save_dataset(name)
@@ -534,7 +523,7 @@ def register_api_routes(
         from dataclasses import asdict
 
         state = get_state()
-        manager = _get_dataset_manager(state)
+        manager = resolve_dataset_manager(app, state)
 
         try:
             result = manager.load_dataset(name)
@@ -559,7 +548,7 @@ def register_api_routes(
             JSON with status.
         """
         state = get_state()
-        manager = _get_dataset_manager(state)
+        manager = resolve_dataset_manager(app, state)
 
         if manager.delete_dataset(name):
             return JSONResponse(content={"status": "deleted"})

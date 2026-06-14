@@ -14,13 +14,13 @@ from starlette.requests import Request
 
 from ..helpers import (
     FormContext,
+    build_inline_tables,
     collect_form_values,
     extract_nested_items,
     format_validation_errors,
     process_reference_linked_children,
     rebuild_nested_items_with_failures,
 )
-from .core import build_inline_tables
 
 if TYPE_CHECKING:
     from collections.abc import Callable

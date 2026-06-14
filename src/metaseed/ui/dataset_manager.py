@@ -23,7 +23,7 @@ from __future__ import annotations
 import re
 from abc import ABC
 from datetime import datetime
-from typing import TYPE_CHECKING, Generic, Self, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, Self, TypeVar
 from weakref import WeakValueDictionary
 
 from metaseed.repositories.dataset_repository import (
@@ -438,3 +438,23 @@ class DatasetManagerFactory:
             manager = AsyncDatasetManager(self._async_repo, state)
             self._async_managers[state_id] = manager
         return manager
+
+
+def resolve_dataset_manager(app: Any, state: AppState) -> DatasetManager:
+    """Resolve the DatasetManager for a request.
+
+    Prefers the MCP-context factory when one is attached to the app so all
+    operations in an MCP session share a repository; otherwise falls back to a
+    freshly created default factory.
+
+    Args:
+        app: FastAPI application, read for an optional ``state.mcp_context``.
+        state: AppState the manager should be tied to.
+
+    Returns:
+        A DatasetManager tied to the given state.
+    """
+    context = getattr(app.state, "mcp_context", None)
+    if context is not None:
+        return context.dataset_factory.get_manager(state)
+    return DatasetManagerFactory().get_manager(state)

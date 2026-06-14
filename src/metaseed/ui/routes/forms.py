@@ -16,11 +16,12 @@ from starlette.requests import Request
 from metaseed.profiles import ProfileFactory
 
 from ..helpers import (
+    build_inline_tables,
     filter_fields,
     get_field_data,
     get_nested_items_for_edit,
 )
-from .core import build_inline_tables, get_profile_display_info
+from .core import get_profile_display_info
 
 if TYPE_CHECKING:
     from collections.abc import Callable

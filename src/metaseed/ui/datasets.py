@@ -14,7 +14,6 @@ from typing import TYPE_CHECKING, Any
 from metaseed.repositories.dataset_repository import DatasetData, DatasetRepository
 from metaseed.repositories.filesystem_dataset import (
     DEFAULT_DATASETS_DIR,
-    FilesystemDatasetRepository,
 )
 
 if TYPE_CHECKING:
@@ -89,7 +88,7 @@ def list_datasets() -> list[dict[str, Any]]:
     Returns:
         List of dataset info dicts with name, profile, version, entity_count, modified.
     """
-    repo = FilesystemDatasetRepository()
+    repo = _resolve_factory().sync_repo
     return [asdict(d) for d in repo.list()]
 
 
@@ -187,7 +186,7 @@ def delete_dataset(name: str) -> bool:
     Returns:
         True if deleted, False if not found.
     """
-    repo = FilesystemDatasetRepository()
+    repo = _resolve_factory().sync_repo
     return repo.delete(name)
 
 

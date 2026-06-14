@@ -15,12 +15,12 @@ from starlette.requests import Request
 from metaseed.profiles import ProfileFactory
 from metaseed.specs.loader import SpecLoader, SpecLoadError
 
+from ..dataset_manager import resolve_dataset_manager
+
 if TYPE_CHECKING:
     from collections.abc import Callable
 
     from fastapi import FastAPI
-
-    from metaseed.facade import ProfileFacade
 
     from ..state import AppState
 
@@ -73,28 +73,6 @@ def get_profile_display_info(factory: ProfileFactory) -> list[dict[str, Any]]:
     return profiles
 
 
-def build_inline_tables(
-    state: AppState,
-    facade: ProfileFacade,
-    entity_type: str,
-) -> dict[str, Any]:
-    """Build inline table data for child entities.
-
-    Args:
-        state: Application state.
-        facade: Profile facade.
-        entity_type: Current entity type.
-
-    Returns:
-        Dictionary mapping field names to inline table data.
-    """
-    from ..helpers.table_helpers import (
-        build_inline_tables as _build_inline_tables,
-    )
-
-    return _build_inline_tables(state, facade, entity_type)
-
-
 def register_core_routes(
     app: FastAPI,
     templates: Jinja2Templates,
@@ -111,22 +89,11 @@ def register_core_routes(
             Should not have a trailing slash. Defaults to empty string.
     """
 
-    def _get_dataset_manager(state: AppState) -> Any:
-        """Get the dataset manager from context."""
-        context = getattr(app.state, "mcp_context", None)
-        if context is not None:
-            return context.dataset_factory.get_manager(state)
-
-        from ..dataset_manager import DatasetManagerFactory
-
-        factory = DatasetManagerFactory()
-        return factory.get_manager(state)
-
     @app.get("/", response_class=HTMLResponse)
     async def index(request: Request) -> HTMLResponse:
         """Render the datasets list page."""
         state = get_state()
-        manager = _get_dataset_manager(state)
+        manager = resolve_dataset_manager(app, state)
         datasets = manager.list_datasets()
 
         return templates.TemplateResponse(
@@ -153,7 +120,7 @@ def register_core_routes(
     async def edit_dataset(request: Request, name: str) -> HTMLResponse:
         """Edit a specific dataset."""
         state = get_state()
-        manager = _get_dataset_manager(state)
+        manager = resolve_dataset_manager(app, state)
 
         if manager.current_dataset != name:
             try:
