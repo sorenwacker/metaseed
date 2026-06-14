@@ -424,6 +424,32 @@ class TestMCPIntegration:
             spec_data = json.loads(result)
             assert "fields" in spec_data or "error" in spec_data
 
+    def test_get_dataset_info_counts_nested_entities(self):
+        """entity_counts must cover nested children so it sums to total_entities."""
+        from metaseed.agent.mcp.server import set_mcp_state
+        from metaseed.ui.state import AppState
+
+        server = create_server()
+        tools = server._tool_manager._tools
+        info_fn = tools.get("get_dataset_info")
+        assert info_fn is not None
+
+        state = AppState(profile="miappe")
+        facade = state.get_or_create_facade()
+        investigation = facade.Investigation.create(unique_id="INV-001", title="Test")
+        root = state.add_node("Investigation", investigation)
+        study = facade.Study.create(
+            unique_id="STU-001", investigation_id="INV-001", title="Test study"
+        )
+        state.add_node("Study", study, parent_id=root.id)
+
+        set_mcp_state(state)
+        data = json.loads(info_fn.fn())
+
+        assert data["total_entities"] == 2
+        assert sum(data["entity_counts"].values()) == data["total_entities"]
+        assert data["entity_counts"].get("Study") == 1
+
     def test_person_label_uses_first_field(self):
         """Test that Person entities use first field as label per convention."""
         from metaseed.ui.state import AppState

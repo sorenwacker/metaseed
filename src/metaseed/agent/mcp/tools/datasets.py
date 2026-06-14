@@ -231,8 +231,10 @@ def register_dataset_tools(mcp: FastMCP, get_mcp_state, reset_entity_service) ->
         try:
             state = get_mcp_state()
 
+            # Count every entity, including nested children, so the per-type
+            # breakdown is consistent with total_entities below.
             entity_counts: dict[str, int] = {}
-            for node in state.entity_tree:
+            for node in state.nodes_by_id.values():
                 etype = node.entity_type
                 entity_counts[etype] = entity_counts.get(etype, 0) + 1
 

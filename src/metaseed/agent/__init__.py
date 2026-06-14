@@ -8,7 +8,6 @@ from metaseed.agent.core import (
     ExtractionContext,
     ExtractionResult,
     ValidationError,
-    extract_instances,
     parse_file,
 )
 from metaseed.agent.mapping import (
@@ -27,7 +26,6 @@ __all__ = [
     "FieldMapping",
     "ValidationError",
     "create_mapping",
-    "extract_instances",
     "mapping_from_dict",
     "mapping_to_dict",
     "parse_file",

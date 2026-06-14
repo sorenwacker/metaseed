@@ -74,7 +74,7 @@ class MCPServerManager:
         Returns:
             Status after attempting to start.
         """
-        if self.is_running():
+        if self.is_running(port):
             return self.status()
 
         # Kill any orphaned process on the port
