@@ -130,6 +130,22 @@ class TestOntologyService:
         assert service._get_cached("key1") == "value1"
         assert service._get_cached("nonexistent") is _MISSING
 
+    def test_search_sync_returns_cache_safe_copy(self) -> None:
+        """Mutating the result of a cache hit must not corrupt the cache."""
+        service = OntologyService()
+        cached = [
+            OntologySearchResult(term_id="PATO:0000001", label="quality"),
+        ]
+        # Key format mirrors search_sync(query, ontology, rows, exact).
+        service._set_cached("search:quality:None:10:False", cached)
+
+        first = service.search_sync("quality")
+        assert len(first) == 1
+        first.append("corruption")  # caller mutates the returned list
+
+        second = service.search_sync("quality")
+        assert len(second) == 1
+
     def test_cache_expiry(self) -> None:
         """Cache entries expire after TTL."""
         service = OntologyService()

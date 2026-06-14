@@ -110,8 +110,6 @@ class OntologyTerm:
     ontology: str | None = None
     iri: str | None = None
     synonyms: list[str] = field(default_factory=list)
-    parents: list[str] = field(default_factory=list)
-    children: list[str] = field(default_factory=list)
 
     def to_dict(self: Self) -> dict[str, Any]:
         """Convert to dictionary."""
@@ -122,8 +120,6 @@ class OntologyTerm:
             "ontology": self.ontology,
             "iri": self.iri,
             "synonyms": self.synonyms,
-            "parents": self.parents,
-            "children": self.children,
         }
 
 
@@ -319,7 +315,8 @@ class OntologyService:
         cached = self._get_cached(cache_key)
         if cached is not _MISSING:
             logger.debug("Cache hit for search: %s", query)
-            return cached
+            # Return a copy so a caller mutating the list cannot corrupt the cache.
+            return list(cached)
 
         # Rate limit
         await self._rate_limiter.acquire()
@@ -401,7 +398,8 @@ class OntologyService:
         cached = self._get_cached(cache_key)
         if cached is not _MISSING:
             logger.debug("Cache hit for search: %s", query)
-            return cached
+            # Return a copy so a caller mutating the list cannot corrupt the cache.
+            return list(cached)
 
         # Rate limit
         self._rate_limiter.acquire_sync()

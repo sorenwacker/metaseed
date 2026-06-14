@@ -128,7 +128,7 @@ def register_ontology_tools(mcp: FastMCP) -> None:
                 or full IRI (e.g., "http://purl.obolibrary.org/obo/PATO_0000015").
 
         Returns:
-            JSON with term details including label, definition, synonyms, and parents.
+            JSON with term details including label, description, and synonyms.
         """
         # Determine if it's a CURIE or IRI
         if term_id.startswith("http://") or term_id.startswith("https://"):
