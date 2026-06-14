@@ -91,6 +91,39 @@ class TestFieldSpec:
         )
         assert field.is_nested() is False
 
+    @pytest.mark.parametrize(
+        "scalar_type",
+        [
+            "string",
+            "integer",
+            "float",
+            "boolean",
+            "date",
+            "datetime",
+            "uri",
+            "ontology_term",
+        ],
+    )
+    def test_is_nested_list_of_scalar_not_nested(self, scalar_type: str) -> None:
+        """List of any canonical scalar type is not nested."""
+        field = FieldSpec(
+            name="values",
+            type=FieldType.LIST,
+            description="List of scalars",
+            items=scalar_type,
+        )
+        assert field.is_nested() is False
+
+    def test_is_nested_list_of_entity_type_nested(self) -> None:
+        """List whose items name an entity type is nested."""
+        field = FieldSpec(
+            name="studies",
+            type=FieldType.LIST,
+            description="List of studies",
+            items="Study",
+        )
+        assert field.is_nested() is True
+
     def test_is_nested_string_type_not_nested(self) -> None:
         """String type is not nested."""
         field = FieldSpec(

@@ -28,7 +28,19 @@ class FieldType(StrEnum):
     ENTITY = "entity"  # Reference to another entity (single object)
 
 
-PRIMITIVE_TYPES: frozenset[str] = frozenset({"string", "int", "float", "bool"})
+PRIMITIVE_TYPES: frozenset[str] = frozenset(
+    member.value
+    for member in FieldType
+    if member not in {FieldType.LIST, FieldType.ENTITY}
+) | frozenset({"int", "bool"})
+"""Scalar (non-container) type names accepted for a list field's ``items``.
+
+The canonical values are derived from :class:`FieldType` so they stay in sync,
+plus the legacy abbreviations ``int`` and ``bool`` that specs and the model
+factory have long accepted. Used to classify the ``items`` type of a list
+field: an ``items`` value not in this set names another entity and therefore
+makes the field nested.
+"""
 
 
 class Constraints(BaseModel):
