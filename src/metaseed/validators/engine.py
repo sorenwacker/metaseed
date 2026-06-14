@@ -456,26 +456,3 @@ def create_engine_for_entity(
         raise SpecLoadError(f"Entity not found: {entity} ({profile} v{version})")
 
     return engine
-
-
-def validate(
-    data: dict[str, Any],
-    entity: str,
-    version: str = "1.2",
-    profile: str = "miappe",
-) -> list[ValidationError]:
-    """Validate data against entity rules.
-
-    Convenience function that creates an engine and validates in one call.
-
-    Args:
-        data: Dictionary to validate.
-        entity: Entity name (e.g., "Investigation").
-        version: Profile version.
-        profile: Profile name.
-
-    Returns:
-        List of validation errors.
-    """
-    engine = create_engine_for_entity(entity, version, profile)
-    return engine.validate(data)

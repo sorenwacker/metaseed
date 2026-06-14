@@ -50,25 +50,21 @@ class DateRangeRule(ValidationRule):
         Returns:
             List with one error if end_date < start_date, empty otherwise.
         """
-        start = data.get(self.start_field)
-        end = data.get(self.end_field)
+        start_raw = data.get(self.start_field)
+        end_raw = data.get(self.end_field)
 
         # Skip if either date is missing or empty
-        if not start or not end:
+        if not start_raw or not end_raw:
             return []
 
-        # Convert strings to dates if needed
-        if isinstance(start, str):
-            # Handle both date and datetime strings
-            if "T" in start:
-                start = datetime.datetime.fromisoformat(start).date()
-            else:
-                start = datetime.date.fromisoformat(start)
-        if isinstance(end, str):
-            if "T" in end:
-                end = datetime.datetime.fromisoformat(end).date()
-            else:
-                end = datetime.date.fromisoformat(end)
+        # Convert strings to dates if needed. The engine runs against raw,
+        # un-coerced YAML data, so a malformed date string must be reported as a
+        # validation error rather than allowed to crash the whole run.
+        errors: list[ValidationError] = []
+        start = self._parse_date(start_raw, self.start_field, errors)
+        end = self._parse_date(end_raw, self.end_field, errors)
+        if errors:
+            return errors
 
         if end < start:
             msg = (
@@ -83,6 +79,49 @@ class DateRangeRule(ValidationRule):
                 )
             ]
         return []
+
+    def _parse_date(
+        self: Self,
+        value: Any,
+        field: str,
+        errors: list[ValidationError],
+    ) -> datetime.date | None:
+        """Coerce a raw value to a date, recording an error on failure.
+
+        Args:
+            value: Raw field value (date, datetime, or ISO string).
+            field: Field name, used in the error message.
+            errors: List that a parse failure is appended to.
+
+        Returns:
+            The parsed date, or None if the value could not be parsed.
+        """
+        if isinstance(value, datetime.datetime):
+            return value.date()
+        if isinstance(value, datetime.date):
+            return value
+        if isinstance(value, str):
+            try:
+                if "T" in value:
+                    return datetime.datetime.fromisoformat(value).date()
+                return datetime.date.fromisoformat(value)
+            except ValueError:
+                errors.append(
+                    ValidationError(
+                        field=field,
+                        message=f"Field '{field}' is not a valid date: {value!r}",
+                        rule=self.name,
+                    )
+                )
+                return None
+        errors.append(
+            ValidationError(
+                field=field,
+                message=f"Field '{field}' is not a valid date: {value!r}",
+                rule=self.name,
+            )
+        )
+        return None
 
 
 class RequiredFieldsRule(ValidationRule):

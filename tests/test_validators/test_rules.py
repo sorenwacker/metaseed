@@ -53,34 +53,33 @@ class TestDateRangeRule:
         errors = rule.validate(data)
         assert len(errors) == 0
 
-    def test_malformed_date_string_raises_error(self) -> None:
-        """Malformed date string raises ValueError from fromisoformat.
+    def test_malformed_start_date_reported_not_raised(self) -> None:
+        """A malformed start date is reported as a validation error, not raised.
 
-        DateRangeRule uses datetime.date.fromisoformat() for string parsing,
-        which raises ValueError for invalid date formats. The rule does not
-        catch this exception - callers should ensure dates are valid ISO format.
+        The engine runs against raw, un-coerced YAML data, so a bad date string
+        must surface as a validation error rather than crash the run.
         """
-        import pytest
-
         rule = DateRangeRule(start_field="start_date", end_field="end_date")
         data = {
             "start_date": "not-a-date",
             "end_date": "2024-12-31",
         }
-        with pytest.raises(ValueError):
-            rule.validate(data)
+        errors = rule.validate(data)
+        assert len(errors) == 1
+        assert errors[0].field == "start_date"
+        assert errors[0].rule == "date_range"
 
-    def test_malformed_end_date_string_raises_error(self) -> None:
-        """Malformed end date string also raises ValueError."""
-        import pytest
-
+    def test_malformed_end_date_reported_not_raised(self) -> None:
+        """A malformed end date is reported as a validation error, not raised."""
         rule = DateRangeRule(start_field="start_date", end_field="end_date")
         data = {
             "start_date": "2024-01-01",
             "end_date": "invalid-date-format",
         }
-        with pytest.raises(ValueError):
-            rule.validate(data)
+        errors = rule.validate(data)
+        assert len(errors) == 1
+        assert errors[0].field == "end_date"
+        assert errors[0].rule == "date_range"
 
 
 class TestRequiredFieldsRule:
