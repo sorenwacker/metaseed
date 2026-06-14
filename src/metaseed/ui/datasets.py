@@ -42,6 +42,29 @@ def _get_factory() -> DatasetManagerFactory:
     return factory
 
 
+def _resolve_factory() -> DatasetManagerFactory:
+    """Resolve the active dataset factory.
+
+    Prefers the factory from the MCP context when one is set (which keeps
+    save, load, and auto-save pointed at the same repository during MCP
+    sessions and test isolation), and otherwise falls back to the
+    context-variable factory from :func:`_get_factory`.
+
+    Returns:
+        The dataset factory to use for repository-backed operations.
+    """
+    try:
+        from metaseed.agent.mcp.server import get_context
+
+        ctx = get_context()
+    except ImportError:
+        ctx = None
+
+    if ctx is not None:
+        return ctx.dataset_factory
+    return _get_factory()
+
+
 def get_datasets_dir() -> Path:
     """Get the datasets directory, creating it if needed."""
     DATASETS_DIR.mkdir(parents=True, exist_ok=True)
@@ -83,7 +106,7 @@ def save_dataset(state: AppState, name: str) -> dict[str, Any]:
     Raises:
         ValueError: If name is invalid.
     """
-    factory = _get_factory()
+    factory = _resolve_factory()
     manager = factory.get_manager(state)
     result = manager.save_dataset(name)
     return asdict(result)
@@ -103,7 +126,7 @@ def load_dataset(state: AppState, name: str) -> dict[str, Any]:
         FileNotFoundError: If dataset doesn't exist.
         ValueError: If dataset is invalid.
     """
-    factory = _get_factory()
+    factory = _resolve_factory()
     manager = factory.get_manager(state)
     result = manager.load_dataset(name)
     return asdict(result)
@@ -191,18 +214,7 @@ def auto_save(state: AppState) -> None:
     Args:
         state: AppState to save.
     """
-    # Prefer MCP context factory if available (for test isolation)
-    try:
-        from metaseed.agent.mcp.server import get_context
-
-        ctx = get_context()
-        if ctx is not None:
-            factory = ctx.dataset_factory
-        else:
-            factory = _get_factory()
-    except ImportError:
-        factory = _get_factory()
-
+    factory = _resolve_factory()
     manager = factory.get_manager(state)
     manager.current_dataset = get_current_dataset_name(state)
     manager.auto_save()

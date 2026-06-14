@@ -19,13 +19,18 @@ from metaseed.ui.state import AppState
 @pytest.fixture
 def temp_datasets_dir(tmp_path):
     """Use a temporary directory for datasets."""
+    from metaseed.agent.mcp.server import get_context, set_context
     from metaseed.ui.datasets import _factory_var
 
     datasets_dir = tmp_path / "datasets"
     datasets_dir.mkdir()
 
-    # Reset the contextvar factory so it picks up the new directory
+    # Reset the contextvar factory so it picks up the new directory.
     token = _factory_var.set(None)
+    # Clear any leaked MCP context so _resolve_factory falls back to the
+    # freshly reset contextvar factory pointing at the temp directory.
+    previous_context = get_context()
+    set_context(None)
     try:
         with (
             patch(
@@ -37,6 +42,7 @@ def temp_datasets_dir(tmp_path):
             yield datasets_dir
     finally:
         _factory_var.reset(token)
+        set_context(previous_context)
 
 
 class TestValidateDatasetName:
