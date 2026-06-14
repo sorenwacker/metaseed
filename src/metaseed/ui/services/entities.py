@@ -10,12 +10,8 @@ import logging
 from typing import Any, Self
 
 from metaseed.repositories.base import EntityData, EntityRepository
-from metaseed.repositories.memory import MemoryEntityRepository
 
 logger = logging.getLogger(__name__)
-
-# Backwards compatibility alias
-AppStateAdapter = MemoryEntityRepository
 
 
 class EntityService:
