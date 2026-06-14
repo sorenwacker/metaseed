@@ -5,11 +5,11 @@ MIAPPE-compliant metadata beyond basic type checking.
 """
 
 import logging
-import re
 from typing import Any
 
 from pydantic import BaseModel
 
+from metaseed.utils import to_snake_case
 from metaseed.validators.base import (
     ValidationCheck,
     ValidationError,
@@ -41,12 +41,6 @@ __all__ = [
     "validate_entity",
     "validate_entity_with_report",
 ]
-
-
-def _to_snake_case(name: str) -> str:
-    """Convert PascalCase to snake_case."""
-    s1 = re.sub(r"(.)([A-Z][a-z]+)", r"\1_\2", name)
-    return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
 
 
 def _validate_nested(
@@ -97,7 +91,7 @@ def _validate_nested(
                 continue
 
             # Check if items is a known entity type
-            item_entity = _to_snake_case(field.items)
+            item_entity = to_snake_case(field.items)
             try:
                 loader.load_entity(item_entity, version)
             except (FileNotFoundError, KeyError, ValueError):
@@ -155,7 +149,7 @@ def validate(
     # Handle Pydantic model instances
     if isinstance(data, BaseModel):
         if entity is None:
-            entity = _to_snake_case(data.__class__.__name__)
+            entity = to_snake_case(data.__class__.__name__)
         data = data.model_dump(mode="json")
 
     if entity is None:

@@ -15,6 +15,7 @@ import yaml
 
 from metaseed.profiles import ProfileFactory
 from metaseed.specs.loader import SpecLoader, SpecLoadError
+from metaseed.utils import to_snake_case
 from metaseed.validators.base import ValidationError
 from metaseed.validators.engine import create_engine_for_entity
 
@@ -198,13 +199,6 @@ class DatasetValidator:
             return "study"
         return None
 
-    def _to_snake_case(self: Self, name: str) -> str:
-        """Convert PascalCase to snake_case."""
-        import re
-
-        s1 = re.sub(r"(.)([A-Z][a-z]+)", r"\1_\2", name)
-        return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
-
     def _traverse_entity_tree(
         self: Self,
         data: dict[str, Any],
@@ -233,7 +227,7 @@ class DatasetValidator:
                 if not isinstance(items, list):
                     continue
 
-                item_entity = self._to_snake_case(f.items)
+                item_entity = to_snake_case(f.items)
                 for i, item in enumerate(items):
                     if isinstance(item, dict):
                         item_path = (
@@ -284,7 +278,7 @@ class DatasetValidator:
                 for field_name, ref_type in self._reference_fields[etype]:
                     ref_value = d.get(field_name)
                     if ref_value is not None:
-                        ref_entity = self._to_snake_case(ref_type)
+                        ref_entity = to_snake_case(ref_type)
                         if not self._registry.exists(ref_entity, ref_value):
                             field_path = f"{p}.{field_name}" if p else field_name
                             errors.append(

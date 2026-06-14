@@ -4,8 +4,6 @@ This module provides the public API for accessing models from various profiles
 (MIAPPE, ISA, etc.), dynamically generating them from specifications when needed.
 """
 
-import re
-
 from pydantic import BaseModel
 
 from metaseed.models.factory import (
@@ -22,6 +20,7 @@ from metaseed.models.registry import (
 )
 from metaseed.models.types import OntologyTerm
 from metaseed.specs.loader import SpecLoader
+from metaseed.utils import to_snake_case
 
 __all__ = [
     "ModelContext",
@@ -33,20 +32,6 @@ __all__ = [
     "get_global_registry",
     "get_model",
 ]
-
-
-def _to_snake_case(name: str) -> str:
-    """Convert CamelCase or PascalCase to snake_case.
-
-    Args:
-        name: Name in CamelCase (e.g., "BiologicalMaterial").
-
-    Returns:
-        Name in snake_case (e.g., "biological_material").
-    """
-    # Insert underscore before uppercase letters and convert to lowercase
-    s1 = re.sub(r"(.)([A-Z][a-z]+)", r"\1_\2", name)
-    return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
 
 
 def get_model(
@@ -91,7 +76,7 @@ def get_model(
     # Profile specs are cached by the loader, so this is cheap on cache hits.
     loader = SpecLoader(profile=profile)
     # Convert CamelCase to snake_case for case-insensitive file lookup
-    entity_name = _to_snake_case(name)
+    entity_name = to_snake_case(name)
     spec = loader.load_entity(entity_name, version)
 
     # Check if already cached, keyed by the spec's PascalCase name
