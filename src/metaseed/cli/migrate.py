@@ -127,7 +127,7 @@ def migrate_all_datasets(dry_run: bool = True) -> list[dict[str, Any]]:
         try:
             report = migrate_dataset(path, dry_run=dry_run)
             reports.append(report)
-        except Exception as e:
+        except (OSError, json.JSONDecodeError) as e:
             reports.append(
                 {
                     "file": str(path),

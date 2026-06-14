@@ -106,7 +106,7 @@ def migrate_all_specs(dry_run: bool = True) -> list[dict]:
         try:
             report = migrate_file(f, dry_run=dry_run)
             reports.append(report)
-        except Exception as e:
+        except OSError as e:
             reports.append(
                 {
                     "file": str(f),
