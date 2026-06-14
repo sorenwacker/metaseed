@@ -144,7 +144,7 @@ def _clean_item_for_child_entity(
     cleaned = {
         k: v
         for k, v in item.items()
-        if not k.startswith("_") and v and k in valid_fields
+        if not k.startswith("_") and v not in (None, "") and k in valid_fields
     }
 
     if parent_ref_field and parent_identifier:

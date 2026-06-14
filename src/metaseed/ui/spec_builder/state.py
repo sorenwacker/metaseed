@@ -62,12 +62,3 @@ class SpecBuilderState:
         if self.spec is None:
             return []
         return list(self.spec.entities.keys())
-
-    def get_current_entity_field_count(self: Self) -> int:
-        """Get field count for the currently editing entity."""
-        if self.spec is None or self.editing_entity is None:
-            return 0
-        entity = self.spec.entities.get(self.editing_entity)
-        if entity is None:
-            return 0
-        return len(entity.fields)

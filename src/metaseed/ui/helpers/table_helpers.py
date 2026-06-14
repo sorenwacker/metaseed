@@ -63,7 +63,8 @@ def get_table_columns(facade: ProfileFacade, entity_type: str) -> list[str]:
 def get_table_column_info(facade: ProfileFacade, entity_type: str) -> dict:
     """Get complete column info for a table (types, constraints, required).
 
-    Returns dict with keys: columns, column_types, column_constraints, required_columns
+    Returns dict with keys: columns, column_types, column_constraints,
+    column_ontologies, required_columns, has_nested_children.
     """
     helper = getattr(facade, entity_type, None)
     if not helper:
@@ -71,6 +72,7 @@ def get_table_column_info(facade: ProfileFacade, entity_type: str) -> dict:
             "columns": ["value"],
             "column_types": {"value": "string"},
             "column_constraints": {},
+            "column_ontologies": {},
             "required_columns": set(),
             "has_nested_children": False,
         }

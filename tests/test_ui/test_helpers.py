@@ -227,6 +227,33 @@ class TestGetTableColumns:
         assert columns == ["value"]
 
 
+class TestCleanItemForChildEntity:
+    """Tests for _clean_item_for_child_entity."""
+
+    def _helper(self):
+        helper = MagicMock()
+        helper.all_fields = ["count", "active", "label"]
+        return helper
+
+    def test_preserves_falsy_but_meaningful_values(self):
+        """Integer 0 and boolean False must survive cleaning."""
+        from metaseed.ui.helpers.validation import _clean_item_for_child_entity
+
+        item = {"count": 0, "active": False, "label": "x", "_meta": "skip"}
+        cleaned = _clean_item_for_child_entity(item, self._helper(), None, None)
+
+        assert cleaned == {"count": 0, "active": False, "label": "x"}
+
+    def test_drops_none_and_empty_string(self):
+        """None and empty string are still removed."""
+        from metaseed.ui.helpers.validation import _clean_item_for_child_entity
+
+        item = {"count": None, "active": "", "label": "x"}
+        cleaned = _clean_item_for_child_entity(item, self._helper(), None, None)
+
+        assert cleaned == {"label": "x"}
+
+
 class TestGetTableColumnInfo:
     """Tests for get_table_column_info function."""
 
@@ -253,6 +280,15 @@ class TestGetTableColumnInfo:
         assert info["columns"] == ["value"]
         assert info["column_types"] == {"value": "string"}
         assert info["has_nested_children"] is False
+
+    def test_unknown_entity_fallback_includes_all_keys(self):
+        """Fallback returns the same keys as the success path (callers index them)."""
+        facade = ProfileFacade("miappe")
+        known = get_table_column_info(facade, "Study")
+        unknown = get_table_column_info(facade, "UnknownEntity")
+
+        assert set(unknown.keys()) == set(known.keys())
+        assert unknown["column_ontologies"] == {}
 
 
 class TestGetItemsStore:
