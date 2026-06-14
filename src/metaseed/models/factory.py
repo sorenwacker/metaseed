@@ -215,7 +215,7 @@ def _coerce_string_to_entity(
     return value
 
 
-class MIAPPEBaseModel(BaseModel):
+class EntityBaseModel(BaseModel):
     """Base model for all generated profile entities.
 
     Used as the base for every dynamically generated model regardless of
@@ -427,7 +427,7 @@ def create_model_from_spec(spec: EntitySpec) -> type:
 
     model = create_model(
         spec.name,
-        __base__=MIAPPEBaseModel,
+        __base__=EntityBaseModel,
         **field_definitions,
     )
 
