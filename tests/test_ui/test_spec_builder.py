@@ -1,4 +1,4 @@
-"""Tests for the Spec Builder UI.
+"""Tests for the Builder UI.
 
 Tests helpers and routes for creating/editing ProfileSpec specifications.
 """
@@ -239,7 +239,7 @@ class TestSpecBuilderRoutes:
         """Creating new spec initializes empty spec."""
         response = client.get("/spec-builder/new")
         assert response.status_code == 200
-        assert "Spec Builder" in response.text
+        assert "Builder" in response.text
         # Should show ERD editor view
         assert "Profile" in response.text
         assert "Toolbox" in response.text
@@ -248,7 +248,7 @@ class TestSpecBuilderRoutes:
         """Cloning spec creates copy of existing."""
         response = client.get("/spec-builder/clone/miappe/1.1")
         assert response.status_code == 200
-        assert "Spec Builder" in response.text
+        assert "Builder" in response.text
         assert "Cloned from miappe v1.1" in response.text
 
     def test_clone_spec_invalid(self, client):
