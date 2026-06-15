@@ -448,10 +448,15 @@ class EntityStore:
 
             instance = self._create_instance(entity_type, fields)
 
-            # Use identifier as node ID
+            # Use the identifier as the node ID, but never reuse one. Two
+            # entities that share an identifier value (e.g. two people with the
+            # same name, or an id reused across types) must stay distinct nodes
+            # rather than overwriting each other and silently disappearing.
             id_field = helper.identifier_field
             entity_id = fields.get(id_field) if id_field else None
             node_id = str(entity_id) if entity_id else _generate_node_id()
+            while node_id in self._instances:
+                node_id = _generate_node_id()
 
             node = EntityNode(
                 id=node_id,

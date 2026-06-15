@@ -91,3 +91,29 @@ def test_malformed_entity_skipped_logged_and_rest_load() -> None:
     message = warnings[0].getMessage()
     assert "Thing" in message
     assert "n2" in message
+
+
+def test_entities_sharing_identifier_are_not_overwritten() -> None:
+    """Two entities with the same identifier value both survive the load.
+
+    The node id is derived from the identifier; without a uniqueness guard the
+    second entity would overwrite the first in the store and silently vanish.
+    """
+
+    def instance_creator(entity_type: str, data: dict) -> BaseModel:
+        return _FakeInstance(name=data["name"])
+
+    store = _build_store(instance_creator)
+
+    entities = [
+        {"_type": "Thing", "name": "John Smith"},
+        {"_type": "Thing", "name": "John Smith"},
+        {"_type": "Thing", "name": "Jane Doe"},
+    ]
+
+    loaded = store.load_from_dict(entities)
+
+    assert loaded == 3
+    assert len(store._instances) == 3
+    names = sorted(node.instance.name for node in store._instances.values())
+    assert names == ["Jane Doe", "John Smith", "John Smith"]
