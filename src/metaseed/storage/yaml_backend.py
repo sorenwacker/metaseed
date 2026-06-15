@@ -11,6 +11,14 @@ from pydantic import BaseModel, ValidationError
 
 from metaseed.storage.base import StorageBackend, StorageError
 
+# Intentamos cargar los parsers ultra veloces compilados en C (libyaml)
+# Si el entorno de Windows no los tiene, cae elegantemente a Python puro
+try:
+    from yaml import CSafeLoader as SafeLoader
+    from yaml import CDumper as Dumper
+except ImportError:
+    from yaml import SafeLoader, Dumper
+
 T = TypeVar("T", bound=BaseModel)
 
 
@@ -38,6 +46,7 @@ class YamlStorage(StorageBackend):
             data = entity.model_dump(mode="json", exclude_none=True)
             yaml_str = yaml.dump(
                 data,
+                Dumper=Dumper,
                 default_flow_style=False,
                 allow_unicode=True,
                 sort_keys=False,
@@ -60,15 +69,15 @@ class YamlStorage(StorageBackend):
             StorageError: If the file doesn't exist, isn't valid YAML,
                 or doesn't match the model schema.
         """
-        if not path.exists():
-            raise StorageError(f"File not found: {path}")
-
         try:
+            # Eliminamos el .exists() redundante para evitar doble IO en el kernel de Windows
             content = path.read_text(encoding="utf-8")
-            data = yaml.safe_load(content)
+            data = yaml.load(content, Loader=SafeLoader)
             if data is None:
                 data = {}
             return model.model_validate(data)
+        except FileNotFoundError as e:
+            raise StorageError(f"File not found: {path}") from e
         except yaml.YAMLError as e:
             raise StorageError(f"Invalid YAML in {path}: {e}") from e
         except ValidationError as e:
