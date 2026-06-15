@@ -6,6 +6,9 @@ var currentGraphLayout = 'physics';
 var allGraphNodes = [];
 var allGraphEdges = [];
 var visibleGroups = new Set();
+// Every group ever seen. Used to tell a genuinely new entity type (auto-show)
+// apart from one the user deliberately hid (must stay hidden across polls).
+var knownGroups = new Set();
 
 // Entity type to display mapping (assigned dynamically)
 var entityDisplayMap = {};
@@ -365,18 +368,28 @@ function loadGraph() {
             // Only initialize visible groups on first load
             if (isFirstLoad) {
                 visibleGroups.clear();
+                knownGroups.clear();
                 // Use entity types from spec if available, otherwise from nodes
                 var types = data.entity_types || [];
-                types.forEach(function(t) { visibleGroups.add(t); });
+                types.forEach(function(t) {
+                    visibleGroups.add(t);
+                    knownGroups.add(t);
+                });
                 // Also add any types from nodes (in case spec is incomplete)
-                allGraphNodes.forEach(function(n) { visibleGroups.add(n.group); });
+                allGraphNodes.forEach(function(n) {
+                    visibleGroups.add(n.group);
+                    knownGroups.add(n.group);
+                });
             }
 
-            // Check for new entity types before preparing data
+            // Check for genuinely new entity types before preparing data. A type
+            // is new only if never seen before; a type the user toggled off is
+            // already known and must not be re-shown by a poll.
             var hadNewTypes = false;
             if (!isFirstLoad) {
                 data.nodes.forEach(function(n) {
-                    if (!visibleGroups.has(n.group)) {
+                    if (!knownGroups.has(n.group)) {
+                        knownGroups.add(n.group);
                         visibleGroups.add(n.group);
                         hadNewTypes = true;
                     }
