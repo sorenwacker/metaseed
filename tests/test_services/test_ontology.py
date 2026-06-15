@@ -111,6 +111,14 @@ class TestOntologyService:
         assert service.rate_limit == 60  # Default
         assert "ebi.ac.uk" in service.base_url
 
+    def test_requests_identify_the_client(self) -> None:
+        """OLS requests send a descriptive User-Agent (EMBL-EBI fair-use)."""
+        from metaseed.services.ontology import DEFAULT_HEADERS, USER_AGENT
+
+        assert USER_AGENT.startswith("metaseed/")
+        assert "github.com/sorenwacker/metaseed" in USER_AGENT
+        assert DEFAULT_HEADERS["User-Agent"] == USER_AGENT
+
     def test_service_custom_config(self) -> None:
         """Service accepts custom configuration."""
         service = OntologyService(
