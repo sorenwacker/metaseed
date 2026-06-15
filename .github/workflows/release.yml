@@ -25,11 +25,11 @@ jobs:
         uses: astral-sh/setup-uv@v4
 
       - name: Install dependencies
-        run: uv sync
+        run: uv sync --extra dev
 
       - name: Run tests
         run: |
-          uv run pytest tests/ \
+          uv run python -m pytest tests/ \
             --ignore=tests/test_ui/test_selenium.py \
             --ignore=tests/test_ui/test_spec_builder_selenium.py \
             --ignore=tests/test_ui/test_validation_selenium.py \
