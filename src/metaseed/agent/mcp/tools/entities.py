@@ -94,6 +94,53 @@ def _get_entity_field_info(entity_type: str) -> dict[str, Any] | None:
         return None
 
 
+def _creation_hints(entity_type: str) -> dict[str, Any] | None:
+    """Build next-step hints for a freshly created entity.
+
+    Surfaces the child types it can contain, a suggested next action, and which
+    other entities' reference fields are expected to point back at it, so an
+    agent keeps building the dataset relationally instead of stopping flat.
+
+    Args:
+        entity_type: The entity type just created.
+
+    Returns:
+        Hints dict, or None if no relationships apply or the type is unknown.
+    """
+    from metaseed.agent.mcp.server import get_mcp_state
+
+    try:
+        state = get_mcp_state()
+        facade = state.get_or_create_facade()
+        helper = getattr(facade, entity_type, None)
+        if not helper:
+            return None
+
+        children = sorted(set(helper.nested_fields.values()))
+        consumers = []
+        for other in facade.entities:
+            other_helper = getattr(facade, other, None)
+            if not other_helper:
+                continue
+            for field, (target_type, _target_field) in (
+                other_helper.reference_fields.items()
+            ):
+                if target_type == entity_type:
+                    consumers.append(f"{other}.{field}")
+
+        hints: dict[str, Any] = {}
+        if children:
+            hints["expected_children"] = children
+            hints["typical_next"] = (
+                f"Create {children[0]} entities with parent_id set to this entity"
+            )
+        if consumers:
+            hints["cross_ref_consumers"] = sorted(consumers)
+        return hints or None
+    except Exception:
+        return None
+
+
 def _auto_fill_reference_fields(
     entity_type: str,
     entity_data: dict[str, Any],
@@ -417,6 +464,11 @@ def register_entity_tools(mcp: FastMCP, get_entity_service) -> None:
 
             # Add dataset info to response
             result["_dataset"] = _get_current_dataset_info()
+
+            # Suggest how to keep building the dataset relationally
+            hints = _creation_hints(entity_type)
+            if hints:
+                result["hints"] = hints
 
             # Add linked_via_field info if parent was specified
             if parent_id:

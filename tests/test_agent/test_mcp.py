@@ -316,6 +316,27 @@ class TestMCPDatasetTools:
         list_out = json.loads(tools["list_entities"].fn())
         assert list_out["total"] == 2
 
+    def test_create_entity_returns_relational_hints(self):
+        """A successful create suggests children and cross-reference consumers."""
+        from metaseed.agent.mcp.server import set_mcp_state
+        from metaseed.ui.state import AppState
+
+        set_mcp_state(AppState(profile="miappe", version="1.2"))
+        server = create_server()
+        create = server._tool_manager._tools["create_entity"].fn
+
+        out = json.loads(
+            create(
+                entity_type="Investigation",
+                data=json.dumps({"unique_id": "INV-1", "title": "I"}),
+            )
+        )
+        assert out.get("status") == "created"
+        hints = out["hints"]
+        assert "Study" in hints["expected_children"]
+        assert "Study.investigation_id" in hints["cross_ref_consumers"]
+        assert "typical_next" in hints
+
     def test_create_entity_error_names_identifier_and_hints(self):
         """A rejected id alias yields the identifier field and a corrective hint.
 

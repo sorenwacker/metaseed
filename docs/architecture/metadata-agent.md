@@ -180,7 +180,7 @@ Exposes agent capabilities via Model Context Protocol:
 | `list_entities` | List all entities in the current dataset |
 | `get_entity_tree` | Get hierarchical tree showing parent-child relationships |
 | `get_entity` | Get a specific entity by node ID |
-| `create_entity` | Create entity with optional `parent_id` (auto-fills parent references). Returns `valid_fields` and `required_fields` on validation errors |
+| `create_entity` | Create entity with optional `parent_id` (auto-fills parent references). On success returns `hints` (`expected_children`, `typical_next`, `cross_ref_consumers`); on validation errors returns `identifier_field`, `field_types`, `valid_fields`, `required_fields`, and a `hint` |
 | `batch_create` | Create multiple entities in one operation with `[{entity_type, data, parent_id?}, ...]` |
 | `link_entity` | Link existing entity as child of another |
 | `update_entity` | Update an existing entity (auto-saves) |
