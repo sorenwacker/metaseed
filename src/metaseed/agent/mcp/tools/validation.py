@@ -179,6 +179,118 @@ def register_validation_tools(mcp: FastMCP, get_mcp_state) -> None:
         except Exception as e:
             return json.dumps({"error": str(e)})
 
+    @mcp.tool()
+    def validate_relationships() -> str:
+        """Report relationship-completeness gaps the schema implies.
+
+        Unlike validate_dataset (per-entity field rules), this flags links that
+        the spec makes possible but that are unset - so datasets come out
+        connected rather than flat. All checks are derived from the active
+        profile's nested_fields, reference_fields, and field types; nothing is
+        profile-specific.
+
+        Warnings:
+        - empty list-reference fields (e.g. a list of ids left empty)
+        - entities of a referenced type that nothing points at
+        - container entities with no child of a type they can hold
+
+        Returns:
+            JSON with total_warnings and a warnings list of {entity, type, issue}.
+        """
+        state = get_mcp_state()
+
+        try:
+            facade = state.get_or_create_facade()
+            nodes = list(state.nodes_by_id.values())
+
+            # Which (consumer_type, field) reference each target type.
+            consumers_of: dict[str, list[str]] = {}
+            for etype in facade.entities:
+                helper = getattr(facade, etype, None)
+                if not helper:
+                    continue
+                for field, (target_type, _tf) in helper.reference_fields.items():
+                    consumers_of.setdefault(target_type, []).append(f"{etype}.{field}")
+
+            # Identifier values referenced by any entity, per target type.
+            referenced: dict[str, set[str]] = {}
+            for node in nodes:
+                helper = getattr(facade, node.entity_type, None)
+                if not helper or not node.instance:
+                    continue
+                data = node.instance.model_dump(exclude_none=True)
+                for field, (target_type, _tf) in helper.reference_fields.items():
+                    value = data.get(field)
+                    if value is None:
+                        continue
+                    values = value if isinstance(value, list) else [value]
+                    referenced.setdefault(target_type, set()).update(
+                        str(v) for v in values
+                    )
+
+            warnings = []
+            for node in nodes:
+                etype = node.entity_type
+                helper = getattr(facade, etype, None)
+                if not helper:
+                    continue
+                data = (
+                    node.instance.model_dump(exclude_none=True)
+                    if node.instance
+                    else {}
+                )
+                label = node.label or node.id
+
+                # Empty list-reference fields.
+                for field, (target_type, _tf) in helper.reference_fields.items():
+                    if helper.field_info(field).get("type") != "list":
+                        continue
+                    if not data.get(field):
+                        warnings.append(
+                            {
+                                "entity": label,
+                                "type": etype,
+                                "issue": f"empty {field} - consider linking "
+                                f"{target_type} entities",
+                            }
+                        )
+
+                # Container with no child of a type it can hold.
+                child_types_present = {c.entity_type for c in node.children}
+                for child_type in helper.nested_fields.values():
+                    if child_type not in child_types_present:
+                        warnings.append(
+                            {
+                                "entity": label,
+                                "type": etype,
+                                "issue": f"no {child_type} linked",
+                            }
+                        )
+
+                # Referenced type, but this instance is referenced by nothing.
+                if etype in consumers_of:
+                    identifier = data.get(helper.identifier_field)
+                    if identifier is not None and str(identifier) not in (
+                        referenced.get(etype, set())
+                    ):
+                        consumers = ", ".join(sorted(set(consumers_of[etype])))
+                        warnings.append(
+                            {
+                                "entity": label,
+                                "type": etype,
+                                "issue": f"not referenced by any {consumers}",
+                            }
+                        )
+
+            return json.dumps(
+                {"total_warnings": len(warnings), "warnings": warnings},
+                indent=2,
+                cls=DateAwareEncoder,
+            )
+
+        except Exception as e:
+            return json.dumps({"error": str(e)})
+
 
 def _validate_node_recursive(node, facade, results: list) -> None:
     """Recursively validate a node and its children.

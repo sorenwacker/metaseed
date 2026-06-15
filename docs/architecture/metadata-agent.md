@@ -221,6 +221,7 @@ get_entity_template("Investigation", "miappe", "1.2") # Template with placeholde
 | Tool | Description |
 |------|-------------|
 | `validate_dataset` | Validate all entities (same logic as UI - single source of truth) |
+| `validate_relationships` | Flag relationship-completeness gaps the schema implies but does not enforce: empty list-references, entities of a referenced type that nothing points at, and containers with no child of a type they can hold. Derived from the profile's own `nested_fields`/`reference_fields` (profile-agnostic) |
 | `get_field_spec` | Get field definitions, constraints, and ontology terms |
 
 **Schema Discovery Tools:**

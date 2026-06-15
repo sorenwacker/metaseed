@@ -404,6 +404,41 @@ class TestMCPDatasetTools:
         # Empty state should have 0 results
         assert data.get("total", 0) == 0 or "error" in data
 
+    def test_validate_relationships_flags_gaps(self):
+        """Relationship validation flags unreferenced and childless entities."""
+        from metaseed.agent.mcp.server import get_entity_service, set_mcp_state
+        from metaseed.ui.state import AppState
+
+        set_mcp_state(AppState(profile="miappe", version="1.2"))
+        server = create_server()
+        svc = get_entity_service()
+        inv = svc.create_entity("Investigation", {"unique_id": "INV-1", "title": "I"})
+        stu = svc.create_entity(
+            "Study",
+            {"unique_id": "STU-1", "investigation_id": "INV-1", "title": "S"},
+            parent_id=inv["id"],
+        )
+        svc.create_entity(
+            "ObservationUnit",
+            {"unique_id": "OU-1", "study_id": "STU-1", "observation_unit_type": "p"},
+            parent_id=stu["id"],
+        )
+        svc.create_entity(
+            "BiologicalMaterial",
+            {"unique_id": "BM-1", "study_id": "STU-1", "organism": "Zea mays"},
+            parent_id=stu["id"],
+        )
+
+        out = json.loads(server._tool_manager._tools["validate_relationships"].fn())
+        issues = {(w["type"], w["issue"]) for w in out["warnings"]}
+        # BiologicalMaterial is a reference target but nothing points at it.
+        assert any(
+            t == "BiologicalMaterial" and "not referenced by any" in i
+            for t, i in issues
+        )
+        # ObservationUnit can contain Samples but has none.
+        assert ("ObservationUnit", "no Sample linked") in issues
+
     def test_create_entity_tool(self):
         """Create entity tool adds entity to state."""
         from metaseed.agent.mcp.server import set_mcp_state
