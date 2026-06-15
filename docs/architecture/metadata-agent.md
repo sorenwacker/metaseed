@@ -239,6 +239,8 @@ the entity's `identifier_field`, plus a `note` for types that break the usual
 `unique_id` convention (e.g. `Person` keys on `name`). On validation failure,
 `create_entity` likewise reports `identifier_field`, `field_types`, and a
 corrective `hint` when an id alias such as `unique_id` is sent to the wrong type.
+Each error detail also carries the field's `description` and `constraints`
+(pattern, range, enum), so a format error explains the expected shape.
 
 The `validate_dataset` tool uses the same validation as the web UI, checking:
 - Required fields

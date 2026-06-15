@@ -141,6 +141,38 @@ def _creation_hints(entity_type: str) -> dict[str, Any] | None:
         return None
 
 
+def _field_constraint_detail(entity_type: str, field_name: str) -> dict[str, Any] | None:
+    """Return a field's description and constraints for error feedback.
+
+    Surfaces the pattern, range, enum, etc. a value must satisfy so a format
+    error explains the expected shape instead of only Pydantic's generic text.
+
+    Args:
+        entity_type: Entity type owning the field.
+        field_name: Field that failed validation.
+
+    Returns:
+        Dict with optional ``description`` and ``constraints``, or None.
+    """
+    from metaseed.agent.mcp.server import get_mcp_state
+
+    try:
+        state = get_mcp_state()
+        helper = getattr(state.get_or_create_facade(), entity_type, None)
+        if not helper:
+            return None
+        info = helper.field_info(field_name)
+    except Exception:
+        return None
+
+    out: dict[str, Any] = {}
+    if info.get("description"):
+        out["description"] = info["description"]
+    if info.get("constraints"):
+        out["constraints"] = info["constraints"]
+    return out or None
+
+
 def _auto_fill_reference_fields(
     entity_type: str,
     entity_data: dict[str, Any],
@@ -283,14 +315,20 @@ def _format_validation_error(
     """
     details = []
     for err in error.errors():
-        field = ".".join(str(loc) for loc in err["loc"])
-        details.append(
-            {
-                "field": field,
-                "message": err["msg"],
-                "type": err["type"],
-            }
-        )
+        loc = err["loc"]
+        field = ".".join(str(part) for part in loc)
+        detail: dict[str, Any] = {
+            "field": field,
+            "message": err["msg"],
+            "type": err["type"],
+        }
+        # Attach the expected format (description, pattern, range, enum) so a
+        # bad value is corrected against the spec, not just flagged.
+        if loc:
+            constraint = _field_constraint_detail(entity_type, str(loc[0]))
+            if constraint:
+                detail.update(constraint)
+        details.append(detail)
 
     result: dict[str, Any] = {
         "error": "Validation failed",

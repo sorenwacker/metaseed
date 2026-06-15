@@ -337,6 +337,25 @@ class TestMCPDatasetTools:
         assert "Study.investigation_id" in hints["cross_ref_consumers"]
         assert "typical_next" in hints
 
+    def test_format_error_includes_pattern_and_description(self):
+        """A pattern failure surfaces the expected format, not just a message."""
+        from metaseed.agent.mcp.server import set_mcp_state
+        from metaseed.ui.state import AppState
+
+        set_mcp_state(AppState(profile="miappe", version="1.2"))
+        server = create_server()
+        create = server._tool_manager._tools["create_entity"].fn
+
+        out = json.loads(
+            create(
+                entity_type="Person",
+                data=json.dumps({"name": "Alice", "orcid": "not-an-orcid"}),
+            )
+        )
+        orcid_detail = next(d for d in out["details"] if d["field"] == "orcid")
+        assert "pattern" in orcid_detail["constraints"]
+        assert orcid_detail.get("description")
+
     def test_create_entity_error_names_identifier_and_hints(self):
         """A rejected id alias yields the identifier field and a corrective hint.
 
