@@ -349,12 +349,28 @@ support). The engine copy duplicates a subset of it and is unreachable.
 
 Fix: remove the `engine.py` module-level `validate` function.
 
-## Appendix: unverified lower-confidence notes
+## Appendix: lower-confidence notes (triaged)
 
-These 57 low-severity notes were surfaced by the reviewers but NOT put through the
-adversarial verification pass (the run used `verifyLow: false`). They are leads, not
-confirmed defects — treat each as "check this", and verify against the code before
-acting. Grouped by category.
+These 57 low-severity notes were surfaced by the reviewers but not adversarially
+verified during the original run. They have since been triaged against the code.
+
+Triage outcome:
+- **Fixed** (confirmed real): the `.tsv` sniffer override, Excel reading
+  `sheetnames` after `close()`, `bulk_update_rows` returning a 500 on an unknown
+  field, the `infer_entity_type_from_field` name-guessing fallback (removed —
+  resolution is now spec-only), the MIAPPE-hardcoded `_detect_entity_type` /
+  `"investigation"` default (now profile-agnostic), and a batch of inaccurate
+  docstrings plus two typing/consistency items (`DateAwareEncoder.default`
+  annotations, `import_dataset` factory resolution).
+- **Refuted:** `get_global_context` is a public export, not dead code — kept.
+- **Already fixed earlier:** `get_table_column_info` docstring (with finding 11).
+- **Deferred (advisory):** the remaining items are subjective consistency
+  preferences (mixed logging idioms, helper-lookup styles, module import style),
+  non-gated typing annotations, latent-only issues (lexicographic version sort —
+  no `1.10` exists yet), and minor notes. They are recorded below for reference;
+  none is a current defect.
+
+The original lead list follows, grouped by category.
 
 ### Docstring accuracy (15)
 
