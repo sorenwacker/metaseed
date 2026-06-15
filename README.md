@@ -199,6 +199,18 @@ make lint     # Run linter
 make docs     # Serve documentation locally
 ```
 
+## Data sources and attribution
+
+Ontology term lookup and validation use the [EMBL-EBI Ontology Lookup Service
+(OLS4)](https://www.ebi.ac.uk/ols4/). Term data is retrieved from the public OLS4
+API and remains the property of the respective source ontologies. Use of OLS is
+subject to the [EMBL-EBI Terms of Use](https://www.ebi.ac.uk/about/terms-of-use/).
+
+Metaseed is a considerate API client: it caches results, rate-limits requests, and
+identifies itself with a descriptive `User-Agent`. For bulk or high-volume term
+resolution, prefer downloading the source ontologies or running a local OLS
+instance rather than the public API.
+
 ## License
 
 MIT
