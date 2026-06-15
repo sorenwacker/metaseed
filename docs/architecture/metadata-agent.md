@@ -229,6 +229,7 @@ get_entity_template("Investigation", "miappe", "1.2") # Template with placeholde
 | Tool | Description |
 |------|-------------|
 | `get_profile_relationships` | Entity relationship map: per type, its `identifier`, child types (`children`), and `cross_references` (which entity/field each reference points at). Use before creating to build relational, not flat, datasets |
+| `get_example_dataset` | One instance of every entity type with required fields filled and every reference wired to the matching example - a correct relational pattern to copy. Values are placeholders; built from the profile schema (any spec) |
 | `get_entity_fields` | Get all fields for an entity type with `(entity_type, profile, version)` |
 | `get_required_fields` | Get list of required field names for an entity type |
 | `get_entity_template` | Get template with placeholder values by field type |

@@ -58,6 +58,32 @@ def _field_to_dict(field: FieldSpec) -> dict:
     return field_info
 
 
+def _placeholder_value(field: FieldSpec) -> Any:
+    """Return a valid placeholder value for a field by its type.
+
+    Used to build example datasets; values are syntactically valid (e.g. a real
+    ISO date) so the example imports cleanly while clearly being placeholders.
+
+    Args:
+        field: FieldSpec to produce a placeholder for.
+
+    Returns:
+        A placeholder value appropriate to the field's type.
+    """
+    from metaseed.specs.schema import FieldType
+
+    by_type = {
+        FieldType.INTEGER: 0,
+        FieldType.FLOAT: 0.0,
+        FieldType.BOOLEAN: False,
+        FieldType.DATE: "2024-01-01",
+        FieldType.DATETIME: "2024-01-01T00:00:00",
+        FieldType.URI: "https://example.com",
+        FieldType.LIST: [],
+    }
+    return by_type.get(field.type, f"<{field.name}>")
+
+
 def _identifier_info(entity_def: Any) -> tuple[str | None, str | None]:
     """Return an entity's identifier field and a note if it deviates.
 
@@ -214,6 +240,76 @@ def register_profile_tools(mcp: FastMCP) -> None:
                 "version": spec.version,
                 "root_entity": spec.root_entity,
                 "hierarchy": hierarchy,
+            },
+            indent=2,
+        )
+
+    @mcp.tool()
+    def get_example_dataset(profile: str, version: str) -> str:
+        """Get a small, fully cross-referenced example dataset for a profile.
+
+        Returns one instance of every entity type with required fields filled
+        with placeholders and every reference field wired to the matching
+        example entity, so an agent has a correct relational pattern to copy.
+        Values are placeholders; the structure and links are valid. Built from
+        the profile's own schema, so it works for any spec.
+
+        Args:
+            profile: Profile name (e.g., "miappe", "isa").
+            version: Profile version (e.g., "1.2", "1.0").
+
+        Returns:
+            JSON with profile, version, a note, and an entities list (each with
+            a ``_type`` and example field values).
+        """
+        from metaseed.facade import ProfileFacade
+        from metaseed.specs.schema import FieldType
+
+        loader = SpecLoader(profile=profile)
+        try:
+            spec = loader.load_profile(version=version, profile=profile)
+            facade = ProfileFacade(profile, version)
+        except SpecLoadError as e:
+            return json.dumps({"error": str(e)})
+
+        # One example identifier per entity type, used to wire references.
+        example_ids = {et: f"{et}-example-1" for et in spec.list_entities()}
+
+        entities = []
+        for entity_name in spec.list_entities():
+            helper = getattr(facade, entity_name, None)
+            if not helper:
+                continue
+            identifier = helper.identifier_field
+            references = helper.reference_fields
+
+            row: dict[str, Any] = {"_type": entity_name}
+            for field in spec.entities[entity_name].fields:
+                name = field.name
+                if name == identifier:
+                    row[name] = example_ids[entity_name]
+                elif name in references:
+                    target_type = references[name][0]
+                    if target_type in example_ids:
+                        target_id = example_ids[target_type]
+                        row[name] = (
+                            [target_id]
+                            if field.type == FieldType.LIST
+                            else target_id
+                        )
+                elif field.required:
+                    row[name] = _placeholder_value(field)
+            entities.append(row)
+
+        return json.dumps(
+            {
+                "profile": spec.name,
+                "version": spec.version,
+                "note": (
+                    "Placeholder values; structure and cross-references are "
+                    "valid. Replace values with real data before saving."
+                ),
+                "entities": entities,
             },
             indent=2,
         )

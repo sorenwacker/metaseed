@@ -825,6 +825,36 @@ class TestMCPNewProfileTools:
         assert h["Person"]["identifier"] == "name"
         assert "unique_id" in h["Person"]["note"]
 
+    def test_get_example_dataset_is_cross_referenced(self):
+        """Example dataset wires references to the matching example entities."""
+        server = create_server()
+        tools = server._tool_manager._tools
+        fn = tools.get("get_example_dataset")
+        assert fn is not None
+
+        data = json.loads(fn.fn(profile="miappe", version="1.2"))
+        if "error" in data:
+            pytest.skip(f"Profile not available: {data['error']}")
+
+        by_type = {e["_type"]: e for e in data["entities"]}
+        # Every entity type appears once and its reference points at the example.
+        assert "Investigation" in by_type and "Study" in by_type
+        assert (
+            by_type["Study"]["investigation_id"]
+            == by_type["Investigation"]["unique_id"]
+        )
+
+    def test_get_example_dataset_is_profile_agnostic(self):
+        """The example builder works for a non-MIAPPE profile too."""
+        server = create_server()
+        fn = server._tool_manager._tools.get("get_example_dataset")
+        data = json.loads(fn.fn(profile="ena", version="1.0"))
+        if "error" in data:
+            pytest.skip(f"Profile not available: {data['error']}")
+        by_type = {e["_type"]: e for e in data["entities"]}
+        # ENA uses 'alias' identifiers and '*_ref' references.
+        assert by_type["Sample"]["study_ref"] == by_type["Study"]["alias"]
+
     def test_get_entity_fields(self):
         """Get entity fields returns field definitions."""
         server = create_server()
