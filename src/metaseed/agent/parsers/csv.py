@@ -25,15 +25,18 @@ class CSVParser:
         delimiter = "\t" if path.suffix.lower() == ".tsv" else ","
 
         with open(path, newline="", encoding="utf-8-sig") as f:
-            # Sniff the dialect if possible
+            # Sniff the dialect only when the extension does not dictate the
+            # delimiter. A .tsv is tab-separated by definition, so never let the
+            # sniffer override that (e.g. a header that contains commas).
             sample = f.read(8192)
             f.seek(0)
 
-            try:
-                dialect = csv.Sniffer().sniff(sample, delimiters=",;\t|")
-                delimiter = dialect.delimiter
-            except csv.Error:
-                pass  # Use default
+            if path.suffix.lower() != ".tsv":
+                try:
+                    dialect = csv.Sniffer().sniff(sample, delimiters=",;\t|")
+                    delimiter = dialect.delimiter
+                except csv.Error:
+                    pass  # Use default
 
             reader = csv.reader(f, delimiter=delimiter)
             rows_raw = list(reader)

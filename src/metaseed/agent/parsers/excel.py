@@ -38,7 +38,11 @@ class ExcelParser:
         workbook = load_workbook(filename=str(path), read_only=True, data_only=True)
         tables: list[ParsedTable] = []
 
-        for sheet_name in workbook.sheetnames:
+        # Capture sheet names before closing the workbook (a read-only workbook
+        # releases its backing file on close, so reading them after is unsafe).
+        sheet_names = list(workbook.sheetnames)
+
+        for sheet_name in sheet_names:
             sheet = workbook[sheet_name]
             table = self._parse_sheet(sheet, sheet_name)
             if table:
@@ -51,8 +55,8 @@ class ExcelParser:
             format="excel",
             tables=tables,
             metadata={
-                "sheet_count": len(workbook.sheetnames),
-                "sheet_names": workbook.sheetnames,
+                "sheet_count": len(sheet_names),
+                "sheet_names": sheet_names,
             },
         )
 
