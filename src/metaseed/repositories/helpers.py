@@ -1,6 +1,6 @@
 """Shared helper functions for entity repositories.
 
-These utilities are used by both FileEntityRepository and AppStateAdapter
+These utilities are used by both FileEntityRepository and MemoryEntityRepository
 to handle common operations like finding parent references and deriving labels.
 """
 
@@ -37,7 +37,8 @@ def get_identifier(
 ) -> str | None:
     """Get identifier value from entity data.
 
-    By convention, the first field in the spec is the identifier.
+    Uses the helper's identifier field (the first non-reference field in the
+    spec) when a helper is given.
 
     Args:
         data: Entity data dictionary.

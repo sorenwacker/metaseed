@@ -46,7 +46,8 @@ def register_dataset_tools(mcp: FastMCP, get_mcp_state, reset_entity_service) ->
         """List all saved datasets.
 
         Returns:
-            JSON array of dataset names.
+            JSON object with a ``datasets`` list (each with name, profile,
+            version, entity_count, modified) and a ``count``.
         """
         try:
             manager = _get_dataset_manager()

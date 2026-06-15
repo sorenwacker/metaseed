@@ -98,7 +98,8 @@ class EntityStore:
         Args:
             entity_type: Type of entity (e.g., "Study", "Sample").
             data: Field values for the entity.
-            node_id: Optional node ID. If not provided, generates a UUID.
+            node_id: Optional node ID. If not provided, generates an 8-character
+                hex id.
             parent_id: Optional explicit parent node ID. If not provided,
                       attempts to resolve parent via reference fields.
             skip_validation: If True, skip Pydantic validation. Use for

@@ -91,7 +91,7 @@ def register_rule_routes(
         router: The APIRouter to add routes to.
         templates: Jinja2Templates instance.
         get_builder_state: Callable to get builder state.
-        base_url: Base URL prefix for all links (no trailing slash).
+        _base_url: Base URL prefix for all links (no trailing slash).
     """
 
     def _require_spec() -> SpecBuilderState:

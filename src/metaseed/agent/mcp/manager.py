@@ -215,7 +215,8 @@ class MCPServerManager:
             port: Port to check.
 
         Returns:
-            PID of process using the port, or None if port is free.
+            PID of the process using the port, -1 if the port is in use but the
+            PID could not be determined, or None if the port is free.
         """
         import socket
 

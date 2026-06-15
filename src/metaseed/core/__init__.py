@@ -1,6 +1,7 @@
 """Core module for MIAPPE-API.
 
-This module provides configuration, context, exception classes, and utilities.
+This module provides profile context, exception classes, and serialization
+utilities.
 """
 
 from metaseed.core.context import ProfileContext
