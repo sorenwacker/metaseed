@@ -181,23 +181,33 @@ class DatasetValidator:
                 continue
 
     def _detect_entity_type(self: Self, data: dict[str, Any]) -> str | None:
-        """Detect entity type from data structure.
+        """Read the entity type from the data's ``_type`` marker.
 
         Args:
             data: The data dictionary.
 
         Returns:
-            Entity type name, or None if not detected.
+            The lowercased ``_type`` value, or None if absent. The type is read
+            from the data, never guessed from profile-specific field names.
         """
-        if "_type" in data:
-            return str(data["_type"]).lower()
-        if "studies" in data and isinstance(data.get("studies"), list):
-            return "investigation"
-        if "observation_units" in data and isinstance(
-            data.get("observation_units"), list
-        ):
-            return "study"
-        return None
+        entity_type = data.get("_type")
+        return str(entity_type).lower() if entity_type else None
+
+    def _default_entity_type(self: Self) -> str | None:
+        """The profile's root entity type, for data lacking a ``_type`` marker.
+
+        Returns:
+            The root entity type from the active profile (lowercased), or None
+            if the profile cannot be loaded. Profile-agnostic - no entity name
+            is hardcoded.
+        """
+        try:
+            spec = self._loader.load_profile(
+                version=self.version, profile=self.profile
+            )
+        except SpecLoadError:
+            return None
+        return spec.root_entity.lower() if spec and spec.root_entity else None
 
     def _traverse_entity_tree(
         self: Self,
@@ -384,10 +394,8 @@ class DatasetValidator:
             )
             return result
 
-        # Detect entity type
-        entity_type = self._detect_entity_type(data)
-        if entity_type is None:
-            entity_type = "investigation"  # Default assumption
+        # Detect entity type, falling back to the profile's root entity.
+        entity_type = self._detect_entity_type(data) or self._default_entity_type()
 
         # Reset registry for single file validation
         self._registry = IdRegistry()
@@ -443,9 +451,9 @@ class DatasetValidator:
                 if data is None:
                     continue
 
-                entity_type = self._detect_entity_type(data)
-                if entity_type is None:
-                    entity_type = "investigation"
+                entity_type = (
+                    self._detect_entity_type(data) or self._default_entity_type()
+                )
 
                 self._collect_ids(data, entity_type)
                 file_data.append((file_path, data, entity_type))
