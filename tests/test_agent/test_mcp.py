@@ -316,6 +316,31 @@ class TestMCPDatasetTools:
         list_out = json.loads(tools["list_entities"].fn())
         assert list_out["total"] == 2
 
+    def test_create_entity_error_names_identifier_and_hints(self):
+        """A rejected id alias yields the identifier field and a corrective hint.
+
+        Persons key on 'name', not 'unique_id'; the error must make that obvious
+        so the model stops sending unique_id to Person.
+        """
+        from metaseed.agent.mcp.server import set_mcp_state
+        from metaseed.ui.state import AppState
+
+        set_mcp_state(AppState(profile="miappe", version="1.2"))
+        server = create_server()
+        create = server._tool_manager._tools["create_entity"].fn
+
+        out = json.loads(
+            create(
+                entity_type="Person",
+                data=json.dumps({"unique_id": "PER-1", "name": "Alice"}),
+            )
+        )
+        assert out["error"] == "Validation failed"
+        assert out["identifier_field"] == "name"
+        assert "name" in out["required_fields"]
+        assert "field_types" in out
+        assert "unique_id" in out["hint"] and "name" in out["hint"]
+
     def test_get_field_spec_tool(self):
         """Get field spec tool returns field definitions."""
         from metaseed.agent.mcp.server import set_mcp_state

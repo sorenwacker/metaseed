@@ -63,7 +63,10 @@ def _check_dataset(expected_dataset: str | None) -> str | None:
 def _get_entity_field_info(entity_type: str) -> dict[str, Any] | None:
     """Get field info for an entity type from the current facade.
 
-    Returns dict with valid_fields and required_fields, or None if entity not found.
+    Returns dict with valid_fields, required_fields, the identifier_field, and a
+    per-field type map, or None if the entity type is not found. The identifier
+    is included so callers stop assuming a generic ``unique_id`` on entities
+    (e.g. Person) that key on a different field.
     """
     from metaseed.agent.mcp.server import get_mcp_state
 
@@ -76,10 +79,16 @@ def _get_entity_field_info(entity_type: str) -> dict[str, Any] | None:
 
         valid_fields = [f.name for f in helper._spec.fields]
         required_fields = [f.name for f in helper._spec.fields if f.required]
+        field_types = {
+            f.name: (f.type.value if hasattr(f.type, "value") else str(f.type))
+            for f in helper._spec.fields
+        }
 
         return {
+            "identifier_field": helper.identifier_field,
             "valid_fields": valid_fields,
             "required_fields": required_fields,
+            "field_types": field_types,
         }
     except Exception:
         return None
@@ -244,8 +253,27 @@ def _format_validation_error(
     # Add field hints
     field_info = _get_entity_field_info(entity_type)
     if field_info:
+        result["identifier_field"] = field_info["identifier_field"]
         result["valid_fields"] = field_info["valid_fields"]
         result["required_fields"] = field_info["required_fields"]
+        result["field_types"] = field_info["field_types"]
+
+        # Targeted hint for the common confusion: an id alias was sent to an
+        # entity whose identifier is a different field (e.g. Person uses 'name').
+        identifier = field_info["identifier_field"]
+        id_aliases = {"unique_id", "id", "identifier"}
+        rejected = {
+            d["field"]
+            for d in details
+            if d.get("type") == "extra_forbidden" and d["field"] in id_aliases
+        }
+        if rejected and identifier and identifier not in id_aliases:
+            sent = sorted(rejected)
+            result["hint"] = (
+                f"{entity_type} has no {', '.join(repr(f) for f in sent)} field; "
+                f"its identifier is {identifier!r}. Remove "
+                f"{', '.join(repr(f) for f in sent)} and use {identifier!r}."
+            )
 
     return result
 
