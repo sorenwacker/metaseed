@@ -172,7 +172,7 @@ def import_dataset(state: AppState, raw: bytes | str) -> dict[str, Any]:
         modified=payload.get("modified", ""),
     )
 
-    factory = _get_factory()
+    factory = _resolve_factory()
     manager = factory.get_manager(state)
     return asdict(manager.import_data(data))
 

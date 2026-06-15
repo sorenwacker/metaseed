@@ -2,6 +2,7 @@
 
 import json
 from datetime import date, datetime
+from typing import Any
 
 
 class DateAwareEncoder(json.JSONEncoder):
@@ -10,7 +11,7 @@ class DateAwareEncoder(json.JSONEncoder):
     Converts date and datetime objects to ISO format strings.
     """
 
-    def default(self, obj):
+    def default(self, obj: Any) -> Any:
         """Encode date/datetime objects to ISO format."""
         if isinstance(obj, datetime):
             return obj.isoformat()
