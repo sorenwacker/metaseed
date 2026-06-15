@@ -278,3 +278,75 @@ def register_ontology_tools(mcp: FastMCP) -> None:
             },
             indent=2,
         )
+
+    @mcp.tool()
+    def validate_ontology_terms() -> str:
+        """Check ontology_term field values in the current dataset against OLS.
+
+        For every ontology_term field that has a value, searches OLS (restricted
+        to the field's spec-declared ontologies) and returns whether the value
+        matches a known term plus suggested terms. Fails open: if OLS is
+        unreachable a field is reported with no suggestions rather than erroring.
+
+        Returns:
+            JSON with total_checked and results of {entity, type, field, value,
+            valid, suggestions:[{id, label}]}.
+        """
+        from metaseed.agent.mcp.server import get_mcp_state
+
+        state = get_mcp_state()
+        try:
+            facade = state.get_or_create_facade()
+            results = []
+            for node in state.nodes_by_id.values():
+                helper = getattr(facade, node.entity_type, None)
+                if not helper or not node.instance:
+                    continue
+                data = node.instance.model_dump(exclude_none=True)
+                for field in helper.all_fields:
+                    info = helper.field_info(field)
+                    if info.get("type") != "ontology_term":
+                        continue
+                    value = data.get(field)
+                    if not value or not isinstance(value, str):
+                        continue
+
+                    params: dict = {"q": value, "rows": 5}
+                    ontologies = info.get("ontologies")
+                    if ontologies:
+                        params["ontology"] = ",".join(o.lower() for o in ontologies)
+
+                    response = _make_request("/select", params)
+                    docs = (response or {}).get("response", {}).get("docs", [])
+                    suggestions = [
+                        {
+                            "id": doc.get("obo_id") or doc.get("short_form"),
+                            "label": doc.get("label"),
+                        }
+                        for doc in docs[:5]
+                    ]
+                    valid = any(
+                        value.lower()
+                        in {
+                            str(s["id"]).lower() if s["id"] else "",
+                            str(s["label"]).lower() if s["label"] else "",
+                        }
+                        for s in suggestions
+                    )
+
+                    results.append(
+                        {
+                            "entity": node.label or node.id,
+                            "type": node.entity_type,
+                            "field": field,
+                            "value": value,
+                            "valid": valid,
+                            "suggestions": suggestions,
+                        }
+                    )
+
+            return json.dumps(
+                {"total_checked": len(results), "results": results}, indent=2
+            )
+        except Exception as e:
+            return json.dumps({"error": str(e)})

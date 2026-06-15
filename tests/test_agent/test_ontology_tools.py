@@ -247,6 +247,77 @@ class TestOntologyTools:
             assert len(data["suggestions"]) == 2
             assert data["suggestions"][0]["label"] == "temperature"
 
+    def test_validate_ontology_terms_checks_filled_values(self, server) -> None:
+        """Ontology-term fields are checked against OLS with suggestions."""
+        from metaseed.agent.mcp.server import get_entity_service, set_mcp_state
+        from metaseed.ui.state import AppState
+
+        set_mcp_state(AppState(profile="miappe", version="1.2"))
+        server = create_server()
+        svc = get_entity_service()
+        inv = svc.create_entity("Investigation", {"unique_id": "INV-1", "title": "I"})
+        stu = svc.create_entity(
+            "Study",
+            {"unique_id": "STU-1", "investigation_id": "INV-1", "title": "S"},
+            parent_id=inv["id"],
+        )
+        svc.create_entity(
+            "ObservedVariable",
+            {
+                "unique_id": "var-1",
+                "study_id": "STU-1",
+                "name": "plant height",
+                "trait_accession_number": "plant height",
+            },
+            parent_id=stu["id"],
+        )
+
+        fake = {"response": {"docs": [{"obo_id": "TO:0000207", "label": "plant height"}]}}
+        with patch(
+            "metaseed.agent.mcp.tools.ontology._make_request", return_value=fake
+        ):
+            out = json.loads(get_tool(server, "validate_ontology_terms")())
+
+        assert out["total_checked"] == 1
+        result = out["results"][0]
+        assert result["field"] == "trait_accession_number"
+        assert result["valid"] is True
+        assert result["suggestions"][0]["id"] == "TO:0000207"
+
+    def test_validate_ontology_terms_fails_open(self, server) -> None:
+        """When OLS is unreachable, fields are reported without suggestions."""
+        from metaseed.agent.mcp.server import get_entity_service, set_mcp_state
+        from metaseed.ui.state import AppState
+
+        set_mcp_state(AppState(profile="miappe", version="1.2"))
+        server = create_server()
+        svc = get_entity_service()
+        inv = svc.create_entity("Investigation", {"unique_id": "INV-1", "title": "I"})
+        stu = svc.create_entity(
+            "Study",
+            {"unique_id": "STU-1", "investigation_id": "INV-1", "title": "S"},
+            parent_id=inv["id"],
+        )
+        svc.create_entity(
+            "ObservedVariable",
+            {
+                "unique_id": "var-1",
+                "study_id": "STU-1",
+                "name": "h",
+                "trait_accession_number": "obscure value",
+            },
+            parent_id=stu["id"],
+        )
+
+        with patch(
+            "metaseed.agent.mcp.tools.ontology._make_request", return_value=None
+        ):
+            out = json.loads(get_tool(server, "validate_ontology_terms")())
+
+        result = out["results"][0]
+        assert result["valid"] is False
+        assert result["suggestions"] == []
+
     def test_search_limits_rows(self, server) -> None:
         """Search ontology limits rows to max 100."""
         search_fn = get_tool(server, "search_ontology")
