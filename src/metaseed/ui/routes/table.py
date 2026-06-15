@@ -293,6 +293,11 @@ def register_table_routes(
             ) from e
 
         nested_entity_type = helper.nested_fields.get(field_name)
+        if nested_entity_type is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"'{field_name}' is not a nested field of {parent_entity_type}",
+            )
         col_info = get_table_column_info(facade, nested_entity_type)
 
         reference_fields = get_reference_fields(

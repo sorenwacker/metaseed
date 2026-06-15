@@ -19,34 +19,23 @@ def infer_entity_type_from_field(
     parent_entity_type: str,
     field_name: str,
 ) -> str | None:
-    """Infer the nested entity type from a field name.
-
-    First checks the parent's nested_fields spec. If not found,
-    infers from field name convention (e.g., "files" -> "File").
+    """Resolve the nested entity type for a field from the profile spec.
 
     Args:
         facade: Profile facade for entity lookups.
         parent_entity_type: Parent entity type (e.g., "Run").
-        field_name: Field name (e.g., "files", "run_attributes").
+        field_name: Nested field name (e.g., "files", "run_attributes").
 
     Returns:
-        Entity type string if found, None otherwise.
+        The nested entity type declared for the field, or None if the field is
+        not a nested field of the parent. Resolution is spec-driven only - field
+        names are never guessed into entity types.
     """
     parent_helper = getattr(facade, parent_entity_type, None)
     if not parent_helper:
         return None
 
-    # Check spec-defined nested fields first
-    entity_type = parent_helper.nested_fields.get(field_name)
-    if entity_type:
-        return entity_type
-
-    # Infer from field name convention: "files" -> "File"
-    inferred_type = field_name.rstrip("s").capitalize()
-    if inferred_type in facade.entities:
-        return inferred_type
-
-    return None
+    return parent_helper.nested_fields.get(field_name)
 
 
 def get_table_columns(facade: ProfileFacade, entity_type: str) -> list[str]:
