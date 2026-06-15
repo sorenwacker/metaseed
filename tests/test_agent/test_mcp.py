@@ -745,6 +745,30 @@ class TestMCPIntegration:
 class TestMCPNewProfileTools:
     """Tests for new profile discovery tools."""
 
+    def test_get_profile_relationships(self):
+        """Relationship map exposes children, cross-references, and identifiers."""
+        server = create_server()
+        tools = server._tool_manager._tools
+        fn = tools.get("get_profile_relationships")
+        assert fn is not None
+
+        data = json.loads(fn.fn(profile="miappe", version="1.2"))
+        if "error" in data:
+            pytest.skip(f"Profile not available: {data['error']}")
+
+        assert data["root_entity"] == "Investigation"
+        h = data["hierarchy"]
+        # Containment: Study can hold ObservationUnit.
+        assert "ObservationUnit" in h["Study"]["children"]
+        # Cross-reference: ObservationUnit points at BiologicalMaterial.
+        assert (
+            h["ObservationUnit"]["cross_references"].get("biological_material_id")
+            == "BiologicalMaterial.unique_id"
+        )
+        # Identifier + deviation note carried through for Person.
+        assert h["Person"]["identifier"] == "name"
+        assert "unique_id" in h["Person"]["note"]
+
     def test_get_entity_fields(self):
         """Get entity fields returns field definitions."""
         server = create_server()

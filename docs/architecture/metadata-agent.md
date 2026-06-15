@@ -227,9 +227,16 @@ get_entity_template("Investigation", "miappe", "1.2") # Template with placeholde
 
 | Tool | Description |
 |------|-------------|
+| `get_profile_relationships` | Entity relationship map: per type, its `identifier`, child types (`children`), and `cross_references` (which entity/field each reference points at). Use before creating to build relational, not flat, datasets |
 | `get_entity_fields` | Get all fields for an entity type with `(entity_type, profile, version)` |
 | `get_required_fields` | Get list of required field names for an entity type |
 | `get_entity_template` | Get template with placeholder values by field type |
+
+`get_entity_fields`, `get_required_fields`, and `get_entity_template` all return
+the entity's `identifier_field`, plus a `note` for types that break the usual
+`unique_id` convention (e.g. `Person` keys on `name`). On validation failure,
+`create_entity` likewise reports `identifier_field`, `field_types`, and a
+corrective `hint` when an id alias such as `unique_id` is sent to the wrong type.
 
 The `validate_dataset` tool uses the same validation as the web UI, checking:
 - Required fields

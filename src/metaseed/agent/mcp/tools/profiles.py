@@ -155,6 +155,70 @@ def register_profile_tools(mcp: FastMCP) -> None:
             return json.dumps({"error": str(e)})
 
     @mcp.tool()
+    def get_profile_relationships(profile: str, version: str) -> str:
+        """Get the entity relationship map for a profile.
+
+        Shows, for every entity type, its identifier field, the child entity
+        types it can contain, and its cross-reference fields (which entity and
+        field each reference points at). Use this before creating entities so
+        the dataset is built relationally instead of flat.
+
+        Args:
+            profile: Profile name (e.g., "miappe", "isa").
+            version: Profile version (e.g., "1.2", "1.0").
+
+        Returns:
+            JSON with profile, version, root_entity, and a hierarchy map of
+            {entity_type: {identifier, children, cross_references, note?}}.
+        """
+        from metaseed.facade import ProfileFacade
+
+        loader = SpecLoader(profile=profile)
+        try:
+            spec = loader.load_profile(version=version, profile=profile)
+            facade = ProfileFacade(profile, version)
+        except SpecLoadError as e:
+            return json.dumps({"error": str(e)})
+
+        hierarchy: dict[str, Any] = {}
+        for entity_name in spec.list_entities():
+            entity_def = spec.entities[entity_name]
+            helper = getattr(facade, entity_name, None)
+
+            children = sorted(set(helper.nested_fields.values())) if helper else []
+            cross_references = (
+                {
+                    field: f"{target_type}.{target_field}"
+                    for field, (
+                        target_type,
+                        target_field,
+                    ) in helper.reference_fields.items()
+                }
+                if helper
+                else {}
+            )
+            identifier, note = _identifier_info(entity_def)
+
+            info: dict[str, Any] = {
+                "identifier": identifier,
+                "children": children,
+                "cross_references": cross_references,
+            }
+            if note:
+                info["note"] = note
+            hierarchy[entity_name] = info
+
+        return json.dumps(
+            {
+                "profile": spec.name,
+                "version": spec.version,
+                "root_entity": spec.root_entity,
+                "hierarchy": hierarchy,
+            },
+            indent=2,
+        )
+
+    @mcp.tool()
     def get_field_spec(entity_type: str, field_name: str | None = None) -> str:
         """Get detailed specification for entity fields.
 
