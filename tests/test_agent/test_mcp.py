@@ -277,6 +277,45 @@ class TestMCPDatasetTools:
             data = json.loads(result)
             assert "datasets" in data
 
+    def test_load_dataset_then_list_round_trips(self, tmp_path):
+        """Loading a saved dataset must leave its entities readable.
+
+        Regression: load_dataset rebuilt the facade and then immediately reset
+        it, discarding everything just loaded, so list_entities returned 0.
+        """
+        from metaseed.agent.mcp import server as srv
+        from metaseed.repositories.filesystem_dataset import (
+            FilesystemDatasetRepository,
+        )
+        from metaseed.ui.dataset_manager import DatasetManagerFactory
+        from metaseed.ui.state import AppState
+
+        factory = DatasetManagerFactory(
+            sync_repo=FilesystemDatasetRepository(datasets_dir=tmp_path)
+        )
+
+        # Session 1: create two entities and save.
+        srv.set_mcp_state(AppState(profile="miappe", version="1.2"))
+        srv.get_context().dataset_factory = factory
+        server = create_server()
+        tools = server._tool_manager._tools
+        svc = srv.get_entity_service()
+        svc.create_entity("Investigation", {"unique_id": "INV-1", "title": "I"})
+        svc.create_entity(
+            "Study",
+            {"unique_id": "STU-1", "investigation_id": "INV-1", "title": "S"},
+        )
+        save_out = json.loads(tools["save_dataset"].fn(name="roundtrip"))
+        assert save_out["entity_count"] == 2
+
+        # Session 2: fresh state, load, then list must still see both entities.
+        srv.set_mcp_state(AppState(profile="miappe", version="1.2"))
+        srv.get_context().dataset_factory = factory
+        load_out = json.loads(tools["load_dataset"].fn(name="roundtrip"))
+        assert load_out["entity_count"] == 2
+        list_out = json.loads(tools["list_entities"].fn())
+        assert list_out["total"] == 2
+
     def test_get_field_spec_tool(self):
         """Get field spec tool returns field definitions."""
         from metaseed.agent.mcp.server import set_mcp_state

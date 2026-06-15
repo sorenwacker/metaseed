@@ -128,11 +128,10 @@ def register_dataset_tools(mcp: FastMCP, get_mcp_state, reset_entity_service) ->
             # Explicitly update state's current dataset
             set_current_dataset_name(state, name)
 
-            # Force facade recreation with loaded profile
-            state.facade = None
-            state.get_or_create_facade()
-
-            # Reset entity service to use new state
+            # Reset entity service to use new state. Do NOT recreate the facade
+            # here: manager.load_dataset already rebuilt it with the loaded
+            # profile and entities, and discarding it would drop everything that
+            # was just loaded.
             reset_entity_service()
 
             return json.dumps(
