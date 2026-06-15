@@ -40,6 +40,9 @@
     --space-xl: 2rem;
     --space-2xl: 3rem;
 
+    /* Sticky header height (space-md padding top+bottom + 32px logo row) */
+    --header-height: 64px;
+
     /* Borders & Shadows */
     --radius-sm: 4px;
     --radius-md: 8px;
@@ -139,6 +142,8 @@ body::before {
     top: 0;
     z-index: 100;
     box-shadow: 0 2px 16px rgba(26, 58, 47, 0.2);
+    min-height: var(--header-height);
+    box-sizing: border-box;
 }
 
 .header::after {
@@ -1197,11 +1202,11 @@ body::before {
 /* Validation Panel (full dataset validation) */
 .validation-panel {
     position: fixed;
-    top: 0;
+    top: var(--header-height);
     right: 0;
     width: 400px;
     max-width: 90vw;
-    height: 100vh;
+    height: calc(100vh - var(--header-height));
     background: var(--clr-bg);
     border-left: 1px solid var(--clr-border);
     box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
