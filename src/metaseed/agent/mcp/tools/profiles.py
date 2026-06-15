@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from metaseed.specs.loader import SpecLoader, SpecLoadError
 from metaseed.specs.schema import EntityDefSpec, FieldSpec
@@ -56,6 +56,32 @@ def _field_to_dict(field: FieldSpec) -> dict:
     if field.items:
         field_info["items"] = field.items
     return field_info
+
+
+def _identifier_info(entity_def: Any) -> tuple[str | None, str | None]:
+    """Return an entity's identifier field and a note if it deviates.
+
+    The identifier is the first non-reference field (matching the runtime
+    EntityHelper convention). A note is returned for entities that break the
+    common ``unique_id`` pattern - e.g. Person keys on ``name`` and has no
+    ``unique_id`` field - so agents stop assuming ``unique_id`` everywhere.
+
+    Args:
+        entity_def: Entity definition spec with a ``fields`` list.
+
+    Returns:
+        Tuple of (identifier_field, note). note is None when the entity follows
+        the usual ``unique_id`` convention.
+    """
+    field_names = {f.name for f in entity_def.fields}
+    identifier = next((f.name for f in entity_def.fields if not f.reference), None)
+    note = None
+    if identifier and identifier != "unique_id" and "unique_id" not in field_names:
+        note = (
+            f"Unlike most entities, this type has no 'unique_id' field; "
+            f"its identifier is '{identifier}'."
+        )
+    return identifier, note
 
 
 def register_profile_tools(mcp: FastMCP) -> None:
@@ -218,18 +244,20 @@ def register_profile_tools(mcp: FastMCP) -> None:
             return json.dumps({"error": error})
 
         fields = [_field_to_dict(f) for f in entity_def.fields]
+        identifier, note = _identifier_info(entity_def)
 
-        return json.dumps(
-            {
-                "entity_type": entity_type,
-                "profile": profile,
-                "version": version,
-                "field_count": len(fields),
-                "required_count": sum(1 for f in fields if f["required"]),
-                "fields": fields,
-            },
-            indent=2,
-        )
+        payload: dict[str, Any] = {
+            "entity_type": entity_type,
+            "profile": profile,
+            "version": version,
+            "identifier_field": identifier,
+            "field_count": len(fields),
+            "required_count": sum(1 for f in fields if f["required"]),
+            "fields": fields,
+        }
+        if note:
+            payload["note"] = note
+        return json.dumps(payload, indent=2)
 
     @mcp.tool()
     def get_required_fields(entity_type: str, profile: str, version: str) -> str:
@@ -251,16 +279,18 @@ def register_profile_tools(mcp: FastMCP) -> None:
             return json.dumps({"error": error})
 
         required_fields = [f.name for f in entity_def.fields if f.required]
+        identifier, note = _identifier_info(entity_def)
 
-        return json.dumps(
-            {
-                "entity_type": entity_type,
-                "profile": profile,
-                "version": version,
-                "required_fields": required_fields,
-            },
-            indent=2,
-        )
+        payload: dict[str, Any] = {
+            "entity_type": entity_type,
+            "profile": profile,
+            "version": version,
+            "identifier_field": identifier,
+            "required_fields": required_fields,
+        }
+        if note:
+            payload["note"] = note
+        return json.dumps(payload, indent=2)
 
     @mcp.tool()
     def get_entity_template(entity_type: str, profile: str, version: str) -> str:
@@ -322,11 +352,13 @@ def register_profile_tools(mcp: FastMCP) -> None:
                 # Optional fields are null
                 template[field.name] = None
 
-        return json.dumps(
-            {
-                "entity_type": entity_type,
-                "template": template,
-                "_required": required_fields,
-            },
-            indent=2,
-        )
+        identifier, note = _identifier_info(entity_def)
+        payload: dict[str, Any] = {
+            "entity_type": entity_type,
+            "identifier_field": identifier,
+            "template": template,
+            "_required": required_fields,
+        }
+        if note:
+            payload["note"] = note
+        return json.dumps(payload, indent=2)

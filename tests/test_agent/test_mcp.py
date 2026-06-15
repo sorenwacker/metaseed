@@ -845,6 +845,30 @@ class TestMCPNewProfileTools:
             # Required fields should have non-null placeholders
             assert data["template"][req_field] is not None
 
+    def test_template_surfaces_identifier_and_deviation_note(self):
+        """Template tools name the identifier and flag non-unique_id entities."""
+        server = create_server()
+        tools = server._tool_manager._tools
+
+        person = json.loads(
+            tools["get_entity_template"].fn(
+                entity_type="Person", profile="miappe", version="1.2"
+            )
+        )
+        if "error" in person:
+            pytest.skip(f"Profile not available: {person['error']}")
+        assert person["identifier_field"] == "name"
+        assert "unique_id" in person["note"] and "name" in person["note"]
+
+        # A conventional entity exposes its identifier but carries no note.
+        study = json.loads(
+            tools["get_required_fields"].fn(
+                entity_type="Study", profile="miappe", version="1.2"
+            )
+        )
+        assert study["identifier_field"] == "unique_id"
+        assert "note" not in study
+
 
 class TestMCPBatchCreate:
     """Tests for batch entity creation."""
