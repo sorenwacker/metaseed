@@ -52,6 +52,12 @@ class TestIndex:
         response = client.get("/")
         assert "New Dataset" in response.text
 
+    def test_index_contains_stop_physics_control(self, client):
+        """Graph controls expose a button to freeze the force simulation."""
+        response = client.get("/")
+        assert 'data-testid="btn-graph-physics"' in response.text
+        assert "toggleGraphPhysics()" in response.text
+
 
 class TestForm:
     """Tests for entity forms."""

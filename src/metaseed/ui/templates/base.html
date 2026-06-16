@@ -56,6 +56,7 @@
                     <input type="range" id="graph-edge-width" min="0.5" max="5" step="0.5" value="1.5" title="1.5" oninput="this.title=this.value; updateGraphEdgeWidth()">
                 </label>
                 <button id="graph-layout-btn" class="btn btn-secondary btn-sm" onclick="toggleGraphLayout()">Hierarchical</button>
+                <button id="graph-physics-btn" class="btn btn-secondary btn-sm" onclick="toggleGraphPhysics()" data-testid="btn-graph-physics">Stop Physics</button>
                 <button class="btn btn-secondary btn-sm" onclick="fitGraph()">Fit</button>
             </div>
             <div id="graph-legend" class="graph-legend"></div>
@@ -100,7 +101,7 @@
     <script src="/static/js/validation.js?v=9"></script>
     <script src="/static/js/table-edit.js?v=9"></script>
     <script src="/static/js/lookup.js?v=10"></script>
-    <script src="/static/js/graph.js?v=10"></script>
+    <script src="/static/js/graph.js?v=11"></script>
     <script src="/static/js/mcp.js?v=9"></script>
     <script src="/static/js/dataset.js?v=9"></script>
 </body>

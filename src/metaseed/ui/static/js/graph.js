@@ -3,6 +3,10 @@
 var graphNetwork = null;
 var graphData = null;
 var currentGraphLayout = 'physics';
+// Whether the force simulation is allowed to run. The physics layout keeps
+// nodes drifting; this lets the user freeze them. Honoured wherever physics
+// would otherwise be (re-)enabled.
+var graphPhysicsRunning = true;
 var allGraphNodes = [];
 var allGraphEdges = [];
 var visibleGroups = new Set();
@@ -174,7 +178,7 @@ function getGraphOptions(layout) {
                 hierarchical: { enabled: false }
             },
             physics: {
-                enabled: true,
+                enabled: graphPhysicsRunning,
                 solver: 'forceAtlas2Based',
                 forceAtlas2Based: {
                     gravitationalConstant: repulsion,
@@ -516,10 +520,28 @@ function filterGraph() {
     graphData.edges.add(filteredEdges);
 
     if (graphNetwork) {
-        if (currentGraphLayout === 'physics') {
+        if (currentGraphLayout === 'physics' && graphPhysicsRunning) {
             graphNetwork.setOptions({ physics: { enabled: true } });
         }
         graphNetwork.fit({ animation: { duration: 300 } });
+    }
+}
+
+function toggleGraphPhysics() {
+    graphPhysicsRunning = !graphPhysicsRunning;
+    if (graphNetwork) {
+        graphNetwork.setOptions({ physics: { enabled: graphPhysicsRunning } });
+        // setOptions alone leaves the current solver loop running until it
+        // settles; stop/start it explicitly so the freeze is immediate.
+        if (graphPhysicsRunning) {
+            graphNetwork.startSimulation();
+        } else {
+            graphNetwork.stopSimulation();
+        }
+    }
+    var btn = document.getElementById('graph-physics-btn');
+    if (btn) {
+        btn.textContent = graphPhysicsRunning ? 'Stop Physics' : 'Start Physics';
     }
 }
 
@@ -535,7 +557,7 @@ function toggleGraphLayout() {
 }
 
 function updateGraphPhysics() {
-    if (!graphNetwork || currentGraphLayout !== 'physics') return;
+    if (!graphNetwork || currentGraphLayout !== 'physics' || !graphPhysicsRunning) return;
 
     var spacing = parseInt(document.getElementById('graph-spacing')?.value || 100);
     var repulsion = parseInt(document.getElementById('graph-repulsion')?.value || -500);
