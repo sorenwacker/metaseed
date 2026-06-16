@@ -51,9 +51,9 @@ class TestSpecMerger:
 
         # Verify entities from MIAPPE exist (case-insensitive check)
         entity_names_lower = [e.lower() for e in entity_names]
-        assert (
-            "investigation" in entity_names_lower
-        ), "Missing Investigation from MIAPPE"
+        assert "investigation" in entity_names_lower, (
+            "Missing Investigation from MIAPPE"
+        )
         assert "study" in entity_names_lower, "Missing Study from MIAPPE"
 
         # Verify entities from ISA exist

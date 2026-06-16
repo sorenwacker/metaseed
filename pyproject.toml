@@ -92,7 +92,7 @@ select = [
     "FURB",   # refurb
     "LOG",    # flake8-logging
     "RET",    # flake8-return
-    "TCH",    # flake8-type-checking
+    "TC",     # flake8-type-checking
     "TRY",    # tryceratops
 ]
 ignore = [
@@ -108,9 +108,9 @@ ignore = [
     "PLR0912", # too many branches (some complex functions are acceptable)
     "PLR0915", # too many statements (some complex functions are acceptable)
     "PLR0911", # too many return statements (validation functions need this)
-    "TCH001",  # move import to type-checking block (not always desirable)
-    "TCH002",  # move import to type-checking block (not always desirable)
-    "TCH003",  # move stdlib import to type-checking block (not always desirable)
+    "TC001",   # move import to type-checking block (not always desirable)
+    "TC002",   # move import to type-checking block (not always desirable)
+    "TC003",   # move stdlib import to type-checking block (not always desirable)
     "TRY300",  # return in try block (acceptable pattern)
     "PLW2901", # loop variable overwritten (intentional type conversion)
     "PERF401", # list.extend vs append (marginal perf, less readable)

@@ -113,9 +113,9 @@ class TestEdgeColoring:
         )
 
         assert edge is not None, "Edge from Parent to Child should exist"
-        assert (
-            edge["color"]["color"] == "#666666"
-        ), "Edge in both profiles should be gray"
+        assert edge["color"]["color"] == "#666666", (
+            "Edge in both profiles should be gray"
+        )
 
     def test_edge_only_in_base_is_red(self, visualizer: DiffVisualizer) -> None:
         """Edge present only in base profile should be red (removed)."""
@@ -169,9 +169,9 @@ class TestEdgeColoring:
         )
 
         assert edge is not None, "Edge from Parent to Child should exist"
-        assert (
-            edge["color"]["color"] == "#f44336"
-        ), "Edge only in base should be red (removed)"
+        assert edge["color"]["color"] == "#f44336", (
+            "Edge only in base should be red (removed)"
+        )
 
     def test_edge_only_in_compare_is_green(self, visualizer: DiffVisualizer) -> None:
         """Edge present only in compare profile should be green (added)."""
@@ -225,9 +225,9 @@ class TestEdgeColoring:
         )
 
         assert edge is not None, "Edge from Parent to Child should exist"
-        assert (
-            edge["color"]["color"] == "#4caf50"
-        ), "Edge only in compare should be green (added)"
+        assert edge["color"]["color"] == "#4caf50", (
+            "Edge only in compare should be green (added)"
+        )
 
     def test_edge_to_added_entity_is_green(self, visualizer: DiffVisualizer) -> None:
         """Edge to an entity that only exists in compare should be green."""
@@ -280,9 +280,9 @@ class TestEdgeColoring:
         )
 
         assert edge is not None, "Edge from Parent to Child should exist"
-        assert (
-            edge["color"]["color"] == "#4caf50"
-        ), "Edge to added entity should be green"
+        assert edge["color"]["color"] == "#4caf50", (
+            "Edge to added entity should be green"
+        )
 
     def test_edge_from_removed_entity_is_red(self, visualizer: DiffVisualizer) -> None:
         """Edge from an entity that only exists in base should be red."""
@@ -335,9 +335,9 @@ class TestEdgeColoring:
         )
 
         assert edge is not None, "Edge from Parent to Child should exist"
-        assert (
-            edge["color"]["color"] == "#f44336"
-        ), "Edge from removed entity should be red"
+        assert edge["color"]["color"] == "#f44336", (
+            "Edge from removed entity should be red"
+        )
 
 
 class TestNodeColoring:

@@ -296,9 +296,9 @@ class TestFileCreationWorkflow:
         time.sleep(2)
 
         # Verify we're on the Run form
-        assert element_exists(
-            browser, "form-entity"
-        ), f"form-entity not found. Page content: {browser.find_element(By.TAG_NAME, 'body').text[:500]}"
+        assert element_exists(browser, "form-entity"), (
+            f"form-entity not found. Page content: {browser.find_element(By.TAG_NAME, 'body').text[:500]}"
+        )
 
     def test_add_file_to_run(self, browser):
         """Add a new File to an existing Run using inline table."""
@@ -310,9 +310,9 @@ class TestFileCreationWorkflow:
         time.sleep(1)
 
         # Verify inline table for files exists
-        assert element_exists(
-            browser, "inline-table-files"
-        ), "Files inline table should exist"
+        assert element_exists(browser, "inline-table-files"), (
+            "Files inline table should exist"
+        )
 
         # Count existing files before adding
         files_table = browser.find_element(By.CSS_SELECTOR, "#inline-table-body-files")
@@ -324,9 +324,9 @@ class TestFileCreationWorkflow:
 
         # Verify a new row was added
         new_rows = len(files_table.find_elements(By.TAG_NAME, "tr"))
-        assert (
-            new_rows == initial_rows + 1
-        ), f"Expected {initial_rows + 1} rows, got {new_rows}"
+        assert new_rows == initial_rows + 1, (
+            f"Expected {initial_rows + 1} rows, got {new_rows}"
+        )
 
         # Fill in the File fields
         new_row_idx = new_rows - 1  # 0-indexed
@@ -391,9 +391,9 @@ class TestFileCreationWorkflow:
 
         # Verify the file appears in the table after save
         page_source = browser.page_source
-        assert (
-            unique_filename in page_source
-        ), f"New file {unique_filename} should appear in page"
+        assert unique_filename in page_source, (
+            f"New file {unique_filename} should appear in page"
+        )
 
     def test_verify_file_in_tree_after_save(self, browser):
         """Verify the new File appears in the tree/overview after saving."""
@@ -438,9 +438,9 @@ class TestFileCreationWorkflow:
         final_file_count = get_entity_count_in_tree(browser, "File")
 
         # Verify the file count increased
-        assert (
-            final_file_count > initial_file_count
-        ), f"File count should increase after adding. Initial: {initial_file_count}, Final: {final_file_count}"
+        assert final_file_count > initial_file_count, (
+            f"File count should increase after adding. Initial: {initial_file_count}, Final: {final_file_count}"
+        )
 
     def test_full_file_creation_workflow(self, browser):
         """Complete end-to-end test of File creation workflow."""
@@ -618,9 +618,9 @@ class TestFileFieldValues:
         # Verify all values are present in the page
         page_source = browser.page_source
         for field, value in test_values.items():
-            assert (
-                value in page_source
-            ), f"Field {field} with value {value} should be in page"
+            assert value in page_source, (
+                f"Field {field} with value {value} should be in page"
+            )
 
     def test_checksum_format_validation(self, browser):
         """Test that MD5 checksum format is validated (32 hex characters)."""

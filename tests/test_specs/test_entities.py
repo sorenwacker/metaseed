@@ -34,9 +34,9 @@ class TestAllEntitySpecs:
     def test_all_entities_exist(self, loader: SpecLoader) -> None:
         """All 14 MIAPPE entities have specs."""
         entities = loader.list_entities(version="1.1")
-        assert (
-            len(entities) >= 14
-        ), f"Expected at least 14 entities, got {len(entities)}"
+        assert len(entities) >= 14, (
+            f"Expected at least 14 entities, got {len(entities)}"
+        )
 
         # Check case-insensitively since profile may use PascalCase
         entities_lower = [e.lower() for e in entities]
@@ -53,9 +53,9 @@ class TestAllEntitySpecs:
         # Verify name matches entity (case-insensitive, underscore-insensitive)
         entity_normalized = entity.replace("_", "").lower()
         spec_name_normalized = spec.name.replace("_", "").lower()
-        assert (
-            spec_name_normalized == entity_normalized
-        ), f"Spec name '{spec.name}' does not match entity '{entity}'"
+        assert spec_name_normalized == entity_normalized, (
+            f"Spec name '{spec.name}' does not match entity '{entity}'"
+        )
         assert spec.version == "1.1"
 
     @pytest.mark.parametrize("entity", MIAPPE_V11_ENTITIES)
@@ -196,14 +196,14 @@ class TestISAMaterialFlowChain:
 
             if expected_derives_from is None:
                 # Source should not have derives_from
-                assert (
-                    derives_from is None
-                ), f"{entity_name} should not have derives_from"
+                assert derives_from is None, (
+                    f"{entity_name} should not have derives_from"
+                )
             else:
                 assert derives_from is not None, f"{entity_name} missing derives_from"
-                assert (
-                    derives_from.items == expected_derives_from
-                ), f"{entity_name}.derives_from should reference {expected_derives_from}"
+                assert derives_from.items == expected_derives_from, (
+                    f"{entity_name}.derives_from should reference {expected_derives_from}"
+                )
 
 
 class TestMIAPPEEntityReferences:
@@ -226,9 +226,9 @@ class TestMIAPPEEntityReferences:
             (f for f in spec.fields if f.name == "geographic_location"), None
         )
         assert geo_field is not None, "Study must have geographic_location field"
-        assert (
-            geo_field.type == FieldType.ENTITY
-        ), "Study.geographic_location should be entity type, not string"
+        assert geo_field.type == FieldType.ENTITY, (
+            "Study.geographic_location should be entity type, not string"
+        )
         assert geo_field.items == "Location"
 
     def test_biological_material_source_references_material_source(
@@ -243,9 +243,9 @@ class TestMIAPPEEntityReferences:
             (f for f in spec.fields if f.name == "material_source"), None
         )
         assert source_field is not None, "BiologicalMaterial must have material_source"
-        assert (
-            source_field.type == FieldType.ENTITY
-        ), "BiologicalMaterial.material_source should be entity type, not string"
+        assert source_field.type == FieldType.ENTITY, (
+            "BiologicalMaterial.material_source should be entity type, not string"
+        )
         assert source_field.items == "MaterialSource"
 
     def test_location_entity_exists_and_has_required_fields(

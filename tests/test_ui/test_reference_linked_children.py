@@ -5,7 +5,76 @@ from metaseed.ui.helpers.entity_helpers import (
     extract_nested_from_tree,
     get_nested_items_for_edit,
 )
+from metaseed.ui.helpers.validation import process_reference_linked_children
 from metaseed.ui.state import AppState
+
+
+class TestNestedEntityItemsBecomeChildNodes:
+    """Saving a spec nested entity field (e.g. Run.files) must create child nodes.
+
+    The tree and exports count standalone child nodes; the MCP creates them.
+    The form-save path must do the same, otherwise an item added in the inline
+    table is never reflected as an entity in the tree.
+    """
+
+    def _run_node(self, state):
+        facade = state.get_or_create_facade()
+        run = facade.Run.create(alias="run1", experiment_ref="exp1")
+        return facade, state.add_node("Run", run)
+
+    def test_nested_file_item_creates_one_child_node(self):
+        state = AppState(profile="ena", version="1.0")
+        facade, run_node = self._run_node(state)
+
+        state.current_nested_items = {
+            "files": [
+                {
+                    "filename": "r1.fastq.gz",
+                    "filetype": "fastq",
+                    "checksum_method": "MD5",
+                    "checksum": "a" * 32,
+                }
+            ]
+        }
+        process_reference_linked_children(
+            state=state,
+            facade=facade,
+            node_id=run_node.id,
+            entity_type="Run",
+            parent_identifier="run1",
+        )
+
+        files = [n for n in state.nodes_by_id.values() if n.entity_type == "File"]
+        assert len(files) == 1
+        assert files[0].instance.run_ref == "run1"
+        assert files[0].parent_id == run_node.id
+
+    def test_nested_file_item_is_not_duplicated_in_edit_view(self):
+        state = AppState(profile="ena", version="1.0")
+        facade, run_node = self._run_node(state)
+
+        state.current_nested_items = {
+            "files": [
+                {
+                    "filename": "r1.fastq.gz",
+                    "filetype": "fastq",
+                    "checksum_method": "MD5",
+                    "checksum": "a" * 32,
+                }
+            ]
+        }
+        process_reference_linked_children(
+            state=state,
+            facade=facade,
+            node_id=run_node.id,
+            entity_type="Run",
+            parent_identifier="run1",
+        )
+
+        items = get_nested_items_for_edit(
+            state.nodes_by_id[run_node.id], facade.Run, facade
+        )
+        assert len(items.get("files", [])) == 1
 
 
 class TestReferenceLinkedChildren:
@@ -101,9 +170,9 @@ class TestReferenceLinkedChildren:
 
         # After rebuild, Run should still have File as child
         run_tree_node = state.nodes_by_id[run_node.id]
-        assert (
-            len(run_tree_node.children) == 1
-        ), f"Expected 1 child, got {len(run_tree_node.children)}"
+        assert len(run_tree_node.children) == 1, (
+            f"Expected 1 child, got {len(run_tree_node.children)}"
+        )
 
     def test_get_nested_items_finds_reference_linked_children(self):
         """Test that get_nested_items_for_edit finds reference-linked children."""
@@ -134,9 +203,9 @@ class TestReferenceLinkedChildren:
         nested_items = get_nested_items_for_edit(run_tree_node, run_helper, facade)
 
         # Files should be in nested_items under "files" key
-        assert (
-            "files" in nested_items
-        ), f"Expected 'files' in nested_items, got {list(nested_items.keys())}"
+        assert "files" in nested_items, (
+            f"Expected 'files' in nested_items, got {list(nested_items.keys())}"
+        )
         assert len(nested_items["files"]) == 1
 
     def test_update_node_then_add_child_preserves_relationship(self):
@@ -210,9 +279,9 @@ class TestReferenceLinkedChildren:
         tree_items = extract_nested_from_tree(run_tree_node, run_helper, facade)
 
         # Files should be found (Run doesn't have "files" in nested_fields, but File.run_ref -> Run)
-        assert (
-            "files" in tree_items
-        ), f"Expected 'files' in tree_items, got {list(tree_items.keys())}"
+        assert "files" in tree_items, (
+            f"Expected 'files' in tree_items, got {list(tree_items.keys())}"
+        )
 
     def test_save_flow_with_existing_and_new_files(self):
         """Test the exact flow: existing files + add new file via table, then save."""
@@ -310,9 +379,9 @@ class TestReferenceLinkedChildren:
             f"Got keys: {list(state.current_nested_items.keys())}. "
             f"Updated node children: {len(updated_run_node.children)}"
         )
-        assert (
-            len(state.current_nested_items["files"]) == 2
-        ), f"Expected 2 files after save, got {len(state.current_nested_items['files'])}"
+        assert len(state.current_nested_items["files"]) == 2, (
+            f"Expected 2 files after save, got {len(state.current_nested_items['files'])}"
+        )
 
     def test_check_nodes_by_id_after_add_node(self):
         """Debug test: check state of nodes_by_id after add_node during invalidated cache."""
@@ -342,9 +411,9 @@ class TestReferenceLinkedChildren:
         # Check facade state
         run_entity_node = facade.get_entity(run_node.id)
         assert run_entity_node is not None
-        assert (
-            len(run_entity_node.children) == 1
-        ), f"Facade Run should have 1 child, got {len(run_entity_node.children)}"
+        assert len(run_entity_node.children) == 1, (
+            f"Facade Run should have 1 child, got {len(run_entity_node.children)}"
+        )
 
         # Now access nodes_by_id (triggers rebuild)
         all_nodes = state.nodes_by_id
@@ -352,9 +421,9 @@ class TestReferenceLinkedChildren:
         # Verify Run TreeNode has children after rebuild
         run_tree_node = all_nodes.get(run_node.id)
         assert run_tree_node is not None
-        assert (
-            len(run_tree_node.children) == 1
-        ), f"After rebuild, Run TreeNode should have 1 child, got {len(run_tree_node.children)}"
+        assert len(run_tree_node.children) == 1, (
+            f"After rebuild, Run TreeNode should have 1 child, got {len(run_tree_node.children)}"
+        )
 
     def test_loaded_dataset_with_files(self):
         """Test loading a dataset that already has Files under Runs."""
@@ -404,9 +473,9 @@ class TestReferenceLinkedChildren:
 
         run_tree_node = state.nodes_by_id.get(run_entity.id)
         assert run_tree_node is not None
-        assert (
-            len(run_tree_node.children) == 2
-        ), f"Expected 2 File children, got {len(run_tree_node.children)}"
+        assert len(run_tree_node.children) == 2, (
+            f"Expected 2 File children, got {len(run_tree_node.children)}"
+        )
 
         # Now simulate editing the Run
         state.editing_node_id = run_entity.id
@@ -420,9 +489,9 @@ class TestReferenceLinkedChildren:
 
         # Verify Files have _node_id
         for file_dict in state.current_nested_items["files"]:
-            assert (
-                "_node_id" in file_dict
-            ), f"File dict should have _node_id: {file_dict}"
+            assert "_node_id" in file_dict, (
+                f"File dict should have _node_id: {file_dict}"
+            )
 
     def test_lookup_existing_file_by_node_id(self):
         """Test that we can look up existing Files by _node_id during save."""
@@ -561,9 +630,9 @@ class TestReferenceLinkedChildren:
         )
 
         # Verify both files are in nested items
-        assert (
-            "files" in state.current_nested_items
-        ), f"Expected 'files' in current_nested_items. Got: {list(state.current_nested_items.keys())}"
+        assert "files" in state.current_nested_items, (
+            f"Expected 'files' in current_nested_items. Got: {list(state.current_nested_items.keys())}"
+        )
         assert len(state.current_nested_items["files"]) == 2, (
             f"Expected 2 files after save, got {len(state.current_nested_items['files'])}. "
             f"Run children count: {len(updated_run_node.children)}"
@@ -605,9 +674,9 @@ class TestReferenceLinkedChildren:
         )
 
         # Children should still be there
-        assert (
-            len(run_node.children) == 2
-        ), f"Expected 2 children after update, got {len(run_node.children)}"
+        assert len(run_node.children) == 2, (
+            f"Expected 2 children after update, got {len(run_node.children)}"
+        )
 
     def test_switching_entities_refreshes_nested_items(self):
         """Test that current_nested_items is refreshed when switching between entities."""
@@ -678,7 +747,7 @@ class TestReferenceLinkedChildren:
             )
 
         # Run should have "files" in nested items
-        assert (
-            "files" in state.current_nested_items
-        ), f"Expected 'files' after switching to Run. Got: {list(state.current_nested_items.keys())}"
+        assert "files" in state.current_nested_items, (
+            f"Expected 'files' after switching to Run. Got: {list(state.current_nested_items.keys())}"
+        )
         assert len(state.current_nested_items["files"]) == 1

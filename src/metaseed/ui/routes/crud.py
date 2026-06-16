@@ -133,18 +133,10 @@ def register_entity_crud_routes(
 
         values = collect_form_values(dict(form_data), helper)
 
-        for field_name, items in state.current_nested_items.items():
-            if field_name in helper.nested_fields and items:
-                cleaned_items = []
-                for item in items:
-                    if isinstance(item, dict):
-                        cleaned = {
-                            k: v for k, v in item.items() if not k.startswith("_") and v
-                        }
-                        if cleaned:
-                            cleaned_items.append(cleaned)
-                if cleaned_items:
-                    values[field_name] = cleaned_items
+        # Nested entity items are materialized as standalone child nodes by
+        # process_reference_linked_children below, so they are intentionally not
+        # embedded into the parent here -- embedding as well would list each item
+        # twice in the edit view (once from the parent, once from the child node).
 
         try:
             instance = helper.create(**values)
@@ -159,7 +151,6 @@ def register_entity_crud_routes(
                 state=state,
                 facade=facade,
                 node_id=node_id,
-                helper=helper,
                 entity_type=entity_type,
                 parent_identifier=parent_identifier,
             )

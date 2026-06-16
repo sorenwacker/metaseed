@@ -987,19 +987,19 @@ class TestAutoPopulatedFields:
         )
 
         # Verify it has a value (auto-populated) - should match the version used in start_new_investigation
-        assert (
-            version_input.get_attribute("value") == "1.2"
-        ), f"Expected miappe_version to be '1.2', got: {version_input.get_attribute('value')}"
+        assert version_input.get_attribute("value") == "1.2", (
+            f"Expected miappe_version to be '1.2', got: {version_input.get_attribute('value')}"
+        )
 
         # Verify it is readonly
-        assert (
-            version_input.get_attribute("readonly") is not None
-        ), "miappe_version field should be readonly"
+        assert version_input.get_attribute("readonly") is not None, (
+            "miappe_version field should be readonly"
+        )
 
         # Verify it has the readonly class
-        assert "form-input-readonly" in version_input.get_attribute(
-            "class"
-        ), "miappe_version field should have form-input-readonly class"
+        assert "form-input-readonly" in version_input.get_attribute("class"), (
+            "miappe_version field should have form-input-readonly class"
+        )
 
     def test_date_format_iso8601(self, browser):
         """Verify date fields use ISO 8601 format (YYYY-MM-DD)."""
@@ -1017,19 +1017,19 @@ class TestAutoPopulatedFields:
         )
 
         # Verify it uses text type with pattern
-        assert (
-            date_input.get_attribute("type") == "text"
-        ), "Date field should be type='text' for consistent formatting"
+        assert date_input.get_attribute("type") == "text", (
+            "Date field should be type='text' for consistent formatting"
+        )
 
         pattern = date_input.get_attribute("pattern")
-        assert (
-            pattern == r"\d{4}-\d{2}-\d{2}"
-        ), f"Date field should have ISO 8601 pattern, got: {pattern}"
+        assert pattern == r"\d{4}-\d{2}-\d{2}", (
+            f"Date field should have ISO 8601 pattern, got: {pattern}"
+        )
 
         placeholder = date_input.get_attribute("placeholder")
-        assert (
-            placeholder == "YYYY-MM-DD"
-        ), f"Date field placeholder should be 'YYYY-MM-DD', got: {placeholder}"
+        assert placeholder == "YYYY-MM-DD", (
+            f"Date field placeholder should be 'YYYY-MM-DD', got: {placeholder}"
+        )
 
     @pytest.mark.skip(
         reason="Client-side validation highlighting not implemented for inline tables"
@@ -1081,9 +1081,9 @@ class TestAutoPopulatedFields:
 
         # Verify the input has the 'invalid' class (red background)
         classes = lat_input.get_attribute("class")
-        assert (
-            "invalid" in classes
-        ), f"Invalid latitude should be highlighted. Classes: {classes}"
+        assert "invalid" in classes, (
+            f"Invalid latitude should be highlighted. Classes: {classes}"
+        )
 
         # Now enter a valid latitude
         lat_input.clear()
@@ -1096,9 +1096,9 @@ class TestAutoPopulatedFields:
 
         # Verify the 'invalid' class is removed
         classes = lat_input.get_attribute("class")
-        assert (
-            "invalid" not in classes
-        ), f"Valid latitude should not be highlighted. Classes: {classes}"
+        assert "invalid" not in classes, (
+            f"Valid latitude should not be highlighted. Classes: {classes}"
+        )
 
 
 @pytest.mark.ui
@@ -1267,9 +1267,9 @@ class TestValidation:
         # Verify validation result appears (success or errors)
         has_success = element_exists(browser, "validation-success")
         has_errors = element_exists(browser, "validation-errors")
-        assert (
-            has_success or has_errors
-        ), "Validation should produce either success or error message"
+        assert has_success or has_errors, (
+            "Validation should produce either success or error message"
+        )
 
     def test_validate_missing_required_fields(self, browser):
         """Validate form with missing required fields shows errors."""
@@ -1915,14 +1915,14 @@ class TestExcelExport:
         wb = load_workbook(BytesIO(content))
 
         # Verify Investigation sheet
-        assert (
-            "Investigation" in wb.sheetnames
-        ), f"Missing Investigation sheet. Sheets: {wb.sheetnames}"
+        assert "Investigation" in wb.sheetnames, (
+            f"Missing Investigation sheet. Sheets: {wb.sheetnames}"
+        )
 
         # Verify Person sheet (contacts)
-        assert (
-            "Person" in wb.sheetnames
-        ), f"Missing Person sheet. Sheets: {wb.sheetnames}"
+        assert "Person" in wb.sheetnames, (
+            f"Missing Person sheet. Sheets: {wb.sheetnames}"
+        )
 
         # Verify Study sheet
         assert "Study" in wb.sheetnames, f"Missing Study sheet. Sheets: {wb.sheetnames}"

@@ -157,20 +157,21 @@ def process_reference_linked_children(
     state: AppState,
     facade: ProfileFacade,
     node_id: str,
-    helper: Any,
     entity_type: str,
     parent_identifier: str | None,
 ) -> ValidationResult:
-    """Process reference-linked children (entities added via reference fields).
+    """Materialize nested items as standalone child entity nodes.
 
-    These are NOT in helper.nested_fields but ARE in current_nested_items.
-    Examples: files added to Run via run_ref field.
+    Items edited in an inline table (e.g. a File row under a Run) live in
+    ``current_nested_items``. Each one is created or updated as a child node so
+    the tree, exports, and the MCP all see the same standalone entities. This
+    covers both spec-defined nested fields (``Run.files``) and reference-linked
+    children, since both resolve to a child entity type for the field.
 
     Args:
         state: Application state containing nodes and nested items.
         facade: Profile facade for entity helpers.
         node_id: ID of the parent node being updated.
-        helper: Parent entity's helper.
         entity_type: Parent entity type (e.g., "Run").
         parent_identifier: Parent's alias or unique_id.
 
@@ -182,9 +183,6 @@ def process_reference_linked_children(
     result = ValidationResult()
 
     for field_name, items in state.current_nested_items.items():
-        if field_name in helper.nested_fields:
-            continue  # Skip spec-defined nested fields (handled elsewhere)
-
         child_type = infer_entity_type_from_field(facade, entity_type, field_name)
         if not child_type:
             continue

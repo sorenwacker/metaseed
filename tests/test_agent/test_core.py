@@ -232,17 +232,17 @@ class TestExtractionContext:
         valid_data = {"unique_id": "INV-001", "title": "Test Investigation"}
         errors = ctx.validate_instance(valid_data, "Investigation")
         # unique_id and title are required fields, so with both provided there should be no errors
-        assert not any(
-            e.field in ("unique_id", "title") for e in errors
-        ), f"Expected no errors for unique_id/title, got: {errors}"
+        assert not any(e.field in ("unique_id", "title") for e in errors), (
+            f"Expected no errors for unique_id/title, got: {errors}"
+        )
 
         # Instance missing required fields
         empty_data: dict = {}
         errors = ctx.validate_instance(empty_data, "Investigation")
         # Should have errors for missing required fields (unique_id is always required)
-        assert any(
-            e.field == "unique_id" for e in errors
-        ), f"Expected error for missing 'unique_id' field, got errors: {errors}"
+        assert any(e.field == "unique_id" for e in errors), (
+            f"Expected error for missing 'unique_id' field, got errors: {errors}"
+        )
 
     def test_export_yaml(self, tmp_path: Path) -> None:
         """Export extracted data to YAML."""
