@@ -354,6 +354,11 @@ class EntityStore:
                 data = {}
 
             data["_type"] = node.entity_type
+            # Persist the node id so it survives a reload verbatim. The graph
+            # endpoint reloads the dataset from disk on every poll; without a
+            # stored id, entities without an identifier value would be assigned
+            # a fresh id each reload and re-appear in the graph on every tick.
+            data["_node_id"] = node.id
             if parent_unique_id:
                 data["_parent_unique_id"] = parent_unique_id
 
@@ -449,13 +454,18 @@ class EntityStore:
 
             instance = self._create_instance(entity_type, fields)
 
-            # Use the identifier as the node ID, but never reuse one. Two
-            # entities that share an identifier value (e.g. two people with the
-            # same name, or an id reused across types) must stay distinct nodes
+            # Restore the persisted node id so a node keeps the same identity
+            # across reloads (the graph endpoint reloads from disk on every
+            # poll). Fall back to the identifier value for datasets written
+            # before ids were persisted, and only generate one as a last resort
+            # for entities that have neither. Never reuse an id already in use:
+            # entities that collide on the same value must stay distinct nodes
             # rather than overwriting each other and silently disappearing.
             id_field = helper.identifier_field
             entity_id = fields.get(id_field) if id_field else None
-            node_id = str(entity_id) if entity_id else _generate_node_id()
+            node_id = old_node_id or (
+                str(entity_id) if entity_id else _generate_node_id()
+            )
             while node_id in self._instances:
                 node_id = _generate_node_id()
 

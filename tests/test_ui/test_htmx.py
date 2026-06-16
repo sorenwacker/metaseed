@@ -1090,8 +1090,14 @@ class TestDatasetStability:
         assert len(loaded_inv.children) == 1
         assert loaded_inv.children[0].instance.unique_id == study_unique_id
 
-    def test_dataset_uses_unique_id_not_node_id(self, client_with_entity, tmp_path):
-        """Dataset JSON uses unique_id for references, not internal node IDs."""
+    def test_dataset_uses_unique_id_for_parent_refs(self, client_with_entity, tmp_path):
+        """Parent references use unique_id; the node's own id is persisted.
+
+        References between entities resolve by domain identifier (unique_id),
+        not by the internal node id. The node id itself is persisted as
+        ``_node_id`` so it survives a reload verbatim (the graph endpoint
+        reloads from disk on every poll and must not re-assign ids).
+        """
         import json
 
         from metaseed.ui.datasets import get_datasets_dir, save_dataset
@@ -1109,7 +1115,7 @@ class TestDatasetStability:
             title="Reference Test",
             investigation_id=inv_unique_id,
         )
-        state.add_node("Study", study, parent_id=inv_node.id)
+        study_node = state.add_node("Study", study, parent_id=inv_node.id)
 
         # Save dataset
         save_dataset(state, "test-unique-id-ref")
@@ -1127,12 +1133,12 @@ class TestDatasetStability:
                 break
 
         assert study_entity is not None
-        # Should use _parent_unique_id, not _parent_id (node ID)
+        # Parent links resolve by unique_id, not by the parent's node id.
         assert "_parent_unique_id" in study_entity
         assert study_entity["_parent_unique_id"] == inv_unique_id
-        # Should NOT have old-style _node_id or _parent_id
-        assert "_node_id" not in study_entity
         assert "_parent_id" not in study_entity
+        # The node's own id is persisted so reloads keep it stable.
+        assert study_entity["_node_id"] == study_node.id
 
 
 class TestEmptyDatasetView:

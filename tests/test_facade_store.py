@@ -117,3 +117,53 @@ def test_entities_sharing_identifier_are_not_overwritten() -> None:
     assert len(store._instances) == 3
     names = sorted(node.instance.name for node in store._instances.values())
     assert names == ["Jane Doe", "John Smith", "John Smith"]
+
+
+def test_persisted_node_id_is_restored_verbatim() -> None:
+    """A stored ``_node_id`` becomes the node id verbatim on load."""
+
+    def instance_creator(entity_type: str, data: dict) -> BaseModel:
+        return _FakeInstance(name=data["name"])
+
+    store = _build_store(instance_creator)
+    store.load_from_dict([{"_type": "Thing", "_node_id": "fixed-1", "name": "alpha"}])
+
+    assert list(store._instances.keys()) == ["fixed-1"]
+
+
+def test_node_ids_are_stable_across_reloads_without_identifier() -> None:
+    """Serialized entities keep their node ids when reloaded repeatedly.
+
+    The graph endpoint reloads the dataset from disk on every poll. An entity
+    without an identifier value must keep the same node id across reloads;
+    otherwise the graph treats it as removed and re-added on every tick. The id
+    persisted by ``to_dict`` is what makes the reload deterministic.
+    """
+
+    def instance_creator(entity_type: str, data: dict) -> BaseModel:
+        return _FakeInstance(name=data["name"])
+
+    # No identifier field -> ids cannot be derived from the data and must come
+    # from the persisted ``_node_id`` instead of being generated afresh.
+    helper = _FakeHelper(identifier_field=None, fields=["name"])
+
+    def make_store() -> EntityStore:
+        return EntityStore(
+            helper_getter=lambda _type: helper,
+            instance_creator=instance_creator,
+        )
+
+    first = make_store()
+    first.load_from_dict(
+        [{"_type": "Thing", "name": "alpha"}, {"_type": "Thing", "name": "beta"}]
+    )
+
+    # to_dict() is what the dataset file stores; subsequent polls reload it.
+    serialized = first.to_dict()
+    ids_by_name = {n.instance.name: nid for nid, n in first._instances.items()}
+
+    for _ in range(3):
+        reloaded = make_store()
+        reloaded.load_from_dict(serialized)
+        reloaded_ids = {n.instance.name: nid for nid, n in reloaded._instances.items()}
+        assert reloaded_ids == ids_by_name
