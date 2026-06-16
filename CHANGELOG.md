@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.9.0 (2026-06-16)
+
+### New Features
+- Add a "Stop Physics" control to freeze the entity-graph force simulation
+- The MCP server advertises a usage workflow on connect (initialize instructions),
+  so clients read the profile schema before creating entities
+
+### Bug Fixes
+- Persist the node id in saved datasets so the entity graph no longer re-adds
+  unchanged nodes on every poll (the permanent "pop-in" / continuous redraw)
+- Reject an unsupported entity type with the active profile's supported types and
+  a closest-match suggestion instead of a dead-end "Unknown entity type" error
+
+### Internal
+- Make the MCP extraction prompts profile-agnostic (drop hardcoded MIAPPE examples)
+
 ## v0.8.1 (2026-06-15)
 
 ### Bug Fixes
