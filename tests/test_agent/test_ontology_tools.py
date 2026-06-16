@@ -272,7 +272,9 @@ class TestOntologyTools:
             parent_id=stu["id"],
         )
 
-        fake = {"response": {"docs": [{"obo_id": "TO:0000207", "label": "plant height"}]}}
+        fake = {
+            "response": {"docs": [{"obo_id": "TO:0000207", "label": "plant height"}]}
+        }
         with patch(
             "metaseed.agent.mcp.tools.ontology._make_request", return_value=fake
         ):

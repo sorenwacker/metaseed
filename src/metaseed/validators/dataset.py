@@ -202,9 +202,7 @@ class DatasetValidator:
             is hardcoded.
         """
         try:
-            spec = self._loader.load_profile(
-                version=self.version, profile=self.profile
-            )
+            spec = self._loader.load_profile(version=self.version, profile=self.profile)
         except SpecLoadError:
             return None
         return spec.root_entity.lower() if spec and spec.root_entity else None

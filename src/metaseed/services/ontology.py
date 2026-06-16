@@ -50,9 +50,7 @@ DEFAULT_TIMEOUT = 30.0
 # Identify the client to EMBL-EBI. EMBL-EBI's fair-use terms ask that traffic not
 # degrade service for others; sending a descriptive User-Agent lets them contact
 # us about load rather than block an anonymous client.
-USER_AGENT = (
-    f"metaseed/{_metaseed_version} (+https://github.com/sorenwacker/metaseed)"
-)
+USER_AGENT = f"metaseed/{_metaseed_version} (+https://github.com/sorenwacker/metaseed)"
 DEFAULT_HEADERS = {"User-Agent": USER_AGENT}
 
 
@@ -346,7 +344,9 @@ class OntologyService:
             params["exact"] = "true"
 
         try:
-            async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, headers=DEFAULT_HEADERS) as client:
+            async with httpx.AsyncClient(
+                timeout=DEFAULT_TIMEOUT, headers=DEFAULT_HEADERS
+            ) as client:
                 response = await client.get(f"{self.base_url}/search", params=params)
                 response.raise_for_status()
                 data = response.json()
@@ -429,7 +429,9 @@ class OntologyService:
             params["exact"] = "true"
 
         try:
-            with httpx.Client(timeout=DEFAULT_TIMEOUT, headers=DEFAULT_HEADERS) as client:
+            with httpx.Client(
+                timeout=DEFAULT_TIMEOUT, headers=DEFAULT_HEADERS
+            ) as client:
                 response = client.get(f"{self.base_url}/search", params=params)
                 response.raise_for_status()
                 data = response.json()
@@ -508,7 +510,9 @@ class OntologyService:
         encoded_iri = quote(quote(iri, safe=""), safe="") if iri else ""
 
         try:
-            async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, headers=DEFAULT_HEADERS) as client:
+            async with httpx.AsyncClient(
+                timeout=DEFAULT_TIMEOUT, headers=DEFAULT_HEADERS
+            ) as client:
                 url = f"{self.base_url}/ontologies/{ontology}/terms/{encoded_iri}"
                 response = await client.get(url)
                 response.raise_for_status()
@@ -588,7 +592,9 @@ class OntologyService:
         encoded_iri = quote(quote(iri, safe=""), safe="") if iri else ""
 
         try:
-            with httpx.Client(timeout=DEFAULT_TIMEOUT, headers=DEFAULT_HEADERS) as client:
+            with httpx.Client(
+                timeout=DEFAULT_TIMEOUT, headers=DEFAULT_HEADERS
+            ) as client:
                 url = f"{self.base_url}/ontologies/{ontology}/terms/{encoded_iri}"
                 response = client.get(url)
                 response.raise_for_status()

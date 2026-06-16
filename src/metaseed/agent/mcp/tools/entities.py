@@ -122,9 +122,10 @@ def _creation_hints(entity_type: str) -> dict[str, Any] | None:
             other_helper = getattr(facade, other, None)
             if not other_helper:
                 continue
-            for field, (target_type, _target_field) in (
-                other_helper.reference_fields.items()
-            ):
+            for field, (
+                target_type,
+                _target_field,
+            ) in other_helper.reference_fields.items():
                 if target_type == entity_type:
                     consumers.append(f"{other}.{field}")
 
@@ -141,7 +142,9 @@ def _creation_hints(entity_type: str) -> dict[str, Any] | None:
         return None
 
 
-def _field_constraint_detail(entity_type: str, field_name: str) -> dict[str, Any] | None:
+def _field_constraint_detail(
+    entity_type: str, field_name: str
+) -> dict[str, Any] | None:
     """Return a field's description and constraints for error feedback.
 
     Surfaces the pattern, range, enum, etc. a value must satisfy so a format

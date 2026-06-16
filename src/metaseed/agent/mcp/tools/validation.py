@@ -235,9 +235,7 @@ def register_validation_tools(mcp: FastMCP, get_mcp_state) -> None:
                 if not helper:
                     continue
                 data = (
-                    node.instance.model_dump(exclude_none=True)
-                    if node.instance
-                    else {}
+                    node.instance.model_dump(exclude_none=True) if node.instance else {}
                 )
                 label = node.label or node.id
 

@@ -293,9 +293,7 @@ def register_profile_tools(mcp: FastMCP) -> None:
                     if target_type in example_ids:
                         target_id = example_ids[target_type]
                         row[name] = (
-                            [target_id]
-                            if field.type == FieldType.LIST
-                            else target_id
+                            [target_id] if field.type == FieldType.LIST else target_id
                         )
                 elif field.required:
                     row[name] = _placeholder_value(field)
