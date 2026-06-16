@@ -259,10 +259,8 @@ class FileEntityRepository(EntityRepository):
         """Create a new entity."""
         facade = self._get_facade()
 
-        # Validate entity type
-        helper = getattr(facade, entity_type, None)
-        if not helper:
-            raise ValueError(f"Unknown entity type: {entity_type}")
+        # Validate entity type against the active profile's spec
+        helper = facade.require_helper(entity_type)
 
         # Auto-detect parent from reference fields if not explicitly provided
         if not parent_id:

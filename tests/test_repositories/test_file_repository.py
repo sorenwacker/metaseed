@@ -194,8 +194,8 @@ class TestCreateEntity:
         assert child.data["investigation_id"] == "INV-001"
 
     def test_create_invalid_type_raises(self, empty_repo):
-        """Raises error for invalid entity type."""
-        with pytest.raises(ValueError, match="Unknown entity type"):
+        """Rejects an unsupported entity type and lists the supported ones."""
+        with pytest.raises(ValueError, match="is not supported by profile"):
             empty_repo.create_entity(
                 entity_type="NonexistentType",
                 data={"unique_id": "X"},

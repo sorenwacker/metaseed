@@ -80,6 +80,35 @@ class TestProfileFacade:
         assert "NonexistentEntity" in str(exc_info.value)
         assert "not found" in str(exc_info.value)
 
+    def test_require_helper_resolves_case_insensitively(self) -> None:
+        """require_helper matches an entity type ignoring case."""
+        facade = ProfileFacade("miappe", "1.1")
+
+        helper = facade.require_helper("study")
+        assert helper.name == "Study"
+
+    def test_require_helper_unknown_lists_supported_types(self) -> None:
+        """An unsupported type is rejected with the profile's vocabulary.
+
+        The LLM driving the MCP tools must learn what the active profile
+        expects instead of receiving a dead-end rejection.
+        """
+        facade = ProfileFacade("miappe", "1.1")
+
+        with pytest.raises(ValueError) as exc_info:
+            facade.require_helper("Banana")
+
+        message = str(exc_info.value)
+        assert "is not supported by profile 'miappe'" in message
+        assert "Investigation" in message  # supported types are listed
+
+    def test_require_helper_suggests_closest_match(self) -> None:
+        """A near-miss type name yields a 'did you mean' suggestion."""
+        facade = ProfileFacade("miappe", "1.1")
+
+        with pytest.raises(ValueError, match="Did you mean 'Investigation'"):
+            facade.require_helper("Investigaton")
+
     def test_dir_includes_entities(self) -> None:
         """dir() includes entity names for tab completion."""
         facade = ProfileFacade("miappe", "1.1")

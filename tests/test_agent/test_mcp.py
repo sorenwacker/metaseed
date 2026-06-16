@@ -20,6 +20,17 @@ class TestMCPServer:
         assert server is not None
         assert server.name == "test-metaseed"
 
+    def test_server_advertises_usage_instructions(self) -> None:
+        """The server hands the LLM a workflow on connect, not just tools.
+
+        Without instructions in the initialize handshake the LLM is never told
+        to read the schema before creating entities.
+        """
+        server = create_server()
+        instructions = server.instructions or ""
+        assert "get_profile_schema" in instructions
+        assert "list_profiles" in instructions
+
     def test_list_profiles_tool(self) -> None:
         """List profiles tool returns profile info."""
         server = create_server()
@@ -686,9 +697,9 @@ class TestMCPIntegration:
 
             # 5. Verify dataset file was saved with hierarchy
             dataset_file = tmp_path / "inv-hierarchy-test.json"
-            assert (
-                dataset_file.exists()
-            ), f"Dataset file not found. Files: {list(tmp_path.iterdir())}"
+            assert dataset_file.exists(), (
+                f"Dataset file not found. Files: {list(tmp_path.iterdir())}"
+            )
 
             with open(dataset_file) as f:
                 saved_data = json.load(f)
@@ -1732,9 +1743,9 @@ class TestMCPStandaloneMode:
             result = get_info_fn.fn()
             info = json.loads(result)
 
-            assert (
-                info["profile"] == "miappe"
-            ), f"Expected 'miappe' but got {info['profile']}"
+            assert info["profile"] == "miappe", (
+                f"Expected 'miappe' but got {info['profile']}"
+            )
             assert info["version"] == "1.1", f"Expected '1.1' but got {info['version']}"
 
     def test_get_dataset_info_returns_dataset_name(self):
@@ -1794,9 +1805,9 @@ class TestMCPStandaloneMode:
             # Verify we're using correct profile
             result = get_info_fn.fn()
             info = json.loads(result)
-            assert (
-                info["profile"] == "miappe"
-            ), f"Profile should be 'miappe', got {info['profile']}"
+            assert info["profile"] == "miappe", (
+                f"Profile should be 'miappe', got {info['profile']}"
+            )
 
             # Create entity - should use MIAPPE schema
             result = create_entity_fn.fn(

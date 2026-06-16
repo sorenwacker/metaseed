@@ -91,9 +91,7 @@ class MemoryEntityRepository(EntityRepository):
 
         facade = self._state.get_or_create_facade()
 
-        helper = getattr(facade, entity_type, None)
-        if not helper:
-            raise ValueError(f"Unknown entity type: {entity_type}")
+        helper = facade.require_helper(entity_type)
 
         # Auto-detect parent from reference fields if not explicitly provided
         if not parent_id:

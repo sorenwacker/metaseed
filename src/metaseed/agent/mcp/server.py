@@ -167,6 +167,30 @@ def reset_entity_service():
     pass
 
 
+SERVER_INSTRUCTIONS = """\
+Metaseed builds validated, schema-driven metadata datasets for a chosen \
+profile (e.g. MIAPPE, ISA, DiSSCo, Darwin Core, ENA). Each profile defines its \
+own entity types, fields, root entity, and parent-child hierarchy.
+
+Follow this order. Do not guess entity types or field names.
+
+1. list_profiles - discover the available standards and versions.
+2. create_dataset or load_dataset - a dataset is bound to one profile and \
+version.
+3. get_profile_schema (and get_profile_relationships) - learn the exact entity \
+types, their fields, the root entity, and the valid parent-child hierarchy for \
+THIS profile. Only these entity types exist; any other type is rejected.
+4. create_entity / batch_create - add entities root-first, placing each under a \
+valid parent per the schema.
+5. Record only information explicitly present in the source. Never invent, \
+infer, or fill placeholder values; leave unknown fields empty.
+6. validate_dataset - check the result before finishing.
+
+If a tool reports an unsupported entity type, it lists the types the active \
+profile supports; pick one of those rather than guessing again.
+"""
+
+
 def create_server(
     name: str = "metaseed",
     context: MCPContext | None = None,
@@ -185,7 +209,7 @@ def create_server(
     if context is not None:
         set_context(context)
 
-    mcp = FastMCP(name=name)
+    mcp = FastMCP(name=name, instructions=SERVER_INSTRUCTIONS)
     _parser_registry = create_default_registry()
 
     # =========================================================================
@@ -300,8 +324,8 @@ Only create entities for which you have explicit data.
 
 ### 4. Create Entities with Correct Hierarchy
 - Check parent-child relationships in the schema
-- PhenotypingSample goes under ObservationUnit, not Study
-- Use `get_entity_fields` to see valid parent types
+- Place each entity under a valid parent for this profile
+- Use `get_profile_relationships` and `get_entity_fields` to see valid parents
 
 ### 5. Validate
 Use `validate_dataset` to check for errors.
@@ -314,7 +338,7 @@ Use `validate_dataset` to check for errors.
 - Don't fill optional fields with made-up values
 
 ## Tips
-- Start with the root entity (usually Investigation)
+- Start with the profile's root entity (see `get_profile_schema`)
 - Map required fields first
 - Ask user about missing required fields
 """

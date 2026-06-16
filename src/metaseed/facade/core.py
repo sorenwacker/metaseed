@@ -6,6 +6,7 @@ entry point for creating and managing profile entities.
 
 from __future__ import annotations
 
+import difflib
 from pathlib import Path
 from typing import Any, Self
 
@@ -475,6 +476,47 @@ class ProfileFacade:
             EntityHelper if found, None otherwise.
         """
         return self._entities.get(entity_type)
+
+    def require_helper(self: Self, entity_type: str) -> EntityHelper:
+        """Resolve an entity helper or raise with the profile's vocabulary.
+
+        Matches exactly first, then case-insensitively. When no entity type
+        matches, raises a ValueError that names the supported types (and a
+        closest-match suggestion) so a caller -- including an LLM driving the
+        MCP tools -- learns what the active profile expects instead of getting
+        a dead-end rejection.
+
+        Args:
+            entity_type: The requested entity type name.
+
+        Returns:
+            The matching EntityHelper.
+
+        Raises:
+            ValueError: If no entity type matches the active profile's spec.
+        """
+        helper = self._entities.get(entity_type)
+        if helper is None:
+            for name, candidate in self._entities.items():
+                if name.lower() == entity_type.lower():
+                    helper = candidate
+                    break
+        if helper is None:
+            raise ValueError(self._unknown_entity_type_message(entity_type))
+        return helper
+
+    def _unknown_entity_type_message(self: Self, entity_type: str) -> str:
+        """Build a corrective message for an unsupported entity type."""
+        supported = self.entities
+        message = (
+            f"Entity type '{entity_type}' is not supported by profile "
+            f"'{self._profile}' v{self._version}. "
+            f"Supported types: {', '.join(supported)}."
+        )
+        closest = difflib.get_close_matches(entity_type, supported, n=1)
+        if closest:
+            message += f" Did you mean '{closest[0]}'?"
+        return message
 
     def __getattr__(self: Self, name: str) -> EntityHelper:
         """Get an entity helper by name (enables tab completion).
