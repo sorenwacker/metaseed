@@ -205,6 +205,7 @@ asyncio_mode = "auto"
 markers = [
     "ui: marks tests as UI tests",
     "network: marks tests requiring external network (OLS4 API)",
+    "selenium: marks tests that drive a real browser and live server (slow; excluded from the pre-push hook)",
 ]
 
 [tool.coverage.run]

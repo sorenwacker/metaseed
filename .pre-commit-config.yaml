@@ -42,7 +42,7 @@ repos:
     hooks:
       - id: pytest
         name: run tests before push
-        entry: uv run python -m pytest -x -q --tb=short -m "not network"
+        entry: uv run python -m pytest -x -q --tb=short -m "not network and not selenium"
         language: system
         stages: [pre-push]
         pass_filenames: false

@@ -17,6 +17,9 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 from tests.test_ui.examples import INV_EXAMPLE
 
+# Drives a real browser + server; excluded from the pre-push hook for speed.
+pytestmark = pytest.mark.selenium
+
 # Delay constants
 FILL_DELAY = 0.1
 CLICK_DELAY = 0.5

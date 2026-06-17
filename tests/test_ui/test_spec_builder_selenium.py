@@ -15,6 +15,9 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
+# Drives a real browser + server; excluded from the pre-push hook for speed.
+pytestmark = pytest.mark.selenium
+
 BASE_URL = "http://127.0.0.1:8765"
 
 

@@ -29,6 +29,9 @@ from tests.test_ui.examples import (
     STUDY_EXAMPLE,
 )
 
+# Drives a real browser + server; excluded from the pre-push hook for speed.
+pytestmark = pytest.mark.selenium
+
 # Delay constants per requirements
 FILL_DELAY = 0.1  # Delay between form fills
 CLICK_DELAY = 0.5  # Delay after button clicks
