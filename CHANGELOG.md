@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.9.1 (2026-06-17)
+
+### Bug Fixes
+- Materialize inline nested entity items (e.g. a File added under a Run) as
+  standalone child nodes on save, so they appear in the tree and exports like
+  entities created via the MCP
+
+### Internal
+- Update the ruff pre-commit pin to 0.15.7 and migrate the deprecated TCH rule
+  codes to TC, so the formatter stops rewriting unrelated files
+- Mark the browser-driven selenium tests and exclude them from the pre-push hook
+
 ## v0.9.0 (2026-06-16)
 
 ### New Features
