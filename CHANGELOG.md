@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.9.2 (2026-06-23)
+
+### Bug Fixes
+- Make the ENA Sample fields `collection_date` and `geographic_location_country`
+  optional. They are checklist-level attributes (e.g. checklist ERC000011), not
+  properties of the base Sample, so requiring them universally blocked import of
+  valid public ENA/DDBJ samples that omit them (#20)
+
 ## v0.9.1 (2026-06-17)
 
 ### Bug Fixes
