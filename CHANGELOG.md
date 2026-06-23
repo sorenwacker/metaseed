@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.10.0 (2026-06-23)
+
+### New Features
+- Attach relational hints (`expected_children`, `typical_next`,
+  `cross_ref_consumers`) to each `batch_create` result, matching
+  `create_entity`, so agents building datasets in bulk keep the same guidance
+  toward cross-referenced entities (#17)
+
 ## v0.9.2 (2026-06-23)
 
 ### Bug Fixes
