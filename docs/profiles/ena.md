@@ -72,6 +72,8 @@ flowchart TB
 
 **Sample**: Describes the biological source material being sequenced. Samples are linked to NCBI taxonomy and annotated using ENA checklists (standardized attribute sets). Samples receive BioSample (SAMEA) or sample (ERS) accessions.
 
+Attributes such as `collection_date` and `geographic_location_country` are checklist-level requirements (e.g. checklist `ERC000011`), not properties of the base Sample. They are therefore optional on the Sample entity, so valid public ENA/DDBJ records that omit them can be imported. Apply checklist-conditional requirements via the `checklist` field rather than expecting these attributes on every Sample.
+
 **Experiment**: Describes the sequencing library and platform. Key fields include:
 
 - `library_strategy`: Sequencing approach (WGS, RNA-Seq, ChIP-Seq, etc.)

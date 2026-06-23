@@ -466,15 +466,15 @@ entities:
       - name: collection_date
         codename: collection_date
         type: string
-        required: true
-        description: Date of sample collection (ISO 8601 format or missing value term).
+        required: false
+        description: Date of sample collection (ISO 8601 format or missing value term). Checklist-level (e.g. ERC000011), not required on the base Sample.
         ontology_term: SRA:collection_date
 
       - name: geographic_location_country
         codename: geographic location (country and/or sea)
         type: string
-        required: true
-        description: Country or sea where the sample was collected (INSDC country list).
+        required: false
+        description: Country or sea where the sample was collected (INSDC country list). Checklist-level (e.g. ERC000011), not required on the base Sample.
         ontology_term: SRA:geo_loc_name
 
       - name: geographic_location_region
