@@ -1079,6 +1079,34 @@ class TestMCPBatchCreate:
             assert data["created"] == 2
             assert data["failed"] == 0
 
+    def test_batch_create_returns_relational_hints(self):
+        """Each created item carries the same hints as create_entity."""
+        from metaseed.agent.mcp.server import set_mcp_state
+        from metaseed.ui.state import AppState
+
+        set_mcp_state(AppState(profile="miappe", version="1.2"))
+        server = create_server()
+        batch_fn = server._tool_manager._tools["batch_create"]
+
+        entities = json.dumps(
+            [
+                {
+                    "entity_type": "Investigation",
+                    "data": {"unique_id": "INV-H1", "title": "I"},
+                }
+            ]
+        )
+
+        with patch("metaseed.ui.datasets.auto_save"):
+            data = json.loads(batch_fn.fn(entities=entities))
+
+        created = data["results"][0]
+        assert created["status"] == "created"
+        hints = created["hints"]
+        assert "Study" in hints["expected_children"]
+        assert "Study.investigation_id" in hints["cross_ref_consumers"]
+        assert "typical_next" in hints
+
     def test_batch_create_with_parent(self):
         """Batch create with parent relationship."""
         from metaseed.agent.mcp.server import set_mcp_state

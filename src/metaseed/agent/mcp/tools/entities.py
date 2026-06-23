@@ -736,15 +736,17 @@ def register_entity_tools(mcp: FastMCP, get_entity_service) -> None:
 
                 try:
                     result = service.create_entity(entity_type, data, parent_id)
-                    results.append(
-                        {
-                            "index": idx,
-                            "status": "created",
-                            "id": result["id"],
-                            "entity_type": entity_type,
-                            "label": result.get("label"),
-                        }
-                    )
+                    created = {
+                        "index": idx,
+                        "status": "created",
+                        "id": result["id"],
+                        "entity_type": entity_type,
+                        "label": result.get("label"),
+                    }
+                    hints = _creation_hints(entity_type)
+                    if hints:
+                        created["hints"] = hints
+                    results.append(created)
                 except Exception as e:
                     validation_error = _handle_validation_error(e, entity_type)
                     if validation_error:
