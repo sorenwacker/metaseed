@@ -48,7 +48,10 @@ jobs:
       - name: Copy presentation to site
         run: |
           mkdir -p site/slides
-          cp -r docs/slides/index.html docs/slides/index_files docs/slides/images site/slides/
+          cp -r docs/slides/index.html docs/slides/images site/slides/
+          # embed-resources renders a self-contained index.html; index_files
+          # only exists when resources are not embedded.
+          [ -d docs/slides/index_files ] && cp -r docs/slides/index_files site/slides/ || true
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
