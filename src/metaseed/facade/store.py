@@ -479,8 +479,13 @@ class EntityStore:
 
             # Build return values
             id_for_index = str(entity_id) if entity_id else None
-            if id_for_index:
-                self._index[id_for_index] = node.id
+            # Index by every identifier field, matching add_entity, so that
+            # references resolve after a reload regardless of which id field
+            # they target.
+            for id_field in self._get_identifier_fields(entity_type):
+                id_value = fields.get(id_field)
+                if id_value:
+                    self._index[str(id_value)] = node.id
 
             parent_entry = None
             if parent_unique_id:
