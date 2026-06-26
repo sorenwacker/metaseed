@@ -1,458 +1,408 @@
-# Metaseed Code Review
+# Codebase Review
 
-Per-file consistency and correctness review of all `src/metaseed` Python modules,
-produced by a 19-group multi-agent pass with an adversarial verification stage.
-Every high/medium finding below was independently re-checked against the actual
-code by a second agent that tried to refute it; severities reflect the verifier's
-correction where it disagreed with the original reviewer.
+Date: 2026-06-26
+Scope: every source file under `src/metaseed/` (122 files reviewed, ~27,600 LOC).
+Method: objective baseline gates, then a 20-group multi-agent per-file review (one
+reviewer per module group). Every high/medium finding was then handed to an independent
+adversarial verifier that tried to refute it against the actual code; only findings the
+verifier could confirm from the source are listed as confirmed below.
 
-- Reviewed at commit: `9541529` (260614)
-- Files reviewed: 126 (all of `src/metaseed`, plus one stray test picked up by the agent grouping)
-- Findings: 81 raw -> 24 confirmed (1 high, 14 medium, 9 low) + 57 unverified low-confidence notes
-- Refuted during verification: 0
+## Baseline gates
 
-## Baseline (objective gates)
-
-These are the project's own definition of "passing", run from its Makefile and
-`.pre-commit-config.yaml`.
+These are the project's own definition of "flawless" (from `Makefile` and
+`.pre-commit-config.yaml`). All enforced gates pass.
 
 | Gate | Command | Result |
-|---|---|---|
-| Lint | `uv run ruff check src tests` | Pass |
-| Format | `ruff-format` (pre-commit) | Pass (lint clean) |
-| Dead code | `uv run vulture src/ --min-confidence=80` | Pass, no findings |
-| Tests | `uv run python -m pytest -m "not ui and not network"` | 1519 passed, 6 skipped, 1 xfailed |
-| File size (<=1000 LOC) | project style rule | Pass (largest: `services/ontology.py`, 742 LOC) |
-| Type check (mypy) | configured `strict` in `pyproject.toml` | Not a wired CI gate; not run as a pass/fail gate |
+| --- | --- | --- |
+| Lint | `uv run ruff check src tests` | Pass (full E/W/F/I/B/UP/RUF/PTH/ERA/PL/PERF/FURB ruleset) |
+| Format | `uv run ruff format --check src tests` | Pass (only the gitignored, auto-generated `_version.py` differs) |
+| Dead code | `uv run vulture src/ --min-confidence=80` | Pass (no hits at the gate threshold) |
+| Tests | `uv run pytest -m "not network and not selenium and not ui"` | Pass: 1530 passed, 6 skipped, 1 xfailed |
+| File size | project rule: no file > 1000 LOC | Pass (largest is `agent/mcp/tools/entities.py` at 788) |
+| Type check | `mypy` | Not enforced. See note below. |
 
-All objective gates pass. The findings below are issues the gates do not catch:
-data-losing logic in code paths the tests do not exercise, behavioural divergence
-between sibling implementations of a shared interface, dead public symbols, and
-docstrings that describe behaviour the code does not implement.
+### mypy is configured but not wired in
+
+`pyproject.toml` declares `[tool.mypy]` with `strict = true`, but mypy is not in the
+`dev` optional-dependencies, is not a pre-commit hook, and is not a Makefile target.
+Nothing installs or runs it, so type-annotation correctness is currently unchecked. This
+is itself a gap: either add mypy to the dev extras and a pre-commit/CI gate so the strict
+config is enforced, or remove the dead config to avoid implying coverage that does not
+exist.
 
 ## Summary
 
-The codebase is in good shape: it lints clean, has no high-confidence dead code by
-the gate threshold, no oversized files, and a large passing test suite. The
-confirmed findings cluster into a few recurring themes rather than scattered
-one-offs.
+The codebase is clean against every automated gate. The review surfaced **94 candidate
+findings**; the 29 rated high/medium were adversarially verified, of which **27 were
+confirmed** and 2 refuted. The remaining **65 low-severity notes** were not individually
+verified (by design) and are listed in the appendix.
 
-Recurring themes:
+Confirmed: 2 high, 20 medium, 5 low (severity as corrected by the verifier).
 
-1. **The `ontologies` FieldSpec attribute is handled incompletely across the merge
-   subsystem.** It is dropped by two merge strategies (data loss) and ignored by the
-   comparator (false "unchanged"). This is the single highest-impact theme because it
-   silently loses real spec data — `ontologies` is populated in MIAPPE 1.1/1.2,
-   MIAPPE-HTP, MetaboLights, and PRIDE profiles.
+### Recurring themes
 
-2. **Sibling implementations of one interface have drifted apart.** The two
-   `EntityRepository` backends (memory vs file), the two entity-extraction paths
-   (`ExtractionContext` vs module-level `extract_instances`), and several duplicated
-   route helpers behave differently for the same contract. Data created through one
-   path is processed differently than through the other.
-
-3. **Falsy-value and unguarded-conversion correctness bugs.** Truthiness filters
-   (`and v`) drop legitimate `0`/`False`/`""` values; `fromisoformat` runs on raw
-   YAML strings with no `try/except`, so a malformed date crashes a validation run
-   instead of reporting a validation error.
-
-4. **Dead public symbols and dishonest docstrings.** A handful of exported functions
-   and dataclass fields are never used or never populated, and several docstrings
-   claim behaviour the code does not implement (the most prominent: a serialization
-   helper whose docstring calls it "the ONLY safe way" while no production code calls
-   it).
-
-None of these block the build, but the merge-strategy data loss (the one high) and
-the date-parse crash are behavioural bugs that the current tests do not cover.
+1. **Exception type mismatches let errors escape public entry points.** The loader raises
+   `SpecLoadError` (a bare `Exception` subclass), but several callers catch only
+   `(FileNotFoundError, KeyError, ValueError)` or similar narrow tuples, and MCP tools let
+   `KeyError` from `ProfileSpec.get_entity` propagate. Both break the "return a clean
+   error" contract. (H1, M2, plus low-severity L2.)
+2. **Case-convention drift between entity-name producers and consumers.** PascalCase entity
+   names from `list_entities()` are looked up against snake_case traversal keys, silently
+   disabling whole features — most seriously the dataset reference-integrity check, which
+   never runs. (H2, M19, M20.)
+3. **Spec field semantics dropped in model generation.** The model factory ignores list
+   cardinality (`min_items`/`max_items`) and `required` on list fields, so constraints
+   declared in profile YAML are not enforced. (M8, M9, plus required-vs-present
+   inconsistencies in the validators, M18.)
+4. **Falsy values treated as absent.** Empty `data`, zero integers/floats, and empty
+   list/dict are conflated with "missing" across the API validator, nested-field save path,
+   and `RequiredFieldsRule`. (M4, M16, M18.)
+5. **Naming/contract honesty.** A public `ValidationError` data record that is not an
+   exception and shadows `pydantic.ValidationError`; docstrings describing key shapes and
+   file formats the code does not produce. (M1, M14, M17, plus low-severity docstring notes.)
 
 ## Confirmed findings
 
-Grouped by verifier-corrected severity. Each carries file:line, the concrete
-problem, and the suggested fix.
-
-### High
-
-#### 1. MostRestrictive/LeastRestrictive merge strategies silently drop the `ontologies` field
-`src/metaseed/specs/merge/strategies.py:128` (and `:239`) — correctness
-
-Both `MostRestrictiveStrategy.resolve_field` (lines 128-140) and
-`LeastRestrictiveStrategy.resolve_field` (lines 239-251) reconstruct a `FieldSpec`
-field-by-field but never copy `base_spec.ontologies`. `FieldSpec` defines
-`ontologies: list[str] | None` (`schema.py:99`) and it is populated in real specs
-(MIAPPE 1.2 has 4 fields with `ontologies:`, MIAPPE 1.1 has 5; also MIAPPE-HTP,
-MetaboLights, PRIDE). When a conflicting `ontology_term`-typed field is resolved by
-these strategies, the OLS ontology search list is lost from the merged profile. The
-merger's own `_apply_manual_resolution` uses `model_dump()`/`model_validate()` and
-therefore preserves all fields, so these strategies diverge from the established
-pattern and lose data.
-
-Fix: build the merged spec from `base_spec.model_copy(update=...)` (or
-`model_dump()`/`model_validate()`) so all `FieldSpec` fields including `ontologies`
-are preserved, overriding only `required` and `constraints`.
-
-### Medium
+### High severity (2)
 
-#### 2. `extract_instances()` is unused and duplicates `ExtractionContext` logic
-`src/metaseed/agent/core.py:496` — dead-code
-
-`extract_instances()` is exported in `agent/__init__.py.__all__` but is never called
-anywhere in `src/`, `tests/`, or the sole external consumer `../metaseed-hub`. The
-production extraction path (`agent/mcp/tools/extraction.py:181`) goes through
-`ExtractionContext.extract_entities()` / `_extract_row()`. The function is a dead
-public symbol carrying a second, divergent copy of the row-extraction loop.
+#### H1. `validators/__init__.py:95` — validate(cascade=True) crashes with uncaught SpecLoadError on list-of-primitive fields
+*Category: correctness*
 
-Fix: remove `extract_instances()` and its `__all__`/import entries, or route it
-through the same `_extract_row`/`TypeConverter` logic and add a test.
+**Issue.** _validate_nested guards the nested-entity probe with `except (FileNotFoundError, KeyError, ValueError)` (lines 95-99, and the same wrong tuple at lines 82-85), but SpecLoader.load_entity raises SpecLoadError (defined as `class SpecLoadError(Exception)` in loader.py:35), which is NOT a subclass of any of those. When a list field's `items` is a primitive type name rather than an entity (e.g. MIAPPE Study.observation_unit_level_hierarchy has items: string), to_snake_case('string') -> 'string', load_entity('string', version) raises SpecLoadError, and the except clause does not catch it, so it propagates out of the public validate() function. Verified empirically: `validate({'unique_id':'STU001','title':'S','observation_unit_level_hierarchy':['plot','plant']}, entity='study', version='1.2', profile='miappe', cascade=True)` raises `SpecLoadError: Entity not found: string (miappe v1.2)`. The …
 
-#### 3. `extract_instances()` skips type conversion the canonical path applies
-`src/metaseed/agent/core.py:519` — consistency
+**Fix.** Catch SpecLoadError in both except clauses (lines 82 and 95), e.g. `except (FileNotFoundError, KeyError, ValueError, SpecLoadError)`, or import and catch SpecLoadError directly to match the loader's actual exception type.
 
-`extract_instances()` (lines 519-537) assigns raw row values directly
-(`instance[field.name] = value`) and never calls `TypeConverter.convert()`, so
-integer/float/boolean/list fields stay as raw strings — unlike `_extract_row()`
-(lines 314-316) which converts and records a `ValidationError` on failure. The same
-operation produces different output types depending on the entry point.
+**Verifier (high confidence).** The finding is real and verified both by reading the code and by empirical reproduction. Code evidence: - /Users/sdrwacker/workspace/metaseed-project/metaseed/src/metaseed/specs/loader.py:35 defines `class SpecLoadError(Exception)` — a direct subclass of …
 
-Fix: have both entry points delegate to one shared conversion helper. (Resolving
-finding 2 by removing the function also resolves this.)
+#### H2. `validators/dataset.py:285` — Reference integrity check never runs: _reference_fields keyed by PascalCase but looked up by snake_case
+*Category: correctness*
 
-#### 4. `entity_counts` counts only root entities while `total_entities` counts all
-`src/metaseed/agent/mcp/tools/datasets.py:234` — correctness
+**Issue.** DatasetValidator advertises reference integrity checking (module + class docstrings) as its core feature, but the lookup never matches, so no reference is ever validated. _load_reference_fields (lines 171-179) keys self._reference_fields by entity_name as returned by SpecLoader.list_entities(), which yields PascalCase names ('Study', 'ObservationUnit', ...). But check_refs (line 285) does `if etype in self._reference_fields`, where etype is the snake_case entity type produced during traversal ('study', 'observation_unit', ...). The keys never match, so the loop body is skipped for every entity. Verified empirically: a MIAPPE study whose nested observation_unit has `study_id: STU_DOES_NOT_EXIST` produces ZERO reference_integrity errors, and `'study' in v._reference_fields` is False (keys are ['Study','Person','BiologicalMaterial','ObservationUnit',...]). The entire reference-integrity …
 
-`get_dataset_info` builds `entity_counts` by iterating `state.entity_tree` (root
-`TreeNode`s only) but sets `total_entities = len(state.nodes_by_id)` (every nested
-child, via the recursive `_index_tree_node`). For any dataset with nested children
-(e.g. Study under Investigation, Sample under Study) the per-type counts will not
-sum to `total_entities`.
+**Fix.** Normalize keys and lookups to the same casing. E.g. store `self._reference_fields[to_snake_case(entity_name)] = refs` in _load_reference_fields, matching the snake_case etype used in check_refs.
 
-Fix: iterate `state.nodes_by_id.values()` when building `entity_counts`, or compute
-`total_entities` from the same root-only traversal if top-level counts are intended.
+**Verifier (high confidence).** Confirmed by code reading and empirical reproduction. _load_reference_fields (dataset.py:171-179) keys self._reference_fields by names from SpecLoader.list_entities(), which returns ProfileSpec.list_entities() = list(self.entities.keys()), and the profile …
 
-#### 5. `to_json_dict` docstring claims it is the ONLY safe serialization path, but no production code uses it
-`src/metaseed/core/serialization.py:20` — docstring
 
-The docstring states "This is the ONLY safe way to serialize entity instances for
-JSON/YAML output." `to_json_dict` is referenced only in tests; ~82 production sites
-call `instance.model_dump(mode="json", exclude_none=...)` directly, inlining the
-exact logic the helper wraps. The helper is neither the only nor the actually-used
-path — an inaccurate docstring on effectively test-only code.
+### Medium severity (20)
 
-Fix: route the production sites through `to_json_dict` (making the claim true and
-removing duplicated inline logic), or soften the docstring to "convenience helper".
+#### M1. `agent/core.py:91` — Public class ValidationError is a data record, not an exception, and shadows pydantic.ValidationError
+*Category: naming*
 
-#### 6. `FileEntityRepository.create_entity` diverges from `MemoryEntityRepository`
-`src/metaseed/repositories/file.py:252` — consistency
+**Issue.** `class ValidationError(BaseModel)` is a plain data record (fields field/message/value) but carries the name of the well-known `pydantic.ValidationError` exception. It is re-exported from `metaseed.agent.__init__` as `ValidationError`. The same source tree imports the real exception elsewhere (`metaseed/specs/loader.py` line 24: `from pydantic import ValidationError`). A consumer writing `from metaseed.agent import ValidationError` and then `except ValidationError:` would silently get a non-Exception model and the except clause would be a TypeError/never match. The name suggests a raisable error but the class cannot be raised.
 
-Both implement the same `EntityRepository.create_entity` contract, but
-`MemoryEntityRepository.create_entity` (memory.py:83-140) auto-detects the parent
-from reference fields, validates the parent-child relationship, and normalizes
-reference fields before validation; `FileEntityRepository.create_entity` does none
-of these. The same divergence exists for `update_entity` (memory normalizes
-references at memory.py:142; file does not at file.py:314). Data created/loaded
-through the file backend (used by metaseed-hub) is processed differently than
-through the memory backend.
+**Fix.** Rename the record to reflect that it is a validation finding/result, e.g. `ValidationIssue`, `ValidationFinding`, or `FieldError`, and update the `__all__` export accordingly (coordinate with metaseed-hub since it is exported).
 
-Fix: factor the shared create/update logic (reference normalization, parent-child
-validation, parent auto-detection) into the `helpers` module and have both
-repositories call it, or document why the file backend intentionally omits it.
+**Verifier (high confidence).** Verified directly in code. core.py:91 defines `class ValidationError(BaseModel)` with fields field/message/value (BaseModel imported from pydantic at line 15) — a plain data record, not an exception. It is publicly re-exported in …
 
-#### 7. `search()`/`search_sync()` return and cache a shared mutable list
-`src/metaseed/services/ontology.py:322` (and `:404`) — correctness
+#### M2. `agent/mcp/tools/validation.py:70` — validate_extracted lets KeyError escape for an unknown entity name
+*Category: correctness*
 
-On a cache hit, `search` returns the exact list object stored in the cache (`return
-cached`). If any caller mutates the returned list (sort/filter in place/append), the
-mutation persists in the cache and corrupts results for all subsequent callers until
-the TTL expires. The `OntologySearchResult` dataclasses are also not frozen.
+**Issue.** The tool ends with `except (json.JSONDecodeError, SpecLoadError) as e`. Inside, `ctx.validate_instance(instance, entity)` calls `ExtractionContext.get_entity_spec` -> `ProfileSpec.get_entity`, which is documented to raise `KeyError: If entity not found` (src/metaseed/specs/schema.py:293). When a caller passes an entity name that does not exist in the profile, the KeyError is not caught and propagates out of the tool, instead of returning the `{"error": ...}` JSON the tool returns for every other failure path. Sibling tools in this same file (validate_entity, validate_dataset, validate_relationships) use a broad `except Exception`, so this is also a consistency divergence.
 
-Fix: return a shallow copy on cache hit (`return list(cached)`), or cache an
-immutable representation.
+**Fix.** Add KeyError to the caught exceptions (e.g. `except (json.JSONDecodeError, SpecLoadError, KeyError) as e`) so an invalid entity name returns the standard JSON error object.
 
-#### 8. Field comparison omits `ontologies`, so differences are not detected
-`src/metaseed/specs/merge/comparator.py:398` — correctness
+**Verifier (high confidence).** Confirmed by reading the code. In validation.py:25-71, validate_extracted's only handler is `except (json.JSONDecodeError, SpecLoadError) as e` (line 70). Inside the try, line 48 calls ctx.validate_instance(instance, entity). That method (core.py:341-355) …
 
-In `_analyze_field_diff`, `attributes_to_compare` (lines 398-407) omits `ontologies`
-(defined on `FieldSpec`). Two profiles defining the same field with different
-`ontologies` lists are reported as UNCHANGED. (Same theme as finding 1.)
+#### M3. `agent/parsers/excel.py:16` — ExcelParser advertises .xls support that openpyxl cannot actually read
+*Category: correctness*
 
-Fix: add `ontologies` to `attributes_to_compare`.
+**Issue.** extensions = [".xlsx", ".xls", ".xlsm"] and mime_types lists "application/vnd.ms-excel", and the class docstring says "(.xlsx, .xls)". can_parse therefore returns True for a real legacy binary .xls file, but parse() calls openpyxl.load_workbook, which raises InvalidFileException for legacy .xls files (openpyxl only supports the OOXML formats .xlsx/.xlsm). The registry routes .xls to this parser and ParserRegistry.parse does not catch the error, so a genuine .xls input fails with a confusing low-level exception rather than a clean "unsupported format". The test at tests/test_agent/test_parsers.py:140 only asserts can_parse(.xls) is True against a touched empty file and never parses a real .xls, so the gap is masked. Naming/advertised capability does not match runtime behaviour.
 
-#### 9. MostRestrictive enum intersection produces None (no restriction) when empty
-`src/metaseed/specs/merge/strategies.py:204` — correctness
+**Fix.** Remove ".xls" from extensions and the .ms-excel mime type (and the docstring claim), or route .xls to a parser backed by a library that can read it (e.g. xlrd/pandas).
 
-`merged.enum = sorted(intersection) if intersection else None`. Disjoint enums (e.g.
-`["x"]` and `["y"]`) intersect to the empty set, so `merged.enum` becomes `None`,
-removing the enum constraint and letting the merged field accept ANY value — the
-inverse of "most restrictive".
+**Verifier (high confidence).** Confirmed from the code. ExcelParser (src/metaseed/agent/parsers/excel.py) advertises .xls support via extensions=[".xlsx", ".xls", ".xlsm"] (line 16), mime_types including "application/vnd.ms-excel" (line 19), and the docstring "(.xlsx, .xls)" (line 14). …
 
-Fix: set `merged.enum = sorted(intersection)` (allow the empty list to signal an
-unsatisfiable enum), or record an unresolved conflict; do not fall back to `None`.
+#### M4. `api/validation.py:37` — validate() skips an entire subtree when a node has empty data
+*Category: correctness*
 
-#### 10. `edge_profiles` annotated as 3-tuple key but keys are 4-tuples
-`src/metaseed/specs/merge/visualizer.py:179` — typing
+**Issue.** In ValidationMixin.validate(), the recursive helper returns early before recursing into children when a node's instance data is empty: def validate_node(node: Any) -> None: data = self._get_instance_data(node.instance) if not data: return # <-- also skips node.children errors = validate_entity(...) ... for child in node.children: validate_node(child) Because the child traversal lives after the early return, a node created with no populated fields (possible during progressive editing where entities are added with skip_validation and empty/None fields, so model_dump(exclude_none=True) yields {}) causes every descendant entity to be silently excluded from validation. The method's docstring says it validates 'all entities', and sibling traversals (_serialize_tree, get_tree) always recurse regardless of data, so this is an inconsistent and incorrect skip.
 
-`edge_profiles: dict[tuple[int, int, str], set[str]]` is declared with a 3-element
-key, but the keys constructed (lines 208, 217) and unpacked (line 228) are 4-tuples
-`(from_id, to_id, label, is_reference)`. The annotation is wrong and would fail mypy
-strict.
+**Fix.** Recurse into children unconditionally. Move the child loop out of the guarded block, e.g. only skip the validate_entity call (not the recursion) when data is empty: if data: run validate_entity; then always iterate node.children.
 
-Fix: change the annotation to `dict[tuple[int, int, str, bool], set[str]]`.
+**Verifier (high confidence).** Confirmed from the actual code in /Users/sdrwacker/workspace/metaseed-project/metaseed/src/metaseed/api/validation.py. In validate_node, the early return at lines 37-38 (`if not data: return`) precedes the child-recursion loop at lines 56-57 (`for child in …
 
-#### 11. Empty-helper fallback in `get_table_column_info` omits `column_ontologies`, callers KeyError
-`src/metaseed/ui/helpers/table_helpers.py:70` — correctness
+#### M5. `facade/store.py:481` — Reload indexes only identifier_field, while add_entity indexes all IDENTIFIER_FIELDS
+*Category: consistency*
 
-When `helper` is None (unknown `entity_type`), the fallback dict (lines 70-76)
-returns without a `column_ontologies` key, while the success path (line 99) includes
-it. Every caller in `routes/table.py` accesses `col_info["column_ontologies"]`
-unconditionally (table.py:98, 191, 317), so an unresolved entity type raises
-`KeyError: 'column_ontologies'`.
+**Issue.** In live use, add_entity (lines 140-157) indexes a node by every value present in IDENTIFIER_FIELDS (alias, unique_id, identifier) PLUS the entity-specific identifier_field. But after a to_dict/load_from_dict round-trip, _create_node_from_dict only indexes the single identifier_field value: `id_for_index = str(entity_id) if entity_id else None` then `self._index[id_for_index] = node.id`. So get_entity_by_ref and _resolve_parent succeed for an alias/unique_id/identifier value before a save+reload but can return None afterwards. Concretely: load a dataset whose parent has identifier_field='unique_id', then add_entity a child whose reference points to the parent's 'alias' value -- _resolve_parent (which uses self._index) fails to find the parent because alias was never indexed on reload, so the child silently becomes a root. The same operation in a single live session resolves correctly.
 
-Fix: add `"column_ontologies": {}` to the fallback dict.
+**Fix.** Index by the full set of identifier fields on reload too, e.g. reuse self._get_identifier_fields(entity_type) when populating self._index inside _create_node_from_dict, matching add_entity's behavior.
 
-#### 12. `_clean_item_for_child_entity` drops falsy field values (0, False, "")
-`src/metaseed/ui/helpers/validation.py:126` — correctness
+**Verifier (high confidence).** Confirmed directly from the code in /Users/sdrwacker/workspace/metaseed-project/metaseed/src/metaseed/facade/store.py. add_entity (lines 140-157) populates self._index under every present value of IDENTIFIER_FIELDS ("alias", "unique_id", "identifier"; defined …
 
-The comprehension (lines 144-148) filters with `... and v ...`, silently discarding
-legitimate falsy values: `0`, `0.0`, `False`, `""`. A child entity with a boolean
-set to False or an integer set to 0 loses that field. This diverges from the sibling
-`collect_form_values` (form_helpers.py:158-161), which only skips `None` and `""`.
+#### M6. `models/factory.py:312` — List cardinality constraints (min_items/max_items) silently dropped by model factory
+*Category: correctness*
 
-Fix: replace `and v` with `and v not in (None, "")`, consistent with
-`collect_form_values`.
+**Issue.** `_build_field_constraints` maps pattern, min_length, max_length, minimum->ge and maximum->le, but never maps `Constraints.min_items` / `Constraints.max_items`. For a list field that declares these in its spec, the generated Pydantic model does not enforce them. Verified at runtime: a FieldSpec(type=LIST, required=True, constraints=Constraints(min_items=2)) produces a model where `M(tags=['a'])` validates successfully. This is inconsistent with the factory honoring string/numeric constraints, and the Constraints model explicitly documents these as 'Minimum/Maximum items for list fields'.
 
-#### 13. Redundant `build_inline_tables` wrapper duplicates the helper and is inconsistently re-exported
-`src/metaseed/ui/routes/core.py:76` — design
+**Fix.** In the LIST branch of `_create_field_definition` (or in `_build_field_constraints`), map constraints.min_items/max_items to Pydantic v2 list constraints (`min_length`/`max_length` apply to sequence length in v2), so declared list cardinality is enforced at the model level.
 
-`core.py` defines a thin wrapper that lazily imports and calls
-`helpers.table_helpers.build_inline_tables`. `crud.py` and `forms.py` import the
-wrapper from `.core`; `nested.py` imports the real helper directly from `..helpers`.
-The wrapper also drops the helper's `items_source` parameter, so it can never reach
-the nested-context path.
+**Verifier (high confidence).** Verified against the code and at runtime. In src/metaseed/models/factory.py, _build_field_constraints (lines 326-340) maps pattern, min_length, max_length, minimum->ge, and maximum->le, but never maps constraints.min_items/max_items. The field-level …
 
-Fix: delete the wrapper; have `crud.py` and `forms.py` import `build_inline_tables`
-from `..helpers` like `nested.py`.
+#### M7. `models/factory.py:371` — field.required is ignored for list fields
+*Category: correctness*
 
-#### 14. Unused method `get_current_entity_field_count`
-`src/metaseed/ui/spec_builder/state.py:66` — dead-code
+**Issue.** The LIST branch of `_create_field_definition` unconditionally sets `constraints['default_factory'] = list` and returns the field, regardless of `field.required`. Verified at runtime: a required list field produces `required=False default_factory=list`, so constructing the model with the field omitted succeeds and yields `[]`. A spec that marks a list field `required: true` gets no presence enforcement at the model level, unlike scalar/entity fields which honor `required` via `...`.
 
-`SpecBuilderState.get_current_entity_field_count` (lines 66-73) is never called;
-sibling helpers (`is_active`, `get_entity_names`, `mark_saved`, `mark_changed`,
-`reset`) are all exercised by tests, but this one is not used by any route,
-template, or test.
+**Fix.** If a required list should differ from an optional one (e.g. require at least the field be present / non-empty), branch on field.required in the LIST path; otherwise document explicitly that list fields always default to empty and `required` is intentionally ignored.
 
-Fix: remove the method, or add a caller/test if it is intended to be public.
+**Verifier (high confidence).** The finding is accurate. In `_create_field_definition` (factory.py:371-375), the LIST branch sets `constraints["default_factory"] = list` and returns `(Annotated[python_type, Field(**constraints)], ...)`. Although `...` is passed as the create_model default, …
 
-#### 15. `DateRangeRule.validate` crashes on malformed date strings (uncaught ValueError)
-`src/metaseed/validators/rules.py:60` — correctness
+#### M8. `services/ontology.py:382` — search/search_sync return the live cached list on a cache miss, defeating the copy-on-read protection
+*Category: correctness*
 
-`DateRangeRule.validate` calls `date.fromisoformat` / `datetime.fromisoformat` on
-raw string values (lines 64-71) with no `try/except`. In the `DatasetValidator`
-path the engine runs against raw YAML dicts that have NOT been Pydantic-coerced, so
-a malformed date string (e.g. `start='2024-13-99'`) raises an uncaught `ValueError`
-that aborts `validate_file()`/`validate_directory()` instead of producing a
-validation error. The unit test only feeds well-formed values, so this is untested.
+**Issue.** On a cache hit the methods deliberately return a defensive copy: `return list(cached)` (lines 330 and 415), with the explanatory comment 'Return a copy so a caller mutating the list cannot corrupt the cache.' But on a cache MISS the very same list object that was just stored is returned by reference: self._set_cached(cache_key, results) # line 382 (and 467 in search_sync) ... return results # line 385 (and 470) The first caller therefore receives the exact object held in the cache. If that caller mutates the returned list (the scenario the copy logic is explicitly guarding against), the cached entry is corrupted and every subsequent cache hit returns the polluted data. The protection is applied inconsistently to only one of the two return paths. The existing test `test_search_sync_returns_cache_safe_copy` pre-seeds the cache and so only exercises the hit path, masking this gap.
 
-Fix: wrap the `fromisoformat` conversions in `try/except ValueError` and emit a
-`ValidationError` (rule `date_range`) so a bad date string is reported as a
-validation failure rather than crashing the run.
+**Fix.** Cache a copy and/or return a copy on the miss path too, e.g. `self._set_cached(cache_key, results)` followed by `return list(results)`; apply identically to both `search` (line 385) and `search_sync` (line 470).
 
-### Low
+**Verifier (high confidence).** Confirmed from the code in /Users/sdrwacker/workspace/metaseed-project/metaseed/src/metaseed/services/ontology.py. _set_cached (line 277) stores the value by reference with no copy, and _get_cached (line 268) returns entry.value by reference. On a cache HIT, …
 
-#### 16. `start()` ignores its own `port` argument in the already-running guard
-`src/metaseed/agent/mcp/manager.py:77` — correctness
+#### M9. `specs/merge/comparator.py:433` — constraints entry in FieldDiff.values has a different shape than all other entries
+*Category: consistency*
 
-`start(self, transport, host, port=8001)` calls `if self.is_running():` with no
-argument, so the guard always checks the default port 8001 rather than the requested
-`port`. The orphan check below it correctly uses `port`.
+**Issue.** In _analyze_field_diff, every per-attribute entry is stored flat as values[attr] = {profile_id: value} (line 422). But the constraints entry is stored as values["constraints"] = constraint_diff, where _compare_constraints returns a nested mapping {constraint_name: {profile_id: value}} (comparator.py:463-477). So values["constraints"] is keyed by constraint attribute name, not by profile_id, unlike every sibling entry. Both report generators assume the flat {profile_id: value} shape when rendering attributes listed in attributes_changed, so constraint conflicts render wrong (see reports.py:217-221 and reports.py:472-476).
 
-Fix: pass the requested port through: `if self.is_running(port):`.
+**Fix.** Either flatten constraint diffs into the same {profile_id: value} shape (e.g. one entry per differing constraint, key like 'constraints.pattern'), or make both report renderers special-case the 'constraints' key. Add a test that produces a field with a type/required conflict AND a differing constraint and asserts the rendered output.
 
-#### 17. `ValidationMixin` depends on a method defined only in `SerializationMixin`
-`src/metaseed/api/validation.py:35` — design
+**Verifier (high confidence).** Confirmed from the code. In comparator.py, per-attribute diffs are stored flat as values[attr] = {profile_id: value} (lines 415-422), but values["constraints"] = constraint_diff (line 433) holds the nested shape {constraint_name: {profile_id: value}} returned …
 
-`ValidationMixin` calls `self._get_instance_data` (lines 35, 83), which is defined
-only in `SerializationMixin` (serialization.py:148). It works solely because
-`MetaseedClient` inherits both and MRO resolves the attribute; composing
-`ValidationMixin` alone, or reordering bases, would raise `AttributeError`.
+#### M10. `specs/merge/reports.py:472` — HTML conflicts table drops constraint conflict values
+*Category: correctness*
 
-Fix: move `_get_instance_data` into a shared base both mixins inherit, or declare it
-as an abstract/Protocol method so the dependency is explicit.
+**Issue.** _add_html_conflicts iterates `for attr, values in fd.values.items()` and then does `val = values.get(profile_id, "-")`. For the 'constraints' entry, `values` is keyed by constraint attribute name (pattern, min_length, ...), not profile_id, so values.get(profile_id) always misses and the row renders '-' for every profile, silently losing the actual constraint conflict. This is reachable because a CONFLICT field (type/required/items differ) can also have differing constraints appended to attributes_changed/values.
 
-#### 18. Broad `except Exception` swallows all errors during dataset migration
-`src/metaseed/cli/migrate.py:130` (and `migrate_specs.py:109`) — correctness
+**Fix.** Handle the nested 'constraints' shape explicitly, or fix the producer (comparator.py:433) to emit a flat {profile_id: value} shape.
 
-`except Exception as e:` catches every error (including `KeyError`/`AttributeError`
-programming bugs) and records only `str(e)`, masking real defects behind a catch-all.
+**Verifier (high confidence).** Confirmed from the code. Producer comparator.py:_analyze_field_diff emits two value shapes into fd.values: flat {profile_id: value} for ordinary attributes (line 422), but a nested {constraint_attr: {profile_id: value}} for the 'constraints' entry (line 433, …
 
-Fix: catch the specific expected exceptions (`json.JSONDecodeError`, `OSError`), or
-at minimum log the traceback.
+#### M11. `src/metaseed/cli/__init__.py:255` — convert command uses raw echo + magic exit code instead of the shared error pattern
+*Category: consistency*
 
-#### 19. `OntologyTerm.parents` and `.children` are declared and serialized but never populated
-`src/metaseed/services/ontology.py:112` — dead-code
+**Issue.** For unknown input/output formats the convert command does `typer.echo(f"Error: Unknown input format: {input_suffix}", err=True)` / `raise typer.Exit(1)` (lines 255-256 and 265-266). Every other command in this module (including the same function's StorageError branch at lines 272-274) uses `echo_error(...)` plus a named `ExitCode`. The literal `1` is `ExitCode.VALIDATION_ERROR`, but a bad output-format suffix is an input error, so the exit code is also semantically wrong; the other input-error branch in this command correctly uses `ExitCode.INPUT_ERROR`.
 
-`OntologyTerm` declares `parents`/`children` (lines 113-114) and `to_dict()`
-serializes them (lines 125-126), but neither `get_term` nor `get_term_sync` parse
-hierarchy data from the OLS4 response — only `synonyms` is filled. Every returned
-term has empty `parents`/`children` regardless of the real hierarchy; the dataclass
-advertises information it never provides.
+**Fix.** Replace the two raw blocks with `echo_error(f"Unknown input format: {input_suffix}")` / `echo_error(...)` and `raise typer.Exit(ExitCode.INPUT_ERROR)` to match the surrounding error-handling convention.
 
-Fix: populate them from the OLS4 hierarchical-links endpoints, or remove the two
-fields and their `to_dict` entries.
+**Verifier (high confidence).** Verified directly against the source. In src/metaseed/cli/__init__.py the convert command's unknown-format branches use the raw pattern: - line 255-256: `typer.echo(f"Error: Unknown input format: {input_suffix}", err=True)` then `raise typer.Exit(1)` - line …
 
-#### 20. `list_datasets()` and `delete_dataset()` bypass the factory used by their save/load siblings
-`src/metaseed/ui/datasets.py:86` (and `:181`) — consistency
+#### M12. `src/metaseed/cli/commands/example.py:12` — _export_example_to_excel hardcodes MIAPPE entity field names but runs for every profile
+*Category: design*
 
-The module-level `list_datasets()`/`delete_dataset()` directly instantiate
-`FilesystemDatasetRepository()`, while their siblings `save_dataset()`/
-`load_dataset()` resolve a manager via `_resolve_factory()` (which prefers the
-MCP-context factory). In an MCP session a saved dataset can land in one repository
-while list/delete operate on the default filesystem repository.
-
-Fix: route `list_datasets()`/`delete_dataset()` through `_resolve_factory()` like
-save/load, or remove them if no production caller needs them.
+**Issue.** export_example accepts any profile (its argument help lists miappe, isa, isa-miappe-combined) and routes .xlsx output through _export_example_to_excel. That function builds sheets from a fixed set of MIAPPE-shaped keys (`studies`, `persons`, `biological_materials`, `observation_units`, `factors`, etc., lines 109-187). For a profile whose example uses different nesting keys, any nested entities outside this hardcoded set are silently dropped from the Excel export with no warning, and only the root sheet plus incidentally-matching keys are populated. The generic name does not reflect that the extraction logic is MIAPPE-specific.
 
-#### 21. `_get_dataset_manager` duplicated verbatim between `core.py` and `api.py` with divergent typing
-`src/metaseed/ui/routes/api.py:141` — consistency
-
-The nested helper is defined identically in `core.py` (typed `(state: AppState) ->
-Any`) and again in `api.py` (untyped `def _get_dataset_manager(state):`), both doing
-the same `context.dataset_factory` lookup with the same fallback. The api.py copy has
-no annotations and no Google-style docstring.
-
-Fix: extract one shared, annotated `_get_dataset_manager` and import it in both.
+**Fix.** Either drive the sheet extraction from the profile schema / nested_fields instead of a hardcoded key list, or rename to reflect the MIAPPE assumption and reject/warn for profiles whose structure does not match.
 
-#### 22. Unused duplicate `AppStateAdapter` alias
-`src/metaseed/ui/services/entities.py:18` — dead-code
-
-`AppStateAdapter = MemoryEntityRepository` ("Backwards compatibility alias") is never
-imported from this module; the canonical alias lives in `repositories/memory.py:286`.
-
-Fix: remove line 18 (and the now-unused `MemoryEntityRepository` import if nothing
-else uses it).
-
-#### 23. Reaches into private `SpecLoader._find_profile_file` across a module boundary
-`src/metaseed/ui/spec_builder/routes_main.py:128` — design
-
-`clone_template` calls `loader._find_profile_file(version, profile)` — the only
-external caller of a private method of `SpecLoader`, which exposes no public
-path-resolution API. Renaming the private helper would silently break the route.
-
-Fix: add a public `get_profile_path`/`find_profile_file` method on `SpecLoader` and
-call that.
-
-#### 24. Module-level `validate()` in `engine.py` is dead code
-`src/metaseed/validators/engine.py:461` — dead-code
-
-The module-level `validate(data, entity, version, profile)` (lines 461-481) is never
-imported or called: the public `validate` everywhere comes from
-`metaseed.validators.__init__` (a richer implementation with cascade/BaseModel
-support). The engine copy duplicates a subset of it and is unreachable.
-
-Fix: remove the `engine.py` module-level `validate` function.
-
-## Appendix: lower-confidence notes (triaged)
-
-These 57 low-severity notes were surfaced by the reviewers but not adversarially
-verified during the original run. They have since been triaged against the code.
-
-Triage outcome:
-- **Fixed** (confirmed real): the `.tsv` sniffer override, Excel reading
-  `sheetnames` after `close()`, `bulk_update_rows` returning a 500 on an unknown
-  field, the `infer_entity_type_from_field` name-guessing fallback (removed —
-  resolution is now spec-only), the MIAPPE-hardcoded `_detect_entity_type` /
-  `"investigation"` default (now profile-agnostic), and a batch of inaccurate
-  docstrings plus two typing/consistency items (`DateAwareEncoder.default`
-  annotations, `import_dataset` factory resolution).
-- **Refuted:** `get_global_context` is a public export, not dead code — kept.
-- **Already fixed earlier:** `get_table_column_info` docstring (with finding 11).
-- **Deferred (advisory):** the remaining items are subjective consistency
-  preferences (mixed logging idioms, helper-lookup styles, module import style),
-  non-gated typing annotations, latent-only issues (lexicographic version sort —
-  no `1.10` exists yet), and minor notes. They are recorded below for reference;
-  none is a current defect.
-
-The original lead list follows, grouped by category.
-
-### Docstring accuracy (15)
-
-- `agent/mcp/manager.py:211` — `_check_port_in_use` docstring omits the `-1` sentinel return value
-- `agent/mcp/tools/datasets.py:44` — `list_datasets` docstring claims "JSON array of dataset names" but returns an object with full metadata
-- `agent/mcp/tools/profiles.py:132` — `get_field_spec` docstring omits that it resolves from current dataset state, not an explicit profile/version
-- `cli/migrate.py:142` — public helper docstrings missing Args/Returns (not Google-style)
-- `core/__init__.py:3` — docstring lists "configuration" the module does not provide
-- `facade/store.py:101` — `add_entity` docstring claims it generates a UUID but it generates an 8-char hex
-- `models/factory.py:223` — `EntityBaseModel` docstring claims a JSON serialization mode that is not configured
-- `models/factory.py:23` — `ModelContext` docstring references a "model registry" the class does not encapsulate
-- `repositories/helpers.py:4` — module docstring references the old name `AppStateAdapter`
-- `repositories/helpers.py:43` — `get_identifier` docstring claims "first field is the identifier" but code uses `helper.identifier_field`
-- `ui/helpers/entity_helpers.py:232` — `collect_entities_by_type` docstring return example does not match produced keys
-- `ui/helpers/table_helpers.py:63` — `get_table_column_info` docstring lists an incomplete set of returned keys (related to finding 11)
-- `ui/spec_builder/routes_export.py:232` — `import_yaml` docstring documents a `request` parameter the signature does not have
-- `ui/spec_builder/routes_fields.py:88` — docstring documents `base_url` but the parameter is `_base_url`
-- `ui/spec_builder/routes_rules.py:94` — docstring documents `base_url` but the parameter is `_base_url`
-
-### Sibling consistency (14)
-
-- `agent/mcp/server.py:228` — loop variable `field` shadows the `dataclasses.field` import
-- `agent/mcp/tools/entities.py:108` — mixed logging idioms within the module
-- `api/client.py:356` — inconsistent helper lookup: `getattr(facade, ...)` vs `facade.get_helper(...)`
-- `cli/migrate.py:141` — two divergent `print_migration_report` implementations with incompatible signatures
-- `facade/helper.py:342` — `validate_ontology_terms` still runs network validation on the `skip_validation=True` path
-- `facade/store.py:160` — `_resolve_parent` uses exact-match `_get_helper` while instance creation uses case-insensitive `getattr`
-- `llm/__init__.py:57` — inconsistent `self` typing within `LLMService`
-- `logging.py:84` — `get_logger` wrapper coexists with the prescribed `logging.getLogger` pattern
-- `repositories/helpers.py:74` — `derive_label` uses the literal first field while `get_identifier` uses the first non-reference field
-- `ui/datasets.py:176` — `import_dataset()` uses `_get_factory()` instead of `_resolve_factory()`
-- `ui/helpers/entity_helpers.py:147` — `extract_nested_from_tree` reaches into private `_spec` instead of the public `reference_fields`
-- `ui/routes/explore.py` — diverges from sibling route modules: no `from __future__ import annotations`, eager imports
-- `ui/spec_builder/routes_export.py:129` — `display_name`/`ontology` stored as `""` instead of `None`, diverging from `update_profile_metadata`
-- `validators/rules.py:88` — `RequiredFieldsRule` does not share the `has_value` emptiness semantics used by sibling rules
-
-### Correctness leads (7)
-
-- `agent/parsers/csv.py:22` — `csv.Sniffer` can silently override the explicit `.tsv` delimiter
-- `repositories/filesystem_dataset.py:76` — dataset sort mixes ISO timestamps and float-string mtimes, producing inconsistent ordering
-- `specs/schema.py:281` — `_to_pascal_case` mishandles already-PascalCase input and embedded acronyms
-- `ui/helpers/table_helpers.py:45` — `infer_entity_type_from_field` uses `rstrip('s')`, which strips all trailing `s` and mis-capitalizes multi-word names
-- `ui/routes/api.py:244` — `validate_dataset_api` swallows all exceptions with a bare `except Exception`
-- `ui/routes/table.py:295` — `bulk_update_rows` does not validate `field_name` is a nested field, yielding a TypeError 500 instead of a clean 404
-- `ui/spec_provider.py:199` — version selection uses lexicographic sort (would order `1.10` before `1.2`)
-
-### Dead code leads (7)
-
-- `agent/parsers/registry.py:49` — `mime_types` declared on the Protocol and all parsers but never read
-- `cli/output.py:53` — `echo_info` is never imported or called
-- `models/factory.py:122` — `get_global_context` is exported but never called
-- `specs/loader.py:172` — unreachable `except yaml.YAMLError` in `SpecLoader.load`
-- `specs/merge/merger.py:204` — `_merge_entity_fields` takes an unused `_profile_specs` parameter; docstring names it `profile_specs`
-- `ui/helpers/validation.py:67` — `_format_validation_error` first parameter is unused and named "reserved for future use"
-- `ui/spec_filesystem.py:114` — redundant local re-imports of `SpecLoadError`
-
-### Design leads (7)
-
-- `agent/core.py:154` — `from_profile` passes `profile` to both the `SpecLoader` ctor and `load_profile`, redundantly
-- `agent/parsers/excel.py:53` — `workbook.sheetnames` accessed after `workbook.close()`
-- `agent/parsers/registry.py:11` — `ParsedContent` defined before the `ParsedTable` it references
-- `cli/migrate_specs.py` — standalone script never wired into the CLI app
-- `ui/routes/crud.py:348` — HX-Trigger chosen by substring-matching a human-readable message instead of the existing `message_type`/`is_edit` signal
-- `ui/spec_builder/routes_fields.py:24` — `FieldUpdateData` abstraction is incomplete: `ontologies` handled outside the model
-- `validators/dataset.py:183` — `DatasetValidator._detect_entity_type` hardcodes MIAPPE-specific field names for a profile-agnostic validator
-
-### Typing leads (7)
-
-- `agent/mcp/server.py:93` — several public module-level functions lack parameter/return annotations
-- `api/client.py:415` — `facade` property annotated as `Any` instead of `ProfileFacade`
-- `api/client.py:423` — `get_model` return type annotated as `Any` instead of a Pydantic model type
-- `profiles/factory.py:64` — `get_profile_info` uses a bare `list[dict]` return annotation
-- `ui/routes/validation.py:286` — `_separate_field_values` `entity_spec` parameter is unannotated
-- `ui/spec_builder/routes_fields.py:99` — `_require_entity`/`_require_field`/`_auto_create_back_reference` lack the entity type annotations present in the sibling file
-- `utils/json.py:13` — `DateAwareEncoder.default` lacks type annotations
-
-## Method
-
-- Source root: `src/metaseed` (126 files, ~27k LOC), grouped into 19 review units.
-- One reviewer agent per group found candidate issues; an adversarial verifier then
-  tried to refute each high/medium finding against the actual code, adjusting
-  severity where it disagreed. Low-severity findings were not verified and appear in
-  the appendix as leads.
-- This review only *finds* issues; no code was modified. Remediation is a separate,
-  user-approved step.
+**Verifier (high confidence).** Confirmed from src/metaseed/cli/commands/example.py. _export_example_to_excel only emits sheets for the root entity plus hardcoded root keys `contacts` (line 87) and `studies` (line 92), and within each study a fixed MIAPPE key set (lines 113-157: persons, …
+
+#### M13. `ui/datasets.py:171` — Importing a dataset without a version pins the facade to an empty-string version instead of latest
+*Category: correctness*
+
+**Issue.** import_dataset coerces a missing version field to an empty string: `version=payload.get("version") or ""`. This flows into DatasetData.version="", then BaseDatasetManager._restore_state_from_data assigns it raw: `self._state.version = data.version` (dataset_manager.py:120). AppState.version uses None to mean 'use latest', but "" is not None, so get_or_create_facade builds ProfileFacade(profile, ""). ProfileFacade.__init__ resolves version via `elif version is not None: self._version = version`, so it is pinned to the literal empty string "" rather than falling back to the latest version directory, which breaks model/entity resolution during load_from_dict. Note the asymmetry: _build_dataset_data (dataset_manager.py:106) guards the same value with `self._state.version or facade.version`, but the restore path does not. The docstring of import_dataset explicitly advertises version as …
+
+**Fix.** Normalize an empty/missing version to None before constructing the facade (e.g. in _restore_state_from_data: `self._state.version = data.version or None`), or have import_dataset pass None and widen DatasetData.version handling accordingly.
+
+**Verifier (high confidence).** Confirmed by reading the code and empirically reproducing it. Chain of evidence: 1. /Users/sdrwacker/workspace/metaseed-project/metaseed/src/metaseed/ui/datasets.py:170 builds DatasetData with `version=payload.get("version") or ""`, so a payload missing the …
+
+#### M14. `ui/helpers/entity_helpers.py:232` — collect_entities_by_type docstring documents wrong dict key (identifier vs value)
+*Category: docstring*
+
+**Issue.** The Returns docstring shows each entry as `{"identifier": "OU-1", "label": ..., "data": {...}}`, but add_entity (line 266) actually appends `{"value": identifier, "label": label, "data": data}`. The real consumer (src/metaseed/ui/routes/api.py:100) reads `entity.get("value", "")`, confirming the key is "value", not "identifier". The docstring will mislead anyone consuming this function.
+
+**Fix.** Change the documented key from "identifier" to "value" to match the actual returned structure.
+
+**Verifier (high confidence).** Verified directly from the code. The Returns docstring of collect_entities_by_type (entity_helpers.py lines 232-237) shows each entry as {"identifier": "OU-1", "label": ..., "data": {...}}. However, the actual append in add_entity at line 267 is …
+
+#### M15. `ui/helpers/spec_builder_helpers.py:91` — spec_to_yaml mutates global PyYAML representer registry as a side effect
+*Category: design*
+
+**Issue.** spec_to_yaml calls `yaml.add_representer(str, str_representer)` which permanently registers a custom string representer on PyYAML's default Dumper for the entire process. After spec_to_yaml runs once, every other `yaml.dump` in the process (e.g. src/metaseed/storage/yaml_backend.py:39, src/metaseed/agent/core.py:457, src/metaseed/cli/__init__.py:207, src/metaseed/cli/commands/example.py) will silently emit multi-line strings as block scalars (style='|'), even though those call sites never opted in. This is action-at-a-distance: a helper for one UI feature reconfigures global serialization behavior for unrelated modules.
+
+**Fix.** Use a local Dumper subclass and register the representer on it (yaml.dump(..., Dumper=MyDumper)) instead of the global yaml.add_representer, so the block-scalar behavior is scoped to spec_to_yaml.
+
+**Verifier (high confidence).** Verified against the code and PyYAML semantics. At /Users/sdrwacker/workspace/metaseed-project/metaseed/src/metaseed/ui/helpers/spec_builder_helpers.py:91, spec_to_yaml calls yaml.add_representer(str, str_representer) with no Dumper argument. Confirmed via …
+
+#### M16. `ui/routes/nested.py:193` — Zero values for integer/float nested fields are silently dropped
+*Category: correctness*
+
+**Issue.** In save_nested_item the form value is converted then written only under `if value:`: ``` if info.get("type") == "integer" and value: with contextlib.suppress(ValueError): value = int(value) elif info.get("type") == "float" and value: with contextlib.suppress(ValueError): value = float(value) if value: item[key] = value ``` A submitted '0' becomes the int 0, which is falsy, so `if value:` is False and the field is never stored. The same applies to 0.0 for float fields. Numeric zero is a legitimate value for these domain field types (integer/float) and is lost on save.
+
+**Fix.** Guard against the empty string explicitly instead of using truthiness, e.g. `if value != "":` before assignment (capturing the original string emptiness before conversion), or only skip when the raw form value is the empty string.
+
+**Verifier (high confidence).** Confirmed directly in /Users/sdrwacker/workspace/metaseed-project/metaseed/src/metaseed/ui/routes/nested.py lines 187-194. For an integer field, a form value of "0" is truthy as a string (passes `if info.get("type") == "integer" and value` at line 187) and is …
+
+#### M17. `ui/routes/validation.py:229` — FileNotFoundError handler for unknown entity is unreachable; SpecLoadError path mishandles normal user input
+*Category: dead-code*
+
+**Issue.** In `_validate_entity_deep`, `loader.load_entity(entity_type, version)` (line 192) raises `SpecLoadError` for an unknown entity type, never `FileNotFoundError` (verified in loader.py: `load_entity` raises `SpecLoadError("Entity not found: ...")` and `_load_profile` returns None rather than raising FileNotFoundError on a missing file). Therefore the `except FileNotFoundError:` block at lines 229-244 that builds the friendly `f"Unknown entity type: {entity_type}"` message is dead. Unknown entity types instead fall through to `except SpecLoadError as e:` (line 245), which calls `logger.warning(..., exc_info=True)` — emitting a full stack trace at warning level for an ordinary user-supplied bad entity name — and surfaces the raw `str(e)` with check name `load_spec` instead of the intended user-facing message. The same dead `except FileNotFoundError` pattern recurs at lines 123 and 141 in …
+
+**Fix.** Drop the dead `except FileNotFoundError` branches and handle the unknown-entity case inside the `except SpecLoadError` branch (or check existence before loading). Do not log normal unknown-entity input at warning level with exc_info=True; reserve that for unexpected failures.
+
+**Verifier (high confidence).** Verified against loader.py. load_entity (loader.py:252-290) raises only SpecLoadError for both unknown entity (line 286, "Entity not found: ...") and missing profile (line 290); it never raises FileNotFoundError. _load_profile returns None on missing file …
+
+#### M18. `ui/spec_builder/routes_entities.py:207` — Entity rename does not update references inside validation_rules
+*Category: correctness*
+
+**Issue.** On rename, update_entity calls _update_entity_references which only iterates builder.spec.entities.values() and rewrites field.items / field.reference / field.parent_ref. It never touches builder.spec.validation_rules. A ValidationRuleSpec stores entity names in `applies_to` (list[str] | str) and an `Entity.field` value in `reference`. After renaming an entity, any validation rule that applies_to that entity or references `OldName.field` is left pointing at the now-nonexistent old name, silently breaking cross-entity validation. The function is the dedicated referential-integrity helper for rename, so missing validation_rules is a real gap, not intentional.
+
+**Fix.** Extend _update_entity_references to also rewrite each ValidationRuleSpec: replace old_name in applies_to (both the scalar and list forms) and rewrite reference when it startswith f"{old_name}.".
+
+**Verifier (high confidence).** Confirmed from the code. In /Users/sdrwacker/workspace/metaseed-project/metaseed/src/metaseed/ui/spec_builder/routes_entities.py, update_entity (line 178) calls _update_entity_references on rename. That helper (lines 207-227), documented as "Update all …
+
+#### M19. `validators/dataset.py:289` — Reference resolution would still fail after key fix: ref entity derived from full 'Entity.field' string, and IDs only registered under literal 'unique_id'
+*Category: correctness*
+
+**Issue.** Two further defects compound the dead reference check. (1) Line 289 does `ref_entity = to_snake_case(ref_type)` where ref_type is the full reference string like 'Study.unique_id' (confirmed: specs store reference as 'Entity.field', e.g. ENA 'Study.alias', ISA 'Investigation.identifier'). to_snake_case('Study.unique_id') returns 'study.unique_id' (verified), but IDs are registered under the bare entity type 'study', so exists('study.unique_id', value) always returns False -> false positives once the key-casing bug is fixed. The entity should be taken from ref_type.split('.')[0] before snake-casing. (2) _collect_ids' register_id (lines 260-262) only registers values when the field is literally named 'unique_id'; profiles whose identifier field is 'alias' (ENA) or 'identifier' (ISA/JERM) register nothing, so references into those entities can never resolve. The registered id field should …
+
+**Fix.** Parse ref_type as `entity, id_field = ref_type.split('.')`; register and look up IDs using the id_field that the reference names, not a hardcoded 'unique_id'.
+
+**Verifier (high confidence).** Both compound defects are confirmed directly in /Users/sdrwacker/workspace/metaseed-project/metaseed/src/metaseed/validators/dataset.py. (1) _load_reference_fields (line 177) stores f.reference verbatim, and specs store it as the full 'Entity.field' string …
+
+#### M20. `validators/rules.py:159` — RequiredFieldsRule treats empty list/dict as present, inconsistent with has_value
+*Category: correctness*
+
+**Issue.** RequiredFieldsRule.validate checks only `if value is None or value == ""`. For a required field whose value is an empty list `[]` or empty dict `{}`, the comparison `[] == ""` / `{} == ""` is False, so the field is accepted as present and no error is raised. The module's own `has_value` helper (base.py) deliberately treats an empty list as absent (`isinstance(value, list) and len(value) == 0 -> False`), and CoordinatePairRule/ConditionalRule rely on that semantics. Since `create_engine_for_entity` builds RequiredFieldsRule from `spec.get_required_fields()`, which can include `list`-type required fields, a required list field supplied as `[]` slips through both Pydantic (an empty list still satisfies 'provided') and this rule. The test suite explicitly documents the 0/False cases (test_zero_value_is_valid, test_false_value_is_valid) but does not cover empty containers, leaving this gap …
+
+**Fix.** Reuse `has_value(data, field)` in RequiredFieldsRule.validate (or add an explicit empty-list/empty-dict check) so 'required' has the same non-empty semantics the rest of the module uses, while still allowing 0 and False.
+
+**Verifier (high confidence).** Confirmed from the code. RequiredFieldsRule.validate (rules.py:159) checks only `value is None or value == ""`. I verified `[] == ""` and `{} == ""` are both False in Python, so a required field supplied as an empty list or empty dict is treated as present …
+
+
+### Low severity (5)
+
+#### L1. `agent/mcp/tools/extraction.py:196` — extract_entities lets KeyError escape for an unknown entity name
+*Category: correctness*
+
+**Issue.** The except clause is `except (ValueError, SpecLoadError, json.JSONDecodeError, IndexError) as e`. `ctx.extract_entities(0, entity, table_index=table_index)` calls `get_entity_spec(entity)` (src/metaseed/agent/core.py:256) which raises `KeyError` when the entity is not defined in the profile (schema.py:293). Unlike analyze_mapping (which routes through `SpecLoader.load_entity` and raises the caught SpecLoadError), this path raises an uncaught KeyError, so a bad entity name produces an unhandled exception instead of the tool's standard `{"error": ...}` JSON.
+
+**Fix.** Include KeyError in the caught exceptions so an invalid entity name is reported as a structured error consistent with the other failure branches.
+
+**Verifier (high confidence).** Verified directly in source. In extract_entities (src/metaseed/agent/mcp/tools/extraction.py:181) the call ctx.extract_entities(0, entity, table_index=table_index) routes through ExtractionContext.extract_entities (core.py:256) -> get_entity_spec …
+
+#### L2. `agent/mcp/tools/profiles.py:361` — get_field_spec example branch is unreachable (FieldSpec has no 'example' field)
+*Category: dead-code*
+
+**Issue.** In get_field_spec the code does: if hasattr(field, "example") and field.example: field_info["example"] = field.example `field` is a FieldSpec, which is a Pydantic v2 model declared with `model_config = ConfigDict(extra="forbid")` and has no `example` attribute (only EntityDefSpec/profile-level specs define `example`). `hasattr(field, "example")` is therefore always False, so this branch never executes and `field_info` can never carry an `example` key. I grepped specs/ and facade/ and confirmed nothing ever assigns `field.example`. The code implies field-level examples are surfaced, but they never are.
+
+**Fix.** Remove the dead branch, or if field-level examples are actually wanted, add an `example` field to FieldSpec and populate it. As written it is misleading dead defensive code.
+
+**Verifier (high confidence).** Confirmed from the code. In /Users/sdrwacker/workspace/metaseed-project/metaseed/src/metaseed/agent/mcp/tools/profiles.py line 341 the loop iterates `helper._spec.fields`, whose elements are FieldSpec instances. FieldSpec is defined in …
+
+#### L3. `core/exceptions.py:4` — StorageIOError is documented as the storage exception but storage code raises an unrelated StorageError
+*Category: consistency*
+
+**Issue.** The module docstring states these exceptions are 'for internal use within the core, models, specs, and storage modules' and the hierarchy lists 'StorageIOError - File I/O errors'. However, the storage backends (yaml_backend.py, json_backend.py) never raise StorageIOError; they raise storage.base.StorageError, which subclasses plain Exception (NOT MiappeError). A grep across src shows StorageIOError is never raised anywhere in production code (only referenced in __init__/__all__ and an inheritance test). So there are two parallel, disjoint storage-error types: the documented-but-unraised core.StorageIOError(MiappeError), and the actually-raised storage.StorageError(Exception) which does not participate in the MiappeError hierarchy. Code that catches MiappeError to handle storage failures will silently miss every real storage error.
+
+**Fix.** Either make storage.base.StorageError subclass core.exceptions.StorageIOError (or MiappeError) so the documented hierarchy holds, or remove StorageIOError and correct the exceptions module docstring to stop claiming the storage module uses it.
+
+**Verifier (high confidence).** Verified against the code. core/exceptions.py defines StorageIOError(MiappeError) and the module docstring (lines 3-4, 9-14) claims the storage module uses this hierarchy. But storage/base.py:15 defines StorageError(Exception), which does NOT subclass …
+
+#### L4. `repositories/file.py:36` — Class docstring documents a nested-children file format that the code never writes
+*Category: docstring*
+
+**Issue.** The FileEntityRepository class docstring shows the on-disk JSON format with each entity carrying a nested "children": [ ... ] array. The actual serializer `_save` (serialize_recursive, lines 213-226) writes a FLAT list of entity dicts, each containing only `id, entity_type, label, parent_id, **data` and NO `children` key; hierarchy is reconstructed purely from `parent_id` on load (`_build_hierarchy`). The documented format is inaccurate and misleads anyone reading or consuming these files (e.g. metaseed-hub).
+
+**Fix.** Update the docstring example to reflect the flat persisted format (entities with parent_id, no nested children), or change _save to actually nest children if nesting is intended.
+
+**Verifier (high confidence).** Confirmed against /Users/sdrwacker/workspace/metaseed-project/metaseed/src/metaseed/repositories/file.py. The class docstring (lines 36-51) shows each persisted entity with a nested "data": { ... } object and a "children": [ ... ] array. The actual serializer …
+
+#### L5. `ui/routes/api.py:306` — compare_profiles and merge_profiles return different HTTP status codes for ValueError
+*Category: consistency*
+
+**Issue.** `compare_profiles` maps `except (ValueError, SpecLoadError) as e:` to a 500 response (lines 306-310), whereas the sibling `merge_profiles` maps `except ValueError` to 400 and only `SpecLoadError` to 500 (lines 382-391). A `ValueError` typically reflects bad client input (e.g. an invalid strategy or profile combination), so returning 500 from `compare` but 400 from `merge` for the same exception class is inconsistent and misreports client errors as server errors.
+
+**Fix.** Treat ValueError consistently across both endpoints (most likely 400 for both), matching merge_profiles' split between ValueError (400) and SpecLoadError (500).
+
+**Verifier (high confidence).** Confirmed directly from /Users/sdrwacker/workspace/metaseed-project/metaseed/src/metaseed/ui/routes/api.py. compare_profiles catches `except (ValueError, SpecLoadError) as e:` at lines 306-310 and returns status_code=500 for both. The sibling merge_profiles …
+
+
+## Appendix: unverified low-severity notes
+
+These 65 notes were produced by the reviewers but, per the review configuration, were not
+individually run through the adversarial verifier. Treat them as leads to confirm, not as
+established defects. They are grouped by category.
+
+#### consistency
+
+- `agent/mapping.py:231` — **mapping_to_dict/mapping_from_dict round-trip silently drops the notes field** `mapping_to_dict` emits only column/confidence/default per field (lines 244-249) and `mapping_from_dict` reconstructs FieldMapping without notes (lines 265-272). FieldMapping.notes (and the human-readable match notes set by suggest_mapping) are lost on a to_dict/from_dict round trip, even though confidence is preserved. The asymmetry is undocumented. _Fix:_ Either persist and restore `notes` for a lossless round trip, or document explicitly that the dict form is a lossy projection that drops notes.
+- `agent/mcp/tools/entities.py:197` — **Mixed logging idioms within the same module** _auto_fill_reference_fields uses `import logging; logger = logging.getLogger(__name__)` (lines 197-199), while _auto_save_dataset in the same file uses the project helper `from metaseed.logging import get_logger`. The codebase has a dedicated `metaseed.logging.get_logger`; using the bare stdlib getLogger in one helper and the project helper in another is an inconsistent pattern inside a single file. _Fix:_ Use `from metaseed.logging import get_logger` consistently throughout entities.py.
+- `agent/mcp/tools/entities.py:658` — **bulk_update_entities returns raw validation text while batch_create returns structured details** The per-item loop in bulk_update_entities catches only `except ValueError as e` and reports `str(e)`. By contrast batch_create (same file, line ~750) catches `except Exception` and routes through `_handle_validation_error` / `_format_validation_error` to produce structured `details`, valid_fields, and identifier hints. update_entity -> repo.update_entity -> helper.create(**merged) can raise pydantic ValidationError on a bad merged value; this is only caught here because pydantic v2 ValidationError happens to subclass ValueError, and even then the caller gets a verbose raw message instead of the helpful structured feedback batch_create provides. Two sibling batch tools handle the same failure class inconsistently. _Fix:_ Catch Exception and reuse `_handle_validation_error(e, entity_type)` (entity_type is available via the looked-up entity) so bulk updates surface the same structured validation feedback as batch_create, rather than relying on ValidationError being a ValueError subclass.
+- `agent/mcp/tools/ontology.py:51` — **register_ontology_tools does not receive get_mcp_state like sibling registrars** register_dataset_tools and register_validation_tools take `get_mcp_state` as a parameter and close over it (server.py:284-287). register_ontology_tools(mcp) omits it, and validate_ontology_terms instead does a lazy `from metaseed.agent.mcp.server import get_mcp_state` inside the tool body (line 295). The two patterns for obtaining the same state diverge across this module group. It works, but it is an inconsistent dependency-injection pattern relative to the other tool modules. _Fix:_ Pass get_mcp_state into register_ontology_tools and close over it, matching register_validation_tools / register_dataset_tools, or document why ontology tools resolve state lazily.
+- `agent/parsers/registry.py:16` — **Inconsistent mutable-default style for Pydantic list fields vs metadata** ParsedContent declares tables: list[ParsedTable] = [] and text_blocks: list[str] = [] with bare mutable defaults, but metadata uses Field(default_factory=dict). Pydantic v2 handles all three safely (defaults are deep-copied per instance), so this is not a correctness bug, but the mixed style is inconsistent within the same model. The same divergence appears in server.py _MCPStateHolder where state uses `= None` but factory uses field(default=None). _Fix:_ Pick one convention (default_factory=list for the list fields, to mirror metadata) for consistency.
+- `api/client.py:358` — **get_entity_fields silently drops the per-field 'ontologies' list** EntityHelper.field_info() returns an 'ontologies' key (plural list) in addition to 'ontology_term', but FieldInfo has no `ontologies` attribute and get_entity_fields never reads it. As a result the public schema-introspection API exposes only a single ontology_term and silently discards any multi-ontology binding present in the spec. If this is intentional it is undocumented; if not, multi-ontology fields are misrepresented through the public surface. _Fix:_ Either add an `ontologies` field to FieldInfo and populate it from info.get('ontologies'), or document that the public FieldInfo intentionally exposes only the primary ontology_term.
+- `api/validation.py:51` — **Inconsistent ValidationIssue.field encoding between validate() and validate_entity()** validate() emits issues with field=f"{node.id}.{err.field}" (node-id prefixed), while validate_entity() emits field=err.field (bare field name). ValidationIssue.field is documented as 'Field path where the issue occurred', so the same attribute carries two different formats depending on which method produced it, making programmatic handling (e.g. ValidationResult.get_field_errors) behave differently across the two entry points. _Fix:_ Use a consistent encoding, e.g. add a separate entity_id attribute on ValidationIssue rather than overloading field, or apply the same prefixing convention in both methods.
+- `core/serialization.py:39` — **to_json_dict guards for non-model inputs that its type signature forbids** The signature is `instance: BaseModel | None`, but the docstring promises an empty dict for 'non-model inputs' and the body has `if not hasattr(instance, 'model_dump'): return {}`. For any value matching the declared type (BaseModel or None) this branch is unreachable, since None is handled above and every BaseModel has model_dump. The defensive branch and the docstring contradict the declared type. _Fix:_ Either widen the annotation to `BaseModel | None | object` / `Any` to honestly reflect the runtime contract described in the docstring, or drop the hasattr guard and the 'non-model inputs' docstring clause.
+- `facade/store.py:368` — **to_dict hardcodes unique_id/alias for parent refs, ignoring 'identifier' and entity-specific id field** to_dict computes `node_unique_id = data.get("unique_id") or data.get("alias")` for the parent reference written as _parent_unique_id. This drops two of the identifier sources used everywhere else: IDENTIFIER_FIELDS also includes 'identifier', and entities can have a custom identifier_field. For an entity identified by 'identifier' or a custom field, node_unique_id is None, so no _parent_unique_id is serialized and _link_by_stored_refs cannot relink the child on load (it then depends on the secondary nested-array/reference-field linking, or becomes a root). This diverges from the IDENTIFIER_FIELDS+identifier_field convention used by add_entity, _get_identifier_fields, and the index logic. _Fix:_ Derive node_unique_id from the same identifier set used elsewhere (IDENTIFIER_FIELDS plus the helper's identifier_field) instead of hardcoding only unique_id/alias.
+- `models/factory.py:110` — **ModelContext.get suppresses KeyError/LookupError but the loader raises SpecLoadError** `get` wraps the on-demand loader call in `contextlib.suppress(KeyError, LookupError)` and documents 'Returns: Model class or None if not found'. The configured loader is `get_model`, which calls `loader.load_entity(...)` and raises `SpecLoadError` (a plain Exception, not a LookupError subclass; confirmed via MRO) when an entity is not found. That exception is not suppressed, so resolving a nested entity whose type is not a real entity raises SpecLoadError out of the model validator instead of returning None as documented. _Fix:_ Add SpecLoadError to the suppressed exceptions (or catch a common base) so unknown nested-entity types degrade to None per the documented contract.
+- `profiles/factory.py:49` — **list_versions constructs a throwaway SpecLoader instead of using self._loader** ProfileFactory.list_versions does `loader = SpecLoader(profile=profile); return loader.list_versions()`, while list_profiles uses self._loader. SpecLoader.list_versions already accepts a `profile` argument (loader.py:328), and every other call site in the codebase (spec_filesystem.py, routes/core.py, agent/mcp/tools/profiles.py) uses the `self._loader.list_versions(profile)` form. Allocating a fresh SpecLoader on each call is inconsistent and discards the cache state held by self._loader. _Fix:_ Replace with `return self._loader.list_versions(profile)` to match the rest of the codebase and reuse the cached loader.
+- `repositories/memory.py:243` — **Reference comparison uses plain model_dump() instead of the mode=json/exclude_none used everywhere else** In `_find_parent_from_references`, `node_data = node.instance.model_dump()` (line 243) is dumped without `mode="json", exclude_none=True`, whereas every other model_dump call in this file (lines 46, 71, 156, 210, 258, 264) uses `mode="json", exclude_none=True`. The result `node_data.get(target_field)` is then compared by equality with `ref_value` taken from raw incoming JSON-ish data. For string identifiers this is fine, but if a reference target field is a date/datetime/uri/enum type, model_dump() yields a Python object (e.g. datetime.date) while ref_value is a string, so the `==` comparison silently fails and parent auto-detection breaks. _Fix:_ Use `node.instance.model_dump(mode="json", exclude_none=True)` to match the rest of the module and ensure comparisons are against JSON-normalized values.
+- `ui/datasets.py:44` — **Duplicated, divergent logic for locating the MCP-context dataset factory** _resolve_factory (datasets.py:44) finds the MCP-context factory via `from metaseed.agent.mcp.server import get_context` (a process-global), while resolve_dataset_manager (dataset_manager.py:443) finds the same factory via `getattr(app.state, "mcp_context", None)`. Two different mechanisms reach the same shared factory, so a session where the global context and app.state.mcp_context disagree would route module-level helpers and route handlers to different repositories. This is a consistency hazard even though each currently has a distinct call surface (helpers without an app vs routes with an app). _Fix:_ Centralize MCP-context-to-factory resolution in a single helper and have both entry points delegate to it, so the lookup strategy cannot diverge.
+- `ui/helpers/navigation_helpers.py:97` — **Unguarded split-unpack of rule.reference inconsistent with field-reference branch** The field-definition branch guards the reference parse with `parts = ref_value.split("."); if len(parts) == 2:` (lines 80-81). The validation-rules branch instead does a direct `target_entity, target_field = rule.reference.split(".")` (line 97) with no length guard, so a malformed reference containing more than one dot would raise an unhandled ValueError (too many values to unpack) rather than being skipped. The two branches handle the same 'Entity.field' format inconsistently. _Fix:_ Apply the same `len(parts) == 2` guard (or split('.', 1)) to the validation-rules branch for consistent, safe handling.
+- `ui/helpers/table_helpers.py:218` — **table_helpers __all__ omits public infer_entity_type_from_field** infer_entity_type_from_field is a public function (no underscore) that is re-exported by the package __init__.py and listed in its __all__ (line 84), and imported directly by validation.py and routes/table.py. However the module's own __all__ (lines 218-224) lists only build_inline_tables, format_table_rows, get_items_store, get_table_column_info, get_table_columns and omits infer_entity_type_from_field. This is inconsistent with how the other helper modules in this group declare every public symbol in their __all__. _Fix:_ Add "infer_entity_type_from_field" to table_helpers __all__ to match the actual public surface.
+- `ui/routes/explore.py:0` — **Module diverges from sibling import conventions** Every other route module in this group uses `from __future__ import annotations` and imports framework/state symbols under `if TYPE_CHECKING:` (see core.py, forms.py, nested.py, examples.py, import_export.py). explore.py instead imports AppState and SpecProvider at runtime top-level and omits the future-annotations import, even though AppState (in `Callable[[], AppState]`) and SpecProvider are only used in annotations. This is an inconsistency in module style rather than a correctness defect. _Fix:_ Align explore.py with siblings: add `from __future__ import annotations` and move type-only imports (AppState, SpecProvider, Callable) under TYPE_CHECKING.
+- `ui/spec_builder/routes_fields.py:24` — **FieldUpdateData diverges from sibling RuleUpdateData pattern; `ontologies` handled outside the model** RuleUpdateData (routes_rules.py) encapsulates the full form and exposes apply_to_rule(rule). FieldUpdateData only exposes build_constraints() and the route applies every field attribute inline (lines 249-263). Additionally the `ontologies` form parameter (line 206) is parsed and applied directly in the route and is NOT a member of FieldUpdateData, even though the model's docstring claims it exists to 'reduce parameter count'. The two update flows for fields vs rules are inconsistent and the field flow is only half-encapsulated. _Fix:_ Either add `ontologies` to FieldUpdateData and give it an apply_to_field(field) method mirroring RuleUpdateData.apply_to_rule, or drop FieldUpdateData and apply inline; pick one pattern for both.
+- `validators/engine.py:437` — **create_engine_for_entity reaches into SpecLoader private method _load_profile** Line 437 calls `loader._load_profile(version, profile)`, the only call to that private method outside loader.py. The sibling dataset.py uses the public API instead (`self._loader.load_profile(version=..., profile=...)` at line 205, catching SpecLoadError). The private method is used here to get a None-on-missing return rather than an exception, but this couples the engine to SpecLoader internals and diverges from the sibling's pattern. _Fix:_ Use the public load_profile() and catch SpecLoadError (consistent with dataset.py and with the existing `except SpecLoadError` at line 450), rather than calling the private _load_profile().
+
+#### correctness
+
+- `agent/core.py:359` — **validate_instance skips a required field that is present but explicitly None** In the loop: `if field.required and field.name not in data:` reports missing; the `elif field.name in data and data[field.name] is not None:` branch validates non-None values. A required field whose key is present with value None falls through both branches: it is neither reported as missing nor validated, so an explicit None for a required field passes validation silently. _Fix:_ Treat a required field whose value is None the same as missing, e.g. `if field.required and data.get(field.name) is None:` for the missing check before the value-validation branch.
+- `facade/store.py:111` — **add_entity documents AttributeError but raises KeyError when skip_validation=True** add_entity's docstring states 'Raises: AttributeError: If entity_type is not found in this profile.' This holds for the default path (skip_validation=False routes through the instance_creator callback -> ProfileFacade._create_instance -> getattr(self, entity_type), which raises AttributeError). But the skip_validation=True path goes through EntityStore._create_instance (line 79-81) which calls self._get_helper(entity_type) -> ProfileFacade._get_helper, raising KeyError for an unknown type. So the exception type for the same error condition depends on skip_validation, and the documented type is wrong for one branch. _Fix:_ Make helper resolution raise a single, consistent exception type for unknown entity types (and update the docstring accordingly). require_helper already provides a uniform ValueError path that could be reused.
+- `profiles/factory.py:52` — **get_latest_version uses lexical sort order, breaking on multi-digit minor versions** get_latest_version returns versions[-1], and get_profile_info likewise uses versions[-1] for 'latest'. The underlying SpecLoader.list_versions returns sorted(versions) on raw directory-name strings (loader.py:350), i.e. lexical string order. For current data (e.g. 1.1, 1.2, 0.4) this happens to work, but it is a latent bug: a profile with versions '1.9' and '1.10' would sort '1.10' before '1.9' lexically, so 'latest' would resolve to 1.9. The 'latest' semantics is asserted here in the factory. _Fix:_ Sort versions by a parsed version key (e.g. packaging.version.Version or a tuple of int components) before selecting the maximum, rather than relying on lexical string order.
+- `repositories/filesystem_dataset.py:70` — **Datasets sorted by `modified` mix ISO timestamps with raw mtime floats, producing wrong order** In `list`, `modified` falls back to `str(path.stat().st_mtime)` (e.g. "1700000000.0") when the file lacks a `modified` key, otherwise it is an ISO-8601 string (e.g. "2024-01-15T10:30:00"). Line 76 then sorts with `key=lambda d: d.modified` as plain strings. Lexicographic comparison of an epoch-float string against an ISO string is meaningless (any ISO date starting with "2" sorts after a 10-digit epoch starting with "1"), so the documented "most recent first" ordering is not guaranteed when both formats are present. _Fix:_ Normalize both branches to a single comparable representation (e.g. always emit ISO from the mtime fallback via datetime.fromtimestamp(...).isoformat()) before sorting.
+- `services/ontology.py:178` — **RateLimiter.acquire_sync mutates shared state without a lock** The async `acquire` (line 155) guards all reads/writes of `self._request_times` with `asyncio.Lock`. The synchronous twin `acquire_sync` (line 178) performs the same list rebuild/append (`self._request_times = [...]`, `self._request_times.append(...)`) with no lock at all. Sync callers such as `validate_term_sync` -> `get_term_sync` are reachable from FastAPI sync endpoints that run in a thread pool, where concurrent threads sharing one context-scoped service would mutate `_request_times` simultaneously. This can corrupt the list or skip rate limiting. The async/sync pair is otherwise a deliberate mirror, so the missing thread guard is an inconsistency, not an intended design. _Fix:_ Guard `acquire_sync` with a `threading.Lock`, or document that the sync path is single-threaded only if that is the intended contract.
+- `services/ontology.py:231` — **Constructor treats an explicit 0 for cache_ttl/rate_limit as 'unset'** `self.cache_ttl = cache_ttl or int(os.environ.get(...))` (line 231) and the analogous `rate_limit` assignment (line 234) use `or`, so passing `cache_ttl=0` or `rate_limit=0` is falsy and silently falls through to the environment variable or the module default rather than being honored. Callers cannot disable caching (TTL 0) or set an explicit zero limit; the value they pass is discarded with no error. The parameters are typed `int | None`, signalling that `None` is the 'use default' sentinel, so the `or` short-circuit conflates `0` with `None`. _Fix:_ Use an explicit None check, e.g. `self.cache_ttl = cache_ttl if cache_ttl is not None else int(os.environ.get('METASEED_OLS_CACHE_TTL', DEFAULT_CACHE_TTL))`, and likewise for rate_limit.
+- `specs/merge/reports.py:220` — **Markdown conflicts section mislabels constraint values as profile IDs** _add_conflicts_section does `for profile_id, value in values.items()` over fd.values[attr]. For attr == 'constraints', values is {constraint_name: {profile_id: value}}, so it prints lines like `  - pattern: `{'miappe/1.1': 5, 'isa/1.0': 10}`` — the constraint name is shown where a profile id is expected and the dict of per-profile values is shown as a single value. Same root cause as the constraints-shape inconsistency in comparator.py:433. _Fix:_ Render the nested constraints mapping correctly or normalize the shape at the producer.
+- `ui/routes/api.py:233` — **validate_dataset_api swallows all exceptions into a generic 500** The recursive validation loop is wrapped in a bare `except Exception as e: return JSONResponse(status_code=500, content={"error": str(e)})` (lines 233-234). This is the only endpoint in api.py using a catch-all, diverging from the specific-exception handling used by compare/merge/dataset endpoints, and it masks programming errors (e.g. attribute errors from a malformed node) as opaque 500s with no logging. _Fix:_ Catch the specific expected exceptions (e.g. SpecLoadError / ValidationError) and at minimum log unexpected ones before returning 500, consistent with sibling endpoints.
+- `ui/state.py:200` — **nodes_by_id setter leaves _tree_cache stale and marks cache valid** The nodes_by_id setter sets `self._nodes_cache = value` and `self._cache_valid = True` but never updates `self._tree_cache`. The reciprocal entity_tree setter rebuilds _nodes_cache from the assigned tree, but nodes_by_id does not rebuild _tree_cache. Setting a non-empty mapping therefore yields an index that disagrees with the tree while marking the cache valid (so _rebuild_cache will not correct it). The sole external consumer (metaseed-hub helpers.py:294-295) only ever assigns both to empty containers as a reset, so the divergence is latent today, but the setter is unsafe for any non-empty assignment. _Fix:_ Either rebuild _tree_cache to match the provided mapping, or drop the standalone nodes_by_id setter and have callers reset via entity_tree only (or a dedicated reset method).
+
+#### dead-code
+
+- `agent/parsers/registry.py:49` — **mime_types attribute is declared on the protocol and every parser but never read** FileParser.mime_types is part of the protocol, and CSVParser/JSONParser/ExcelParser each define mime_types, but a grep across src and tests shows no consumer ever reads it: routing is done purely by file extension via can_parse() and ParserRegistry.supported_extensions() only aggregates .extensions. The mime_types data is therefore inert API surface that suggests a capability (MIME-based dispatch) that does not exist. _Fix:_ Either implement MIME-based dispatch that consumes mime_types, or drop the attribute from the protocol and the parsers to avoid an unused, misleading contract field.
+- `facade/core.py:118` — **ProfileFacade._create_instance has an unreachable skip_validation parameter** _create_instance(self, entity_type, data, skip_validation=False) is only ever wired in as EntityStore's instance_creator (core.py:99), whose contract is Callable[[str, dict[str, Any]], BaseModel] and which EntityStore only ever calls with two positional args (store.py:82 `self._create_instance_callback(entity_type, data)`). The skip_validation branch in EntityStore is handled separately via helper.create, so this parameter is never passed a non-default value through any real call path. It is effectively dead and misleadingly suggests the callback honors skip_validation. _Fix:_ Drop the unused skip_validation parameter from ProfileFacade._create_instance to match the 2-arg instance_creator contract, or document that it is intentionally inert.
+- `repositories/memory.py:223` — **Unused `_facade` parameter; signature diverges from FileEntityRepository sibling** `MemoryEntityRepository._find_parent_from_references(self, _facade, helper, data)` accepts a `_facade` argument that is never used (the leading underscore suppresses vulture). Its sibling `FileEntityRepository._find_parent_from_references(self, helper, data)` (file.py line 360) has no such parameter and the two are meant to mirror each other. The call site (line 98) needlessly passes `facade`. _Fix:_ Drop the `_facade` parameter and the argument at the call site so the two repository implementations share the same helper signature.
+- `repositories/memory.py:284` — **Unused backwards-compatibility alias AppStateAdapter** `AppStateAdapter = MemoryEntityRepository` is declared as a backwards-compatibility alias but has no consumers: grep across src and tests finds only this definition, it is not in repositories/__init__.py __all__, and the sole external consumer repo metaseed-hub contains no reference to it. It is dead. _Fix:_ Remove the alias, or if it must remain for an external consumer, document who consumes it; otherwise it is unreachable code.
+- `specs/loader.py:190` — **Unreachable except yaml.YAMLError in SpecLoader.load** In `load`, the body is `content = path.read_text(...)` followed by `return self.load_from_string(content)`, wrapped in `except yaml.YAMLError`. `read_text` does not raise YAMLError, and `load_from_string` already catches YAMLError internally and re-raises it as SpecLoadError. Therefore the `except yaml.YAMLError as e` branch in `load` can never fire. (Note also OSError from read_text is not wrapped, so it escapes as OSError rather than SpecLoadError.) _Fix:_ Remove the dead YAMLError handler; if uniform error reporting is desired, wrap read_text in `except OSError` and convert to SpecLoadError instead.
+- `specs/merge/merger.py:204` — **_merge_entity_fields receives an unused profile_specs argument with a mismatched docstring** The method signature declares `_profile_specs: dict[str, ProfileSpec]` (line 204) and the caller passes a real value `comparison.profile_specs` (line 116), but the parameter is never referenced anywhere in the method body (lines 224-310). The underscore prefix hides it from vulture, so the gates miss it. Additionally the docstring documents the argument under a different name, `profile_specs: Profile specifications.` (line 219), implying it is used. Either the parameter and its argument should be removed, or the docstring corrected to match the real `_profile_specs` name. _Fix:_ Drop the `_profile_specs` parameter and the `comparison.profile_specs` argument at the call site, or restore real use of it; align the docstring with the actual parameter name.
+- `specs/merge/models.py:47` — **FieldDiff.get_profile_value is never called in src or tests** get_profile_value is defined on FieldDiff but grep across src and tests finds no callers (only the definition). It is public API, so the sole external consumer (metaseed-hub) could use it; flagging conservatively rather than asserting it is dead. Note it duplicates logic already trivially available via fd.profiles[profile_id] plus getattr. _Fix:_ Confirm against metaseed-hub; if unused there too, remove it to avoid an untested public method, otherwise add a test exercising it.
+- `specs/merge/visualizer.py:195` — **is_reference local variable is always False where it is consumed** In _create_entity_edges, `is_reference = False` is initialized (line 196) and never reassigned. The reference-edge branch builds its key with a hardcoded `True` (line 208), and the nested-relationship branch uses `is_reference` (line 217) which is therefore always False. The variable reads as if it could vary but is a constant; it could be replaced with the literal False to avoid implying conditional logic that does not exist. _Fix:_ Replace the `is_reference` variable in the nested edge_key with the literal `False`, or remove the variable entirely.
+- `ui/dataset_manager.py:260` — **AsyncDatasetManager and get_async_manager are never instantiated in this repo or the sole consumer** AsyncDatasetManager (line 260) and DatasetManagerFactory.get_async_manager (line 423) form a full async parallel of the sync manager, but the factory is always constructed with async_repo=None (app.py:65 and elsewhere), so get_async_manager always returns None and AsyncDatasetManager is never built. Grepping both src/tests and the sole external consumer (../metaseed-hub/src) finds zero references to get_async_manager or AsyncDatasetManager. This is designed-but-unwired infrastructure that vulture will not flag because the symbols are public on a public class. _Fix:_ Confirm whether the async backend is still planned; if not, remove the async hierarchy. If retained for a future DB backend, add a comment/test exercising it so the intent and behavior are pinned.
+- `ui/helpers/entity_helpers.py:99` — **Unreachable model_dump branch in extract_nested_items** After `data = instance.model_dump(exclude_none=True)` (line 93), Pydantic v2 recursively converts all nested models to plain dicts. The subsequent comprehension `item.model_dump() if hasattr(item, "model_dump") else item` therefore always takes the `else item` branch because the items are already dicts; `hasattr(item, "model_dump")` is never True. The model_dump() branch is dead. _Fix:_ Simplify to `result[field_name] = items` (the items are already plain dicts), removing the unreachable model_dump branch.
+- `ui/helpers/entity_helpers.py:200` — **Redundant `not isinstance(item, str)` guard in get_nested_items_for_edit** The comprehension filters `if isinstance(item, dict) and not isinstance(item, str)`. A value that satisfies `isinstance(item, dict)` can never also be a `str`, so `not isinstance(item, str)` is always True and contributes nothing. The comment 'Only include actual dicts, not string references' is already fully satisfied by the dict check alone. _Fix:_ Drop the `and not isinstance(item, str)` clause; keep `if isinstance(item, dict)`.
+- `ui/routes/validation.py:285` — **_separate_field_values computes simple_values that its only caller discards** `_separate_field_values` returns `(simple_values, nested_fields)`, but the sole caller (line 222: `_, nested_fields = _separate_field_values(entity_spec, values)`) discards `simple_values`. The `simple_values` accumulation (lines 298, 304-305) is wasted work and the function's two-value contract is misleading given only the nested split is ever used. The `entity_spec` parameter (line 286) also lacks a type annotation. _Fix:_ Reduce the function to return only the nested-field mapping (rename accordingly), and add a type annotation for entity_spec (e.g. EntitySpec).
+- `ui/services/entities.py:33` — **EntityService.repository property has no callers in src or tests** The public `repository` property exposing self._repo is not referenced anywhere in src or tests (grep for `.repository` only matches the unrelated DatasetManager.repository). EntityService is always constructed with the repo passed in, and callers in agent/mcp and ui hold the repo directly. Flagged at low severity because metaseed-hub is the external API consumer and may rely on it; confirm against that repo before removing. _Fix:_ If metaseed-hub does not use EntityService.repository, remove the property; otherwise leave a note that it exists for the external consumer.
+
+#### design
+
+- `specs/merge/strategies.py:107` — **most_restrictive / least_restrictive silently fall back to first-profile value for type and items conflicts** A field is flagged DiffType.CONFLICT by the comparator when type, required, OR items differ (comparator.py line 424). MostRestrictiveStrategy.resolve_field and LeastRestrictiveStrategy.resolve_field only recompute `required` and `constraints` via `base_spec.model_copy(update={...})` (lines 129-134 and 235-240); `type` and `items` are inherited unchanged from the first available (base) spec. So when a conflict is driven solely by a differing `type` or `items`, these strategies behave identically to first_wins and resolve the conflict silently with no warning beyond the generic 'Conflict resolved via <strategy>' message. This is a real gap between the documented intent ('use the most/least restrictive values for conflicts') and behavior for the type/items conflict dimensions. _Fix:_ Either explicitly document that type/items conflicts always resolve to the first profile, or detect incompatible type/items and route them to unresolved_conflicts instead of silently keeping the base value.
+- `ui/datasets.py:193` — **Two unsynchronized sources of truth for the current dataset name** The current dataset is tracked in two places: DatasetManager._current (exposed via the current_dataset property) and a dynamically attached AppState._current_dataset (set via set_current_dataset_name, read via get_current_dataset_name, with a `# type: ignore[attr-defined]` because it is not a declared dataclass field). These are not kept in sync automatically: only datasets.auto_save bridges them (lines 218-220), while datasets.save_dataset/load_dataset update only the manager and rely on each caller (routes/core.py, routes/forms.py, mcp tools) to remember to call set_current_dataset_name separately. A caller that loads via datasets.load_dataset and then auto-saves without the extra bridging call would lose the current-name target and fall back to a derived default name. _Fix:_ Pick one source of truth. Either declare _current_dataset as a real field on AppState and have the manager read/write it, or have the datasets.save_dataset/load_dataset helpers update the state attribute consistently the way auto_save does.
+- `ui/routes/crud.py:339` — **HX-Trigger header derived from substring match on the notification message** `render_entity_form` decides the client event via `if "Created" in message: response.headers["HX-Trigger"] = "entityCreated" else "entityUpdated"` (lines 339-342). The create vs update distinction is already known explicitly at the call sites (create passes `f"Created {entity_type}: {node.label}"`, update passes `f"Saved {entity_type}: {node.label}"`), and the function already accepts a `message_type` parameter. Coupling control flow to free-text message content is fragile: an entity label or future message wording containing the word "Created" would emit the wrong trigger. _Fix:_ Pass an explicit flag/parameter (e.g. is_create or an event name) into render_entity_form rather than inferring it from the message text.
+- `ui/routes/nested.py:131` — **Duplicated nested_form TemplateResponse context construction** edit_nested_item (lines 131-152) and save_nested_item (lines 243-265) build virtually identical context dicts for partials/nested_form.html (entity_type, parent_entity_type, field_name, row_idx, description, ontology_term, required/optional/nested fields via filter_fields, values, auto_fields, editing_node_id, breadcrumb, inline_tables). The only difference is the success_message key. This duplication is error-prone if the template contract changes. _Fix:_ Extract a single helper that builds the nested_form context from (state, facade, nested_helper, ...) and call it from both handlers.
+- `validators/rules.py:600` — **UniquenessRule is wired into the engine in a configuration where it can never flag a duplicate** UniquenessRule accumulates seen values in `_seen_values` across calls to the same instance. Its only production callers (`engine._create_rule_by_type` line 204 and `_infer_rule_type` line 271) construct a fresh instance, and ValidationEngine/DatasetValidator run a new engine per record, so each instance ever sees exactly one value and `reset()` is never called outside tests. As wired, the rule therefore can never detect a duplicate. The class docstring (lines 601-621) is admirably honest and documents exactly this, and the per-instance behavior is correct and unit-tested, so this is a known design wart rather than a hidden bug. Flagging only because the rule is exported and added to engines where it is functionally inert; dataset-wide identifier uniqueness is actually enforced elsewhere (IdRegistry). _Fix:_ Either stop registering UniquenessRule in the per-record engine path (since it cannot fire there) or route it through a caller that reuses one instance across a sibling collection, so its presence in the engine reflects actual behavior.
+
+#### docstring
+
+- `agent/core.py:225` — **extract_entities and suggest_mapping omit Raises sections for the exceptions they raise** `extract_entities` (line 225) raises `IndexError` (lines 205/209-style checks at 243-248) and `ValueError` (line 253) but its docstring has no Raises section. `suggest_mapping` (line 188) raises `IndexError` (lines 205, 209) with no documented Raises. Sibling methods in the same class (`add_source`, `get_entity_spec`) do document their Raises, so this is an internal inconsistency in the Google-style docstrings. _Fix:_ Add Raises sections documenting IndexError (out-of-range source/table index) and ValueError (no mapping set) to match the sibling methods.
+- `core/__init__.py:1` — **Stale 'MIAPPE-API' naming in core package docstring** The module docstring opens 'Core module for MIAPPE-API.' The project is now 'metaseed' and is multi-profile (the exceptions module explicitly documents MiappeError as a legacy artifact). This stale name in the package docstring is misleading to readers. _Fix:_ Update the docstring to refer to metaseed rather than MIAPPE-API.
+- `facade/node.py:24` — **EntityNode docstring Attributes section omits 'children'** The EntityNode dataclass declares `children: list[EntityNode] = field(default_factory=list)` (line 36), but the class docstring's Attributes section only lists id, entity_type, instance, and parent_id. children is a core part of the node's structure (used throughout store.py and graph.py for tree/graph traversal) and should be documented. _Fix:_ Add a 'children: List of child EntityNodes.' entry to the Attributes section.
+- `models/types.py:1` — **types.py docstring scopes OntologyTerm to MIAPPE but it is profile-agnostic** Module docstring says 'Custom types for MIAPPE models' and 'used in generated models', but OntologyTerm is the type for every FieldType.ONTOLOGY_TERM field across all profiles (TYPE_MAP in factory.py maps ONTOLOGY_TERM -> OntologyTerm for MIAPPE, ISA, DiSSCo, Darwin Core, ENA, etc.). The MIAPPE-specific wording is misleading. _Fix:_ Reword the module docstring to describe it as custom types for generated profile entity models in general, not MIAPPE specifically.
+- `specs/merge/models.py:114` — **ComparisonStatistics.common_fields docstring does not match how it is computed** The docstring says 'common_fields: Fields present in all profiles.' but _calculate_statistics (comparator.py:572-573) increments common_fields only for fields whose diff_type == UNCHANGED, i.e. fields that are identical across profiles. A field present in all profiles but MODIFIED is excluded. The Markdown/HTML reports label this 'Common fields' alongside a separate 'Modified fields', confirming the intended meaning is 'identical', not 'present in all'. _Fix:_ Reword the docstring to 'Fields identical across all profiles' to match the implementation (and the report semantics).
+- `specs/merge/strategies.py:151` — **Inaccurate inline comment claims constraint merge starts from the first constraint** In _merge_constraints_restrictive the comment 'Start with first constraint as base' (line 151) is immediately followed by `merged = Constraints()` (line 152), which creates an empty Constraints, not a copy of the first constraint. The function then explicitly recomputes every Constraints attribute, so behavior is correct, but the comment is misleading. The sibling _merge_constraints_permissive (line 257) has the same `merged = Constraints()` without the misleading comment, so the two methods are also inconsistent. _Fix:_ Remove or correct the comment to say an empty Constraints is built and each attribute recomputed from the most-restrictive value.
+- `specs/schema.py:85` — **FieldSpec.items docstring only mentions list type, but factory also uses it for single entity fields** The `items` attribute is documented as 'For list type, the entity type of list items.' However, the model factory (factory.py line 425) also reads `field.items` to determine the target entity type for single `FieldType.ENTITY` fields (`elif field.type == FieldType.ENTITY and field.items: entity_fields[field.name] = field.items`). The docstring omits this second use, which is load-bearing: an ENTITY field without `items` is never registered for nested conversion. _Fix:_ Update the `items` docstring to note it also names the entity type for single `entity` fields, not only `list` items.
+- `ui/dataset_manager.py:450` — **resolve_dataset_manager docstring references state.mcp_context but code reads app.state.mcp_context** The docstring says 'read for an optional ``state.mcp_context``', but the implementation reads from the FastAPI app: `context = getattr(app.state, "mcp_context", None)` (line 457). The attribute lives on app.state, not on the AppState `state` parameter, so the docstring is misleading about which object carries the context. _Fix:_ Update the docstring to say it reads `app.state.mcp_context`.
+- `ui/spec_builder/routes_export.py:233` — **import_yaml docstring documents a `request` arg that does not exist** The handler signature is `import_yaml(_request: Request, file: UploadFile)` but the Google-style docstring lists `Args: request: The FastAPI request.` There is no `request` parameter (it is `_request`, intentionally unused). Also register_export_routes' docstring (line 38) omits the `_base_url` parameter that the three sibling register_* functions document. _Fix:_ Drop the stale `request` arg line from import_yaml's docstring (and apply_yaml_edit if applicable), and add `_base_url` to register_export_routes' Args list for parity.
+
+#### naming
+
+- `agent/mcp/server.py:161` — **reset_entity_service is a permanent no-op despite its action-implying name** reset_entity_service() just does `pass`; its docstring honestly states it is a no-op under context injection. It is still wired in (passed to register_dataset_tools and invoked in tools/datasets.py at lines 136 and 205). The name promises a side effect that never happens, which is easy to misread at the call sites where it appears to do meaningful work after a dataset load. _Fix:_ Drop the callback and its call sites if truly unnecessary, or rename to reflect that it is an intentional hook (e.g. remove and let get_entity_service's fresh-per-call behaviour stand on its own).
+
+#### typing
+
+- `agent/mapping.py:231` — **Public serialization helpers use bare dict annotations** `def mapping_to_dict(mapping: ColumnMapping) -> dict:` (line 231) and `def mapping_from_dict(data: dict) -> ColumnMapping:` (line 254) annotate with bare `dict`. These are public, exported API (used by tests and re-exported in agent/__init__). The codebase otherwise parametrizes dict types (e.g. `dict[str, Any]` throughout core.py). `TypeConverter._to_list` in core.py line 80 (`-> list`) has the same gap. _Fix:_ Use `dict[str, Any]` for the mapping helpers and `list[Any]` (or a more specific type) for `_to_list`.
+- `agent/mcp/server.py:93` — **Public module functions in server.py lack type annotations, inconsistent with siblings** get_mcp_state(), set_mcp_state(state), reset_mcp_state(), get_entity_service(), and reset_entity_service() have no parameter or return annotations, while set_context()/get_context() in the same file and the whole of context.py and manager.py are fully annotated. set_mcp_state/reset_mcp_state/get_mcp_state are imported and used from tests, and get_mcp_state/get_entity_service are passed into register_*_tools as the dependency-injection seams, so they are effectively public API. get_mcp_state returns AppState, set_mcp_state takes an AppState, get_entity_service returns EntityService. _Fix:_ Add return/param annotations (e.g. def get_mcp_state() -> AppState, def set_mcp_state(state: AppState) -> None, def get_entity_service() -> EntityService) under TYPE_CHECKING imports for consistency with the rest of the module group.
+- `agent/mcp/tools/profiles.py:39` — **_field_to_dict annotated as bare dict instead of dict[str, Any]** `def _field_to_dict(field: FieldSpec) -> dict:` returns a heterogeneous mapping (str name, FieldType.value str, bool required, optional codename/items). Every other helper and tool in these two files annotates such payloads as `dict[str, Any]` (e.g. _field_constraint_detail, _identifier_info return values, the payload dicts in get_entity_fields). The bare `dict` here is an inconsistent, weaker annotation on a module-level helper. _Fix:_ Annotate as `-> dict[str, Any]` to match the surrounding code.
+- `api/client.py:415` — **facade property annotated as Any despite returning a known type** The public `facade` property is annotated `-> Any` and returns `self._facade`, which is a ProfileFacade (already imported under TYPE_CHECKING and used as the annotation for `_facade`). Returning Any erases all type information for consumers of this public accessor. _Fix:_ Annotate the property as `-> ProfileFacade` (the type is already available under TYPE_CHECKING), so the public API exposes an accurate, useful type.
+- `profiles/factory.py:64` — **get_profile_info return type is unparameterized list[dict]** get_profile_info is annotated `-> list[dict]`, but each dict has mixed value types (str for 'name', list[str] for 'versions', str | None for 'latest'). This is a public API method consumed by cli/__init__.py. Under the project's (configured-strict) mypy this bare `dict` is `dict[Any, Any]`, losing all key/value typing. _Fix:_ Annotate as `list[dict[str, Any]]` (or a TypedDict) to document the structure of each entry.
+- `src/metaseed/cli/migrate.py:16` — **is_node_id annotated value: str but documented and tested to accept arbitrary types** is_node_id is typed `def is_node_id(value: str) -> bool` yet its body guards `if not isinstance(value, str): return False`, and it is called at line 84 on arbitrary entity field values (ints, lists, dicts). test_migrate.py explicitly asserts is_node_id(12345678), is_node_id(None) and is_node_id([...]) return False. The `str` annotation is dishonest about the contract the function actually implements and is tested against. _Fix:_ Annotate as `value: object` (or `Any`) so the signature matches the runtime contract and the tests.
+- `src/metaseed/cli/migrate_specs.py:45` — **Imprecise dict/list[dict] return annotations diverge from the parallel migrate.py** migrate_file returns bare `dict` (line 45) and migrate_all_specs returns `list[dict]` (line 92), while the sibling dataset-migration module migrate.py annotates the equivalent functions as `dict[str, Any]` and `list[dict[str, Any]]`. The two modules are near-mirror implementations, so the parameterless annotations here are both less precise and inconsistent with the established pattern. _Fix:_ Annotate as `dict[str, Any]` / `list[dict[str, Any]]` to match migrate.py.
+- `src/metaseed/cli/migrate_specs.py:152` — **main() entry point missing return type annotation** `def main():` (line 152) has no `-> None` annotation, unlike the other public functions in this module (e.g. print_migration_report on line 120 is annotated `-> None`). Under the configured strict-mypy profile this is an untyped public function. _Fix:_ Add `-> None`.
+- `ui/spec_builder/routes_entities.py:141` — **update_entity new_name annotated str but defaults to None** `new_name: str = Form(None, alias="name")` declares the type as str while the default is None and the body explicitly handles the None case (`if new_name and new_name.strip() != name`). The honest annotation is `str | None`. mypy is configured strict but not wired into CI, so this slips through; it is still a genuine signature inaccuracy on the handler. _Fix:_ Change the annotation to `new_name: str | None = Form(None, alias="name")`.
+- `validators/dataset.py:396` — **entity_type may be None but is passed to methods annotated str** In validate_file (line 396) and validate_directory (lines 452-454), `entity_type = self._detect_entity_type(data) or self._default_entity_type()` can be None (both helpers return Optional[str]; _default_entity_type returns None if the profile cannot be loaded). That value is then passed to _collect_ids, _validate_entity, _validate_references, _count_entities and ultimately _traverse_entity_tree, all of which annotate the parameter as `entity_type: str`. With None, load_entity raises SpecLoadError (swallowed, so traversal stops after the root visitor) but count_node still records `counts[None]`, and the type contract is violated. Since mypy is not enforced this passes silently. _Fix:_ Either guard against None (emit an explicit error result when no entity type can be determined) or widen the annotations to `str | None` and handle the None case deliberately.
