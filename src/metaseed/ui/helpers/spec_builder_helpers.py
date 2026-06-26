@@ -82,16 +82,21 @@ def spec_to_yaml(spec: ProfileSpec) -> str:
     # Convert to dict, using mode='json' to serialize enums as strings
     data = spec.model_dump(exclude_none=True, exclude_defaults=False, mode="json")
 
-    # Custom representer for cleaner output
+    # Custom representer for cleaner output, scoped to a local Dumper so the
+    # global PyYAML representer registry is not mutated as a side effect.
+    class _SpecDumper(yaml.Dumper):
+        pass
+
     def str_representer(dumper: yaml.Dumper, data: str) -> yaml.Node:
         if "\n" in data:
             return dumper.represent_scalar("tag:yaml.org,2002:str", data, style="|")
         return dumper.represent_scalar("tag:yaml.org,2002:str", data)
 
-    yaml.add_representer(str, str_representer)
+    _SpecDumper.add_representer(str, str_representer)
 
     return yaml.dump(
         data,
+        Dumper=_SpecDumper,
         default_flow_style=False,
         sort_keys=False,
         allow_unicode=True,

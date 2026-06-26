@@ -181,6 +181,17 @@ class TestSpecBuilderHelpers:
         assert "TestEntity:" in yaml_str
         assert "unique_id" in yaml_str
 
+    def test_spec_to_yaml_does_not_mutate_global_yaml_registry(
+        self, sample_spec
+    ) -> None:
+        """spec_to_yaml must not register a global str representer side effect."""
+        import yaml
+
+        before = yaml.Dumper.yaml_representers.get(str)
+        spec_to_yaml(sample_spec)
+        after = yaml.Dumper.yaml_representers.get(str)
+        assert before is after
+
     def test_list_available_templates(self):
         """list_available_templates returns list of profiles."""
         templates = list_available_templates()
