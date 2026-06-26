@@ -62,7 +62,7 @@ def _validate_nested(
     Returns:
         List of all validation errors including nested ones.
     """
-    from metaseed.specs.loader import SpecLoader
+    from metaseed.specs.loader import SpecLoader, SpecLoadError
 
     errors: list[ValidationError] = []
 
@@ -79,7 +79,7 @@ def _validate_nested(
     loader = SpecLoader(profile=profile)
     try:
         spec = loader.load_entity(entity, version)
-    except (FileNotFoundError, KeyError, ValueError) as e:
+    except (FileNotFoundError, KeyError, ValueError, SpecLoadError) as e:
         # Entity spec not found - return errors collected so far
         logger.debug("Could not load entity spec %s: %s", entity, e)
         return errors
@@ -94,7 +94,7 @@ def _validate_nested(
             item_entity = to_snake_case(field.items)
             try:
                 loader.load_entity(item_entity, version)
-            except (FileNotFoundError, KeyError, ValueError):
+            except (FileNotFoundError, KeyError, ValueError, SpecLoadError):
                 # Not a known entity type, skip nested validation
                 continue
 
