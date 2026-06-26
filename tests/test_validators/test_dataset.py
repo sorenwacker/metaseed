@@ -292,3 +292,48 @@ studies:
         # After validation, registry should have both IDs
         assert validator._registry.exists("investigation", "INV001")
         assert validator._registry.exists("study", "STU001")
+
+    def test_valid_reference_passes(self, tmp_path: Path) -> None:
+        """A nested reference to an existing entity raises no integrity error."""
+        content = """
+unique_id: INV001
+title: Test Investigation
+description: A test
+studies:
+  - unique_id: STU001
+    title: Study 1
+    investigation_id: INV001
+    observation_units:
+      - unique_id: OBS001
+        study_id: STU001
+"""
+        file_path = tmp_path / "investigation.yaml"
+        file_path.write_text(content)
+
+        result = DatasetValidator().validate_file(file_path)
+
+        ref_errors = [e for e in result.errors if e.rule == "reference_integrity"]
+        assert ref_errors == []
+
+    def test_dangling_reference_is_reported(self, tmp_path: Path) -> None:
+        """A nested reference to a missing entity raises an integrity error."""
+        content = """
+unique_id: INV001
+title: Test Investigation
+description: A test
+studies:
+  - unique_id: STU001
+    title: Study 1
+    investigation_id: INV001
+    observation_units:
+      - unique_id: OBS001
+        study_id: STU999
+"""
+        file_path = tmp_path / "investigation.yaml"
+        file_path.write_text(content)
+
+        result = DatasetValidator().validate_file(file_path)
+
+        ref_errors = [e for e in result.errors if e.rule == "reference_integrity"]
+        assert len(ref_errors) == 1
+        assert "STU999" in ref_errors[0].message

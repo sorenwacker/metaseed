@@ -176,7 +176,9 @@ class DatasetValidator:
                     if f.reference:
                         refs.append((f.name, f.reference))
                 if refs:
-                    self._reference_fields[entity_name] = refs
+                    # Key by snake_case so lookups during traversal, which use
+                    # the snake_case entity type, actually match.
+                    self._reference_fields[to_snake_case(entity_name)] = refs
             except SpecLoadError:
                 continue
 
@@ -286,7 +288,10 @@ class DatasetValidator:
                 for field_name, ref_type in self._reference_fields[etype]:
                     ref_value = d.get(field_name)
                     if ref_value is not None:
-                        ref_entity = to_snake_case(ref_type)
+                        # ``ref_type`` is an "Entity.field" string (e.g.
+                        # "Study.unique_id"); the registered entity type is the
+                        # snake_case form of the entity part only.
+                        ref_entity = to_snake_case(ref_type.split(".")[0])
                         if not self._registry.exists(ref_entity, ref_value):
                             field_path = f"{p}.{field_name}" if p else field_name
                             errors.append(
