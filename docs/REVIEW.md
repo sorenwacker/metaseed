@@ -19,16 +19,16 @@ These are the project's own definition of "flawless" (from `Makefile` and
 | Dead code | `uv run vulture src/ --min-confidence=80` | Pass (no hits at the gate threshold) |
 | Tests | `uv run pytest -m "not network and not selenium and not ui"` | Pass: 1530 passed, 6 skipped, 1 xfailed |
 | File size | project rule: no file > 1000 LOC | Pass (largest is `agent/mcp/tools/entities.py` at 788) |
-| Type check | `mypy` | Not enforced. See note below. |
+| Type check | `uv run python -m mypy src/metaseed` | Pass (strict; 0 errors) |
 
-### mypy is configured but not wired in
+### mypy is now wired in
 
-`pyproject.toml` declares `[tool.mypy]` with `strict = true`, but mypy is not in the
-`dev` optional-dependencies, is not a pre-commit hook, and is not a Makefile target.
-Nothing installs or runs it, so type-annotation correctness is currently unchecked. This
-is itself a gap: either add mypy to the dev extras and a pre-commit/CI gate so the strict
-config is enforced, or remove the dead config to avoid implying coverage that does not
-exist.
+At review time `pyproject.toml` declared `[tool.mypy]` with `strict = true`, but mypy was
+not installed, not a pre-commit hook, and not a Makefile target, so it never ran. It has
+since been added to the `dev` extras, the pre-commit hooks, and a `make typecheck` target.
+Enforcing the existing strict config surfaced 304 errors across 54 files (including a set
+of genuine `Optional`-attribute-access bugs); all were fixed, and strict mypy now passes
+as a gate.
 
 ## Summary
 

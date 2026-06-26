@@ -9,7 +9,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Self
+from typing import Any, Self, cast
 
 import yaml
 
@@ -259,7 +259,7 @@ class DatasetValidator:
             entity_type: Type of the entity.
         """
 
-        def register_id(d: dict, etype: str, _path: str) -> None:
+        def register_id(d: dict[str, Any], etype: str, _path: str) -> None:
             if "unique_id" in d:
                 self._registry.register(etype, d["unique_id"])
 
@@ -283,7 +283,7 @@ class DatasetValidator:
         """
         errors: list[ValidationError] = []
 
-        def check_refs(d: dict, etype: str, p: str) -> None:
+        def check_refs(d: dict[str, Any], etype: str, p: str) -> None:
             if etype in self._reference_fields:
                 for field_name, ref_type in self._reference_fields[etype]:
                     ref_value = d.get(field_name)
@@ -323,7 +323,7 @@ class DatasetValidator:
         """
         errors: list[ValidationError] = []
 
-        def validate_node(d: dict, etype: str, p: str) -> None:
+        def validate_node(d: dict[str, Any], etype: str, p: str) -> None:
             try:
                 engine = create_engine_for_entity(etype, self.version, self.profile)
                 for error in engine.validate(d):
@@ -355,7 +355,7 @@ class DatasetValidator:
             counts: Dictionary to update with counts.
         """
 
-        def count_node(_d: dict, etype: str, _p: str) -> None:
+        def count_node(_d: dict[str, Any], etype: str, _p: str) -> None:
             counts[etype] = counts.get(etype, 0) + 1
 
         self._traverse_entity_tree(data, entity_type, count_node)
@@ -397,8 +397,13 @@ class DatasetValidator:
             )
             return result
 
-        # Detect entity type, falling back to the profile's root entity.
-        entity_type = self._detect_entity_type(data) or self._default_entity_type()
+        # Detect entity type, falling back to the profile's root entity. The
+        # fallback yields ``None`` only when the profile cannot be loaded, a
+        # degenerate case the downstream traversal handles as a no-op; cast to
+        # ``str`` to satisfy the helper signatures without altering behavior.
+        entity_type = cast(
+            "str", self._detect_entity_type(data) or self._default_entity_type()
+        )
 
         # Reset registry for single file validation
         self._registry = IdRegistry()
@@ -454,8 +459,10 @@ class DatasetValidator:
                 if data is None:
                     continue
 
-                entity_type = (
-                    self._detect_entity_type(data) or self._default_entity_type()
+                # See validate_file: the fallback is None only for an unloadable
+                # profile; cast to str leaves runtime behavior unchanged.
+                entity_type = cast(
+                    "str", self._detect_entity_type(data) or self._default_entity_type()
                 )
 
                 self._collect_ids(data, entity_type)

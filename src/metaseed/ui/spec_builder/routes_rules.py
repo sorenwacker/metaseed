@@ -103,6 +103,7 @@ def register_rule_routes(
 
     def _require_rule(builder: SpecBuilderState, idx: int) -> ValidationRuleSpec:
         """Get rule by index, raising HTTPException if not found."""
+        assert builder.spec is not None  # caller resolves via _require_spec
         if idx < 0 or idx >= len(builder.spec.validation_rules):
             raise HTTPException(status_code=404, detail="Rule not found")
         return builder.spec.validation_rules[idx]
@@ -114,6 +115,7 @@ def register_rule_routes(
         success: bool = False,
     ) -> HTMLResponse:
         """Helper to return rules list template response."""
+        assert builder.spec is not None  # caller resolves via _require_spec
         return templates.TemplateResponse(
             request,
             "spec_builder/partials/validation_rules_list.html",
@@ -133,6 +135,7 @@ def register_rule_routes(
         idx: int,
     ) -> HTMLResponse:
         """Helper to return rule form template response."""
+        assert builder.spec is not None  # caller resolves via _require_spec
         return templates.TemplateResponse(
             request,
             "spec_builder/partials/validation_rule_form.html",
@@ -156,6 +159,7 @@ def register_rule_routes(
     ) -> HTMLResponse:
         """Add a new validation rule."""
         builder = _require_spec()
+        assert builder.spec is not None  # _require_spec guarantees spec is set
 
         name = name.strip()
         if not name:
@@ -243,6 +247,7 @@ def register_rule_routes(
         builder = _require_spec()
         _require_rule(builder, idx)  # Validate idx exists
 
+        assert builder.spec is not None  # _require_spec guarantees spec is set
         del builder.spec.validation_rules[idx]
         builder.editing_rule_idx = None
         builder.mark_changed()

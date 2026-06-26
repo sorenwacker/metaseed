@@ -131,7 +131,7 @@ class ProfileFacade:
         Returns:
             Pydantic model instance.
         """
-        helper = getattr(self, entity_type)
+        helper: EntityHelper = getattr(self, entity_type)
         return helper.create(skip_validation=skip_validation, **data)
 
     def _store_entity(self: Self, entity_type: str, data: dict[str, Any]) -> EntityNode:
@@ -318,7 +318,7 @@ class ProfileFacade:
             return [n for n in all_nodes if n.entity_type == entity_type]
         return all_nodes
 
-    def to_dict(self: Self) -> list[dict]:
+    def to_dict(self: Self) -> list[dict[str, Any]]:
         """Export all entities for serialization.
 
         Returns a flat list of entity data with metadata for reconstruction.
@@ -329,7 +329,7 @@ class ProfileFacade:
         """
         return self._store.to_dict()
 
-    def load_from_dict(self: Self, entities: list[dict]) -> int:
+    def load_from_dict(self: Self, entities: list[dict[str, Any]]) -> int:
         """Load entities from serialized data.
 
         Reconstructs the entity graph from a flat list of entity dictionaries.
@@ -405,7 +405,7 @@ class ProfileFacade:
     # Tree and Graph Methods
     # ========================================================================
 
-    def get_tree(self: Self) -> list[dict]:
+    def get_tree(self: Self) -> list[dict[str, Any]]:
         """Get hierarchical tree for visualization.
 
         Returns tree structure starting from root nodes, with each node
@@ -417,7 +417,7 @@ class ProfileFacade:
         """
         return get_tree(self._store, self._entities)
 
-    def to_graph(self: Self) -> dict:
+    def to_graph(self: Self) -> dict[str, Any]:
         """Export entity graph in vis.js format.
 
         Builds nodes and edges for visualization. Includes:

@@ -6,7 +6,7 @@ and reference field handling.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -34,7 +34,7 @@ def error_response(
 
 def get_reference_fields(
     profile: str, version: str, entity_type: str
-) -> dict[str, dict]:
+) -> dict[str, dict[str, str]]:
     """Get all reference fields for an entity type.
 
     Checks two sources:
@@ -62,7 +62,7 @@ def get_reference_fields(
     except SpecLoadError:
         return {}
 
-    reference_fields = {}
+    reference_fields: dict[str, dict[str, str]] = {}
 
     # Check field definitions for parent_ref or reference attribute
     entity_spec = spec.entities.get(entity_type)
@@ -104,7 +104,7 @@ def get_reference_fields(
 
 
 def get_parent_id_fields(
-    reference_fields: dict[str, dict], parent_entity_type: str
+    reference_fields: dict[str, dict[str, str]], parent_entity_type: str
 ) -> dict[str, str]:
     """Get fields that reference the parent entity and should be auto-filled.
 
@@ -152,9 +152,9 @@ def get_parent_identifier(
     return ""
 
 
-def build_breadcrumb(state: AppState) -> list[dict]:
+def build_breadcrumb(state: AppState) -> list[dict[str, Any]]:
     """Build breadcrumb navigation from nested edit stack."""
-    breadcrumb = []
+    breadcrumb: list[dict[str, Any]] = []
 
     # Root entity (if editing)
     if state.editing_node_id:

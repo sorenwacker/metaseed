@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 from difflib import SequenceMatcher
-from typing import Self
+from typing import Any, Self
 
 from pydantic import BaseModel, Field
 
@@ -228,7 +228,7 @@ def create_mapping(
     )
 
 
-def mapping_to_dict(mapping: ColumnMapping) -> dict:
+def mapping_to_dict(mapping: ColumnMapping) -> dict[str, Any]:
     """Convert ColumnMapping to a simple dictionary format.
 
     Args:
@@ -251,7 +251,7 @@ def mapping_to_dict(mapping: ColumnMapping) -> dict:
     }
 
 
-def mapping_from_dict(data: dict) -> ColumnMapping:
+def mapping_from_dict(data: dict[str, Any]) -> ColumnMapping:
     """Create ColumnMapping from dictionary.
 
     Args:

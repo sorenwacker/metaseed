@@ -73,7 +73,7 @@ class TreeNode:
 
         return node
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Convert node to dictionary for template rendering."""
         return {
             "id": self.id,
@@ -92,7 +92,7 @@ class NestedEditContext:
     row_idx: int  # Index in the parent's list
     entity_type: str  # Entity type being edited (e.g., "Study")
     parent_entity_type: str  # Parent entity type (e.g., "Investigation")
-    nested_items: dict[str, list] = field(
+    nested_items: dict[str, list[Any]] = field(
         default_factory=dict
     )  # This item's nested fields
 
@@ -123,7 +123,7 @@ class AppState:
 
     # UI-only state (not delegated to facade)
     editing_node_id: str | None = None
-    current_nested_items: dict[str, list] = field(default_factory=dict)
+    current_nested_items: dict[str, list[Any]] = field(default_factory=dict)
     nested_edit_stack: list[NestedEditContext] = field(default_factory=list)
     spec_builder: SpecBuilderState | None = None
 
@@ -358,7 +358,7 @@ class AppState:
 
         return result
 
-    def get_tree_data(self: Self) -> list[dict]:
+    def get_tree_data(self: Self) -> list[dict[str, Any]]:
         """Get tree data for template rendering.
 
         Delegates to facade.get_tree().

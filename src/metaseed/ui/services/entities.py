@@ -47,7 +47,7 @@ class EntityService:
         entities = self._repo.list_entities(entity_type)
 
         # Group by type
-        by_type: dict[str, list] = {}
+        by_type: dict[str, list[Any]] = {}
         for e in entities:
             if e.entity_type not in by_type:
                 by_type[e.entity_type] = []
@@ -187,7 +187,7 @@ class EntityService:
         """
         tree = self._repo.get_tree()
 
-        def entity_to_dict(e: EntityData) -> dict:
+        def entity_to_dict(e: EntityData) -> dict[str, Any]:
             return {
                 "id": e.id,
                 "entity_type": e.entity_type,

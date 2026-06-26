@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 import logging
 import urllib.parse
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 import httpx
 
@@ -24,7 +24,9 @@ OLS4_BASE_URL = "https://www.ebi.ac.uk/ols4/api"
 DEFAULT_TIMEOUT = 30.0
 
 
-def _make_request(endpoint: str, params: dict | None = None) -> dict | None:
+def _make_request(
+    endpoint: str, params: dict[str, Any] | None = None
+) -> dict[str, Any] | None:
     """Make a request to the OLS4 API.
 
     Args:
@@ -39,7 +41,7 @@ def _make_request(endpoint: str, params: dict | None = None) -> dict | None:
         with httpx.Client(timeout=DEFAULT_TIMEOUT) as client:
             response = client.get(url, params=params)
             response.raise_for_status()
-            return response.json()
+            return cast("dict[str, Any]", response.json())
     except httpx.HTTPStatusError as e:
         logger.warning("OLS4 API error: %s %s", e.response.status_code, e.response.text)
         return None
@@ -311,7 +313,7 @@ def register_ontology_tools(mcp: FastMCP) -> None:
                     if not value or not isinstance(value, str):
                         continue
 
-                    params: dict = {"q": value, "rows": 5}
+                    params: dict[str, Any] = {"q": value, "rows": 5}
                     ontologies = info.get("ontologies")
                     if ontologies:
                         params["ontology"] = ",".join(o.lower() for o in ontologies)

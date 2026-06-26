@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from metaseed.ui.state import AppState
 
 
-def to_dict(item: Any, exclude_none: bool = True) -> dict | None:
+def to_dict(item: Any, exclude_none: bool = True) -> dict[str, Any] | None:
     """Convert an item to a plain dictionary.
 
     Handles Pydantic models, dicts, and other types consistently.
@@ -26,17 +26,18 @@ def to_dict(item: Any, exclude_none: bool = True) -> dict | None:
         Dictionary representation, or None if item cannot be converted.
     """
     if hasattr(item, "model_dump"):
-        return item.model_dump(exclude_none=exclude_none)
+        dumped: dict[str, Any] = item.model_dump(exclude_none=exclude_none)
+        return dumped
     if isinstance(item, dict):
         return item.copy()
     return None
 
 
 def walk_nested_entities(
-    data: dict,
+    data: dict[str, Any],
     entity_type: str,
     facade: Any,
-) -> list[tuple[str, dict]]:
+) -> list[tuple[str, dict[str, Any]]]:
     """Walk nested entities recursively, yielding (type, data) tuples.
 
     Traverses nested entity fields and collects all nested items
@@ -50,9 +51,9 @@ def walk_nested_entities(
     Returns:
         List of (entity_type, data_dict) tuples for all nested entities.
     """
-    results: list[tuple[str, dict]] = []
+    results: list[tuple[str, dict[str, Any]]] = []
 
-    def _walk(current_data: dict, current_type: str) -> None:
+    def _walk(current_data: dict[str, Any], current_type: str) -> None:
         helper = getattr(facade, current_type, None)
         if not helper:
             return
@@ -72,7 +73,7 @@ def walk_nested_entities(
     return results
 
 
-def extract_nested_items(instance: Any, helper: Any) -> dict[str, list[dict]]:
+def extract_nested_items(instance: Any, helper: Any) -> dict[str, list[dict[str, Any]]]:
     """Extract nested items from an instance as dictionaries.
 
     Converts nested Pydantic models or dicts in an instance to a dictionary
@@ -85,7 +86,7 @@ def extract_nested_items(instance: Any, helper: Any) -> dict[str, list[dict]]:
     Returns:
         Dictionary mapping nested field names to lists of item dicts.
     """
-    result: dict[str, list[dict]] = {}
+    result: dict[str, list[dict[str, Any]]] = {}
 
     if not hasattr(instance, "model_dump"):
         return result
@@ -105,7 +106,7 @@ def extract_nested_items(instance: Any, helper: Any) -> dict[str, list[dict]]:
 
 def extract_nested_from_tree(
     node: Any, helper: Any, facade: Any = None
-) -> dict[str, list[dict]]:
+) -> dict[str, list[dict[str, Any]]]:
     """Extract nested items from tree children.
 
     When entities are created via MCP with parent_id, child entities are
@@ -124,7 +125,7 @@ def extract_nested_from_tree(
     Returns:
         Dictionary mapping field names to lists of child entity dicts.
     """
-    result: dict[str, list[dict]] = {}
+    result: dict[str, list[dict[str, Any]]] = {}
 
     if not node.children:
         return result
@@ -173,7 +174,7 @@ def extract_nested_from_tree(
 
 def get_nested_items_for_edit(
     node: Any, helper: Any, facade: Any = None
-) -> dict[str, list[dict]]:
+) -> dict[str, list[dict[str, Any]]]:
     """Get all nested items for editing, combining instance data and tree children.
 
     This is the canonical function for getting nested items when editing an entity.
@@ -190,7 +191,7 @@ def get_nested_items_for_edit(
     Returns:
         Dictionary mapping field names to lists of entity dicts.
     """
-    result: dict[str, list[dict]] = {}
+    result: dict[str, list[dict[str, Any]]] = {}
 
     # First, get items from instance data
     if node.instance:
@@ -219,7 +220,7 @@ def get_nested_items_for_edit(
 
 def collect_entities_by_type(
     state: AppState, facade: ProfileFacade
-) -> dict[str, list[dict]]:
+) -> dict[str, list[dict[str, Any]]]:
     """Collect all entities (root and nested) organized by type.
 
     Traverses nodes_by_id and nested items to extract all entities.
@@ -238,9 +239,9 @@ def collect_entities_by_type(
             ...
         }
     """
-    entities_by_type: dict[str, list[dict]] = {}
+    entities_by_type: dict[str, list[dict[str, Any]]] = {}
 
-    def _extract_label(data: dict) -> tuple[str, str]:
+    def _extract_label(data: dict[str, Any]) -> tuple[str, str]:
         """Extract identifier and label from entity data."""
         identifier = ""
         label = ""
@@ -257,7 +258,7 @@ def collect_entities_by_type(
 
         return identifier, label or identifier
 
-    def add_entity(entity_type: str, data: dict) -> None:
+    def add_entity(entity_type: str, data: dict[str, Any]) -> None:
         """Add an entity to the collection."""
         if entity_type not in entities_by_type:
             entities_by_type[entity_type] = []

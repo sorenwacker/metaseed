@@ -29,7 +29,7 @@ import os
 import time
 from contextvars import ContextVar
 from dataclasses import dataclass, field
-from typing import Any, Self
+from typing import Any, Self, cast
 from urllib.parse import quote
 
 import httpx
@@ -495,7 +495,7 @@ class OntologyService:
         cached = self._get_cached(cache_key)
         if cached is not _MISSING:
             logger.debug("Cache hit for term: %s", term_id)
-            return cached
+            return cast("OntologyTerm | None", cached)
 
         # Parse term ID to get ontology
         ontology = self._parse_ontology_from_term_id(term_id)
@@ -577,7 +577,7 @@ class OntologyService:
         cached = self._get_cached(cache_key)
         if cached is not _MISSING:
             logger.debug("Cache hit for term: %s", term_id)
-            return cached
+            return cast("OntologyTerm | None", cached)
 
         # Parse term ID to get ontology
         ontology = self._parse_ontology_from_term_id(term_id)

@@ -214,12 +214,13 @@ def register_extraction_tools(mcp: FastMCP, parser_registry: ParserRegistry) -> 
                 return json.dumps(parsed, indent=2, ensure_ascii=False)
             import yaml
 
-            return yaml.dump(
+            result: str = yaml.dump(
                 parsed,
                 default_flow_style=False,
                 sort_keys=False,
                 allow_unicode=True,
             )
+            return result
 
         except json.JSONDecodeError as e:
             return json.dumps({"error": f"Invalid JSON: {e}"})

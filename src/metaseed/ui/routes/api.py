@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
     from fastapi import FastAPI
 
-    from ..state import AppState
+    from ..state import AppState, TreeNode
 
 
 def _parse_profile_strings(
@@ -186,7 +186,7 @@ def register_api_routes(
             facade = state.get_or_create_facade()
             results = []
 
-            def validate_recursive(node):
+            def validate_recursive(node: TreeNode) -> None:
                 errors = []
                 if node.instance:
                     data = node.instance.model_dump(exclude_none=True)

@@ -9,7 +9,7 @@ from __future__ import annotations
 import copy
 from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import yaml
 
@@ -84,7 +84,7 @@ def spec_to_yaml(spec: ProfileSpec) -> str:
 
     # Custom representer for cleaner output, scoped to a local Dumper so the
     # global PyYAML representer registry is not mutated as a side effect.
-    class _SpecDumper(yaml.Dumper):
+    class _SpecDumper(yaml.Dumper):  # type: ignore[misc]  # yaml.Dumper is untyped (no stubs)
         pass
 
     def str_representer(dumper: yaml.Dumper, data: str) -> yaml.Node:
@@ -94,7 +94,7 @@ def spec_to_yaml(spec: ProfileSpec) -> str:
 
     _SpecDumper.add_representer(str, str_representer)
 
-    return yaml.dump(
+    rendered: str = yaml.dump(
         data,
         Dumper=_SpecDumper,
         default_flow_style=False,
@@ -102,6 +102,7 @@ def spec_to_yaml(spec: ProfileSpec) -> str:
         allow_unicode=True,
         width=120,
     )
+    return rendered
 
 
 def get_custom_specs_dir() -> Path:
@@ -167,7 +168,7 @@ def save_spec(spec: ProfileSpec, name: str | None = None) -> Path:
 
 def _list_specs(
     include_user_defined: bool, default_display_name_fn: Callable[[str], str]
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     """Common logic for listing specs.
 
     Args:
@@ -182,7 +183,7 @@ def _list_specs(
     loader = SpecLoader()
     profiles = loader.list_profiles()
 
-    result = []
+    result: list[dict[str, Any]] = []
     for profile_name in profiles:
         is_user_defined = loader.is_user_defined(profile_name)
         if is_user_defined != include_user_defined:
@@ -219,7 +220,7 @@ def _list_specs(
     return result
 
 
-def list_available_templates() -> list[dict]:
+def list_available_templates() -> list[dict[str, Any]]:
     """List built-in profiles that can be used as templates.
 
     Returns:
@@ -231,7 +232,7 @@ def list_available_templates() -> list[dict]:
     )
 
 
-def list_user_specs() -> list[dict]:
+def list_user_specs() -> list[dict[str, Any]]:
     """List user-created specifications.
 
     Returns:

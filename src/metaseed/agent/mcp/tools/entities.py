@@ -6,6 +6,7 @@ Uses EntityService for all CRUD operations to avoid code duplication.
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 from pydantic import ValidationError
@@ -14,6 +15,8 @@ from metaseed.utils.json import DateAwareEncoder
 
 if TYPE_CHECKING:
     from mcp.server.fastmcp import FastMCP
+
+    from metaseed.ui.services.entities import EntityService
 
 
 def _auto_save_dataset() -> None:
@@ -385,7 +388,9 @@ def _handle_validation_error(
     return None
 
 
-def register_entity_tools(mcp: FastMCP, get_entity_service) -> None:
+def register_entity_tools(
+    mcp: FastMCP, get_entity_service: Callable[[], EntityService]
+) -> None:
     """Register entity management tools with the MCP server.
 
     Args:

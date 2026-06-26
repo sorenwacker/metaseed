@@ -36,7 +36,7 @@ def _load_entity_def(
         return None, str(e)
 
 
-def _field_to_dict(field: FieldSpec) -> dict:
+def _field_to_dict(field: FieldSpec) -> dict[str, Any]:
     """Convert a FieldSpec to a dictionary for JSON serialization.
 
     Args:
@@ -45,7 +45,7 @@ def _field_to_dict(field: FieldSpec) -> dict:
     Returns:
         Dictionary with field properties.
     """
-    field_info = {
+    field_info: dict[str, Any] = {
         "name": field.name,
         "type": field.type.value,
         "required": field.required,
@@ -398,7 +398,7 @@ def register_profile_tools(mcp: FastMCP) -> None:
             required_count, and list of field definitions.
         """
         entity_def, error = _load_entity_def(entity_type, profile, version)
-        if error:
+        if entity_def is None:
             return json.dumps({"error": error})
 
         fields = [_field_to_dict(f) for f in entity_def.fields]
@@ -433,7 +433,7 @@ def register_profile_tools(mcp: FastMCP) -> None:
             JSON with entity_type, profile, version, and required_fields list.
         """
         entity_def, error = _load_entity_def(entity_type, profile, version)
-        if error:
+        if entity_def is None:
             return json.dumps({"error": error})
 
         required_fields = [f.name for f in entity_def.fields if f.required]
@@ -476,10 +476,10 @@ def register_profile_tools(mcp: FastMCP) -> None:
         from metaseed.specs.schema import FieldType
 
         entity_def, error = _load_entity_def(entity_type, profile, version)
-        if error:
+        if entity_def is None:
             return json.dumps({"error": error})
 
-        template = {}
+        template: dict[str, Any] = {}
         required_fields = []
 
         for field in entity_def.fields:

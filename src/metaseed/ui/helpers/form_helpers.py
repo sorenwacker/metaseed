@@ -24,10 +24,10 @@ class FormContext:
 
     entity_type: str
     helper: Any
-    values: dict
+    values: dict[str, Any]
     node_id: str | None = None
     auto_fields: set[str] = field(default_factory=set)
-    inline_tables: dict[str, dict] = field(default_factory=dict)
+    inline_tables: dict[str, dict[str, Any]] = field(default_factory=dict)
 
     @property
     def is_edit(self) -> bool:
@@ -44,30 +44,30 @@ class FormContext:
         """Ontology term from helper."""
         return self.helper.ontology_term if self.helper else ""
 
-    def get_fields(self) -> list[dict]:
+    def get_fields(self) -> list[dict[str, Any]]:
         """Get all field data for this entity."""
         return get_field_data(self.helper) if self.helper else []
 
-    def get_required_fields(self) -> list[dict]:
+    def get_required_fields(self) -> list[dict[str, Any]]:
         """Get required fields only."""
         return filter_fields(self.get_fields(), required=True)
 
-    def get_optional_fields(self) -> list[dict]:
+    def get_optional_fields(self) -> list[dict[str, Any]]:
         """Get optional non-nested fields."""
         return filter_fields(self.get_fields(), required=False, exclude_nested=True)
 
-    def get_nested_fields(self) -> list[dict]:
+    def get_nested_fields(self) -> list[dict[str, Any]]:
         """Get nested entity fields only."""
         return filter_fields(self.get_fields(), nested_only=True)
 
 
 def filter_fields(
-    fields: list[dict],
+    fields: list[dict[str, Any]],
     *,
     required: bool | None = None,
     exclude_nested: bool = False,
     nested_only: bool = False,
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     """Filter field list by criteria.
 
     Args:
@@ -89,7 +89,9 @@ def filter_fields(
     return result
 
 
-def get_field_data(helper: Any, exclude_parent_ref: str | None = None) -> list[dict]:
+def get_field_data(
+    helper: Any, exclude_parent_ref: str | None = None
+) -> list[dict[str, Any]]:
     """Get field data for template rendering.
 
     Args:
@@ -131,7 +133,7 @@ def get_field_data(helper: Any, exclude_parent_ref: str | None = None) -> list[d
     return fields
 
 
-def is_nested_field(field: dict) -> bool:
+def is_nested_field(field: dict[str, Any]) -> bool:
     """Check if a field dict represents a nested entity (list of entities or single entity).
 
     This function operates on field dicts from get_field_data(). For FieldSpec
@@ -152,9 +154,9 @@ def is_nested_field(field: dict) -> bool:
     return False
 
 
-def collect_form_values(form_data: dict, helper: Any) -> dict:
+def collect_form_values(form_data: dict[str, Any], helper: Any) -> dict[str, Any]:
     """Collect form values into a dictionary."""
-    values = {}
+    values: dict[str, Any] = {}
     for field_name in helper.all_fields:
         value = form_data.get(field_name)
         if value is None or value == "":

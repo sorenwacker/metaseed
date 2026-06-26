@@ -238,7 +238,7 @@ def export_example(
 
     # Find examples directory (in src/metaseed/examples/)
     try:
-        examples_dir = Path(importlib.resources.files("metaseed")) / "examples"
+        examples_dir = Path(str(importlib.resources.files("metaseed"))) / "examples"
         if not examples_dir.exists():
             # Try relative to package (from cli/commands/example.py -> metaseed/examples)
             examples_dir = Path(__file__).parent.parent.parent / "examples"

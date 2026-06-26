@@ -334,7 +334,7 @@ class EntityStore:
         """
         return [n for n in self._instances.values() if n.parent_id is None]
 
-    def to_dict(self: Self) -> list[dict]:
+    def to_dict(self: Self) -> list[dict[str, Any]]:
         """Export all entities for serialization.
 
         Returns a flat list of entity data with metadata for reconstruction.
@@ -343,7 +343,7 @@ class EntityStore:
         Returns:
             List of entity dictionaries with _type and optional _parent_unique_id.
         """
-        entities: list[dict] = []
+        entities: list[dict[str, Any]] = []
 
         def serialize_node(
             node: EntityNode, parent_unique_id: str | None = None
@@ -375,7 +375,7 @@ class EntityStore:
 
         return entities
 
-    def load_from_dict(self: Self, entities: list[dict]) -> int:
+    def load_from_dict(self: Self, entities: list[dict[str, Any]]) -> int:
         """Load entities from serialized data.
 
         Reconstructs the entity graph from a flat list of entity dictionaries.
@@ -414,8 +414,11 @@ class EntityStore:
         return len(self._instances)
 
     def _create_node_from_dict(
-        self: Self, entity_data: dict
-    ) -> tuple[EntityNode, str | None, str | None, tuple | None] | None:
+        self: Self, entity_data: dict[str, Any]
+    ) -> (
+        tuple[EntityNode, str | None, str | None, tuple[EntityNode, str, bool] | None]
+        | None
+    ):
         """Create a single node from serialized data.
 
         Malformed entities (those raising ValidationError, ValueError, or

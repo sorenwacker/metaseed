@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
     from fastapi import FastAPI
 
-    from metaseed.specs.schema import Constraints
+    from metaseed.specs.schema import Constraints, EntitySpec
 
     from ..state import AppState
 
@@ -269,8 +269,8 @@ def _validate_entity_deep(
 
 
 def _separate_field_values(
-    entity_spec, values: dict[str, Any]
-) -> tuple[dict[str, Any], dict[str, tuple[str, Any]]]:
+    entity_spec: EntitySpec, values: dict[str, Any]
+) -> tuple[dict[str, Any], dict[str, tuple[str | None, Any]]]:
     """Separate simple field values from nested entity values.
 
     Args:
@@ -293,7 +293,7 @@ def _separate_field_values(
 
 
 def _validate_nested_entities_with_checks(
-    nested_fields: dict[str, tuple[str, Any]],
+    nested_fields: dict[str, tuple[str | None, Any]],
     profile: str,
     version: str,
     path_prefix: str,
@@ -352,7 +352,7 @@ def register_validation_routes(
         form_data = await request.form()
         entity_type = form_data.get("_entity_type")
 
-        if not entity_type:
+        if not entity_type or not isinstance(entity_type, str):
             return templates.TemplateResponse(
                 request,
                 "components/validation_result.html",

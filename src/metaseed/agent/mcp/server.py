@@ -34,6 +34,7 @@ from metaseed.specs.loader import SpecLoader, SpecLoadError
 if TYPE_CHECKING:
     from metaseed.agent.mcp.context import MCPContext
     from metaseed.ui.dataset_manager import DatasetManagerFactory
+    from metaseed.ui.services.entities import EntityService
     from metaseed.ui.state import AppState
 
 
@@ -90,7 +91,7 @@ def get_context() -> MCPContext | None:
     return _context_var.get()
 
 
-def get_mcp_state():
+def get_mcp_state() -> AppState:
     """Get the shared MCP state.
 
     Prefers context if available, otherwise uses a cached standalone state.
@@ -111,7 +112,7 @@ def get_standalone_factory() -> DatasetManagerFactory:
     return _standalone.get_or_create_factory()
 
 
-def set_mcp_state(state):
+def set_mcp_state(state: AppState) -> None:
     """Set the MCP state for tests and standalone mode.
 
     Creates a new context with the given state, allowing tests
@@ -132,7 +133,7 @@ def set_mcp_state(state):
     _standalone.state = state
 
 
-def reset_mcp_state():
+def reset_mcp_state() -> None:
     """Reset the MCP state (for tests).
 
     Clears both the context and standalone state cache.
@@ -141,7 +142,7 @@ def reset_mcp_state():
     set_context(None)
 
 
-def get_entity_service():
+def get_entity_service() -> EntityService:
     """Get the entity service for operations.
 
     Uses context if available, otherwise creates a fresh service.
@@ -158,7 +159,7 @@ def get_entity_service():
     return EntityService(repo)
 
 
-def reset_entity_service():
+def reset_entity_service() -> None:
     """Reset the entity service (no-op with context injection).
 
     With context injection, get_entity_service() creates a fresh service

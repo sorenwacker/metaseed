@@ -6,7 +6,7 @@ and their versions, and creating ProfileFacade instances.
 
 from __future__ import annotations
 
-from typing import Self
+from typing import Any, Self
 
 from metaseed.facade import ProfileFacade
 from metaseed.specs.loader import SpecLoader
@@ -61,7 +61,7 @@ class ProfileFactory:
         versions = self.list_versions(profile)
         return versions[-1] if versions else None
 
-    def get_profile_info(self: Self) -> list[dict]:
+    def get_profile_info(self: Self) -> list[dict[str, Any]]:
         """Get information about all available profiles.
 
         Returns:

@@ -5,7 +5,7 @@ profile entities and their fields.
 """
 
 from enum import StrEnum
-from typing import Self
+from typing import Any, Self
 
 from pydantic import BaseModel, ConfigDict
 
@@ -138,7 +138,7 @@ class EntitySpec(BaseModel):
     ontology_term: str | None = None
     description: str = ""
     fields: list[FieldSpec] = []
-    example: dict[str, str | int | float | bool | list] | None = None
+    example: dict[str, str | int | float | bool | list[Any]] | None = None
 
     def get_required_fields(self: Self) -> list[FieldSpec]:
         """Return list of required fields.
@@ -168,7 +168,7 @@ class EntityDefSpec(BaseModel):
     ontology_term: str | None = None
     description: str = ""
     fields: list[FieldSpec] = []
-    example: dict[str, str | int | float | bool | list] | None = None
+    example: dict[str, str | int | float | bool | list[Any]] | None = None
 
 
 class ValidationRuleSpec(BaseModel):

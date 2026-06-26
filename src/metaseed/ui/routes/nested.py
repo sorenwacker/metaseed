@@ -147,7 +147,7 @@ def register_nested_routes(
         if state.nested_edit_stack:
             ctx = state.nested_edit_stack[-1]
             inline_tables = build_inline_tables(
-                state, facade, nested_entity_type, items_source=ctx.nested_items
+                state, facade, nested_entity_type or "", items_source=ctx.nested_items
             )
 
         return templates.TemplateResponse(
@@ -199,7 +199,7 @@ def register_nested_routes(
         item = items[idx]
         if isinstance(item, dict):
             for key, value in form_data.items():
-                if key.startswith("_"):
+                if key.startswith("_") or not isinstance(value, str):
                     continue
                 field_type = None
                 if nested_helper and key in nested_helper.all_fields:
@@ -218,11 +218,11 @@ def register_nested_routes(
             if state.nested_edit_stack:
                 state.nested_edit_stack.pop()
 
-            all_columns = get_table_columns(facade, nested_entity_type)
+            all_columns = get_table_columns(facade, nested_entity_type or "")
             reference_fields = get_reference_fields(
                 profile=state.profile,
                 version=facade.version,
-                entity_type=nested_entity_type,
+                entity_type=nested_entity_type or "",
             )
             parent_id_fields = get_parent_id_fields(reference_fields, parent_type)
             display_columns = [c for c in all_columns if c not in parent_id_fields]
@@ -252,7 +252,7 @@ def register_nested_routes(
         if state.nested_edit_stack:
             ctx = state.nested_edit_stack[-1]
             inline_tables = build_inline_tables(
-                state, facade, nested_entity_type, items_source=ctx.nested_items
+                state, facade, nested_entity_type or "", items_source=ctx.nested_items
             )
 
         return templates.TemplateResponse(

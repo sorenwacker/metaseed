@@ -7,7 +7,7 @@ metadata assistance. The public entry point is re-exported from
 """
 
 import logging
-from typing import Any, Self
+from typing import Any, Self, cast
 
 import httpx
 
@@ -174,7 +174,7 @@ When suggesting values, explain why they fit typical schema requirements.
                 response.raise_for_status()
 
                 data = response.json()
-                return data["choices"][0]["message"]["content"]
+                return cast("str", data["choices"][0]["message"]["content"])
 
         except httpx.HTTPStatusError as e:
             logger.exception(

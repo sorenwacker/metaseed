@@ -45,6 +45,7 @@ def register_entity_routes(
 
     def _require_entity(builder: SpecBuilderState, name: str) -> EntityDefSpec:
         """Get entity by name, raising HTTPException if not found."""
+        assert builder.spec is not None  # guaranteed by _require_spec
         if name not in builder.spec.entities:
             raise HTTPException(status_code=404, detail=f"Entity '{name}' not found")
         return builder.spec.entities[name]
@@ -53,6 +54,7 @@ def register_entity_routes(
         request: Request, builder: SpecBuilderState, error: str | None = None
     ) -> HTMLResponse:
         """Helper to return entity list template response."""
+        assert builder.spec is not None  # guaranteed by _require_spec
         return templates.TemplateResponse(
             request,
             "spec_builder/partials/entities_list.html",
@@ -72,6 +74,7 @@ def register_entity_routes(
         success: bool = False,
     ) -> HTMLResponse:
         """Helper to return entity editor template response."""
+        assert builder.spec is not None  # guaranteed by _require_spec
         return templates.TemplateResponse(
             request,
             "spec_builder/partials/entity_editor.html",
@@ -99,6 +102,7 @@ def register_entity_routes(
     ) -> HTMLResponse:
         """Add a new entity."""
         builder = _require_spec()
+        assert builder.spec is not None  # guaranteed by _require_spec
         name = name.strip()
         error = validate_entity_name(name)
         if error:
@@ -144,6 +148,7 @@ def register_entity_routes(
     ) -> HTMLResponse:
         """Update entity metadata, including rename."""
         builder = _require_spec()
+        assert builder.spec is not None  # guaranteed by _require_spec
         entity = _require_entity(builder, name)
         entity.description = description.strip()
         entity.ontology_term = ontology_term.strip() or None
@@ -187,6 +192,7 @@ def register_entity_routes(
     async def delete_entity(request: Request, name: str) -> HTMLResponse:
         """Delete an entity."""
         builder = _require_spec()
+        assert builder.spec is not None  # guaranteed by _require_spec
         _require_entity(builder, name)
         del builder.spec.entities[name]
 
@@ -214,6 +220,7 @@ def _update_entity_references(
         old_name: The old entity name.
         new_name: The new entity name.
     """
+    assert builder.spec is not None  # caller renames within an active spec
     for other_entity in builder.spec.entities.values():
         for field in other_entity.fields:
             # Update items (entity name)

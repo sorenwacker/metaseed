@@ -7,6 +7,7 @@ reference-linked children during entity updates.
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
@@ -33,7 +34,7 @@ class ValidationResult:
     """
 
     errors: list[str] = field(default_factory=list)
-    failed_items: dict[str, list[dict]] = field(default_factory=dict)
+    failed_items: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
 
     def add_error(self, entity_type: str, message: str) -> None:
         """Add a validation error message.
@@ -44,7 +45,7 @@ class ValidationResult:
         """
         self.errors.append(f"{entity_type}: {message}")
 
-    def add_failed_item(self, field_name: str, item: dict) -> None:
+    def add_failed_item(self, field_name: str, item: dict[str, Any]) -> None:
         """Add a failed item to be preserved for user correction.
 
         Args:
@@ -74,7 +75,8 @@ def _format_validation_error(_entity_type: str, error: ValidationError) -> str:
     Returns:
         Human-readable error message.
     """
-    err = error.errors()[0] if error.errors() else {}
+    errors = error.errors()
+    err: Mapping[str, Any] = errors[0] if errors else {}
     err_type = err.get("type", "")
 
     if err_type == "missing":
@@ -85,7 +87,7 @@ def _format_validation_error(_entity_type: str, error: ValidationError) -> str:
             str(e["loc"][0]) for e in error.errors() if e["type"] == "extra_forbidden"
         ]
         return f"Unknown fields: {', '.join(extra)}"
-    return err.get("msg", str(error))
+    return str(err.get("msg", str(error)))
 
 
 def _find_existing_child_node(
@@ -124,11 +126,11 @@ def _find_existing_child_node(
 
 
 def _clean_item_for_child_entity(
-    item: dict,
+    item: dict[str, Any],
     child_helper: Any,
     parent_ref_field: str | None,
     parent_identifier: str | None,
-) -> dict:
+) -> dict[str, Any]:
     """Clean and prepare an item dict for creating/updating a child entity.
 
     Args:
@@ -215,7 +217,7 @@ def process_reference_linked_children(
 
 def _process_child_items(
     state: AppState,
-    items: list,
+    items: list[Any],
     child_type: str,
     child_helper: Any,
     parent_ref_field: str | None,
@@ -281,9 +283,9 @@ def _update_existing_child(
     existing_node: Any,
     child_type: str,
     child_helper: Any,
-    cleaned: dict,
+    cleaned: dict[str, Any],
     field_name: str,
-    item: dict,
+    item: dict[str, Any],
     result: ValidationResult,
 ) -> None:
     """Update an existing child node.
@@ -313,10 +315,10 @@ def _create_new_child(
     state: AppState,
     child_type: str,
     child_helper: Any,
-    cleaned: dict,
+    cleaned: dict[str, Any],
     node_id: str,
     field_name: str,
-    item: dict,
+    item: dict[str, Any],
     result: ValidationResult,
 ) -> None:
     """Create a new child node.
@@ -348,7 +350,7 @@ def rebuild_nested_items_with_failures(
     node_id: str,
     helper: Any,
     facade: ProfileFacade,
-    failed_items: dict[str, list[dict]],
+    failed_items: dict[str, list[dict[str, Any]]],
 ) -> None:
     """Rebuild nested items after update, including failed items for correction.
 

@@ -83,7 +83,7 @@ def register_explore_routes(
         # Parse profile specs
         profile_tuples = []
         for spec in profile_specs:
-            if "/" in spec:
+            if isinstance(spec, str) and "/" in spec:
                 parts = spec.split("/", 1)
                 profile_tuples.append((parts[0], parts[1]))
 

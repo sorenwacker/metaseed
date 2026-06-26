@@ -13,7 +13,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
-from metaseed.specs.schema import Constraints, FieldSpec, FieldType
+from metaseed.specs.schema import Constraints, EntityDefSpec, FieldSpec, FieldType
 
 from ..helpers.spec_builder_helpers import validate_field_name
 
@@ -96,13 +96,14 @@ def register_field_routes(
             raise HTTPException(status_code=400, detail="No spec in progress")
         return builder
 
-    def _require_entity(builder: SpecBuilderState, name: str):
+    def _require_entity(builder: SpecBuilderState, name: str) -> EntityDefSpec:
         """Get entity by name, raising HTTPException if not found."""
+        assert builder.spec is not None  # caller resolves via _require_spec
         if name not in builder.spec.entities:
             raise HTTPException(status_code=404, detail=f"Entity '{name}' not found")
         return builder.spec.entities[name]
 
-    def _require_field(entity, idx: int) -> FieldSpec:
+    def _require_field(entity: EntityDefSpec, idx: int) -> FieldSpec:
         """Get field by index, raising HTTPException if not found."""
         if idx < 0 or idx >= len(entity.fields):
             raise HTTPException(status_code=404, detail="Field not found")
@@ -116,6 +117,7 @@ def register_field_routes(
         success: bool = False,
     ) -> HTMLResponse:
         """Helper to return entity editor template response."""
+        assert builder.spec is not None  # caller resolves via _require_spec
         return templates.TemplateResponse(
             request,
             "spec_builder/partials/entity_editor.html",
@@ -140,6 +142,7 @@ def register_field_routes(
     ) -> HTMLResponse:
         """Add a new field to an entity."""
         builder = _require_spec()
+        assert builder.spec is not None  # _require_spec guarantees spec is set
         _require_entity(builder, entity_name)
         name = name.strip()
         error = validate_field_name(name)
@@ -325,7 +328,7 @@ def register_field_routes(
 def _auto_create_back_reference(
     builder: SpecBuilderState,
     entity_name: str,
-    entity,
+    entity: EntityDefSpec,
     field_type: str,
     items: str,
 ) -> None:
@@ -338,6 +341,7 @@ def _auto_create_back_reference(
         field_type: The field type.
         items: The target entity name.
     """
+    assert builder.spec is not None  # caller resolves via _require_spec
     target_entity_name = items.strip() if items else None
     if not (
         target_entity_name
@@ -360,6 +364,8 @@ def _auto_create_back_reference(
                 description="Unique identifier",
             ),
         )
+        # add_field sets editing_field_idx before invoking this helper.
+        assert builder.editing_field_idx is not None
         builder.editing_field_idx += 1
 
     # Add back-reference to target entity if not exists

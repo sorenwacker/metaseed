@@ -66,6 +66,11 @@ class DateRangeRule(ValidationRule):
         if errors:
             return errors
 
+        # A successful parse (no errors) guarantees both dates are non-None;
+        # this guard narrows the Optional for the comparison below.
+        if start is None or end is None:
+            return errors
+
         if end < start:
             msg = (
                 self.custom_message

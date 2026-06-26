@@ -6,7 +6,7 @@ table columns, and managing items stores.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from metaseed.facade import ProfileFacade
@@ -35,7 +35,8 @@ def infer_entity_type_from_field(
     if not parent_helper:
         return None
 
-    return parent_helper.nested_fields.get(field_name)
+    nested_type: str | None = parent_helper.nested_fields.get(field_name)
+    return nested_type
 
 
 def get_table_columns(facade: ProfileFacade, entity_type: str) -> list[str]:
@@ -49,7 +50,7 @@ def get_table_columns(facade: ProfileFacade, entity_type: str) -> list[str]:
     return [c for c in cols if c not in nested]
 
 
-def get_table_column_info(facade: ProfileFacade, entity_type: str) -> dict:
+def get_table_column_info(facade: ProfileFacade, entity_type: str) -> dict[str, Any]:
     """Get complete column info for a table (types, constraints, required).
 
     Returns dict with keys: columns, column_types, column_constraints,
@@ -97,8 +98,8 @@ def build_inline_tables(
     state: AppState,
     facade: ProfileFacade,
     entity_type: str,
-    items_source: dict[str, list] | None = None,
-) -> dict[str, dict]:
+    items_source: dict[str, list[Any]] | None = None,
+) -> dict[str, dict[str, Any]]:
     """Build inline table data for all nested fields of an entity type.
 
     Args:
@@ -130,7 +131,7 @@ def build_inline_tables(
     # Use provided items_source or fall back to state.current_nested_items
     source = items_source if items_source is not None else state.current_nested_items
 
-    inline_tables = {}
+    inline_tables: dict[str, dict[str, Any]] = {}
 
     # Build map of field_name -> nested_type from spec
     field_to_type = dict(helper.nested_fields)
@@ -183,7 +184,7 @@ def build_inline_tables(
 
 def get_items_store(
     state: AppState, parent_entity_type: str, field_name: str
-) -> tuple[dict, list]:
+) -> tuple[dict[str, Any], list[Any]]:
     """Get the correct items store and items list based on context.
 
     Returns (items_store dict, items list for field_name).
@@ -200,9 +201,9 @@ def get_items_store(
     return items_store, items_store[field_name]
 
 
-def format_table_rows(items: list) -> list[dict]:
+def format_table_rows(items: list[Any]) -> list[dict[str, Any]]:
     """Format items for table row rendering."""
-    rows = []
+    rows: list[dict[str, Any]] = []
     for i, item in enumerate(items):
         if hasattr(item, "model_dump"):
             row = item.model_dump(exclude_none=True)

@@ -21,7 +21,7 @@ __all__ = ["get_tree", "to_graph"]
 def get_tree(
     store: EntityStore,
     entities: dict[str, EntityHelper],
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     """Get hierarchical tree for visualization.
 
     Returns tree structure starting from root nodes, with each node
@@ -37,7 +37,7 @@ def get_tree(
     """
     roots = store.get_roots()
 
-    def node_to_dict(node: EntityNode) -> dict:
+    def node_to_dict(node: EntityNode) -> dict[str, Any]:
         # Get label using helper's get_label for consistency
         helper = entities.get(node.entity_type)
         if helper and node.instance:
@@ -59,7 +59,7 @@ def get_tree(
 def to_graph(
     store: EntityStore,
     entities: dict[str, EntityHelper],
-) -> dict:
+) -> dict[str, Any]:
     """Export entity graph in vis.js format.
 
     Builds nodes and edges for visualization. Includes:
@@ -73,8 +73,8 @@ def to_graph(
     Returns:
         Dictionary with 'nodes' and 'edges' lists for vis.js.
     """
-    nodes: list[dict] = []
-    edges: list[dict] = []
+    nodes: list[dict[str, Any]] = []
+    edges: list[dict[str, Any]] = []
 
     # Maps for resolving references by unique_id/alias
     unique_id_to_vis_id: dict[str, str] = {}
@@ -104,7 +104,7 @@ def to_graph(
             return text[: max_len - 3] + "..."
         return text
 
-    def build_tooltip(entity_type: str, label: str, data: dict) -> str:
+    def build_tooltip(entity_type: str, label: str, data: dict[str, Any]) -> str:
         lines = [f"{entity_type}: {label}"]
         shown = 0
         for key, value in data.items():

@@ -43,9 +43,9 @@ def _validate_nested(
     engine = create_engine_for_entity(entity, version, profile=profile)
     for error in engine.validate(data):
         # Prefix field with path for nested errors
-        field = f"{path}.{error.field}" if path else error.field
+        error_field = f"{path}.{error.field}" if path else error.field
         errors.append(
-            ValidationError(field=field, message=error.message, rule=error.rule)
+            ValidationError(field=error_field, message=error.message, rule=error.rule)
         )
 
     # Find and validate nested list fields

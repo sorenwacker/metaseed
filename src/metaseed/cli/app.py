@@ -5,12 +5,15 @@ The ``app`` object is re-exported from :mod:`metaseed.cli` and wired as the
 """
 
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 import typer
 import yaml
 
-from metaseed import __version__
+try:
+    from metaseed._version import __version__
+except ImportError:
+    __version__ = "0.0.0+unknown"
 
 # Import commands from submodules
 from metaseed.cli.commands.example import export_example
@@ -21,6 +24,7 @@ from metaseed.models import get_model
 from metaseed.profiles import ProfileFactory
 from metaseed.specs.loader import SpecLoader, SpecLoadError
 from metaseed.storage import JsonStorage, StorageError, YamlStorage
+from metaseed.storage.base import StorageBackend
 from metaseed.validators import DatasetValidator
 from metaseed.validators import validate as validate_data
 
@@ -183,7 +187,7 @@ def template(
     # The "# name" comment-key technique is YAML-specific, so optional fields
     # are only represented for YAML output and omitted for JSON.
     is_yaml = format.lower() != "json"
-    template_data = {}
+    template_data: dict[str, Any] = {}
     for field in spec.fields:
         if field.required:
             if field.type.value == "string":
@@ -251,6 +255,7 @@ def convert(
 
     # Determine input format
     input_suffix = input_file.suffix.lower()
+    input_storage: StorageBackend
     if input_suffix in [".yaml", ".yml"]:
         input_storage = YamlStorage()
     elif input_suffix == ".json":
@@ -261,6 +266,7 @@ def convert(
 
     # Determine output format
     output_suffix = output_file.suffix.lower()
+    output_storage: StorageBackend
     if output_suffix in [".yaml", ".yml"]:
         output_storage = YamlStorage()
     elif output_suffix == ".json":

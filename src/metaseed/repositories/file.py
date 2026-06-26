@@ -130,7 +130,7 @@ class FileEntityRepository(EntityRepository):
             logger.warning("Failed to load dataset: %s", e)
 
     def _parse_entities(
-        self: Self, raw_entities: list[dict]
+        self: Self, raw_entities: list[dict[str, Any]]
     ) -> tuple[dict[str, EntityData], dict[str, list[EntityData]]]:
         """Parse raw entity dictionaries into EntityData objects.
 
@@ -208,7 +208,7 @@ class FileEntityRepository(EntityRepository):
             return
 
         # Serialize tree to flat list with hierarchy metadata
-        entities_data: list[dict] = []
+        entities_data: list[dict[str, Any]] = []
 
         def serialize_recursive(entity: EntityData) -> None:
             entity_dict = {

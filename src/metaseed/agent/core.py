@@ -9,8 +9,9 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Self
+from typing import Any, Self, cast
 
 import yaml
 from pydantic import BaseModel
@@ -39,7 +40,7 @@ class TypeConverter:
         if value is None or value == "":
             return None
 
-        converters = {
+        converters: dict[str, Callable[[Any], Any]] = {
             "string": str,
             "integer": TypeConverter._to_integer,
             "float": TypeConverter._to_float,
@@ -77,12 +78,12 @@ class TypeConverter:
         return str(value).lower() in ("true", "1", "yes")
 
     @staticmethod
-    def _to_list(value: Any) -> list:
+    def _to_list(value: Any) -> list[Any]:
         if isinstance(value, list):
             return value
         if isinstance(value, str) and value.startswith("["):
             try:
-                return json.loads(value)
+                return cast("list[Any]", json.loads(value))
             except json.JSONDecodeError:
                 return [value]
         return [value] if value else []
@@ -459,9 +460,10 @@ class ExtractionContext:
         else:
             data = self.extracted
 
-        return yaml.dump(
+        result: str = yaml.dump(
             data, default_flow_style=False, sort_keys=False, allow_unicode=True
         )
+        return result
 
     def export_json(self: Self, entity_name: str | None = None) -> str:
         """Export extracted entities to JSON.
