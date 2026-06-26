@@ -252,8 +252,8 @@ def convert(
     elif input_suffix == ".json":
         input_storage = JsonStorage()
     else:
-        typer.echo(f"Error: Unknown input format: {input_suffix}", err=True)
-        raise typer.Exit(1)
+        echo_error(f"Unknown input format: {input_suffix}")
+        raise typer.Exit(ExitCode.INPUT_ERROR)
 
     # Determine output format
     output_suffix = output_file.suffix.lower()
@@ -262,8 +262,8 @@ def convert(
     elif output_suffix == ".json":
         output_storage = JsonStorage()
     else:
-        typer.echo(f"Error: Unknown output format: {output_suffix}", err=True)
-        raise typer.Exit(1)
+        echo_error(f"Unknown output format: {output_suffix}")
+        raise typer.Exit(ExitCode.INPUT_ERROR)
 
     try:
         entity_instance = input_storage.load(input_file, Model)

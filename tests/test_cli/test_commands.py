@@ -246,6 +246,21 @@ class TestTemplateCommandEdgeCases:
 class TestConvertCommandEdgeCases:
     """Edge case tests for convert command."""
 
+    def test_convert_unknown_format_uses_input_error_code(self, tmp_path: Path) -> None:
+        """An unknown input format exits with the shared INPUT_ERROR code."""
+        from metaseed.cli.output import ExitCode
+
+        input_path = tmp_path / "data.txt"
+        input_path.write_text("nope")
+        output_path = tmp_path / "out.json"
+
+        result = runner.invoke(
+            app,
+            ["convert", str(input_path), str(output_path), "--entity", "investigation"],
+        )
+        assert result.exit_code == ExitCode.INPUT_ERROR
+        assert "Unknown input format" in result.output
+
     def test_convert_invalid_input(self, tmp_path: Path) -> None:
         """Convert nonexistent input file shows error."""
         output_path = tmp_path / "output.json"
