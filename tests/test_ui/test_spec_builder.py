@@ -363,6 +363,48 @@ class TestSpecBuilderRoutes:
         assert "items: NewParent" in response.text
         assert "items: Parent" not in response.text
 
+    def test_rename_entity_updates_validation_rules(self) -> None:
+        """Renaming an entity updates applies_to and reference in rules."""
+        from metaseed.ui.spec_builder.routes_entities import (
+            _update_entity_references,
+        )
+
+        spec = ProfileSpec(
+            version="1.0",
+            name="p",
+            display_name="P",
+            description="d",
+            ontology="TEST",
+            root_entity="Study",
+            validation_rules=[
+                ValidationRuleSpec(
+                    name="ou_study_ref",
+                    applies_to=["ObservationUnit"],
+                    field="study_id",
+                    reference="Study.unique_id",
+                ),
+            ],
+            entities={
+                "Study": EntityDefSpec(
+                    ontology_term="TEST:1",
+                    description="s",
+                    fields=[
+                        FieldSpec(name="unique_id", type=FieldType.STRING),
+                    ],
+                ),
+            },
+        )
+        state = SpecBuilderState()
+        state.spec = spec
+
+        _update_entity_references(state, "Study", "Investigation")
+
+        rule = spec.validation_rules[0]
+        assert rule.reference == "Investigation.unique_id"
+
+        _update_entity_references(state, "ObservationUnit", "ObsUnit")
+        assert spec.validation_rules[0].applies_to == ["ObsUnit"]
+
     def test_add_list_field_creates_back_reference(self, client):
         """Adding a list field auto-creates back-reference in target entity."""
         client.get("/spec-builder/new")

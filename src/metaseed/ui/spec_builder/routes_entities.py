@@ -225,3 +225,14 @@ def _update_entity_references(
             # Update parent_ref (format: Entity.field)
             if field.parent_ref and field.parent_ref.startswith(f"{old_name}."):
                 field.parent_ref = f"{new_name}.{field.parent_ref.split('.', 1)[1]}"
+
+    # Update cross-entity validation rules that name the entity.
+    for rule in builder.spec.validation_rules:
+        if isinstance(rule.applies_to, list):
+            rule.applies_to = [
+                new_name if name == old_name else name for name in rule.applies_to
+            ]
+        elif rule.applies_to == old_name:
+            rule.applies_to = new_name
+        if rule.reference and rule.reference.startswith(f"{old_name}."):
+            rule.reference = f"{new_name}.{rule.reference.split('.', 1)[1]}"
