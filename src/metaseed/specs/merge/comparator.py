@@ -429,8 +429,13 @@ class SpecComparator:
             {pid: spec.constraints for pid, spec in present_specs.items()}
         )
         if constraint_diff:
-            changed_attrs.append("constraints")
-            values["constraints"] = constraint_diff
+            # Flatten into the same {profile_id: value} shape as every other
+            # entry (keyed "constraints.<attr>") so report renderers handle it
+            # uniformly instead of dropping constraint conflict values.
+            for constraint_attr, constraint_values in constraint_diff.items():
+                key = f"constraints.{constraint_attr}"
+                changed_attrs.append(key)
+                values[key] = constraint_values
 
         if has_conflict:
             return DiffType.CONFLICT, changed_attrs, values
