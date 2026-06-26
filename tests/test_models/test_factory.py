@@ -141,6 +141,97 @@ class TestCreateModelFromSpec:
         instance = Model(items=["a", "b", "c"])
         assert instance.items == ["a", "b", "c"]
 
+    def test_list_min_items_enforced(self) -> None:
+        """List min_items constraint rejects too-short lists."""
+        spec = EntitySpec(
+            name="WithMinItems",
+            version="1.0",
+            description="Test",
+            fields=[
+                FieldSpec(
+                    name="items",
+                    type=FieldType.LIST,
+                    items="string",
+                    required=True,
+                    description="At least two items",
+                    constraints=Constraints(min_items=2),
+                ),
+            ],
+        )
+
+        Model = create_model_from_spec(spec)
+
+        assert Model(items=["a", "b"]).items == ["a", "b"]
+        with pytest.raises(ValidationError):
+            Model(items=["a"])
+
+    def test_list_max_items_enforced(self) -> None:
+        """List max_items constraint rejects too-long lists."""
+        spec = EntitySpec(
+            name="WithMaxItems",
+            version="1.0",
+            description="Test",
+            fields=[
+                FieldSpec(
+                    name="items",
+                    type=FieldType.LIST,
+                    items="string",
+                    required=False,
+                    description="At most two items",
+                    constraints=Constraints(max_items=2),
+                ),
+            ],
+        )
+
+        Model = create_model_from_spec(spec)
+
+        assert Model(items=["a", "b"]).items == ["a", "b"]
+        with pytest.raises(ValidationError):
+            Model(items=["a", "b", "c"])
+
+    def test_required_list_field_enforced(self) -> None:
+        """A required list field rejects a missing value."""
+        spec = EntitySpec(
+            name="WithRequiredList",
+            version="1.0",
+            description="Test",
+            fields=[
+                FieldSpec(
+                    name="items",
+                    type=FieldType.LIST,
+                    items="string",
+                    required=True,
+                    description="Required list",
+                ),
+            ],
+        )
+
+        Model = create_model_from_spec(spec)
+
+        assert Model(items=["a"]).items == ["a"]
+        with pytest.raises(ValidationError):
+            Model()
+
+    def test_optional_list_field_defaults_to_empty(self) -> None:
+        """An optional list field still defaults to an empty list when omitted."""
+        spec = EntitySpec(
+            name="WithOptionalList",
+            version="1.0",
+            description="Test",
+            fields=[
+                FieldSpec(
+                    name="items",
+                    type=FieldType.LIST,
+                    items="string",
+                    required=False,
+                    description="Optional list",
+                ),
+            ],
+        )
+
+        Model = create_model_from_spec(spec)
+        assert Model().items == []
+
     def test_string_constraints_pattern(self) -> None:
         """String pattern constraint is enforced."""
         spec = EntitySpec(

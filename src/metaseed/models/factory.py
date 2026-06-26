@@ -339,6 +339,15 @@ def _build_field_constraints(field: FieldSpec) -> dict[str, Any]:
     if constraints.maximum is not None:
         kwargs["le"] = constraints.maximum
 
+    # List cardinality. Pydantic v2 validates collection length via
+    # min_length/max_length; only apply for list fields so string length
+    # constraints above are not clobbered.
+    if field.type == FieldType.LIST:
+        if constraints.min_items is not None:
+            kwargs["min_length"] = constraints.min_items
+        if constraints.max_items is not None:
+            kwargs["max_length"] = constraints.max_items
+
     return kwargs
 
 
@@ -371,8 +380,10 @@ def _create_field_definition(field: FieldSpec) -> tuple[type, Any]:
     if field.type == FieldType.LIST:
         if has_enum:
             python_type = list[_build_enum_type(field.constraints.enum)]  # type: ignore[misc]
+        if field.required:
+            return (python_type, Field(**constraints))
         constraints["default_factory"] = list
-        return (Annotated[python_type, Field(**constraints)], ...)
+        return (python_type, Field(**constraints))
 
     if has_enum:
         python_type = _build_enum_type(field.constraints.enum)
