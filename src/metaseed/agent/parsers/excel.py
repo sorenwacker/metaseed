@@ -11,12 +11,15 @@ from metaseed.agent.parsers.registry import ParsedContent, ParsedTable
 
 
 class ExcelParser:
-    """Parser for Excel files (.xlsx, .xls)."""
+    """Parser for OOXML Excel files (.xlsx, .xlsm).
 
-    extensions = [".xlsx", ".xls", ".xlsm"]
+    Legacy binary .xls files are not supported: the backing openpyxl library
+    only reads the OOXML formats.
+    """
+
+    extensions = [".xlsx", ".xlsm"]
     mime_types = [
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "application/vnd.ms-excel",
     ]
 
     def can_parse(self: Self, path: Path) -> bool:
