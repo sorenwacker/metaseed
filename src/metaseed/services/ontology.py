@@ -382,7 +382,8 @@ class OntologyService:
         self._set_cached(cache_key, results)
         logger.debug("Cached search results for: %s (%d results)", query, len(results))
 
-        return results
+        # Return a copy so a caller mutating the list cannot corrupt the cache.
+        return list(results)
 
     def search_sync(
         self: Self,
@@ -467,7 +468,8 @@ class OntologyService:
         self._set_cached(cache_key, results)
         logger.debug("Cached search results for: %s (%d results)", query, len(results))
 
-        return results
+        # Return a copy so a caller mutating the list cannot corrupt the cache.
+        return list(results)
 
     async def get_term(self: Self, term_id: str) -> OntologyTerm | None:
         """Get detailed information about an ontology term.
