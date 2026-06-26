@@ -408,6 +408,28 @@ class TestValidation:
         # Test that validation runs and returns structured issues
         assert len(result.issues) > 0 or result.valid is True
 
+    def test_validate_descends_into_children_of_empty_node(
+        self, client: MetaseedClient
+    ) -> None:
+        """A node with empty data must not hide its children from validation."""
+        inv = client.create_entity(
+            "Investigation",
+            {"unique_id": "INV-001", "title": "Test"},
+        )
+        invalid_child = client.create_entity(
+            "Study", {}, skip_validation=True, parent_id=inv.id
+        )
+
+        # Simulate an empty/structural parent node (instance-less).
+        client._facade.get_roots()[0].instance = None
+
+        result = client.validate()
+
+        child_issues = [
+            issue for issue in result.issues if issue.field.startswith(invalid_child.id)
+        ]
+        assert child_issues, "child of an empty node should still be validated"
+
     def test_validate_entity_by_id(self, client: MetaseedClient) -> None:
         """Validate specific entity returns result."""
         entity = client.create_entity(

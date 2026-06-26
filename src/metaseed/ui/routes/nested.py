@@ -34,6 +34,28 @@ if TYPE_CHECKING:
     from ..state import AppState
 
 
+def _coerce_form_value(value: str, field_type: str | None) -> object | None:
+    """Coerce a raw form field value to its typed value.
+
+    Args:
+        value: Raw string value from the submitted form.
+        field_type: The nested field's declared type, if known.
+
+    Returns:
+        The typed value, or None when the field was left blank and should be
+        dropped. Numeric zero is preserved, unlike a plain truthiness check.
+    """
+    if value == "":
+        return None
+    if field_type == "integer":
+        with contextlib.suppress(ValueError):
+            return int(value)
+    elif field_type == "float":
+        with contextlib.suppress(ValueError):
+            return float(value)
+    return value
+
+
 def register_nested_routes(
     app: FastAPI,
     templates: Jinja2Templates,
@@ -177,21 +199,14 @@ def register_nested_routes(
         item = items[idx]
         if isinstance(item, dict):
             for key, value in form_data.items():
-                if not key.startswith("_"):
-                    if nested_helper:
-                        info = (
-                            nested_helper.field_info(key)
-                            if key in nested_helper.all_fields
-                            else {}
-                        )
-                        if info.get("type") == "integer" and value:
-                            with contextlib.suppress(ValueError):
-                                value = int(value)
-                        elif info.get("type") == "float" and value:
-                            with contextlib.suppress(ValueError):
-                                value = float(value)
-                    if value:
-                        item[key] = value
+                if key.startswith("_"):
+                    continue
+                field_type = None
+                if nested_helper and key in nested_helper.all_fields:
+                    field_type = nested_helper.field_info(key).get("type")
+                coerced = _coerce_form_value(value, field_type)
+                if coerced is not None:
+                    item[key] = coerced
 
             if state.nested_edit_stack:
                 context = state.nested_edit_stack[-1]

@@ -155,8 +155,7 @@ class RequiredFieldsRule(ValidationRule):
         """
         errors = []
         for field in self.fields:
-            value = data.get(field)
-            if value is None or value == "":
+            if not has_value(data, field):
                 errors.append(
                     ValidationError(
                         field=field,
