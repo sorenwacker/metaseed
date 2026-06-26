@@ -232,7 +232,7 @@ def collect_entities_by_type(
         Dictionary mapping entity type to list of entity data:
         {
             "ObservationUnit": [
-                {"identifier": "OU-1", "label": "Obs Unit 1", "data": {...}},
+                {"value": "OU-1", "label": "Obs Unit 1", "data": {...}},
                 ...
             ],
             ...
