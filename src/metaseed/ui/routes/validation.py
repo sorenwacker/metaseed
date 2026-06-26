@@ -226,24 +226,10 @@ def _validate_entity_deep(
             nested_fields, profile, version, path_prefix, error_list, rules, check_list
         )
 
-    except FileNotFoundError:
-        error_list.append(
-            ValidationError(
-                field=path_prefix.rstrip(".") or entity_type,
-                message=f"Unknown entity type: {entity_type}",
-                rule="error",
-            )
-        )
-        check_list.append(
-            ValidationCheckResult(
-                field=path_prefix.rstrip(".") or entity_type,
-                check="load_spec",
-                passed=False,
-                message=f"Unknown entity type: {entity_type}",
-            )
-        )
     except SpecLoadError as e:
-        logger.warning("Validation error for %s: %s", entity_type, e, exc_info=True)
+        # An unknown entity type is normal user input, not an unexpected
+        # failure, so log it at debug rather than warning-with-traceback.
+        logger.debug("Could not load spec for %s: %s", entity_type, e)
         error_list.append(
             ValidationError(
                 field=path_prefix.rstrip(".") or entity_type,
