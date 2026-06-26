@@ -116,7 +116,9 @@ class BaseDatasetManager(ABC, Generic[R]):
         - Reference field linking (e.g., File.run_ref -> Run.alias)
         """
         self._state.profile = data.profile
-        self._state.version = data.version
+        # AppState uses None to mean "latest"; an empty/missing version must
+        # not be pinned as a concrete version (breaks model/entity resolution).
+        self._state.version = data.version or None
         self._state.facade = None
         self._state.reset()
 

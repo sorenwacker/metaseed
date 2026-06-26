@@ -121,6 +121,27 @@ class TestDatasetManager:
         assert new_manager.current_dataset == "test"
         assert new_state.profile == "miappe"
 
+    def test_load_empty_version_falls_back_to_latest(self, manager):
+        """Loading a dataset with an empty version pins state to None, not "".
+
+        AppState treats version=None as "use latest"; an empty string is a
+        concrete version that breaks model/entity resolution. Importing a
+        dataset without a version must normalize to None.
+        """
+        manager._repo.datasets["no-version"] = DatasetData(
+            name="no-version",
+            profile="miappe",
+            version="",
+            entities={},
+            modified="",
+        )
+
+        new_state = AppState(profile="miappe")
+        new_manager = DatasetManager(manager._repo, new_state)
+        new_manager.load_dataset("no-version")
+
+        assert new_state.version is None
+
     def test_load_nonexistent(self, manager):
         """Should raise error for nonexistent dataset."""
         with pytest.raises(FileNotFoundError):
