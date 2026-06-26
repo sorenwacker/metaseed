@@ -7,7 +7,7 @@ import pytest
 
 from metaseed.agent.core import (
     ExtractionContext,
-    ValidationError,
+    ValidationIssue,
     parse_file,
 )
 from metaseed.agent.mapping import ColumnMapping, FieldMapping, suggest_mapping
@@ -335,12 +335,12 @@ class TestColumnMapping:
         assert mapping.fields[0].confidence == 1.0
 
 
-class TestValidationError:
-    """Tests for ValidationError class."""
+class TestValidationIssue:
+    """Tests for ValidationIssue class."""
 
     def test_create_validation_error(self) -> None:
         """Create a validation error."""
-        error = ValidationError(
+        error = ValidationIssue(
             field="unique_id",
             message="Field is required",
             value=None,

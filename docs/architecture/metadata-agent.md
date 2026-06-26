@@ -74,7 +74,7 @@ class ExtractionContext:
     def extract_entities(self, source_index: int, entity_name: str) -> ExtractionResult:
         """Extract entity instances from a source."""
 
-    def validate_instance(self, data: dict, entity_name: str) -> list[ValidationError]:
+    def validate_instance(self, data: dict, entity_name: str) -> list[ValidationIssue]:
         """Validate extracted data against entity spec."""
 
     def export_yaml(self, entity_name: str | None = None) -> str:
