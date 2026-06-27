@@ -42,9 +42,9 @@ def _require_draft(state: AppState) -> SpecBuilder:
     return SpecBuilder.from_spec(state.spec_draft)
 
 
-def _status(builder: SpecBuilder, *, saved: bool | None = None) -> dict[str, Any]:
+def _status(builder: SpecBuilder) -> dict[str, Any]:
     spec = builder.spec
-    status: dict[str, Any] = {
+    return {
         "name": spec.name,
         "version": spec.version,
         "display_name": spec.display_name,
@@ -55,9 +55,6 @@ def _status(builder: SpecBuilder, *, saved: bool | None = None) -> dict[str, Any
         },
         "validation_rules": [r.name for r in spec.validation_rules],
     }
-    if saved is not None:
-        status["saved"] = saved
-    return status
 
 
 def _clean(attrs: dict[str, Any]) -> dict[str, Any]:
@@ -121,7 +118,7 @@ def register_spec_builder_tools(
             ontology=ontology,
         )
         _set_draft(get_mcp_state(), builder)
-        return json.dumps(_status(builder, saved=False), indent=2)
+        return json.dumps(_status(builder), indent=2)
 
     @mcp.tool()
     def spec_clone(profile: str, version: str) -> str:
@@ -131,7 +128,7 @@ def register_spec_builder_tools(
         except ValueError as exc:
             return json.dumps({"error": str(exc)})
         _set_draft(get_mcp_state(), builder)
-        return json.dumps(_status(builder, saved=False), indent=2)
+        return json.dumps(_status(builder), indent=2)
 
     @mcp.tool()
     def spec_import_yaml(yaml_text: str) -> str:
@@ -141,7 +138,7 @@ def register_spec_builder_tools(
         except ValueError as exc:
             return json.dumps({"error": str(exc)})
         _set_draft(get_mcp_state(), builder)
-        return json.dumps(_status(builder, saved=False), indent=2)
+        return json.dumps(_status(builder), indent=2)
 
     @mcp.tool()
     def spec_status() -> str:

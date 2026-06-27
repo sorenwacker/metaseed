@@ -40,7 +40,7 @@ class TestDraftLifecycle:
     def test_create_starts_draft(self, server):
         result = call(server, "spec_create", name="p", version="0.1")
         assert result["name"] == "p"
-        assert result["saved"] is False
+        assert result["version"] == "0.1"
         assert result["entities"] == {}
 
     def test_status_reflects_edits(self, server):

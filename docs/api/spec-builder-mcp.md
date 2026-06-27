@@ -33,9 +33,9 @@ agent can edit without tracking positions. The single exception is
 | `spec_create` | `name`, `version`, `display_name?`, `description?`, `ontology?` | Start an empty draft. |
 | `spec_clone` | `profile`, `version` | Start a draft from a built-in or user spec. |
 | `spec_import_yaml` | `yaml_text` | Start a draft from YAML. |
-| `spec_status` | — | Summary of the draft: name, version, root entity, entity and field counts, whether it has been saved. |
+| `spec_status` | — | Summary of the draft: name, version, display name, root entity, each entity's field names, and rule names. |
 | `spec_preview_yaml` | — | Current draft serialized to YAML. |
-| `spec_validate` | — | Full model build; returns issues (empty list = valid). |
+| `spec_validate` | — | Full model build; returns `{"valid": bool, "issues": [...]}` (empty issues = valid). |
 | `spec_save` | `name?` | Persist the draft to the user specs directory. |
 
 ### Profile metadata
@@ -99,6 +99,6 @@ spec_add_entity(name="Study")
 spec_add_field(entity="Investigation", name="studies", type="list", items="Study")
   # auto-creates Investigation.identifier and Study.investigation_id back-reference
 spec_add_field(entity="Study", name="title", type="string", required=True)
-spec_validate()            # -> []  (builds cleanly)
-spec_save()                # -> persisted to the user specs directory
+spec_validate()            # -> {"valid": true, "issues": []}
+spec_save()                # -> {"status": "saved", "path": "…/profile.yaml"}
 ```
