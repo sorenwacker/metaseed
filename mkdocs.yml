@@ -73,12 +73,14 @@ nav:
       - Entity Repository: architecture/entity-repository.md
       - Dataset Repository: architecture/dataset-repository.md
       - UI Helpers: architecture/ui-helpers.md
+      - Spec Builder Engine: architecture/spec-builder.md
   - API Reference:
       - MetaseedClient: api/client.md
       - CLI: api/cli.md
       - Facade: api/facade.md
       - REST API: api/rest.md
       - Specification Language: api/schema-specs.md
+      - Spec Builder MCP: api/spec-builder-mcp.md
       - Validators: api/validators.md
       - Storage: api/storage.md
   - Development:
