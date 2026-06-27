@@ -97,6 +97,11 @@ def get_all_inline_examples() -> list[tuple[str, str, str, dict]]:
     loader = SpecLoader()
 
     for profile in loader.list_profiles():
+        # Validate only built-in (repo) specs. User-defined specs under the
+        # data directory are runtime artifacts, not part of the test suite;
+        # enumerating them makes the suite depend on the developer's machine.
+        if loader.is_user_defined(profile):
+            continue
         for version in loader.list_versions(profile):
             try:
                 profile_spec = loader.load_profile(version, profile)
