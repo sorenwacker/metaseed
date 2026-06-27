@@ -80,22 +80,30 @@ def build_dcat_dataset(
     Returns:
         The resolved DCAT dataset (explicit metadata wins over derived).
     """
-    fmap = get_field_map(profile)
+    fmap = get_field_map(profile)  # None for record-rooted profiles
     root = root_entity or {}
     cm = catalog_metadata
 
     def derived(field_name: str | None) -> Any:
+        """Read the root-entity field the profile map names for a property."""
         return root.get(field_name) if field_name else None
 
+    # Contact: derive from the root entity's contacts list, then let explicit
+    # metadata override it.
     contact_point = _contact_from(derived(fmap.contacts)) if fmap else None
     if cm and (cm.contact_name or cm.contact_email):
         contact_point = DcatContactPoint(name=cm.contact_name, email=cm.contact_email)
 
+    # Publisher comes only from explicit metadata; deriving it from contacts
+    # would be ambiguous.
     publisher = DcatAgent(name=cm.publisher) if cm and cm.publisher else None
 
     title = _first(cm.title if cm else None, derived(fmap.title if fmap else None))
+    # Identifier prefers the root entity's id, falling back to the dataset name.
     identifier = derived(fmap.identifier if fmap else None) or fallback_identifier
 
+    # For every property: explicit CatalogMetadata wins (via _first), otherwise
+    # the value derived from the root entity.
     return DcatDataset(
         identifier=identifier,
         title=title or fallback_identifier,
