@@ -1,0 +1,166 @@
+"""Filesystem persistence for user-created specifications.
+
+User specs are stored under the platform data directory, separate from the
+built-in specs shipped in ``src/metaseed/specs/<profile>/<version>/``. This
+module is independent of the UI and MCP layers so either interface can save,
+list, or delete a draft.
+
+See `docs/architecture/spec-builder.md`.
+"""
+
+from __future__ import annotations
+
+import shutil
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
+
+from metaseed.specs.builder import SpecBuilder
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from metaseed.specs.schema import ProfileSpec
+
+
+def get_custom_specs_dir() -> Path:
+    """Return the directory for user-created specs (created if needed).
+
+    Locations:
+    - Linux/macOS: ``~/.local/share/metaseed/specs/``
+    - Windows: ``%LOCALAPPDATA%/metaseed/specs/``
+    """
+    from metaseed.paths import get_user_specs_dir
+
+    return get_user_specs_dir()
+
+
+def save_spec(spec: ProfileSpec, name: str | None = None) -> Path:
+    """Save a spec to ``specs/<name>/<version>/profile.yaml``.
+
+    Args:
+        spec: The ProfileSpec to save.
+        name: Profile name override. Uses ``spec.name`` if not provided.
+
+    Returns:
+        Path to the saved ``profile.yaml`` file.
+
+    Raises:
+        ValueError: If the name is empty or conflicts with a built-in spec.
+    """
+    from metaseed.specs.loader import SpecLoader
+
+    profile_name = (name or spec.name).lower().strip()
+    if not profile_name:
+        raise ValueError("Profile name cannot be empty")
+
+    safe_name = "".join(c if c.isalnum() or c in "-_" else "-" for c in profile_name)
+
+    loader = SpecLoader()
+    builtin_profiles = [
+        p.lower() for p in loader.list_profiles() if not loader.is_user_defined(p)
+    ]
+    if safe_name in builtin_profiles:
+        raise ValueError(
+            f"Cannot save with name '{profile_name}' - conflicts with built-in spec. "
+            f"Please choose a different name."
+        )
+
+    version_dir = get_custom_specs_dir() / safe_name / spec.version
+    version_dir.mkdir(parents=True, exist_ok=True)
+
+    profile_path = version_dir / "profile.yaml"
+    profile_path.write_text(SpecBuilder.from_spec(spec).to_yaml(), encoding="utf-8")
+    return profile_path
+
+
+def _list_specs(
+    include_user_defined: bool, default_display_name_fn: Callable[[str], str]
+) -> list[dict[str, Any]]:
+    """Shared logic for listing built-in or user specs."""
+    from metaseed.specs.loader import SpecLoader, SpecLoadError
+
+    loader = SpecLoader()
+    result: list[dict[str, Any]] = []
+    for profile_name in loader.list_profiles():
+        if loader.is_user_defined(profile_name) != include_user_defined:
+            continue
+
+        versions = loader.list_versions(profile_name)
+        if not versions:
+            continue
+
+        try:
+            spec = loader.load_profile(version=versions[-1], profile=profile_name)
+            result.append(
+                {
+                    "name": profile_name,
+                    "display_name": spec.display_name
+                    or spec.name
+                    or default_display_name_fn(profile_name),
+                    "description": spec.description or "",
+                    "versions": versions,
+                }
+            )
+        except SpecLoadError:
+            result.append(
+                {
+                    "name": profile_name,
+                    "display_name": default_display_name_fn(profile_name),
+                    "description": "",
+                    "versions": versions,
+                }
+            )
+
+    return result
+
+
+def list_available_templates() -> list[dict[str, Any]]:
+    """List built-in profiles usable as templates."""
+    return _list_specs(
+        include_user_defined=False,
+        default_display_name_fn=lambda name: name.upper(),
+    )
+
+
+def list_user_specs() -> list[dict[str, Any]]:
+    """List user-created specifications."""
+    return _list_specs(
+        include_user_defined=True,
+        default_display_name_fn=lambda name: name,
+    )
+
+
+def delete_user_spec(name: str, version: str | None = None) -> bool:
+    """Delete a user-created spec (all versions if ``version`` is None).
+
+    Args:
+        name: The profile name to delete.
+        version: Specific version to delete, or None for all versions.
+
+    Returns:
+        True if something was deleted, False if nothing matched.
+
+    Raises:
+        ValueError: If the spec is built-in.
+    """
+    from metaseed.specs.loader import SpecLoader
+
+    loader = SpecLoader()
+    if not loader.is_user_defined(name):
+        raise ValueError(f"Cannot delete built-in specification: {name}")
+
+    profile_dir = get_custom_specs_dir() / name
+    if not profile_dir.exists():
+        return False
+
+    if version:
+        version_dir = profile_dir / version
+        if not version_dir.exists():
+            return False
+        shutil.rmtree(version_dir)
+        if not list(profile_dir.iterdir()):
+            profile_dir.rmdir()
+        return True
+
+    shutil.rmtree(profile_dir)
+    return True

@@ -2,6 +2,10 @@
 
 The Spec Builder is a visual tool for creating custom profile specifications. It provides an ERD-style canvas for designing entities and their relationships.
 
+The web UI and the [MCP tools](../api/spec-builder-mcp.md) are two interfaces over
+the same [Spec Builder Engine](../architecture/spec-builder.md); both produce
+identical results.
+
 ## Accessing the Spec Builder
 
 1. Start the Metaseed server: `metaseed serve`

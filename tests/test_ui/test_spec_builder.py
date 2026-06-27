@@ -374,47 +374,40 @@ class TestSpecBuilderRoutes:
         assert "items: NewParent" in response.text
         assert "items: Parent" not in response.text
 
-    def test_rename_entity_updates_validation_rules(self) -> None:
-        """Renaming an entity updates applies_to and reference in rules."""
-        from metaseed.ui.spec_builder.routes_entities import (
-            _update_entity_references,
-        )
+    def test_rename_entity_updates_validation_rules(self, client) -> None:
+        """Renaming an entity updates applies_to and reference in rules.
 
-        spec = ProfileSpec(
-            version="1.0",
-            name="p",
-            display_name="P",
-            description="d",
-            ontology="TEST",
-            root_entity="Study",
-            validation_rules=[
-                ValidationRuleSpec(
-                    name="ou_study_ref",
-                    applies_to=["ObservationUnit"],
-                    field="study_id",
-                    reference="Study.unique_id",
-                ),
-            ],
-            entities={
-                "Study": EntityDefSpec(
-                    ontology_term="TEST:1",
-                    description="s",
-                    fields=[
-                        FieldSpec(name="unique_id", type=FieldType.STRING),
-                    ],
-                ),
+        Exercises the route's delegation to SpecBuilder.rename_entity; the
+        cascade itself is unit-tested in tests/test_specs/test_builder.py.
+        """
+        client.get("/spec-builder/new")
+        client.post("/spec-builder/entity", data={"name": "Study"})
+        client.post("/spec-builder/entity", data={"name": "ObservationUnit"})
+        # Add a rule and configure it to reference Study / apply to ObservationUnit.
+        client.post("/spec-builder/validation-rule", data={"name": "ou_study_ref"})
+        client.put(
+            "/spec-builder/validation-rule/0",
+            data={
+                "name": "ou_study_ref",
+                "applies_to": "ObservationUnit",
+                "reference": "Study.unique_id",
             },
         )
-        state = SpecBuilderState()
-        state.spec = spec
 
-        _update_entity_references(state, "Study", "Investigation")
+        client.put(
+            "/spec-builder/entity/Study",
+            data={"name": "Investigation", "description": "", "ontology_term": ""},
+        )
+        preview = client.get("/spec-builder/preview").text
+        assert "reference: Investigation.unique_id" in preview
+        assert "Study.unique_id" not in preview
 
-        rule = spec.validation_rules[0]
-        assert rule.reference == "Investigation.unique_id"
-
-        _update_entity_references(state, "ObservationUnit", "ObsUnit")
-        assert spec.validation_rules[0].applies_to == ["ObsUnit"]
+        client.put(
+            "/spec-builder/entity/ObservationUnit",
+            data={"name": "ObsUnit", "description": "", "ontology_term": ""},
+        )
+        preview = client.get("/spec-builder/preview").text
+        assert "applies_to: ObsUnit" in preview
 
     def test_add_list_field_creates_back_reference(self, client):
         """Adding a list field auto-creates back-reference in target entity."""
