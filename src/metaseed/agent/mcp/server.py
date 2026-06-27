@@ -84,6 +84,14 @@ def set_context(context: MCPContext | None) -> None:
         context: MCPContext instance with all dependencies, or None to clear.
     """
     _context_var.set(context)
+    # Keep the standalone fallback pointed at the same AppState so get_mcp_state()
+    # resolves one consistent state whether or not the ContextVar is visible in
+    # the current async task. Without this, a per-request task where the
+    # ContextVar did not propagate falls back to a fresh, default-profile state
+    # and silently operates against the wrong profile (bug #32).
+    if context is not None:
+        _standalone.state = context.state
+        _standalone.factory = context.dataset_factory
 
 
 def get_context() -> MCPContext | None:
