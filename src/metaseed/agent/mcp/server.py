@@ -279,6 +279,7 @@ def create_server(
     from metaseed.agent.mcp.tools.extraction import register_extraction_tools
     from metaseed.agent.mcp.tools.ontology import register_ontology_tools
     from metaseed.agent.mcp.tools.profiles import register_profile_tools
+    from metaseed.agent.mcp.tools.spec_builder import register_spec_builder_tools
     from metaseed.agent.mcp.tools.validation import register_validation_tools
 
     register_profile_tools(mcp)
@@ -287,6 +288,7 @@ def create_server(
     register_extraction_tools(mcp, _parser_registry)
     register_validation_tools(mcp, get_mcp_state)
     register_ontology_tools(mcp)
+    register_spec_builder_tools(mcp, get_mcp_state)
 
     # =========================================================================
     # Prompts - Guided workflows

@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Any, Self
 
 if TYPE_CHECKING:
     from metaseed.facade import EntityNode, ProfileFacade
+    from metaseed.specs.schema import ProfileSpec
     from metaseed.ui.spec_builder import SpecBuilderState
 
 
@@ -126,6 +127,8 @@ class AppState:
     current_nested_items: dict[str, list[Any]] = field(default_factory=dict)
     nested_edit_stack: list[NestedEditContext] = field(default_factory=list)
     spec_builder: SpecBuilderState | None = None
+    # In-progress spec draft for the MCP spec-builder tools (one per session).
+    spec_draft: ProfileSpec | None = None
 
     # TreeNode caches for backward compatibility
     _tree_cache: list[TreeNode] = field(default_factory=list)
