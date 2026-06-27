@@ -12,9 +12,8 @@ from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
+from metaseed.specs.builder import SpecBuilder
 from metaseed.specs.schema import EntityDefSpec, FieldType
-
-from ..helpers.spec_builder_helpers import validate_entity_name
 
 if TYPE_CHECKING:
     from .state import SpecBuilderState
@@ -104,20 +103,11 @@ def register_entity_routes(
         builder = _require_spec()
         assert builder.spec is not None  # guaranteed by _require_spec
         name = name.strip()
-        error = validate_entity_name(name)
-        if error:
-            return _entity_list_response(request, builder, error)
+        try:
+            SpecBuilder.from_spec(builder.spec).add_entity(name)
+        except ValueError as error:
+            return _entity_list_response(request, builder, str(error))
 
-        if name in builder.spec.entities:
-            return _entity_list_response(
-                request, builder, f"Entity '{name}' already exists"
-            )
-
-        builder.spec.entities[name] = EntityDefSpec(
-            ontology_term=None,
-            description="",
-            fields=[],
-        )
         builder.editing_entity = name
         builder.editing_field_idx = None
         builder.mark_changed()
@@ -157,30 +147,14 @@ def register_entity_routes(
         final_name = name
         if new_name and new_name.strip() != name:
             new_name = new_name.strip()
+            try:
+                SpecBuilder.from_spec(builder.spec).rename_entity(name, new_name)
+            except ValueError as error:
+                return _entity_editor_response(request, builder, name, error=str(error))
 
-            error = validate_entity_name(new_name)
-            if error:
-                return _entity_editor_response(request, builder, name, error=error)
-
-            if new_name in builder.spec.entities:
-                return _entity_editor_response(
-                    request, builder, name, error=f"Entity '{new_name}' already exists"
-                )
-
-            # Rename: remove old, add with new name
-            del builder.spec.entities[name]
-            builder.spec.entities[new_name] = entity
-
-            # Update root_entity if renamed
-            if builder.spec.root_entity == name:
-                builder.spec.root_entity = new_name
-
-            # Update editing state
+            # Update editing state (UI concern, not handled by the engine)
             if builder.editing_entity == name:
                 builder.editing_entity = new_name
-
-            # Update references in other entities
-            _update_entity_references(builder, name, new_name)
 
             final_name = new_name
 
@@ -194,52 +168,13 @@ def register_entity_routes(
         builder = _require_spec()
         assert builder.spec is not None  # guaranteed by _require_spec
         _require_entity(builder, name)
-        del builder.spec.entities[name]
+        SpecBuilder.from_spec(builder.spec).delete_entity(name)
 
-        # Clear editing state if we were editing this entity
+        # Clear editing state if we were editing this entity (UI concern)
         if builder.editing_entity == name:
             builder.editing_entity = None
             builder.editing_field_idx = None
 
-        # Clear root_entity if it was this entity
-        if builder.spec.root_entity == name:
-            builder.spec.root_entity = ""
-
         builder.mark_changed()
 
         return _entity_list_response(request, builder)
-
-
-def _update_entity_references(
-    builder: SpecBuilderState, old_name: str, new_name: str
-) -> None:
-    """Update all references to an entity after rename.
-
-    Args:
-        builder: The builder state.
-        old_name: The old entity name.
-        new_name: The new entity name.
-    """
-    assert builder.spec is not None  # caller renames within an active spec
-    for other_entity in builder.spec.entities.values():
-        for field in other_entity.fields:
-            # Update items (entity name)
-            if field.items == old_name:
-                field.items = new_name
-            # Update reference (format: Entity.field)
-            if field.reference and field.reference.startswith(f"{old_name}."):
-                field.reference = f"{new_name}.{field.reference.split('.', 1)[1]}"
-            # Update parent_ref (format: Entity.field)
-            if field.parent_ref and field.parent_ref.startswith(f"{old_name}."):
-                field.parent_ref = f"{new_name}.{field.parent_ref.split('.', 1)[1]}"
-
-    # Update cross-entity validation rules that name the entity.
-    for rule in builder.spec.validation_rules:
-        if isinstance(rule.applies_to, list):
-            rule.applies_to = [
-                new_name if name == old_name else name for name in rule.applies_to
-            ]
-        elif rule.applies_to == old_name:
-            rule.applies_to = new_name
-        if rule.reference and rule.reference.startswith(f"{old_name}."):
-            rule.reference = f"{new_name}.{rule.reference.split('.', 1)[1]}"

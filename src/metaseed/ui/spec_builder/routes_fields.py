@@ -13,9 +13,8 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
+from metaseed.specs.builder import SpecBuilder
 from metaseed.specs.schema import Constraints, EntityDefSpec, FieldSpec, FieldType
-
-from ..helpers.spec_builder_helpers import validate_field_name
 
 if TYPE_CHECKING:
     from .state import SpecBuilderState
@@ -145,31 +144,21 @@ def register_field_routes(
         assert builder.spec is not None  # _require_spec guarantees spec is set
         _require_entity(builder, entity_name)
         name = name.strip()
-        error = validate_field_name(name)
-        if error:
-            return _entity_editor_response(request, builder, entity_name, error=error)
-
-        entity = builder.spec.entities[entity_name]
-
-        # Check for duplicate field name
-        if any(f.name == name for f in entity.fields):
+        try:
+            # add_field also creates the parent identifier and target
+            # back-reference for nested fields.
+            SpecBuilder.from_spec(builder.spec).add_field(
+                entity_name, name, field_type, items=items.strip() or None
+            )
+        except ValueError as error:
             return _entity_editor_response(
-                request, builder, entity_name, error=f"Field '{name}' already exists"
+                request, builder, entity_name, error=str(error)
             )
 
-        new_field = FieldSpec(
-            name=name,
-            type=FieldType(field_type),
-            required=False,
-            description="",
-            items=items.strip() or None,
+        entity = builder.spec.entities[entity_name]
+        builder.editing_field_idx = next(
+            i for i, f in enumerate(entity.fields) if f.name == name
         )
-        entity.fields.append(new_field)
-        builder.editing_field_idx = len(entity.fields) - 1
-
-        # Auto-create back-reference for list/entity fields
-        _auto_create_back_reference(builder, entity_name, entity, field_type, items)
-
         builder.mark_changed()
 
         return _entity_editor_response(request, builder, entity_name)
@@ -323,65 +312,3 @@ def register_field_routes(
             builder.mark_changed()
 
         return _entity_editor_response(request, builder, entity_name)
-
-
-def _auto_create_back_reference(
-    builder: SpecBuilderState,
-    entity_name: str,
-    entity: EntityDefSpec,
-    field_type: str,
-    items: str,
-) -> None:
-    """Auto-create back-reference for list/entity fields.
-
-    Args:
-        builder: The builder state.
-        entity_name: Name of the parent entity.
-        entity: The parent entity.
-        field_type: The field type.
-        items: The target entity name.
-    """
-    assert builder.spec is not None  # caller resolves via _require_spec
-    target_entity_name = items.strip() if items else None
-    if not (
-        target_entity_name
-        and target_entity_name in builder.spec.entities
-        and field_type in ("list", "entity")
-    ):
-        return
-
-    target_entity = builder.spec.entities[target_entity_name]
-
-    # Ensure parent has an identifier field
-    parent_has_id = any(f.name == "identifier" for f in entity.fields)
-    if not parent_has_id:
-        entity.fields.insert(
-            0,
-            FieldSpec(
-                name="identifier",
-                type=FieldType.STRING,
-                required=True,
-                description="Unique identifier",
-            ),
-        )
-        # add_field sets editing_field_idx before invoking this helper.
-        assert builder.editing_field_idx is not None
-        builder.editing_field_idx += 1
-
-    # Add back-reference to target entity if not exists
-    back_ref_name = f"{entity_name.lower()}_id"
-    has_back_ref = any(
-        f.reference and f.reference.startswith(f"{entity_name}.")
-        for f in target_entity.fields
-    )
-    if not has_back_ref:
-        target_entity.fields.insert(
-            0,
-            FieldSpec(
-                name=back_ref_name,
-                type=FieldType.STRING,
-                required=True,
-                description=f"Reference to parent {entity_name}",
-                reference=f"{entity_name}.identifier",
-            ),
-        )
