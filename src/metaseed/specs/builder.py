@@ -1,0 +1,554 @@
+"""Spec builder engine.
+
+`SpecBuilder` is the shared domain layer for authoring profile specifications.
+Both the web UI (`metaseed.ui.spec_builder`) and the MCP tools
+(`metaseed.agent.mcp.tools.spec_builder`) are thin adapters over this class, so
+the two interfaces cannot drift apart. The engine has no UI or MCP dependencies.
+
+See `docs/architecture/spec-builder.md` for the design.
+"""
+
+from __future__ import annotations
+
+import copy
+import secrets
+from typing import TYPE_CHECKING, Any, Self
+
+import yaml
+
+from metaseed.specs.schema import (
+    EntityDefSpec,
+    FieldSpec,
+    FieldType,
+    ProfileSpec,
+    ValidationRuleSpec,
+)
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
+
+_PROFILE_METADATA_FIELDS = frozenset(
+    {"name", "version", "display_name", "description", "ontology", "spec_version"}
+)
+
+
+def validate_entity_name(name: str) -> str | None:
+    """Validate an entity name (PascalCase).
+
+    Args:
+        name: The entity name to validate.
+
+    Returns:
+        Error message if invalid, None if valid.
+    """
+    if not name:
+        return "Entity name is required"
+    if not name[0].isupper():
+        return "Entity name must start with uppercase letter (PascalCase)"
+    if not name.replace("_", "").isalnum():
+        return "Entity name can only contain letters, numbers, and underscores"
+    return None
+
+
+def validate_field_name(name: str) -> str | None:
+    """Validate a field name (snake_case).
+
+    Args:
+        name: The field name to validate.
+
+    Returns:
+        Error message if invalid, None if valid.
+    """
+    if not name:
+        return "Field name is required"
+    if not name[0].islower() and name[0] != "_":
+        return "Field name must start with lowercase letter or underscore"
+    if not name.replace("_", "").replace("-", "").isalnum():
+        return "Field name can only contain letters, numbers, underscores, and hyphens"
+    return None
+
+
+class SpecBuilder:
+    """Build and edit a single :class:`ProfileSpec`.
+
+    All spec mutations are defined here so the UI and MCP interfaces share one
+    implementation. Entities, fields, and rules are addressed by name.
+    """
+
+    def __init__(self: Self, spec: ProfileSpec) -> None:
+        """Wrap an existing spec. Prefer the classmethod constructors."""
+        self._spec = spec
+
+    # ------------------------------------------------------------------
+    # Construction
+    # ------------------------------------------------------------------
+    @property
+    def spec(self: Self) -> ProfileSpec:
+        """The underlying profile spec being edited."""
+        return self._spec
+
+    @classmethod
+    def empty(
+        cls,
+        name: str,
+        version: str,
+        *,
+        display_name: str | None = None,
+        description: str = "",
+        ontology: str | None = None,
+    ) -> SpecBuilder:
+        """Create a builder around a new, entity-less spec."""
+        return cls(
+            ProfileSpec(
+                version=version,
+                name=name,
+                display_name=display_name if display_name is not None else "",
+                description=description,
+                ontology=ontology,
+                root_entity="",
+                validation_rules=[],
+                entities={},
+            )
+        )
+
+    @classmethod
+    def from_template(cls, profile: str, version: str) -> SpecBuilder:
+        """Create a builder from a deep copy of an existing profile.
+
+        The version is suffixed to mark the result as a derivative.
+
+        Raises:
+            ValueError: If the profile/version cannot be loaded.
+        """
+        from metaseed.specs.loader import SpecLoader, SpecLoadError
+
+        loader = SpecLoader(profile=profile)
+        try:
+            source = loader.load_profile(version=version, profile=profile)
+        except SpecLoadError as exc:
+            raise ValueError(
+                f"Cannot load profile {profile} v{version}: {exc}"
+            ) from exc
+
+        cloned = copy.deepcopy(source)
+        base_version = source.version.split("-dev")[0]
+        cloned.version = f"{base_version}-dev-{secrets.token_hex(3)}"
+        return cls(cloned)
+
+    @classmethod
+    def from_yaml(cls, text: str) -> SpecBuilder:
+        """Create a builder from a YAML spec document.
+
+        Raises:
+            ValueError: If the YAML is malformed or fails schema validation.
+        """
+        try:
+            data = yaml.safe_load(text)
+        except yaml.YAMLError as exc:
+            raise ValueError(f"Invalid YAML: {exc}") from exc
+        try:
+            return cls(ProfileSpec.model_validate(data))
+        except Exception as exc:  # pydantic ValidationError and friends
+            raise ValueError(f"Invalid spec: {exc}") from exc
+
+    @classmethod
+    def from_spec(cls, spec: ProfileSpec) -> SpecBuilder:
+        """Wrap an existing spec object (mutated in place)."""
+        return cls(spec)
+
+    # ------------------------------------------------------------------
+    # Profile metadata
+    # ------------------------------------------------------------------
+    def set_metadata(self: Self, **fields: Any) -> None:
+        """Update profile-level fields.
+
+        Accepts: name, version, display_name, description, ontology, spec_version.
+
+        Raises:
+            ValueError: If an unknown field is supplied.
+        """
+        unknown = set(fields) - _PROFILE_METADATA_FIELDS
+        if unknown:
+            raise ValueError(f"Unknown profile field(s): {', '.join(sorted(unknown))}")
+        for key, value in fields.items():
+            setattr(self._spec, key, value)
+
+    def set_root_entity(self: Self, entity: str) -> None:
+        """Set the root entity. The entity must already exist.
+
+        Raises:
+            ValueError: If the entity is not defined.
+        """
+        self._require_entity(entity)
+        self._spec.root_entity = entity
+
+    # ------------------------------------------------------------------
+    # Entities
+    # ------------------------------------------------------------------
+    def add_entity(
+        self: Self,
+        name: str,
+        *,
+        description: str = "",
+        ontology_term: str | None = None,
+    ) -> None:
+        """Add a new entity.
+
+        Raises:
+            ValueError: If the name is invalid or already exists.
+        """
+        error = validate_entity_name(name)
+        if error:
+            raise ValueError(error)
+        if name in self._spec.entities:
+            raise ValueError(f"Entity '{name}' already exists")
+        self._spec.entities[name] = EntityDefSpec(
+            ontology_term=ontology_term,
+            description=description,
+            fields=[],
+        )
+
+    def update_entity(
+        self: Self,
+        name: str,
+        *,
+        description: str | None = None,
+        ontology_term: str | None = None,
+    ) -> None:
+        """Update an entity's metadata. Unset arguments are left unchanged.
+
+        Raises:
+            ValueError: If the entity is not defined.
+        """
+        entity = self._require_entity(name)
+        if description is not None:
+            entity.description = description
+        if ontology_term is not None:
+            entity.ontology_term = ontology_term
+
+    def rename_entity(self: Self, old_name: str, new_name: str) -> None:
+        """Rename an entity and rewrite every reference to it.
+
+        Updates ``field.items``, ``field.reference``, ``field.parent_ref``, and
+        validation-rule ``applies_to`` / ``reference`` across the whole spec.
+
+        Raises:
+            ValueError: If the old entity is missing, the new name is invalid,
+                or the new name already exists.
+        """
+        self._require_entity(old_name)
+        if old_name == new_name:
+            return
+        error = validate_entity_name(new_name)
+        if error:
+            raise ValueError(error)
+        if new_name in self._spec.entities:
+            raise ValueError(f"Entity '{new_name}' already exists")
+
+        # Preserve insertion order while replacing the key.
+        self._spec.entities = {
+            (new_name if key == old_name else key): value
+            for key, value in self._spec.entities.items()
+        }
+        if self._spec.root_entity == old_name:
+            self._spec.root_entity = new_name
+        self._update_references(old_name, new_name)
+
+    def delete_entity(self: Self, name: str) -> None:
+        """Delete an entity. Clears ``root_entity`` if it pointed here.
+
+        Raises:
+            ValueError: If the entity is not defined.
+        """
+        self._require_entity(name)
+        del self._spec.entities[name]
+        if self._spec.root_entity == name:
+            self._spec.root_entity = ""
+
+    # ------------------------------------------------------------------
+    # Fields
+    # ------------------------------------------------------------------
+    def add_field(
+        self: Self,
+        entity: str,
+        name: str,
+        field_type: FieldType | str,
+        **attrs: Any,
+    ) -> None:
+        """Add a field to an entity.
+
+        A nested field (``list`` of entities or a single ``entity``) auto-creates
+        the parent ``identifier`` field and a back-reference on the target.
+
+        Raises:
+            ValueError: If the field name is invalid, the entity is missing, or
+                the field already exists.
+        """
+        error = validate_field_name(name)
+        if error:
+            raise ValueError(error)
+        entity_def = self._require_entity(entity)
+        if any(f.name == name for f in entity_def.fields):
+            raise ValueError(f"Field '{name}' already exists on '{entity}'")
+
+        field = FieldSpec(name=name, type=FieldType(field_type), **attrs)
+        entity_def.fields.append(field)
+        self._auto_create_back_reference(entity, entity_def, field)
+
+    def update_field(self: Self, entity: str, field_name: str, **attrs: Any) -> None:
+        """Update a field in place. Only supplied attributes change.
+
+        Raises:
+            ValueError: If the entity or field is missing, or an attribute is
+                not a valid field property.
+        """
+        field = self._require_field(entity, field_name)
+        valid = set(FieldSpec.model_fields)
+        unknown = set(attrs) - valid
+        if unknown:
+            raise ValueError(
+                f"Unknown field attribute(s): {', '.join(sorted(unknown))}"
+            )
+        for key, value in attrs.items():
+            if key == "type" and value is not None:
+                value = FieldType(value)
+            setattr(field, key, value)
+
+    def delete_field(self: Self, entity: str, field_name: str) -> None:
+        """Delete a field by name.
+
+        Raises:
+            ValueError: If the entity or field is missing.
+        """
+        entity_def = self._require_entity(entity)
+        index = self._field_index(entity_def, field_name)
+        if index is None:
+            raise ValueError(f"Field '{field_name}' not found on '{entity}'")
+        del entity_def.fields[index]
+
+    def move_field(self: Self, entity: str, field_name: str, direction: str) -> None:
+        """Reorder a field one position ``up`` or ``down``.
+
+        Movement past either boundary is a no-op.
+
+        Raises:
+            ValueError: If the entity or field is missing, or the direction is
+                not 'up' or 'down'.
+        """
+        if direction not in ("up", "down"):
+            raise ValueError("direction must be 'up' or 'down'")
+        entity_def = self._require_entity(entity)
+        index = self._field_index(entity_def, field_name)
+        if index is None:
+            raise ValueError(f"Field '{field_name}' not found on '{entity}'")
+        target = index - 1 if direction == "up" else index + 1
+        if 0 <= target < len(entity_def.fields):
+            fields = entity_def.fields
+            fields[index], fields[target] = fields[target], fields[index]
+
+    # ------------------------------------------------------------------
+    # Validation rules
+    # ------------------------------------------------------------------
+    def add_rule(self: Self, name: str, **attrs: Any) -> None:
+        """Add a validation rule.
+
+        Raises:
+            ValueError: If a rule with the same name exists.
+        """
+        if any(r.name == name for r in self._spec.validation_rules):
+            raise ValueError(f"Validation rule '{name}' already exists")
+        self._spec.validation_rules.append(ValidationRuleSpec(name=name, **attrs))
+
+    def update_rule(self: Self, rule_name: str, **attrs: Any) -> None:
+        """Update a validation rule in place.
+
+        Raises:
+            ValueError: If the rule is missing or an attribute is invalid.
+        """
+        rule = self._require_rule(rule_name)
+        valid = set(ValidationRuleSpec.model_fields)
+        unknown = set(attrs) - valid
+        if unknown:
+            raise ValueError(f"Unknown rule attribute(s): {', '.join(sorted(unknown))}")
+        for key, value in attrs.items():
+            setattr(rule, key, value)
+
+    def delete_rule(self: Self, rule_name: str) -> None:
+        """Delete a validation rule by name.
+
+        Raises:
+            ValueError: If the rule is missing.
+        """
+        self._require_rule(rule_name)
+        self._spec.validation_rules = [
+            r for r in self._spec.validation_rules if r.name != rule_name
+        ]
+
+    # ------------------------------------------------------------------
+    # Output
+    # ------------------------------------------------------------------
+    def to_yaml(self: Self) -> str:
+        """Serialize the spec to a YAML document."""
+        data = self._spec.model_dump(
+            exclude_none=True, exclude_defaults=False, mode="json"
+        )
+
+        class _SpecDumper(yaml.Dumper):  # type: ignore[misc]  # yaml.Dumper is untyped
+            pass
+
+        def str_representer(dumper: yaml.Dumper, value: str) -> yaml.Node:
+            if "\n" in value:
+                return dumper.represent_scalar(
+                    "tag:yaml.org,2002:str", value, style="|"
+                )
+            return dumper.represent_scalar("tag:yaml.org,2002:str", value)
+
+        _SpecDumper.add_representer(str, str_representer)
+
+        rendered: str = yaml.dump(
+            data,
+            Dumper=_SpecDumper,
+            default_flow_style=False,
+            sort_keys=False,
+            allow_unicode=True,
+            width=120,
+        )
+        return rendered
+
+    def validate(self: Self) -> list[str]:
+        """Validate the draft via a full model build plus reference checks.
+
+        Constructs a :class:`ProfileFacade` from the in-memory spec, which runs
+        every entity through the model factory, and additionally checks that the
+        root entity and all entity references resolve.
+
+        Returns:
+            A list of human-readable issues. An empty list means the spec is
+            structurally sound and builds cleanly.
+        """
+        issues: list[str] = []
+        spec = self._spec
+
+        if spec.root_entity and spec.root_entity not in spec.entities:
+            issues.append(f"root_entity '{spec.root_entity}' is not a defined entity")
+
+        issues.extend(self._reference_issues(spec.entities.items()))
+
+        try:
+            from metaseed.facade.core import ProfileFacade
+
+            ProfileFacade(spec.name or "draft", spec.version, spec=spec)
+        except Exception as exc:  # surface any build failure as an issue
+            issues.append(f"model build failed: {exc}")
+
+        return issues
+
+    # ------------------------------------------------------------------
+    # Internals
+    # ------------------------------------------------------------------
+    def _require_entity(self: Self, name: str) -> EntityDefSpec:
+        if name not in self._spec.entities:
+            raise ValueError(f"Entity '{name}' not found")
+        return self._spec.entities[name]
+
+    def _require_field(self: Self, entity: str, field_name: str) -> FieldSpec:
+        entity_def = self._require_entity(entity)
+        index = self._field_index(entity_def, field_name)
+        if index is None:
+            raise ValueError(f"Field '{field_name}' not found on '{entity}'")
+        return entity_def.fields[index]
+
+    def _require_rule(self: Self, rule_name: str) -> ValidationRuleSpec:
+        for rule in self._spec.validation_rules:
+            if rule.name == rule_name:
+                return rule
+        raise ValueError(f"Validation rule '{rule_name}' not found")
+
+    @staticmethod
+    def _field_index(entity_def: EntityDefSpec, field_name: str) -> int | None:
+        for index, field in enumerate(entity_def.fields):
+            if field.name == field_name:
+                return index
+        return None
+
+    def _update_references(self: Self, old_name: str, new_name: str) -> None:
+        """Rewrite all references to ``old_name`` after a rename."""
+        for entity_def in self._spec.entities.values():
+            for field in entity_def.fields:
+                if field.items == old_name:
+                    field.items = new_name
+                if field.reference and field.reference.startswith(f"{old_name}."):
+                    field.reference = f"{new_name}.{field.reference.split('.', 1)[1]}"
+                if field.parent_ref and field.parent_ref.startswith(f"{old_name}."):
+                    field.parent_ref = f"{new_name}.{field.parent_ref.split('.', 1)[1]}"
+
+        for rule in self._spec.validation_rules:
+            if isinstance(rule.applies_to, list):
+                rule.applies_to = [
+                    new_name if name == old_name else name for name in rule.applies_to
+                ]
+            elif rule.applies_to == old_name:
+                rule.applies_to = new_name
+            if rule.reference and rule.reference.startswith(f"{old_name}."):
+                rule.reference = f"{new_name}.{rule.reference.split('.', 1)[1]}"
+
+    def _auto_create_back_reference(
+        self: Self, entity_name: str, entity: EntityDefSpec, field: FieldSpec
+    ) -> None:
+        """Create the parent identifier and target back-reference for a nested field."""
+        if not field.is_nested() or not field.items:
+            return
+        target_name = field.items.strip()
+        if target_name not in self._spec.entities:
+            return
+        target = self._spec.entities[target_name]
+
+        if not any(f.name == "identifier" for f in entity.fields):
+            entity.fields.insert(
+                0,
+                FieldSpec(
+                    name="identifier",
+                    type=FieldType.STRING,
+                    required=True,
+                    description="Unique identifier",
+                ),
+            )
+
+        has_back_ref = any(
+            f.reference and f.reference.startswith(f"{entity_name}.")
+            for f in target.fields
+        )
+        if not has_back_ref:
+            target.fields.insert(
+                0,
+                FieldSpec(
+                    name=f"{entity_name.lower()}_id",
+                    type=FieldType.STRING,
+                    required=True,
+                    description=f"Reference to parent {entity_name}",
+                    reference=f"{entity_name}.identifier",
+                ),
+            )
+
+    def _reference_issues(
+        self: Self, entities: Iterable[tuple[str, EntityDefSpec]]
+    ) -> list[str]:
+        """Report nested/reference targets that name an undefined entity."""
+        issues: list[str] = []
+        defined = set(self._spec.entities)
+        for entity_name, entity_def in entities:
+            for field in entity_def.fields:
+                if field.is_nested() and field.items and field.items not in defined:
+                    issues.append(
+                        f"{entity_name}.{field.name}: items target "
+                        f"'{field.items}' is not a defined entity"
+                    )
+                for attr in ("reference", "parent_ref"):
+                    ref = getattr(field, attr)
+                    if ref and ref.split(".")[0] not in defined:
+                        issues.append(
+                            f"{entity_name}.{field.name}: {attr} target "
+                            f"'{ref.split('.')[0]}' is not a defined entity"
+                        )
+        return issues
