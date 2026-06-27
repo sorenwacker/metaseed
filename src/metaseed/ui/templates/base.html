@@ -29,6 +29,9 @@
                 <button id="graph-toggle" class="btn btn-header" onclick="toggleGraph()" data-testid="btn-graph">
                     Graph
                 </button>
+                <button id="dcat-btn" class="btn btn-header" onclick="showDcatCard()" data-testid="btn-dcat" title="DCAT catalog card">
+                    DCAT
+                </button>
                 <span class="header-divider"></span>
                 <button id="mcp-toggle" class="btn btn-header" onclick="toggleMCP()" data-testid="btn-mcp" title="MCP Server">
                     <span id="mcp-status-indicator" class="status-indicator status-off"></span>
@@ -88,6 +91,14 @@
             <button class="validation-panel-close" onclick="closeValidationPanel()">&times;</button>
         </div>
         <div id="validation-results" class="validation-panel-content"></div>
+    </div>
+
+    <div id="dcat-panel" class="validation-panel hidden">
+        <div class="validation-panel-header">
+            <h3>DCAT Card</h3>
+            <button class="validation-panel-close" onclick="closeDcatPanel()">&times;</button>
+        </div>
+        <div id="dcat-card-content" class="validation-panel-content"></div>
     </div>
 
     {% include "components/lookup_modal.html" %}

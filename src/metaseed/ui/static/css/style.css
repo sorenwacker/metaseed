@@ -5535,3 +5535,23 @@ details.sidebar-section summary:hover {
 .welcome-actions {
     margin-top: var(--space-lg);
 }
+
+/* DCAT card panel */
+.dcat-card-hint {
+    color: var(--text-secondary, #555);
+    font-size: 0.85rem;
+    margin: 0 0 0.75rem;
+}
+.dcat-card-pre {
+    background: #f5f5f7;
+    color: #1d1d1f;
+    padding: 0.75rem;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-x: auto;
+    max-height: 40vh;
+    overflow-y: auto;
+}

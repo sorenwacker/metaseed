@@ -145,3 +145,45 @@ function validateDataset() {
 function closeValidationPanel() {
     document.getElementById('validation-panel').classList.add('hidden');
 }
+
+function showDcatCard() {
+    var btn = document.getElementById('dcat-btn');
+    var panel = document.getElementById('dcat-panel');
+    var content = document.getElementById('dcat-card-content');
+
+    btn.disabled = true;
+
+    fetch('/api/dcat')
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            btn.disabled = false;
+
+            if (data.error) {
+                showNotification('error', 'DCAT error: ' + data.error);
+                return;
+            }
+
+            var esc = function(s) {
+                var d = document.createElement('div');
+                d.textContent = s == null ? '' : s;
+                return d.innerHTML;
+            };
+
+            var name = data.title || data.identifier || 'this dataset';
+            var html = '<p class="dcat-card-hint">Catalog/discovery metadata for <strong>'
+                + esc(name) + '</strong> — what a data portal or a FAIR tool (F-UJI) would ingest.</p>';
+            html += '<h4>Turtle</h4><pre class="dcat-card-pre">' + esc(data.turtle) + '</pre>';
+            html += '<h4>JSON-LD</h4><pre class="dcat-card-pre">' + esc(data.jsonld) + '</pre>';
+
+            content.innerHTML = html;
+            panel.classList.remove('hidden');
+        })
+        .catch(function(err) {
+            btn.disabled = false;
+            showNotification('error', 'DCAT failed: ' + err.message);
+        });
+}
+
+function closeDcatPanel() {
+    document.getElementById('dcat-panel').classList.add('hidden');
+}

@@ -1,8 +1,12 @@
-"""DCAT card viewer route.
+"""DCAT card routes.
 
-Renders the DCAT description ("catalog card") of the dataset currently loaded in
-the editor, as Turtle and JSON-LD. A preview of the export feature (issues
-#28/#30); read-only.
+Describe the dataset currently loaded in the editor as a DCAT "catalog card"
+(Turtle + JSON-LD):
+
+- ``GET /api/dcat`` returns the card as JSON, used by the in-app DCAT panel.
+- ``GET /dcat`` renders a standalone read-only page.
+
+A preview of the export/exposure work (issues #28/#30).
 """
 
 from __future__ import annotations
@@ -10,20 +14,54 @@ from __future__ import annotations
 import html
 from typing import TYPE_CHECKING
 
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
     from fastapi import FastAPI
 
+    from metaseed.dcat.model import DcatDataset
     from metaseed.ui.state import AppState
 
 
-def _page(title: str, turtle: str, jsonld: str) -> str:
-    """Render a minimal HTML page showing the two serializations."""
+def _build_card(state: AppState) -> tuple[DcatDataset, str, str]:
+    """Resolve and serialize the DCAT card for the loaded dataset.
+
+    Returns the dataset model plus its Turtle and JSON-LD serializations.
+    Raises ModuleNotFoundError if the ``dcat`` extra (rdflib) is not installed.
+    """
+    from metaseed.dcat import build_dcat_catalog
+    from metaseed.dcat.resolver import build_dcat_dataset_from_entities
+    from metaseed.dcat.serialize import to_jsonld, to_turtle
+    from metaseed.specs.loader import SpecLoader
+    from metaseed.ui.datasets import get_current_dataset_name
+
+    facade = state.get_or_create_facade()
+    spec = SpecLoader(profile=facade.profile).load_profile(
+        facade.version, facade.profile
+    )
+    name = get_current_dataset_name(state) or "dataset"
+
+    dataset = build_dcat_dataset_from_entities(
+        profile=facade.profile,
+        root_entity_type=spec.root_entity,
+        entities=facade.to_dict(),
+        identifier=name,
+    )
+    catalog = build_dcat_catalog(
+        title=spec.display_name or facade.profile,
+        description=spec.description or None,
+        datasets=[dataset],
+    )
+    return dataset, to_turtle(catalog), to_jsonld(catalog)
+
+
+def _page(dataset: DcatDataset, turtle: str, jsonld: str) -> str:
+    """Render a standalone HTML page for the card."""
+    heading = dataset.title or dataset.identifier or "dataset"
     return f"""<!doctype html>
-<html><head><meta charset="utf-8"><title>DCAT card — {html.escape(title)}</title>
+<html><head><meta charset="utf-8"><title>DCAT card — {html.escape(heading)}</title>
 <style>
   body {{ font-family: system-ui, sans-serif; margin: 2rem; max-width: 70rem; }}
   h1 {{ font-size: 1.3rem; }} h2 {{ font-size: 1rem; margin-top: 1.5rem; }}
@@ -32,9 +70,9 @@ def _page(title: str, turtle: str, jsonld: str) -> str:
   .hint {{ color: #555; }}
 </style></head>
 <body>
-  <h1>DCAT card for <code>{html.escape(title)}</code></h1>
+  <h1>DCAT card: {html.escape(heading)}</h1>
   <p class="hint">Catalog/discovery metadata derived from the dataset's root
-  entity (and any explicit catalog metadata). This is what a data portal or a
+  entity (and any explicit catalog metadata) — what a data portal or a
   FAIR-assessment tool (F-UJI) would ingest.</p>
   <h2>Turtle</h2>
   <pre>{html.escape(turtle)}</pre>
@@ -44,43 +82,30 @@ def _page(title: str, turtle: str, jsonld: str) -> str:
 
 
 def register_dcat_routes(app: FastAPI, get_state: Callable[[], AppState]) -> None:
-    """Register the DCAT viewer route."""
+    """Register the DCAT card routes."""
+
+    @app.get("/api/dcat")
+    def dcat_api() -> JSONResponse:
+        try:
+            dataset, turtle, jsonld = _build_card(get_state())
+        except ModuleNotFoundError as exc:
+            return JSONResponse({"error": str(exc)}, status_code=501)
+        return JSONResponse(
+            {
+                "title": dataset.title,
+                "identifier": dataset.identifier,
+                "turtle": turtle,
+                "jsonld": jsonld,
+            }
+        )
 
     @app.get("/dcat", response_class=HTMLResponse)
     def dcat_card() -> HTMLResponse:
-        from metaseed.dcat import build_dcat_catalog
-        from metaseed.dcat.resolver import build_dcat_dataset_from_entities
-        from metaseed.specs.loader import SpecLoader
-        from metaseed.ui.datasets import get_current_dataset_name
-
-        state = get_state()
-        facade = state.get_or_create_facade()
-        spec = SpecLoader(profile=facade.profile).load_profile(
-            facade.version, facade.profile
-        )
-        name = get_current_dataset_name(state) or "dataset"
-
-        dataset = build_dcat_dataset_from_entities(
-            profile=facade.profile,
-            root_entity_type=spec.root_entity,
-            entities=facade.to_dict(),
-            identifier=name,
-        )
-        catalog = build_dcat_catalog(
-            title=spec.display_name or facade.profile,
-            description=spec.description or None,
-            datasets=[dataset],
-        )
-
         try:
-            from metaseed.dcat.serialize import to_jsonld, to_turtle
-
-            turtle = to_turtle(catalog)
-            jsonld = to_jsonld(catalog)
+            dataset, turtle, jsonld = _build_card(get_state())
         except ModuleNotFoundError as exc:
             return HTMLResponse(
                 f"<p>DCAT RDF serialization is unavailable: {html.escape(str(exc))}</p>",
                 status_code=501,
             )
-
-        return HTMLResponse(_page(name, turtle, jsonld))
+        return HTMLResponse(_page(dataset, turtle, jsonld))
