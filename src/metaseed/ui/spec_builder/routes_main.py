@@ -6,7 +6,7 @@ Handles the index page, new spec creation, cloning templates, and reset.
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse
@@ -193,13 +193,17 @@ def register_main_routes(
     ) -> HTMLResponse:
         """Update profile metadata."""
         builder = _require_spec()
+        spec = builder.spec
+        assert spec is not None  # _require_spec guarantees spec is set
         form_data = await request.form()
-        builder.spec.name = form_data.get("name", "").strip()
-        builder.spec.version = form_data.get("version", "").strip()
-        builder.spec.display_name = form_data.get("display_name", "").strip() or None
-        builder.spec.description = form_data.get("description", "").strip()
-        builder.spec.ontology = form_data.get("ontology", "").strip() or None
-        builder.spec.root_entity = form_data.get("root_entity", "").strip()
+        spec.name = cast("str", form_data.get("name", "")).strip()
+        spec.version = cast("str", form_data.get("version", "")).strip()
+        spec.display_name = (
+            cast("str", form_data.get("display_name", "")).strip() or None
+        )
+        spec.description = cast("str", form_data.get("description", "")).strip()
+        spec.ontology = cast("str", form_data.get("ontology", "")).strip() or None
+        spec.root_entity = cast("str", form_data.get("root_entity", "")).strip()
         builder.mark_changed()
 
         return templates.TemplateResponse(
@@ -223,7 +227,7 @@ def register_main_routes(
         """Save notes content."""
         builder = get_builder_state()
         form_data = await request.form()
-        builder.notes = form_data.get("notes", "")
+        builder.notes = cast("str", form_data.get("notes", ""))
         builder.mark_changed()
 
         return templates.TemplateResponse(

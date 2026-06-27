@@ -3,14 +3,18 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import asdict
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from mcp.server.fastmcp import FastMCP
 
+    from metaseed.ui.dataset_manager import DatasetManager
+    from metaseed.ui.state import AppState
 
-def _get_dataset_manager():
+
+def _get_dataset_manager() -> DatasetManager:
     """Get the dataset manager using context.
 
     Returns:
@@ -32,7 +36,11 @@ def _get_dataset_manager():
     return factory.get_manager(state)
 
 
-def register_dataset_tools(mcp: FastMCP, get_mcp_state, reset_entity_service) -> None:
+def register_dataset_tools(
+    mcp: FastMCP,
+    get_mcp_state: Callable[[], AppState],
+    reset_entity_service: Callable[[], None],
+) -> None:
     """Register dataset management tools with the MCP server.
 
     Args:

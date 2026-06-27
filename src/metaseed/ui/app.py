@@ -84,7 +84,10 @@ def create_app(state: AppState | None = None, base_url: str = "") -> FastAPI:
     templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
     # Add global template variables
-    from metaseed import __version__
+    try:
+        from metaseed._version import __version__
+    except ImportError:
+        __version__ = "0.0.0+unknown"
 
     templates.env.globals["app_version"] = __version__
     templates.env.globals["base_url"] = base_url
@@ -104,10 +107,12 @@ def create_app(state: AppState | None = None, base_url: str = "") -> FastAPI:
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
     def get_state() -> AppState:
-        return app.state.ui_state
+        ui_state: AppState = app.state.ui_state
+        return ui_state
 
     def get_base_url() -> str:
-        return app.state.base_url
+        base_url_value: str = app.state.base_url
+        return base_url_value
 
     # Mount spec builder routes
     from .spec_builder import create_spec_builder_router

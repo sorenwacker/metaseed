@@ -62,7 +62,7 @@ class BaseDatasetManager(ABC, Generic[R]):
             repository: Repository implementation for storage.
             state: AppState instance for entity management.
         """
-        self._repo = repository
+        self._repo: R = repository
         self._state = state
         self._current: str | None = None
 
@@ -116,7 +116,9 @@ class BaseDatasetManager(ABC, Generic[R]):
         - Reference field linking (e.g., File.run_ref -> Run.alias)
         """
         self._state.profile = data.profile
-        self._state.version = data.version
+        # AppState uses None to mean "latest"; an empty/missing version must
+        # not be pinned as a concrete version (breaks model/entity resolution).
+        self._state.version = data.version or None
         self._state.facade = None
         self._state.reset()
 
@@ -456,5 +458,6 @@ def resolve_dataset_manager(app: Any, state: AppState) -> DatasetManager:
     """
     context = getattr(app.state, "mcp_context", None)
     if context is not None:
-        return context.dataset_factory.get_manager(state)
+        manager: DatasetManager = context.dataset_factory.get_manager(state)
+        return manager
     return DatasetManagerFactory().get_manager(state)

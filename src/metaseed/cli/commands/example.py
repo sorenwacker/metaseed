@@ -9,8 +9,28 @@ import yaml
 from metaseed.cli.output import ExitCode, echo_error, echo_success
 
 
-def _export_example_to_excel(data: dict[str, Any], output: Path) -> None:
-    """Export example data to Excel with multiple sheets."""
+def _is_investigation_shaped(data: dict[str, Any]) -> bool:
+    """Whether example data matches the Investigation-rooted MIAPPE/ISA layout.
+
+    The Excel exporter is hardcoded to that layout (root Investigation with
+    ``studies``/``contacts`` and their MIAPPE-named nested entities), so other
+    profiles (ENA, DiSSCo, Darwin Core) cannot be exported to Excel.
+
+    Args:
+        data: Parsed example dataset.
+
+    Returns:
+        True if the data is rooted in an Investigation-style record.
+    """
+    return isinstance(data, dict) and ("studies" in data or "contacts" in data)
+
+
+def _export_investigation_example_to_excel(data: dict[str, Any], output: Path) -> None:
+    """Export Investigation-rooted (MIAPPE/ISA) example data to Excel.
+
+    The sheet layout and entity names are specific to the MIAPPE/ISA
+    Investigation hierarchy; use ``_is_investigation_shaped`` to gate callers.
+    """
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill
     from openpyxl.utils import get_column_letter
@@ -218,7 +238,7 @@ def export_example(
 
     # Find examples directory (in src/metaseed/examples/)
     try:
-        examples_dir = Path(importlib.resources.files("metaseed")) / "examples"
+        examples_dir = Path(str(importlib.resources.files("metaseed"))) / "examples"
         if not examples_dir.exists():
             # Try relative to package (from cli/commands/example.py -> metaseed/examples)
             examples_dir = Path(__file__).parent.parent.parent / "examples"
@@ -306,9 +326,17 @@ def export_example(
         echo_success(f"Example exported to {output}")
 
     elif output_suffix == ".xlsx":
-        # Export to Excel
+        # Export to Excel (only the Investigation-rooted MIAPPE/ISA layout is
+        # supported; other profiles would produce mislabeled or empty sheets).
+        if not _is_investigation_shaped(data):
+            echo_error(
+                f"Excel export is not supported for profile '{example_key}'. "
+                "Only Investigation-rooted profiles (MIAPPE, ISA) can be exported "
+                "to .xlsx; use a .yaml or .json output instead."
+            )
+            raise typer.Exit(ExitCode.INPUT_ERROR)
         try:
-            _export_example_to_excel(data, output)
+            _export_investigation_example_to_excel(data, output)
             echo_success(f"Example exported to {output}")
         except ImportError:
             echo_error(

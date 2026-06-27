@@ -1,4 +1,4 @@
-.PHONY: install setup test test-ui test-cov demo test-export test-validation lint format docs docs-build ui dev clean help
+.PHONY: install setup test test-ui test-cov demo test-export test-validation lint typecheck format docs docs-build ui dev clean help
 
 help:
 	@echo "Available targets:"
@@ -12,6 +12,7 @@ help:
 	@echo "  test-export     - Run Excel export tests (visible browser)"
 	@echo "  test-validation - Run validation UI tests (visible browser)"
 	@echo "  lint            - Run linter"
+	@echo "  typecheck       - Run mypy strict type checking"
 	@echo "  format          - Format code"
 	@echo "  docs            - Serve documentation locally with hot reload"
 	@echo "  docs-build      - Build documentation"
@@ -45,6 +46,9 @@ test-validation:
 
 lint:
 	uv run ruff check src tests
+
+typecheck:
+	uv run python -m mypy src/metaseed
 
 format:
 	uv run ruff format src tests

@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
 
 from metaseed.agent.core import ExtractionContext
 from metaseed.specs.loader import SpecLoadError
@@ -12,8 +13,13 @@ from metaseed.utils.json import DateAwareEncoder
 if TYPE_CHECKING:
     from mcp.server.fastmcp import FastMCP
 
+    from metaseed.facade import ProfileFacade
+    from metaseed.ui.state import AppState, TreeNode
 
-def register_validation_tools(mcp: FastMCP, get_mcp_state) -> None:
+
+def register_validation_tools(
+    mcp: FastMCP, get_mcp_state: Callable[[], AppState]
+) -> None:
     """Register validation tools with the MCP server.
 
     Args:
@@ -160,7 +166,7 @@ def register_validation_tools(mcp: FastMCP, get_mcp_state) -> None:
 
         try:
             facade = state.get_or_create_facade()
-            results = []
+            results: list[dict[str, Any]] = []
 
             for node in state.entity_tree:
                 _validate_node_recursive(node, facade, results)
@@ -290,7 +296,9 @@ def register_validation_tools(mcp: FastMCP, get_mcp_state) -> None:
             return json.dumps({"error": str(e)})
 
 
-def _validate_node_recursive(node, facade, results: list) -> None:
+def _validate_node_recursive(
+    node: TreeNode, facade: ProfileFacade, results: list[dict[str, Any]]
+) -> None:
     """Recursively validate a node and its children.
 
     Uses comprehensive validation from the validators module, including:

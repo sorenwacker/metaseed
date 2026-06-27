@@ -114,6 +114,13 @@ class TestRequiredFieldsRule:
         errors = rule.validate(data)
         assert len(errors) == 1
 
+    def test_empty_list_invalid(self) -> None:
+        """Empty list is treated as missing, consistent with has_value."""
+        rule = RequiredFieldsRule(fields=["items"])
+        data = {"items": []}
+        errors = rule.validate(data)
+        assert len(errors) == 1
+
     def test_zero_value_is_valid(self) -> None:
         """Zero integer is treated as valid (not missing).
 

@@ -148,6 +148,39 @@ class TestSpecComparator:
         assert inv_diff is not None
         assert len(inv_diff.field_diffs) > 0
 
+    def test_constraint_diffs_use_flat_per_profile_shape(
+        self, comparator: SpecComparator
+    ) -> None:
+        """A differing constraint is reported as a flat {profile: value} entry.
+
+        Every other entry in FieldDiff.values is keyed by profile id; the
+        constraint diff must match so report renderers do not drop its values.
+        """
+        from metaseed.specs.schema import Constraints
+
+        field_a = FieldSpec(
+            name="code",
+            type=FieldType.STRING,
+            constraints=Constraints(pattern="^[A-Z]+$"),
+        )
+        field_b = FieldSpec(
+            name="code",
+            type=FieldType.STRING,
+            constraints=Constraints(pattern="^[a-z]+$"),
+        )
+
+        _, attributes_changed, values = comparator._analyze_field_diff(
+            {"profile_a": field_a, "profile_b": field_b},
+            ["profile_a", "profile_b"],
+        )
+
+        assert "constraints.pattern" in attributes_changed
+        assert "constraints" not in values
+        assert values["constraints.pattern"] == {
+            "profile_a": "^[A-Z]+$",
+            "profile_b": "^[a-z]+$",
+        }
+
     def test_compare_statistics(self, comparator: SpecComparator) -> None:
         """Comparison provides statistics."""
         result = comparator.compare(

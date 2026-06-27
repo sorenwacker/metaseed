@@ -7,7 +7,7 @@ and mapping them to a selected metadata profile.
 from metaseed.agent.core import (
     ExtractionContext,
     ExtractionResult,
-    ValidationError,
+    ValidationIssue,
     parse_file,
 )
 from metaseed.agent.mapping import (
@@ -24,7 +24,7 @@ __all__ = [
     "ExtractionContext",
     "ExtractionResult",
     "FieldMapping",
-    "ValidationError",
+    "ValidationIssue",
     "create_mapping",
     "mapping_from_dict",
     "mapping_to_dict",

@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
     from fastapi import FastAPI
 
-    from metaseed.specs.schema import Constraints
+    from metaseed.specs.schema import Constraints, EntitySpec
 
     from ..state import AppState
 
@@ -226,24 +226,10 @@ def _validate_entity_deep(
             nested_fields, profile, version, path_prefix, error_list, rules, check_list
         )
 
-    except FileNotFoundError:
-        error_list.append(
-            ValidationError(
-                field=path_prefix.rstrip(".") or entity_type,
-                message=f"Unknown entity type: {entity_type}",
-                rule="error",
-            )
-        )
-        check_list.append(
-            ValidationCheckResult(
-                field=path_prefix.rstrip(".") or entity_type,
-                check="load_spec",
-                passed=False,
-                message=f"Unknown entity type: {entity_type}",
-            )
-        )
     except SpecLoadError as e:
-        logger.warning("Validation error for %s: %s", entity_type, e, exc_info=True)
+        # An unknown entity type is normal user input, not an unexpected
+        # failure, so log it at debug rather than warning-with-traceback.
+        logger.debug("Could not load spec for %s: %s", entity_type, e)
         error_list.append(
             ValidationError(
                 field=path_prefix.rstrip(".") or entity_type,
@@ -283,8 +269,8 @@ def _validate_entity_deep(
 
 
 def _separate_field_values(
-    entity_spec, values: dict[str, Any]
-) -> tuple[dict[str, Any], dict[str, tuple[str, Any]]]:
+    entity_spec: EntitySpec, values: dict[str, Any]
+) -> tuple[dict[str, Any], dict[str, tuple[str | None, Any]]]:
     """Separate simple field values from nested entity values.
 
     Args:
@@ -307,7 +293,7 @@ def _separate_field_values(
 
 
 def _validate_nested_entities_with_checks(
-    nested_fields: dict[str, tuple[str, Any]],
+    nested_fields: dict[str, tuple[str | None, Any]],
     profile: str,
     version: str,
     path_prefix: str,
@@ -366,7 +352,7 @@ def register_validation_routes(
         form_data = await request.form()
         entity_type = form_data.get("_entity_type")
 
-        if not entity_type:
+        if not entity_type or not isinstance(entity_type, str):
             return templates.TemplateResponse(
                 request,
                 "components/validation_result.html",

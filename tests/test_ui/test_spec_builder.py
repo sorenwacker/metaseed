@@ -181,6 +181,17 @@ class TestSpecBuilderHelpers:
         assert "TestEntity:" in yaml_str
         assert "unique_id" in yaml_str
 
+    def test_spec_to_yaml_does_not_mutate_global_yaml_registry(
+        self, sample_spec
+    ) -> None:
+        """spec_to_yaml must not register a global str representer side effect."""
+        import yaml
+
+        before = yaml.Dumper.yaml_representers.get(str)
+        spec_to_yaml(sample_spec)
+        after = yaml.Dumper.yaml_representers.get(str)
+        assert before is after
+
     def test_list_available_templates(self):
         """list_available_templates returns list of profiles."""
         templates = list_available_templates()
@@ -362,6 +373,48 @@ class TestSpecBuilderRoutes:
         response = client.get("/spec-builder/preview")
         assert "items: NewParent" in response.text
         assert "items: Parent" not in response.text
+
+    def test_rename_entity_updates_validation_rules(self) -> None:
+        """Renaming an entity updates applies_to and reference in rules."""
+        from metaseed.ui.spec_builder.routes_entities import (
+            _update_entity_references,
+        )
+
+        spec = ProfileSpec(
+            version="1.0",
+            name="p",
+            display_name="P",
+            description="d",
+            ontology="TEST",
+            root_entity="Study",
+            validation_rules=[
+                ValidationRuleSpec(
+                    name="ou_study_ref",
+                    applies_to=["ObservationUnit"],
+                    field="study_id",
+                    reference="Study.unique_id",
+                ),
+            ],
+            entities={
+                "Study": EntityDefSpec(
+                    ontology_term="TEST:1",
+                    description="s",
+                    fields=[
+                        FieldSpec(name="unique_id", type=FieldType.STRING),
+                    ],
+                ),
+            },
+        )
+        state = SpecBuilderState()
+        state.spec = spec
+
+        _update_entity_references(state, "Study", "Investigation")
+
+        rule = spec.validation_rules[0]
+        assert rule.reference == "Investigation.unique_id"
+
+        _update_entity_references(state, "ObservationUnit", "ObsUnit")
+        assert spec.validation_rules[0].applies_to == ["ObsUnit"]
 
     def test_add_list_field_creates_back_reference(self, client):
         """Adding a list field auto-creates back-reference in target entity."""

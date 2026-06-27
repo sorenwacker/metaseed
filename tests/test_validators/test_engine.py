@@ -206,6 +206,26 @@ class TestValidateFunction:
         errors = validate(inv, cascade=False)
         assert len(errors) == 0  # Investigation itself is valid
 
+    def test_validate_cascade_list_of_primitive(self) -> None:
+        """Cascading over a list field whose items are a primitive type.
+
+        ``observation_unit_level_hierarchy`` has ``items: string``; resolving
+        it as an entity raises SpecLoadError, which the nested traversal must
+        swallow rather than let escape the public ``validate`` function.
+        """
+        data = {
+            "unique_id": "STU001",
+            "title": "Study",
+            "observation_unit_level_hierarchy": ["plot", "plant"],
+        }
+
+        errors = validate(
+            data, entity="study", version="1.2", profile="miappe", cascade=True
+        )
+
+        # The primitive-list field must not be treated as a nested entity.
+        assert isinstance(errors, list)
+
 
 class TestExplicitRuleTypes:
     """Tests for explicit rule type handling in engine."""

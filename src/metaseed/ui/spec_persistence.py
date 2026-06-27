@@ -6,7 +6,7 @@ user-created specifications. Implementations handle the actual storage mechanism
 """
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from metaseed.specs.schema import ProfileSpec
@@ -59,7 +59,7 @@ class SpecPersistence(ABC):
         pass
 
     @abstractmethod
-    async def list_user_specs(self) -> list[dict]:
+    async def list_user_specs(self) -> list[dict[str, Any]]:
         """List all user-created specs.
 
         Returns:
@@ -72,7 +72,7 @@ class SpecPersistence(ABC):
         pass
 
     @abstractmethod
-    async def list_templates(self) -> list[dict]:
+    async def list_templates(self) -> list[dict[str, Any]]:
         """List available templates (built-in specs).
 
         Templates are the built-in specifications that can be cloned

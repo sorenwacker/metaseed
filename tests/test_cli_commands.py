@@ -6,6 +6,7 @@ import yaml
 from typer.testing import CliRunner
 
 from metaseed.cli import app
+from metaseed.cli.output import ExitCode
 
 runner = CliRunner()
 
@@ -215,7 +216,7 @@ class TestConvertCommand:
         result = runner.invoke(
             app, ["convert", str(input_file), str(tmp_path / "output.json")]
         )
-        assert result.exit_code == 1
+        assert result.exit_code == ExitCode.INPUT_ERROR
         assert "Unknown input format" in result.output
 
     def test_convert_unknown_output_format(self, tmp_path):
@@ -228,7 +229,7 @@ class TestConvertCommand:
         result = runner.invoke(
             app, ["convert", str(input_file), str(tmp_path / "output.txt")]
         )
-        assert result.exit_code == 1
+        assert result.exit_code == ExitCode.INPUT_ERROR
         assert "Unknown output format" in result.output
 
     def test_convert_unknown_entity(self, tmp_path):

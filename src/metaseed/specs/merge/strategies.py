@@ -5,7 +5,7 @@ when merging profile specifications.
 """
 
 from abc import ABC, abstractmethod
-from typing import Self
+from typing import Any, Self
 
 from metaseed.specs.schema import Constraints, FieldSpec
 
@@ -295,7 +295,7 @@ class LeastRestrictiveStrategy(MergeStrategy):
         # Enum: union values
         enums = [set(c.enum) for c in all_constraints if c.enum is not None]
         if enums:
-            union = set()
+            union: set[Any] = set()
             for e in enums:
                 union = union | e
             merged.enum = sorted(union) if union else None

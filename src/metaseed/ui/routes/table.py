@@ -6,7 +6,7 @@ Provides routes for viewing and editing nested entity tables.
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException
 from fastapi.responses import HTMLResponse
@@ -124,6 +124,11 @@ def register_table_routes(
         entity_type = infer_entity_type_from_field(
             facade, parent_entity_type, field_name
         )
+        if entity_type is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"'{field_name}' is not a nested field of {parent_entity_type}",
+            )
         col_info = get_table_column_info(facade, entity_type)
 
         reference_fields = (
@@ -162,7 +167,7 @@ def register_table_routes(
                             parent_identifier = str(parent_data[target_field])
                             break
 
-        new_row = dict.fromkeys(col_info["columns"], "")
+        new_row: dict[str, Any] = dict.fromkeys(col_info["columns"], "")
         new_row["_idx"] = len(items)
 
         for field_name_ref in parent_id_fields:
@@ -265,7 +270,8 @@ def register_table_routes(
         form_data = await request.form()
         field = form_data.get("bulk-edit-field", "")
         value = form_data.get("bulk-edit-value", "")
-        indices_str = form_data.get("indices", "")
+        indices_raw = form_data.get("indices", "")
+        indices_str = indices_raw if isinstance(indices_raw, str) else ""
 
         if not field or not indices_str:
             return error_response(request, templates, "Field and indices are required")
@@ -346,7 +352,8 @@ def register_table_routes(
         """Apply pasted cell values from clipboard."""
         state = get_state()
         form_data = await request.form()
-        changes_json = form_data.get("changes", "[]")
+        changes_raw = form_data.get("changes", "[]")
+        changes_json = changes_raw if isinstance(changes_raw, str) else "[]"
 
         try:
             changes = json.loads(changes_json)

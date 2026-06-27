@@ -267,12 +267,13 @@ class MergeResult:
         """
         import yaml
 
-        return yaml.dump(
+        result: str = yaml.dump(
             self.merged_profile.model_dump(mode="json", exclude_none=True),
             default_flow_style=False,
             sort_keys=False,
             allow_unicode=True,
         )
+        return result
 
     def to_dict(self) -> dict[str, Any]:
         """Export merged profile as dictionary.

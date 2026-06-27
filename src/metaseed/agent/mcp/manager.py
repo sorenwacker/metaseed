@@ -37,6 +37,7 @@ class MCPServerManager:
 
     _instance: MCPServerManager | None = None
     _lock = threading.Lock()
+    _initialized: bool
 
     def __new__(cls) -> MCPServerManager:
         """Singleton pattern to ensure only one manager exists."""
@@ -52,7 +53,7 @@ class MCPServerManager:
         if self._initialized:
             return
 
-        self._process: subprocess.Popen | None = None
+        self._process: subprocess.Popen[str] | None = None
         self._transport: str | None = None
         self._host: str | None = None
         self._port: int | None = None
@@ -227,15 +228,15 @@ class MCPServerManager:
                 if result == 0:
                     # Port is in use - try to get PID via lsof
                     try:
-                        result = subprocess.run(
+                        lsof_result = subprocess.run(
                             ["lsof", "-ti", f":{port}"],
                             capture_output=True,
                             text=True,
                             timeout=2,
                             check=False,
                         )
-                        if result.returncode == 0 and result.stdout.strip():
-                            return int(result.stdout.strip().split()[0])
+                        if lsof_result.returncode == 0 and lsof_result.stdout.strip():
+                            return int(lsof_result.stdout.strip().split()[0])
                     except (subprocess.TimeoutExpired, ValueError):
                         pass
                     return -1  # Port in use but can't get PID

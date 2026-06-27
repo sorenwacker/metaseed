@@ -6,7 +6,10 @@ import pytest
 import yaml
 from typer.testing import CliRunner
 
-from metaseed.cli.commands.example import _export_example_to_excel, export_example
+from metaseed.cli.commands.example import (
+    _export_investigation_example_to_excel,
+    export_example,
+)
 
 runner = CliRunner()
 
@@ -55,7 +58,7 @@ def miappe_example_data() -> dict:
 
 
 class TestExportExampleToExcel:
-    """Test _export_example_to_excel function."""
+    """Test _export_investigation_example_to_excel function."""
 
     @pytest.mark.skipif(
         not pytest.importorskip("openpyxl", reason="openpyxl not installed"),
@@ -64,7 +67,7 @@ class TestExportExampleToExcel:
     def test_creates_excel_file(self, tmp_path, miappe_example_data):
         """Creates an Excel file with multiple sheets."""
         output_path = tmp_path / "test.xlsx"
-        _export_example_to_excel(miappe_example_data, output_path)
+        _export_investigation_example_to_excel(miappe_example_data, output_path)
 
         assert output_path.exists()
 
@@ -77,7 +80,7 @@ class TestExportExampleToExcel:
         from openpyxl import load_workbook
 
         output_path = tmp_path / "test.xlsx"
-        _export_example_to_excel(miappe_example_data, output_path)
+        _export_investigation_example_to_excel(miappe_example_data, output_path)
 
         wb = load_workbook(output_path)
         assert "Investigation" in wb.sheetnames
@@ -91,7 +94,7 @@ class TestExportExampleToExcel:
         from openpyxl import load_workbook
 
         output_path = tmp_path / "test.xlsx"
-        _export_example_to_excel(miappe_example_data, output_path)
+        _export_investigation_example_to_excel(miappe_example_data, output_path)
 
         wb = load_workbook(output_path)
         assert "Study" in wb.sheetnames
@@ -105,7 +108,7 @@ class TestExportExampleToExcel:
         from openpyxl import load_workbook
 
         output_path = tmp_path / "test.xlsx"
-        _export_example_to_excel(miappe_example_data, output_path)
+        _export_investigation_example_to_excel(miappe_example_data, output_path)
 
         wb = load_workbook(output_path)
         # At minimum should have Investigation and Study
@@ -139,6 +142,22 @@ class TestExportExampleCommand:
 
         assert result.exit_code == 0
         assert "Available example datasets" in result.stdout
+
+    def test_excel_export_rejected_for_non_investigation_profile(self, tmp_path):
+        """Excel export refuses profiles that are not Investigation-rooted."""
+        import typer
+
+        from metaseed.cli.output import ExitCode
+
+        app = typer.Typer()
+        app.command()(export_example)
+
+        output_path = tmp_path / "out.xlsx"
+        result = runner.invoke(app, ["ena/1.0", "-o", str(output_path)])
+
+        assert result.exit_code == ExitCode.INPUT_ERROR
+        assert "not supported" in result.output
+        assert not output_path.exists()
 
     def test_export_to_yaml(self, tmp_path):
         """Exports example to YAML file."""
@@ -224,7 +243,7 @@ class TestFlattenEntity:
         """Simple fields are preserved in flattened output."""
         # The flattening is tested indirectly through Excel export
         output_path = tmp_path / "test.xlsx"
-        _export_example_to_excel(miappe_example_data, output_path)
+        _export_investigation_example_to_excel(miappe_example_data, output_path)
 
         from openpyxl import load_workbook
 

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from typing import Any
 
 
 def get_spec_dirs() -> list[Path]:
@@ -36,13 +37,13 @@ def get_spec_dirs() -> list[Path]:
 
 def find_spec_files(dirs: list[Path]) -> list[Path]:
     """Find all profile.yaml files in spec directories."""
-    files = []
+    files: list[Path] = []
     for d in dirs:
         files.extend(d.glob("**/profile.yaml"))
     return sorted(files)
 
 
-def migrate_file(path: Path, dry_run: bool = True) -> dict:
+def migrate_file(path: Path, dry_run: bool = True) -> dict[str, Any]:
     """Migrate a single spec file from parent_ref to reference.
 
     Args:
@@ -89,7 +90,7 @@ def migrate_file(path: Path, dry_run: bool = True) -> dict:
     }
 
 
-def migrate_all_specs(dry_run: bool = True) -> list[dict]:
+def migrate_all_specs(dry_run: bool = True) -> list[dict[str, Any]]:
     """Migrate all spec files.
 
     Args:
@@ -117,7 +118,7 @@ def migrate_all_specs(dry_run: bool = True) -> list[dict]:
     return reports
 
 
-def print_migration_report(reports: list[dict], dry_run: bool) -> None:
+def print_migration_report(reports: list[dict[str, Any]], dry_run: bool) -> None:
     """Print migration report to console."""
     print()
     if dry_run:
@@ -149,7 +150,7 @@ def print_migration_report(reports: list[dict], dry_run: bool) -> None:
         print("Run with --apply to apply changes")
 
 
-def main():
+def main() -> None:
     """CLI entry point."""
     import argparse
 

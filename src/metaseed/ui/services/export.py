@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from io import BytesIO
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from openpyxl import Workbook
 
@@ -58,7 +58,7 @@ def build_workbook(state: AppState) -> Workbook:
     wb = Workbook()
     wb.remove(wb.active)
 
-    entities_by_type: dict[str, list[dict]] = {}
+    entities_by_type: dict[str, list[dict[str, Any]]] = {}
 
     # Collect all entities including nested ones
     for node in state.nodes_by_id.values():

@@ -32,6 +32,13 @@ repos:
         args: [src/, --min-confidence=80]
         pass_filenames: false
 
+      - id: mypy
+        name: mypy type check
+        entry: uv run python -m mypy src/metaseed
+        language: system
+        types: [python]
+        pass_filenames: false
+
   - repo: https://github.com/commitizen-tools/commitizen
     rev: v3.27.0
     hooks:

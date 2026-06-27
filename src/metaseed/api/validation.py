@@ -34,25 +34,24 @@ class ValidationMixin(InstanceDataMixin):
 
         def validate_node(node: Any) -> None:
             data = self._get_instance_data(node.instance)
-            if not data:
-                return
-
-            errors = validate_entity(
-                data,
-                entity_type=node.entity_type,
-                profile=self._facade.profile,
-                version=self._facade.version,
-            )
-
-            for err in errors:
-                all_issues.append(
-                    ValidationIssue(
-                        field=f"{node.id}.{err.field}",
-                        message=err.message,
-                        rule=err.rule,
-                    )
+            if data:
+                errors = validate_entity(
+                    data,
+                    entity_type=node.entity_type,
+                    profile=self._facade.profile,
+                    version=self._facade.version,
                 )
 
+                for err in errors:
+                    all_issues.append(
+                        ValidationIssue(
+                            field=f"{node.id}.{err.field}",
+                            message=err.message,
+                            rule=err.rule,
+                        )
+                    )
+
+            # Always descend; an empty node must not hide its subtree.
             for child in node.children:
                 validate_node(child)
 

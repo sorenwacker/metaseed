@@ -7,7 +7,7 @@ to handle common operations like finding parent references and deriving labels.
 from __future__ import annotations
 
 import copy
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
     from metaseed.facade import EntityHelper
@@ -28,7 +28,7 @@ def find_parent_ref_field(helper: Any, parent_type: str) -> str | None:
     if hasattr(helper, "reference_fields"):
         for field_name, (target_type, _target_field) in helper.reference_fields.items():
             if target_type == parent_type:
-                return field_name
+                return cast("str", field_name)
     return None
 
 
@@ -147,7 +147,7 @@ def update_parent_reference(
         refs.append(child_ref)
         parent_data[target_field] = refs
 
-    return target_field
+    return cast("str", target_field)
 
 
 def normalize_reference_fields(

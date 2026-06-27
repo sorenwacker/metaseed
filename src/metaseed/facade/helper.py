@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
-from typing import Any, Self
+from typing import Any, Self, cast
 
 from pydantic import BaseModel
 
@@ -171,7 +171,7 @@ class EntityHelper:
         """
         for f in self._spec.fields:
             if f.name == field_name:
-                info = {
+                info: dict[str, Any] = {
                     "name": f.name,
                     "type": f.type.value,
                     "required": f.required,
@@ -299,7 +299,7 @@ class EntityHelper:
         print(")")  # noqa: T201
 
     def validate_ontology_terms(
-        self: Self, data: dict | BaseModel, warn: bool = True
+        self: Self, data: dict[str, Any] | BaseModel, warn: bool = True
     ) -> list[str]:
         """Validate ontology term fields in entity data.
 
@@ -390,7 +390,7 @@ class EntityHelper:
         """
         if self._store_callback:
             node = self._store_callback(self._name, kwargs)
-            return node.instance
+            return cast("BaseModel", node.instance)
         return self.create(**kwargs)
 
     def __repr__(self: Self) -> str:

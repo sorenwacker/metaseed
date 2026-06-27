@@ -8,7 +8,7 @@ spec_builder_helpers.py and SpecLoader.
 from __future__ import annotations
 
 import copy
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING, Any, Self
 
 from metaseed.specs.loader import SpecLoader, SpecLoadError
 from metaseed.ui.spec_persistence import SpecPersistence
@@ -69,7 +69,7 @@ class FilesystemSpecPersistence(SpecPersistence):
 
         return delete_user_spec(name, version)
 
-    async def list_user_specs(self: Self) -> list[dict]:
+    async def list_user_specs(self: Self) -> list[dict[str, Any]]:
         """List all user-created specs from the filesystem.
 
         Returns:
@@ -83,7 +83,7 @@ class FilesystemSpecPersistence(SpecPersistence):
 
         return list_user_specs()
 
-    async def list_templates(self: Self) -> list[dict]:
+    async def list_templates(self: Self) -> list[dict[str, Any]]:
         """List available built-in templates from the filesystem.
 
         Returns:

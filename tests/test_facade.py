@@ -758,6 +758,7 @@ class TestEntityStoreIndex:
         helper = MagicMock()
         helper.identifier_field = None
         helper.reference_fields = ["study_ref"]
+        helper.all_fields = ["alias", "unique_id", "study_ref"]
 
         def create_instance(_entity_type, data):
             return _Model(**{k: v for k, v in data.items() if k in _Model.model_fields})
@@ -785,3 +786,16 @@ class TestEntityStoreIndex:
 
         assert store.get_entity_by_ref("shared") is not None
         assert store._index["shared"] == second.id
+
+    def test_reload_indexes_all_identifier_fields(self) -> None:
+        """load_from_dict must index every identifier field, like add_entity.
+
+        A node reloaded from disk must be resolvable by any of its identifier
+        values, not only the helper's primary identifier field.
+        """
+        store = self._make_store()
+
+        store.load_from_dict([{"_type": "Study", "unique_id": "STU1", "alias": "A1"}])
+
+        assert store.get_entity_by_ref("STU1") is not None
+        assert store.get_entity_by_ref("A1") is not None

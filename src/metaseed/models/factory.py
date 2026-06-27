@@ -255,7 +255,7 @@ class EntityBaseModel(BaseModel):
                 continue
 
             if isinstance(value, list):
-                converted = []
+                converted: list[Any] = []
                 for item in value:
                     if isinstance(item, dict):
                         converted.append(model_class.model_validate(item))
@@ -339,43 +339,62 @@ def _build_field_constraints(field: FieldSpec) -> dict[str, Any]:
     if constraints.maximum is not None:
         kwargs["le"] = constraints.maximum
 
+    # List cardinality. Pydantic v2 validates collection length via
+    # min_length/max_length; only apply for list fields so string length
+    # constraints above are not clobbered.
+    if field.type == FieldType.LIST:
+        if constraints.min_items is not None:
+            kwargs["min_length"] = constraints.min_items
+        if constraints.max_items is not None:
+            kwargs["max_length"] = constraints.max_items
+
     return kwargs
 
 
-def _build_enum_type(enum_values: list[str]) -> type:
+def _build_enum_type(enum_values: list[str]) -> Any:
     """Build a Literal type from enum values.
 
     Args:
         enum_values: List of allowed string values.
 
     Returns:
-        A Literal type constraining values to the given list.
+        A Literal special form constraining values to the given list. Typed as
+        ``Any`` because a dynamically built ``Literal`` is not a ``type``.
     """
-    return Literal[tuple(enum_values)]  # type: ignore[misc]
+    return Literal[tuple(enum_values)]
 
 
-def _create_field_definition(field: FieldSpec) -> tuple[type, Any]:
+def _create_field_definition(field: FieldSpec) -> tuple[Any, Any]:
     """Create a Pydantic field definition tuple.
 
     Args:
         field: Field specification.
 
     Returns:
-        Tuple of (type, default) for pydantic.create_model.
+        Tuple of (type, default) for pydantic.create_model. The type element is
+        typed as ``Any`` because it may be a dynamically built ``Literal`` or
+        ``Optional`` special form rather than a concrete ``type``.
     """
-    python_type = _build_field_type(field)
+    python_type: Any = _build_field_type(field)
     constraints = _build_field_constraints(field)
 
-    has_enum = bool(field.constraints and field.constraints.enum)
+    # ``enum_values`` is non-None exactly when an enum constraint is present;
+    # using it as the truthiness guard narrows ``Constraints | None`` for the
+    # attribute accesses below.
+    enum_values = field.constraints.enum if field.constraints else None
 
     if field.type == FieldType.LIST:
-        if has_enum:
-            python_type = list[_build_enum_type(field.constraints.enum)]  # type: ignore[misc]
+        if enum_values:
+            # The element is a dynamically built Literal special form, which
+            # cannot be expressed as a static type subscript.
+            python_type = list[_build_enum_type(enum_values)]  # type: ignore[misc]
+        if field.required:
+            return (python_type, Field(**constraints))
         constraints["default_factory"] = list
-        return (Annotated[python_type, Field(**constraints)], ...)
+        return (python_type, Field(**constraints))
 
-    if has_enum:
-        python_type = _build_enum_type(field.constraints.enum)
+    if enum_values:
+        python_type = _build_enum_type(enum_values)
 
     if field.type == FieldType.ENTITY:
         annotated_type = (

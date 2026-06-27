@@ -9,13 +9,13 @@ This module provides a thin wrapper for backward compatibility with UI code.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from metaseed.ui.state import AppState
 
 
-def build_graph(state: AppState) -> dict:
+def build_graph(state: AppState) -> dict[str, Any]:
     """Build graph data from entity tree.
 
     Delegates to facade.to_graph() for vis.js format generation.

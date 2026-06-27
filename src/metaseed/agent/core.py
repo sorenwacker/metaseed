@@ -9,8 +9,9 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Self
+from typing import Any, Self, cast
 
 import yaml
 from pydantic import BaseModel
@@ -39,7 +40,7 @@ class TypeConverter:
         if value is None or value == "":
             return None
 
-        converters = {
+        converters: dict[str, Callable[[Any], Any]] = {
             "string": str,
             "integer": TypeConverter._to_integer,
             "float": TypeConverter._to_float,
@@ -77,19 +78,24 @@ class TypeConverter:
         return str(value).lower() in ("true", "1", "yes")
 
     @staticmethod
-    def _to_list(value: Any) -> list:
+    def _to_list(value: Any) -> list[Any]:
         if isinstance(value, list):
             return value
         if isinstance(value, str) and value.startswith("["):
             try:
-                return json.loads(value)
+                return cast("list[Any]", json.loads(value))
             except json.JSONDecodeError:
                 return [value]
         return [value] if value else []
 
 
-class ValidationError(BaseModel):
-    """A validation error for extracted data."""
+class ValidationIssue(BaseModel):
+    """A validation issue found in extracted data.
+
+    This is a plain data record describing one problem with a field; it is not
+    an exception and is never raised. Named to avoid implying it can be caught
+    like ``pydantic.ValidationError``.
+    """
 
     field: str
     message: str
@@ -101,7 +107,7 @@ class ExtractionResult(BaseModel):
 
     entity: str
     instances: list[dict[str, Any]]
-    errors: list[ValidationError] = []
+    errors: list[ValidationIssue] = []
 
 
 class ExtractionContext:
@@ -255,7 +261,7 @@ class ExtractionContext:
         table = source.tables[table_index]
         entity_spec = self.get_entity_spec(entity_name)
         instances: list[dict[str, Any]] = []
-        errors: list[ValidationError] = []
+        errors: list[ValidationIssue] = []
 
         for row_idx, row in enumerate(table.rows):
             row_dict = dict(zip(table.headers, row, strict=False))
@@ -282,7 +288,7 @@ class ExtractionContext:
         entity_spec: EntitySpec,
         mapping: ColumnMapping,
         row_idx: int,
-        errors: list[ValidationError],
+        errors: list[ValidationIssue],
     ) -> dict[str, Any] | None:
         """Extract a single row to entity instance.
 
@@ -316,7 +322,7 @@ class ExtractionContext:
                 instance[field_spec.name] = converted
             elif field_spec.required and value:
                 errors.append(
-                    ValidationError(
+                    ValidationIssue(
                         field=field_spec.name,
                         message=f"Row {row_idx}: Failed to convert value '{value}'",
                         value=value,
@@ -342,7 +348,7 @@ class ExtractionContext:
         self: Self,
         data: dict[str, Any],
         entity_name: str,
-    ) -> list[ValidationError]:
+    ) -> list[ValidationIssue]:
         """Validate an extracted instance against entity spec.
 
         Args:
@@ -353,13 +359,13 @@ class ExtractionContext:
             List of validation errors.
         """
         entity_spec = self.get_entity_spec(entity_name)
-        errors: list[ValidationError] = []
+        errors: list[ValidationIssue] = []
 
         # Check required fields
         for field in entity_spec.fields:
             if field.required and field.name not in data:
                 errors.append(
-                    ValidationError(
+                    ValidationIssue(
                         field=field.name,
                         message=f"Required field '{field.name}' is missing",
                     )
@@ -372,16 +378,16 @@ class ExtractionContext:
 
     def _validate_field(
         self: Self, value: Any, field_spec: FieldSpec
-    ) -> list[ValidationError]:
+    ) -> list[ValidationIssue]:
         """Validate a single field value."""
-        errors: list[ValidationError] = []
+        errors: list[ValidationIssue] = []
 
         if field_spec.constraints:
             constraints = field_spec.constraints
 
             if constraints.enum and value not in constraints.enum:
                 errors.append(
-                    ValidationError(
+                    ValidationIssue(
                         field=field_spec.name,
                         message=f"Value must be one of: {constraints.enum}",
                         value=value,
@@ -391,7 +397,7 @@ class ExtractionContext:
             if constraints.pattern and isinstance(value, str):
                 if not re.match(constraints.pattern, value):
                     errors.append(
-                        ValidationError(
+                        ValidationIssue(
                             field=field_spec.name,
                             message=f"Value does not match pattern: {constraints.pattern}",
                             value=value,
@@ -401,7 +407,7 @@ class ExtractionContext:
             if constraints.min_length and isinstance(value, str):
                 if len(value) < constraints.min_length:
                     errors.append(
-                        ValidationError(
+                        ValidationIssue(
                             field=field_spec.name,
                             message=f"Value must be at least {constraints.min_length} characters",
                             value=value,
@@ -411,7 +417,7 @@ class ExtractionContext:
             if constraints.max_length and isinstance(value, str):
                 if len(value) > constraints.max_length:
                     errors.append(
-                        ValidationError(
+                        ValidationIssue(
                             field=field_spec.name,
                             message=f"Value must be at most {constraints.max_length} characters",
                             value=value,
@@ -421,7 +427,7 @@ class ExtractionContext:
             if constraints.minimum is not None and isinstance(value, int | float):
                 if value < constraints.minimum:
                     errors.append(
-                        ValidationError(
+                        ValidationIssue(
                             field=field_spec.name,
                             message=f"Value must be at least {constraints.minimum}",
                             value=value,
@@ -431,7 +437,7 @@ class ExtractionContext:
             if constraints.maximum is not None and isinstance(value, int | float):
                 if value > constraints.maximum:
                     errors.append(
-                        ValidationError(
+                        ValidationIssue(
                             field=field_spec.name,
                             message=f"Value must be at most {constraints.maximum}",
                             value=value,
@@ -454,9 +460,10 @@ class ExtractionContext:
         else:
             data = self.extracted
 
-        return yaml.dump(
+        result: str = yaml.dump(
             data, default_flow_style=False, sort_keys=False, allow_unicode=True
         )
+        return result
 
     def export_json(self: Self, entity_name: str | None = None) -> str:
         """Export extracted entities to JSON.

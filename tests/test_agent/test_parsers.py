@@ -137,9 +137,14 @@ class TestExcelParser:
         xlsx_file.touch()
         assert parser.can_parse(xlsx_file) is True
 
+        xlsm_file = tmp_path / "test.xlsm"
+        xlsm_file.touch()
+        assert parser.can_parse(xlsm_file) is True
+
+        # Legacy binary .xls is not supported: openpyxl cannot read it.
         xls_file = tmp_path / "test.xls"
         xls_file.touch()
-        assert parser.can_parse(xls_file) is True
+        assert parser.can_parse(xls_file) is False
 
         csv_file = tmp_path / "test.csv"
         csv_file.touch()

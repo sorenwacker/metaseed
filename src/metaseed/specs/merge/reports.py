@@ -7,7 +7,7 @@ of profile comparison results.
 import csv
 import io
 from abc import ABC, abstractmethod
-from typing import Self
+from typing import Any, Self
 
 from .models import ComparisonResult, DiffType
 
@@ -70,7 +70,7 @@ class CSVReportGenerator(ReportGenerator):
 
         # Data rows
         for ed in self.comparison.entity_diffs:
-            row = [ed.entity_name, ed.diff_type.value]
+            row: list[Any] = [ed.entity_name, ed.diff_type.value]
             for profile_id in self.comparison.profiles:
                 row.append("Y" if ed.profiles.get(profile_id, False) else "N")
             row.append(len(ed.field_diffs))

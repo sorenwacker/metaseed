@@ -93,6 +93,7 @@ def register_export_routes(
     async def preview_yaml(request: Request) -> HTMLResponse:
         """Get YAML preview of the current spec."""
         builder = _require_spec()
+        assert builder.spec is not None  # guaranteed by _require_spec
         yaml_content = spec_to_yaml(builder.spec)
 
         return templates.TemplateResponse(
@@ -105,6 +106,7 @@ def register_export_routes(
     async def export_yaml(_request: Request) -> StreamingResponse:
         """Download the spec as a YAML file."""
         builder = _require_spec()
+        assert builder.spec is not None  # guaranteed by _require_spec
         yaml_content = spec_to_yaml(builder.spec)
         filename = f"{builder.spec.name or 'profile'}.yaml"
 
@@ -118,21 +120,28 @@ def register_export_routes(
     async def save_to_filesystem(request: Request) -> HTMLResponse:
         """Save the spec to the specs directory."""
         builder = _require_spec()
+        assert builder.spec is not None  # guaranteed by _require_spec
 
         # Apply any included metadata from the form
         form_data = await request.form()
-        if form_data.get("name"):
-            builder.spec.name = form_data.get("name", "").strip()
-        if form_data.get("version"):
-            builder.spec.version = form_data.get("version", "").strip()
-        if form_data.get("display_name"):
-            builder.spec.display_name = form_data.get("display_name", "").strip()
-        if form_data.get("description"):
-            builder.spec.description = form_data.get("description", "").strip()
-        if form_data.get("root_entity"):
-            builder.spec.root_entity = form_data.get("root_entity", "").strip()
-        if form_data.get("ontology"):
-            builder.spec.ontology = form_data.get("ontology", "").strip()
+
+        def _form_text(key: str) -> str | None:
+            """Return a text form field, ignoring file uploads."""
+            value = form_data.get(key)
+            return value if isinstance(value, str) else None
+
+        if name := _form_text("name"):
+            builder.spec.name = name.strip()
+        if version := _form_text("version"):
+            builder.spec.version = version.strip()
+        if display_name := _form_text("display_name"):
+            builder.spec.display_name = display_name.strip()
+        if description := _form_text("description"):
+            builder.spec.description = description.strip()
+        if root_entity := _form_text("root_entity"):
+            builder.spec.root_entity = root_entity.strip()
+        if ontology := _form_text("ontology"):
+            builder.spec.ontology = ontology.strip()
 
         if not builder.spec.name:
             return templates.TemplateResponse(
