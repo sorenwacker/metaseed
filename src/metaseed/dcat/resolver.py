@@ -126,6 +126,35 @@ def build_dcat_dataset(
     )
 
 
+def build_dcat_dataset_from_entities(
+    *,
+    profile: str,
+    root_entity_type: str | None,
+    entities: list[dict[str, Any]],
+    catalog_metadata: CatalogMetadata | None = None,
+    modified: str | None = None,
+    identifier: str | None = None,
+) -> DcatDataset:
+    """Build a DCAT dataset from a dataset's serialized entity list.
+
+    Finds the root entity (the one whose ``_type`` is ``root_entity_type``),
+    strips its ``_`` metadata keys, and resolves it like
+    :func:`build_dcat_dataset`.
+    """
+    root: dict[str, Any] | None = None
+    for entity in entities:
+        if entity.get("_type") == root_entity_type:
+            root = {k: v for k, v in entity.items() if not k.startswith("_")}
+            break
+    return build_dcat_dataset(
+        profile=profile,
+        root_entity=root,
+        catalog_metadata=catalog_metadata,
+        modified=modified,
+        fallback_identifier=identifier,
+    )
+
+
 def build_dcat_catalog(
     *,
     title: str | None = None,

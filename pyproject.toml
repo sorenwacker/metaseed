@@ -46,6 +46,9 @@ docs = [
     "pymdown-extensions>=10.8",
     "mkdocs-panzoom-plugin>=0.4",
 ]
+dcat = [
+    "rdflib>=7.0",
+]
 
 [project.scripts]
 metaseed = "metaseed.cli:app"
@@ -195,6 +198,7 @@ exclude = ["tests/", "docs/"]
 module = [
     "openpyxl.*",
     "yaml.*",
+    "rdflib.*",
 ]
 ignore_missing_imports = true
 

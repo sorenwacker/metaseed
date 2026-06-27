@@ -8,6 +8,7 @@ CatalogMetadata for record-rooted profiles, and explicit-wins precedence.
 from __future__ import annotations
 
 from metaseed.dcat import build_dcat_catalog, build_dcat_dataset
+from metaseed.dcat.resolver import build_dcat_dataset_from_entities
 from metaseed.repositories.dataset_repository import CatalogMetadata
 
 
@@ -98,6 +99,33 @@ class TestPrecedence:
 
         assert ds.contact_point is not None
         assert ds.contact_point.name == "Explicit"
+
+
+class TestFromEntities:
+    """Build a dataset card from a serialized entity list (the `_type`-tagged form)."""
+
+    def test_finds_and_strips_root_entity(self):
+        entities = [
+            {"_type": "Investigation", "title": "Trial", "unique_id": "INV-1"},
+            {"_type": "Study", "_parent_unique_id": "INV-1", "title": "Study 1"},
+        ]
+        ds = build_dcat_dataset_from_entities(
+            profile="miappe",
+            root_entity_type="Investigation",
+            entities=entities,
+            identifier="my-ds",
+        )
+        assert ds.title == "Trial"
+        assert ds.identifier == "INV-1"
+
+    def test_no_root_entity_falls_back(self):
+        ds = build_dcat_dataset_from_entities(
+            profile="miappe",
+            root_entity_type="Investigation",
+            entities=[{"_type": "Study", "title": "s"}],
+            identifier="my-ds",
+        )
+        assert ds.identifier == "my-ds"
 
 
 class TestCatalog:

@@ -55,10 +55,31 @@ Two sources are merged, **explicit wins**:
 maps are intentionally code-level for now (moving them into `profile.yaml` is a
 possible later refinement).
 
+## RDF serialization
+
+`metaseed.dcat.serialize` turns the model into RDF — `to_turtle()` and
+`to_jsonld()` — by building an `rdflib.Graph` with the DCAT, Dublin Core Terms,
+FOAF, and vCard vocabularies. This is the only DCAT module that depends on
+`rdflib`; it is imported lazily (never from `metaseed.dcat.__init__`) and
+`rdflib` ships behind the optional extra:
+
+```
+pip install 'metaseed[dcat]'
+```
+
+so the model and resolver remain usable without it.
+
+## Viewing the card
+
+The dev UI exposes a read-only viewer at `GET /dcat` that renders the DCAT card
+(Turtle + JSON-LD) for the dataset currently loaded in the editor. It is a
+preview of the export/exposure work (#30); a proper harvestable endpoint
+(content negotiation, embedded JSON-LD on a landing page) follows there.
+
 ## Out of scope for the core adapter
 
 - `dcat:accessURL` / `dcat:downloadURL` are a **publishing** concern — they
   depend on where a dataset is hosted, so they come from the serving layer
   (e.g. metaseed-hub), not the core exporter. `mediaType`, `format`,
   `byteSize`, and `dcat:Checksum` are computed from the emitted file.
-- RDF serialization and SHACL/DCAT-AP validation are separate steps (#28, #29).
+- SHACL/DCAT-AP validation is a separate step (#29).
