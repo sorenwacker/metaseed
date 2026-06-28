@@ -8,6 +8,8 @@ This module assembles routes from domain-specific modules in the routes/ package
 from __future__ import annotations
 
 import logging
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
@@ -76,10 +78,18 @@ def create_app(state: AppState | None = None, base_url: str = "") -> FastAPI:
     )
     app.state.mcp_context = context
 
-    # Set context on MCP server so tools use the same dependencies
-    from metaseed.agent.mcp.server import set_context
+    # Install the shared MCP context only once the app starts serving — never at
+    # construction. A module-level `app = create_app()` (used by uvicorn) runs at
+    # import; doing set_context() there would hijack the standalone MCP server's
+    # state simply because something imported `metaseed.ui`.
+    @asynccontextmanager
+    async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
+        from metaseed.agent.mcp.server import set_context
 
-    set_context(context)
+        set_context(context)
+        yield
+
+    app.router.lifespan_context = _lifespan
 
     templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
