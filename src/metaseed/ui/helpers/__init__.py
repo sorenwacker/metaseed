@@ -14,6 +14,18 @@ Submodules:
 
 from __future__ import annotations
 
+# Form generation now lives in the framework-agnostic metaseed.forms package
+# (importable without the web app); re-exported here for the UI's existing call
+# sites and backward compatibility.
+from metaseed.forms import (
+    FormContext,
+    collect_form_values,
+    filter_fields,
+    format_validation_errors,
+    get_field_data,
+    is_nested_field,
+)
+
 # Re-export from entity_helpers
 from metaseed.ui.helpers.entity_helpers import (
     collect_entities_by_type,
@@ -22,16 +34,6 @@ from metaseed.ui.helpers.entity_helpers import (
     get_nested_items_for_edit,
     to_dict,
     walk_nested_entities,
-)
-
-# Re-export from form_helpers
-from metaseed.ui.helpers.form_helpers import (
-    FormContext,
-    collect_form_values,
-    filter_fields,
-    format_validation_errors,
-    get_field_data,
-    is_nested_field,
 )
 
 # Re-export from navigation_helpers

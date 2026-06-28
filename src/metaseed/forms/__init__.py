@@ -1,7 +1,11 @@
-"""Form helper functions for UI routes.
+"""Profile-driven form generation.
 
-Contains FormContext class and utility functions for form handling,
-field data collection, and validation error formatting.
+Turns a profile's entity schema into render-agnostic form metadata: the fields,
+which are required, their types, options, and ontology hints, plus helpers to
+collect and validate submitted values. It depends only on the spec schema and a
+duck-typed entity ``helper`` (e.g. from :class:`metaseed.facade.ProfileFacade`),
+not on any web framework, so downstream apps can build forms in any renderer
+(HTML, a SPA, a CLI prompt) without importing the metaseed web app.
 """
 
 from __future__ import annotations
@@ -12,6 +16,15 @@ from typing import Any
 from pydantic import ValidationError
 
 from metaseed.specs.schema import PRIMITIVE_TYPES
+
+__all__ = [
+    "FormContext",
+    "collect_form_values",
+    "filter_fields",
+    "format_validation_errors",
+    "get_field_data",
+    "is_nested_field",
+]
 
 
 @dataclass
