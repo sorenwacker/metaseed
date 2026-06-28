@@ -9,7 +9,9 @@ See docs/architecture/dcat.md and issue #28.
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
+from urllib.parse import quote
 
 try:
     from rdflib import BNode, Graph, Literal, Namespace, URIRef
@@ -46,18 +48,37 @@ _JSONLD_CONTEXT: dict[str, str] = {
 }
 
 
+# Characters that may not appear in an IRI (rdflib refuses to serialize these).
+_INVALID_IRI = re.compile(r"""[\s<>"{}|\\^`]""")
+
+
+def _iri_ok(value: str) -> bool:
+    """Whether ``value`` is usable as an IRI (no whitespace or illegal chars)."""
+    return bool(value) and _INVALID_IRI.search(value) is None
+
+
+def _safe_uriref(value: str) -> Node:
+    """A URIRef when ``value`` is a usable IRI, otherwise a plain literal."""
+    return URIRef(value) if _iri_ok(value) else Literal(value)
+
+
 def _node_for(identifier: str | None) -> Node:
-    """A URIRef from the identifier, or a blank node if there is none."""
+    """A stable node IRI for a dataset/catalog, or a blank node if none.
+
+    Identifiers that are already valid IRIs are used as-is; anything else is
+    minted under ``urn:metaseed:`` with the local part percent-encoded, so a
+    value such as ``"My Dataset 2024"`` still serializes to valid RDF.
+    """
     if not identifier:
         return BNode()
-    if "://" in identifier or identifier.startswith("urn:"):
+    if ("://" in identifier or identifier.startswith("urn:")) and _iri_ok(identifier):
         return URIRef(identifier)
-    return _BASE[identifier]
+    return _BASE[quote(identifier, safe="-._~")]
 
 
 def _uri_or_literal(value: str) -> Node:
-    """Render a value as a URIRef when it looks like an IRI, else a literal."""
-    return URIRef(value) if "://" in value else Literal(value)
+    """Render a value as a URIRef when it is a usable IRI, else a literal."""
+    return URIRef(value) if "://" in value and _iri_ok(value) else Literal(value)
 
 
 def _add_contact(graph: Graph, contact: DcatContactPoint) -> Node:
@@ -66,7 +87,14 @@ def _add_contact(graph: Graph, contact: DcatContactPoint) -> Node:
     if contact.name:
         graph.add((node, VCARD.fn, Literal(contact.name)))
     if contact.email:
-        graph.add((node, VCARD.hasEmail, URIRef(f"mailto:{contact.email}")))
+        mailto = f"mailto:{contact.email}"
+        graph.add(
+            (
+                node,
+                VCARD.hasEmail,
+                URIRef(mailto) if _iri_ok(mailto) else Literal(contact.email),
+            )
+        )
     return node
 
 
@@ -76,9 +104,9 @@ def _add_distribution(graph: Graph, dist: DcatDistribution) -> Node:
     if dist.title:
         graph.add((node, DCTERMS.title, Literal(dist.title)))
     if dist.access_url:
-        graph.add((node, DCAT.accessURL, URIRef(dist.access_url)))
+        graph.add((node, DCAT.accessURL, _safe_uriref(dist.access_url)))
     if dist.download_url:
-        graph.add((node, DCAT.downloadURL, URIRef(dist.download_url)))
+        graph.add((node, DCAT.downloadURL, _safe_uriref(dist.download_url)))
     if dist.media_type:
         graph.add((node, DCAT.mediaType, Literal(dist.media_type)))
     if dist.format:
@@ -114,7 +142,7 @@ def _add_dataset(graph: Graph, dataset: DcatDataset) -> Node:
     if dataset.access_rights:
         graph.add((node, DCTERMS.accessRights, Literal(dataset.access_rights)))
     if dataset.landing_page:
-        graph.add((node, DCAT.landingPage, URIRef(dataset.landing_page)))
+        graph.add((node, DCAT.landingPage, _safe_uriref(dataset.landing_page)))
     for keyword in dataset.keywords:
         graph.add((node, DCAT.keyword, Literal(keyword)))
     for theme in dataset.themes:
@@ -122,7 +150,8 @@ def _add_dataset(graph: Graph, dataset: DcatDataset) -> Node:
     for relation in dataset.related:
         graph.add((node, DCTERMS.relation, _uri_or_literal(relation)))
     if dataset.publisher and dataset.publisher.name:
-        pub = URIRef(dataset.publisher.uri) if dataset.publisher.uri else BNode()
+        pub_uri = dataset.publisher.uri
+        pub = URIRef(pub_uri) if pub_uri and _iri_ok(pub_uri) else BNode()
         graph.add((pub, RDF.type, FOAF.Agent))
         graph.add((pub, FOAF.name, Literal(dataset.publisher.name)))
         graph.add((node, DCTERMS.publisher, pub))
@@ -141,7 +170,7 @@ def _add_catalog(graph: Graph, catalog: DcatCatalog) -> Node:
     if catalog.description:
         graph.add((node, DCTERMS.description, Literal(catalog.description)))
     if catalog.homepage:
-        graph.add((node, FOAF.homepage, URIRef(catalog.homepage)))
+        graph.add((node, FOAF.homepage, _safe_uriref(catalog.homepage)))
     if catalog.publisher and catalog.publisher.name:
         pub = BNode()
         graph.add((pub, RDF.type, FOAF.Agent))
