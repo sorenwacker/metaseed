@@ -16,13 +16,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from metaseed.pride.export import to_pride_submission
 from metaseed.pride.mapper import build_dataset
 
 if TYPE_CHECKING:
     from metaseed.api.client import MetaseedClient
     from metaseed.pride.client import PrideClient
 
-__all__ = ["build_dataset", "import_accession"]
+__all__ = ["build_dataset", "import_accession", "to_pride_submission"]
 
 
 def import_accession(
