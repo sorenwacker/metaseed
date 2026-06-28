@@ -92,6 +92,10 @@ def register_dcat_routes(app: FastAPI, get_state: Callable[[], AppState]) -> Non
             dataset, turtle, jsonld = _build_card(get_state())
         except ModuleNotFoundError as exc:
             return JSONResponse({"error": str(exc)}, status_code=501)
+        except Exception as exc:  # never leak a 500 stack trace to the client
+            return JSONResponse(
+                {"error": f"Could not build the DCAT card: {exc}"}, status_code=500
+            )
         return JSONResponse(
             {
                 "title": dataset.title,
@@ -109,5 +113,10 @@ def register_dcat_routes(app: FastAPI, get_state: Callable[[], AppState]) -> Non
             return HTMLResponse(
                 f"<p>DCAT RDF serialization is unavailable: {html.escape(str(exc))}</p>",
                 status_code=501,
+            )
+        except Exception as exc:
+            return HTMLResponse(
+                f"<p>Could not build the DCAT card: {html.escape(str(exc))}</p>",
+                status_code=500,
             )
         return HTMLResponse(_page(dataset, turtle, jsonld))
