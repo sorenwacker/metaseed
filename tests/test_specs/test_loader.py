@@ -336,9 +336,11 @@ class TestSpecVersionBackwardCompatibility:
         profile = loader.load_profile(version="1.1", profile="miappe")
         assert profile.spec_version == "0.1"
 
-    def test_isa_profile_has_default_spec_version(self, loader: SpecLoader) -> None:
-        """ISA profile without spec_version gets default 0.1."""
-        profile = loader.load_profile(version="1.0", profile="isa")
+    def test_profile_without_spec_version_gets_default(
+        self, loader: SpecLoader
+    ) -> None:
+        """A profile that declares no spec_version defaults to 0.1."""
+        profile = loader.load_profile(version="1.0", profile="darwin-core")
         assert profile.spec_version == "0.1"
 
     def test_profile_with_explicit_spec_version(self, tmp_path: Path) -> None:

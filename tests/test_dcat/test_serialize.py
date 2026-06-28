@@ -19,14 +19,19 @@ from metaseed.dcat.serialize import to_graph, to_jsonld, to_turtle  # noqa: E402
 
 
 def test_dataset_triples_present():
+    from metaseed.specs.schema import FieldSpec, FieldType
+
+    fields = [
+        FieldSpec(name="title", type=FieldType.STRING, dcat="dct:title"),
+        FieldSpec(name="submission_date", type=FieldType.DATE, dcat="dct:issued"),
+        FieldSpec(name="license", type=FieldType.URI, dcat="dct:license"),
+    ]
     root = {
-        "unique_id": "INV-1",
         "title": "Drought trial",
-        "description": "desc",
         "submission_date": "2024-01-01",
         "license": "https://creativecommons.org/licenses/by/4.0/",
     }
-    ds = build_dcat_dataset(profile="miappe", root_entity=root)
+    ds = build_dcat_dataset(root_fields=fields, root_entity=root)
     graph = to_graph(ds)
 
     subjects = list(graph.subjects(RDF.type, DCAT.Dataset))
@@ -39,7 +44,7 @@ def test_dataset_triples_present():
 
 
 def test_catalog_links_datasets():
-    ds = build_dcat_dataset(profile="ena", fallback_identifier="d1")
+    ds = build_dcat_dataset(root_fields=[], fallback_identifier="d1")
     cat = build_dcat_catalog(title="Cat", publisher="Org", datasets=[ds])
     graph = to_graph(cat)
 
@@ -49,7 +54,7 @@ def test_catalog_links_datasets():
 
 
 def test_distribution_and_checksum():
-    ds = build_dcat_dataset(profile="ena", fallback_identifier="d1")
+    ds = build_dcat_dataset(root_fields=[], fallback_identifier="d1")
     ds.distributions = [
         DcatDistribution(
             download_url="https://example.org/d1.ttl",
@@ -66,7 +71,7 @@ def test_distribution_and_checksum():
 
 def test_turtle_and_jsonld_are_nonempty_strings():
     cm = CatalogMetadata(title="t", description="d", publisher="p")
-    ds = build_dcat_dataset(profile="darwin-core", catalog_metadata=cm)
+    ds = build_dcat_dataset(root_fields=[], catalog_metadata=cm)
     cat = build_dcat_catalog(title="c", datasets=[ds])
 
     turtle = to_turtle(cat)

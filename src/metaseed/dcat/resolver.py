@@ -1,10 +1,10 @@
 """Resolve a metaseed dataset into the DCAT intermediate representation.
 
-The resolver merges two sources for dataset-level metadata, explicit-wins:
-
-1. values derived from the dataset's root entity via the profile field map
-   (:mod:`metaseed.dcat.mapping`), and
-2. explicit :class:`CatalogMetadata` provided on the dataset.
+The mapping from a profile's root-entity fields onto DCAT properties is declared
+in the spec itself: each ``FieldSpec`` may carry a ``dcat`` annotation naming the
+DCAT/DCAT-AP property it provides (e.g. ``dct:title``, ``dct:issued``,
+``dcat:contactPoint``). The resolver reads those annotations and merges in
+explicit :class:`CatalogMetadata`, explicit-wins.
 
 See docs/architecture/dcat.md.
 """
@@ -13,7 +13,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from metaseed.dcat.mapping import get_field_map
 from metaseed.dcat.model import (
     DcatAgent,
     DcatCatalog,
@@ -25,16 +24,28 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
     from metaseed.repositories.dataset_repository import CatalogMetadata
+    from metaseed.specs.schema import FieldSpec
+
+_EMPTY: tuple[Any, ...] = (None, "", [], {})
 
 
 def _first(explicit: Any, derived: Any) -> Any:
     """Return ``explicit`` unless it is empty, else ``derived``."""
-    return explicit if explicit not in (None, "", [], {}) else derived
+    return explicit if explicit not in _EMPTY else derived
+
+
+def _scalar(value: Any) -> str | None:
+    """Coerce a value to a single string (first element if it is a list)."""
+    if value in _EMPTY:
+        return None
+    if isinstance(value, list):
+        return str(value[0]) if value else None
+    return str(value)
 
 
 def _as_str_list(value: Any) -> list[str]:
-    """Coerce a value into a list of strings (for keyword/relation-like fields)."""
-    if value in (None, "", [], {}):
+    """Coerce a value into a list of strings."""
+    if value in _EMPTY:
         return []
     if isinstance(value, list):
         return [str(v) for v in value]
@@ -60,18 +71,18 @@ def _contact_from(contacts: Any) -> DcatContactPoint | None:
 
 def build_dcat_dataset(
     *,
-    profile: str,
+    root_fields: Iterable[FieldSpec] = (),
     root_entity: dict[str, Any] | None = None,
     catalog_metadata: CatalogMetadata | None = None,
     modified: str | None = None,
     fallback_identifier: str | None = None,
 ) -> DcatDataset:
-    """Build a :class:`DcatDataset` from a dataset's root entity and metadata.
+    """Build a :class:`DcatDataset` from a root entity and its field specs.
 
     Args:
-        profile: Profile name (selects the field map).
-        root_entity: The root entity's field values, if the profile is
-            container-rooted; ignored fields are simply absent.
+        root_fields: The root entity's field specs; each field's ``dcat``
+            annotation declares the DCAT property it provides.
+        root_entity: The root entity's field values.
         catalog_metadata: Explicit dataset-level metadata (overrides derived).
         modified: Dataset modification timestamp (``dct:modified``).
         fallback_identifier: Used for identifier/title when nothing else applies
@@ -80,55 +91,58 @@ def build_dcat_dataset(
     Returns:
         The resolved DCAT dataset (explicit metadata wins over derived).
     """
-    fmap = get_field_map(profile)  # None for record-rooted profiles
     root = root_entity or {}
     cm = catalog_metadata
 
-    def derived(field_name: str | None) -> Any:
-        """Read the root-entity field the profile map names for a property."""
-        return root.get(field_name) if field_name else None
+    # Collect derived values keyed by the DCAT term each field is annotated with.
+    derived: dict[str, Any] = {}
+    for field in root_fields:
+        if field.dcat and root.get(field.name) not in _EMPTY:
+            derived[field.dcat] = root[field.name]
 
-    # Contact: derive from the root entity's contacts list, then let explicit
-    # metadata override it.
-    contact_point = _contact_from(derived(fmap.contacts)) if fmap else None
+    def d(term: str) -> Any:
+        return derived.get(term)
+
+    # Contact: from the dcat:contactPoint field (a contacts list), overridden by
+    # explicit metadata.
+    contact_point = _contact_from(d("dcat:contactPoint"))
     if cm and (cm.contact_name or cm.contact_email):
         contact_point = DcatContactPoint(name=cm.contact_name, email=cm.contact_email)
 
-    # Publisher comes only from explicit metadata; deriving it from contacts
-    # would be ambiguous.
-    publisher = DcatAgent(name=cm.publisher) if cm and cm.publisher else None
+    # Publisher: explicit metadata, else a field annotated dct:publisher.
+    pub_name = (cm.publisher if cm and cm.publisher else None) or _scalar(
+        d("dct:publisher")
+    )
+    publisher = DcatAgent(name=pub_name) if pub_name else None
 
-    title = _first(cm.title if cm else None, derived(fmap.title if fmap else None))
-    # Identifier prefers the root entity's id, falling back to the dataset name.
-    identifier = derived(fmap.identifier if fmap else None) or fallback_identifier
+    identifier = _scalar(d("dct:identifier")) or fallback_identifier
+    title = _first(cm.title if cm else None, _scalar(d("dct:title")))
 
-    # For every property: explicit CatalogMetadata wins (via _first), otherwise
-    # the value derived from the root entity.
     return DcatDataset(
         identifier=identifier,
         title=title or fallback_identifier,
         description=_first(
-            cm.description if cm else None, derived(fmap.description if fmap else None)
+            cm.description if cm else None, _scalar(d("dct:description"))
         ),
-        issued=_first(
-            cm.issued if cm else None, derived(fmap.issued if fmap else None)
-        ),
+        issued=_first(cm.issued if cm else None, _scalar(d("dct:issued"))),
         modified=modified,
-        license=_first(
-            cm.license if cm else None, derived(fmap.license if fmap else None)
-        ),
+        license=_first(cm.license if cm else None, _scalar(d("dct:license"))),
+        access_rights=_scalar(d("dct:accessRights")),
         publisher=publisher,
         contact_point=contact_point,
-        landing_page=cm.landing_page if cm else None,
-        keywords=list(cm.keywords) if cm else [],
-        themes=list(cm.themes) if cm else [],
-        related=_as_str_list(derived(fmap.related if fmap else None)),
+        landing_page=(cm.landing_page if cm else None)
+        or _scalar(d("dcat:landingPage")),
+        keywords=list(cm.keywords)
+        if cm and cm.keywords
+        else _as_str_list(d("dcat:keyword")),
+        themes=list(cm.themes) if cm and cm.themes else _as_str_list(d("dcat:theme")),
+        related=_as_str_list(d("dct:relation")),
     )
 
 
 def build_dcat_dataset_from_entities(
     *,
-    profile: str,
+    root_fields: Iterable[FieldSpec] = (),
     root_entity_type: str | None,
     entities: list[dict[str, Any]],
     catalog_metadata: CatalogMetadata | None = None,
@@ -138,8 +152,8 @@ def build_dcat_dataset_from_entities(
     """Build a DCAT dataset from a dataset's serialized entity list.
 
     Finds the root entity (the one whose ``_type`` is ``root_entity_type``),
-    strips its ``_`` metadata keys, and resolves it like
-    :func:`build_dcat_dataset`.
+    strips its ``_`` metadata keys, and resolves it via
+    :func:`build_dcat_dataset` using ``root_fields``.
     """
     root: dict[str, Any] | None = None
     for entity in entities:
@@ -147,7 +161,7 @@ def build_dcat_dataset_from_entities(
             root = {k: v for k, v in entity.items() if not k.startswith("_")}
             break
     return build_dcat_dataset(
-        profile=profile,
+        root_fields=root_fields,
         root_entity=root,
         catalog_metadata=catalog_metadata,
         modified=modified,

@@ -41,19 +41,22 @@ The source of dataset-level metadata depends on the profile's root entity:
 
 Two sources are merged, **explicit wins**:
 
-1. **Per-profile field map** (`metaseed.dcat.mapping`): each container-rooted
-   profile declares which root-entity field supplies each DCAT property
-   (e.g. MIAPPE `submission_date` → `dct:issued`, `license` → `dct:license`,
-   `contacts` → `dcat:contactPoint`). Record-rooted profiles have no map.
+1. **Per-field `dcat` annotations in the spec** (spec_version 0.5+): each
+   container-rooted profile's root entity annotates its fields with the DCAT
+   property they fill (e.g. MIAPPE `submission_date: {dcat: dct:issued}`,
+   `license: {dcat: dct:license}`, `contacts: {dcat: dcat:contactPoint}`). The
+   mapping is declared in `profile.yaml`, not in code — so any profile,
+   including ones built in the Spec Builder, can self-describe its DCAT mapping.
+   See [DCAT Mapping](../api/schema-specs.md#dcat-mapping). Record-rooted
+   profiles have no such annotations.
 2. **`CatalogMetadata`** (`metaseed.repositories.dataset_repository`): an
    optional, generic dataset-level block (`title`, `description`, `publisher`,
    `license`, `issued`, `contact_name`/`contact_email`, `landing_page`,
    `keywords`, `themes`). It is persisted with the dataset and is the explicit
    source for record-rooted profiles and the override for any profile.
 
-`metaseed.dcat.resolver.build_dcat_dataset` performs the merge; the field-map
-maps are intentionally code-level for now (moving them into `profile.yaml` is a
-possible later refinement).
+`metaseed.dcat.resolver.build_dcat_dataset` reads the root entity's field specs
+(their `dcat` annotations) and merges in the explicit `CatalogMetadata`.
 
 ## RDF serialization
 
