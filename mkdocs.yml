@@ -75,6 +75,7 @@ nav:
       - UI Helpers: architecture/ui-helpers.md
       - Spec Builder Engine: architecture/spec-builder.md
       - DCAT Export: architecture/dcat.md
+      - ENA Import: architecture/ena-import.md
       - Codebase Review: REVIEW.md
   - API Reference:
       - MetaseedClient: api/client.md
