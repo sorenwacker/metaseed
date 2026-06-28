@@ -17,6 +17,7 @@ from metaseed.api.entities import Entity, EntityNode
 from metaseed.api.errors import (
     EntityNotFoundError,
     EntityTypeNotFoundError,
+    InvalidSpecError,
     MetaseedError,
     ProfileNotFoundError,
     ValidationError,
@@ -38,6 +39,7 @@ __all__ = [
     "EntitySchema",
     "EntityTypeNotFoundError",
     "FieldInfo",
+    "InvalidSpecError",
     "MetaseedClient",
     "MetaseedError",
     "ProfileNotFoundError",

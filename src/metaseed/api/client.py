@@ -26,6 +26,7 @@ from metaseed.api.entities import Entity, EntityNode
 from metaseed.api.errors import (
     EntityNotFoundError,
     EntityTypeNotFoundError,
+    InvalidSpecError,
     ProfileNotFoundError,
     ValidationError,
 )
@@ -127,13 +128,18 @@ class MetaseedClient(SerializationMixin, ValidationMixin):
             >>> client = MetaseedClient.from_spec(spec)
         """
         from metaseed.facade import ProfileFacade
+        from metaseed.specs.loader import SpecLoadError
         from metaseed.specs.schema import ProfileSpec as ProfileSpecCls
 
-        if isinstance(spec, dict):
-            spec = ProfileSpecCls(**spec)
-
-        instance = cls.__new__(cls)
-        instance._facade = ProfileFacade(spec.name, spec=spec)
+        try:
+            if isinstance(spec, dict):
+                spec = ProfileSpecCls(
+                    **spec
+                )  # pydantic ValidationError is a ValueError
+            instance = cls.__new__(cls)
+            instance._facade = ProfileFacade(spec.name, spec=spec)
+        except (ValueError, SpecLoadError) as e:
+            raise InvalidSpecError(str(e)) from e
         return instance
 
     @classmethod
@@ -149,10 +155,16 @@ class MetaseedClient(SerializationMixin, ValidationMixin):
         Example:
             >>> client = MetaseedClient.from_yaml("my-custom-spec.yaml")
         """
-        from metaseed.facade import ProfileFacade
+        import yaml
 
-        instance = cls.__new__(cls)
-        instance._facade = ProfileFacade.from_yaml(path)
+        from metaseed.facade import ProfileFacade
+        from metaseed.specs.loader import SpecLoadError
+
+        try:
+            instance = cls.__new__(cls)
+            instance._facade = ProfileFacade.from_yaml(path)
+        except (OSError, ValueError, SpecLoadError, yaml.YAMLError) as e:
+            raise InvalidSpecError(str(e)) from e
         return instance
 
     # ========================================================================
