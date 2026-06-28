@@ -1,5 +1,42 @@
 # Changelog
 
+## v0.11.0 (2026-06-28)
+
+### New Features
+- DCAT export: a profile's dataset can be rendered as a DCAT catalog card in
+  JSON-LD and Turtle. Mapping is spec-driven via a per-field `dcat:` annotation
+  in `profile.yaml` (spec_version 0.5); RDF serialization uses rdflib behind the
+  optional `metaseed[dcat]` extra. The UI exposes a card viewer with copy/download
+  and an editor for explicit catalog metadata, so record-rooted profiles (Darwin
+  Core, DiSSCo) also get a real card (#24, #27, #28, #53, #54, #58)
+- Spec-builder MCP: `spec_*` tools to create and edit profiles over MCP, sharing
+  the SpecBuilder engine with the UI (#51)
+- `metaseed.forms`: framework-agnostic, profile-driven form generation that other
+  apps can reuse without importing the web app
+- Public `metaseed.list_profiles()` entry point
+- `InvalidSpecError` raised by `MetaseedClient.from_spec`/`from_yaml`
+
+### Bug Fixes
+- MCP session state no longer reverts to the default profile after
+  `create_dataset` (#32); fixed the deeper root where importing the UI installed
+  the MCP context at import time — it now installs in the app lifespan
+- DCAT serialization produces valid RDF for identifiers/URLs containing spaces or
+  other non-IRI characters; the DCAT routes return a clean error instead of a 500
+- `convert` honors `--profile` instead of defaulting to `miappe`
+- `update_entity` returns the updated entity, not the pre-update snapshot
+- A missing required field is reported once, not twice
+- `batch_create` auto-fills reference fields like `create_entity`
+- Spec merge resolves constraint-only field differences via the chosen strategy
+  (e.g. most-restrictive wins) instead of silently taking the first spec
+- The entity form fires the correct HTMX event via an explicit flag rather than
+  matching the message text
+
+### Internal
+- The FastAPI app is loaded lazily from `metaseed.api`, so importing `metaseed`
+  (or any submodule) no longer pulls in FastAPI/Starlette or the UI app
+- Full multi-agent codebase review recorded in `docs/REVIEW.md`; all gates green
+- Run tests in parallel (pytest-xdist); remove dead code
+
 ## v0.10.0 (2026-06-23)
 
 ### New Features
