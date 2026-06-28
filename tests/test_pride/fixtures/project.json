@@ -1,0 +1,91 @@
+{
+  "accession": "PXD000001",
+  "title": "TMT spikes - Using R and Bioconductor for proteomics data analysis",
+  "projectDescription": "Expected reporter ion ratios: Erwinia peptides 1:1:1:1:1:1 Enolase spike 10:5:2.5:1:2.5:10 BSA spike 1:2.5:5:10:5:1 PhosB spike 2:2:2:2:1:1 Cytochrome C spike 1:1:1:1:1:2",
+  "sampleProcessingProtocol": "Not available",
+  "dataProcessingProtocol": "Two extra files have been added post-publication as mzML and mzXML conversions of the raw acquisition.",
+  "submissionType": "COMPLETE",
+  "submissionDate": "2012-03-13",
+  "publicationDate": "2012-03-07",
+  "doi": "10.6019/PXD000001",
+  "keywords": ["Spikes", "Tmt", "Eriwinia"],
+  "projectTags": ["Prime-xs project"],
+  "submitters": [
+    {
+      "title": "Dr",
+      "firstName": "Laurent",
+      "lastName": "Gatto",
+      "affiliation": "Department of Biochemistry, University of Cambridge",
+      "email": "lg390@cam.ac.uk",
+      "country": "United Kingdom",
+      "orcid": "0000-0002-1520-2268",
+      "name": "Laurent Gatto"
+    }
+  ],
+  "labPIs": [
+    {
+      "title": "Prof",
+      "firstName": "Kathryn",
+      "lastName": "Lilley",
+      "affiliation": "Department of Biochemistry, University of Cambridge",
+      "email": "kl1@cam.ac.uk",
+      "country": "United Kingdom",
+      "orcid": "",
+      "name": "Kathryn Lilley"
+    }
+  ],
+  "instruments": [
+    {
+      "@type": "CvParam",
+      "cvLabel": "MS",
+      "accession": "MS:1001742",
+      "name": "LTQ Orbitrap Velos"
+    }
+  ],
+  "experimentTypes": [
+    {
+      "@type": "CvParam",
+      "cvLabel": "PRIDE",
+      "accession": "PRIDE:0000428",
+      "name": "Bottom-up proteomics"
+    }
+  ],
+  "organisms": [
+    {
+      "@type": "CvParam",
+      "cvLabel": "NEWT",
+      "accession": "NEWT:554",
+      "name": "Erwinia carotovora"
+    }
+  ],
+  "organismParts": [
+    {
+      "@type": "CvParam",
+      "cvLabel": "BTO",
+      "accession": "BTO:0000089",
+      "name": "whole organism"
+    }
+  ],
+  "diseases": [],
+  "references": [
+    {
+      "referenceLine": "Gatto L, Christoforou A; Using R and Bioconductor for proteomics data analysis., Biochim Biophys Acta, 2013 May 18",
+      "pubmedID": 23692960,
+      "doi": "10.1016/j.bbapap.2013.04.032"
+    }
+  ],
+  "identifiedPTMStrings": [
+    {
+      "@type": "CvParam",
+      "cvLabel": "MOD",
+      "accession": "MOD:00425",
+      "name": "monohydroxylated residue"
+    },
+    {
+      "@type": "CvParam",
+      "cvLabel": "MOD",
+      "accession": "MOD:01720",
+      "name": "TMT6plex-126 reporter+balance reagent acylated residue"
+    }
+  ]
+}

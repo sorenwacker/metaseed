@@ -1,0 +1,137 @@
+{
+  "studies": {
+    "metadata": {"pagination": {"currentPage": 0, "totalCount": 2, "totalPages": 1}},
+    "result": {
+      "data": [
+        {
+          "studyDbId": "1001",
+          "studyName": "Drought trial 2024",
+          "studyDescription": "Maize drought tolerance field trial",
+          "trialDbId": "T01",
+          "trialName": "Maize drought programme",
+          "startDate": "2024-04-01",
+          "endDate": "2024-09-30",
+          "locationName": "Wageningen field A",
+          "experimentalDesign": {"PUI": "CO_715:0000145", "description": "RCBD"},
+          "growthFacility": {"description": "open field"},
+          "documentationURL": "https://example.org/studies/1001",
+          "dataLinks": [
+            {
+              "name": "phenotypes.csv",
+              "type": "OBSERVATION",
+              "url": "https://example.org/files/1001/phenotypes.csv",
+              "description": "Trait measurements"
+            }
+          ]
+        },
+        {
+          "studyDbId": "1002",
+          "studyName": "Drought trial 2025",
+          "studyDescription": "Follow-up season",
+          "trialDbId": "T01",
+          "trialName": "Maize drought programme",
+          "startDate": "2025-04-01",
+          "locationName": "Wageningen field B",
+          "dataLinks": []
+        }
+      ]
+    }
+  },
+  "observationunits": {
+    "metadata": {"pagination": {"currentPage": 0, "totalCount": 2, "totalPages": 1}},
+    "result": {
+      "data": [
+        {
+          "observationUnitDbId": "OU1",
+          "observationUnitName": "plot-1",
+          "studyDbId": "1001",
+          "germplasmDbId": "G1",
+          "germplasmName": "B73",
+          "observationLevel": {"levelName": "plot", "levelCode": "1"},
+          "observationUnitPosition": {
+            "positionCoordinateX": "1",
+            "positionCoordinateXType": "GRID_COL",
+            "positionCoordinateY": "1",
+            "blockNumber": "1",
+            "replicate": "1",
+            "entryType": "TEST"
+          }
+        },
+        {
+          "observationUnitDbId": "OU2",
+          "observationUnitName": "plot-2",
+          "studyDbId": "1001",
+          "germplasmDbId": "G2",
+          "germplasmName": "Mo17",
+          "observationLevel": {"levelName": "plot", "levelCode": "2"},
+          "observationUnitPosition": {
+            "positionCoordinateX": "2",
+            "positionCoordinateXType": "GRID_COL",
+            "positionCoordinateY": "1",
+            "blockNumber": "1",
+            "replicate": "2",
+            "entryType": "TEST"
+          }
+        }
+      ]
+    }
+  },
+  "observations": {
+    "metadata": {"pagination": {"currentPage": 0, "totalCount": 3, "totalPages": 1}},
+    "result": {
+      "data": [
+        {
+          "observationDbId": "OBS1",
+          "observationUnitDbId": "OU1",
+          "studyDbId": "1001",
+          "observationVariableDbId": "VAR_HEIGHT",
+          "observationVariableName": "Plant height",
+          "value": "180"
+        },
+        {
+          "observationDbId": "OBS2",
+          "observationUnitDbId": "OU2",
+          "studyDbId": "1001",
+          "observationVariableDbId": "VAR_HEIGHT",
+          "observationVariableName": "Plant height",
+          "value": "165"
+        },
+        {
+          "observationDbId": "OBS3",
+          "observationUnitDbId": "OU1",
+          "studyDbId": "1001",
+          "observationVariableDbId": "VAR_YIELD",
+          "observationVariableName": "Grain yield",
+          "value": "9.2"
+        }
+      ]
+    }
+  },
+  "germplasm": {
+    "metadata": {"pagination": {"currentPage": 0, "totalCount": 2, "totalPages": 1}},
+    "result": {
+      "data": [
+        {
+          "germplasmDbId": "G1",
+          "germplasmName": "B73",
+          "accessionNumber": "PI 550473",
+          "genus": "Zea",
+          "species": "Zea mays",
+          "subtaxa": "subsp. mays",
+          "instituteCode": "USDA",
+          "instituteName": "USDA-ARS",
+          "studyDbIds": ["1001"]
+        },
+        {
+          "germplasmDbId": "G2",
+          "germplasmName": "Mo17",
+          "accessionNumber": "PI 558532",
+          "genus": "Zea",
+          "species": "Zea mays",
+          "instituteCode": "USDA",
+          "instituteName": "USDA-ARS"
+        }
+      ]
+    }
+  }
+}
