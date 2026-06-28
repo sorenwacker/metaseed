@@ -181,6 +181,29 @@ class TestSpecComparator:
             "profile_b": "^[a-z]+$",
         }
 
+    def test_constraint_only_diff_is_a_conflict(
+        self, comparator: SpecComparator
+    ) -> None:
+        """A field differing only in a constraint is a CONFLICT, so the merge
+        strategy resolves it (e.g. 'tighter wins') rather than the merger
+        silently taking the first spec.
+        """
+        from metaseed.specs.schema import Constraints
+
+        field_a = FieldSpec(
+            name="code", type=FieldType.STRING, constraints=Constraints(max_length=10)
+        )
+        field_b = FieldSpec(
+            name="code", type=FieldType.STRING, constraints=Constraints(max_length=20)
+        )
+
+        diff_type, _, _ = comparator._analyze_field_diff(
+            {"profile_a": field_a, "profile_b": field_b},
+            ["profile_a", "profile_b"],
+        )
+
+        assert diff_type == DiffType.CONFLICT
+
     def test_compare_statistics(self, comparator: SpecComparator) -> None:
         """Comparison provides statistics."""
         result = comparator.compare(

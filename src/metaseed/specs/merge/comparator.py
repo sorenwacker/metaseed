@@ -436,6 +436,10 @@ class SpecComparator:
                 key = f"constraints.{constraint_attr}"
                 changed_attrs.append(key)
                 values[key] = constraint_values
+            # A constraint difference is a conflict the merge strategy must
+            # resolve (e.g. "tighter constraints win"); without this it would be
+            # MODIFIED and the merger would silently take the first spec.
+            has_conflict = True
 
         if has_conflict:
             return DiffType.CONFLICT, changed_attrs, values
