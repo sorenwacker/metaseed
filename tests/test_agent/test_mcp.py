@@ -775,6 +775,46 @@ class TestMCPIntegration:
             assert len(state.entity_tree[0].children) == 1
             assert state.entity_tree[0].children[0].id == study["id"]
 
+    def test_batch_create_auto_fills_reference_fields(self):
+        """batch_create fills a missing reference field when there is exactly one
+        candidate parent, matching create_entity (REVIEW.md consistency finding).
+        """
+        from metaseed.agent.mcp.server import set_mcp_state
+        from metaseed.ui.state import AppState
+
+        server = create_server()
+        tools = server._tool_manager._tools
+
+        state = AppState(profile="miappe")
+        set_mcp_state(state)
+
+        with patch("metaseed.ui.datasets.auto_save"):
+            inv = json.loads(
+                tools.get("create_entity").fn(
+                    entity_type="Investigation",
+                    data='{"unique_id": "inv-batch", "title": "Parent"}',
+                )
+            )
+            if "error" in inv:
+                pytest.skip(f"Profile not available: {inv['error']}")
+
+            result = json.loads(
+                tools.get("batch_create").fn(
+                    entities=json.dumps(
+                        [
+                            {
+                                "entity_type": "Study",
+                                "data": {"unique_id": "study-batch", "title": "Child"},
+                            }
+                        ]
+                    )
+                )
+            )
+            study_id = result["results"][0]["id"]
+            instance = state.nodes_by_id[study_id].instance
+
+            assert getattr(instance, "investigation_id", None) == "inv-batch"
+
     def test_get_entity_tree_shows_hierarchy(self):
         """Test that get_entity_tree correctly shows parent-child relationships."""
         from metaseed.agent.mcp.server import set_mcp_state

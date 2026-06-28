@@ -97,6 +97,7 @@ def register_entity_crud_routes(
                 instance,
                 f"Created {entity_type}: {node.label}",
                 state,
+                created=True,
             )
 
         except ValidationError as e:
@@ -205,6 +206,7 @@ def register_entity_crud_routes(
                 msg,
                 state,
                 message_type=msg_type,
+                created=False,
             )
 
         except ValidationError as e:
@@ -299,6 +301,7 @@ def render_entity_form(
     message: str,
     state: AppState | None = None,
     message_type: str = "success",
+    created: bool = False,
 ) -> HTMLResponse:
     """Render entity form after successful create/update."""
     values = (
@@ -336,10 +339,7 @@ def render_entity_form(
             "child_entity_types": child_entity_types,
         },
     )
-    if "Created" in message:
-        response.headers["HX-Trigger"] = "entityCreated"
-    else:
-        response.headers["HX-Trigger"] = "entityUpdated"
+    response.headers["HX-Trigger"] = "entityCreated" if created else "entityUpdated"
     return response
 
 

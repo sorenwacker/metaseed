@@ -865,3 +865,33 @@ class TestErrorHierarchy:
         assert error.profile == "miappe"
         assert "BadType" in str(error)
         assert "miappe" in str(error)
+
+
+class TestAlternateConstructorErrors:
+    """Alternate constructors must translate internal errors into MetaseedError
+    (InvalidSpecError), not leak pydantic/YAML/filesystem exceptions."""
+
+    def test_from_spec_invalid_dict_raises_invalid_spec_error(self):
+        from metaseed.api import InvalidSpecError
+
+        with pytest.raises(InvalidSpecError):
+            MetaseedClient.from_spec({"not": "a valid spec"})
+
+    def test_from_yaml_missing_file_raises_invalid_spec_error(self):
+        from metaseed.api import InvalidSpecError
+
+        with pytest.raises(InvalidSpecError):
+            MetaseedClient.from_yaml("/no/such/file.yaml")
+
+    def test_from_yaml_malformed_yaml_raises_invalid_spec_error(self, tmp_path):
+        from metaseed.api import InvalidSpecError
+
+        bad = tmp_path / "bad.yaml"
+        bad.write_text("this: : : not valid\n[unclosed")
+        with pytest.raises(InvalidSpecError):
+            MetaseedClient.from_yaml(str(bad))
+
+    def test_invalid_spec_error_is_a_metaseed_error(self):
+        from metaseed.api import InvalidSpecError
+
+        assert issubclass(InvalidSpecError, MetaseedError)

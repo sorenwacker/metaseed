@@ -71,6 +71,27 @@ class ProfileNotFoundError(MetaseedError):
         super().__init__(message)
 
 
+class InvalidSpecError(MetaseedError):
+    """A provided profile spec (dict or YAML file) is invalid or unreadable.
+
+    Raised by the alternate constructors (``from_spec``, ``from_yaml``) so the
+    caller catches a metaseed error rather than a leaked pydantic, YAML, or
+    filesystem exception.
+
+    Attributes:
+        detail: The underlying reason the spec could not be loaded.
+    """
+
+    def __init__(self, detail: str) -> None:
+        """Initialize the error.
+
+        Args:
+            detail: Description of why the spec is invalid.
+        """
+        self.detail = detail
+        super().__init__(f"Invalid profile spec: {detail}")
+
+
 class EntityNotFoundError(MetaseedError):
     """Entity not found in store.
 
