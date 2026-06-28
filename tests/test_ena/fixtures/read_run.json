@@ -1,0 +1,40 @@
+[
+  {
+    "study_accession": "PRJEB10000",
+    "study_title": "Example drought RNA-seq",
+    "sample_accession": "SAMEA001",
+    "sample_alias": "leaf-1",
+    "tax_id": "4577",
+    "scientific_name": "Zea mays",
+    "experiment_accession": "ERX001",
+    "library_name": "lib-1",
+    "library_strategy": "RNA-Seq",
+    "library_source": "TRANSCRIPTOMIC",
+    "library_selection": "cDNA",
+    "library_layout": "PAIRED",
+    "instrument_platform": "ILLUMINA",
+    "instrument_model": "Illumina HiSeq 2500",
+    "run_accession": "ERR001",
+    "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/ERR001/ERR001_1.fastq.gz;ftp.sra.ebi.ac.uk/vol1/ERR001/ERR001_2.fastq.gz",
+    "fastq_md5": "aaa111;bbb222"
+  },
+  {
+    "study_accession": "PRJEB10000",
+    "study_title": "Example drought RNA-seq",
+    "sample_accession": "SAMEA002",
+    "sample_alias": "leaf-2",
+    "tax_id": "4577",
+    "scientific_name": "Zea mays",
+    "experiment_accession": "ERX002",
+    "library_name": "lib-2",
+    "library_strategy": "RNA-Seq",
+    "library_source": "TRANSCRIPTOMIC",
+    "library_selection": "cDNA",
+    "library_layout": "PAIRED",
+    "instrument_platform": "ILLUMINA",
+    "instrument_model": "Illumina HiSeq 2500",
+    "run_accession": "ERR002",
+    "fastq_ftp": "ftp.sra.ebi.ac.uk/vol1/ERR002/ERR002_1.fastq.gz",
+    "fastq_md5": "ccc333"
+  }
+]
