@@ -31,29 +31,6 @@ class TestIdRegistry:
         assert registry.exists("observation_unit", "OBS001")
         assert not registry.exists("study", "OBS001")
 
-    def test_get_ids(self) -> None:
-        """Get all IDs for a type."""
-        registry = IdRegistry()
-        registry.register("study", "STU001")
-        registry.register("study", "STU002")
-
-        ids = registry.get_ids("study")
-        assert ids == {"STU001", "STU002"}
-
-    def test_get_ids_empty(self) -> None:
-        """Get IDs for non-existent type returns empty set."""
-        registry = IdRegistry()
-        assert registry.get_ids("nonexistent") == set()
-
-    def test_get_all_types(self) -> None:
-        """Get all registered entity types."""
-        registry = IdRegistry()
-        registry.register("study", "STU001")
-        registry.register("observation_unit", "OBS001")
-
-        types = registry.get_all_types()
-        assert set(types) == {"study", "observation_unit"}
-
 
 class TestDatasetValidationResult:
     """Tests for DatasetValidationResult."""

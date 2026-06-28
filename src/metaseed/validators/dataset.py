@@ -98,25 +98,6 @@ class IdRegistry:
         """
         return entity_id in self._ids.get(entity_type, set())
 
-    def get_ids(self: Self, entity_type: str) -> set[str]:
-        """Get all registered IDs for an entity type.
-
-        Args:
-            entity_type: The type of entity.
-
-        Returns:
-            Set of registered IDs, or empty set if none.
-        """
-        return self._ids.get(entity_type, set()).copy()
-
-    def get_all_types(self: Self) -> list[str]:
-        """Get all registered entity types.
-
-        Returns:
-            List of entity type names.
-        """
-        return list(self._ids.keys())
-
 
 class DatasetValidator:
     """Validates datasets with reference integrity checking.
