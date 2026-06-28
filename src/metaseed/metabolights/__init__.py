@@ -16,13 +16,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from metaseed.metabolights.export import to_metabolights
 from metaseed.metabolights.mapper import build_dataset
 
 if TYPE_CHECKING:
     from metaseed.api.client import MetaseedClient
     from metaseed.metabolights.client import MetaboLightsClient
 
-__all__ = ["build_dataset", "import_accession"]
+__all__ = ["build_dataset", "import_accession", "to_metabolights"]
 
 
 def import_accession(
