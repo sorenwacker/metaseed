@@ -72,12 +72,18 @@ pip install 'metaseed[dcat]'
 
 so the model and resolver remain usable without it.
 
-## Viewing the card
+## Viewing and editing the card
 
-The dev UI exposes a read-only viewer at `GET /dcat` that renders the DCAT card
-(Turtle + JSON-LD) for the dataset currently loaded in the editor. It is a
-preview of the export/exposure work (#30); a proper harvestable endpoint
-(content negotiation, embedded JSON-LD on a landing page) follows there.
+The UI's **DCAT** panel shows the card (Turtle + JSON-LD) for the loaded dataset,
+with copy/download buttons and an editor for the explicit `CatalogMetadata`
+(title, description, publisher, license, keywords). The editor posts to
+`POST /api/dcat/metadata`; the values are held on the session state and
+round-tripped through dataset save/load. This is how record-rooted profiles
+(Darwin Core, DiSSCo) supply the dataset-level metadata they cannot derive.
+A standalone read-only page is also served at `GET /dcat`.
+
+A proper *harvestable* endpoint (content negotiation, embedded JSON-LD on a
+landing page) is the remaining export step (#30).
 
 ## Out of scope for the core adapter
 
