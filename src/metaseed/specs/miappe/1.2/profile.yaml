@@ -1,3 +1,4 @@
+spec_version: '0.5'
 version: '1.2'
 name: miappe
 display_name: MIAPPE
@@ -309,6 +310,7 @@ entities:
       - https://doi.org/10.1234/example.2024.002
     fields:
     - name: unique_id
+      dcat: dct:identifier
       codename: investigationDbId
       type: string
       required: true
@@ -319,6 +321,7 @@ entities:
         min_length: 1
         max_length: 100
     - name: title
+      dcat: dct:title
       codename: investigationName
       type: string
       required: true
@@ -328,12 +331,14 @@ entities:
         min_length: 1
         max_length: 255
     - name: description
+      dcat: dct:description
       codename: investigationDescription
       type: string
       required: false
       description: Detailed description of the investigation.
       ontology_term: PPEO:hasDescription
     - name: submission_date
+      dcat: dct:issued
       codename: submissionDate
       type: date
       required: false
@@ -346,6 +351,7 @@ entities:
       description: 'Date of public release. Format: ISO 8601 (YYYY-MM-DD).'
       ontology_term: PPEO:hasPublicReleaseDate
     - name: license
+      dcat: dct:license
       codename: license
       type: uri
       required: false
@@ -360,6 +366,7 @@ entities:
       constraints:
         pattern: ^[0-9]+\.[0-9]+$
     - name: associated_publications
+      dcat: dct:relation
       codename: publications
       type: list
       items: string
@@ -367,6 +374,7 @@ entities:
       description: DOIs or URLs to associated publications.
       ontology_term: PPEO:hasAssociatedPublication
     - name: contacts
+      dcat: dcat:contactPoint
       codename: contacts
       type: list
       items: Person

@@ -6,6 +6,7 @@
 # - https://ena-docs.readthedocs.io/en/latest/submit/general-guide/metadata.html
 # - https://github.com/enasequence/webin-xml
 
+spec_version: '0.5'
 version: "1.0"
 name: ena
 display_name: ENA
@@ -281,6 +282,7 @@ entities:
           max_length: 255
 
       - name: accession
+        dcat: dct:identifier
         codename: accession
         type: string
         required: false
@@ -288,6 +290,7 @@ entities:
         ontology_term: SRA:accession
 
       - name: center_name
+        dcat: dct:publisher
         codename: center_name
         type: string
         required: false
@@ -302,6 +305,7 @@ entities:
         ontology_term: SRA:broker_name
 
       - name: title
+        dcat: dct:title
         codename: TITLE
         type: string
         required: true
@@ -312,6 +316,7 @@ entities:
           max_length: 4000
 
       - name: description
+        dcat: dct:description
         codename: DESCRIPTION
         type: string
         required: true
@@ -326,6 +331,7 @@ entities:
         ontology_term: SRA:study_type
 
       - name: pubmed_ids
+        dcat: dct:relation
         codename: PUBMED_ID
         type: list
         items: string

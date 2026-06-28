@@ -1,3 +1,4 @@
+spec_version: '0.5'
 version: '1.0'
 name: isa
 display_name: ISA
@@ -107,21 +108,25 @@ entities:
       '
     fields:
     - name: identifier
+      dcat: dct:identifier
       type: string
       required: true
       description: A locally unique identifier or an accession number provided by a repository
       ontology_term: isaterms:identifier
     - name: title
+      dcat: dct:title
       type: string
       required: true
       description: A concise name given to the investigation
       ontology_term: isaterms:title
     - name: description
+      dcat: dct:description
       type: string
       required: false
       description: A textual description of the investigation
       ontology_term: isaterms:description
     - name: submission_date
+      dcat: dct:issued
       type: date
       required: false
       description: Date on which the investigation was reported to the repository (ISO8601)
@@ -141,11 +146,13 @@ entities:
       required: false
       description: Ontology sources referenced by OntologyAnnotations in this descriptor
     - name: publications
+      dcat: dct:relation
       type: list
       items: Publication
       required: false
       description: Publications associated with the investigation
     - name: contacts
+      dcat: dcat:contactPoint
       type: list
       items: Person
       required: false

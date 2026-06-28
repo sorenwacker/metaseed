@@ -42,9 +42,11 @@ def _build_card(state: AppState) -> tuple[DcatDataset, str, str]:
         facade.version, facade.profile
     )
     name = get_current_dataset_name(state) or "dataset"
+    root_def = spec.entities.get(spec.root_entity)
+    root_fields = root_def.fields if root_def else []
 
     dataset = build_dcat_dataset_from_entities(
-        profile=facade.profile,
+        root_fields=root_fields,
         root_entity_type=spec.root_entity,
         entities=facade.to_dict(),
         identifier=name,

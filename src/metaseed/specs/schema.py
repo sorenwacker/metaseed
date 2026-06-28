@@ -86,6 +86,9 @@ class FieldSpec(BaseModel):
             Fields with parent_ref are auto-filled from parent context and hidden in nested forms.
         unique_within: Uniqueness scope ("parent" or "global").
         reference: Entity.field reference for integrity validation.
+        dcat: DCAT/DCAT-AP property this field maps to on the dataset card
+            (e.g. "dct:title", "dct:issued", "dct:license", "dcat:contactPoint").
+            Only meaningful on the profile's root entity. See metaseed.dcat.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -102,6 +105,7 @@ class FieldSpec(BaseModel):
     parent_ref: str | None = None
     unique_within: str | None = None
     reference: str | None = None
+    dcat: str | None = None
 
     def is_nested(self: Self) -> bool:
         """Check if this field represents a nested entity.

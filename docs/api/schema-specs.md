@@ -76,6 +76,7 @@ The `spec_version` field indicates which version of the specification language f
 | `0.2` | Adds `ontologies` section for structured ontology definitions. |
 | `0.3` | Adds explicit `type` and `message` fields to validation rules, plus `lat_field`, `lon_field`, `start_field`, `end_field` for explicit field configuration. |
 | `0.4` | Adds `ontologies` field to FieldSpec for scoping `ontology_term` type fields to specific OLS ontologies. |
+| `0.5` | Adds `dcat` field to FieldSpec for mapping a root entity's fields onto DCAT/DCAT-AP properties (see DCAT Mapping). |
 
 Existing specs without `spec_version` are automatically treated as version `0.1`.
 
@@ -195,6 +196,7 @@ fields:
 | `items` | conditional | Element type for `list` or target for `entity` |
 | `reference` | no | Entity reference in format "Entity.field" (see Relationships) |
 | `unique_within` | no | Uniqueness scope: "parent" or "global" |
+| `dcat` | no | DCAT/DCAT-AP property this root-entity field maps to (see DCAT Mapping) |
 
 ## Field Types
 
@@ -237,6 +239,53 @@ Fields with `type: ontology_term` enable OLS4 (Ontology Lookup Service) integrat
 The `ontologies` field accepts a list of OLS IDs (e.g., `po`, `pato`, `ncbitaxon`). When omitted, searches across all available ontologies.
 
 See [Ontology Lookup Guide](../guides/ontology-lookup.md) for details on autocomplete, modal search, and configuration.
+
+### DCAT Mapping
+
+*(spec_version 0.5+)*
+
+The optional `dcat` annotation declares which [DCAT](https://www.w3.org/TR/vocab-dcat-3/) / DCAT-AP property a field provides when a dataset is described as a catalog "card" for discovery (e.g. for a data portal or a FAIR-assessment tool). It is the discovery-layer analogue of `ontology_term`: where `ontology_term` says what a field *means* semantically, `dcat` says what catalog property it *fills*.
+
+The annotation is only read on the **profile's root entity** (the dataset-level container, e.g. `Investigation` for MIAPPE/ISA, `Study` for ENA). Annotations on non-root entities are ignored.
+
+Supported terms and the DCAT Dataset property each fills:
+
+| `dcat` value | Fills | Expected field shape |
+|--------------|-------|----------------------|
+| `dct:identifier` | dataset identifier | scalar |
+| `dct:title` | title | scalar |
+| `dct:description` | description | scalar |
+| `dct:issued` | issued date | scalar (date) |
+| `dct:license` | license | scalar (URI or string) |
+| `dct:accessRights` | access rights | scalar |
+| `dct:publisher` | publisher name | scalar |
+| `dct:relation` | related resources (e.g. publications) | scalar or list |
+| `dcat:contactPoint` | contact point | a list of contact objects (`name`/`email`) |
+| `dcat:keyword` | keywords | scalar or list |
+| `dcat:theme` | themes | scalar or list |
+| `dcat:landingPage` | landing page | scalar (URI) |
+
+Example — a MIAPPE `Investigation` root entity:
+
+```yaml
+- name: title
+  type: string
+  dcat: dct:title
+- name: submission_date
+  type: date
+  dcat: dct:issued
+- name: license
+  type: uri
+  dcat: dct:license
+- name: contacts
+  type: list
+  items: Person
+  dcat: dcat:contactPoint
+```
+
+Profiles whose root entity is a single record rather than a dataset container (e.g. Darwin Core `Occurrence`) have no dataset-level fields to annotate; their card metadata comes instead from an explicit, dataset-level catalog-metadata block. Explicit catalog metadata also overrides any value derived from an annotation.
+
+See [DCAT Export](../architecture/dcat.md) for the full mapping, serialization (JSON-LD / Turtle), and the in-app viewer.
 
 ### List Fields
 
