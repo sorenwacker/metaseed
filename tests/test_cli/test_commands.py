@@ -161,6 +161,35 @@ title: Test Investigation
         content = output_path.read_text()
         assert "{" not in content  # YAML shouldn't have braces
 
+    def test_convert_respects_profile_option(self, tmp_path: Path) -> None:
+        """convert must load the model for the requested --profile.
+
+        Regression: the resolved profile was dropped and get_model defaulted to
+        'miappe', so a non-MIAPPE --profile loaded the wrong model (or failed).
+        Darwin Core's Occurrence does not exist under miappe, so a successful
+        conversion proves the profile is honored (REVIEW.md high finding).
+        """
+        input_path = tmp_path / "occ.yaml"
+        input_path.write_text("occurrenceID: OCC001\nbasisOfRecord: HumanObservation\n")
+        output_path = tmp_path / "occ.json"
+
+        result = runner.invoke(
+            app,
+            [
+                "convert",
+                str(input_path),
+                str(output_path),
+                "--entity",
+                "Occurrence",
+                "--profile",
+                "darwin-core",
+            ],
+        )
+
+        assert result.exit_code == 0, result.output
+        assert output_path.exists()
+        assert "OCC001" in output_path.read_text()
+
 
 class TestEntitiesCommand:
     """Tests for entities command."""

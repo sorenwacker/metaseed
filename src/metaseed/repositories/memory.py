@@ -160,11 +160,13 @@ class MemoryEntityRepository(EntityRepository):
 
         merged = {**existing, **data}
         instance = helper.create(**merged)
-        self._state.update_node(entity_id, instance)
+        updated = self._state.update_node(entity_id, instance)
 
         auto_save(self._state)
 
-        return self._node_to_entity(node, include_children=False)
+        # Serialize the post-update node; the original `node` still references
+        # the pre-update instance and would return stale data.
+        return self._node_to_entity(updated or node, include_children=False)
 
     def delete_entity(self: Self, entity_id: str) -> bool:
         """Delete entity from AppState."""

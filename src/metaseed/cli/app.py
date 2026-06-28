@@ -248,7 +248,7 @@ def convert(
         raise typer.Exit(ExitCode.INPUT_ERROR)
 
     try:
-        Model = get_model(entity, version)
+        Model = get_model(entity, version, profile)
     except SpecLoadError as e:
         echo_error(str(e))
         raise typer.Exit(ExitCode.CONFIG_ERROR) from None
