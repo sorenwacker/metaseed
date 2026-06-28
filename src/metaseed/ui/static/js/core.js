@@ -173,9 +173,26 @@ function showDcatCard() {
                 return d.innerHTML;
             };
 
+            var attr = function(s) { return esc(s).replace(/"/g, '&quot;'); };
+
             var name = data.title || data.identifier || 'this dataset';
             var html = '<p class="dcat-card-hint">Catalog/discovery metadata for <strong>'
                 + esc(name) + '</strong> — what a data portal or a FAIR tool (F-UJI) would ingest.</p>';
+
+            // Editor for explicit catalog metadata (needed for profiles whose
+            // root entity is not a dataset container, e.g. Darwin Core).
+            var m = data.metadata || {};
+            html += '<details class="dcat-card-meta"><summary>Edit catalog metadata</summary>'
+                + '<form class="dcat-meta-form" onsubmit="saveDcatMetadata(event)">'
+                + '<label>Title<input name="title" value="' + attr(m.title) + '"></label>'
+                + '<label>Description<textarea name="description" rows="2">' + esc(m.description) + '</textarea></label>'
+                + '<label>Publisher<input name="publisher" value="' + attr(m.publisher) + '"></label>'
+                + '<label>License<input name="license" value="' + attr(m.license) + '"></label>'
+                + '<label>Keywords <span class="dcat-meta-hint">(comma-separated)</span>'
+                + '<input name="keywords" value="' + attr(m.keywords) + '"></label>'
+                + '<button type="submit" class="btn btn-secondary btn-sm">Save metadata</button>'
+                + '</form></details>';
+
             html += '<div class="dcat-card-actions">'
                 + '<button class="btn btn-secondary btn-sm" onclick="dcatCopy(\'turtle\')">Copy Turtle</button>'
                 + '<button class="btn btn-secondary btn-sm" onclick="dcatDownload(\'turtle\')">Download .ttl</button>'
@@ -215,6 +232,20 @@ function dcatDownload(fmt) {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+}
+
+function saveDcatMetadata(event) {
+    event.preventDefault();
+    var body = new URLSearchParams(new FormData(event.target));
+    fetch('/api/dcat/metadata', { method: 'POST', body: body })
+        .then(function(response) {
+            if (!response.ok) { throw new Error('HTTP ' + response.status); }
+            showNotification('success', 'Catalog metadata saved');
+            showDcatCard();  // refresh the card with the new values
+        })
+        .catch(function(err) {
+            showNotification('error', 'Save failed: ' + err.message);
+        });
 }
 
 function closeDcatPanel() {

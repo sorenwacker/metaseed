@@ -5561,3 +5561,12 @@ details.sidebar-section summary:hover {
     gap: 0.4rem;
     margin: 0 0 1rem;
 }
+.dcat-card-meta { margin: 0 0 1rem; font-size: 0.85rem; }
+.dcat-card-meta summary { cursor: pointer; color: var(--text-secondary, #555); }
+.dcat-meta-form { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.6rem; }
+.dcat-meta-form label { display: flex; flex-direction: column; gap: 0.2rem; }
+.dcat-meta-form input, .dcat-meta-form textarea {
+    padding: 0.35rem 0.5rem; border: 1px solid var(--clr-border, #ccc);
+    border-radius: 6px; font: inherit; width: 100%; box-sizing: border-box;
+}
+.dcat-meta-hint { color: #888; font-weight: normal; }
