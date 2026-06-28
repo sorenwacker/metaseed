@@ -324,6 +324,29 @@ class TestHtmxHeaders:
         assert response.status_code == 200
         assert response.headers.get("HX-Trigger") == "entityCreated"
 
+    def test_update_with_created_in_label_fires_entity_updated(self, client):
+        """An update whose label contains the word 'Created' must still fire
+        entityUpdated. Regression: the trigger was chosen by substring-matching
+        the user-facing message, so a 'Created'-containing label misfired.
+        """
+        client.post(
+            "/entity",
+            data={
+                "_entity_type": "Investigation",
+                "unique_id": "INV-002",
+                "title": "Created plots",
+            },
+        )
+        node_id = next(iter(client.app.state.ui_state.nodes_by_id.keys()))
+
+        response = client.put(
+            f"/entity/{node_id}",
+            data={"unique_id": "INV-002", "title": "Created plots"},
+        )
+
+        assert response.status_code == 200
+        assert response.headers.get("HX-Trigger") == "entityUpdated"
+
 
 class TestAppState:
     """Tests for AppState class."""
