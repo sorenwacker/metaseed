@@ -62,6 +62,23 @@ try:
 except ImportError:
     __version__ = "0.0.0+unknown"
 
+
+def list_profiles() -> list[str]:
+    """List the names of all available profiles.
+
+    Searches both the built-in and user spec directories.
+
+    Returns:
+        Profile names, e.g. ``["miappe", "isa", "darwin-core"]``.
+
+    Example:
+        >>> import metaseed
+        >>> "miappe" in metaseed.list_profiles()
+        True
+    """
+    return SpecLoader().list_profiles()
+
+
 __all__ = [
     "Entity",
     "EntityNode",
@@ -84,6 +101,7 @@ __all__ = [
     "get_model",
     "isa",
     "jerm",
+    "list_profiles",
     "metabolights",
     "miappe",
     "miappe_htp",
