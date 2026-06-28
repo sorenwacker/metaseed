@@ -76,6 +76,7 @@ nav:
       - Spec Builder Engine: architecture/spec-builder.md
       - DCAT Export: architecture/dcat.md
       - ENA Integration: architecture/ena-import.md
+      - PRIDE Import: architecture/pride-import.md
       - Codebase Review: REVIEW.md
   - API Reference:
       - MetaseedClient: api/client.md

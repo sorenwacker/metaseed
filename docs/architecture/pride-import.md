@@ -1,0 +1,83 @@
+# PRIDE Import
+
+An ingest bridge to the [PRIDE Archive](https://www.ebi.ac.uk/pride): **import**
+public proteomics metadata for a ProteomeXchange accession into a validated
+`pride`-profile dataset. It follows the same seam as the
+[ENA importer](ena-import.md) (the reference ingest adapter). It lives in
+`metaseed.pride`.
+
+## What it does
+
+```python
+from metaseed.pride import import_accession
+
+client = import_accession("PXD000001")   # needs the metaseed[pride] extra
+client.validate()                          # report any field gaps
+client.serialize()                         # the pride dataset
+```
+
+Given a ProteomeXchange accession, it fetches the project metadata and file list
+from the PRIDE Archive `v2` web service and builds a single `Dataset` carrying
+its nested Species, Instruments, Modifications, Contacts, Publications, Samples,
+and referenced DataFiles.
+
+## The seam
+
+`accession → fetch metadata → map (spec-driven) → validate → dataset`, in three
+parts:
+
+- **`metaseed.pride.client.PrideClient`** — calls the PRIDE Archive `v2`
+  endpoints `GET /projects/{accession}` (project metadata) and
+  `GET /projects/{accession}/files` (file list, unwrapping the HAL paged
+  `{"_embedded": {"files": [...]}}` shape when present). Sends a descriptive
+  `User-Agent` (EBI etiquette) and accepts an injected `httpx.Client` for
+  testing. Requires `httpx` (the `metaseed[pride]` extra).
+- **`metaseed.pride.mapper.build_dataset`** — pure and network-free: maps the
+  project record plus file list into `pride`-profile entities. Importable
+  without the extra.
+- **`metaseed.pride.import_accession`** — wires the two together.
+
+## Mapping
+
+The `pride` profile is *composed*: a single root `Dataset` holds the other
+entity types as nested lists.
+
+| PRIDE source field | pride target |
+| --- | --- |
+| `accession` | `Dataset.identifier`, `Dataset.accession` |
+| `title`, `projectDescription` | `Dataset.title`, `Dataset.description` |
+| `sampleProcessingProtocol`, `dataProcessingProtocol` | the matching `Dataset` protocol fields |
+| `submissionType`, `publicationDate`, `keywords` | `Dataset.submission_type`, `announcement_date`, `keywords` |
+| `organisms[]` | `Dataset.species[]` and synthesized `Dataset.samples[]` |
+| `instruments[]` | `Dataset.instruments[]` (CV accession + name) |
+| `identifiedPTMStrings[]` | `Dataset.modifications[]` |
+| `submitters[]`, `labPIs[]` | `Dataset.contacts[]` (roles `submitter` / `lab head`) |
+| `references[]` | `Dataset.publications[]` |
+| files list | `Dataset.files[]` (DataFile references) |
+
+## Design choices
+
+- **Metadata, not raw data.** RAW/mzML/peak-list files are *referenced* — each
+  becomes a `DataFile` entity carrying its name, type, format, size, and
+  checksum — never downloaded.
+- **Composed dataset.** PRIDE describes one project; the import produces a single
+  `Dataset` with the related records nested in its list fields, rather than a
+  graph of cross-referenced entities.
+- **Samples synthesized from organisms.** The project endpoint does not expose
+  individual biological samples, so one `Sample` is derived per organism,
+  enriched with the project's first organism part and disease when present.
+- **Lenient build.** The `Dataset` is created with `skip_validation`, so a
+  project that omits a field does not abort the import; `client.validate()`
+  reports gaps (including the profile's `min_items` rules) afterwards. Empty
+  values are dropped so missing fields are absent, not blank.
+- **Optional extra.** The network dependency installs only with
+  `pip install "metaseed[pride]"`; importing `metaseed.pride.mapper` (the pure
+  mapper) needs nothing extra, and importing `metaseed.pride` does not pull in
+  the web framework.
+
+## Testing
+
+The mapper is tested from recorded `project` and `files` fixtures; the client is
+tested with an `httpx` mock transport (request shape, JSON parsing, and the HAL
+paged unwrapping). One live smoke test against the real PRIDE API is marked
+`network` and excluded from the default run.

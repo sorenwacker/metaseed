@@ -1,0 +1,74 @@
+[
+  {
+    "projectAccessions": ["PXD000001"],
+    "accession": "5bda360133398f66021c8889e01dce921cb51300c7269e1f2b0f20368ab20af6",
+    "fileCategory": {
+      "@type": "CvParam",
+      "cvLabel": "PRIDE",
+      "accession": "PRIDE:0000410",
+      "name": "Other type file URI",
+      "value": "OTHER"
+    },
+    "checksum": "",
+    "publicFileLocations": [
+      {
+        "@type": "CvParam",
+        "cvLabel": "PRIDE",
+        "accession": "PRIDE:0000469",
+        "name": "FTP Protocol",
+        "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2012/03/PXD000001/generated/PRIDE_Exp_Complete_Ac_22134.pride.mztab.gz"
+      }
+    ],
+    "fileSizeBytes": 497985,
+    "fileName": "PRIDE_Exp_Complete_Ac_22134.pride.mztab.gz",
+    "compress": false
+  },
+  {
+    "projectAccessions": ["PXD000001"],
+    "accession": "ca2e3dea18950a328b7dc8303911961267a2c19058e67bfe49ab0d6784c3f62b",
+    "fileCategory": {
+      "@type": "CvParam",
+      "cvLabel": "PRIDE",
+      "accession": "PRIDE:0000409",
+      "name": "Peak list file URI",
+      "value": "PEAK"
+    },
+    "checksum": "098f6bcd4621d373cade4e832627b4f6",
+    "publicFileLocations": [
+      {
+        "@type": "CvParam",
+        "cvLabel": "PRIDE",
+        "accession": "PRIDE:0000469",
+        "name": "FTP Protocol",
+        "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2012/03/PXD000001/generated/PRIDE_Exp_Complete_Ac_22134.pride.mgf.gz"
+      }
+    ],
+    "fileSizeBytes": 16448103,
+    "fileName": "PRIDE_Exp_Complete_Ac_22134.pride.mgf.gz",
+    "compress": false
+  },
+  {
+    "projectAccessions": ["PXD000001"],
+    "accession": "8ce43227bda837e3cad6c4fa1b11c4094291c48d76ca469c66e0a4e1efebd7e7",
+    "fileCategory": {
+      "@type": "CvParam",
+      "cvLabel": "PRIDE",
+      "accession": "PRIDE:0000404",
+      "name": "Raw file URI",
+      "value": "RAW"
+    },
+    "checksum": "",
+    "publicFileLocations": [
+      {
+        "@type": "CvParam",
+        "cvLabel": "PRIDE",
+        "accession": "PRIDE:0000469",
+        "name": "FTP Protocol",
+        "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2012/03/PXD000001/TMT_Erwinia_1uLSike_Top10HCD_isol2_45stepped_60min_01.raw"
+      }
+    ],
+    "fileSizeBytes": 243031280,
+    "fileName": "TMT_Erwinia_1uLSike_Top10HCD_isol2_45stepped_60min_01.raw",
+    "compress": false
+  }
+]
