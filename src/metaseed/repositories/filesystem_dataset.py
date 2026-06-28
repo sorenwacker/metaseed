@@ -7,11 +7,13 @@ This is the default implementation used by metaseed standalone.
 from __future__ import annotations
 
 import json
+from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
-from typing import Self
+from typing import Any, Self
 
 from metaseed.repositories.dataset_repository import (
+    CatalogMetadata,
     DatasetData,
     DatasetInfo,
     DatasetRepository,
@@ -98,13 +100,15 @@ class FilesystemDatasetRepository(DatasetRepository):
 
         modified = data.modified or datetime.now().isoformat()
 
-        file_data = {
+        file_data: dict[str, Any] = {
             "name": name,
             "profile": data.profile,
             "version": data.version,
             "entities": data.entities,
             "modified": modified,
         }
+        if data.catalog_metadata is not None:
+            file_data["catalog_metadata"] = asdict(data.catalog_metadata)
 
         with open(path, "w") as f:
             json.dump(file_data, f, indent=2, default=str)
@@ -137,12 +141,16 @@ class FilesystemDatasetRepository(DatasetRepository):
         with open(path) as f:
             data = json.load(f)
 
+        catalog_metadata = data.get("catalog_metadata")
         return DatasetData(
             name=data.get("name", name),
             profile=data.get("profile", "unknown"),
             version=data.get("version", "unknown"),
             entities=data.get("entities", []),
             modified=data.get("modified", ""),
+            catalog_metadata=(
+                CatalogMetadata(**catalog_metadata) if catalog_metadata else None
+            ),
         )
 
     def delete(self: Self, name: str) -> bool:

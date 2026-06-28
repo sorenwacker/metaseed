@@ -135,6 +135,10 @@ def create_app(state: AppState | None = None, base_url: str = "") -> FastAPI:
     register_api_routes(app, get_state)
     register_explore_routes(app, templates, get_state, base_url=base_url)
 
+    from .routes.dcat import register_dcat_routes
+
+    register_dcat_routes(app, get_state)
+
     return app
 
 

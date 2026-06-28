@@ -33,6 +33,29 @@ class DatasetInfo:
 
 
 @dataclass
+class CatalogMetadata:
+    """Optional dataset-level descriptive metadata.
+
+    Generic catalog/discovery metadata that does not live in the profile content
+    model. It is the explicit source for fields that record-rooted profiles
+    (e.g. Darwin Core) cannot derive from their root entity, and the override
+    source for profiles that can. Field names are generic; the DCAT adapter maps
+    them onto DCAT/DCAT-AP properties.
+    """
+
+    title: str | None = None
+    description: str | None = None
+    publisher: str | None = None
+    license: str | None = None
+    issued: str | None = None
+    contact_name: str | None = None
+    contact_email: str | None = None
+    landing_page: str | None = None
+    keywords: list[str] = field(default_factory=list)
+    themes: list[str] = field(default_factory=list)
+
+
+@dataclass
 class DatasetData:
     """Full dataset contents including entities.
 
@@ -44,6 +67,7 @@ class DatasetData:
     version: str
     entities: list[dict[str, Any]] = field(default_factory=list)
     modified: str = ""
+    catalog_metadata: CatalogMetadata | None = None
 
 
 def validate_dataset_name(name: str) -> str | None:

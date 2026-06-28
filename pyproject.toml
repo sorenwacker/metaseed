@@ -34,6 +34,7 @@ dependencies = [
 dev = [
     "pytest>=8.0",
     "pytest-cov>=5.0",
+    "pytest-xdist>=3.5",
     "ruff>=0.4",
     "mypy>=1.8",
     "pre-commit>=3.7",
@@ -45,6 +46,9 @@ docs = [
     "mkdocs-material>=9.5",
     "pymdown-extensions>=10.8",
     "mkdocs-panzoom-plugin>=0.4",
+]
+dcat = [
+    "rdflib>=7.0",
 ]
 
 [project.scripts]
@@ -195,6 +199,7 @@ exclude = ["tests/", "docs/"]
 module = [
     "openpyxl.*",
     "yaml.*",
+    "rdflib.*",
 ]
 ignore_missing_imports = true
 

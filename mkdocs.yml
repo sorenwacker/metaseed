@@ -74,6 +74,7 @@ nav:
       - Dataset Repository: architecture/dataset-repository.md
       - UI Helpers: architecture/ui-helpers.md
       - Spec Builder Engine: architecture/spec-builder.md
+      - DCAT Export: architecture/dcat.md
   - API Reference:
       - MetaseedClient: api/client.md
       - CLI: api/cli.md
