@@ -1,0 +1,196 @@
+{
+  "mtblsStudy": {
+    "studyStatus": "PUBLIC",
+    "studyHttpUrl": "http://ftp.ebi.ac.uk/pub/databases/metabolights/studies/public/MTBLS1",
+    "studyFtpUrl": "ftp://ftp.ebi.ac.uk/pub/databases/metabolights/studies/public/MTBLS1"
+  },
+  "isaInvestigation": {
+    "identifier": "MTBLS1",
+    "title": "A metabolomic study of urinary changes in type 2 diabetes",
+    "description": "Type 2 diabetes mellitus is the result of impaired insulin secretion combined with insulin resistance, studied here through urinary metabolite profiling.",
+    "submissionDate": "2012-02-14",
+    "publicReleaseDate": "2012-02-14",
+    "studies": [
+      {
+        "identifier": "MTBLS1",
+        "title": "A metabolomic study of urinary changes in type 2 diabetes",
+        "description": "Urine samples from healthy volunteers and type 2 diabetes patients analysed by NMR.",
+        "submissionDate": "2012-02-14",
+        "publicReleaseDate": "2012-02-14",
+        "studyDesignDescriptors": [
+          {
+            "annotationValue": "diabetes mellitus",
+            "termAccession": "http://www.ebi.ac.uk/efo/EFO_0000400"
+          },
+          {
+            "annotationValue": "untargeted metabolites",
+            "termAccession": ""
+          },
+          {
+            "annotationValue": "NMR spectroscopy",
+            "termAccession": ""
+          }
+        ],
+        "factors": [
+          {
+            "factorName": "Gender",
+            "factorType": {
+              "annotationValue": "Gender",
+              "termAccession": "http://purl.obolibrary.org/obo/NCIT_C17357"
+            }
+          },
+          {
+            "factorName": "Metabolic syndrome",
+            "factorType": {
+              "annotationValue": "Disease",
+              "termAccession": ""
+            }
+          }
+        ],
+        "protocols": [
+          {
+            "name": "Sample collection",
+            "protocolType": {
+              "annotationValue": "Sample collection"
+            },
+            "description": "Midstream urine samples were collected and frozen.",
+            "uri": "",
+            "parameters": [
+              {
+                "parameterName": {
+                  "annotationValue": ""
+                }
+              }
+            ]
+          },
+          {
+            "name": "NMR spectroscopy",
+            "protocolType": {
+              "annotationValue": "NMR spectroscopy"
+            },
+            "description": "Spectra acquired on a Bruker spectrometer.",
+            "uri": "",
+            "parameters": [
+              {
+                "parameterName": {
+                  "annotationValue": "Instrument"
+                }
+              },
+              {
+                "parameterName": {
+                  "annotationValue": "NMR tube type"
+                }
+              }
+            ]
+          }
+        ],
+        "samples": [
+          {
+            "name": "ADG10003u_007",
+            "characteristics": [
+              {
+                "category": {
+                  "characteristicType": {
+                    "annotationValue": "Organism"
+                  }
+                },
+                "value": {
+                  "annotationValue": "Homo sapiens",
+                  "termAccession": "http://purl.obolibrary.org/obo/NCBITaxon_9606"
+                }
+              },
+              {
+                "category": {
+                  "characteristicType": {
+                    "annotationValue": "Organism part"
+                  }
+                },
+                "value": {
+                  "annotationValue": "urine"
+                }
+              }
+            ],
+            "factorValues": [
+              {
+                "category": {
+                  "factorName": "Gender"
+                },
+                "value": {
+                  "annotationValue": "Male"
+                }
+              }
+            ]
+          }
+        ],
+        "assays": [
+          {
+            "measurementType": {
+              "annotationValue": "metabolite profiling"
+            },
+            "technologyType": {
+              "annotationValue": "NMR spectroscopy"
+            },
+            "technologyPlatform": "Nuclear Magnetic Resonance (NMR) - - - Bruker",
+            "filename": "a_MTBLS1_NMR_metabolite_profiling_NMR_spectroscopy.txt",
+            "comments": [
+              {
+                "name": "Metabolite Assignment File",
+                "value": "m_MTBLS1_NMR_metabolite_profiling_v2_maf.tsv"
+              }
+            ],
+            "samples": [
+              {
+                "name": "ADG10003u_007"
+              }
+            ],
+            "dataFiles": [
+              {
+                "name": "ADG10003u_007.zip",
+                "label": "Raw Spectral Data File"
+              }
+            ]
+          }
+        ],
+        "people": [
+          {
+            "firstName": "Reza",
+            "lastName": "Salek",
+            "email": "rms72@cam.ac.uk",
+            "affiliation": "University of Cambridge",
+            "roles": [
+              {
+                "annotationValue": "principal investigator role",
+                "termAccession": ""
+              }
+            ]
+          },
+          {
+            "firstName": "Christian",
+            "lastName": "Steinbeck",
+            "email": "steinbeck@ebi.ac.uk",
+            "affiliation": "EMBL-EBI",
+            "roles": [
+              {
+                "annotationValue": "principal investigator role",
+                "termAccession": ""
+              }
+            ]
+          }
+        ],
+        "publications": [
+          {
+            "title": "A metabolomic study of urinary changes in type 2 diabetes.",
+            "authorList": "Salek RM, Maguire ML, Bentley E, et al.",
+            "doi": "10.1152/physiolgenomics.90264.2008",
+            "pubMedID": "17686970",
+            "status": {
+              "annotationValue": "Published"
+            }
+          }
+        ]
+      }
+    ],
+    "people": [],
+    "publications": []
+  }
+}

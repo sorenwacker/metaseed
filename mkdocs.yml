@@ -78,6 +78,7 @@ nav:
       - ENA Integration: architecture/ena-import.md
       - BrAPI Import: architecture/brapi-import.md
       - PRIDE Import: architecture/pride-import.md
+      - MetaboLights Import: architecture/metabolights-import.md
       - Codebase Review: REVIEW.md
   - API Reference:
       - MetaseedClient: api/client.md
