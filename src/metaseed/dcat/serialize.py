@@ -35,6 +35,16 @@ VCARD = Namespace("http://www.w3.org/2006/vcard/ns#")
 SPDX = Namespace("http://spdx.org/rdf/terms#")
 _BASE = Namespace("urn:metaseed:")
 
+# Minimal JSON-LD context — only the vocabularies the card actually uses, so the
+# output is not padded with rdflib's full default namespace registry.
+_JSONLD_CONTEXT: dict[str, str] = {
+    "dcat": str(DCAT),
+    "dct": str(DCTERMS),
+    "foaf": str(FOAF),
+    "vcard": str(VCARD),
+    "spdx": str(SPDX),
+}
+
 
 def _node_for(identifier: str | None) -> Node:
     """A URIRef from the identifier, or a blank node if there is none."""
@@ -164,5 +174,5 @@ def to_turtle(obj: DcatCatalog | DcatDataset) -> str:
 
 
 def to_jsonld(obj: DcatCatalog | DcatDataset) -> str:
-    """Serialize to JSON-LD."""
-    return to_graph(obj).serialize(format="json-ld", auto_compact=True)
+    """Serialize to JSON-LD with a minimal, card-specific @context."""
+    return to_graph(obj).serialize(format="json-ld", context=_JSONLD_CONTEXT)

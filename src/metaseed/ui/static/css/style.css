@@ -5555,3 +5555,9 @@ details.sidebar-section summary:hover {
     max-height: 40vh;
     overflow-y: auto;
 }
+.dcat-card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin: 0 0 1rem;
+}

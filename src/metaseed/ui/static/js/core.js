@@ -146,6 +146,8 @@ function closeValidationPanel() {
     document.getElementById('validation-panel').classList.add('hidden');
 }
 
+var _dcatCard = null;
+
 function showDcatCard() {
     var btn = document.getElementById('dcat-btn');
     var panel = document.getElementById('dcat-panel');
@@ -163,6 +165,8 @@ function showDcatCard() {
                 return;
             }
 
+            _dcatCard = data;
+
             var esc = function(s) {
                 var d = document.createElement('div');
                 d.textContent = s == null ? '' : s;
@@ -172,6 +176,12 @@ function showDcatCard() {
             var name = data.title || data.identifier || 'this dataset';
             var html = '<p class="dcat-card-hint">Catalog/discovery metadata for <strong>'
                 + esc(name) + '</strong> — what a data portal or a FAIR tool (F-UJI) would ingest.</p>';
+            html += '<div class="dcat-card-actions">'
+                + '<button class="btn btn-secondary btn-sm" onclick="dcatCopy(\'turtle\')">Copy Turtle</button>'
+                + '<button class="btn btn-secondary btn-sm" onclick="dcatDownload(\'turtle\')">Download .ttl</button>'
+                + '<button class="btn btn-secondary btn-sm" onclick="dcatCopy(\'jsonld\')">Copy JSON-LD</button>'
+                + '<button class="btn btn-secondary btn-sm" onclick="dcatDownload(\'jsonld\')">Download .jsonld</button>'
+                + '</div>';
             html += '<h4>Turtle</h4><pre class="dcat-card-pre">' + esc(data.turtle) + '</pre>';
             html += '<h4>JSON-LD</h4><pre class="dcat-card-pre">' + esc(data.jsonld) + '</pre>';
 
@@ -182,6 +192,29 @@ function showDcatCard() {
             btn.disabled = false;
             showNotification('error', 'DCAT failed: ' + err.message);
         });
+}
+
+function dcatCopy(fmt) {
+    if (!_dcatCard) { return; }
+    var text = fmt === 'turtle' ? _dcatCard.turtle : _dcatCard.jsonld;
+    navigator.clipboard.writeText(text).then(function() {
+        showNotification('success', 'Copied ' + (fmt === 'turtle' ? 'Turtle' : 'JSON-LD'));
+    });
+}
+
+function dcatDownload(fmt) {
+    if (!_dcatCard) { return; }
+    var text = fmt === 'turtle' ? _dcatCard.turtle : _dcatCard.jsonld;
+    var ext = fmt === 'turtle' ? 'ttl' : 'jsonld';
+    var blob = new Blob([text], { type: 'text/plain' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = (_dcatCard.identifier || 'dataset') + '.' + ext;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 }
 
 function closeDcatPanel() {
