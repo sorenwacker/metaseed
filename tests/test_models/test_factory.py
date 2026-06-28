@@ -572,3 +572,15 @@ class TestCreateModelFromSpec:
         assert len(inv.studies[0].observed_variables) == 1
         assert inv.studies[0].factors[0].name == "Water"
         assert inv.studies[0].observed_variables[0].name == "Plant Height"
+
+
+def test_model_context_get_returns_none_for_unknown_entity():
+    """ModelContext.get returns None for an unresolvable entity (its contract),
+    rather than letting the loader's SpecLoadError escape."""
+    from metaseed.models import get_model  # noqa: F401  wires the on-demand loader
+    from metaseed.models.factory import get_global_context
+
+    ctx = get_global_context()
+    ctx.set_context("miappe", "1.2")
+
+    assert ctx.get("NoSuchEntity") is None
