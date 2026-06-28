@@ -740,6 +740,10 @@ def register_entity_tools(
                     continue
 
                 try:
+                    # Match create_entity: fill a missing reference field when
+                    # exactly one candidate parent exists, so batched entities
+                    # are linked consistently with singly-created ones.
+                    data = _auto_fill_reference_fields(entity_type, data, service)
                     result = service.create_entity(entity_type, data, parent_id)
                     created = {
                         "index": idx,
