@@ -53,3 +53,23 @@ def test_dcat_api_returns_clean_error_instead_of_crashing(monkeypatch):
 
     assert resp.status_code == 500
     assert "kaboom" in resp.json()["error"]
+
+
+def test_set_catalog_metadata_appears_in_card():
+    """A record-rooted profile (Darwin Core) gets a real title once explicit
+    catalog metadata is set via POST /api/dcat/metadata."""
+    client = TestClient(create_app())
+    client.get("/load-example/darwin-core/1.0", follow_redirects=True)
+
+    # Before: no explicit metadata -> bare card (title falls back to identifier)
+    set_resp = client.post(
+        "/api/dcat/metadata",
+        data={"title": "Bird occurrences 2024", "publisher": "GBIF node"},
+    )
+    assert set_resp.status_code == 200
+
+    card = client.get("/api/dcat").json()
+    assert card["title"] == "Bird occurrences 2024"
+    assert "Bird occurrences 2024" in card["turtle"]
+    assert "GBIF node" in card["turtle"]
+    assert card["metadata"]["publisher"] == "GBIF node"

@@ -104,6 +104,7 @@ class BaseDatasetManager(ABC, Generic[R]):
             version=self._state.version or facade.version,
             entities=facade.to_dict(),
             modified=datetime.now().isoformat(),
+            catalog_metadata=self._state.catalog_metadata,
         )
 
     def _restore_state_from_data(self: Self, data: DatasetData) -> int:
@@ -119,6 +120,7 @@ class BaseDatasetManager(ABC, Generic[R]):
         # AppState uses None to mean "latest"; an empty/missing version must
         # not be pinned as a concrete version (breaks model/entity resolution).
         self._state.version = data.version or None
+        self._state.catalog_metadata = data.catalog_metadata
         self._state.facade = None
         self._state.reset()
 

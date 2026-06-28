@@ -14,6 +14,7 @@ from __future__ import annotations
 import html
 from typing import TYPE_CHECKING
 
+from fastapi import Form
 from fastapi.responses import HTMLResponse, JSONResponse
 
 if TYPE_CHECKING:
@@ -49,6 +50,7 @@ def _build_card(state: AppState) -> tuple[DcatDataset, str, str]:
         root_fields=root_fields,
         root_entity_type=spec.root_entity,
         entities=facade.to_dict(),
+        catalog_metadata=state.catalog_metadata,
         identifier=name,
     )
     catalog = build_dcat_catalog(
@@ -88,22 +90,57 @@ def register_dcat_routes(app: FastAPI, get_state: Callable[[], AppState]) -> Non
 
     @app.get("/api/dcat")
     def dcat_api() -> JSONResponse:
+        state = get_state()
         try:
-            dataset, turtle, jsonld = _build_card(get_state())
+            dataset, turtle, jsonld = _build_card(state)
         except ModuleNotFoundError as exc:
             return JSONResponse({"error": str(exc)}, status_code=501)
         except Exception as exc:  # never leak a 500 stack trace to the client
             return JSONResponse(
                 {"error": f"Could not build the DCAT card: {exc}"}, status_code=500
             )
+        cm = state.catalog_metadata
         return JSONResponse(
             {
                 "title": dataset.title,
                 "identifier": dataset.identifier,
                 "turtle": turtle,
                 "jsonld": jsonld,
+                # Echo the explicit metadata so the editor form can prefill.
+                "metadata": {
+                    "title": (cm.title if cm else None) or "",
+                    "description": (cm.description if cm else None) or "",
+                    "publisher": (cm.publisher if cm else None) or "",
+                    "license": (cm.license if cm else None) or "",
+                    "keywords": ", ".join(cm.keywords) if cm and cm.keywords else "",
+                },
             }
         )
+
+    @app.post("/api/dcat/metadata")
+    def set_dcat_metadata(
+        title: str = Form(""),
+        description: str = Form(""),
+        publisher: str = Form(""),
+        license: str = Form(""),
+        keywords: str = Form(""),
+    ) -> JSONResponse:
+        """Set explicit dataset-level catalog metadata for the DCAT card.
+
+        Lets profiles whose root entity is not a dataset container (e.g. Darwin
+        Core) supply title/description/publisher that cannot be derived.
+        """
+        from metaseed.repositories.dataset_repository import CatalogMetadata
+
+        state = get_state()
+        state.catalog_metadata = CatalogMetadata(
+            title=title.strip() or None,
+            description=description.strip() or None,
+            publisher=publisher.strip() or None,
+            license=license.strip() or None,
+            keywords=[k.strip() for k in keywords.split(",") if k.strip()],
+        )
+        return JSONResponse({"status": "saved"})
 
     @app.get("/dcat", response_class=HTMLResponse)
     def dcat_card() -> HTMLResponse:
