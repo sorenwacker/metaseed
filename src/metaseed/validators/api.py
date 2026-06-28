@@ -204,6 +204,10 @@ def validate_entity(
 
     except PydanticValidationError as e:
         for err in e.errors():
+            # Missing required fields are reported by the engine's
+            # RequiredFieldsRule below; skip them here to avoid a duplicate.
+            if err["type"] == "missing":
+                continue
             field_path = ".".join(str(loc) for loc in err["loc"])
             errors.append(
                 ValidationError(
