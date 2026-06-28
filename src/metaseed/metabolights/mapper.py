@@ -177,6 +177,14 @@ def _add_study(
         skip_validation=True,
     )
 
+    # MetaboLights records people and publications on the study, not the
+    # investigation (where ISA also allows them); map both levels.
+    for person in study.get("people") or []:
+        _add_person(client, person, parent_id=study_entity.id)
+
+    for publication in study.get("publications") or []:
+        _add_publication(client, publication, parent_id=study_entity.id)
+
     for factor in study.get("factors") or []:
         client.create_entity(
             "Factor",
