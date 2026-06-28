@@ -136,6 +136,7 @@ ignore = [
     "S101",    # assert allowed in tests
     "S110",    # try-except-pass - used in test setup
     "S310",    # URL open audit - tests use localhost URLs
+    "S314",    # XML parse - tests parse their own generated XML
     "S603",    # subprocess call - tests need to start servers
     "S607",    # partial executable path - tests use uv/uvicorn
     "ARG",     # unused arguments in fixtures

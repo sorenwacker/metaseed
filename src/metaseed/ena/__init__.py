@@ -15,13 +15,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from metaseed.ena.export import to_ena_xml
 from metaseed.ena.mapper import build_dataset
 
 if TYPE_CHECKING:
     from metaseed.api.client import MetaseedClient
     from metaseed.ena.client import EnaClient
 
-__all__ = ["build_dataset", "import_accession"]
+__all__ = ["build_dataset", "import_accession", "to_ena_xml"]
 
 
 def import_accession(

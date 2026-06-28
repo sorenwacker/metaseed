@@ -1,9 +1,10 @@
-# ENA Import
+# ENA Integration
 
-Imports public metadata from the [European Nucleotide Archive](https://www.ebi.ac.uk/ena)
-into a validated `ena`-profile dataset. It is the reference **importer** — the
-mirror image of the exporters (e.g. [DCAT](dcat.md)) — and establishes the seam
-the other repository importers (BrAPI, PRIDE, MetaboLights) reuse.
+A round-trip bridge to the [European Nucleotide Archive](https://www.ebi.ac.uk/ena):
+**import** public metadata into a validated `ena`-profile dataset, and **export**
+a dataset back to ENA submission XML. The importer is the reference ingest
+adapter (the seam BrAPI/PRIDE/MetaboLights importers reuse); the exporter is the
+round-trip partner. Both live in `metaseed.ena`.
 
 ## What it does
 
@@ -47,9 +48,23 @@ parts:
   mapper) needs nothing extra, and importing `metaseed.ena` does not pull in the
   web framework.
 
+## Export (round-trip)
+
+```python
+from metaseed.ena import to_ena_xml
+
+docs = to_ena_xml(client)        # {"study.xml": ..., "sample.xml": ..., ...}
+```
+
+`to_ena_xml` renders an `ena`-profile dataset as the ENA/SRA submission
+documents — `STUDY_SET`, `SAMPLE_SET`, `EXPERIMENT_SET`, `RUN_SET`. It is pure
+and dependency-free (stdlib `xml.etree`); data files are *referenced* in
+`RUN > DATA_BLOCK > FILES`, never uploaded (submission/auth is out of scope). So
+`import_accession` and `to_ena_xml` round-trip through the same profile.
+
 ## Testing
 
 The mapper is tested from a recorded `read_run` fixture; the client is tested
-with an `httpx` mock transport (request shape + JSON parsing). One live smoke
-test against the real ENA API is marked `network` and excluded from the default
-run.
+with an `httpx` mock transport (request shape + JSON parsing); the exporter is
+tested by parsing its output back with `xml.etree`. One live smoke test against
+the real ENA API is marked `network` and excluded from the default run.
