@@ -19,6 +19,8 @@ except (
         "PRIDE import requires httpx. Install with: pip install 'metaseed[pride]'"
     ) from exc
 
+from metaseed._http import request_json
+
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
@@ -61,14 +63,13 @@ class PrideClient:
         """
         url = f"{self._base_url}{path}"
         headers = {"User-Agent": USER_AGENT, "Accept": "application/json"}
-        if self._client is not None:
-            response = self._client.get(url, headers=headers, params=params)
-        else:
-            response = httpx.get(
-                url, headers=headers, params=params, timeout=self._timeout
-            )
-        response.raise_for_status()
-        return response.json()
+        return request_json(
+            url,
+            params=params,
+            headers=headers,
+            timeout=self._timeout,
+            http_client=self._client,
+        )
 
     def project(self, accession: str) -> dict[str, Any]:
         """Return PRIDE project metadata for an accession.

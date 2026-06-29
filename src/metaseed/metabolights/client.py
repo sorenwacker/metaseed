@@ -20,6 +20,8 @@ except (
         "Install with: pip install 'metaseed[metabolights]'"
     ) from exc
 
+from metaseed._http import request_json
+
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
@@ -66,12 +68,12 @@ class MetaboLightsClient:
             "User-Agent": USER_AGENT,
             "Accept": "application/json",
         }
-        if self._client is not None:
-            response = self._client.get(url, headers=headers)
-        else:
-            response = httpx.get(url, headers=headers, timeout=self._timeout)
-        response.raise_for_status()
-        data: object = response.json()
+        data: object = request_json(
+            url,
+            headers=headers,
+            timeout=self._timeout,
+            http_client=self._client,
+        )
         if not isinstance(data, dict):
             return {}
         content = data.get("content")
