@@ -79,6 +79,7 @@ nav:
       - BrAPI Import: architecture/brapi-import.md
       - PRIDE Import: architecture/pride-import.md
       - MetaboLights Import: architecture/metabolights-import.md
+      - ISA-Tab Export: architecture/isatab-export.md
       - Codebase Review: REVIEW.md
   - API Reference:
       - MetaseedClient: api/client.md
