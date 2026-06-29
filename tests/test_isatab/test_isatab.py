@@ -48,3 +48,39 @@ def test_study_and_assay_files_are_emitted():
     docs = to_isatab(_client())
     assert any(name.startswith("s_") for name in docs)
     assert any(name.startswith("a_") for name in docs)
+
+
+def test_multi_study_investigation_partitions_children_per_study():
+    """Each study's sections contain only its own factors/contacts — a
+    multi-study investigation must not duplicate every child into every study.
+    """
+    from metaseed import MetaseedClient
+
+    client = MetaseedClient("metabolights", "1.0")
+    inv = client.create_entity(
+        "Investigation", {"identifier": "INV1", "title": "Inv"}, skip_validation=True
+    )
+    s1 = client.create_entity(
+        "Study",
+        {"identifier": "S1", "title": "One"},
+        parent_id=inv.id,
+        skip_validation=True,
+    )
+    s2 = client.create_entity(
+        "Study",
+        {"identifier": "S2", "title": "Two"},
+        parent_id=inv.id,
+        skip_validation=True,
+    )
+    client.create_entity(
+        "Factor", {"name": "FactorA"}, parent_id=s1.id, skip_validation=True
+    )
+    client.create_entity(
+        "Factor", {"name": "FactorB"}, parent_id=s2.id, skip_validation=True
+    )
+
+    inv_txt = to_isatab(client)["i_Investigation.txt"]
+
+    # Each factor belongs to exactly one study, so it appears once, not once per study.
+    assert inv_txt.count("FactorA") == 1
+    assert inv_txt.count("FactorB") == 1
