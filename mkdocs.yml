@@ -68,6 +68,7 @@ nav:
       - MetaboLights Design: discussion/metabolights-design.md
   - Architecture:
       - Overview: architecture/overview.md
+      - Integration Adapters: architecture/integration-adapters.md
       - Exceptions: architecture/exceptions.md
       - Model Factory: architecture/model-factory.md
       - Entity Repository: architecture/entity-repository.md
