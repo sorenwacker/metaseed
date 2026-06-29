@@ -17,13 +17,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from metaseed.brapi.export import to_brapi
 from metaseed.brapi.mapper import build_dataset
 
 if TYPE_CHECKING:
     from metaseed.api.client import MetaseedClient
     from metaseed.brapi.client import BrapiClient
 
-__all__ = ["build_dataset", "import_brapi"]
+__all__ = ["build_dataset", "import_brapi", "to_brapi"]
 
 
 def import_brapi(
