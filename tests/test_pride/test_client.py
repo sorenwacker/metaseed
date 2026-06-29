@@ -49,8 +49,30 @@ def test_files_parses_a_plain_list():
     files = _mock(handler).files("PXD000001")
 
     assert len(files) == 3
-    assert captured["url"].endswith("/projects/PXD000001/files")
+    assert "/projects/PXD000001/files" in captured["url"]
+    assert "page=0" in captured["url"]  # pagination params are sent
     assert files[0]["fileName"].endswith(".mztab.gz")
+
+
+def test_files_follows_pagination_to_the_end():
+    """A full 100-record page is followed by the next; a short page ends it.
+
+    PRIDE caps /files at 100 records per page, so large datasets were truncated
+    before this was paged through.
+    """
+    pages = [
+        [{"fileName": f"f{i}.raw"} for i in range(100)],  # full page -> keep going
+        [{"fileName": "last.raw"}],  # short page -> stop
+    ]
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        page = int(dict(request.url.params).get("page", "0"))
+        return httpx.Response(200, json=pages[page] if page < len(pages) else [])
+
+    files = _mock(handler).files("PXD999999")
+
+    assert len(files) == 101  # both pages collected, not just the first 100
+    assert files[-1]["fileName"] == "last.raw"
 
 
 def test_files_unwraps_the_hal_paged_shape():
