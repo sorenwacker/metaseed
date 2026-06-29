@@ -84,26 +84,44 @@ class BrapiClient:
     def _get(
         self, path: str, params: Mapping[str, str] | None = None
     ) -> list[dict[str, Any]]:
-        """Issue a GET request and return the BrAPI ``result.data`` list.
+        """Issue GET requests and return all ``result.data`` records.
+
+        BrAPI paginates: each response carries ``metadata.pagination.totalPages``
+        and one page of ``result.data``. This follows the pages so a server with
+        more records than one page is not silently truncated.
 
         Args:
             path: Endpoint path appended to the base URL.
             params: Optional query parameters.
 
         Returns:
-            The ``result.data`` list (empty if the server omits it).
+            The concatenated ``result.data`` records across all pages.
         """
         url = f"{self._base_url}/{path}"
         headers = {"User-Agent": USER_AGENT, "Accept": "application/json"}
         if self._token:
             headers["Authorization"] = f"Bearer {self._token}"
-        if self._client is not None:
-            response = self._client.get(url, params=params, headers=headers)
-        else:
-            response = httpx.get(
-                url, params=params, headers=headers, timeout=self._timeout
-            )
-        response.raise_for_status()
-        result = response.json().get("result") or {}
-        data = result.get("data")
-        return data if isinstance(data, list) else []
+
+        collected: list[dict[str, Any]] = []
+        page = 0
+        while True:
+            query = {**(params or {}), "page": str(page)}
+            if self._client is not None:
+                response = self._client.get(url, params=query, headers=headers)
+            else:
+                response = httpx.get(
+                    url, params=query, headers=headers, timeout=self._timeout
+                )
+            response.raise_for_status()
+            body = response.json()
+            data = (body.get("result") or {}).get("data")
+            if isinstance(data, list):
+                collected.extend(d for d in data if isinstance(d, dict))
+            pagination = (body.get("metadata") or {}).get("pagination") or {}
+            total_pages = pagination.get("totalPages")
+            if not isinstance(total_pages, int) or page + 1 >= total_pages or not data:
+                break
+            page += 1
+            if page >= 10_000:  # safety net
+                break
+        return collected
