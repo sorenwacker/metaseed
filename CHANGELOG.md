@@ -1,5 +1,45 @@
 # Changelog
 
+## v0.12.0 (2026-06-29)
+
+A bidirectional bridge to scientific data repositories: import public metadata
+into a validated profile dataset, and export a dataset back to a repository's
+submission format. Each adapter is an optional extra, a pure mapper/writer, and
+imports without pulling in the web framework. **First step — smoke-tested
+against live records and code-reviewed, but not yet validated at scale or
+against the real submission systems (except ENA export, which is XSD-valid).**
+
+### New Features
+- **ENA** (`metaseed[ena]`): import a study/sample/experiment/run accession into
+  the `ena` profile; export ENA SRA submission XML. Files are referenced, not
+  downloaded.
+- **BrAPI** (`metaseed[brapi]`): import from any BrAPI v2 server (configurable
+  URL + optional bearer token) into the `miappe` profile; export BrAPI v2 JSON.
+- **PRIDE** (`metaseed[pride]`): import a ProteomeXchange `PXD` project into the
+  `pride` profile; export the px `submission.px`.
+- **MetaboLights** (`metaseed[metabolights]`): import an `MTBLS` study into the
+  `metabolights` profile; export ISA-Tab + the MAF.
+- **`metaseed.isatab.to_isatab`**: a shared ISA-Tab writer reused by the
+  `metabolights` and `isa` profiles (and a head start for FAIRDOM-SEEK).
+
+### Bug Fixes
+- BrAPI read `observationLevel` and block/replicate from the wrong BrAPI v2
+  nesting, silently dropping those fields on every conformant server
+- ISA-Tab export duplicated each study's factors/protocols/assays into every
+  study and dropped investigation-level contacts for multi-study investigations
+- PRIDE `submission.px` lacked the `FMH` header and ordered FME columns wrongly,
+  so it would not load as a submission
+- MetaboLights dropped a study's contributors and publications (recorded on the
+  study, not the investigation)
+- ENA file checksums could misalign when a `fastq_ftp` URL segment was empty
+
+### Internal
+- The PRIDE and BrAPI clients page through all results (no silent truncation)
+- A shared retry helper (`metaseed._http`) retries transient network failures
+  (timeouts, connection errors, 429/5xx) across all repository clients
+- The ENA export is validated against ENA's official SRA XSD schemas
+- Integration approach documented in `docs/architecture/integration-adapters.md`
+
 ## v0.11.0 (2026-06-28)
 
 ### New Features
