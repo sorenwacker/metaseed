@@ -1,7 +1,7 @@
 """Export a ``metabolights`` dataset to the MetaboLights submission format.
 
 MetaboLights archives are ISA-Tab plus one MetaboLights-specific file per
-assay: the Metabolite Assignment File (MAF, ``m_*.txt``). This module reuses the
+assay: the Metabolite Assignment File (MAF, ``m_*.tsv``). This module reuses the
 shared :func:`metaseed.isatab.to_isatab` writer for the ISA-Tab documents and
 adds a MAF skeleton (the standard column header) for each assay. Pure and
 dependency-free; it references files, never reads or writes spectra.
@@ -57,7 +57,7 @@ def to_metabolights(client: MetaseedClient) -> dict[str, str]:
 
     Returns:
         Mapping of document name to text — the ISA-Tab files from
-        :func:`metaseed.isatab.to_isatab` plus one ``m_*.txt`` MAF (column
+        :func:`metaseed.isatab.to_isatab` plus one ``m_*.tsv`` MAF (column
         header only) per Assay.
     """
     documents = dict(to_isatab(client))

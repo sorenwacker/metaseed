@@ -7,9 +7,10 @@ file (``a_<assay>.txt``) per study and assay.
 
 This writer is pure and dependency-free (stdlib tab-delimited text). It emits
 the metadata structure and *references* raw data files by name; it never reads
-or writes spectra. It works for any ISA-shaped profile (e.g. ``isa`` or
-``metabolights``) whose serialized entities use the ISA entity types
-Investigation, Study, Person, Publication, Factor, Protocol, and Assay.
+or writes spectra. It reads the ISA entity types Investigation, Study, Person,
+Publication, Factor, Protocol, and Assay using the field codenames of the
+``metabolights`` profile; other ISA-shaped profiles (e.g. ``isa``) work only
+where their field codenames match.
 """
 
 from __future__ import annotations

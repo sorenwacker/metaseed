@@ -14,6 +14,7 @@ record that omits a field; call :meth:`MetaseedClient.validate` to report gaps.
 
 from __future__ import annotations
 
+from itertools import zip_longest
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -142,9 +143,14 @@ def build_dataset(
             skip_validation=True,
         )
 
-        urls = [u for u in (row.get("fastq_ftp") or "").split(";") if u]
+        # fastq_ftp and fastq_md5 are parallel ;-separated lists; pair them
+        # positionally (zip_longest) so an empty URL segment cannot shift the
+        # checksums out of alignment.
+        urls = (row.get("fastq_ftp") or "").split(";")
         md5s = (row.get("fastq_md5") or "").split(";")
-        for i, url in enumerate(urls):
+        for url, md5 in zip_longest(urls, md5s, fillvalue=""):
+            if not url:
+                continue
             client.create_entity(
                 "File",
                 _clean(
@@ -153,7 +159,7 @@ def build_dataset(
                         "filename": url.rsplit("/", 1)[-1],
                         "filetype": "fastq",
                         "checksum_method": "MD5",
-                        "checksum": md5s[i] if i < len(md5s) else None,
+                        "checksum": md5 or None,
                     }
                 ),
                 skip_validation=True,
