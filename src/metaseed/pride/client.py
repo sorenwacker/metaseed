@@ -49,11 +49,12 @@ class PrideClient:
         self._timeout = timeout
         self._client = http_client
 
-    def _get(self, path: str) -> Any:
+    def _get(self, path: str, params: dict[str, Any] | None = None) -> Any:
         """Issue a GET request and return the parsed JSON payload.
 
         Args:
             path: Path appended to the configured base URL.
+            params: Optional query parameters.
 
         Returns:
             The decoded JSON body.
@@ -61,9 +62,11 @@ class PrideClient:
         url = f"{self._base_url}{path}"
         headers = {"User-Agent": USER_AGENT, "Accept": "application/json"}
         if self._client is not None:
-            response = self._client.get(url, headers=headers)
+            response = self._client.get(url, headers=headers, params=params)
         else:
-            response = httpx.get(url, headers=headers, timeout=self._timeout)
+            response = httpx.get(
+                url, headers=headers, params=params, timeout=self._timeout
+            )
         response.raise_for_status()
         return response.json()
 
@@ -80,9 +83,11 @@ class PrideClient:
         return data if isinstance(data, dict) else {}
 
     def files(self, accession: str) -> list[dict[str, Any]]:
-        """Return the list of files for a PRIDE project.
+        """Return all files for a PRIDE project, following pagination.
 
-        Handles both the plain list response and the HAL paged
+        The PRIDE ``v2`` ``/files`` endpoint caps each response at 100 records
+        (and ignores larger ``pageSize`` values), so large datasets must be
+        paged through. Handles both the plain list response and the HAL paged
         ``{"_embedded": {"files": [...]}}`` shape.
 
         Args:
@@ -91,8 +96,22 @@ class PrideClient:
         Returns:
             One dict per file (empty if the project has no files).
         """
-        data = self._get(f"/projects/{accession}/files")
-        return _extract_files(data)
+        page_size = 100
+        files: list[dict[str, Any]] = []
+        page = 0
+        while True:
+            data = self._get(
+                f"/projects/{accession}/files",
+                {"pageSize": page_size, "page": page},
+            )
+            batch = _extract_files(data)
+            files.extend(batch)
+            # A short (or empty) page is the last one. Cap pages as a safety net
+            # against an endpoint that never shrinks the batch.
+            if len(batch) < page_size or page >= 10_000:
+                break
+            page += 1
+        return files
 
 
 def _extract_files(data: Any) -> list[dict[str, Any]]:
