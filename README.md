@@ -17,6 +17,7 @@ A **schema-driven metadata management system** that:
 - Generates Pydantic models dynamically at runtime
 - Validates with composable rules
 - Supports multiple metadata standards (MIAPPE, ISA, Darwin Core, ...)
+- Exports a dataset as a DCAT catalog card (JSON-LD / Turtle) for data portals and FAIR assessment
 
 ```
 YAML specs → Pydantic models → Validation → Serialization
