@@ -18,6 +18,7 @@ except (
         "ENA import requires httpx. Install with: pip install 'metaseed[ena]'"
     ) from exc
 
+from metaseed._http import request_json
 from metaseed.ena.mapper import READ_RUN_FIELDS
 
 if TYPE_CHECKING:
@@ -68,12 +69,11 @@ class EnaClient:
             "limit": "0",  # no row cap
         }
         headers = {"User-Agent": USER_AGENT, "Accept": "application/json"}
-        if self._client is not None:
-            response = self._client.get(self._base_url, params=params, headers=headers)
-        else:
-            response = httpx.get(
-                self._base_url, params=params, headers=headers, timeout=self._timeout
-            )
-        response.raise_for_status()
-        data = response.json()
+        data = request_json(
+            self._base_url,
+            params=params,
+            headers=headers,
+            timeout=self._timeout,
+            http_client=self._client,
+        )
         return data if isinstance(data, list) else []

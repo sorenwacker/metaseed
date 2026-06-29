@@ -23,6 +23,8 @@ except (
         "BrAPI import requires httpx. Install with: pip install 'metaseed[brapi]'"
     ) from exc
 
+from metaseed._http import request_json
+
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
@@ -106,14 +108,13 @@ class BrapiClient:
         page = 0
         while True:
             query = {**(params or {}), "page": str(page)}
-            if self._client is not None:
-                response = self._client.get(url, params=query, headers=headers)
-            else:
-                response = httpx.get(
-                    url, params=query, headers=headers, timeout=self._timeout
-                )
-            response.raise_for_status()
-            body = response.json()
+            body = request_json(
+                url,
+                params=query,
+                headers=headers,
+                timeout=self._timeout,
+                http_client=self._client,
+            )
             data = (body.get("result") or {}).get("data")
             if isinstance(data, list):
                 collected.extend(d for d in data if isinstance(d, dict))
