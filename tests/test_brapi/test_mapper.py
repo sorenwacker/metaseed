@@ -55,6 +55,11 @@ def test_ids_and_references_are_mapped():
     units = {u["unique_id"]: u for u in _by_type(client, "ObservationUnit")}
     assert units["OU1"]["study_id"] == "1001"
     assert units["OU1"]["biological_material_id"] == "G1"
+    # The level (nested in observationUnitPosition in BrAPI v2) and the
+    # block/replicate relationships are captured, not dropped.
+    assert units["OU1"]["observation_level"] == "plot"
+    assert units["OU1"]["observation_level_code"] == "1"
+    assert units["OU1"]["observation_unit_block"] == "1"
     assert units["OU1"]["observation_unit_replicate"] == "1"
 
     germplasm = {g["unique_id"]: g for g in _by_type(client, "BiologicalMaterial")}

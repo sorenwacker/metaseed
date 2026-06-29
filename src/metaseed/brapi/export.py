@@ -73,22 +73,34 @@ def _observation_unit(unit: dict[str, Any]) -> dict[str, Any]:
             "levelCode": unit.get("observation_level_code"),
         }
     )
+    # BrAPI v2: block/replicate are expressed via observationLevelRelationships.
+    relationships = []
+    if unit.get("observation_unit_block"):
+        relationships.append(
+            {"levelName": "block", "levelCode": str(unit["observation_unit_block"])}
+        )
+    if unit.get("observation_unit_replicate"):
+        relationships.append(
+            {"levelName": "rep", "levelCode": str(unit["observation_unit_replicate"])}
+        )
     position = _clean(
         {
             "positionCoordinateX": unit.get("observation_unit_x_ref"),
             "positionCoordinateXType": unit.get("spatial_distribution_type"),
             "positionCoordinateY": unit.get("observation_unit_y_ref"),
-            "blockNumber": unit.get("observation_unit_block"),
-            "replicate": unit.get("observation_unit_replicate"),
             "entryType": unit.get("entry_type"),
         }
     )
+    # BrAPI v2 nests the level inside the position object.
+    if level:
+        position["observationLevel"] = level
+    if relationships:
+        position["observationLevelRelationships"] = relationships
     return _clean(
         {
             "observationUnitDbId": unit.get("unique_id"),
             "studyDbId": unit.get("study_id"),
             "germplasmDbId": unit.get("biological_material_id"),
-            "observationLevel": level,
             "observationUnitPosition": position,
         }
     )
