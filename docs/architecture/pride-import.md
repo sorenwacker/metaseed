@@ -75,9 +75,23 @@ entity types as nested lists.
   mapper) needs nothing extra, and importing `metaseed.pride` does not pull in
   the web framework.
 
+## Export
+
+```python
+from metaseed.pride import to_pride_submission
+
+docs = to_pride_submission(client)   # {"submission.px": ...}
+```
+
+`to_pride_submission` renders a `pride` dataset as the PRIDE px-submission
+`submission.px` file: `MTD` metadata lines (project title, submitters, species,
+instruments, modifications) and one `FME` entry per referenced file. Pure and
+dependency-free. With `import_accession` this makes metaseed a round-trip PRIDE
+bridge.
+
 ## Testing
 
 The mapper is tested from recorded `project` and `files` fixtures; the client is
-tested with an `httpx` mock transport (request shape, JSON parsing, and the HAL
-paged unwrapping). One live smoke test against the real PRIDE API is marked
-`network` and excluded from the default run.
+tested with an `httpx` mock transport (request shape, JSON parsing, pagination,
+and the HAL paged unwrapping). One live smoke test against the real PRIDE API is
+marked `network` and excluded from the default run.

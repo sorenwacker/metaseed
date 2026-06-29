@@ -75,8 +75,19 @@ parts:
   individual measured value, so BrAPI `observations` are reduced to the distinct
   `ObservedVariable` definitions they reference; the measured `value` and
   `observationDbId` are not retained.
-- **Single-page fetch.** Each endpoint is read once; BrAPI pagination beyond the
-  server's default page is not followed.
+## Export
+
+```python
+from metaseed.brapi import to_brapi
+
+bodies = to_brapi(client)
+# {"trials": [...], "studies": [...], "observationUnits": [...], "germplasm": [...]}
+```
+
+`to_brapi` inverts the importer, rendering a `miappe` dataset as BrAPI v2 JSON
+objects — the request bodies a BrAPI server's POST endpoints accept. Pure and
+dependency-free. With `import_brapi` this makes metaseed a round-trip BrAPI
+bridge.
 
 ## Testing
 
