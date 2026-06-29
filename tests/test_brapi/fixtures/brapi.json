@@ -1,6 +1,12 @@
 {
   "studies": {
-    "metadata": {"pagination": {"currentPage": 0, "totalCount": 2, "totalPages": 1}},
+    "metadata": {
+      "pagination": {
+        "currentPage": 0,
+        "totalCount": 2,
+        "totalPages": 1
+      }
+    },
     "result": {
       "data": [
         {
@@ -12,8 +18,13 @@
           "startDate": "2024-04-01",
           "endDate": "2024-09-30",
           "locationName": "Wageningen field A",
-          "experimentalDesign": {"PUI": "CO_715:0000145", "description": "RCBD"},
-          "growthFacility": {"description": "open field"},
+          "experimentalDesign": {
+            "PUI": "CO_715:0000145",
+            "description": "RCBD"
+          },
+          "growthFacility": {
+            "description": "open field"
+          },
           "documentationURL": "https://example.org/studies/1001",
           "dataLinks": [
             {
@@ -38,7 +49,13 @@
     }
   },
   "observationunits": {
-    "metadata": {"pagination": {"currentPage": 0, "totalCount": 2, "totalPages": 1}},
+    "metadata": {
+      "pagination": {
+        "currentPage": 0,
+        "totalCount": 2,
+        "totalPages": 1
+      }
+    },
     "result": {
       "data": [
         {
@@ -47,14 +64,25 @@
           "studyDbId": "1001",
           "germplasmDbId": "G1",
           "germplasmName": "B73",
-          "observationLevel": {"levelName": "plot", "levelCode": "1"},
           "observationUnitPosition": {
             "positionCoordinateX": "1",
             "positionCoordinateXType": "GRID_COL",
             "positionCoordinateY": "1",
-            "blockNumber": "1",
-            "replicate": "1",
-            "entryType": "TEST"
+            "entryType": "TEST",
+            "observationLevel": {
+              "levelName": "plot",
+              "levelCode": "1"
+            },
+            "observationLevelRelationships": [
+              {
+                "levelName": "block",
+                "levelCode": "1"
+              },
+              {
+                "levelName": "rep",
+                "levelCode": "1"
+              }
+            ]
           }
         },
         {
@@ -63,21 +91,38 @@
           "studyDbId": "1001",
           "germplasmDbId": "G2",
           "germplasmName": "Mo17",
-          "observationLevel": {"levelName": "plot", "levelCode": "2"},
           "observationUnitPosition": {
             "positionCoordinateX": "2",
             "positionCoordinateXType": "GRID_COL",
             "positionCoordinateY": "1",
-            "blockNumber": "1",
-            "replicate": "2",
-            "entryType": "TEST"
+            "entryType": "TEST",
+            "observationLevel": {
+              "levelName": "plot",
+              "levelCode": "2"
+            },
+            "observationLevelRelationships": [
+              {
+                "levelName": "block",
+                "levelCode": "1"
+              },
+              {
+                "levelName": "rep",
+                "levelCode": "2"
+              }
+            ]
           }
         }
       ]
     }
   },
   "observations": {
-    "metadata": {"pagination": {"currentPage": 0, "totalCount": 3, "totalPages": 1}},
+    "metadata": {
+      "pagination": {
+        "currentPage": 0,
+        "totalCount": 3,
+        "totalPages": 1
+      }
+    },
     "result": {
       "data": [
         {
@@ -108,7 +153,13 @@
     }
   },
   "germplasm": {
-    "metadata": {"pagination": {"currentPage": 0, "totalCount": 2, "totalPages": 1}},
+    "metadata": {
+      "pagination": {
+        "currentPage": 0,
+        "totalCount": 2,
+        "totalPages": 1
+      }
+    },
     "result": {
       "data": [
         {
@@ -120,7 +171,9 @@
           "subtaxa": "subsp. mays",
           "instituteCode": "USDA",
           "instituteName": "USDA-ARS",
-          "studyDbIds": ["1001"]
+          "studyDbIds": [
+            "1001"
+          ]
         },
         {
           "germplasmDbId": "G2",

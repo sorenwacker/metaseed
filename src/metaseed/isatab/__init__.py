@@ -7,9 +7,10 @@ file (``a_<assay>.txt``) per study and assay.
 
 This writer is pure and dependency-free (stdlib tab-delimited text). It emits
 the metadata structure and *references* raw data files by name; it never reads
-or writes spectra. It works for any ISA-shaped profile (e.g. ``isa`` or
-``metabolights``) whose serialized entities use the ISA entity types
-Investigation, Study, Person, Publication, Factor, Protocol, and Assay.
+or writes spectra. It reads the ISA entity types Investigation, Study, Person,
+Publication, Factor, Protocol, and Assay using the field codenames of the
+``metabolights`` profile; other ISA-shaped profiles (e.g. ``isa``) work only
+where their field codenames match.
 """
 
 from __future__ import annotations
@@ -221,20 +222,61 @@ def to_isatab(client: MetaseedClient) -> dict[str, str]:
     assays = by_type.get("Assay", [])
     samples = by_type.get("Sample", [])
 
+    # Each entity's owning study (None = directly under the Investigation), so a
+    # multi-study investigation routes factors/protocols/assays/samples and
+    # study- vs investigation-level people/publications to the right place
+    # instead of duplicating every child into every study.
+    owner = _parent_study_map(client)
+
+    def of(items: list[dict[str, Any]], study_id: str | None) -> list[dict[str, Any]]:
+        return [e for e in items if owner.get(str(e.get("_node_id"))) == study_id]
+
     lines = _ontology_source_section()
     investigation = investigations[0] if investigations else {}
     lines += _investigation_section(investigation)
-    lines += _publication_section("INVESTIGATION PUBLICATIONS", "Investigation", [])
-    lines += _contacts_section("INVESTIGATION CONTACTS", "Investigation", [])
+    lines += _publication_section(
+        "INVESTIGATION PUBLICATIONS", "Investigation", of(publications, None)
+    )
+    lines += _contacts_section(
+        "INVESTIGATION CONTACTS", "Investigation", of(people, None)
+    )
 
     for study in studies:
+        sid = study.get("_node_id")
         lines += _study_sections(
-            study, factors, assays, protocols, publications, people
+            study,
+            of(factors, sid),
+            of(assays, sid),
+            of(protocols, sid),
+            of(publications, sid),
+            of(people, sid),
         )
 
     documents: dict[str, str] = {"i_Investigation.txt": "\n".join(lines) + "\n"}
     for study in studies:
-        documents[study_filename(study)] = _study_file(samples)
+        documents[study_filename(study)] = _study_file(
+            of(samples, study.get("_node_id"))
+        )
     for assay in assays:
         documents[assay_filename(assay)] = _assay_file(assay)
     return documents
+
+
+def _parent_study_map(client: MetaseedClient) -> dict[str, str | None]:
+    """Map each entity's node id to the node id of the Study that owns it.
+
+    Entities directly under the Investigation (e.g. investigation-level people
+    or publications) map to ``None``. Built from the dataset tree, since the flat
+    serialization does not carry parent links.
+    """
+    owner: dict[str, str | None] = {}
+
+    def descend(node: Any, study_id: str | None) -> None:
+        for child in node.children:
+            owner[child.id] = study_id
+            next_study = child.id if child.entity_type == "Study" else study_id
+            descend(child, next_study)
+
+    for root in client.get_tree():
+        descend(root, None)
+    return owner

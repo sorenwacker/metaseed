@@ -65,3 +65,24 @@ def test_files_reference_runs_and_carry_checksums_not_downloads():
 def test_empty_rows_yield_empty_dataset():
     client = build_dataset([])
     assert client.serialize()["entities"] == []
+
+
+def test_file_checksums_stay_aligned_when_a_url_segment_is_empty():
+    """fastq_ftp/fastq_md5 are parallel lists; an empty URL segment must not
+    shift the checksums (they are paired positionally)."""
+    rows = [
+        {
+            "study_accession": "PRJEB1",
+            "run_accession": "ERR1",
+            "fastq_ftp": "ftp.x/a_1.fastq.gz;;ftp.x/a_3.fastq.gz",
+            "fastq_md5": "aaa;bbb;ccc",
+        }
+    ]
+    files = {
+        e["filename"]: e
+        for e in build_dataset(rows).serialize()["entities"]
+        if e["_type"] == "File"
+    }
+    assert len(files) == 2  # the empty URL segment is skipped
+    assert files["a_1.fastq.gz"]["checksum"] == "aaa"
+    assert files["a_3.fastq.gz"]["checksum"] == "ccc"  # not the middle "bbb"

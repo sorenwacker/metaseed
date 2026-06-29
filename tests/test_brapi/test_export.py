@@ -65,7 +65,15 @@ def test_observation_units_link_to_study_and_germplasm():
 
     assert units["OU1"]["studyDbId"] == "1001"
     assert units["OU1"]["germplasmDbId"] == "G1"
-    assert units["OU1"]["observationUnitPosition"]["replicate"] == "1"
+    # BrAPI v2: the level nests inside the position; block/replicate are
+    # observationLevelRelationships, not position keys.
+    position = units["OU1"]["observationUnitPosition"]
+    assert position["observationLevel"]["levelName"]
+    rels = {
+        r["levelName"]: r["levelCode"]
+        for r in position["observationLevelRelationships"]
+    }
+    assert rels["rep"] == "1"
 
 
 def test_empty_inputs_yield_no_collections():

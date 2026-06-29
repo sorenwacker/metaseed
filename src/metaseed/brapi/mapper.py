@@ -156,8 +156,10 @@ def _add_observation_units(
         unit_id = unit.get("observationUnitDbId")
         if not unit_id:
             continue
-        level = unit.get("observationLevel") or {}
         position = unit.get("observationUnitPosition") or {}
+        # In BrAPI v2 the observationLevel object is nested inside the position,
+        # and block/replicate are expressed via observationLevelRelationships.
+        level = position.get("observationLevel") or {}
         client.create_entity(
             "ObservationUnit",
             _clean(
@@ -173,13 +175,24 @@ def _add_observation_units(
                     ),
                     "observation_unit_x_ref": position.get("positionCoordinateX"),
                     "observation_unit_y_ref": position.get("positionCoordinateY"),
-                    "observation_unit_block": position.get("blockNumber"),
-                    "observation_unit_replicate": position.get("replicate"),
+                    "observation_unit_block": _level_code(position, ("block",)),
+                    "observation_unit_replicate": _level_code(
+                        position, ("rep", "replicate")
+                    ),
                     "entry_type": position.get("entryType"),
                 }
             ),
             skip_validation=True,
         )
+
+
+def _level_code(position: dict[str, Any], level_names: tuple[str, ...]) -> str | None:
+    """Return the levelCode for a named level from observationLevelRelationships."""
+    for rel in position.get("observationLevelRelationships") or []:
+        if str(rel.get("levelName", "")).lower() in level_names:
+            code = rel.get("levelCode")
+            return str(code) if code is not None else None
+    return None
 
 
 def _add_observed_variables(
