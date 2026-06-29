@@ -36,8 +36,11 @@ def _mtd(text: str) -> dict[str, list[str]]:
 def test_submission_has_header_and_is_tab_separated():
     text = _submission()
     assert text.startswith("# PRIDE submission.px")
+    assert "FMH\tfile_id\tfile_type\tfile_path" in text  # file-mapping header
     assert all(
-        line.startswith(("# ", "MTD\t", "FME\t")) for line in text.splitlines() if line
+        line.startswith(("# ", "MTD\t", "FMH\t", "FME\t"))
+        for line in text.splitlines()
+        if line
     )
 
 
@@ -68,13 +71,14 @@ def test_files_become_fme_lines():
     ]
 
     assert len(fme) == 3
-    indices = [row[1] for row in fme]
-    assert indices == ["0", "1", "2"]
+    # FME columns: file_id, file_type, file_path
+    file_ids = [row[1] for row in fme]
+    assert file_ids == ["0", "1", "2"]
 
-    by_name = {row[2]: row for row in fme}
-    raw = by_name["TMT_Erwinia_1uLSike_Top10HCD_isol2_45stepped_60min_01.raw"]
-    assert raw[3] == "RAW"
-    assert "PRIDE_Exp_Complete_Ac_22134.pride.mgf.gz" in by_name
+    by_path = {row[3]: row for row in fme}
+    raw = by_path["TMT_Erwinia_1uLSike_Top10HCD_isol2_45stepped_60min_01.raw"]
+    assert raw[2] == "RAW"  # file_type column
+    assert "PRIDE_Exp_Complete_Ac_22134.pride.mgf.gz" in by_path
 
 
 def test_empty_dataset_yields_no_submission():

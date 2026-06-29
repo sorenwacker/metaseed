@@ -52,6 +52,8 @@ def _metadata_lines(dataset: dict[str, Any]) -> list[str]:
         _mtd("submitter_email", submitter.get("email")),
         _mtd("submitter_affiliation", submitter.get("affiliation")),
         _mtd("lab_head_name", lab_head.get("name")),
+        _mtd("lab_head_email", lab_head.get("email")),
+        _mtd("lab_head_affiliation", lab_head.get("affiliation")),
         _mtd("project_title", dataset.get("title")),
         _mtd("project_description", dataset.get("description")),
         _mtd("keywords", ", ".join(str(k) for k in keywords)),
@@ -68,18 +70,19 @@ def _metadata_lines(dataset: dict[str, Any]) -> list[str]:
 
 
 def _file_lines(dataset: dict[str, Any]) -> list[str]:
-    """Render one ``FME`` file-mapping entry per referenced data file."""
-    lines = []
-    for index, file in enumerate(dataset.get("files") or []):
-        filename = file.get("filename")
-        if not filename:
-            continue
-        file_type = file.get("file_type") or ""
-        fields = [str(index), str(filename), str(file_type)]
-        file_format = file.get("file_format")
-        if file_format:
-            fields.append(str(file_format))
-        lines.append("FME\t" + "\t".join(fields))
+    """Render the ``FMH`` header and one ``FME`` entry per referenced data file.
+
+    The PRIDE px file-mapping section is an ``FMH`` header row declaring the
+    columns followed by ``FME`` rows ordered ``file_id, file_type, file_path``.
+    """
+    files = [f for f in (dataset.get("files") or []) if f.get("filename")]
+    if not files:
+        return []
+    lines = ["FMH\tfile_id\tfile_type\tfile_path"]
+    for file_id, file in enumerate(files):
+        file_type = str(file.get("file_type") or "")
+        path = str(file.get("filename"))
+        lines.append(f"FME\t{file_id}\t{file_type}\t{path}")
     return lines
 
 
