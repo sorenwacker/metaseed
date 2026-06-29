@@ -47,8 +47,34 @@ def test_studies_builds_request_and_parses_data():
 
     assert isinstance(rows, list)
     assert len(rows) == 2
-    assert captured["url"].endswith("/brapi/v2/studies")
+    assert "/brapi/v2/studies" in captured["url"]
+    assert "page=0" in captured["url"]  # pagination params are sent
     assert "metaseed" in captured["user_agent"]
+
+
+def test_get_follows_brapi_pagination():
+    """records spread across pages are all collected, not just page 0."""
+    pages = {
+        "0": {
+            "metadata": {"pagination": {"currentPage": 0, "totalPages": 2}},
+            "result": {"data": [{"studyDbId": "a"}, {"studyDbId": "b"}]},
+        },
+        "1": {
+            "metadata": {"pagination": {"currentPage": 1, "totalPages": 2}},
+            "result": {"data": [{"studyDbId": "c"}]},
+        },
+    }
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        page = dict(request.url.params).get("page", "0")
+        return httpx.Response(200, json=pages[page])
+
+    client = BrapiClient(
+        BASE_URL, http_client=httpx.Client(transport=httpx.MockTransport(handler))
+    )
+
+    rows = client.studies()
+    assert [r["studyDbId"] for r in rows] == ["a", "b", "c"]
 
 
 def test_observation_units_sends_study_filter():
