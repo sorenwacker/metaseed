@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
+import pytest
+
 from metaseed.ena import to_ena_xml
 from metaseed.ena.mapper import build_dataset
 
@@ -65,3 +67,24 @@ def test_roundtrip_import_then_export_is_well_formed():
     docs = to_ena_xml(_dataset())
     for xml in docs.values():
         ET.fromstring(xml)  # no exception
+
+
+@pytest.mark.network
+def test_ena_export_validates_against_official_sra_xsd():
+    """The exported XML conforms to ENA's official SRA schemas (would be
+    accepted). Opt-in: needs network + xmlschema (a dev dependency)."""
+    xmlschema = pytest.importorskip("xmlschema")
+    from metaseed.ena import import_accession
+
+    docs = to_ena_xml(import_accession("ERR164407"))
+    base = (
+        "https://raw.githubusercontent.com/enasequence/schema/master/"
+        "src/main/resources/uk/ac/ebi/ena/sra/schema/"
+    )
+    for doc, xsd in [
+        ("study.xml", "SRA.study.xsd"),
+        ("sample.xml", "SRA.sample.xsd"),
+        ("run.xml", "SRA.run.xsd"),
+    ]:
+        schema = xmlschema.XMLSchema(base + xsd, base_url=base)
+        schema.validate(docs[doc])  # raises XMLSchemaValidationError if invalid
