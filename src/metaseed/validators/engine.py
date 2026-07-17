@@ -126,6 +126,23 @@ class ValidationEngine:
         return []
 
 
+# The explicit `type:` values a validation rule may declare. Kept in sync with
+# the documented list in ValidationRuleSpec and _create_rule_by_type's branches.
+# A rule that sets `type:` to anything outside this set is a spec error (e.g. a
+# typo like "unique" for "uniqueness") and is rejected loudly rather than being
+# silently dropped, which would let the rule never run and invalid data pass.
+_VALID_RULE_TYPES = frozenset(
+    {
+        "conditional",
+        "date_range",
+        "coordinate_pair",
+        "cardinality",
+        "uniqueness",
+        "reference",
+    }
+)
+
+
 def _create_rule_by_type(
     rule_spec: ValidationRuleSpec,
     available_refs: dict[str, set[str]] | None = None,
@@ -359,6 +376,12 @@ def _create_rule_from_spec(
     """
     # Explicit type takes precedence
     if rule_spec.type:
+        if rule_spec.type not in _VALID_RULE_TYPES:
+            valid = ", ".join(sorted(_VALID_RULE_TYPES))
+            raise ValueError(
+                f"Validation rule '{rule_spec.name}' has unknown type "
+                f"'{rule_spec.type}'. Valid types are: {valid}."
+            )
         return _create_rule_by_type(rule_spec, available_refs)
 
     # Legacy: infer from fields (backward compatibility)
