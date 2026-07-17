@@ -2,6 +2,8 @@
 
 import datetime
 
+import pytest
+
 from metaseed.specs.schema import ValidationRuleSpec
 from metaseed.validators import validate
 from metaseed.validators.engine import (
@@ -344,6 +346,22 @@ class TestExplicitRuleTypes:
         rule = _create_rule_from_spec(spec)
         assert isinstance(rule, ConditionalRule)
         assert rule.custom_message == "Please provide either A or B"
+
+    def test_unknown_explicit_type_raises(self) -> None:
+        """A mistyped explicit rule type fails loudly instead of no-opping.
+
+        Without this, ``type: unique`` (a typo for ``uniqueness``) would be
+        silently dropped and the rule would never run, so invalid data could
+        be reported valid.
+        """
+        spec = ValidationRuleSpec(
+            name="dup_ids",
+            type="unique",  # typo for "uniqueness"
+            field="unique_id",
+            unique_within="parent",
+        )
+        with pytest.raises(ValueError, match="unknown type 'unique'"):
+            _create_rule_from_spec(spec)
 
 
 class TestInferredRuleTypes:
