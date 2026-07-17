@@ -1,6 +1,12 @@
 site_name: Metaseed
 site_description: Tools for creating, editing, and validating experimental metadata following MIAPPE standards
 
+# REVIEW.md is a point-in-time internal review artifact, not user documentation.
+# Excluded from the build, not just the nav: MkDocs renders any page under docs/
+# regardless of nav membership, so dropping the nav entry alone still ships it.
+exclude_docs: |
+  REVIEW.md
+
 theme:
   name: material
   logo: images/metaseed-icon.svg
@@ -81,7 +87,6 @@ nav:
       - PRIDE Import: architecture/pride-import.md
       - MetaboLights Import: architecture/metabolights-import.md
       - ISA-Tab Export: architecture/isatab-export.md
-      - Codebase Review: REVIEW.md
   - API Reference:
       - MetaseedClient: api/client.md
       - CLI: api/cli.md
