@@ -361,9 +361,10 @@ class ExtractionContext:
         entity_spec = self.get_entity_spec(entity_name)
         errors: list[ValidationIssue] = []
 
-        # Check required fields
+        # Check required fields. A field present with a null value is as absent
+        # as a missing key, so treat both as a missing required field.
         for field in entity_spec.fields:
-            if field.required and field.name not in data:
+            if field.required and (field.name not in data or data[field.name] is None):
                 errors.append(
                     ValidationIssue(
                         field=field.name,

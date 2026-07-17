@@ -16,6 +16,7 @@ import yaml
 from metaseed.profiles import ProfileFactory
 from metaseed.specs.loader import SpecLoader, SpecLoadError
 from metaseed.utils import to_snake_case
+from metaseed.validators.api import _pydantic_constraint_errors
 from metaseed.validators.base import ValidationError
 from metaseed.validators.engine import create_engine_for_entity
 
@@ -318,6 +319,20 @@ class DatasetValidator:
                     )
             except SpecLoadError:
                 pass
+
+            # Pydantic constraint validation (types/patterns/ranges/enums), so the
+            # dataset path enforces the same constraints as the single-entity path.
+            try:
+                spec = SpecLoader(profile=self.profile).load_entity(etype, self.version)
+            except (FileNotFoundError, KeyError, ValueError, SpecLoadError):
+                return
+            for error in _pydantic_constraint_errors(d, spec):
+                field_path = f"{p}.{error.field}" if p else error.field
+                errors.append(
+                    ValidationError(
+                        field=field_path, message=error.message, rule=error.rule
+                    )
+                )
 
         self._traverse_entity_tree(data, entity_type, validate_node, path)
         return errors

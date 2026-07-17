@@ -16,6 +16,51 @@ from metaseed.validators.engine import create_engine_for_entity
 logger = logging.getLogger(__name__)
 
 
+def _pydantic_constraint_errors(
+    data: dict[str, Any], entity_spec: Any
+) -> list[ValidationError]:
+    """Return Pydantic constraint errors for an entity's simple fields.
+
+    Builds the spec's Pydantic model from the entity's non-nested fields and
+    collects type/pattern/range/length/enum violations. Missing-required errors
+    are skipped here — the engine's RequiredFieldsRule reports those, so this
+    avoids duplicates. Shared by every public validation path so they enforce
+    the same constraints.
+
+    Args:
+        data: Entity data dictionary.
+        entity_spec: The loaded entity spec.
+
+    Returns:
+        List of constraint validation errors (empty if none).
+    """
+    from pydantic import ValidationError as PydanticValidationError
+
+    from metaseed.models.factory import create_model_from_spec
+
+    errors: list[ValidationError] = []
+    try:
+        model_class = create_model_from_spec(entity_spec)
+        nested_field_names = {
+            f.name for f in entity_spec.fields if f.type.value == "list" and f.items
+        }
+        simple_data = {
+            key: value
+            for key, value in data.items()
+            if key not in nested_field_names and not key.startswith("_")
+        }
+        model_class(**simple_data)
+    except PydanticValidationError as e:
+        for err in e.errors():
+            if err["type"] == "missing":
+                continue
+            field_path = ".".join(str(loc) for loc in err["loc"])
+            errors.append(
+                ValidationError(field=field_path, message=err["msg"], rule="constraint")
+            )
+    return errors
+
+
 def _validate_nested(
     data: dict[str, Any],
     entity: str,
@@ -56,6 +101,13 @@ def _validate_nested(
         # Entity spec not found - return errors collected so far
         logger.debug("Could not load entity spec %s: %s", entity, e)
         return errors
+
+    # Pydantic constraint validation (types/patterns/ranges/enums) for this entity.
+    for error in _pydantic_constraint_errors(data, spec):
+        error_field = f"{path}.{error.field}" if path else error.field
+        errors.append(
+            ValidationError(field=error_field, message=error.message, rule=error.rule)
+        )
 
     for field in spec.fields:
         if field.type.value == "list" and field.items:
@@ -132,7 +184,15 @@ def validate(
         return _validate_nested(data, entity, version, profile)
 
     engine = create_engine_for_entity(entity, version, profile=profile)
-    return engine.validate(data)
+    errors: list[ValidationError] = list(engine.validate(data))
+    from metaseed.specs.loader import SpecLoader, SpecLoadError
+
+    try:
+        spec = SpecLoader(profile=profile).load_entity(entity, version)
+    except (FileNotFoundError, KeyError, ValueError, SpecLoadError):
+        return errors
+    errors.extend(_pydantic_constraint_errors(data, spec))
+    return errors
 
 
 def validate_entity(
@@ -166,9 +226,6 @@ def validate_entity(
         ...     version="1.2",
         ... )
     """
-    from pydantic import ValidationError as PydanticValidationError
-
-    from metaseed.models.factory import create_model_from_spec
     from metaseed.specs.loader import SpecLoader, SpecLoadError
 
     errors: list[ValidationError] = []
@@ -187,35 +244,7 @@ def validate_entity(
         return errors
 
     # 1. Pydantic validation - checks types, patterns, ranges, etc.
-    try:
-        model_class = create_model_from_spec(entity_spec)
-
-        # Filter to only simple fields (not nested entity lists)
-        nested_field_names = {
-            f.name for f in entity_spec.fields if f.type.value == "list" and f.items
-        }
-        simple_data = {
-            key: value
-            for key, value in data.items()
-            if key not in nested_field_names and not key.startswith("_")
-        }
-
-        model_class(**simple_data)
-
-    except PydanticValidationError as e:
-        for err in e.errors():
-            # Missing required fields are reported by the engine's
-            # RequiredFieldsRule below; skip them here to avoid a duplicate.
-            if err["type"] == "missing":
-                continue
-            field_path = ".".join(str(loc) for loc in err["loc"])
-            errors.append(
-                ValidationError(
-                    field=field_path,
-                    message=err["msg"],
-                    rule="constraint",
-                )
-            )
+    errors.extend(_pydantic_constraint_errors(data, entity_spec))
 
     # 2. Custom rule validation from profile spec
     engine = create_engine_for_entity(entity_type, version, profile=profile)

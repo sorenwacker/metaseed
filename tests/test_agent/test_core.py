@@ -244,6 +244,13 @@ class TestExtractionContext:
             f"Expected error for missing 'unique_id' field, got errors: {errors}"
         )
 
+        # A required field present with a null value is as absent as a missing key.
+        null_data = {"unique_id": None, "title": "Test"}
+        errors = ctx.validate_instance(null_data, "Investigation")
+        assert any(e.field == "unique_id" for e in errors), (
+            f"Expected error for required 'unique_id' set to None, got: {errors}"
+        )
+
     def test_export_yaml(self, tmp_path: Path) -> None:
         """Export extracted data to YAML."""
         csv_file = tmp_path / "data.csv"
