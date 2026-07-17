@@ -44,7 +44,20 @@ class FilesystemDatasetRepository(DatasetRepository):
         self._dir.mkdir(parents=True, exist_ok=True)
 
     def _get_path(self: Self, name: str) -> Path:
-        """Get the file path for a dataset."""
+        """Resolve the on-disk path for a dataset, rejecting unsafe names.
+
+        The name is interpolated straight into a filename, so a value like
+        ``../../etc/passwd`` or an absolute path would escape the datasets
+        directory. This is the single choke point shared by save/load/delete/
+        exists, so validating here protects every operation rather than only
+        the save path.
+
+        Raises:
+            ValueError: If the name is not a valid dataset name.
+        """
+        error = self.validate_name(name)
+        if error:
+            raise ValueError(error)
         return self._dir / f"{name}.json"
 
     def list(self: Self) -> list[DatasetInfo]:
