@@ -468,7 +468,13 @@ def create_engine_for_entity(
             for rule_spec in profile_spec.validation_rules:
                 if _applies_to_entity(rule_spec, entity):
                     rule = _create_rule_from_spec(rule_spec, available_refs)
-                    if rule:
+                    # Reference-integrity rules need the set of IDs that exist
+                    # elsewhere in the dataset, which a single-entity engine does
+                    # not have (no caller passes ``available_refs`` here). Such a
+                    # rule could therefore only ever no-op or false-positive, so
+                    # skip it: dataset-scope reference integrity is enforced by
+                    # DatasetValidator._validate_references instead.
+                    if rule and not isinstance(rule, EntityReferenceRule):
                         engine.add_rule(rule)
     except SpecLoadError:
         # If profile not found, continue with basic rules only

@@ -363,6 +363,23 @@ class TestExplicitRuleTypes:
         with pytest.raises(ValueError, match="unknown type 'unique'"):
             _create_rule_from_spec(spec)
 
+    def test_single_entity_engine_omits_reference_rules(self) -> None:
+        """A per-entity engine must not carry dead reference-integrity rules.
+
+        BiologicalMaterial declares a Study.unique_id reference rule. At
+        single-entity scope there is no set of dataset-wide IDs, so such a rule
+        can only no-op or false-positive; it must be skipped (reference
+        integrity is enforced by DatasetValidator instead).
+        """
+        from metaseed.validators.engine import create_engine_for_entity
+
+        engine = create_engine_for_entity(
+            "BiologicalMaterial", version="1.1", profile="miappe"
+        )
+        assert not any(
+            isinstance(r, EntityReferenceRule) for r in engine.rules
+        )
+
 
 class TestInferredRuleTypes:
     """Tests for backward-compatible rule type inference."""
