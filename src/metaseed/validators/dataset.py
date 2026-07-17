@@ -6,10 +6,11 @@ references between entities are valid.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Self, cast
+from typing import Any, NamedTuple, Self, cast
 
 import yaml
 
@@ -19,6 +20,16 @@ from metaseed.utils import to_snake_case
 from metaseed.validators.api import _pydantic_constraint_errors
 from metaseed.validators.base import ValidationError
 from metaseed.validators.engine import create_engine_for_entity
+
+
+class _UniquenessRuleDef(NamedTuple):
+    """A declared uniqueness rule, resolved for dataset-level enforcement."""
+
+    name: str
+    field: str
+    scope: str  # "parent" or "global"
+    applies_to: set[str]  # snake_case entity types, or {"all"}
+    message: str | None
 
 
 @dataclass
@@ -142,6 +153,46 @@ class DatasetValidator:
         self._registry = IdRegistry()
         self._reference_fields: dict[str, list[tuple[str, str]]] = {}
         self._load_reference_fields()
+        self._uniqueness_rules: list[_UniquenessRuleDef] = []
+        self._load_uniqueness_rules()
+
+    def _load_uniqueness_rules(self: Self) -> None:
+        """Load declared uniqueness rules from the profile.
+
+        Cross-record identifier uniqueness (e.g. MIAPPE's ``unique_within:
+        parent`` on ``unique_id``) is a dataset-level concern: the per-record
+        ``UniquenessRule`` in the engine cannot see sibling records. These
+        definitions drive :meth:`_validate_uniqueness` over the full tree.
+        """
+        try:
+            profile_spec = self._loader.load_profile(
+                version=self.version, profile=self.profile
+            )
+        except SpecLoadError:
+            return
+        if not profile_spec:
+            return
+
+        for rule in profile_spec.validation_rules:
+            is_uniqueness = rule.type == "uniqueness" or (
+                rule.type is None and bool(rule.unique_within)
+            )
+            if not is_uniqueness or not rule.field:
+                continue
+            applies = rule.applies_to
+            if applies == "all" or isinstance(applies, str):
+                applies_snake = {"all"} if applies == "all" else {to_snake_case(applies)}
+            else:
+                applies_snake = {to_snake_case(e) for e in applies}
+            self._uniqueness_rules.append(
+                _UniquenessRuleDef(
+                    name=rule.name,
+                    field=rule.field,
+                    scope=rule.unique_within or "parent",
+                    applies_to=applies_snake,
+                    message=rule.message,
+                )
+            )
 
     def _load_reference_fields(self: Self) -> None:
         """Load reference field definitions from specs."""
@@ -287,6 +338,66 @@ class DatasetValidator:
         self._traverse_entity_tree(data, entity_type, check_refs, path)
         return errors
 
+    def _validate_uniqueness(
+        self: Self,
+        data: dict[str, Any],
+        entity_type: str,
+        seen: set[tuple[str, str, str]],
+        path: str = "",
+    ) -> list[ValidationError]:
+        """Flag duplicate values for fields declared unique in the profile.
+
+        Enforces the profile's uniqueness rules across records, which the
+        per-record engine rule cannot. ``seen`` accumulates ``(rule, scope_key,
+        value)`` keys so a caller may share it across files for global scope.
+
+        Scope:
+            - ``global``: unique across the whole dataset.
+            - ``parent``: unique among siblings of the same collection. Two
+              records share a parent scope when their paths differ only in the
+              trailing list index, so the scope key is the path with that index
+              stripped.
+
+        Args:
+            data: Entity data dictionary.
+            entity_type: Type of the entity.
+            seen: Accumulator of already-seen (rule, scope_key, value) keys.
+            path: Current path for error reporting.
+
+        Returns:
+            List of uniqueness validation errors.
+        """
+        if not self._uniqueness_rules:
+            return []
+
+        errors: list[ValidationError] = []
+
+        def check_unique(d: dict[str, Any], etype: str, p: str) -> None:
+            for rule in self._uniqueness_rules:
+                if "all" not in rule.applies_to and etype not in rule.applies_to:
+                    continue
+                value = d.get(rule.field)
+                if value is None:
+                    continue
+                scope_key = "" if rule.scope == "global" else re.sub(r"\[\d+\]$", "", p)
+                key = (rule.name, scope_key, str(value))
+                if key in seen:
+                    field_path = f"{p}.{rule.field}" if p else rule.field
+                    msg = rule.message or (
+                        f"Value '{value}' is not unique for '{rule.field}' "
+                        f"within {rule.scope} scope"
+                    )
+                    errors.append(
+                        ValidationError(
+                            field=field_path, message=msg, rule="uniqueness"
+                        )
+                    )
+                else:
+                    seen.add(key)
+
+        self._traverse_entity_tree(data, entity_type, check_unique, path)
+        return errors
+
     def _validate_entity(
         self: Self,
         data: dict[str, Any],
@@ -413,6 +524,9 @@ class DatasetValidator:
         # Pass 3: Validate references
         result.errors.extend(self._validate_references(data, entity_type))
 
+        # Pass 4: Validate declared uniqueness rules across records
+        result.errors.extend(self._validate_uniqueness(data, entity_type, set()))
+
         # Count entities
         self._count_entities(data, entity_type, result.entity_counts)
 
@@ -481,7 +595,9 @@ class DatasetValidator:
                     )
                 )
 
-        # Pass 2: Validate all files
+        # Pass 2: Validate all files. Uniqueness is shared across files so that
+        # global-scope rules catch cross-file duplicates.
+        uniqueness_seen: set[tuple[str, str, str]] = set()
         for file_path, data, entity_type in file_data:
             # Validate entity structure
             errors = self._validate_entity(data, entity_type)
@@ -497,6 +613,19 @@ class DatasetValidator:
             # Validate references
             ref_errors = self._validate_references(data, entity_type)
             for error in ref_errors:
+                result.errors.append(
+                    ValidationError(
+                        field=f"{file_path}:{error.field}",
+                        message=error.message,
+                        rule=error.rule,
+                    )
+                )
+
+            # Validate declared uniqueness rules across records
+            uniq_errors = self._validate_uniqueness(
+                data, entity_type, uniqueness_seen
+            )
+            for error in uniq_errors:
                 result.errors.append(
                     ValidationError(
                         field=f"{file_path}:{error.field}",

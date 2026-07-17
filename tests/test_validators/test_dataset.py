@@ -314,3 +314,66 @@ studies:
         ref_errors = [e for e in result.errors if e.rule == "reference_integrity"]
         assert len(ref_errors) == 1
         assert "STU999" in ref_errors[0].message
+
+
+class TestUniqueness:
+    """Tests for dataset-level uniqueness enforcement (MIAPPE unique_within)."""
+
+    def test_duplicate_id_within_parent_is_reported(self, tmp_path: Path) -> None:
+        """Two siblings sharing a unique_id violate parent-scoped uniqueness."""
+        content = """
+unique_id: INV001
+title: Test Investigation
+description: A test
+studies:
+  - unique_id: STU001
+    title: Study 1
+    investigation_id: INV001
+    observation_units:
+      - unique_id: OU-DUP
+        observation_unit_type: plant
+      - unique_id: OU-DUP
+        observation_unit_type: plant
+"""
+        file_path = tmp_path / "investigation.yaml"
+        file_path.write_text(content)
+
+        result = DatasetValidator(profile="miappe", version="1.2").validate_file(
+            file_path
+        )
+
+        uniq_errors = [e for e in result.errors if e.rule == "uniqueness"]
+        assert len(uniq_errors) == 1
+        assert "OU-DUP" in uniq_errors[0].message
+
+    def test_same_id_under_different_parents_is_allowed(
+        self, tmp_path: Path
+    ) -> None:
+        """Parent scope permits the same id under different parents."""
+        content = """
+unique_id: INV001
+title: Test Investigation
+description: A test
+studies:
+  - unique_id: STU001
+    title: Study 1
+    investigation_id: INV001
+    observation_units:
+      - unique_id: OU-X
+        observation_unit_type: plant
+  - unique_id: STU002
+    title: Study 2
+    investigation_id: INV001
+    observation_units:
+      - unique_id: OU-X
+        observation_unit_type: plant
+"""
+        file_path = tmp_path / "investigation.yaml"
+        file_path.write_text(content)
+
+        result = DatasetValidator(profile="miappe", version="1.2").validate_file(
+            file_path
+        )
+
+        uniq_errors = [e for e in result.errors if e.rule == "uniqueness"]
+        assert uniq_errors == []
