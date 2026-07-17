@@ -1,6 +1,16 @@
 site_name: Metaseed
 site_description: Tools for creating, editing, and validating experimental metadata following MIAPPE standards
 
+# Files kept in the repo but not published. MkDocs renders any page under docs/
+# regardless of nav membership, so excluding here (not just omitting from nav) is
+# what actually keeps them off the site.
+#   REVIEW.md      - point-in-time internal code-review artifact, not user docs
+#   isa_demo.ipynb - stale demo (never in nav yet was published); references a
+#                    defunct project path and the pre-<profile>/<version> layout
+exclude_docs: |
+  REVIEW.md
+  isa_demo.ipynb
+
 theme:
   name: material
   logo: images/metaseed-icon.svg
@@ -81,7 +91,6 @@ nav:
       - PRIDE Import: architecture/pride-import.md
       - MetaboLights Import: architecture/metabolights-import.md
       - ISA-Tab Export: architecture/isatab-export.md
-      - Codebase Review: REVIEW.md
   - API Reference:
       - MetaseedClient: api/client.md
       - CLI: api/cli.md
