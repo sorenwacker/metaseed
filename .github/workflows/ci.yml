@@ -25,8 +25,12 @@ jobs:
         run: uv run ruff check .
 
       - name: Run tests with coverage
+        # Exclude network-marked tests: they hit live third-party services
+        # (e.g. the EBI/MetaboLights API), so an external outage would fail CI
+        # for unrelated changes. This matches the project's pre-push hook.
         run: |
           uv run pytest \
+            -m "not network" \
             --ignore=tests/test_ui/test_selenium.py \
             --ignore=tests/test_ui/test_spec_builder_selenium.py \
             --ignore=tests/test_ui/selenium/ \
