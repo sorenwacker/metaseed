@@ -149,6 +149,46 @@ class TestFilesystemDatasetRepository:
         """Should return False for nonexistent."""
         assert repo.delete("nonexistent") is False
 
+    @pytest.mark.parametrize(
+        "evil_name",
+        [
+            "../secret",
+            "../../etc/passwd",
+            "sub/../../escape",
+            "/etc/passwd",
+            "..",
+        ],
+    )
+    def test_load_rejects_path_traversal(self, repo, tmp_path, evil_name):
+        """load() must not read files outside the datasets directory.
+
+        The name becomes a filename, so an unvalidated ``../secret`` (or an
+        absolute path) would escape the datasets dir. Every read/delete path,
+        not only save, must reject such names.
+        """
+        outside = tmp_path / "secret.json"
+        outside.write_text('{"name": "secret", "profile": "x", "version": "1"}')
+
+        with pytest.raises(ValueError):
+            repo.load(evil_name)
+
+    def test_delete_rejects_path_traversal(self, repo, tmp_path):
+        """delete() must not unlink files outside the datasets directory."""
+        victim = tmp_path / "victim.json"
+        victim.write_text("{}")
+
+        with pytest.raises(ValueError):
+            repo.delete("../victim")
+        assert victim.exists()  # untouched
+
+    def test_exists_rejects_path_traversal(self, repo, tmp_path):
+        """exists() must not probe files outside the datasets directory."""
+        outside = tmp_path / "probe.json"
+        outside.write_text("{}")
+
+        with pytest.raises(ValueError):
+            repo.exists("../probe")
+
     def test_exists(self, repo):
         """Should check existence correctly."""
         assert not repo.exists("test")
