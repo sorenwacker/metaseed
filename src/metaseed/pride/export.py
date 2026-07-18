@@ -1,10 +1,13 @@
-"""Export a ``pride``-profile dataset to a PRIDE ``submission.px`` file.
+"""Export a ``pride``-profile dataset to PRIDE submission artifacts.
 
-Produces the ``submission.px`` document consumed by the ProteomeXchange
-``px-submission-tool`` from a metaseed ``pride`` dataset. Pure and
-dependency-free (stdlib only). Data files are *referenced* by name and type in
-file-mapping (``FME``) lines; this never uploads anything (submission/auth is
-out of scope).
+Produces two tab-separated documents from a metaseed ``pride`` dataset, both
+pure and dependency-free (stdlib only), never uploading anything (submission and
+auth are out of scope):
+
+* :func:`to_pride_submission` -- the ``submission.px`` document consumed by the
+  ProteomeXchange ``px-submission-tool``. Data files are *referenced* by name
+  and type in file-mapping (``FME``) lines.
+* :func:`to_pride_sdrf` -- the SDRF-Proteomics sample-to-data table.
 
 The format is tab-separated, one record per line, each prefixed by a line-type
 token:
@@ -84,6 +87,122 @@ def _file_lines(dataset: dict[str, Any]) -> list[str]:
         path = str(file.get("filename"))
         lines.append(f"FME\t{file_id}\t{file_type}\t{path}")
     return lines
+
+
+_NA = "not available"
+# Fixed technology-type term for MS proteomics (PSI-MS wording used by SDRF).
+_TECHNOLOGY_TYPE = "proteomic profiling by mass spectrometry"
+
+
+def _characteristic_columns(samples: list[dict[str, Any]]) -> list[str]:
+    """Return the ordered ``characteristics[...]`` column keys.
+
+    A fixed core (organism, organism part, cell type, disease) is always
+    present, followed by any custom-attribute names, in first-seen order, so
+    every sample row shares the same columns.
+    """
+    columns = ["organism", "organism part", "cell type", "disease"]
+    seen = set(columns)
+    for sample in samples:
+        for attr in sample.get("custom_attributes") or []:
+            name = attr.get("name")
+            if name and name not in seen:
+                seen.add(name)
+                columns.append(str(name))
+    return columns
+
+
+def _sample_characteristic(sample: dict[str, Any], key: str) -> str:
+    """Resolve a single ``characteristics[key]`` value for a sample."""
+    core = {
+        "organism": sample.get("species"),
+        "organism part": sample.get("tissue"),
+        "cell type": sample.get("cell_type"),
+        "disease": sample.get("disease"),
+    }
+    if key in core:
+        return str(core[key]) if core[key] else _NA
+    for attr in sample.get("custom_attributes") or []:
+        if attr.get("name") == key:
+            return str(attr.get("value")) if attr.get("value") else _NA
+    return _NA
+
+
+def _files_for_sample(
+    sample: dict[str, Any], files: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Return the data files that reference ``sample`` by name."""
+    name = sample.get("name")
+    matched = [f for f in files if name in (f.get("sample_refs") or [])]
+    return matched
+
+
+def to_pride_sdrf(client: MetaseedClient) -> dict[str, str]:
+    """Render a ``pride``-profile dataset as an SDRF-Proteomics table.
+
+    SDRF-Proteomics is a tab-separated sample-to-data table: one row per
+    (sample, data file) pair. Columns are ``source name``, the
+    ``characteristics[...]`` sample columns, ``assay name``, ``technology
+    type``, and the ``comment[...]`` columns (data file, instrument). Missing
+    values render as ``"not available"`` per SDRF convention.
+
+    Args:
+        client: A MetaseedClient bound to the ``pride`` profile whose root
+            Dataset carries the nested Sample and DataFile lists. A sample is
+            linked to a file via the file's ``sample_refs`` (sample names).
+
+    Returns:
+        Mapping ``{"sdrf.tsv": ...}``. Empty when the dataset holds no samples
+        (the PRIDE Archive API exposes no per-sample rows, so an imported-only
+        dataset has none to export).
+    """
+    entities = client.serialize()["entities"]
+    datasets = [e for e in entities if e.get("_type") == "Dataset"]
+    if not datasets:
+        return {}
+    dataset = datasets[0]
+    samples = dataset.get("samples") or []
+    if not samples:
+        return {}
+
+    files = dataset.get("files") or []
+    instruments = dataset.get("instruments") or []
+    instrument = str(instruments[0].get("name")) if instruments else _NA
+
+    char_cols = _characteristic_columns(samples)
+    header = (
+        ["source name"]
+        + [f"characteristics[{c}]" for c in char_cols]
+        + ["assay name", "technology type", "comment[data file]", "comment[instrument]"]
+    )
+
+    rows = [header]
+    assay_index = 0
+    for sample in samples:
+        chars = [_sample_characteristic(sample, c) for c in char_cols]
+        # One row per associated file; a sample with no files still gets a row.
+        matched = _files_for_sample(sample, files)
+        sample_files: list[dict[str, Any] | None] = list(matched) if matched else [None]
+        for data_file in sample_files:
+            assay_index += 1
+            data_name = (
+                str(data_file.get("filename"))
+                if data_file and data_file.get("filename")
+                else _NA
+            )
+            rows.append(
+                [
+                    str(sample.get("name") or _NA),
+                    *chars,
+                    f"run {assay_index}",
+                    _TECHNOLOGY_TYPE,
+                    data_name,
+                    instrument,
+                ]
+            )
+
+    text = "\n".join("\t".join(row) for row in rows) + "\n"
+    return {"sdrf.tsv": text}
 
 
 def to_pride_submission(client: MetaseedClient) -> dict[str, str]:
