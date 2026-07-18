@@ -163,6 +163,43 @@ unique_id: INV001
         assert not result.is_valid
         assert len(result.errors) == 1
 
+    def test_validate_file_unknown_type_is_rejected(self, tmp_path: Path) -> None:
+        """A file declaring an unknown _type must not validate as valid.
+
+        The traversal and engine both swallow the SpecLoadError raised for an
+        unknown entity, so without an explicit check the file fails open (no
+        rule runs and it is reported valid).
+        """
+        content = """
+_type: NotARealEntity
+unique_id: X001
+made_up_field: whatever
+"""
+        file_path = tmp_path / "bogus.yaml"
+        file_path.write_text(content)
+
+        result = DatasetValidator(profile="miappe", version="1.2").validate_file(
+            file_path
+        )
+
+        assert not result.is_valid
+        type_errors = [e for e in result.errors if e.rule == "unknown_entity_type"]
+        assert len(type_errors) == 1
+        assert "NotARealEntity" in type_errors[0].message
+
+    def test_validate_directory_flags_unknown_type_file(
+        self, tmp_path: Path
+    ) -> None:
+        """An unknown-_type file in a directory is flagged, not skipped silently."""
+        (tmp_path / "bogus.yaml").write_text("_type: Nope\nunique_id: X\n")
+
+        result = DatasetValidator(profile="miappe", version="1.2").validate_directory(
+            tmp_path
+        )
+
+        assert not result.is_valid
+        assert any(e.rule == "unknown_entity_type" for e in result.errors)
+
     def test_validate_directory_valid(self, tmp_path: Path) -> None:
         """Validate a directory with valid files."""
         inv_content = """
