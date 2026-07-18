@@ -30,7 +30,7 @@ ENV/
 
 # UV
 .uv/
-uv.lock
+# uv.lock is committed for reproducible dev/CI builds and Dependabot scanning.
 
 # Testing
 .pytest_cache/
