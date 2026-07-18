@@ -228,6 +228,21 @@ class DatasetValidator:
         entity_type = data.get("_type")
         return str(entity_type).lower() if entity_type else None
 
+    def _is_known_entity(self: Self, entity_type: str) -> bool:
+        """Whether ``entity_type`` resolves to an entity in the active profile.
+
+        Args:
+            entity_type: The entity type name to check.
+
+        Returns:
+            True if the profile defines the entity, False otherwise.
+        """
+        try:
+            self._loader.load_entity(entity_type, self.version)
+        except SpecLoadError:
+            return False
+        return True
+
     def _default_entity_type(self: Self) -> str | None:
         """The profile's root entity type, for data lacking a ``_type`` marker.
 
@@ -508,9 +523,23 @@ class DatasetValidator:
         # fallback yields ``None`` only when the profile cannot be loaded, a
         # degenerate case the downstream traversal handles as a no-op; cast to
         # ``str`` to satisfy the helper signatures without altering behavior.
+        detected_type = self._detect_entity_type(data)
         entity_type = cast(
-            "str", self._detect_entity_type(data) or self._default_entity_type()
+            "str", detected_type or self._default_entity_type()
         )
+
+        # A file that declares a _type naming no known entity would otherwise be
+        # reported valid: the traversal and engine both swallow the resulting
+        # SpecLoadError, so no rule ever runs. Flag it instead of failing open.
+        if detected_type is not None and not self._is_known_entity(detected_type):
+            result.errors.append(
+                ValidationError(
+                    field="_type",
+                    message=f"Unknown entity type: '{data.get('_type')}'",
+                    rule="unknown_entity_type",
+                )
+            )
+            return result
 
         # Reset registry for single file validation
         self._registry = IdRegistry()
@@ -571,13 +600,29 @@ class DatasetValidator:
 
                 # See validate_file: the fallback is None only for an unloadable
                 # profile; cast to str leaves runtime behavior unchanged.
+                detected_type = self._detect_entity_type(data)
                 entity_type = cast(
-                    "str", self._detect_entity_type(data) or self._default_entity_type()
+                    "str", detected_type or self._default_entity_type()
                 )
+
+                result.files_checked.append(file_path)
+
+                # Flag a declared-but-unknown _type rather than fail open (see
+                # validate_file); skip collecting/validating this file further.
+                if detected_type is not None and not self._is_known_entity(
+                    detected_type
+                ):
+                    result.errors.append(
+                        ValidationError(
+                            field=f"{file_path}:_type",
+                            message=f"Unknown entity type: '{data.get('_type')}'",
+                            rule="unknown_entity_type",
+                        )
+                    )
+                    continue
 
                 self._collect_ids(data, entity_type)
                 file_data.append((file_path, data, entity_type))
-                result.files_checked.append(file_path)
             except yaml.YAMLError as e:
                 result.errors.append(
                     ValidationError(
