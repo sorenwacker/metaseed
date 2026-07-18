@@ -78,16 +78,26 @@ entity types as nested lists.
 ## Export
 
 ```python
-from metaseed.pride import to_pride_submission
+from metaseed.pride import to_pride_sdrf, to_pride_submission
 
 docs = to_pride_submission(client)   # {"submission.px": ...}
+sdrf = to_pride_sdrf(client)         # {"sdrf.tsv": ...}
 ```
 
 `to_pride_submission` renders a `pride` dataset as the PRIDE px-submission
 `submission.px` file: `MTD` metadata lines (project title, submitters, species,
-instruments, modifications) and one `FME` entry per referenced file. Pure and
-dependency-free. With `import_accession` this makes metaseed a round-trip PRIDE
-bridge.
+instruments, modifications) and one `FME` entry per referenced file.
+
+`to_pride_sdrf` renders the [SDRF-Proteomics](https://github.com/bigbio/proteomics-sample-metadata)
+sample-to-data table: one row per `(sample, data file)` pair, with a `source
+name` column, `characteristics[...]` columns (organism, organism part, cell
+type, disease, plus any sample custom attributes), `assay name`, `technology
+type`, and `comment[...]` columns (data file, instrument). Files link to samples
+via `DataFile.sample_refs`; missing values render as `not available`. Returns
+`{}` when the dataset has no samples.
+
+Both are pure and dependency-free. With `import_accession` this makes metaseed a
+round-trip PRIDE bridge.
 
 ## Testing
 
