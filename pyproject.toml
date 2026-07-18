@@ -1,12 +1,22 @@
 [project]
 name = "metaseed"
 dynamic = ["version"]
-description = "Tools for creating, editing, and validating experimental metadata following MIAPPE standards"
+description = "A schema-driven toolbox for creating, editing, and validating scientific metadata across standards (MIAPPE, ISA, Darwin Core, DiSSCo, ENA, JERM) from YAML specifications"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{ name = "sdrwacker" }]
-keywords = ["miappe", "phenotyping", "metadata", "ontology", "ppeo"]
+keywords = [
+    "metadata",
+    "fair-data",
+    "ontology",
+    "miappe",
+    "isa-tab",
+    "darwin-core",
+    "dissco",
+    "ena",
+    "phenotyping",
+]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",

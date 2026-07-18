@@ -2,10 +2,13 @@
 
 ## Supported Versions
 
+Metaseed is pre-1.0 and moves fast; only the latest released minor receives
+security fixes.
+
 | Version | Supported          |
 | ------- | ------------------ |
-| 0.6.x   | Yes                |
-| < 0.6   | No                 |
+| 0.12.x  | Yes                |
+| < 0.12  | No                 |
 
 ## Reporting a Vulnerability
 
