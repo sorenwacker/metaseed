@@ -1,5 +1,5 @@
 site_name: Metaseed
-site_description: Tools for creating, editing, and validating experimental metadata following MIAPPE standards
+site_description: A schema-driven toolbox for creating, editing, and validating scientific metadata across standards (MIAPPE, ISA, Darwin Core, DiSSCo, ENA, JERM) from YAML specifications
 
 # Files kept in the repo but not published. MkDocs renders any page under docs/
 # regardless of nav membership, so excluding here (not just omitting from nav) is
