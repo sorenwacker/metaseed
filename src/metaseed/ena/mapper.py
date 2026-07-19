@@ -17,6 +17,8 @@ from __future__ import annotations
 from itertools import zip_longest
 from typing import TYPE_CHECKING, Any
 
+from metaseed._mapping import clean as _clean
+
 if TYPE_CHECKING:
     from metaseed.api.client import MetaseedClient
 
@@ -41,11 +43,6 @@ READ_RUN_FIELDS: tuple[str, ...] = (
     "fastq_ftp",
     "fastq_md5",
 )
-
-
-def _clean(data: dict[str, Any]) -> dict[str, Any]:
-    """Drop empty values so missing ENA fields are absent, not blank strings."""
-    return {k: v for k, v in data.items() if v not in (None, "", [])}
 
 
 def _int(value: Any) -> int | None:

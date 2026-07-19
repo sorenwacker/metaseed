@@ -17,13 +17,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from metaseed._mapping import clean as _clean
+
 if TYPE_CHECKING:
     from metaseed.api.client import MetaseedClient
-
-
-def _clean(data: dict[str, Any]) -> dict[str, Any]:
-    """Drop empty values so missing BrAPI fields are absent, not blank."""
-    return {k: v for k, v in data.items() if v not in (None, "", [], {})}
 
 
 def build_dataset(
