@@ -138,6 +138,17 @@ entities:
       constraints:
         enum: [COMPLETE, PARTIAL]
 
+    - name: experiment_types
+      type: list
+      items: string
+      required: false
+      description: Experiment type(s), e.g. "Shotgun proteomics" (PX experiment_type)
+
+    - name: reason_for_partial
+      type: string
+      required: false
+      description: Why the submission is PARTIAL (required by PX for PARTIAL submissions)
+
     - name: announcement_date
       type: date
       required: false

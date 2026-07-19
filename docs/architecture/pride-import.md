@@ -114,9 +114,29 @@ custom-attribute `cv_accession` — and resolves each against OLS4 via the share
 accession that does not exist. A transient OLS4 outage fails open (nothing
 flagged). Pass `service=` to inject a stub in tests.
 
+## PX submission structure
+
+```python
+from metaseed.pride import validate_submission
+
+issues = validate_submission(client)   # [] when the submission.px is compliant
+```
+
+`validate_submission` applies the ProteomeXchange submission-file rules to the
+`submission.px` produced by `to_pride_submission` — without invoking the Java
+`px-submission-tool`, it encodes the same rules: mandatory `MTD` fields present
+(submitter, lab head, project, keywords, `submission_type`, `experiment_type`,
+`species`, `tissue`, `instrument`), `submission_type` one of COMPLETE/PARTIAL,
+`reason_for_partial` present for PARTIAL, and a well-formed file mapping (at least
+one RAW file, valid file types, and a RESULT (COMPLETE) or SEARCH (PARTIAL)
+file). Each violation is a `ValidationError` with rule `px_structure`.
+
 ## Testing
 
 The mapper is tested from recorded `project` and `files` fixtures; the client is
-tested with an `httpx` mock transport (request shape, JSON parsing, pagination,
-and the HAL paged unwrapping). One live smoke test against the real PRIDE API is
-marked `network` and excluded from the default run.
+tested with an `httpx` mock transport. The exporters and `validate_submission`
+are tested against real generated documents (no network). CV resolution is
+two-tier: hermetic dev tests (stubbed service and pure collection checks) run in
+CI, and `network`-marked tests resolve real accessions against live OLS4 before
+releases. Live-API smoke tests are `network`-marked and excluded from the default
+run.
