@@ -345,7 +345,7 @@ class TestOntologyToolsIntegration:
         """Create MCP server instance."""
         return create_server()
 
-    @pytest.mark.skip(reason="Requires network access to OLS4 API")
+    @pytest.mark.network
     def test_search_real_api(self, server) -> None:
         """Search using real OLS4 API."""
         search_fn = get_tool(server, "search_ontology")
@@ -356,7 +356,7 @@ class TestOntologyToolsIntegration:
         assert "results" in data
         assert data["total_found"] > 0
 
-    @pytest.mark.skip(reason="Requires network access to OLS4 API")
+    @pytest.mark.network
     def test_get_term_real_api(self, server) -> None:
         """Get term using real OLS4 API."""
         get_fn = get_tool(server, "get_ontology_term")
@@ -367,7 +367,7 @@ class TestOntologyToolsIntegration:
         assert data["id"] == "PATO:0000015"
         assert "label" in data
 
-    @pytest.mark.skip(reason="Requires network access to OLS4 API")
+    @pytest.mark.network
     def test_list_ontologies_real_api(self, server) -> None:
         """List ontologies using real OLS4 API."""
         list_fn = get_tool(server, "list_ontologies")
