@@ -1,6 +1,13 @@
-"""Tests for the shared CV-term compliance helper (hermetic; no OLS4 call)."""
+"""Tests for the shared CV-term compliance helper.
+
+Two tiers: the dev/CI tests below stub the ontology service (fast, hermetic, no
+OLS4 rate limits); the ``@pytest.mark.network`` test at the end resolves against
+live OLS4 and is meant to run before releases.
+"""
 
 from __future__ import annotations
+
+import pytest
 
 from metaseed.validators.cv import validate_cv_terms
 
@@ -60,3 +67,11 @@ def test_outage_fails_open():
         [("a", "MS:9999999")], service=_FakeService(outage=True)
     )
     assert errors == []
+
+
+@pytest.mark.network
+def test_resolves_against_live_ols4():
+    # Release tier: real OLS4. MS:1000031 is a real PSI-MS term; MS:9999999 is not.
+    errors = validate_cv_terms([("good", "MS:1000031"), ("bad", "MS:9999999")])
+    assert [e.field for e in errors] == ["bad"]
+    assert errors[0].rule == "cv_compliance"

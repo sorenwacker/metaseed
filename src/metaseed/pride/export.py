@@ -54,6 +54,8 @@ def _metadata_lines(dataset: dict[str, Any]) -> list[str]:
         _mtd("submitter_name", submitter.get("name")),
         _mtd("submitter_email", submitter.get("email")),
         _mtd("submitter_affiliation", submitter.get("affiliation")),
+        # PX uses the submitter email as the PRIDE login user name.
+        _mtd("submitter_pride_login", submitter.get("email")),
         _mtd("lab_head_name", lab_head.get("name")),
         _mtd("lab_head_email", lab_head.get("email")),
         _mtd("lab_head_affiliation", lab_head.get("affiliation")),
@@ -61,9 +63,19 @@ def _metadata_lines(dataset: dict[str, Any]) -> list[str]:
         _mtd("project_description", dataset.get("description")),
         _mtd("keywords", ", ".join(str(k) for k in keywords)),
         _mtd("submission_type", dataset.get("submission_type")),
+        _mtd("reason_for_partial", dataset.get("reason_for_partial")),
     ]
+    for experiment_type in dataset.get("experiment_types") or []:
+        candidates.append(_mtd("experiment_type", experiment_type))
     for species in dataset.get("species") or []:
         candidates.append(_mtd("species", species.get("name")))
+    # PX requires tissue; emit each distinct sample tissue (order-preserving).
+    seen_tissues: set[str] = set()
+    for sample in dataset.get("samples") or []:
+        tissue = sample.get("tissue")
+        if tissue and tissue not in seen_tissues:
+            seen_tissues.add(tissue)
+            candidates.append(_mtd("tissue", tissue))
     for instrument in dataset.get("instruments") or []:
         candidates.append(_mtd("instrument", instrument.get("name")))
     for modification in dataset.get("modifications") or []:

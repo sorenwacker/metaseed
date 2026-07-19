@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING
 
 from metaseed.pride.export import to_pride_sdrf, to_pride_submission
 from metaseed.pride.mapper import build_dataset
-from metaseed.pride.validate import validate_cv
+from metaseed.pride.validate import validate_cv, validate_submission
 
 if TYPE_CHECKING:
     from metaseed.api.client import MetaseedClient
@@ -30,6 +30,7 @@ __all__ = [
     "to_pride_sdrf",
     "to_pride_submission",
     "validate_cv",
+    "validate_submission",
 ]
 
 

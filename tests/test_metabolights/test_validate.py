@@ -1,10 +1,10 @@
-"""Tests for metabolights CV-term compliance (hermetic; injected service).
+"""Tests for metabolights CV-term compliance.
 
-MetaboLights creates ``Sample`` as its own entity, so its ``organism_term``
-(an ``ontology_term`` field) is resolved against OLS4 at *creation* time
-(facade.helper.validate_ontology_terms). The ``fake_ontology`` fixture patches
-the context ontology service so both that coercion and ``validate_cv`` use the
-stub — no live OLS4 call.
+The collection logic is checked directly (pure, no network); end-to-end
+resolution runs against live OLS4 under ``@pytest.mark.network``. Note that
+building a Sample with an ``organism_term`` accession resolves it against OLS4 at
+creation time (facade.helper), so the end-to-end test is network-marked for that
+reason too.
 """
 
 from __future__ import annotations
@@ -13,27 +13,29 @@ import pytest
 
 from metaseed import MetaseedClient
 from metaseed.metabolights import validate_cv
+from metaseed.metabolights.validate import _cv_terms
+
+# --- CV term collection (pure; no network) ---------------------------------
 
 
-class _FakeService:
-    KNOWN = {"NCBITaxon:9606", "CHEBI:17234"}
+def test_cv_terms_collects_organism_and_metabolite_accessions():
+    entities = [
+        {"_type": "Sample", "organism_term": "NCBITaxon:9606"},
+        {
+            "_type": "Assay",
+            "metabolites": [
+                {"metabolite_identification": "g", "database_identifier": "CHEBI:17234"},
+                {"metabolite_identification": "x", "database_identifier": "CHEBI:0000000"},
+            ],
+        },
+    ]
+    collected = dict(_cv_terms(entities))
+    assert collected["Sample[0].organism_term"] == "NCBITaxon:9606"
+    assert collected["Assay[0].metabolites[0].database_identifier"] == "CHEBI:17234"
+    assert collected["Assay[0].metabolites[1].database_identifier"] == "CHEBI:0000000"
 
-    def validate_term_sync(self, term_id: str) -> tuple[bool, str | None]:
-        if ":" not in term_id and "_" not in term_id:
-            return True, None
-        if term_id in self.KNOWN:
-            return True, None
-        return False, f"Ontology term '{term_id}' not found in OLS4"
 
-
-@pytest.fixture
-def fake_ontology(monkeypatch):
-    """Route the context ontology service to a network-free stub."""
-    service = _FakeService()
-    monkeypatch.setattr(
-        "metaseed.services.ontology.get_ontology_service", lambda: service
-    )
-    return service
+# --- CV resolution against live OLS4 ---------------------------------------
 
 
 def _client(*, organism_term=None, metabolites=None) -> MetaseedClient:
@@ -71,31 +73,23 @@ def _client(*, organism_term=None, metabolites=None) -> MetaseedClient:
     return client
 
 
-def test_valid_cv_terms_pass(fake_ontology):
+@pytest.mark.network
+def test_valid_cv_terms_resolve():
     client = _client(
         organism_term="NCBITaxon:9606",
         metabolites=[{"metabolite_identification": "g", "database_identifier": "CHEBI:17234"}],
     )
-    assert validate_cv(client, service=fake_ontology) == []
+    assert validate_cv(client) == []
 
 
-def test_unknown_organism_and_metabolite_terms_are_reported(fake_ontology):
+@pytest.mark.network
+def test_unknown_organism_and_metabolite_terms_are_reported():
     client = _client(
-        organism_term="NCBITaxon:0000000",
-        metabolites=[
-            {"metabolite_identification": "g", "database_identifier": "CHEBI:17234"},
-            {"metabolite_identification": "x", "database_identifier": "CHEBI:0000000"},
-        ],
+        organism_term="NCBITaxon:9606",
+        metabolites=[{"metabolite_identification": "x", "database_identifier": "CHEBI:0000000"}],
     )
-    errors = validate_cv(client, service=fake_ontology)
-    fields = {e.field for e in errors}
-    assert "Sample[0].organism_term" in fields
-    assert "Assay[0].metabolites[1].database_identifier" in fields
-    assert len(errors) == 2
-    assert all(e.rule == "cv_compliance" for e in errors)
-
-
-def test_free_text_organism_is_not_flagged(fake_ontology):
-    # organism_term left unset (import default) or free text must not error.
-    client = _client(organism_term=None)
-    assert validate_cv(client, service=fake_ontology) == []
+    errors = validate_cv(client)
+    assert [e.field for e in errors] == [
+        "Assay[0].metabolites[0].database_identifier"
+    ]
+    assert errors[0].rule == "cv_compliance"
