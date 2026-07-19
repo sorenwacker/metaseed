@@ -50,15 +50,6 @@ def echo_warning(message: str) -> None:
     typer.secho(f"Warning: {message}", fg=typer.colors.YELLOW)
 
 
-def echo_info(message: str) -> None:
-    """Print an informational message in blue.
-
-    Args:
-        message: The info message to display.
-    """
-    typer.secho(message, fg=typer.colors.BLUE)
-
-
 class CheckOutput:
     """Formats and displays dataset validation results with colors.
 

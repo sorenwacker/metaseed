@@ -280,7 +280,3 @@ class MemoryEntityRepository(EntityRepository):
             if parent_helper:
                 new_instance = parent_helper.create(**parent_data)
                 self._state.update_node(parent_node.id, new_instance)
-
-
-# Backwards compatibility alias
-AppStateAdapter = MemoryEntityRepository
