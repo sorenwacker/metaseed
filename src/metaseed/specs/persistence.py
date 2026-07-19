@@ -12,14 +12,37 @@ from __future__ import annotations
 
 import shutil
 from collections.abc import Callable
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from metaseed.specs.builder import SpecBuilder
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from metaseed.specs.schema import ProfileSpec
+
+
+def _specs_subpath(*parts: str) -> Path:
+    """Resolve a path under the custom-specs dir, rejecting escapes.
+
+    ``name`` and ``version`` components flow from user/model input into
+    filesystem paths (and, on delete, into ``shutil.rmtree``). A component like
+    ``../../.config/autostart`` or an absolute path would otherwise escape the
+    specs directory. Resolve the full path and require it to stay within the
+    (resolved) base; also reject empty components.
+
+    Raises:
+        ValueError: If any component is empty or the result escapes the base.
+    """
+    base = get_custom_specs_dir()
+    for part in parts:
+        if not part or not str(part).strip():
+            raise ValueError("path component cannot be empty")
+    candidate = base.joinpath(*parts).resolve()
+    if not candidate.is_relative_to(base.resolve()):
+        raise ValueError(
+            f"path component escapes the specs directory: {parts!r}"
+        )
+    return candidate
 
 
 def get_custom_specs_dir() -> Path:
@@ -65,7 +88,7 @@ def save_spec(spec: ProfileSpec, name: str | None = None) -> Path:
             f"Please choose a different name."
         )
 
-    version_dir = get_custom_specs_dir() / safe_name / spec.version
+    version_dir = _specs_subpath(safe_name, spec.version)
     version_dir.mkdir(parents=True, exist_ok=True)
 
     profile_path = version_dir / "profile.yaml"
@@ -149,12 +172,13 @@ def delete_user_spec(name: str, version: str | None = None) -> bool:
     if not loader.is_user_defined(name):
         raise ValueError(f"Cannot delete built-in specification: {name}")
 
-    profile_dir = get_custom_specs_dir() / name
+    # Containment-check before any rmtree: name/version must not escape the base.
+    profile_dir = _specs_subpath(name)
     if not profile_dir.exists():
         return False
 
     if version:
-        version_dir = profile_dir / version
+        version_dir = _specs_subpath(name, version)
         if not version_dir.exists():
             return False
         shutil.rmtree(version_dir)
