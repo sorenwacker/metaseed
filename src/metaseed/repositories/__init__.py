@@ -6,7 +6,6 @@ entity and dataset persistence, following the same DI pattern as SpecPersistence
 
 from metaseed.repositories.base import EntityData, EntityRepository
 from metaseed.repositories.dataset_repository import (
-    AsyncDatasetRepository,
     DatasetData,
     DatasetInfo,
     DatasetRepository,
@@ -24,7 +23,6 @@ from metaseed.repositories.helpers import (
 from metaseed.repositories.memory import MemoryEntityRepository
 
 __all__ = [
-    "AsyncDatasetRepository",
     "DatasetData",
     "DatasetInfo",
     "DatasetRepository",

@@ -7,9 +7,8 @@ the actual storage mechanism (filesystem, database, etc.).
 A dataset is a named collection of entities with metadata about the
 profile, version, and modification time.
 
-Two interfaces are provided:
-- DatasetRepository: Synchronous interface (for filesystem, simple use cases)
-- AsyncDatasetRepository: Asynchronous interface (for database backends)
+DatasetRepository is the synchronous interface (for filesystem, simple use
+cases).
 """
 
 import re
@@ -94,8 +93,6 @@ class DatasetRepository(ABC):
     This interface defines the contract for dataset CRUD operations,
     separating storage concerns from business logic. Implementations
     may use filesystem or other synchronous backends.
-
-    For async backends (databases), use AsyncDatasetRepository instead.
     """
 
     @abstractmethod
@@ -152,85 +149,6 @@ class DatasetRepository(ABC):
 
     @abstractmethod
     def exists(self, name: str) -> bool:
-        """Check if a dataset exists.
-
-        Args:
-            name: Dataset name to check.
-
-        Returns:
-            True if exists, False otherwise.
-        """
-        pass
-
-    @staticmethod
-    def validate_name(name: str) -> str | None:
-        """Validate a dataset name."""
-        return validate_dataset_name(name)
-
-
-class AsyncDatasetRepository(ABC):
-    """Abstract interface for asynchronous dataset persistence.
-
-    This interface defines the contract for async dataset CRUD operations,
-    suitable for database backends using async SQLAlchemy or similar.
-
-    For sync backends (filesystem), use DatasetRepository instead.
-    """
-
-    @abstractmethod
-    async def list(self) -> list[DatasetInfo]:
-        """List all saved datasets.
-
-        Returns:
-            List of DatasetInfo summaries, sorted by modified time (most recent first).
-        """
-        pass
-
-    @abstractmethod
-    async def save(self, name: str, data: DatasetData) -> DatasetInfo:
-        """Save a dataset.
-
-        Args:
-            name: Dataset name (must be valid per validate_name).
-            data: Dataset contents to save.
-
-        Returns:
-            DatasetInfo for the saved dataset.
-
-        Raises:
-            ValueError: If name is invalid.
-        """
-        pass
-
-    @abstractmethod
-    async def load(self, name: str) -> DatasetData:
-        """Load a dataset by name.
-
-        Args:
-            name: Dataset name to load.
-
-        Returns:
-            DatasetData with full contents.
-
-        Raises:
-            FileNotFoundError: If dataset doesn't exist.
-        """
-        pass
-
-    @abstractmethod
-    async def delete(self, name: str) -> bool:
-        """Delete a dataset.
-
-        Args:
-            name: Dataset name to delete.
-
-        Returns:
-            True if deleted, False if not found.
-        """
-        pass
-
-    @abstractmethod
-    async def exists(self, name: str) -> bool:
         """Check if a dataset exists.
 
         Args:

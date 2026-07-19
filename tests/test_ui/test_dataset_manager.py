@@ -257,9 +257,3 @@ class TestDatasetManagerFactory:
         factory = DatasetManagerFactory(sync_repo=custom_repo)
 
         assert factory.sync_repo is custom_repo
-
-    def test_async_repo_property(self):
-        """Factory should expose async_repo property."""
-        factory = DatasetManagerFactory()
-
-        assert factory.async_repo is None
