@@ -23,10 +23,10 @@ validation_rules:
     pattern: "^(PRJEB[0-9]+|ERP[0-9]{6,})$"
 
   - name: sample_accession_format
-    description: Sample accession must be ERS or SAMEA format
+    description: Sample accession must be an ENA/INSDC form (ERS, or BioSample SAMEA/SAMN/SAMD)
     applies_to: [Sample]
     field: accession
-    pattern: "^(ERS[0-9]{6,}|SAMEA[0-9]+)$"
+    pattern: "^(ERS[0-9]{6,}|SAM(EA|N|D)[0-9]+)$"
 
   - name: experiment_accession_format
     description: Experiment accession must be ERX format
