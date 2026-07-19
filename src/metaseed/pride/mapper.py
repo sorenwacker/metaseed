@@ -16,19 +16,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from metaseed._mapping import clean as _clean
+from metaseed._mapping import clean_all as _clean_all
+
 if TYPE_CHECKING:
     from metaseed.api.client import MetaseedClient
-
-
-def _clean(data: dict[str, Any]) -> dict[str, Any]:
-    """Drop empty values so missing PRIDE fields are absent, not blank."""
-    return {k: v for k, v in data.items() if v not in (None, "", [], {})}
-
-
-def _clean_all(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Clean every dict and drop any that become empty."""
-    cleaned = [_clean(r) for r in rows]
-    return [r for r in cleaned if r]
 
 
 def _taxon_id(accession: Any) -> str | None:
