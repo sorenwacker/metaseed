@@ -4,11 +4,8 @@ Provides a central interface for dataset operations that integrates
 with AppState and allows repository implementation to be swapped
 (e.g., for metaseed-hub database backend).
 
-Two managers are provided:
-- DatasetManager: Synchronous manager (for filesystem, simple use cases)
-- AsyncDatasetManager: Asynchronous manager (for database backends)
-
-Both inherit from BaseDatasetManager which contains shared logic for:
+DatasetManager is the synchronous manager (for filesystem, simple use cases).
+It provides:
 - Building dataset data from state
 - Restoring state from dataset data
 - Default dataset name generation
@@ -21,13 +18,11 @@ for loading and saving operations.
 from __future__ import annotations
 
 import re
-from abc import ABC
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Generic, Self, TypeVar
+from typing import TYPE_CHECKING, Any, Self
 from weakref import WeakValueDictionary
 
 from metaseed.repositories.dataset_repository import (
-    AsyncDatasetRepository,
     DatasetData,
     DatasetInfo,
     DatasetRepository,
@@ -39,21 +34,19 @@ from metaseed.repositories.filesystem_dataset import (
 if TYPE_CHECKING:
     from metaseed.ui.state import AppState
 
-# Type variable for repository type (sync or async)
-R = TypeVar("R", DatasetRepository, AsyncDatasetRepository)
 
+class DatasetManager:
+    """Manages dataset operations with DI support.
 
-class BaseDatasetManager(ABC, Generic[R]):
-    """Base class with shared logic for dataset managers.
-
-    Contains common implementation for building dataset data,
-    restoring state, and generating default names. Subclasses
-    implement sync or async versions of the repository operations.
+    Integrates a DatasetRepository with AppState to provide high-level
+    dataset operations including state synchronization: building dataset
+    data from state, restoring state from a dataset, and generating
+    default names.
     """
 
     def __init__(
         self,
-        repository: R,
+        repository: DatasetRepository,
         state: AppState,
     ):
         """Initialize dataset manager.
@@ -62,12 +55,12 @@ class BaseDatasetManager(ABC, Generic[R]):
             repository: Repository implementation for storage.
             state: AppState instance for entity management.
         """
-        self._repo: R = repository
+        self._repo: DatasetRepository = repository
         self._state = state
         self._current: str | None = None
 
     @property
-    def repository(self) -> R:
+    def repository(self) -> DatasetRepository:
         """Get the underlying repository."""
         return self._repo
 
@@ -152,14 +145,6 @@ class BaseDatasetManager(ABC, Generic[R]):
             entity_count=loaded_count,
             modified=data.modified,
         )
-
-
-class DatasetManager(BaseDatasetManager[DatasetRepository]):
-    """Manages dataset operations with DI support.
-
-    Integrates a DatasetRepository with AppState to provide
-    high-level dataset operations including state synchronization.
-    """
 
     def list_datasets(self: Self) -> list[DatasetInfo]:
         """List all saved datasets.
@@ -261,113 +246,6 @@ class DatasetManager(BaseDatasetManager[DatasetRepository]):
             pass
 
 
-class AsyncDatasetManager(BaseDatasetManager[AsyncDatasetRepository]):
-    """Manages dataset operations with async DI support.
-
-    Integrates an AsyncDatasetRepository with AppState to provide
-    high-level async dataset operations for database backends.
-    """
-
-    async def list_datasets(self: Self) -> list[DatasetInfo]:
-        """List all saved datasets.
-
-        Returns:
-            List of DatasetInfo summaries.
-        """
-        return await self._repo.list()
-
-    async def save_dataset(self: Self, name: str) -> DatasetInfo:
-        """Save current state as a named dataset.
-
-        Args:
-            name: Dataset name.
-
-        Returns:
-            DatasetInfo for the saved dataset.
-
-        Raises:
-            ValueError: If name is invalid.
-        """
-        error = AsyncDatasetRepository.validate_name(name)
-        if error:
-            raise ValueError(error)
-
-        data = self._build_dataset_data(name)
-        result = await self._repo.save(name, data)
-        self._current = name
-        return result
-
-    async def load_dataset(self: Self, name: str) -> DatasetInfo:
-        """Load a dataset into the state.
-
-        Args:
-            name: Dataset name to load.
-
-        Returns:
-            DatasetInfo for the loaded dataset.
-
-        Raises:
-            FileNotFoundError: If dataset doesn't exist.
-        """
-        data = await self._repo.load(name)
-        loaded_count = self._restore_state_from_data(data)
-        self._current = name
-
-        return DatasetInfo(
-            name=name,
-            profile=data.profile,
-            version=data.version,
-            entity_count=loaded_count,
-            modified=data.modified,
-        )
-
-    async def delete_dataset(self: Self, name: str) -> bool:
-        """Delete a dataset.
-
-        Args:
-            name: Dataset name to delete.
-
-        Returns:
-            True if deleted, False if not found.
-        """
-        result = await self._repo.delete(name)
-        if result and self._current == name:
-            self._current = None
-        return result
-
-    async def dataset_exists(self: Self, name: str) -> bool:
-        """Check if a dataset exists.
-
-        Args:
-            name: Dataset name to check.
-
-        Returns:
-            True if exists, False otherwise.
-        """
-        return await self._repo.exists(name)
-
-    async def auto_save(self: Self) -> None:
-        """Auto-save the current state.
-
-        Saves to the current dataset if one is loaded, otherwise derives
-        a name from the first entity's label.
-        """
-        name = self._current or self._get_default_dataset_name()
-
-        try:
-            result = await self.save_dataset(name)
-
-            from metaseed.ui.websocket import notify_state_changed
-
-            notify_state_changed(
-                event="state_changed",
-                dataset=name,
-                entity_count=result.entity_count,
-            )
-        except (ValueError, OSError):
-            pass
-
-
 class DatasetManagerFactory:
     """Factory for creating DatasetManager instances tied to AppState.
 
@@ -383,30 +261,19 @@ class DatasetManagerFactory:
     def __init__(
         self,
         sync_repo: DatasetRepository | None = None,
-        async_repo: AsyncDatasetRepository | None = None,
     ) -> None:
-        """Initialize factory with optional custom repositories.
+        """Initialize factory with an optional custom repository.
 
         Args:
             sync_repo: Sync repository implementation (default: FilesystemDatasetRepository).
-            async_repo: Async repository implementation (default: None).
         """
         self._sync_repo = sync_repo or FilesystemDatasetRepository()
-        self._async_repo = async_repo
         self._managers: WeakValueDictionary[int, DatasetManager] = WeakValueDictionary()
-        self._async_managers: WeakValueDictionary[int, AsyncDatasetManager] = (
-            WeakValueDictionary()
-        )
 
     @property
     def sync_repo(self) -> DatasetRepository:
         """Get the sync repository."""
         return self._sync_repo
-
-    @property
-    def async_repo(self) -> AsyncDatasetRepository | None:
-        """Get the async repository."""
-        return self._async_repo
 
     def get_manager(self: Self, state: AppState) -> DatasetManager:
         """Get or create a DatasetManager for the given state.
@@ -422,25 +289,6 @@ class DatasetManagerFactory:
         if manager is None:
             manager = DatasetManager(self._sync_repo, state)
             self._managers[state_id] = manager
-        return manager
-
-    def get_async_manager(self: Self, state: AppState) -> AsyncDatasetManager | None:
-        """Get or create an AsyncDatasetManager for the given state.
-
-        Args:
-            state: AppState instance to create manager for.
-
-        Returns:
-            AsyncDatasetManager instance, or None if no async repository is set.
-        """
-        if self._async_repo is None:
-            return None
-
-        state_id = id(state)
-        manager = self._async_managers.get(state_id)
-        if manager is None:
-            manager = AsyncDatasetManager(self._async_repo, state)
-            self._async_managers[state_id] = manager
         return manager
 
 
