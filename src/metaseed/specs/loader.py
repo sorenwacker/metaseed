@@ -24,7 +24,16 @@ import yaml
 from pydantic import ValidationError
 
 from metaseed.paths import get_builtin_specs_dir, get_user_specs_dir
-from metaseed.specs.schema import EntitySpec, ProfileSpec
+from metaseed.specs.schema import Constraints, EntitySpec, FieldType, ProfileSpec
+
+if TYPE_CHECKING:
+    from metaseed.specs.schema import EntityDefSpec, FieldSpec, ValidationRuleSpec
+
+# Field types a regex ``pattern`` or ``enum`` constraint can be applied to
+# (Pydantic rejects e.g. a pattern on a ``datetime`` field). ``minimum``/``maximum``
+# apply only to numeric fields.
+_STRING_TYPES = frozenset({FieldType.STRING})
+_NUMERIC_TYPES = frozenset({FieldType.INTEGER, FieldType.FLOAT})
 
 if TYPE_CHECKING:
     from metaseed.core.context import ProfileContext
@@ -34,6 +43,72 @@ logger = logging.getLogger(__name__)
 
 class SpecLoadError(Exception):
     """Raised when a specification file cannot be loaded or parsed."""
+
+
+def _rule_target_fields(
+    profile: ProfileSpec, rule: ValidationRuleSpec
+) -> list[FieldSpec]:
+    """Return the FieldSpecs a rule applies to (by ``applies_to`` + ``field``)."""
+    if not rule.field:
+        return []
+    applies = rule.applies_to
+    if applies == "all":
+        targets: list[EntityDefSpec] = list(profile.entities.values())
+    else:
+        names = applies if isinstance(applies, list) else [applies]
+        by_norm = {
+            key.lower().replace("_", ""): entity_def
+            for key, entity_def in profile.entities.items()
+        }
+        targets = [
+            entity_def
+            for name in names
+            if (entity_def := by_norm.get(str(name).lower().replace("_", "")))
+        ]
+    fields: list[FieldSpec] = []
+    for entity_def in targets:
+        fields.extend(f for f in entity_def.fields if f.name == rule.field)
+    return fields
+
+
+def _merge_rule_constraints_into_fields(profile: ProfileSpec) -> None:
+    """Mirror rule-level pattern/enum/range constraints onto their fields.
+
+    A constraint (``pattern``/``enum``/``minimum``/``maximum``) declared only on a
+    ``validation_rule`` — the common case, since rule and field are separate YAML
+    objects — is otherwise never enforced: ``engine._infer_rule_type`` delegates
+    such constraints to Pydantic, but Pydantic (via ``models.factory``) only reads
+    constraints from the field's own ``constraints`` block. Copying them onto the
+    matching field here makes that delegation correct, so the generated model
+    enforces them on every validation path. Field-level constraints win on
+    conflict (a constraint the field already declares is left untouched).
+    """
+    for rule in profile.validation_rules:
+        if (
+            rule.pattern is None
+            and rule.enum is None
+            and rule.minimum is None
+            and rule.maximum is None
+        ):
+            continue
+        for field in _rule_target_fields(profile, rule):
+            is_string = field.type in _STRING_TYPES
+            is_numeric = field.type in _NUMERIC_TYPES
+            if not (is_string or is_numeric):
+                # A constraint on e.g. a datetime/uri field can't be applied as a
+                # Pydantic pattern/range; the field type already validates it.
+                continue
+            if field.constraints is None:
+                field.constraints = Constraints()
+            constraints = field.constraints
+            if is_string and rule.pattern is not None and constraints.pattern is None:
+                constraints.pattern = rule.pattern
+            if is_string and rule.enum is not None and constraints.enum is None:
+                constraints.enum = rule.enum
+            if is_numeric and rule.minimum is not None and constraints.minimum is None:
+                constraints.minimum = rule.minimum
+            if is_numeric and rule.maximum is not None and constraints.maximum is None:
+                constraints.maximum = rule.maximum
 
 
 class SpecLoader:
@@ -160,6 +235,8 @@ class SpecLoader:
                     f"Invalid profile {profile_path} at {loc}: {msg}"
                 ) from e
             raise SpecLoadError(f"Invalid profile {profile_path}: {e}") from e
+
+        _merge_rule_constraints_into_fields(loaded_profile)
 
         self._profile_cache[cache_key] = loaded_profile
         logger.debug(

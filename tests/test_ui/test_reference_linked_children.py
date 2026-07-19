@@ -101,7 +101,7 @@ class TestReferenceLinkedChildren:
                 "filetype": "fastq",
                 "run_ref": "run1",
                 "checksum_method": "MD5",
-                "checksum": "abc123",
+                "checksum": "0123456789abcdef0123456789abcdef",
             },
         )
 
@@ -131,7 +131,7 @@ class TestReferenceLinkedChildren:
             filetype="fastq",
             run_ref="run1",
             checksum_method="MD5",
-            checksum="abc123",
+            checksum="0123456789abcdef0123456789abcdef",
         )
         file_node = state.add_node("File", file_instance, parent_id=run_node.id)
 
@@ -160,7 +160,7 @@ class TestReferenceLinkedChildren:
             filetype="fastq",
             run_ref="run1",
             checksum_method="MD5",
-            checksum="abc123",
+            checksum="0123456789abcdef0123456789abcdef",
         )
         state.add_node("File", file_instance, parent_id=run_node.id)
 
@@ -191,7 +191,7 @@ class TestReferenceLinkedChildren:
             filetype="fastq",
             run_ref="run1",
             checksum_method="MD5",
-            checksum="abc123",
+            checksum="0123456789abcdef0123456789abcdef",
         )
         state.add_node("File", file_instance, parent_id=run_node.id)
 
@@ -231,7 +231,7 @@ class TestReferenceLinkedChildren:
             filetype="fastq",
             run_ref="run1",
             checksum_method="MD5",
-            checksum="abc123",
+            checksum="0123456789abcdef0123456789abcdef",
         )
         file_node = state.add_node("File", file_instance, parent_id=run_node.id)
 
@@ -267,7 +267,7 @@ class TestReferenceLinkedChildren:
             filetype="fastq",
             run_ref="run1",
             checksum_method="MD5",
-            checksum="abc123",
+            checksum="0123456789abcdef0123456789abcdef",
         )
         state.add_node("File", file_instance, parent_id=run_node.id)
 
@@ -300,7 +300,7 @@ class TestReferenceLinkedChildren:
             filetype="fastq",
             run_ref="run1",
             checksum_method="MD5",
-            checksum="existing123",
+            checksum="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         )
         _existing_file_node = state.add_node(
             "File", existing_file, parent_id=run_node.id
@@ -324,7 +324,7 @@ class TestReferenceLinkedChildren:
             "filename": "new.fastq.gz",
             "filetype": "fastq",
             "checksum_method": "MD5",
-            "checksum": "new123",
+            "checksum": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
             # run_ref will be set during save
         }
         state.current_nested_items["files"].append(new_file_dict)
@@ -404,7 +404,7 @@ class TestReferenceLinkedChildren:
             filetype="fastq",
             run_ref="run1",
             checksum_method="MD5",
-            checksum="abc123",
+            checksum="0123456789abcdef0123456789abcdef",
         )
         _file_node = state.add_node("File", file_instance, parent_id=run_node.id)
 
@@ -446,7 +446,7 @@ class TestReferenceLinkedChildren:
                 "filetype": "fastq",
                 "run_ref": "DRR000618",
                 "checksum_method": "MD5",
-                "checksum": "abc123",
+                "checksum": "0123456789abcdef0123456789abcdef",
                 "_parent_unique_id": "DRR000618",
             },
             {
@@ -455,7 +455,7 @@ class TestReferenceLinkedChildren:
                 "filetype": "fastq",
                 "run_ref": "DRR000618",
                 "checksum_method": "MD5",
-                "checksum": "def456",
+                "checksum": "cccccccccccccccccccccccccccccccc",
                 "_parent_unique_id": "DRR000618",
             },
         ]
@@ -509,7 +509,7 @@ class TestReferenceLinkedChildren:
                 "filetype": "fastq",
                 "run_ref": "run1",
                 "checksum_method": "MD5",
-                "checksum": "abc",
+                "checksum": "dddddddddddddddddddddddddddddddd",
                 "_parent_unique_id": "run1",
             },
         ]
@@ -563,7 +563,7 @@ class TestReferenceLinkedChildren:
                 "filetype": "fastq",
                 "run_ref": "run1",
                 "checksum_method": "MD5",
-                "checksum": "existing123",
+                "checksum": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                 "_parent_unique_id": "run1",
             },
         ]
@@ -589,7 +589,7 @@ class TestReferenceLinkedChildren:
             "filename": "new.fastq.gz",
             "filetype": "fastq",
             "checksum_method": "MD5",
-            "checksum": "new123",
+            "checksum": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
         }
         state.current_nested_items["files"].append(new_file_dict)
 
@@ -651,7 +651,7 @@ class TestReferenceLinkedChildren:
                 "filetype": "fastq",
                 "run_ref": "run1",
                 "checksum_method": "MD5",
-                "checksum": "abc",
+                "checksum": "dddddddddddddddddddddddddddddddd",
             },
         )
         _file2 = facade.add_entity(
@@ -661,7 +661,7 @@ class TestReferenceLinkedChildren:
                 "filetype": "fastq",
                 "run_ref": "run1",
                 "checksum_method": "MD5",
-                "checksum": "def",
+                "checksum": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
             },
         )
 
@@ -713,7 +713,7 @@ class TestReferenceLinkedChildren:
                 "filetype": "fastq",
                 "run_ref": "run1",
                 "checksum_method": "MD5",
-                "checksum": "abc",
+                "checksum": "dddddddddddddddddddddddddddddddd",
             },
             parent_id=run_node.id,
         )
