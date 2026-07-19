@@ -18,12 +18,13 @@ from typing import TYPE_CHECKING
 
 from metaseed.metabolights.export import to_metabolights
 from metaseed.metabolights.mapper import build_dataset
+from metaseed.metabolights.validate import validate_cv
 
 if TYPE_CHECKING:
     from metaseed.api.client import MetaseedClient
     from metaseed.metabolights.client import MetaboLightsClient
 
-__all__ = ["build_dataset", "import_accession", "to_metabolights"]
+__all__ = ["build_dataset", "import_accession", "to_metabolights", "validate_cv"]
 
 
 def import_accession(
