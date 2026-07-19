@@ -23,7 +23,9 @@ jobs:
         run: uv python install 3.12
 
       - name: Install dependencies
-        run: uv sync --extra dev
+        # dcat (rdflib) is needed so mypy sees real types for dcat/serialize.py;
+        # the other extras are just httpx, already pulled in by dev.
+        run: uv sync --extra dev --extra dcat
 
       - name: Run linting
         run: uv run ruff check .
