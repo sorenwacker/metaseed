@@ -63,13 +63,36 @@ and would make the otherwise network-free mapper issue a request per sample.
   `metaseed.metabolights.mapper` (the pure mapper) needs nothing extra, and
   importing `metaseed.metabolights` does not pull in the web framework.
 
+## Export
+
+```python
+from metaseed.metabolights import to_metabolights
+
+docs = to_metabolights(client)   # {"i_Investigation.txt": ..., "m_*.tsv": ..., ...}
+```
+
+`to_metabolights` renders a `metabolights` dataset as the MetaboLights archive:
+the ISA-Tab documents (via `metaseed.isatab.to_isatab`) plus one **Metabolite
+Assignment File** (`m_*.tsv`) per Assay. Each MAF is the standard MAF column
+header followed by **one row per `Assay.metabolites` entry**; the MAF column
+names match the `Metabolite` entity field names, so each column is a direct
+lookup (columns the profile does not model — e.g. `search_engine`, `taxid` —
+stay empty). An assay with no metabolites yields a valid header-only MAF. Pure
+and dependency-free.
+
+Note: the *importer* does not populate metabolites (see Limitations), so a
+populated MAF comes from datasets authored in metaseed or loaded with
+`Assay.metabolites` present.
+
 ## Limitations
 
-- **Sample and metabolite tables are not parsed.** MetaboLights stores per-sample
-  rows and the metabolite assignment file (MAF) as separate tabular files. The
-  importer maps only the samples inline in the ISA document and records the MAF
-  filename (`metabolite_assignment_file`) when the assay declares it; it does not
-  download or parse the MAF, so no `Metabolite` entities are created.
+- **The importer does not parse the sample and metabolite tables.** MetaboLights
+  stores per-sample rows and the metabolite assignment file (MAF) as separate
+  tabular files. The importer maps only the samples inline in the ISA document
+  and records the MAF filename (`metabolite_assignment_file`) when the assay
+  declares it; it does not download or parse the MAF, so it creates no
+  `Metabolite` entities. (The *exporter* does emit a populated MAF when a dataset
+  carries `Assay.metabolites` — see Export.)
 - **Free-text vs. enum values.** MetaboLights annotation values (e.g.
   `technology_type`, `measurement_type`) are recorded verbatim and may fall
   outside the profile's enumerations; `validate()` surfaces these.

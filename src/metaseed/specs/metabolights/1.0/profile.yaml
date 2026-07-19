@@ -262,6 +262,12 @@ entities:
       required: false
       description: Metabolite annotation file (m_*.tsv)
 
+    - name: metabolites
+      type: list
+      items: Metabolite
+      required: false
+      description: Identified metabolites listed in this assay's MAF (m_*.tsv)
+
   Sample:
     ontology_term: mtbls:Sample
     description: A biological sample used in the study.
