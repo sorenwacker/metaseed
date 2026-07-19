@@ -16,6 +16,23 @@ from metaseed.ui.helpers import to_dict, walk_nested_entities
 if TYPE_CHECKING:
     from metaseed.ui.state import AppState
 
+# Characters that make Excel/LibreOffice interpret a cell as a formula. A string
+# value beginning with one of these (e.g. a collaborator-supplied field like
+# ``=HYPERLINK(...)``) would otherwise round-trip into a live formula on export.
+_FORMULA_TRIGGERS = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _escape_formula(value: object) -> object:
+    """Neutralize a formula-injection payload in a string cell value.
+
+    Prefixes a single quote so the value is stored/opened as literal text, not a
+    formula (also stops openpyxl from emitting a leading-``=`` string as a
+    formula). Non-strings can't be formulas and are returned unchanged.
+    """
+    if isinstance(value, str) and value.startswith(_FORMULA_TRIGGERS):
+        return "'" + value
+    return value
+
 
 def _format_cell_value(value: object, is_nested_field: bool) -> object:
     """Format a value for Excel cell.
@@ -93,6 +110,7 @@ def build_workbook(state: AppState) -> Workbook:
             for col in columns:
                 value = entity_data.get(col, "")
                 value = _format_cell_value(value, col in nested_fields)
+                value = _escape_formula(value)
                 row.append(value)
             ws.append(row)
 
