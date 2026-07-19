@@ -8,19 +8,48 @@ column mappings, and extracted entities.
 from __future__ import annotations
 
 import json
-import re
 from collections.abc import Callable
+from functools import lru_cache
 from pathlib import Path
-from typing import Any, Self, cast
+from typing import Annotated, Any, Self, cast
 
 import yaml
-from pydantic import BaseModel
+from pydantic import BaseModel, StringConstraints, TypeAdapter, ValidationError
 
 from metaseed.agent.mapping import ColumnMapping, FieldMapping, suggest_mapping
 from metaseed.agent.parsers import ParsedContent, ParserRegistry
 from metaseed.agent.parsers.registry import create_default_registry
 from metaseed.specs.loader import SpecLoader
 from metaseed.specs.schema import EntitySpec, FieldSpec, ProfileSpec
+
+
+@lru_cache(maxsize=512)
+def _pattern_matcher(pattern: str) -> TypeAdapter[str]:
+    """Cache a Pydantic string-pattern validator for a spec-supplied regex.
+
+    Pydantic's default engine is the Rust ``regex`` crate — linear-time and
+    ReDoS-immune — unlike Python's backtracking ``re``. Used so a malicious
+    spec pattern (e.g. ``^(a+)+$``) cannot stall the process.
+    """
+    return TypeAdapter(Annotated[str, StringConstraints(pattern=pattern)])
+
+
+def _pattern_matches(pattern: str, value: str) -> bool:
+    """Whether ``value`` matches ``pattern`` using the linear (Rust) engine.
+
+    A pattern that will not compile (e.g. Python-only lookbehind/backrefs, none
+    of which ship) is treated as unenforceable and passes, rather than crashing
+    or falsely rejecting — consistent with the Pydantic model path.
+    """
+    try:
+        adapter = _pattern_matcher(pattern)
+    except Exception:
+        return True
+    try:
+        adapter.validate_python(value)
+    except ValidationError:
+        return False
+    return True
 
 
 class TypeConverter:
@@ -396,7 +425,7 @@ class ExtractionContext:
                 )
 
             if constraints.pattern and isinstance(value, str):
-                if not re.match(constraints.pattern, value):
+                if not _pattern_matches(constraints.pattern, value):
                     errors.append(
                         ValidationIssue(
                             field=field_spec.name,
