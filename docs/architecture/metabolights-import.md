@@ -84,6 +84,21 @@ Note: the *importer* does not populate metabolites (see Limitations), so a
 populated MAF comes from datasets authored in metaseed or loaded with
 `Assay.metabolites` present.
 
+## CV-term compliance
+
+```python
+from metaseed.metabolights import validate_cv
+
+issues = validate_cv(client)   # [] when every CV accession resolves
+```
+
+`validate_cv` collects the dataset's controlled-vocabulary accessions — each
+sample's `organism_term` and each identified metabolite's `database_identifier`
+(e.g. a ChEBI id) — and resolves them against OLS4 via the shared
+`OntologyService`, returning a `ValidationError` (rule `cv_compliance`) per
+accession that does not exist. A transient OLS4 outage fails open. Pass
+`service=` to inject a stub in tests.
+
 ## Limitations
 
 - **The importer does not parse the sample and metabolite tables.** MetaboLights

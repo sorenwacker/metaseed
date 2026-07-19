@@ -99,6 +99,21 @@ via `DataFile.sample_refs`; missing values render as `not available`. Returns
 Both are pure and dependency-free. With `import_accession` this makes metaseed a
 round-trip PRIDE bridge.
 
+## CV-term compliance
+
+```python
+from metaseed.pride import validate_cv
+
+issues = validate_cv(client)   # [] when every CV accession resolves
+```
+
+`validate_cv` collects the dataset's controlled-vocabulary accessions —
+instrument and modification `cv_accession`, sample `tissue_accession`, and
+custom-attribute `cv_accession` — and resolves each against OLS4 via the shared
+`OntologyService`, returning a `ValidationError` (rule `cv_compliance`) per
+accession that does not exist. A transient OLS4 outage fails open (nothing
+flagged). Pass `service=` to inject a stub in tests.
+
 ## Testing
 
 The mapper is tested from recorded `project` and `files` fixtures; the client is
