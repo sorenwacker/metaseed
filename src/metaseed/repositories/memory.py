@@ -17,6 +17,8 @@ from metaseed.repositories.helpers import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from metaseed.ui.state import AppState, TreeNode
 
 
@@ -27,13 +29,21 @@ class MemoryEntityRepository(EntityRepository):
     EntityService while providing a clean repository interface.
     """
 
-    def __init__(self: Self, state: AppState) -> None:
+    def __init__(
+        self: Self,
+        state: AppState,
+        on_change: Callable[[AppState], None] | None = None,
+    ) -> None:
         """Initialize with AppState.
 
         Args:
             state: The AppState instance to wrap.
+            on_change: Optional callback invoked with the state after each
+                create/update/delete. The composition root wires this to the
+                UI's ``auto_save`` so the data layer need not import the UI.
         """
         self._state = state
+        self._on_change = on_change
 
     def list_entities(self: Self, entity_type: str | None = None) -> list[EntityData]:
         """List all entities from AppState."""
@@ -87,8 +97,6 @@ class MemoryEntityRepository(EntityRepository):
         parent_id: str | None = None,
     ) -> EntityData:
         """Create entity in AppState."""
-        from metaseed.ui.datasets import auto_save
-
         facade = self._state.get_or_create_facade()
 
         helper = facade.require_helper(entity_type)
@@ -133,14 +141,13 @@ class MemoryEntityRepository(EntityRepository):
         if parent:
             self._update_parent_ref(facade, parent, node)
 
-        auto_save(self._state)
+        if self._on_change is not None:
+            self._on_change(self._state)
 
         return self._node_to_entity(node, include_children=False)
 
     def update_entity(self: Self, entity_id: str, data: dict[str, Any]) -> EntityData:
         """Update entity in AppState."""
-        from metaseed.ui.datasets import auto_save
-
         node = self._state.nodes_by_id.get(entity_id)
         if not node:
             raise ValueError(f"Entity not found: {entity_id}")
@@ -162,7 +169,8 @@ class MemoryEntityRepository(EntityRepository):
         instance = helper.create(**merged)
         updated = self._state.update_node(entity_id, instance)
 
-        auto_save(self._state)
+        if self._on_change is not None:
+            self._on_change(self._state)
 
         # Serialize the post-update node; the original `node` still references
         # the pre-update instance and would return stale data.
@@ -170,11 +178,9 @@ class MemoryEntityRepository(EntityRepository):
 
     def delete_entity(self: Self, entity_id: str) -> bool:
         """Delete entity from AppState."""
-        from metaseed.ui.datasets import auto_save
-
         result = self._state.delete_node(entity_id)
-        if result:
-            auto_save(self._state)
+        if result and self._on_change is not None:
+            self._on_change(self._state)
         return result
 
     def get_tree(self: Self) -> list[EntityData]:

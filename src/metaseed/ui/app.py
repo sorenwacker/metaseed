@@ -53,6 +53,7 @@ def create_app(state: AppState | None = None, base_url: str = "") -> FastAPI:
     from metaseed.agent.mcp.context import MCPContext
     from metaseed.repositories.memory import MemoryEntityRepository
     from metaseed.ui.dataset_manager import DatasetManagerFactory
+    from metaseed.ui.datasets import auto_save
     from metaseed.ui.services.entities import EntityService
 
     app = FastAPI(title="Metaseed")
@@ -68,7 +69,7 @@ def create_app(state: AppState | None = None, base_url: str = "") -> FastAPI:
 
     # Create entity service factory that always uses current facade
     def get_entity_service() -> EntityService:
-        return EntityService(MemoryEntityRepository(state))
+        return EntityService(MemoryEntityRepository(state, on_change=auto_save))
 
     # Create MCP context with all dependencies
     context = MCPContext(
