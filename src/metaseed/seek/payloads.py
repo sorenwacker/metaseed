@@ -97,18 +97,35 @@ def sample_attribute(
     attribute_type_id: str | int,
     required: bool = False,
     is_title: bool = False,
+    controlled_vocab_id: str | int | None = None,
 ) -> dict[str, Any]:
     """Build one entry for a Sample Type's ``sample_attributes`` list.
 
     ``attribute_type_id`` is a SEEK base attribute-type id (e.g. 8 = String,
-    4 = Integer, 7 = Text), as listed by ``GET /sample_attribute_types``.
+    4 = Integer, 7 = Text, 20 = Controlled Vocabulary), as listed by
+    ``GET /sample_attribute_types``. For a Controlled Vocabulary attribute, also
+    pass ``controlled_vocab_id`` — SEEK requires it (flat ``sample_controlled_vocab_id``).
     """
-    return {
+    attribute: dict[str, Any] = {
         "title": title,
         "required": required,
         "is_title": is_title,
         "sample_attribute_type": {"id": str(attribute_type_id)},
     }
+    if controlled_vocab_id is not None:
+        attribute["sample_controlled_vocab_id"] = str(controlled_vocab_id)
+    return attribute
+
+
+def controlled_vocab_payload(*, title: str, terms: list[str]) -> dict[str, Any]:
+    """Build a POST body for ``/sample_controlled_vocabs`` from a list of terms."""
+    return _document(
+        "sample_controlled_vocabs",
+        {
+            "title": title,
+            "sample_controlled_vocab_terms": [{"label": t} for t in terms],
+        },
+    )
 
 
 def sample_type_payload(

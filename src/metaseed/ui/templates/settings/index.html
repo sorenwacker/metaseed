@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="settings-page" style="padding: 1.5rem; max-width: 920px;">
+    <h2>Plugins</h2>
+    <p class="muted">
+        Optional integration adapters. Each ships as a pip extra
+        (<code>pip install 'metaseed[&lt;name&gt;]'</code>); availability reflects
+        whether that extra is installed. Toggle to enable an adapter in this instance.
+    </p>
+    <div id="adapter-list" class="adapter-list">
+        {% for row in adapters %}
+        {% include "partials/adapter_toggle.html" %}
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
