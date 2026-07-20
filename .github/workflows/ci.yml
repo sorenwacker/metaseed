@@ -36,13 +36,12 @@ jobs:
       - name: Run tests with coverage
         # Exclude network-marked tests: they hit live third-party services
         # (e.g. the EBI/MetaboLights API), so an external outage would fail CI
-        # for unrelated changes. This matches the project's pre-push hook.
+        # for unrelated changes. Exclude selenium-marked tests: they drive a real
+        # browser and run in the dedicated `selenium` job below. This matches the
+        # project's pre-push hook.
         run: |
           uv run pytest \
-            -m "not network" \
-            --ignore=tests/test_ui/test_selenium.py \
-            --ignore=tests/test_ui/test_spec_builder_selenium.py \
-            --ignore=tests/test_ui/selenium/ \
+            -m "not selenium and not network" \
             --cov=src/metaseed \
             --cov-report=xml \
             --cov-fail-under=78 \
@@ -54,3 +53,26 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage.xml
           fail_ci_if_error: false
+
+  selenium:
+    runs-on: ubuntu-latest
+    # Advisory: the browser suite drives a real headless Chrome, so occasional
+    # flakiness must never block a merge. ubuntu-latest ships Chrome, and
+    # Selenium Manager (selenium>=4.20) resolves the driver; the tests start
+    # their own uvicorn server, so no extra service setup is needed.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --extra dev --extra dcat
+
+      - name: Run Selenium tests (headless Chrome)
+        # --timeout caps any hung browser so a stuck test cannot stall the job.
+        run: uv run pytest -m selenium tests/test_ui -q --timeout=180
