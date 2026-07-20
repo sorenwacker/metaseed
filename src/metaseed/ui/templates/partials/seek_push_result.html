@@ -1,0 +1,26 @@
+{% if error %}
+<div class="notification error" data-testid="seek-push-error" style="color:#b00020;">
+    Push failed: {{ error }}
+</div>
+{% else %}
+<div class="notification success" data-testid="seek-push-success">
+    <p>
+        Created {{ result.sample_types|length }} Sample Type(s) and
+        {{ result.controlled_vocabularies|length }} Controlled Vocabular(ies) in project
+        {{ result.project }}.
+    </p>
+    {% if result.sample_types %}
+    <ul>
+        {% for entity, id in result.sample_types.items() %}
+        <li>{{ entity }} → Sample Type #{{ id }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+    {% if result.skipped %}
+    <p class="muted" style="font-size:0.85rem;">
+        Skipped (already existed or no fields): {{ result.skipped|join(", ") }}
+    </p>
+    {% endif %}
+    <p><a href="{{ seek_url }}/sample_types" target="_blank" rel="noopener">Open Sample Types in SEEK →</a></p>
+</div>
+{% endif %}

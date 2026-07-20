@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="seek-page" style="padding: 1.5rem; max-width: 720px;">
+    <h2>Push profile to FAIRDOM-SEEK</h2>
+    <p class="muted">
+        Create a SEEK Sample Type for each entity of the chosen profile (enum
+        fields become Controlled Vocabularies). Authenticate with a SEEK API key.
+        After pushing, users register samples against these types in SEEK itself.
+    </p>
+    <form hx-post="{{ base_url }}/seek/push" hx-target="#seek-result" hx-swap="innerHTML"
+          data-testid="seek-push-form"
+          style="display:flex; flex-direction:column; gap:0.75rem; max-width:520px;">
+        <label>Profile
+            <select name="profile" data-testid="seek-profile" required>
+                {% for p in profiles %}
+                <option value="{{ p.value }}">{{ p.label }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>SEEK URL
+            <input name="seek_url" type="url" placeholder="http://localhost:3001"
+                   data-testid="seek-url" required>
+        </label>
+        <label>API key
+            <input name="api_key" type="password" autocomplete="off"
+                   data-testid="seek-api-key" required>
+        </label>
+        <button type="submit" class="btn btn-primary" data-testid="seek-push-btn">Push to SEEK</button>
+    </form>
+    <div id="seek-result" style="margin-top:1rem;"></div>
+</div>
+{% endblock %}

@@ -37,6 +37,16 @@ def get_user_specs_dir() -> Path:
     return specs_dir
 
 
+def get_user_config_path() -> Path:
+    """Get the path to the instance-level settings file (created on first write).
+
+    Returns:
+        Path to ``<user data dir>/settings.json`` (the parent dir is ensured by
+        :func:`get_user_data_dir`; the file itself may not exist yet).
+    """
+    return get_user_data_dir() / "settings.json"
+
+
 def get_builtin_specs_dir() -> Path:
     """Get the directory for built-in specifications.
 

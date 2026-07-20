@@ -28,14 +28,17 @@ from metaseed.seek.payloads import (
 
 if TYPE_CHECKING:
     from metaseed.seek.client import SeekClient
+    from metaseed.seek.config import ProfilePushResult, push_profile
     from metaseed.seek.export import ExperimentIds, push_minimal_experiment
 
 __all__ = [
     "ExperimentIds",
+    "ProfilePushResult",
     "SeekClient",
     "assay_payload",
     "investigation_payload",
     "push_minimal_experiment",
+    "push_profile",
     "sample_attribute",
     "sample_payload",
     "sample_type_payload",
@@ -53,4 +56,8 @@ def __getattr__(name: str) -> Any:
         from metaseed.seek import export
 
         return getattr(export, name)
+    if name in ("push_profile", "ProfilePushResult"):
+        from metaseed.seek import config
+
+        return getattr(config, name)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

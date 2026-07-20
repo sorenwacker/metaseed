@@ -54,7 +54,12 @@ class SeekClient:
                 ``http_client`` is provided).
             http_client: Optional pre-configured ``httpx.Client`` (e.g. a mock
                 transport for tests).
+
+        Raises:
+            ValueError: If both ``auth`` and ``token`` are supplied.
         """
+        if auth is not None and token is not None:
+            raise ValueError("pass either auth or token, not both")
         self._base_url = base_url.rstrip("/")
         self._auth = auth
         self._token = token
@@ -181,3 +186,17 @@ class SeekClient:
                 sample_type_id=sample_type_id, project_id=project_id, data=data
             ),
         )
+
+    def create_controlled_vocabulary(self, *, title: str, terms: list[str]) -> str:
+        """Create a Controlled Vocabulary from ``terms``; return its id."""
+        return self._create(
+            "/sample_controlled_vocabs",
+            payloads.controlled_vocab_payload(title=title, terms=terms),
+        )
+
+    def list_sample_type_titles(self) -> set[str]:
+        """Return the titles of the instance's existing Sample Types."""
+        return {
+            row["attributes"].get("title")
+            for row in self.get("/sample_types").get("data", [])
+        }
