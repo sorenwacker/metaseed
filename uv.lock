@@ -1510,6 +1510,9 @@ metabolights = [
 pride = [
     { name = "httpx" },
 ]
+seek = [
+    { name = "httpx" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -1533,6 +1536,7 @@ requires-dist = [
     { name = "httpx", marker = "extra == 'ena'", specifier = ">=0.27" },
     { name = "httpx", marker = "extra == 'metabolights'", specifier = ">=0.27" },
     { name = "httpx", marker = "extra == 'pride'", specifier = ">=0.27" },
+    { name = "httpx", marker = "extra == 'seek'", specifier = ">=0.27" },
     { name = "jinja2", specifier = ">=3.1" },
     { name = "jupyter", marker = "extra == 'dev'", specifier = ">=1.0" },
     { name = "mcp", specifier = ">=1.0.0" },
@@ -1556,7 +1560,7 @@ requires-dist = [
     { name = "uvicorn", specifier = ">=0.29" },
     { name = "xmlschema", marker = "extra == 'dev'", specifier = ">=3.0" },
 ]
-provides-extras = ["brapi", "dcat", "dev", "docs", "ena", "metabolights", "pride"]
+provides-extras = ["brapi", "dcat", "dev", "docs", "ena", "metabolights", "pride", "seek"]
 
 [package.metadata.requires-dev]
 dev = [

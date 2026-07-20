@@ -72,6 +72,9 @@ pride = [
 metabolights = [
     "httpx>=0.27",
 ]
+seek = [
+    "httpx>=0.27",
+]
 
 [project.scripts]
 metaseed = "metaseed.cli:app"
