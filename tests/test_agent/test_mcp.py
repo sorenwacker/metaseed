@@ -646,13 +646,16 @@ class TestMCPIntegration:
         from metaseed.agent.mcp.server import set_context
         from metaseed.repositories.memory import MemoryEntityRepository
         from metaseed.ui.dataset_manager import DatasetManagerFactory
+        from metaseed.ui.datasets import auto_save
         from metaseed.ui.services.entities import EntityService
 
         test_repo = FilesystemDatasetRepository(datasets_dir=tmp_path)
         factory = DatasetManagerFactory(sync_repo=test_repo)
         context = MCPContext(
             state=state,
-            get_entity_service=lambda: EntityService(MemoryEntityRepository(state)),
+            get_entity_service=lambda: EntityService(
+                MemoryEntityRepository(state, on_change=auto_save)
+            ),
             dataset_factory=factory,
         )
         set_context(context)

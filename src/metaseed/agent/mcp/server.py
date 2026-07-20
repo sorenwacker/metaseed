@@ -129,11 +129,14 @@ def set_mcp_state(state: AppState) -> None:
     from metaseed.agent.mcp.context import MCPContext
     from metaseed.repositories.memory import MemoryEntityRepository
     from metaseed.ui.dataset_manager import DatasetManagerFactory
+    from metaseed.ui.datasets import auto_save
     from metaseed.ui.services.entities import EntityService
 
     context = MCPContext(
         state=state,
-        get_entity_service=lambda: EntityService(MemoryEntityRepository(state)),
+        get_entity_service=lambda: EntityService(
+            MemoryEntityRepository(state, on_change=auto_save)
+        ),
         dataset_factory=DatasetManagerFactory(),
     )
     set_context(context)
@@ -160,10 +163,11 @@ def get_entity_service() -> EntityService:
         return ctx.get_entity_service()
 
     from metaseed.repositories.memory import MemoryEntityRepository
+    from metaseed.ui.datasets import auto_save
     from metaseed.ui.services.entities import EntityService
 
     state = get_mcp_state()
-    repo = MemoryEntityRepository(state)
+    repo = MemoryEntityRepository(state, on_change=auto_save)
     return EntityService(repo)
 
 

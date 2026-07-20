@@ -2,16 +2,11 @@
 
 from __future__ import annotations
 
-import pytest
-
 from metaseed.repositories.memory import MemoryEntityRepository
 from metaseed.ui.state import AppState
 
-
-@pytest.fixture(autouse=True)
-def _no_disk_autosave(monkeypatch):
-    """Keep the repo hermetic — do not persist to the datasets dir."""
-    monkeypatch.setattr("metaseed.ui.datasets.auto_save", lambda state: None)
+# The repository takes no on_change callback in these tests, so it never
+# autosaves — the CRUD assertions run purely in-memory, no disk writes.
 
 
 def test_update_entity_returns_post_update_data():
