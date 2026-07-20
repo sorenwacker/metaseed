@@ -76,3 +76,26 @@ jobs:
       - name: Run Selenium tests (headless Chrome)
         # --timeout caps any hung browser so a stuck test cannot stall the job.
         run: uv run pytest -m selenium tests/test_ui -q --timeout=180
+
+  audit:
+    runs-on: ubuntu-latest
+    # Advisory: a newly-disclosed CVE in a transitive dependency must not block
+    # an unrelated PR — the vulnerability DB updates independently of this code.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
+
+      - name: Set up Python
+        # Use uv-managed CPython (ships ensurepip), so uvx can build pip-audit's
+        # isolated environment.
+        run: uv python install 3.12
+
+      - name: Audit dependencies for known vulnerabilities
+        # Audit the full locked closure — base + all extras + dev group — so a CVE
+        # in an optional adapter dep (metaseed[pride], dcat, …) is caught too.
+        run: |
+          uv export --format requirements-txt --no-emit-project --no-hashes --all-extras \
+            | uvx --python 3.12 pip-audit --requirement /dev/stdin
