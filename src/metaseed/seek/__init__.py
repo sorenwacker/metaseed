@@ -36,7 +36,10 @@ from metaseed.seek.sync import sync_dataset_to_seek
 
 if TYPE_CHECKING:
     from metaseed.seek.client import SeekClient, client_from_settings
-    from metaseed.seek.fairds import to_fair_data_station_rdf
+    from metaseed.seek.fairds import (
+        to_fair_data_station_model_rdf,
+        to_fair_data_station_rdf,
+    )
 
 __all__ = [
     "SeekClient",
@@ -51,6 +54,7 @@ __all__ = [
     "sample_type_payload",
     "study_payload",
     "sync_dataset_to_seek",
+    "to_fair_data_station_model_rdf",
     "to_fair_data_station_rdf",
 ]
 
@@ -61,8 +65,8 @@ def __getattr__(name: str) -> Any:
         from metaseed.seek import client
 
         return getattr(client, name)
-    if name == "to_fair_data_station_rdf":
-        from metaseed.seek.fairds import to_fair_data_station_rdf
+    if name in ("to_fair_data_station_rdf", "to_fair_data_station_model_rdf"):
+        from metaseed.seek import fairds
 
-        return to_fair_data_station_rdf
+        return getattr(fairds, name)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

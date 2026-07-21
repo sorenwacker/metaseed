@@ -13,6 +13,7 @@ from metaseed import MetaseedClient
 from metaseed.seek.fairds import (
     EXPORTED_TYPES,
     exportable_entity_types,
+    to_fair_data_station_model_rdf,
     to_fair_data_station_rdf,
 )
 
@@ -136,3 +137,42 @@ def test_exportable_entity_types_is_role_aware(monkeypatch):
     assert "Sampling" not in EXPORTED_TYPES  # custom name isn't in the JERM map
     assert "Sampling" in types  # ...but the role makes it exportable
     assert types >= EXPORTED_TYPES  # JERM-mapped names still included
+
+
+def test_model_rdf_defines_every_field_even_unpopulated():
+    # The model TTL defines a property for every non-core field, with no dataset.
+    from metaseed.specs.schema import (
+        Constraints,
+        EntityDefSpec,
+        FieldSpec,
+        FieldType,
+        ProfileSpec,
+    )
+
+    profile = ProfileSpec(
+        name="p",
+        version="1.0",
+        entities={
+            "Sample": EntityDefSpec(
+                fields=[
+                    FieldSpec(name="identifier", type=FieldType.STRING),  # core
+                    FieldSpec(
+                        name="tissue",
+                        type=FieldType.STRING,
+                        required=True,
+                        description="tissue type",
+                        constraints=Constraints(pattern="^[a-z]+$"),
+                    ),
+                ]
+            )
+        },
+    )
+    graph = Graph()
+    graph.parse(data=to_fair_data_station_model_rdf(profile), format="turtle")
+
+    assert (SCHEMA.tissue, RDF.type, RDF.Property) in graph
+    assert (SCHEMA.tissue, RDFS.label, None) in graph
+    assert (SCHEMA.tissue, SCHEMA.valueRequired, None) in graph
+    assert (SCHEMA.tissue, SCHEMA.valuePattern, None) in graph
+    # a core field (identifier) is emitted as data, not a property definition
+    assert (SCHEMA.identifier, RDF.type, RDF.Property) not in graph

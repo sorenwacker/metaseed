@@ -45,7 +45,11 @@ from metaseed.specs.loader import SpecLoader
 
 if TYPE_CHECKING:
     from metaseed.api.client import MetaseedClient
-    from metaseed.specs.schema import FieldSpec
+    from metaseed.specs.schema import FieldSpec, ProfileSpec
+
+# Core fields emitted as native schema.org triples (or the identifier), so they
+# do not get a property definition of their own.
+_CORE_FIELDS = frozenset({"identifier", "unique_id", "title", "name", "description"})
 
 JERM = Namespace("http://jermontology.org/ontology/JERMOntology#")
 SCHEMA = Namespace("http://schema.org/")
@@ -63,6 +67,46 @@ of counting every node and overstating what the download contains.
 
 def _slug(value: str) -> str:
     return re.sub(r"[^A-Za-z0-9._-]+", "-", value).strip("-") or "x"
+
+
+def _emit_property_definition(graph: Graph, name: str, spec: FieldSpec) -> None:
+    """Emit one ``rdf:Property`` definition SEEK turns into an EMT attribute."""
+    prop = SCHEMA[name]
+    graph.add((prop, RDF.type, RDF.Property))
+    graph.add((prop, RDFS.label, Literal(name)))
+    if spec.description:
+        graph.add((prop, SCHEMA.description, Literal(spec.description)))
+    pattern = spec.constraints.pattern if spec.constraints else None
+    if pattern:
+        graph.add((prop, SCHEMA.valuePattern, Literal(pattern)))
+    graph.add((prop, SCHEMA.valueRequired, Literal(spec.required)))
+
+
+def to_fair_data_station_model_rdf(profile: ProfileSpec) -> str:
+    """Render a profile's field *definitions* as FAIR Data Station Turtle (no data).
+
+    Unlike :func:`to_fair_data_station_rdf` (which defines only the fields a
+    dataset actually populated), this emits a property definition for **every**
+    non-core field in the profile. A SEEK admin feeds it to the admin "Extended
+    Metadata Types → create from FAIR Data Station TTL" flow to define the custom
+    metadata the JSON:API cannot create — the model half of the hybrid flow.
+
+    As in the data exporter, a field name reused across entities resolves to a
+    single (last-wins) global ``schema:<field>`` definition.
+    """
+    graph = Graph()
+    graph.bind("jerm", JERM)
+    graph.bind("schema", SCHEMA)
+    graph.bind("fair", FAIR)
+    seen: set[str] = set()
+    for entity in profile.entities.values():
+        for field in entity.fields:
+            if field.is_nested() or field.name in _CORE_FIELDS or field.name in seen:
+                continue
+            seen.add(field.name)
+            _emit_property_definition(graph, field.name, field)
+    serialized: str = graph.serialize(format="turtle")
+    return serialized
 
 
 # Default id-prefix per JERM role (for readable URIs).
@@ -204,15 +248,7 @@ def to_fair_data_station_rdf(client: MetaseedClient) -> str:
 
     # Property definitions -> SEEK builds Extended Metadata attributes from these.
     for name, spec in used.items():
-        prop = SCHEMA[name]
-        graph.add((prop, RDF.type, RDF.Property))
-        graph.add((prop, RDFS.label, Literal(name)))
-        if spec.description:
-            graph.add((prop, SCHEMA.description, Literal(spec.description)))
-        pattern = spec.constraints.pattern if spec.constraints else None
-        if pattern:
-            graph.add((prop, SCHEMA.valuePattern, Literal(pattern)))
-        graph.add((prop, SCHEMA.valueRequired, Literal(spec.required)))
+        _emit_property_definition(graph, name, spec)
 
     serialized: str = graph.serialize(format="turtle")
     return serialized
