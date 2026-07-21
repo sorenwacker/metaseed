@@ -40,6 +40,7 @@ except (
         "Install with: pip install 'metaseed[seek]'"
     ) from exc
 
+from metaseed.seek.roles import JERM_CLASSES as _JERM
 from metaseed.specs.loader import SpecLoader
 
 if TYPE_CHECKING:
@@ -50,20 +51,6 @@ JERM = Namespace("http://jermontology.org/ontology/JERMOntology#")
 SCHEMA = Namespace("http://schema.org/")
 FAIR = Namespace("http://fairbydesign.nl/ontology/")
 _BASE = "http://fairbydesign.nl/ontology/"
-
-# metaseed entity type -> (JERM class, URI id-prefix). Only ISA-structural and
-# sample-bearing entities become FDS resources; other entities are skipped.
-_JERM: dict[str, tuple[str, str]] = {
-    "Investigation": ("Investigation", "inv"),
-    "Study": ("Study", "stu"),
-    "ObservationUnit": ("ObservationUnit", "obs"),
-    "Assay": ("Assay", "assay"),
-    "Sample": ("Sample", "sample"),
-    "Source": ("Sample", "source"),
-    "Extract": ("Sample", "extract"),
-    "LabeledExtract": ("Sample", "lextract"),
-    "OtherMaterial": ("Sample", "material"),
-}
 
 EXPORTED_TYPES: frozenset[str] = frozenset(_JERM)
 """Entity type names that :func:`to_fair_data_station_rdf` actually emits.
