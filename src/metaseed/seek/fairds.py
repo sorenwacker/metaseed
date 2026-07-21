@@ -113,6 +113,19 @@ def _profile_index(
     return fields, roles
 
 
+def exportable_entity_types(client: MetaseedClient) -> frozenset[str]:
+    """Entity type names the FDS export will emit for ``client``'s profile.
+
+    The built-in JERM-mapped names (:data:`EXPORTED_TYPES`) plus any entity the
+    profile maps via ``seek.role``. The ``/seek`` preview uses this (rather than
+    the static :data:`EXPORTED_TYPES`) so a custom profile that makes a
+    non-JERM-named entity exportable purely through a role is still counted and
+    downloadable, matching what :func:`to_fair_data_station_rdf` actually emits.
+    """
+    _fields, roles = _profile_index(client)
+    return EXPORTED_TYPES | frozenset(roles)
+
+
 def to_fair_data_station_rdf(client: MetaseedClient) -> str:
     """Render a metaseed ISA dataset as FAIR Data Station Turtle RDF.
 
