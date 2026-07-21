@@ -14,6 +14,15 @@ The emitted graph has two parts, mirroring SEEK's reader
   rdf:Property`` with ``rdfs:label``, ``schema:description``,
   ``schema:valuePattern`` (from the field's regex/constraint) and
   ``schema:valueRequired`` — SEEK turns these into Extended Metadata attributes.
+
+Known limitations (SEEK reads the ISA hierarchy *positionally* — Investigation →
+Study → ObservationUnit → Sample → Assay — not by ``rdf:type``): the metaseed ISA
+profile has no ObservationUnit level, so entities below Study land one level too
+high on import (a Study's Samples are read as ObservationUnits). Investigation and
+Study round-trip cleanly today; a follow-up must insert the ObservationUnit layer
+for full sample/assay fidelity. Also, a property definition uses one global
+``schema:<field>`` URI, so a field name reused across entities with different
+constraints resolves to a single (last-written) definition.
 """
 
 from __future__ import annotations
@@ -55,8 +64,6 @@ _JERM: dict[str, tuple[str, str]] = {
     "LabeledExtract": ("Sample", "lextract"),
     "OtherMaterial": ("Sample", "material"),
 }
-# Fields carried by SEEK's core annotations (not emitted as extended metadata).
-_CORE_FIELDS = {"identifier", "title", "name", "description"}
 
 
 def _slug(value: str) -> str:
@@ -92,40 +99,62 @@ def to_fair_data_station_rdf(client: MetaseedClient) -> str:
     graph.bind("fair", FAIR)
     used: dict[str, FieldSpec] = {}
 
-    def walk(node: Any, parent_path: str) -> None:
+    def node_identity(node: Any) -> str:
+        """The entity's own identifier, from its data — not the display label.
+
+        ``node.label`` is the value of the entity's *first* spec field, which is
+        the identifier only for some entities (e.g. Study's is ``study_id``), so
+        it would collide sample siblings onto one URI. Use the real id field.
+        """
+        data = values_by_node.get(node.id, {})
+        return str(
+            data.get("identifier")
+            or data.get("unique_id")
+            or data.get("name")
+            or node.id
+        )
+
+    def segment(node: Any) -> str | None:
         mapping = _JERM.get(node.entity_type)
         if mapping is None:
+            return None
+        return f"{mapping[1]}_{_slug(node_identity(node))}"
+
+    def walk(node: Any, parent_path: str) -> None:
+        mapping = _JERM.get(node.entity_type)
+        seg = segment(node)
+        if mapping is None or seg is None:
             return
-        jerm_class, prefix = mapping
-        identifier = node.label or node.id
-        segment = f"{prefix}_{_slug(identifier)}"
-        path = f"{parent_path}/{segment}" if parent_path else segment
+        jerm_class = mapping[0]
+        path = f"{parent_path}/{seg}" if parent_path else seg
         uri = URIRef(_BASE + path)
 
         graph.add((uri, RDF.type, JERM[jerm_class]))
-        graph.add((uri, SCHEMA.identifier, Literal(identifier)))
+        graph.add((uri, SCHEMA.identifier, Literal(node_identity(node))))
 
-        data = values_by_node.get(node.id, {})
         entity_fields = fields.get(node.entity_type, {})
-        for key, value in data.items():
-            if key.startswith("_") or value in (None, "", [], {}):
+        for key, value in values_by_node.get(node.id, {}).items():
+            if key.startswith("_") or key in ("identifier", "unique_id"):
+                continue
+            if value in (None, "", [], {}) or not isinstance(
+                value, (str, int, float, bool)
+            ):
                 continue
             if key == "title":
                 graph.add((uri, SCHEMA.title, Literal(value)))
+            elif key == "name":
+                graph.add((uri, SCHEMA.name, Literal(value)))
             elif key == "description":
                 graph.add((uri, SCHEMA.description, Literal(value)))
-            elif key in _CORE_FIELDS:
-                continue
-            elif isinstance(value, (str, int, float, bool)):
+            else:
                 graph.add((uri, SCHEMA[key], Literal(value)))
                 if key in entity_fields:
                     used[key] = entity_fields[key]
 
         for child in node.children:
-            child_mapping = _JERM.get(child.entity_type)
-            if child_mapping is not None:
-                child_segment = f"{child_mapping[1]}_{_slug(child.label or child.id)}"
-                graph.add((uri, JERM.hasPart, URIRef(f"{_BASE}{path}/{child_segment}")))
+            child_seg = segment(child)
+            if child_seg is not None:
+                graph.add((uri, JERM.hasPart, URIRef(f"{_BASE}{path}/{child_seg}")))
             walk(child, path)
 
     for root in client.get_tree():
@@ -135,7 +164,7 @@ def to_fair_data_station_rdf(client: MetaseedClient) -> str:
     for name, spec in used.items():
         prop = SCHEMA[name]
         graph.add((prop, RDF.type, RDF.Property))
-        graph.add((prop, RDFS.label, Literal(spec.description or name)))
+        graph.add((prop, RDFS.label, Literal(name)))
         if spec.description:
             graph.add((prop, SCHEMA.description, Literal(spec.description)))
         pattern = spec.constraints.pattern if spec.constraints else None
