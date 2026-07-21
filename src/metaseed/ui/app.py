@@ -27,6 +27,7 @@ from .routes import (
     register_form_routes,
     register_import_routes,
     register_nested_routes,
+    register_settings_routes,
     register_table_routes,
     register_validation_routes,
 )
@@ -63,6 +64,10 @@ def create_app(state: AppState | None = None, base_url: str = "") -> FastAPI:
 
     app.state.ui_state = state
     app.state.base_url = base_url
+
+    from metaseed.settings import Settings
+
+    app.state.settings = Settings()
 
     # Create dataset manager factory with default filesystem repository
     dataset_factory = DatasetManagerFactory()
@@ -145,6 +150,7 @@ def create_app(state: AppState | None = None, base_url: str = "") -> FastAPI:
     register_example_routes(app, get_state)
     register_api_routes(app, get_state)
     register_explore_routes(app, templates, get_state, base_url=base_url)
+    register_settings_routes(app, templates, get_state, base_url=base_url)
 
     from .routes.dcat import register_dcat_routes
 
