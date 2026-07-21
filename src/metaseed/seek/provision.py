@@ -113,6 +113,7 @@ class ProvisionResult:
     sample_type_ids: dict[str, str] = dc_field(default_factory=dict)
     created: list[str] = dc_field(default_factory=list)
     reused: list[str] = dc_field(default_factory=list)
+    errors: list[str] = dc_field(default_factory=list)
 
 
 def _is_cv_field(field: FieldSpec) -> bool:
@@ -264,53 +265,65 @@ def execute_provisioning_plan(
     result = ProvisionResult()
     type_id_cache: dict[str, str] = {}
 
+    # Each create is isolated: one SEEK failure records an error and the rest of
+    # the plan still runs (a rerun is idempotent, so it self-heals on retry).
     for cv in plan.cvs:
-        existing = client.find_controlled_vocab_id_by_title(cv.title)
-        if existing is not None:
-            result.cv_ids[cv.title] = existing
-            result.reused.append(f"CV: {cv.title}")
-            continue
-        cv_id = client.create_controlled_vocab(
-            title=cv.title,
-            terms=[
-                {"label": t.label, "iri": t.iri, "parent_iri": t.parent_iri}
-                for t in cv.terms
-            ],
-            description=cv.description,
-            source_ontology=cv.source_ontology,
-            ols_root_term_uris=cv.ols_root_term_uris,
-        )
-        result.cv_ids[cv.title] = cv_id
-        result.created.append(f"CV: {cv.title}")
+        try:
+            existing = client.find_controlled_vocab_id_by_title(cv.title)
+            if existing is not None:
+                result.cv_ids[cv.title] = existing
+                result.reused.append(f"CV: {cv.title}")
+                continue
+            cv_id = client.create_controlled_vocab(
+                title=cv.title,
+                terms=[
+                    {"label": t.label, "iri": t.iri, "parent_iri": t.parent_iri}
+                    for t in cv.terms
+                ],
+                description=cv.description,
+                source_ontology=cv.source_ontology,
+                ols_root_term_uris=cv.ols_root_term_uris,
+            )
+            result.cv_ids[cv.title] = cv_id
+            result.created.append(f"CV: {cv.title}")
+        except Exception as exc:
+            result.errors.append(f"CV {cv.title}: {exc}")
 
     for st in plan.sample_types:
-        existing = client.find_sample_type_id_by_title(st.title, project_id=project_id)
-        if existing is not None:
-            result.sample_type_ids[st.entity_type] = existing
-            result.reused.append(f"Sample Type: {st.title}")
-            continue
-        attributes: list[dict[str, object]] = []
-        for attr in st.attributes:
-            if attr.attribute_type_title not in type_id_cache:
-                type_id_cache[attr.attribute_type_title] = (
-                    client.sample_attribute_type_id(attr.attribute_type_title)
-                )
-            attr_cv_id = result.cv_ids.get(attr.cv_title) if attr.cv_title else None
-            attributes.append(
-                payloads.sample_attribute(
-                    title=attr.title,
-                    attribute_type_id=type_id_cache[attr.attribute_type_title],
-                    required=attr.required,
-                    is_title=attr.is_title,
-                    pos=attr.pos,
-                    sample_controlled_vocab_id=attr_cv_id,
-                    allow_cv_free_text=attr.allow_cv_free_text,
-                )
+        try:
+            existing = client.find_sample_type_id_by_title(
+                st.title, project_id=project_id
             )
-        st_id = client.create_sample_type(
-            title=st.title, project_id=project_id, attributes=attributes
-        )
-        result.sample_type_ids[st.entity_type] = st_id
-        result.created.append(f"Sample Type: {st.title}")
+            if existing is not None:
+                result.sample_type_ids[st.entity_type] = existing
+                result.reused.append(f"Sample Type: {st.title}")
+                continue
+            attributes: list[dict[str, object]] = []
+            for attr in st.attributes:
+                if attr.attribute_type_title not in type_id_cache:
+                    type_id_cache[attr.attribute_type_title] = (
+                        client.sample_attribute_type_id(attr.attribute_type_title)
+                    )
+                attr_cv_id = (
+                    result.cv_ids.get(attr.cv_title) if attr.cv_title else None
+                )
+                attributes.append(
+                    payloads.sample_attribute(
+                        title=attr.title,
+                        attribute_type_id=type_id_cache[attr.attribute_type_title],
+                        required=attr.required,
+                        is_title=attr.is_title,
+                        pos=attr.pos,
+                        sample_controlled_vocab_id=attr_cv_id,
+                        allow_cv_free_text=attr.allow_cv_free_text,
+                    )
+                )
+            st_id = client.create_sample_type(
+                title=st.title, project_id=project_id, attributes=attributes
+            )
+            result.sample_type_ids[st.entity_type] = st_id
+            result.created.append(f"Sample Type: {st.title}")
+        except Exception as exc:
+            result.errors.append(f"Sample Type {st.title}: {exc}")
 
     return result

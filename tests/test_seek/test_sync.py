@@ -90,6 +90,22 @@ def test_sync_creates_isa_hierarchy_and_threads_ids():
     assert sample_call["data"]["name"] == "sample-a"
 
 
+def test_sample_data_keeps_scalar_lists_drops_nested():
+    from metaseed.seek.sync import _sample_data
+
+    data = _sample_data(
+        {
+            "_node_id": "x",  # metadata key dropped
+            "name": "s1",
+            "empty": "",  # empty dropped
+            "tags": ["a", "b"],  # scalar list kept (CV list)
+            "nested": {"k": "v"},  # non-scalar dropped
+            "mixed": ["a", {"k": 1}],  # list with a dict dropped
+        }
+    )
+    assert data == {"name": "s1", "tags": ["a", "b"]}
+
+
 def test_sync_skips_sample_without_provisioned_type():
     seek = _FakeSeek()
     result = sync_dataset_to_seek(

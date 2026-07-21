@@ -22,6 +22,8 @@
             {{ provision_result.created|join(", ") }}</div>{% endif %}
         {% if provision_result.reused %}<div class="muted" style="font-size:0.85rem;">Reused:
             {{ provision_result.reused|join(", ") }}</div>{% endif %}
+        {% if provision_result.errors %}<div style="font-size:0.85rem; color:#b00;">Errors:
+            {{ provision_result.errors|join("; ") }}</div>{% endif %}
     </div>
     {% endif %}
     {% if sync_result %}

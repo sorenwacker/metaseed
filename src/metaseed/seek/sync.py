@@ -44,12 +44,18 @@ class SyncResult:
 
 
 def _sample_data(values: Mapping[str, Any]) -> dict[str, Any]:
-    """The postable attribute map for a Sample: drop metadata keys and empties."""
+    """The postable attribute map for a Sample: drop metadata keys and empties.
+
+    Scalars pass through; a list of scalars is kept (a Controlled Vocabulary List
+    attribute expects an array); other structures (nested dicts) are dropped.
+    """
     data: dict[str, Any] = {}
     for key, value in values.items():
         if key.startswith("_") or value in (None, "", [], {}):
             continue
-        if isinstance(value, (str, int, float, bool)):
+        if isinstance(value, (str, int, float, bool)) or (isinstance(value, list) and all(
+            isinstance(v, (str, int, float, bool)) for v in value
+        )):
             data[key] = value
     return data
 

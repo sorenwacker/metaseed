@@ -179,6 +179,23 @@ def test_execute_creates_cv_before_sample_type_and_threads_id():
     ]
 
 
+def test_execute_isolates_a_failing_create():
+    # A SEEK failure on one create records an error and does not abort the rest.
+    plan = build_provisioning_plan(_profile())
+    seek = _FakeSeek(existing_cvs={}, existing_sample_types={})
+
+    def boom(**kwargs):
+        raise RuntimeError("SEEK 422")
+
+    seek.create_controlled_vocab = boom  # CV creation fails
+    result = execute_provisioning_plan(seek, plan, project_id="1")  # type: ignore[arg-type]
+
+    assert result.errors and "SEEK 422" in result.errors[0]
+    # the Sample Type is still created despite the CV failure
+    assert result.sample_type_ids.get("Sample")
+    assert any(c[0] == "create_sample_type" for c in seek.calls)
+
+
 def test_execute_reuses_existing_and_posts_nothing():
     plan = build_provisioning_plan(_profile())
     seek = _FakeSeek(

@@ -39,19 +39,23 @@ def _relates_to_project(row: Mapping[str, Any], project_id: str) -> bool:
 
 
 def client_from_settings(
-    config: Mapping[str, str], *, http_client: httpx.Client | None = None
+    config: Mapping[str, str],
+    *,
+    timeout: float = 30.0,
+    http_client: httpx.Client | None = None,
 ) -> SeekClient:
     """Build a :class:`SeekClient` from a stored adapter config.
 
     ``config`` is the ``get_adapter_config("seek")`` dict: ``url`` (required) and
     an optional ``api_key`` used as a bearer token. A blank ``api_key`` yields an
     unauthenticated client (callers should warn); a blank ``url`` is an error.
+    ``timeout`` bounds each request (use a small value for a liveness probe).
     """
     url = (config.get("url") or "").strip()
     if not url:
         raise ValueError("SEEK URL is not configured (set it on the Plugins page)")
     token = (config.get("api_key") or "").strip() or None
-    return SeekClient(url, token=token, http_client=http_client)
+    return SeekClient(url, token=token, timeout=timeout, http_client=http_client)
 
 
 class SeekClient:

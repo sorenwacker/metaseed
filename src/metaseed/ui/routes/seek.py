@@ -17,6 +17,7 @@ key configured on the Plugins page.
 
 from __future__ import annotations
 
+import functools
 import re
 from collections import Counter
 from collections.abc import Callable
@@ -25,8 +26,13 @@ from typing import Any
 from fastapi import FastAPI, Form, Request, Response
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from starlette.concurrency import run_in_threadpool
 
 from metaseed.ui.state import AppState
+
+# Short timeout for the /seek liveness probe (project list): a misconfigured or
+# unreachable SEEK must not stall the page for the client's full request timeout.
+_PROBE_TIMEOUT = 5.0
 
 
 def _safe_filename(name: str) -> str:
@@ -95,14 +101,16 @@ def register_seek_routes(
             if exported is None or etype in exported
         )
 
-        # Best-effort project list (needs a reachable, configured SEEK).
+        # Best-effort project list (needs a reachable, configured SEEK). Uses a
+        # short timeout so a misconfigured/unreachable instance can't stall.
         projects: list[tuple[str, str]] = []
-        seek_client, _seek_error = _seek_client(request)
-        if seek_client is not None:
-            try:
-                projects = seek_client.list_projects()
-            except Exception:  # unreachable / unauthorized — leave empty
-                projects = []
+        try:
+            from metaseed.seek import client_from_settings
+
+            probe = client_from_settings(seek_config, timeout=_PROBE_TIMEOUT)
+            projects = probe.list_projects()
+        except Exception:  # not configured / unreachable / httpx absent
+            projects = []
 
         from metaseed.ui.datasets import get_current_dataset_name
 
@@ -124,12 +132,17 @@ def register_seek_routes(
         context.update(extra)
         return context
 
+    async def _render(request: Request, **extra: Any) -> HTMLResponse:
+        """Build the (blocking) template context off the event loop and render."""
+        context = await run_in_threadpool(functools.partial(_context, request, **extra))
+        return templates.TemplateResponse(request, "seek/index.html", context)
+
     @app.get("/seek", response_class=HTMLResponse)
     async def seek_page(request: Request) -> HTMLResponse:
         """Render the SEEK page (export preview + provision/sync panels)."""
         if not _enabled(request):
             return HTMLResponse("SEEK plugin is disabled", status_code=404)
-        return templates.TemplateResponse(request, "seek/index.html", _context(request))
+        return await _render(request)
 
     @app.post("/seek/provision", response_class=HTMLResponse)
     async def seek_provision(
@@ -141,27 +154,23 @@ def register_seek_routes(
 
         client, error = _seek_client(request)
         if client is None:
-            return templates.TemplateResponse(
-                request, "seek/index.html", _context(request, action_error=error)
-            )
-        from metaseed.seek.provision import (
-            build_provisioning_plan,
-            execute_provisioning_plan,
-        )
+            return await _render(request, action_error=error)
 
-        try:
+        def work() -> Any:
+            from metaseed.seek.provision import (
+                build_provisioning_plan,
+                execute_provisioning_plan,
+            )
+
             pid = project_id or client.default_project_id()
             plan = build_provisioning_plan(_load_profile(get_state()))
-            result = execute_provisioning_plan(client, plan, project_id=pid)
+            return execute_provisioning_plan(client, plan, project_id=pid)
+
+        try:
+            result = await run_in_threadpool(work)
         except Exception as exc:
-            return templates.TemplateResponse(
-                request,
-                "seek/index.html",
-                _context(request, action_error=f"Provisioning failed: {exc}"),
-            )
-        return templates.TemplateResponse(
-            request, "seek/index.html", _context(request, provision_result=result)
-        )
+            return await _render(request, action_error=f"Provisioning failed: {exc}")
+        return await _render(request, provision_result=result)
 
     @app.post("/seek/sync", response_class=HTMLResponse)
     async def seek_sync(request: Request, project_id: str = Form("")) -> HTMLResponse:
@@ -171,38 +180,30 @@ def register_seek_routes(
 
         state = get_state()
         if not state.entity_tree:
-            return templates.TemplateResponse(
-                request,
-                "seek/index.html",
-                _context(request, action_error="No dataset loaded to sync."),
-            )
+            return await _render(request, action_error="No dataset loaded to sync.")
         client, error = _seek_client(request)
         if client is None:
-            return templates.TemplateResponse(
-                request, "seek/index.html", _context(request, action_error=error)
-            )
-        from metaseed.seek.provision import resolve_sample_type_ids
-        from metaseed.seek.sync import sync_dataset_to_seek
+            return await _render(request, action_error=error)
 
-        try:
+        def work() -> Any:
+            from metaseed.seek.provision import resolve_sample_type_ids
+            from metaseed.seek.sync import sync_dataset_to_seek
+
             pid = project_id or client.default_project_id()
             profile = _load_profile(state)
             sample_type_ids = resolve_sample_type_ids(client, profile, project_id=pid)
-            result = sync_dataset_to_seek(
+            return sync_dataset_to_seek(
                 client,
                 _facade_client(state),
                 project_id=pid,
                 sample_type_ids=sample_type_ids,
             )
+
+        try:
+            result = await run_in_threadpool(work)
         except Exception as exc:
-            return templates.TemplateResponse(
-                request,
-                "seek/index.html",
-                _context(request, action_error=f"Sync failed: {exc}"),
-            )
-        return templates.TemplateResponse(
-            request, "seek/index.html", _context(request, sync_result=result)
-        )
+            return await _render(request, action_error=f"Sync failed: {exc}")
+        return await _render(request, sync_result=result)
 
     @app.get("/seek/isa-rdf")
     async def seek_isa_rdf(request: Request) -> Response:
