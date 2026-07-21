@@ -74,6 +74,7 @@ metabolights = [
 ]
 seek = [
     "httpx>=0.27",
+    "rdflib>=7.0",
 ]
 
 [project.scripts]
