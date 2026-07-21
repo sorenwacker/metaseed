@@ -50,13 +50,21 @@ def register_seek_routes(
         # Count only the entity types the FDS export actually emits, so the
         # "Will emit" preview and the enabled/disabled state of the Download
         # button match the download's real contents (a dataset made entirely of
-        # non-exported types must NOT show an enabled button + empty file).
+        # non-exported types must NOT show an enabled button + empty file). This
+        # is role-aware: a profile can map a custom-named entity via seek.role,
+        # so consult the profile — not just the built-in JERM name map.
         try:
-            from metaseed.seek.fairds import EXPORTED_TYPES
+            from metaseed.api.client import MetaseedClient
+            from metaseed.seek.fairds import exportable_entity_types
 
-            exported: frozenset[str] | None = EXPORTED_TYPES
-        except ModuleNotFoundError:
-            exported = None  # rdflib absent: fall back to counting every type
+            client = MetaseedClient.__new__(MetaseedClient)
+            client._facade = facade
+            exported: frozenset[str] | None = exportable_entity_types(client)
+        except Exception:
+            # rdflib absent (ModuleNotFoundError) or the profile fails to load:
+            # degrade to counting every type rather than 500-ing the whole page
+            # (the download route is likewise defensive around generation).
+            exported = None
 
         counts = Counter(node.entity_type for node in state.nodes_by_id.values())
         emit_counts = sorted(

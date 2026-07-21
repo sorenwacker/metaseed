@@ -10,7 +10,11 @@ from __future__ import annotations
 from rdflib import RDF, RDFS, Graph, Namespace
 
 from metaseed import MetaseedClient
-from metaseed.seek.fairds import to_fair_data_station_rdf
+from metaseed.seek.fairds import (
+    EXPORTED_TYPES,
+    exportable_entity_types,
+    to_fair_data_station_rdf,
+)
 
 JERM = Namespace("http://jermontology.org/ontology/JERMOntology#")
 SCHEMA = Namespace("http://schema.org/")
@@ -111,3 +115,24 @@ def test_entity_seek_role_overrides_jerm_type(monkeypatch):
     graph.parse(data=to_fair_data_station_rdf(client), format="turtle")
     assert (None, RDF.type, JERM.Study) in graph  # role override applied
     assert (None, RDF.type, JERM.Investigation) not in graph
+
+
+def test_exportable_entity_types_is_role_aware(monkeypatch):
+    # A profile can make a non-JERM-named entity exportable purely via seek.role;
+    # exportable_entity_types must include it so the /seek preview matches output.
+    from metaseed.specs.loader import SpecLoader
+    from metaseed.specs.schema import EntityDefSpec, SeekEntityConfig
+
+    real = SpecLoader.load_profile
+
+    def patched(self, version, profile=None, **kw):
+        spec = real(self, version, profile, **kw)
+        spec.entities["Sampling"] = EntityDefSpec(seek=SeekEntityConfig(role="Sample"))
+        return spec
+
+    monkeypatch.setattr(SpecLoader, "load_profile", patched)
+    client = MetaseedClient("isa", "1.0")
+    types = exportable_entity_types(client)
+    assert "Sampling" not in EXPORTED_TYPES  # custom name isn't in the JERM map
+    assert "Sampling" in types  # ...but the role makes it exportable
+    assert types >= EXPORTED_TYPES  # JERM-mapped names still included
