@@ -60,8 +60,11 @@ def register_seek_routes(
             client = MetaseedClient.__new__(MetaseedClient)
             client._facade = facade
             exported: frozenset[str] | None = exportable_entity_types(client)
-        except ModuleNotFoundError:
-            exported = None  # rdflib absent: fall back to counting every type
+        except Exception:
+            # rdflib absent (ModuleNotFoundError) or the profile fails to load:
+            # degrade to counting every type rather than 500-ing the whole page
+            # (the download route is likewise defensive around generation).
+            exported = None
 
         counts = Counter(node.entity_type for node in state.nodes_by_id.values())
         emit_counts = sorted(
