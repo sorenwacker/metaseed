@@ -77,10 +77,11 @@ ADAPTERS: tuple[AdapterInfo, ...] = (
     AdapterInfo(
         key="seek",
         name="FAIRDOM-SEEK",
-        description="Push a profile's schema and ISA content into a FAIRDOM-SEEK instance.",
-        direction="push",
+        description="Export a dataset as SEEK-importable ISA RDF; push ISA content over the API.",
+        direction="export",
         extra="seek",
-        requires=("httpx",),
+        # httpx for the JSON:API client, rdflib for the ISA RDF export.
+        requires=("httpx", "rdflib"),
     ),
 )
 

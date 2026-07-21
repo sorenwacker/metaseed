@@ -5,6 +5,7 @@ is enabled on the Plugins page. The export produces RDF that SEEK ingests with
 its own built-in "Import from FAIR Data Station" feature (no external tool).
 """
 
+import re
 from collections.abc import Callable
 
 from fastapi import FastAPI, Request, Response
@@ -12,6 +13,12 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from metaseed.ui.state import AppState
+
+
+def _safe_filename(name: str) -> str:
+    """ASCII-slug a dataset name for a Content-Disposition filename (no injection)."""
+    slug = re.sub(r"[^A-Za-z0-9._-]+", "-", name).strip("-")
+    return slug or "dataset"
 
 
 def register_seek_routes(
@@ -47,18 +54,28 @@ def register_seek_routes(
                 "No dataset loaded — build or load a dataset first.", status_code=400
             )
 
-        from metaseed import MetaseedClient
-        from metaseed.seek.fairds import to_fair_data_station_rdf
+        from metaseed.api.client import MetaseedClient
         from metaseed.ui.datasets import get_current_dataset_name
 
-        facade = state.get_or_create_facade()
-        client = MetaseedClient(facade.profile, facade.version)
-        client._facade = facade  # reuse the UI's populated dataset
-        turtle = to_fair_data_station_rdf(client)
+        try:
+            from metaseed.seek.fairds import to_fair_data_station_rdf
+        except ModuleNotFoundError:
+            return HTMLResponse(
+                "SEEK export needs rdflib: pip install 'metaseed[seek]'.",
+                status_code=503,
+            )
 
-        name = get_current_dataset_name(state) or "dataset"
+        # Wrap the UI's populated facade in a client without reloading a spec.
+        client = MetaseedClient.__new__(MetaseedClient)
+        client._facade = state.get_or_create_facade()
+        try:
+            turtle = to_fair_data_station_rdf(client)
+        except Exception as exc:  # surface generation errors as a readable 500
+            return HTMLResponse(f"Could not build SEEK RDF: {exc}", status_code=500)
+
+        stem = _safe_filename(get_current_dataset_name(state) or "dataset")
         return Response(
             turtle,
             media_type="text/turtle",
-            headers={"Content-Disposition": f'attachment; filename="{name}-seek.ttl"'},
+            headers={"Content-Disposition": f'attachment; filename="{stem}-seek.ttl"'},
         )

@@ -26,9 +26,10 @@ turtle = to_fair_data_station_rdf(client)   # needs metaseed[seek]
 
 ## Using it from the web UI
 
-Enable the **SEEK** adapter on the **Plugins** page (`/settings`); a *Export to
-SEEK* page appears at `/seek` with a **Download SEEK ISA RDF (.ttl)** button that
-exports the currently loaded dataset.
+The **SEEK** adapter is listed on the **Plugins** page (`/settings`) — enabled by
+default when its extra (`httpx` + `rdflib`) is installed. While enabled, the
+*Export to SEEK* page at `/seek` offers a **Download SEEK ISA RDF (.ttl)** button
+that exports the currently loaded dataset; disabling the adapter hides it (404).
 
 ## Then, in SEEK
 

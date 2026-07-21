@@ -52,3 +52,22 @@ def test_isa_rdf_exports_the_current_dataset(make_client):
     assert "text/turtle" in response.headers["content-type"]
     assert "jerm:Investigation" in response.text
     assert response.headers["content-disposition"].endswith('-seek.ttl"')
+
+
+def test_download_filename_is_sanitized(make_client):
+    # A dataset name with quotes/unicode/newlines must not break the header.
+    client, _settings, state = make_client()
+    client.post(
+        "/entity",
+        data={"_entity_type": "Investigation", "identifier": "INV1", "title": "T"},
+    )
+    from metaseed.ui.datasets import set_current_dataset_name
+
+    set_current_dataset_name(state, 'ev"il\nΩ name')
+    response = client.get("/seek/isa-rdf")
+    assert response.status_code == 200
+    disposition = response.headers["content-disposition"]
+    assert disposition.isascii()  # no latin-1 encode crash
+    filename = disposition.split("filename=", 1)[1].strip('"')
+    assert '"' not in filename and "\n" not in filename  # no header injection
+    assert filename == "ev-il-name-seek.ttl"
