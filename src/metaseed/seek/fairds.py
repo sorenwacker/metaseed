@@ -86,14 +86,18 @@ def _profile_index(
     """Return (entity -> {field name -> spec}, entity -> SEEK role) for the profile.
 
     The role comes from the entity's ``seek.role`` when the profile declares one,
-    letting a profile drive the ISA mapping instead of the built-in name map.
+    letting a profile pick the emitted ``jerm:`` class instead of the built-in
+    name map. Note it overrides the ``rdf:type`` only — nodes keep their position
+    in the tree, which is what SEEK's positional reader actually consumes (see the
+    module docstring), so declaring ``role=ObservationUnit`` re-types but does not
+    itself insert an ObservationUnit level.
     """
     profile = SpecLoader().load_profile(client.version, client.profile)
     fields = {
         name: {f.name: f for f in entity.fields}
         for name, entity in profile.entities.items()
     }
-    roles = {
+    roles: dict[str, str] = {
         name: entity.seek.role
         for name, entity in profile.entities.items()
         if entity.seek and entity.seek.role

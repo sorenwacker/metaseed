@@ -5,7 +5,7 @@ profile entities and their fields.
 """
 
 from enum import StrEnum
-from typing import Any, Self
+from typing import Any, Literal, Self
 
 from pydantic import BaseModel, ConfigDict
 
@@ -69,30 +69,35 @@ class Constraints(BaseModel):
     enum: list[str] | None = None
 
 
-class SeekFieldConfig(BaseModel):
-    """SEEK-specific routing for a field (used by the ``metaseed[seek]`` export).
+SEEK_ROLES: tuple[str, ...] = (
+    "Investigation",
+    "Study",
+    "ObservationUnit",
+    "Sample",
+    "Assay",
+)
+"""The ISA/JERM object types a metaseed entity may declare as its SEEK ``role``.
 
-    ``isa_tag`` places the field on SEEK's ISA graph (e.g. ``source``,
-    ``source_characteristic``, ``sample``, ``sample_characteristic``,
-    ``protocol``, ``parameter_value``).
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    isa_tag: str | None = None
+The single source of truth for the Spec Builder's role dropdown and the
+``SeekEntityConfig.role`` validation, so a hand-authored profile with a typo is
+rejected at load rather than silently exporting a nonexistent ``jerm:`` class.
+"""
 
 
 class SeekEntityConfig(BaseModel):
     """SEEK-specific routing for an entity (used by the ``metaseed[seek]`` export).
 
     ``role`` is the ISA/JERM object this entity maps to in SEEK — one of
-    ``Investigation``, ``Study``, ``ObservationUnit``, ``Sample``, ``Assay`` —
-    overriding the exporter's default entity-name mapping.
+    :data:`SEEK_ROLES` — overriding the exporter's default entity-name mapping.
+    It sets the emitted ``rdf:type`` only; it does not reposition the node in the
+    ISA hierarchy (SEEK reads the tree positionally — see ``metaseed.seek.fairds``).
     """
 
     model_config = ConfigDict(extra="forbid")
 
-    role: str | None = None
+    role: (
+        Literal["Investigation", "Study", "ObservationUnit", "Sample", "Assay"] | None
+    ) = None
 
 
 class FieldSpec(BaseModel):
@@ -132,7 +137,6 @@ class FieldSpec(BaseModel):
     unique_within: str | None = None
     reference: str | None = None
     dcat: str | None = None
-    seek: SeekFieldConfig | None = None
 
     def is_nested(self: Self) -> bool:
         """Check if this field represents a nested entity.

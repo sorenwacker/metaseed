@@ -13,7 +13,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from metaseed.specs.builder import SpecBuilder
-from metaseed.specs.schema import EntityDefSpec, FieldType
+from metaseed.specs.schema import SEEK_ROLES, EntityDefSpec, FieldType
 
 if TYPE_CHECKING:
     from .state import SpecBuilderState
@@ -83,6 +83,7 @@ def register_entity_routes(
                 "entity": builder.spec.entities[entity_name],
                 "editing_field_idx": builder.editing_field_idx,
                 "field_types": [t.value for t in FieldType],
+                "seek_roles": SEEK_ROLES,
                 "error": error,
                 "success": success,
             },
@@ -135,18 +136,26 @@ def register_entity_routes(
         new_name: str = Form(None, alias="name"),
         description: str = Form(""),
         ontology_term: str = Form(""),
-        seek_role: str = Form(""),
+        seek_role: str | None = Form(None),
     ) -> HTMLResponse:
         """Update entity metadata, including rename."""
-        from metaseed.specs.schema import SeekEntityConfig
+        from metaseed.specs.schema import SEEK_ROLES, SeekEntityConfig
 
         builder = _require_spec()
         assert builder.spec is not None  # guaranteed by _require_spec
         entity = _require_entity(builder, name)
         entity.description = description.strip()
         entity.ontology_term = ontology_term.strip() or None
-        role = seek_role.strip()
-        entity.seek = SeekEntityConfig(role=role) if role else None
+        # Only touch entity.seek when the form actually carried the field, so a
+        # post that omits it (older form / API caller) preserves a saved role.
+        # An empty or unrecognized value clears it (dropdown "— none —").
+        if seek_role is not None:
+            role = seek_role.strip()
+            entity.seek = (
+                SeekEntityConfig(role=role)  # type: ignore[arg-type]
+                if role in SEEK_ROLES
+                else None
+            )
 
         # Handle rename
         final_name = name

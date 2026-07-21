@@ -409,6 +409,56 @@ class TestSpecBuilderRoutes:
         preview = client.get("/spec-builder/preview").text
         assert "applies_to: ObsUnit" in preview
 
+    def test_set_seek_role_persists_and_reselects(self, client):
+        """Selecting a SEEK role serializes to YAML and re-selects on reopen."""
+        client.get("/spec-builder/new")
+        client.post("/spec-builder/entity", data={"name": "Sampling"})
+        resp = client.put(
+            "/spec-builder/entity/Sampling",
+            data={
+                "name": "Sampling",
+                "description": "",
+                "ontology_term": "",
+                "seek_role": "ObservationUnit",
+            },
+        )
+        assert resp.status_code == 200
+        assert 'value="ObservationUnit" selected' in resp.text  # editor re-selects
+        assert "role: ObservationUnit" in client.get("/spec-builder/preview").text
+
+    def test_update_entity_without_seek_role_preserves_it(self, client):
+        """A PUT that omits seek_role (e.g. a rename form) must not wipe the role."""
+        client.get("/spec-builder/new")
+        client.post("/spec-builder/entity", data={"name": "Sampling"})
+        client.put(
+            "/spec-builder/entity/Sampling",
+            data={"name": "Sampling", "seek_role": "Sample"},
+        )
+        client.put(  # no seek_role field this time
+            "/spec-builder/entity/Sampling",
+            data={"name": "Sampling", "description": "d", "ontology_term": ""},
+        )
+        assert "role: Sample" in client.get("/spec-builder/preview").text
+
+    def test_seek_role_none_clears_it(self, client):
+        """A present-but-blank seek_role clears a previously set role.
+
+        The browser's ``<select>`` "— none —" submits ``seek_role=`` (present but
+        empty); httpx drops empty-string form values, so send a whitespace value
+        which ``.strip()`` reduces to the same empty-and-therefore-clear branch.
+        """
+        client.get("/spec-builder/new")
+        client.post("/spec-builder/entity", data={"name": "Sampling"})
+        client.put(
+            "/spec-builder/entity/Sampling",
+            data={"name": "Sampling", "seek_role": "Sample"},
+        )
+        client.put(
+            "/spec-builder/entity/Sampling",
+            data={"name": "Sampling", "seek_role": " "},  # "— none —" (blank)
+        )
+        assert "role:" not in client.get("/spec-builder/preview").text
+
     def test_add_list_field_creates_back_reference(self, client):
         """Adding a list field auto-creates back-reference in target entity."""
         client.get("/spec-builder/new")
