@@ -60,3 +60,23 @@ def test_config_saves_and_masks_secret(client):
 
 def test_config_unknown_adapter_is_404(client):
     assert client.post("/settings/adapters/nope/config", data={}).status_code == 404
+
+
+def test_config_blank_secret_keeps_stored_key(client):
+    settings = client.app.state.settings
+    client.post(
+        "/settings/adapters/seek/config",
+        data={"url": "http://localhost:3001", "api_key": "keepme"},
+    )
+    # Re-submit with the api_key field blank (the UI never prefills a secret).
+    client.post("/settings/adapters/seek/config", data={"url": "http://elsewhere:3001"})
+    config = settings.get_adapter_config("seek")
+    assert config["api_key"] == "keepme"  # secret retained
+    assert config["url"] == "http://elsewhere:3001"  # plain field updated
+
+
+def test_config_refused_when_adapter_disabled(client):
+    settings = client.app.state.settings
+    settings.set_adapter_enabled("seek", False)
+    client.post("/settings/adapters/seek/config", data={"url": "http://x:3001"})
+    assert settings.get_adapter_config("seek") == {}  # nothing persisted

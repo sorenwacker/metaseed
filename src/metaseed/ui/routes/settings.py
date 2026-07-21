@@ -67,13 +67,19 @@ def register_settings_routes(
         if not adapters.is_known(key):
             return HTMLResponse("Unknown adapter", status_code=404)
         info = adapters.get_adapter(key)
+        settings = _settings(request)
+        # Only a configurable, enabled adapter accepts config — mirror the UI gate.
+        if not info.config_fields or not settings.adapter_enabled(key):
+            return _render_row(request, info)
+
         form = await request.form()
         values: dict[str, str] = {}
         for field in info.config_fields:
-            submitted = str(form.get(field.key, "")).strip()
+            raw = form.get(field.key, "")
+            submitted = raw.strip() if isinstance(raw, str) else ""
             # A blank secret means "leave unchanged"; a blank plain field clears it.
             if field.secret and not submitted:
                 continue
             values[field.key] = submitted
-        _settings(request).set_adapter_config(key, values)
+        settings.set_adapter_config(key, values)
         return _render_row(request, info)

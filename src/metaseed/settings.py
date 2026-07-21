@@ -17,6 +17,9 @@ from metaseed.paths import get_user_config_path
 if TYPE_CHECKING:
     from pathlib import Path
 
+# Upper bound on a stored config value (URLs/keys are short; cap bloat).
+_MAX_CONFIG_VALUE_LEN = 4096
+
 
 class Settings:
     """Read/write instance settings backed by a JSON file.
@@ -105,7 +108,7 @@ class Settings:
         for field_key, value in values.items():
             if field_key not in allowed:
                 continue
-            text = str(value).strip()
+            text = str(value).strip()[:_MAX_CONFIG_VALUE_LEN]  # bound stored size
             if text:
                 current[field_key] = text
             else:
