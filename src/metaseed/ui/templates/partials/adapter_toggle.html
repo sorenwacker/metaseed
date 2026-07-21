@@ -1,0 +1,25 @@
+<div class="adapter-row" id="adapter-{{ row.info.key }}"
+     data-testid="adapter-{{ row.info.key }}"
+     style="display:flex; justify-content:space-between; align-items:center; gap:1rem; padding:0.75rem 0; border-bottom:1px solid var(--border, #ddd);">
+    <div>
+        <strong>{{ row.info.name }}</strong>
+        <span class="badge" style="font-size:0.75rem; opacity:0.7;">{{ row.info.direction }}</span>
+        <div class="muted" style="font-size:0.9rem;">{{ row.info.description }}</div>
+        {% if not row.available %}
+        <div class="muted" style="font-size:0.8rem;">Not installed — <code>pip install 'metaseed[{{ row.info.extra }}]'</code></div>
+        {% endif %}
+    </div>
+    <div>
+        {% if row.available %}
+        <button class="btn {{ 'btn-primary' if row.enabled else 'btn-secondary' }}"
+                data-testid="toggle-{{ row.info.key }}"
+                hx-post="{{ base_url }}/settings/adapters/{{ row.info.key }}/toggle"
+                hx-target="#adapter-{{ row.info.key }}"
+                hx-swap="outerHTML">
+            {{ "Enabled" if row.enabled else "Disabled" }}
+        </button>
+        {% else %}
+        <button class="btn btn-secondary" disabled>Unavailable</button>
+        {% endif %}
+    </div>
+</div>
