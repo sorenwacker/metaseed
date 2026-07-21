@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Any
 
 from metaseed.seek.payloads import (
     assay_payload,
+    controlled_vocab_payload,
     investigation_payload,
     sample_attribute,
     sample_payload,
@@ -27,7 +28,7 @@ from metaseed.seek.payloads import (
 )
 
 if TYPE_CHECKING:
-    from metaseed.seek.client import SeekClient
+    from metaseed.seek.client import SeekClient, client_from_settings
     from metaseed.seek.export import ExperimentIds, push_minimal_experiment
     from metaseed.seek.fairds import to_fair_data_station_rdf
 
@@ -35,6 +36,8 @@ __all__ = [
     "ExperimentIds",
     "SeekClient",
     "assay_payload",
+    "client_from_settings",
+    "controlled_vocab_payload",
     "investigation_payload",
     "push_minimal_experiment",
     "sample_attribute",
@@ -47,10 +50,10 @@ __all__ = [
 
 def __getattr__(name: str) -> Any:
     """Lazily expose the httpx/rdflib-backed API so builders import without the extra."""
-    if name == "SeekClient":
-        from metaseed.seek.client import SeekClient
+    if name in ("SeekClient", "client_from_settings"):
+        from metaseed.seek import client
 
-        return SeekClient
+        return getattr(client, name)
     if name in ("push_minimal_experiment", "ExperimentIds"):
         from metaseed.seek import export
 
