@@ -7,6 +7,8 @@
         <div class="muted" style="font-size:0.9rem;">{{ row.info.description }}</div>
         {% if not row.available %}
         <div class="muted" style="font-size:0.8rem;">Not installed — <code>pip install 'metaseed[{{ row.info.extra }}]'</code></div>
+        {% elif row.info.key == "seek" and row.enabled %}
+        <div style="font-size:0.85rem;"><a href="{{ base_url }}/seek" data-testid="link-seek-export">Open “Export to SEEK” →</a></div>
         {% endif %}
     </div>
     <div>
