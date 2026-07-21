@@ -36,6 +36,18 @@
                        value="{{ entity.ontology_term or '' }}"
                        placeholder="PPEO:entity">
             </div>
+            <div class="form-group">
+                <label class="form-label">SEEK role</label>
+                <select name="seek_role" class="form-input" data-testid="entity-seek-role">
+                    {% set current = entity.seek.role if entity.seek else '' %}
+                    <option value=""{% if not current %} selected{% endif %}>— none —</option>
+                    {% for role in seek_roles %}
+                    <option value="{{ role }}"{% if current == role %} selected{% endif %}>{{ role }}</option>
+                    {% endfor %}
+                </select>
+                <span class="form-help">Sets this entity's SEEK/ISA <code>rdf:type</code> on export
+                    (it does not move it in the ISA hierarchy — SEEK reads that positionally).</span>
+            </div>
             <button type="submit" class="btn btn-sm btn-secondary">Apply</button>
         </form>
     </div>

@@ -78,12 +78,39 @@ def _slug(value: str) -> str:
     return re.sub(r"[^A-Za-z0-9._-]+", "-", value).strip("-") or "x"
 
 
-def _field_index(client: MetaseedClient) -> dict[str, dict[str, FieldSpec]]:
+# Default id-prefix per JERM role (for readable URIs).
+_ROLE_PREFIX = {
+    "Investigation": "inv",
+    "Study": "stu",
+    "ObservationUnit": "obs",
+    "Assay": "assay",
+    "Sample": "sample",
+}
+
+
+def _profile_index(
+    client: MetaseedClient,
+) -> tuple[dict[str, dict[str, FieldSpec]], dict[str, str]]:
+    """Return (entity -> {field name -> spec}, entity -> SEEK role) for the profile.
+
+    The role comes from the entity's ``seek.role`` when the profile declares one,
+    letting a profile pick the emitted ``jerm:`` class instead of the built-in
+    name map. Note it overrides the ``rdf:type`` only — nodes keep their position
+    in the tree, which is what SEEK's positional reader actually consumes (see the
+    module docstring), so declaring ``role=ObservationUnit`` re-types but does not
+    itself insert an ObservationUnit level.
+    """
     profile = SpecLoader().load_profile(client.version, client.profile)
-    return {
+    fields = {
         name: {f.name: f for f in entity.fields}
         for name, entity in profile.entities.items()
     }
+    roles: dict[str, str] = {
+        name: entity.seek.role
+        for name, entity in profile.entities.items()
+        if entity.seek and entity.seek.role
+    }
+    return fields, roles
 
 
 def to_fair_data_station_rdf(client: MetaseedClient) -> str:
@@ -96,10 +123,17 @@ def to_fair_data_station_rdf(client: MetaseedClient) -> str:
     Returns:
         A Turtle string SEEK's "Import from FAIR Data Station" accepts.
     """
-    fields = _field_index(client)
+    fields, roles = _profile_index(client)
     values_by_node = {
         e.get("_node_id"): e for e in client.serialize().get("entities", [])
     }
+
+    def resolve(entity_type: str) -> tuple[str, str] | None:
+        """(JERM class, URI prefix) for an entity type — profile role wins."""
+        role = roles.get(entity_type)
+        if role:
+            return role, _ROLE_PREFIX.get(role, _slug(role).lower())
+        return _JERM.get(entity_type)
 
     graph = Graph()
     graph.bind("jerm", JERM)
@@ -123,13 +157,13 @@ def to_fair_data_station_rdf(client: MetaseedClient) -> str:
         )
 
     def segment(node: Any) -> str | None:
-        mapping = _JERM.get(node.entity_type)
+        mapping = resolve(node.entity_type)
         if mapping is None:
             return None
         return f"{mapping[1]}_{_slug(node_identity(node))}"
 
     def walk(node: Any, parent_path: str) -> None:
-        mapping = _JERM.get(node.entity_type)
+        mapping = resolve(node.entity_type)
         seg = segment(node)
         if mapping is None or seg is None:
             return

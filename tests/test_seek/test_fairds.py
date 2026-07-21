@@ -88,3 +88,26 @@ def test_field_property_definitions_carry_label_and_required():
     for prop in props:
         assert (prop, RDFS.label, None) in graph
         assert (prop, SCHEMA.valueRequired, None) in graph
+
+
+def test_entity_seek_role_overrides_jerm_type(monkeypatch):
+    # A profile's entity.seek.role drives the JERM type in the export.
+    from metaseed.specs.loader import SpecLoader
+    from metaseed.specs.schema import SeekEntityConfig
+
+    real = SpecLoader.load_profile
+
+    def patched(self, version, profile=None, **kw):
+        spec = real(self, version, profile, **kw)
+        spec.entities["Investigation"].seek = SeekEntityConfig(role="Study")
+        return spec
+
+    monkeypatch.setattr(SpecLoader, "load_profile", patched)
+    client = MetaseedClient("isa", "1.0")
+    client.create_entity(
+        "Investigation", {"identifier": "I1", "title": "T"}, skip_validation=True
+    )
+    graph = Graph()
+    graph.parse(data=to_fair_data_station_rdf(client), format="turtle")
+    assert (None, RDF.type, JERM.Study) in graph  # role override applied
+    assert (None, RDF.type, JERM.Investigation) not in graph

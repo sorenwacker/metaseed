@@ -5,7 +5,7 @@ profile entities and their fields.
 """
 
 from enum import StrEnum
-from typing import Any, Self
+from typing import Any, Literal, Self
 
 from pydantic import BaseModel, ConfigDict
 
@@ -67,6 +67,37 @@ class Constraints(BaseModel):
     min_items: int | None = None
     max_items: int | None = None
     enum: list[str] | None = None
+
+
+SEEK_ROLES: tuple[str, ...] = (
+    "Investigation",
+    "Study",
+    "ObservationUnit",
+    "Sample",
+    "Assay",
+)
+"""The ISA/JERM object types a metaseed entity may declare as its SEEK ``role``.
+
+The single source of truth for the Spec Builder's role dropdown and the
+``SeekEntityConfig.role`` validation, so a hand-authored profile with a typo is
+rejected at load rather than silently exporting a nonexistent ``jerm:`` class.
+"""
+
+
+class SeekEntityConfig(BaseModel):
+    """SEEK-specific routing for an entity (used by the ``metaseed[seek]`` export).
+
+    ``role`` is the ISA/JERM object this entity maps to in SEEK — one of
+    :data:`SEEK_ROLES` — overriding the exporter's default entity-name mapping.
+    It sets the emitted ``rdf:type`` only; it does not reposition the node in the
+    ISA hierarchy (SEEK reads the tree positionally — see ``metaseed.seek.fairds``).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    role: (
+        Literal["Investigation", "Study", "ObservationUnit", "Sample", "Assay"] | None
+    ) = None
 
 
 class FieldSpec(BaseModel):
@@ -173,6 +204,7 @@ class EntityDefSpec(BaseModel):
     description: str = ""
     fields: list[FieldSpec] = []
     example: dict[str, str | int | float | bool | list[Any]] | None = None
+    seek: SeekEntityConfig | None = None
 
 
 class ValidationRuleSpec(BaseModel):
