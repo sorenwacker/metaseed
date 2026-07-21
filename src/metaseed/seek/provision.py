@@ -221,12 +221,36 @@ def build_provisioning_plan(
         sample_types.append(
             SampleTypePlan(
                 entity_type=entity_name,
-                title=f"{profile.name} {entity_name}",
+                title=sample_type_title(profile, entity_name),
                 attributes=tuple(attributes),
             )
         )
 
     return ProvisioningPlan(cvs=tuple(cvs.values()), sample_types=tuple(sample_types))
+
+
+def sample_type_title(profile: ProfileSpec, entity_type: str) -> str:
+    """The SEEK Sample Type title for a profile entity (single source of truth)."""
+    return f"{profile.name} {entity_type}"
+
+
+def resolve_sample_type_ids(
+    client: SeekClient, profile: ProfileSpec, *, project_id: str
+) -> dict[str, str]:
+    """Look up already-provisioned Sample Type ids by entity type (for a sync).
+
+    Only entities whose Sample Type currently exists in ``project_id`` are
+    returned; a caller can compare against :func:`sample_role_entities` to see
+    what still needs provisioning.
+    """
+    ids: dict[str, str] = {}
+    for entity_type in sample_role_entities(profile):
+        existing = client.find_sample_type_id_by_title(
+            sample_type_title(profile, entity_type), project_id=project_id
+        )
+        if existing is not None:
+            ids[entity_type] = existing
+    return ids
 
 
 def execute_provisioning_plan(
