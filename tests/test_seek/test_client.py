@@ -98,6 +98,130 @@ def test_default_project_id_raises_without_projects():
         client.default_project_id()
 
 
+def test_create_controlled_vocab_posts_terms():
+    seek = _RecordingSeek()
+    new_id = _client(seek).create_controlled_vocab(
+        title="Organism",
+        terms=[{"label": "human", "iri": "x", "parent_iri": None}],
+        source_ontology="ncbitaxon",
+    )
+    assert new_id == "1"
+    req = seek.requests[-1]
+    assert req["method"] == "POST"
+    assert req["path"] == "/sample_controlled_vocabs"
+    attrs = req["json"]["data"]["attributes"]
+    assert attrs["title"] == "Organism"
+    assert attrs["sample_controlled_vocab_terms_attributes"][0]["label"] == "human"
+
+
+def test_find_sample_type_id_by_title_scopes_by_project():
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "data": [
+                    {
+                        "id": "10",
+                        "attributes": {"title": "Sample"},
+                        "relationships": {
+                            "projects": {"data": [{"id": "1", "type": "projects"}]}
+                        },
+                    },
+                    {
+                        "id": "20",
+                        "attributes": {"title": "Sample"},
+                        "relationships": {
+                            "projects": {"data": [{"id": "2", "type": "projects"}]}
+                        },
+                    },
+                ]
+            },
+        )
+
+    client = SeekClient(
+        "http://seek.test",
+        http_client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+    assert client.find_sample_type_id_by_title("Sample", project_id="2") == "20"
+    assert client.find_sample_type_id_by_title("Sample", project_id="9") is None
+    assert client.find_sample_type_id_by_title("Missing", project_id="1") is None
+
+
+def test_find_controlled_vocab_id_by_title():
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={"data": [{"id": "5", "attributes": {"title": "Organism"}}]},
+        )
+
+    client = SeekClient(
+        "http://seek.test",
+        http_client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+    assert client.find_controlled_vocab_id_by_title("Organism") == "5"
+    assert client.find_controlled_vocab_id_by_title("Nope") is None
+
+
+def test_list_projects_returns_id_title_pairs():
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "data": [
+                    {"id": "1", "attributes": {"title": "Alpha"}},
+                    {"id": "2", "attributes": {"title": "Beta"}},
+                ]
+            },
+        )
+
+    client = SeekClient(
+        "http://seek.test",
+        http_client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+    assert client.list_projects() == [("1", "Alpha"), ("2", "Beta")]
+
+
+def test_client_from_settings_uses_url_and_token():
+    from metaseed.seek.client import client_from_settings
+
+    captured: dict[str, str] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured.update(dict(request.headers))
+        return httpx.Response(200, json={"data": [{"id": "1", "type": "projects"}]})
+
+    client = client_from_settings(
+        {"url": "http://seek.test", "api_key": "tok"},
+        http_client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+    client.default_project_id()
+    assert captured["authorization"] == "Bearer tok"
+
+
+def test_client_from_settings_blank_key_is_unauthenticated():
+    from metaseed.seek.client import client_from_settings
+
+    captured: dict[str, str] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured.update(dict(request.headers))
+        return httpx.Response(200, json={"data": [{"id": "1", "type": "projects"}]})
+
+    client = client_from_settings(
+        {"url": "http://seek.test", "api_key": ""},
+        http_client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+    client.default_project_id()
+    assert "authorization" not in captured
+
+
+def test_client_from_settings_requires_url():
+    from metaseed.seek.client import client_from_settings
+
+    with pytest.raises(ValueError, match="SEEK URL"):
+        client_from_settings({"api_key": "tok"})
+
+
 def test_push_minimal_experiment_threads_ids():
     from metaseed.seek.export import push_minimal_experiment
 

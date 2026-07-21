@@ -32,6 +32,28 @@ JSONAPI_MEDIA_TYPE = "application/vnd.api+json"
 USER_AGENT = "metaseed (+https://github.com/sorenwacker/metaseed)"
 
 
+def _relates_to_project(row: Mapping[str, Any], project_id: str) -> bool:
+    """Whether a JSON:API resource row links to ``project_id`` via ``projects``."""
+    projects = row.get("relationships", {}).get("projects", {}).get("data", [])
+    return any(str(p.get("id")) == str(project_id) for p in projects)
+
+
+def client_from_settings(
+    config: Mapping[str, str], *, http_client: httpx.Client | None = None
+) -> SeekClient:
+    """Build a :class:`SeekClient` from a stored adapter config.
+
+    ``config`` is the ``get_adapter_config("seek")`` dict: ``url`` (required) and
+    an optional ``api_key`` used as a bearer token. A blank ``api_key`` yields an
+    unauthenticated client (callers should warn); a blank ``url`` is an error.
+    """
+    url = (config.get("url") or "").strip()
+    if not url:
+        raise ValueError("SEEK URL is not configured (set it on the Plugins page)")
+    token = (config.get("api_key") or "").strip() or None
+    return SeekClient(url, token=token, http_client=http_client)
+
+
 class SeekClient:
     """Minimal read/write client for the SEEK JSON:API."""
 
@@ -107,6 +129,13 @@ class SeekClient:
             raise ValueError("SEEK instance has no projects to attach content to")
         return str(projects[0]["id"])
 
+    def list_projects(self) -> list[tuple[str, str]]:
+        """Return ``(id, title)`` for every project (for a UI selector)."""
+        return [
+            (str(row["id"]), str(row["attributes"].get("title", row["id"])))
+            for row in self.get("/projects").get("data", [])
+        ]
+
     def sample_attribute_type_id(self, title: str) -> str:
         """Resolve a base sample-attribute-type id by its title (e.g. 'String').
 
@@ -181,3 +210,53 @@ class SeekClient:
                 sample_type_id=sample_type_id, project_id=project_id, data=data
             ),
         )
+
+    def create_controlled_vocab(
+        self,
+        *,
+        title: str,
+        terms: list[dict[str, Any]],
+        description: str | None = None,
+        source_ontology: str | None = None,
+        ols_root_term_uris: str | None = None,
+    ) -> str:
+        """Create a Controlled Vocabulary (with its terms); return its id."""
+        return self._create(
+            "/sample_controlled_vocabs",
+            payloads.controlled_vocab_payload(
+                title=title,
+                terms=terms,
+                description=description,
+                source_ontology=source_ontology,
+                ols_root_term_uris=ols_root_term_uris,
+            ),
+        )
+
+    # -- idempotency lookups ----------------------------------------------
+
+    def find_sample_type_id_by_title(
+        self, title: str, *, project_id: str | None = None
+    ) -> str | None:
+        """Return an existing Sample Type id matching ``title`` (else ``None``).
+
+        When ``project_id`` is given, only a sample type attached to that project
+        matches — titles are unique per project, not globally.
+        """
+        for row in self.get("/sample_types").get("data", []):
+            if row["attributes"].get("title") != title:
+                continue
+            if project_id is not None and not _relates_to_project(row, project_id):
+                continue
+            return str(row["id"])
+        return None
+
+    def find_controlled_vocab_id_by_title(self, title: str) -> str | None:
+        """Return an existing Controlled Vocabulary id matching ``title``.
+
+        Controlled Vocabularies are instance-global in SEEK (not per-project), so
+        this matches on title alone.
+        """
+        for row in self.get("/sample_controlled_vocabs").get("data", []):
+            if row["attributes"].get("title") == title:
+                return str(row["id"])
+        return None

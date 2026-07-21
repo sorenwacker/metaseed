@@ -97,18 +97,36 @@ def sample_attribute(
     attribute_type_id: str | int,
     required: bool = False,
     is_title: bool = False,
+    pos: int | None = None,
+    sample_controlled_vocab_id: str | int | None = None,
+    allow_cv_free_text: bool = False,
+    linked_sample_type_id: str | int | None = None,
 ) -> dict[str, Any]:
     """Build one entry for a Sample Type's ``sample_attributes`` list.
 
     ``attribute_type_id`` is a SEEK base attribute-type id (e.g. 8 = String,
     4 = Integer, 7 = Text), as listed by ``GET /sample_attribute_types``.
+
+    ``sample_controlled_vocab_id`` binds a Controlled Vocabulary to the attribute
+    and ``linked_sample_type_id`` binds another Sample Type. SEEK's
+    ``resolve_inconsistencies`` silently *nulls* these unless the attribute type
+    is CV/CVList (for the vocab) or a registered-sample type (for the link), so
+    callers must pass them only alongside a consistent ``attribute_type_id``.
     """
-    return {
+    attribute: dict[str, Any] = {
         "title": title,
         "required": required,
         "is_title": is_title,
         "sample_attribute_type": {"id": str(attribute_type_id)},
     }
+    if pos is not None:
+        attribute["pos"] = pos
+    if sample_controlled_vocab_id is not None:
+        attribute["sample_controlled_vocab_id"] = str(sample_controlled_vocab_id)
+        attribute["allow_cv_free_text"] = allow_cv_free_text
+    if linked_sample_type_id is not None:
+        attribute["linked_sample_type_id"] = str(linked_sample_type_id)
+    return attribute
 
 
 def sample_type_payload(
@@ -147,3 +165,31 @@ def sample_payload(
             "projects": _to_many("projects", [project_id]),
         },
     )
+
+
+def controlled_vocab_payload(
+    *,
+    title: str,
+    terms: list[dict[str, Any]],
+    description: str | None = None,
+    source_ontology: str | None = None,
+    ols_root_term_uris: str | None = None,
+) -> dict[str, Any]:
+    """Build a POST body for ``/sample_controlled_vocabs``.
+
+    ``terms`` is a list of ``{"label", "iri", "parent_iri"}`` dicts (SEEK does
+    not expand an ontology on create — the caller supplies the terms). Setting
+    ``source_ontology`` + ``ols_root_term_uris`` tags the vocabulary as
+    ontology-backed.
+    """
+    attributes: dict[str, Any] = {
+        "title": title,
+        "sample_controlled_vocab_terms_attributes": terms,
+    }
+    if description is not None:
+        attributes["description"] = description
+    if source_ontology is not None:
+        attributes["source_ontology"] = source_ontology
+    if ols_root_term_uris is not None:
+        attributes["ols_root_term_uris"] = ols_root_term_uris
+    return _document("sample_controlled_vocabs", attributes)
