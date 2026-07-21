@@ -69,6 +69,32 @@ class Constraints(BaseModel):
     enum: list[str] | None = None
 
 
+class SeekFieldConfig(BaseModel):
+    """SEEK-specific routing for a field (used by the ``metaseed[seek]`` export).
+
+    ``isa_tag`` places the field on SEEK's ISA graph (e.g. ``source``,
+    ``source_characteristic``, ``sample``, ``sample_characteristic``,
+    ``protocol``, ``parameter_value``).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    isa_tag: str | None = None
+
+
+class SeekEntityConfig(BaseModel):
+    """SEEK-specific routing for an entity (used by the ``metaseed[seek]`` export).
+
+    ``role`` is the ISA/JERM object this entity maps to in SEEK — one of
+    ``Investigation``, ``Study``, ``ObservationUnit``, ``Sample``, ``Assay`` —
+    overriding the exporter's default entity-name mapping.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    role: str | None = None
+
+
 class FieldSpec(BaseModel):
     """Specification for a single field in an entity.
 
@@ -106,6 +132,7 @@ class FieldSpec(BaseModel):
     unique_within: str | None = None
     reference: str | None = None
     dcat: str | None = None
+    seek: SeekFieldConfig | None = None
 
     def is_nested(self: Self) -> bool:
         """Check if this field represents a nested entity.
@@ -173,6 +200,7 @@ class EntityDefSpec(BaseModel):
     description: str = ""
     fields: list[FieldSpec] = []
     example: dict[str, str | int | float | bool | list[Any]] | None = None
+    seek: SeekEntityConfig | None = None
 
 
 class ValidationRuleSpec(BaseModel):

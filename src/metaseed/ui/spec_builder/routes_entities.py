@@ -135,13 +135,18 @@ def register_entity_routes(
         new_name: str = Form(None, alias="name"),
         description: str = Form(""),
         ontology_term: str = Form(""),
+        seek_role: str = Form(""),
     ) -> HTMLResponse:
         """Update entity metadata, including rename."""
+        from metaseed.specs.schema import SeekEntityConfig
+
         builder = _require_spec()
         assert builder.spec is not None  # guaranteed by _require_spec
         entity = _require_entity(builder, name)
         entity.description = description.strip()
         entity.ontology_term = ontology_term.strip() or None
+        role = seek_role.strip()
+        entity.seek = SeekEntityConfig(role=role) if role else None
 
         # Handle rename
         final_name = name
