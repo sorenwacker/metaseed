@@ -1,0 +1,13 @@
+{% if projects %}
+<label style="font-size:0.85rem;">Project
+    <select name="project_id" class="form-input" data-testid="seek-project-select">
+        {% for pid, ptitle in projects %}
+        <option value="{{ pid }}">{{ ptitle }}</option>
+        {% endfor %}
+    </select>
+</label>
+{% else %}
+<span class="muted" data-testid="seek-no-projects" style="font-size:0.85rem;">
+    No SEEK projects available — check the URL/key and that the instance is reachable.
+</span>
+{% endif %}
