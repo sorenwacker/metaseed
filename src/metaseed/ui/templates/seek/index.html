@@ -9,21 +9,47 @@
         No external tool is involved; metaseed generates the RDF directly.
     </p>
 
+    <div class="seek-context" data-testid="seek-context"
+         style="border:1px solid var(--border, #ddd); border-radius:6px; padding:0.9rem 1rem; margin:1rem 0;">
+        {% if entity_count %}
+        <div>Exporting profile <strong>{{ profile }}</strong>{% if version %} v{{ version }}{% endif %}
+            · dataset <strong>{{ dataset_name or "(unsaved)" }}</strong>
+            · <strong>{{ entity_count }}</strong> entit{{ "y" if entity_count == 1 else "ies" }}</div>
+        <div class="muted" style="font-size:0.85rem; margin-top:0.4rem;">Will emit:
+            {% for etype, n in entity_counts %}{{ etype }} ×{{ n }}{% if not loop.last %}, {% endif %}{% endfor %}
+        </div>
+        {% else %}
+        <div class="muted" data-testid="seek-empty">No dataset loaded. Build or load a dataset
+            (Datasets / Builder), then return here to export it.</div>
+        {% endif %}
+    </div>
+
+    {% if entity_count %}
     <p>
         <a href="{{ base_url }}/seek/isa-rdf" class="btn btn-primary"
            data-testid="seek-export-rdf" download>Download SEEK ISA RDF (.ttl) →</a>
     </p>
+    {% else %}
+    <p><button class="btn btn-secondary" disabled data-testid="seek-export-disabled">Download SEEK ISA RDF (.ttl)</button></p>
+    {% endif %}
 
     <h3 style="margin-top:1.5rem;">Then, in SEEK</h3>
     <ol class="muted" style="line-height:1.6;">
         <li>Enable the feature (admin, once): <em>Server administration → Enable/disable
             features → FAIR Data Station import</em>.</li>
-        <li>Open your <strong>Project</strong> → <strong>Import from FAIR Data Station</strong>.</li>
+        <li>Open your <strong>Project</strong> → <strong>Import from FAIR Data Station</strong>
+            {% if seek_url %}(<a href="{{ seek_url }}" target="_blank" rel="noopener">{{ seek_url }}</a>){% endif %}.</li>
         <li>Upload the downloaded <code>.ttl</code> and submit.</li>
     </ol>
+    {% if not seek_url %}
     <p class="muted" style="font-size:0.85rem;">
-        Note: SEEK reads the ISA levels positionally, so with the ISA profile (no
-        ObservationUnit level) entities below Study currently import one level high;
+        Tip: set your SEEK URL + API key on the <a href="{{ base_url }}/settings">Plugins</a> page
+        so links here point at your instance.
+    </p>
+    {% endif %}
+    <p class="muted" style="font-size:0.85rem;">
+        Note: SEEK reads ISA levels positionally, so with the ISA profile (no
+        ObservationUnit level) entities below Study import one level high;
         Investigation and Study round-trip cleanly.
     </p>
 </div>

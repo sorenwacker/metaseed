@@ -35,11 +35,31 @@ def register_seek_routes(
 
     @app.get("/seek", response_class=HTMLResponse)
     async def seek_page(request: Request) -> HTMLResponse:
-        """Render the SEEK export page (404 when the plugin is disabled)."""
+        """Render the SEEK export page with the current profile/dataset context."""
         if not _enabled(request):
             return HTMLResponse("SEEK plugin is disabled", status_code=404)
+
+        from collections import Counter
+
+        from metaseed.ui.datasets import get_current_dataset_name
+
+        state = get_state()
+        facade = state.get_or_create_facade()
+        counts = Counter(node.entity_type for node in state.nodes_by_id.values())
+        seek_config = request.app.state.settings.get_adapter_config("seek")
+
         return templates.TemplateResponse(
-            request, "seek/index.html", {"base_url": base_url}
+            request,
+            "seek/index.html",
+            {
+                "base_url": base_url,
+                "profile": facade.profile,
+                "version": facade.version,
+                "dataset_name": get_current_dataset_name(state),
+                "entity_count": len(state.nodes_by_id),
+                "entity_counts": sorted(counts.items()),
+                "seek_url": seek_config.get("url", ""),
+            },
         )
 
     @app.get("/seek/isa-rdf")
