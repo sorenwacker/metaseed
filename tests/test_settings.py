@@ -46,3 +46,25 @@ def test_corrupt_file_falls_back_to_defaults(tmp_path):
     path = tmp_path / "s.json"
     path.write_text("not json {", encoding="utf-8")
     assert Settings(path).adapter_enabled("seek") is True
+
+
+def test_adapter_config_round_trips_and_drops_unknown_fields(tmp_path):
+    path = tmp_path / "s.json"
+    Settings(path).set_adapter_config(
+        "seek", {"url": "http://x:3001", "api_key": "k", "bogus": "no"}
+    )
+    config = Settings(path).get_adapter_config("seek")  # reloaded from disk
+    assert config == {"url": "http://x:3001", "api_key": "k"}  # bogus dropped
+
+
+def test_adapter_config_blank_clears_a_field(tmp_path):
+    path = tmp_path / "s.json"
+    s = Settings(path)
+    s.set_adapter_config("seek", {"url": "http://x:3001"})
+    s.set_adapter_config("seek", {"url": ""})
+    assert "url" not in Settings(path).get_adapter_config("seek")
+
+
+def test_set_config_for_unknown_adapter_raises(tmp_path):
+    with pytest.raises(KeyError):
+        Settings(tmp_path / "s.json").set_adapter_config("nope", {"url": "x"})

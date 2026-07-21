@@ -37,3 +37,26 @@ def test_toggle_disables_then_reenables(client):
 
 def test_toggle_unknown_adapter_is_404(client):
     assert client.post("/settings/adapters/nope/toggle").status_code == 404
+
+
+def test_seek_row_shows_config_form_and_action_link(client):
+    page = client.get("/settings").text
+    assert 'data-testid="config-seek"' in page  # config form present
+    assert 'data-testid="config-seek-api_key"' in page  # api key field
+    assert 'data-testid="link-seek-action"' in page  # Open action link
+
+
+def test_config_saves_and_masks_secret(client):
+    response = client.post(
+        "/settings/adapters/seek/config",
+        data={"url": "http://localhost:3001", "api_key": "s3cret"},
+    )
+    assert response.status_code == 200
+    # url is prefilled back; the api key is never rendered into the response.
+    assert "http://localhost:3001" in response.text
+    assert "s3cret" not in response.text
+    assert "configured — leave blank to keep" in response.text
+
+
+def test_config_unknown_adapter_is_404(client):
+    assert client.post("/settings/adapters/nope/config", data={}).status_code == 404

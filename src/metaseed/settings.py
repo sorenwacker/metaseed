@@ -84,3 +84,31 @@ class Settings:
             )
         self._data.setdefault("adapters", {})[key] = enabled
         self._save()
+
+    def get_adapter_config(self, key: str) -> dict[str, str]:
+        """Return the stored config values for adapter ``key`` (empty if none)."""
+        stored = self._data.get("adapter_config", {}).get(key, {})
+        return dict(stored) if isinstance(stored, dict) else {}
+
+    def set_adapter_config(self, key: str, values: dict[str, str]) -> None:
+        """Persist config values for adapter ``key``.
+
+        Only fields declared in the adapter's ``config_fields`` are stored; unknown
+        keys and blank values are dropped. Empty strings clear a field.
+
+        Raises:
+            KeyError: If ``key`` is not a registered adapter.
+        """
+        info = adapters.get_adapter(key)  # raises KeyError for unknown keys
+        allowed = {f.key for f in info.config_fields}
+        current = self.get_adapter_config(key)
+        for field_key, value in values.items():
+            if field_key not in allowed:
+                continue
+            text = str(value).strip()
+            if text:
+                current[field_key] = text
+            else:
+                current.pop(field_key, None)
+        self._data.setdefault("adapter_config", {})[key] = current
+        self._save()

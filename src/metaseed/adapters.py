@@ -15,6 +15,20 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
+class ConfigField:
+    """A configurable setting for an adapter (e.g. a service URL or API key)."""
+
+    key: str
+    """Stable identifier stored in settings (e.g. ``url``, ``api_key``)."""
+    label: str
+    """Human-readable label shown in the UI."""
+    secret: bool = False
+    """Whether the value is sensitive (rendered masked, e.g. an API key)."""
+    placeholder: str = ""
+    """Optional input placeholder."""
+
+
+@dataclass(frozen=True)
 class AdapterInfo:
     """Static description of an optional integration adapter."""
 
@@ -31,6 +45,10 @@ class AdapterInfo:
     """The pip extra that installs it (``pip install 'metaseed[<extra>]'``)."""
     requires: tuple[str, ...]
     """Third-party modules whose presence means the extra is installed."""
+    config_fields: tuple[ConfigField, ...] = ()
+    """Per-instance configuration this adapter accepts (URLs, keys)."""
+    action_path: str | None = None
+    """UI path to the adapter's action page, if it has one (e.g. ``/seek``)."""
 
 
 ADAPTERS: tuple[AdapterInfo, ...] = (
@@ -82,6 +100,11 @@ ADAPTERS: tuple[AdapterInfo, ...] = (
         extra="seek",
         # httpx for the JSON:API client, rdflib for the ISA RDF export.
         requires=("httpx", "rdflib"),
+        config_fields=(
+            ConfigField("url", "SEEK URL", placeholder="http://localhost:3001"),
+            ConfigField("api_key", "API key", secret=True),
+        ),
+        action_path="/seek",
     ),
 )
 
