@@ -337,16 +337,18 @@ function updateEntity(event, oldName) {
 
     const form = event.target;
     const formData = new FormData(form);
-    const newName = formData.get('name').trim();
-    const description = formData.get('description') || '';
-    const ontologyTerm = formData.get('ontology_term') || '';
+    const newName = (formData.get('name') || '').trim();
+    formData.set('name', newName);
+    // Send the whole form (name, description, ontology_term, seek_role, ...) so
+    // fields added to the editor are posted without touching this handler.
+    const body = new URLSearchParams(formData).toString();
 
     fetch(`/spec-builder/entity/${encodeURIComponent(oldName)}`, {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: `name=${encodeURIComponent(newName)}&description=${encodeURIComponent(description)}&ontology_term=${encodeURIComponent(ontologyTerm)}`
+        body: body
     })
     .then(response => {
         if (response.ok) {
