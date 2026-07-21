@@ -147,15 +147,16 @@ def test_seek_export_end_to_end(driver):
     driver.get(f"{BASE_URL}/load-example/isa/1.0")
 
     driver.get(f"{BASE_URL}/seek")
-    context = _wait(driver, '[data-testid="seek-context"]')
-    assert "isa" in context.text  # active profile shown
-    assert "Investigation" in context.text  # exportable type in "Will emit"
-    # Download is enabled (not the disabled placeholder), and the configured
-    # instance URL is linked.
-    assert driver.find_elements(By.CSS_SELECTOR, '[data-testid="seek-export-rdf"]')
+    # Download is enabled (not the disabled placeholder), the sync panel is shown,
+    # and the configured instance URL appears.
+    export_link = _wait(driver, '[data-testid="seek-export-rdf"]')
+    assert export_link is not None
+    assert driver.find_elements(By.CSS_SELECTOR, '[data-testid="seek-sync-form"]')
     assert not driver.find_elements(
         By.CSS_SELECTOR, '[data-testid="seek-export-disabled"]'
     )
+    assert "isa" in driver.page_source  # active profile shown
+    assert "Investigation" in driver.page_source  # exportable type listed
     assert "localhost:3001" in driver.page_source
 
     # The download endpoint returns valid FAIR Data Station Turtle (fetched in the

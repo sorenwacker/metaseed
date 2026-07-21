@@ -1,16 +1,18 @@
-"""FAIRDOM-SEEK adapter — push ISA content into a SEEK instance.
+"""FAIRDOM-SEEK adapter — provision a data model and push ISA content into SEEK.
 
-Creates the ISA hierarchy (Investigation → Study → Assay) plus Sample Types and
-Samples in a `FAIRDOM-SEEK <https://seek4science.org/>`_ instance through its
-JSON:API.
+Two phases over the SEEK JSON:API:
 
-    >>> from metaseed.seek import SeekClient, push_minimal_experiment
-    >>> client = SeekClient("http://localhost:3001", auth=("admin", "..."))  # metaseed[seek]
-    >>> ids = push_minimal_experiment(client)
+- **provision** (:mod:`metaseed.seek.provision`) — project a profile onto SEEK
+  Controlled Vocabularies + Sample Types;
+- **sync** (:mod:`metaseed.seek.sync`) — push a loaded dataset as Investigations,
+  Studies, Assays and Samples.
+
+    >>> from metaseed.seek import SeekClient, client_from_settings
+    >>> client = SeekClient("http://localhost:3001", token="...")  # metaseed[seek]
 
 The pure JSON:API payload builders (:mod:`metaseed.seek.payloads`, re-exported
-here) import without the ``metaseed[seek]`` extra; ``SeekClient`` and
-``push_minimal_experiment`` need ``httpx``.
+here) import without the ``metaseed[seek]`` extra; ``SeekClient`` needs ``httpx``
+and ``to_fair_data_station_rdf`` needs ``rdflib``.
 """
 
 from __future__ import annotations
@@ -26,24 +28,33 @@ from metaseed.seek.payloads import (
     sample_type_payload,
     study_payload,
 )
+from metaseed.seek.provision import (
+    build_provisioning_plan,
+    execute_provisioning_plan,
+)
+from metaseed.seek.sync import sync_dataset_to_seek
 
 if TYPE_CHECKING:
     from metaseed.seek.client import SeekClient, client_from_settings
-    from metaseed.seek.export import ExperimentIds, push_minimal_experiment
-    from metaseed.seek.fairds import to_fair_data_station_rdf
+    from metaseed.seek.fairds import (
+        to_fair_data_station_model_rdf,
+        to_fair_data_station_rdf,
+    )
 
 __all__ = [
-    "ExperimentIds",
     "SeekClient",
     "assay_payload",
+    "build_provisioning_plan",
     "client_from_settings",
     "controlled_vocab_payload",
+    "execute_provisioning_plan",
     "investigation_payload",
-    "push_minimal_experiment",
     "sample_attribute",
     "sample_payload",
     "sample_type_payload",
     "study_payload",
+    "sync_dataset_to_seek",
+    "to_fair_data_station_model_rdf",
     "to_fair_data_station_rdf",
 ]
 
@@ -54,12 +65,8 @@ def __getattr__(name: str) -> Any:
         from metaseed.seek import client
 
         return getattr(client, name)
-    if name in ("push_minimal_experiment", "ExperimentIds"):
-        from metaseed.seek import export
+    if name in ("to_fair_data_station_rdf", "to_fair_data_station_model_rdf"):
+        from metaseed.seek import fairds
 
-        return getattr(export, name)
-    if name == "to_fair_data_station_rdf":
-        from metaseed.seek.fairds import to_fair_data_station_rdf
-
-        return to_fair_data_station_rdf
+        return getattr(fairds, name)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

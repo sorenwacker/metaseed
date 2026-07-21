@@ -115,26 +115,30 @@ def test_create_controlled_vocab_posts_terms():
 
 
 def test_find_sample_type_id_by_title_scopes_by_project():
+    # SEEK's /sample_types LIST omits the projects relationship; the project is
+    # confirmed against the single-resource detail view.
     def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/sample_types":
+            return httpx.Response(
+                200,
+                json={
+                    "data": [
+                        {"id": "10", "attributes": {"title": "Sample"}},
+                        {"id": "20", "attributes": {"title": "Sample"}},
+                    ]
+                },
+            )
+        proj = {"10": "1", "20": "2"}[request.url.path.rsplit("/", 1)[1]]
         return httpx.Response(
             200,
             json={
-                "data": [
-                    {
-                        "id": "10",
-                        "attributes": {"title": "Sample"},
-                        "relationships": {
-                            "projects": {"data": [{"id": "1", "type": "projects"}]}
-                        },
+                "data": {
+                    "id": request.url.path.rsplit("/", 1)[1],
+                    "attributes": {"title": "Sample"},
+                    "relationships": {
+                        "projects": {"data": [{"id": proj, "type": "projects"}]}
                     },
-                    {
-                        "id": "20",
-                        "attributes": {"title": "Sample"},
-                        "relationships": {
-                            "projects": {"data": [{"id": "2", "type": "projects"}]}
-                        },
-                    },
-                ]
+                }
             },
         )
 
@@ -145,6 +149,8 @@ def test_find_sample_type_id_by_title_scopes_by_project():
     assert client.find_sample_type_id_by_title("Sample", project_id="2") == "20"
     assert client.find_sample_type_id_by_title("Sample", project_id="9") is None
     assert client.find_sample_type_id_by_title("Missing", project_id="1") is None
+    # with no project filter, the first title match wins (no detail fetch needed)
+    assert client.find_sample_type_id_by_title("Sample") == "10"
 
 
 def test_find_controlled_vocab_id_by_title():
@@ -220,41 +226,3 @@ def test_client_from_settings_requires_url():
 
     with pytest.raises(ValueError, match="SEEK URL"):
         client_from_settings({"api_key": "tok"})
-
-
-def test_push_minimal_experiment_threads_ids():
-    from metaseed.seek.export import push_minimal_experiment
-
-    seek = _RecordingSeek()
-    # default_project_id -> GET /projects; sample_attribute_type_id -> GET
-    def handler(request: httpx.Request) -> httpx.Response:
-        if request.method == "GET" and request.url.path == "/projects":
-            return httpx.Response(200, json={"data": [{"id": "1", "type": "projects"}]})
-        if request.method == "GET" and request.url.path == "/sample_attribute_types":
-            return httpx.Response(
-                200, json={"data": [{"id": "8", "attributes": {"title": "String"}}]}
-            )
-        return seek.handler(request)
-
-    client = SeekClient(
-        "http://seek.test",
-        auth=("a", "b"),
-        http_client=httpx.Client(transport=httpx.MockTransport(handler)),
-    )
-    ids = push_minimal_experiment(client)
-
-    posted = [r["path"] for r in seek.requests if r["method"] == "POST"]
-    assert posted == [
-        "/investigations",
-        "/studies",
-        "/assays",
-        "/sample_types",
-        "/samples",
-    ]
-    # study links the investigation id that was returned first
-    study_req = next(r for r in seek.requests if r["path"] == "/studies")
-    assert (
-        study_req["json"]["data"]["relationships"]["investigation"]["data"]["id"]
-        == ids.investigation
-    )
-    assert ids.project == "1"

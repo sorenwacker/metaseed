@@ -39,19 +39,23 @@ def _relates_to_project(row: Mapping[str, Any], project_id: str) -> bool:
 
 
 def client_from_settings(
-    config: Mapping[str, str], *, http_client: httpx.Client | None = None
+    config: Mapping[str, str],
+    *,
+    timeout: float = 30.0,
+    http_client: httpx.Client | None = None,
 ) -> SeekClient:
     """Build a :class:`SeekClient` from a stored adapter config.
 
     ``config`` is the ``get_adapter_config("seek")`` dict: ``url`` (required) and
     an optional ``api_key`` used as a bearer token. A blank ``api_key`` yields an
     unauthenticated client (callers should warn); a blank ``url`` is an error.
+    ``timeout`` bounds each request (use a small value for a liveness probe).
     """
     url = (config.get("url") or "").strip()
     if not url:
         raise ValueError("SEEK URL is not configured (set it on the Plugins page)")
     token = (config.get("api_key") or "").strip() or None
-    return SeekClient(url, token=token, http_client=http_client)
+    return SeekClient(url, token=token, timeout=timeout, http_client=http_client)
 
 
 class SeekClient:
@@ -240,14 +244,19 @@ class SeekClient:
         """Return an existing Sample Type id matching ``title`` (else ``None``).
 
         When ``project_id`` is given, only a sample type attached to that project
-        matches — titles are unique per project, not globally.
+        matches — titles are unique per project, not globally. SEEK's
+        ``/sample_types`` *list* omits the ``projects`` relationship (it is only on
+        the single-resource view), so a title match is confirmed against the
+        resource detail when the list row can't prove the project.
         """
         for row in self.get("/sample_types").get("data", []):
             if row["attributes"].get("title") != title:
                 continue
-            if project_id is not None and not _relates_to_project(row, project_id):
-                continue
-            return str(row["id"])
+            if project_id is None or _relates_to_project(row, project_id):
+                return str(row["id"])
+            detail = self.get(f"/sample_types/{row['id']}").get("data", {})
+            if _relates_to_project(detail, project_id):
+                return str(row["id"])
         return None
 
     def find_controlled_vocab_id_by_title(self, title: str) -> str | None:
