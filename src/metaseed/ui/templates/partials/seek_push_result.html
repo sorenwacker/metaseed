@@ -5,9 +5,9 @@
 {% else %}
 <div class="notification success" data-testid="seek-push-success">
     <p>
-        Created {{ result.sample_types|length }} Sample Type(s) and
-        {{ result.controlled_vocabularies|length }} Controlled Vocabular(ies) in project
-        {{ result.project }}.
+        Pushed to project {{ result.project }}:
+        <strong>{{ result.sample_types|length }}</strong> Sample Type(s),
+        <strong>{{ result.controlled_vocabularies|length }}</strong> Controlled Vocabular(ies).
     </p>
     {% if result.sample_types %}
     <ul>
@@ -16,11 +16,25 @@
         {% endfor %}
     </ul>
     {% endif %}
-    {% if result.skipped %}
-    <p class="muted" style="font-size:0.85rem;">
-        Skipped (already existed or no fields): {{ result.skipped|join(", ") }}
+
+    {% if result.extended_metadata %}
+    <p style="margin-top:0.75rem;">
+        <strong>{{ result.extended_metadata|length }}</strong> Extended Metadata Type(s)
+        ({{ result.extended_metadata | map(attribute='supported_type') | join(', ') }})
+        can't be created via the SEEK API — download the JSON and upload it in SEEK under
+        <em>Admin → Extended Metadata Types</em>:
+        <br>
+        <a href="{{ base_url }}/seek/extended-metadata?profile={{ profile_spec }}"
+           data-testid="seek-emt-download" download>Download extended-metadata JSON →</a>
     </p>
     {% endif %}
+
+    {% if result.skipped %}
+    <p class="muted" style="font-size:0.85rem;">
+        Skipped {{ result.skipped|length }} entit(y/ies) with no SEEK mapping.
+    </p>
+    {% endif %}
+
     <p><a href="{{ seek_url }}/sample_types" target="_blank" rel="noopener">Open Sample Types in SEEK →</a></p>
 </div>
 {% endif %}

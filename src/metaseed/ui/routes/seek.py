@@ -7,8 +7,8 @@ false, so disabling the plugin hides the feature.
 
 from collections.abc import Callable
 
-from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, Request, Response
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
 from metaseed.ui.spec_provider import SpecProvider
@@ -101,5 +101,41 @@ def register_seek_routes(
         return templates.TemplateResponse(
             request,
             "partials/seek_push_result.html",
-            {"result": result, "seek_url": seek_url, "base_url": base_url},
+            {
+                "result": result,
+                "seek_url": seek_url,
+                "profile_spec": profile_spec,
+                "base_url": base_url,
+            },
+        )
+
+    @app.get("/seek/extended-metadata")
+    async def seek_extended_metadata(request: Request, profile: str = "") -> Response:
+        """Download the Extended Metadata Type JSON for a profile (admin uploads it)."""
+        if not _enabled(request):
+            return HTMLResponse("SEEK plugin is disabled", status_code=404)
+        if "/" not in profile:
+            return HTMLResponse("Provide ?profile=name/version", status_code=400)
+
+        name, version = profile.split("/", 1)
+        from metaseed.seek.config import extended_metadata_json
+        from metaseed.specs.loader import SpecLoader, SpecLoadError
+
+        try:
+            spec = SpecLoader().load_profile(version, name)
+        except (SpecLoadError, ValueError, OSError) as exc:
+            return HTMLResponse(str(exc), status_code=404)
+
+        blocks = [
+            block
+            for entity_name in spec.entities
+            if (block := extended_metadata_json(spec, entity_name)) is not None
+        ]
+        return JSONResponse(
+            blocks,
+            headers={
+                "Content-Disposition": (
+                    f'attachment; filename="{name}-{version}-extended-metadata.json"'
+                )
+            },
         )

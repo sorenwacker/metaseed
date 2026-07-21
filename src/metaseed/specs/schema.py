@@ -5,7 +5,7 @@ profile entities and their fields.
 """
 
 from enum import StrEnum
-from typing import Any, Self
+from typing import Any, Literal, Self
 
 from pydantic import BaseModel, ConfigDict
 
@@ -69,6 +69,39 @@ class Constraints(BaseModel):
     enum: list[str] | None = None
 
 
+class SeekFieldConfig(BaseModel):
+    """SEEK routing metadata for a field (used by the ``metaseed[seek]`` adapter).
+
+    Places a field on SEEK's ISA graph. ``isa_tag`` is SEEK's per-attribute tag
+    (e.g. ``source``, ``source_characteristic``, ``sample``,
+    ``sample_characteristic``, ``protocol``, ``parameter_value``); ``label`` is
+    an optional human-readable attribute label.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    isa_tag: str | None = None
+    label: str | None = None
+
+
+class SeekEntityConfig(BaseModel):
+    """SEEK routing metadata for an entity (used by the ``metaseed[seek]`` adapter).
+
+    ``artifact`` decides where the entity is projected in SEEK: a
+    ``sample_type`` (samples flowing through assays, created via the API) or
+    ``extended_metadata`` (descriptive metadata on an ISA object, emitted as a
+    JSON artifact the admin uploads). ``supported_type`` is the SEEK object an
+    extended-metadata block attaches to (Investigation / Study / Assay /
+    ExtendedMetadata). ``level`` reserves the sample-type template level.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    artifact: Literal["sample_type", "extended_metadata"]
+    supported_type: str | None = None
+    level: str | None = None
+
+
 class FieldSpec(BaseModel):
     """Specification for a single field in an entity.
 
@@ -106,6 +139,7 @@ class FieldSpec(BaseModel):
     unique_within: str | None = None
     reference: str | None = None
     dcat: str | None = None
+    seek: SeekFieldConfig | None = None
 
     def is_nested(self: Self) -> bool:
         """Check if this field represents a nested entity.
@@ -173,6 +207,7 @@ class EntityDefSpec(BaseModel):
     description: str = ""
     fields: list[FieldSpec] = []
     example: dict[str, str | int | float | bool | list[Any]] | None = None
+    seek: SeekEntityConfig | None = None
 
 
 class ValidationRuleSpec(BaseModel):
