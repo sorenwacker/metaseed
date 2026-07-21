@@ -29,6 +29,7 @@ from metaseed.seek.payloads import (
 if TYPE_CHECKING:
     from metaseed.seek.client import SeekClient
     from metaseed.seek.export import ExperimentIds, push_minimal_experiment
+    from metaseed.seek.fairds import to_fair_data_station_rdf
 
 __all__ = [
     "ExperimentIds",
@@ -40,11 +41,12 @@ __all__ = [
     "sample_payload",
     "sample_type_payload",
     "study_payload",
+    "to_fair_data_station_rdf",
 ]
 
 
 def __getattr__(name: str) -> Any:
-    """Lazily expose the httpx-backed API so builders import without the extra."""
+    """Lazily expose the httpx/rdflib-backed API so builders import without the extra."""
     if name == "SeekClient":
         from metaseed.seek.client import SeekClient
 
@@ -53,4 +55,8 @@ def __getattr__(name: str) -> Any:
         from metaseed.seek import export
 
         return getattr(export, name)
+    if name == "to_fair_data_station_rdf":
+        from metaseed.seek.fairds import to_fair_data_station_rdf
+
+        return to_fair_data_station_rdf
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

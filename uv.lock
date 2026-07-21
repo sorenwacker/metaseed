@@ -1512,6 +1512,7 @@ pride = [
 ]
 seek = [
     { name = "httpx" },
+    { name = "rdflib" },
 ]
 
 [package.dev-dependencies]
@@ -1555,6 +1556,7 @@ requires-dist = [
     { name = "python-multipart", specifier = ">=0.0.9" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "rdflib", marker = "extra == 'dcat'", specifier = ">=7.0" },
+    { name = "rdflib", marker = "extra == 'seek'", specifier = ">=7.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.4" },
     { name = "typer", specifier = ">=0.12" },
     { name = "uvicorn", specifier = ">=0.29" },
