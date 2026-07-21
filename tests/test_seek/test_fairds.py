@@ -53,6 +53,32 @@ def test_hierarchy_via_haspart():
     assert (study, RDF.type, JERM.Study) in graph
 
 
+def test_sample_siblings_get_distinct_uris_and_names():
+    # Regression: sample identity must come from the entity's own id/name field,
+    # not node.label (Sample's first field is study_id) — else siblings collapse.
+    client = MetaseedClient("isa", "1.0")
+    inv = client.create_entity(
+        "Investigation", {"identifier": "INV1", "title": "I"}, skip_validation=True
+    )
+    study = client.create_entity(
+        "Study", {"identifier": "STU1", "title": "S"}, parent_id=inv.id,
+        skip_validation=True,
+    )
+    client.create_entity(
+        "Sample", {"name": "sample-a"}, parent_id=study.id, skip_validation=True
+    )
+    client.create_entity(
+        "Sample", {"name": "sample-b"}, parent_id=study.id, skip_validation=True
+    )
+    graph = Graph()
+    graph.parse(data=to_fair_data_station_rdf(client), format="turtle")
+
+    samples = set(graph.subjects(RDF.type, JERM.Sample))
+    assert len(samples) == 2  # siblings are distinct resources, not merged
+    names = {str(o) for s in samples for o in graph.objects(s, SCHEMA.name)}
+    assert names == {"sample-a", "sample-b"}  # name emitted as schema:name
+
+
 def test_field_property_definitions_carry_label_and_required():
     graph = _graph()
     # every schema property used as a predicate on a resource is declared with a
