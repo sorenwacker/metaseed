@@ -39,6 +39,39 @@ that exports the currently loaded dataset; disabling the adapter hides it (404).
    SEEK builds the Investigation/Study/Assay/Sample structure and derives the
    Extended Metadata Types from the RDF.
 
+## Two-phase API integration (provision → sync)
+
+Besides the file export above, the `/seek` page drives SEEK directly over its
+JSON:API using the **URL + API key** configured on the Plugins page:
+
+1. **Configure the model** (`POST /seek/provision`) — projects the active profile
+   onto the SEEK model surface the API actually permits a project member to
+   create: **Controlled Vocabularies** (from a field's closed `enum`, term IRIs
+   optionally resolved via OLS) and **Sample Types** (from the profile's
+   sample-bearing entities, one attribute per field with the right base type).
+   Idempotent: a same-named CV/Sample Type is reused, not duplicated.
+2. **Sync the dataset** (`POST /seek/sync`) — walks the loaded dataset and creates
+   Investigations, Studies, Assays, and Samples (placed in the provisioned Sample
+   Types), threading the ids SEEK returns.
+
+```python
+from metaseed.seek import (
+    client_from_settings, build_provisioning_plan,
+    execute_provisioning_plan, sync_dataset_to_seek,
+)
+seek = client_from_settings({"url": "http://localhost:3001", "api_key": "<token>"})
+plan = build_provisioning_plan(profile)                       # pure projection
+provisioned = execute_provisioning_plan(seek, plan, project_id=pid)   # idempotent
+sync_dataset_to_seek(seek, client, project_id=pid,
+                     sample_type_ids=provisioned.sample_type_ids)
+```
+
+**Extended Metadata Types** cannot be created over the API (admin-UI only), so
+metaseed instead offers a **model-only TTL** (`GET /seek/model-ttl`,
+`to_fair_data_station_model_rdf(profile)`) that a SEEK admin feeds to *Extended
+Metadata Types → create from FAIR Data Station TTL* — the "hybrid" half of the
+flow for custom Investigation/Study/Assay metadata.
+
 ## Why this path (and not the config APIs)
 
 SEEK's Extended Metadata Type and ISA Template APIs are **admin-UI-only**
