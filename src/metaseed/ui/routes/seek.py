@@ -45,8 +45,26 @@ def register_seek_routes(
 
         state = get_state()
         facade = state.get_or_create_facade()
-        counts = Counter(node.entity_type for node in state.nodes_by_id.values())
         seek_config = request.app.state.settings.get_adapter_config("seek")
+
+        # Count only the entity types the FDS export actually emits, so the
+        # "Will emit" preview and the enabled/disabled state of the Download
+        # button match the download's real contents (a dataset made entirely of
+        # non-exported types must NOT show an enabled button + empty file).
+        try:
+            from metaseed.seek.fairds import EXPORTED_TYPES
+
+            exported: frozenset[str] | None = EXPORTED_TYPES
+        except ModuleNotFoundError:
+            exported = None  # rdflib absent: fall back to counting every type
+
+        counts = Counter(node.entity_type for node in state.nodes_by_id.values())
+        emit_counts = sorted(
+            (etype, n)
+            for etype, n in counts.items()
+            if exported is None or etype in exported
+        )
+        exportable_count = sum(n for _, n in emit_counts)
 
         return templates.TemplateResponse(
             request,
@@ -57,7 +75,8 @@ def register_seek_routes(
                 "version": facade.version,
                 "dataset_name": get_current_dataset_name(state),
                 "entity_count": len(state.nodes_by_id),
-                "entity_counts": sorted(counts.items()),
+                "exportable_count": exportable_count,
+                "entity_counts": emit_counts,
                 "seek_url": seek_config.get("url", ""),
             },
         )

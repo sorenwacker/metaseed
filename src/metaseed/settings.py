@@ -20,6 +20,12 @@ if TYPE_CHECKING:
 # Upper bound on a stored config value (URLs/keys are short; cap bloat).
 _MAX_CONFIG_VALUE_LEN = 4096
 
+# URL schemes that execute script if a stored value is later rendered as a link.
+# A config value beginning with one is dropped rather than stored — defence in
+# depth alongside the template only linkifying http/https (a service URL or API
+# key never legitimately starts with these).
+_BLOCKED_SCHEMES = ("javascript:", "data:", "vbscript:", "file:")
+
 
 class Settings:
     """Read/write instance settings backed by a JSON file.
@@ -97,7 +103,8 @@ class Settings:
         """Persist config values for adapter ``key``.
 
         Only fields declared in the adapter's ``config_fields`` are stored; unknown
-        keys and blank values are dropped. Empty strings clear a field.
+        keys, blank values, and values beginning with a script-executing URL
+        scheme are dropped. Empty strings clear a field.
 
         Raises:
             KeyError: If ``key`` is not a registered adapter.
@@ -109,6 +116,8 @@ class Settings:
             if field_key not in allowed:
                 continue
             text = str(value).strip()[:_MAX_CONFIG_VALUE_LEN]  # bound stored size
+            if text and text.lower().startswith(_BLOCKED_SCHEMES):
+                continue  # refuse dangerous URL schemes (link-XSS defence)
             if text:
                 current[field_key] = text
             else:
