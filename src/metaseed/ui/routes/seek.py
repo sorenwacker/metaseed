@@ -35,11 +35,50 @@ def register_seek_routes(
 
     @app.get("/seek", response_class=HTMLResponse)
     async def seek_page(request: Request) -> HTMLResponse:
-        """Render the SEEK export page (404 when the plugin is disabled)."""
+        """Render the SEEK export page with the current profile/dataset context."""
         if not _enabled(request):
             return HTMLResponse("SEEK plugin is disabled", status_code=404)
+
+        from collections import Counter
+
+        from metaseed.ui.datasets import get_current_dataset_name
+
+        state = get_state()
+        facade = state.get_or_create_facade()
+        seek_config = request.app.state.settings.get_adapter_config("seek")
+
+        # Count only the entity types the FDS export actually emits, so the
+        # "Will emit" preview and the enabled/disabled state of the Download
+        # button match the download's real contents (a dataset made entirely of
+        # non-exported types must NOT show an enabled button + empty file).
+        try:
+            from metaseed.seek.fairds import EXPORTED_TYPES
+
+            exported: frozenset[str] | None = EXPORTED_TYPES
+        except ModuleNotFoundError:
+            exported = None  # rdflib absent: fall back to counting every type
+
+        counts = Counter(node.entity_type for node in state.nodes_by_id.values())
+        emit_counts = sorted(
+            (etype, n)
+            for etype, n in counts.items()
+            if exported is None or etype in exported
+        )
+        exportable_count = sum(n for _, n in emit_counts)
+
         return templates.TemplateResponse(
-            request, "seek/index.html", {"base_url": base_url}
+            request,
+            "seek/index.html",
+            {
+                "base_url": base_url,
+                "profile": facade.profile,
+                "version": facade.version,
+                "dataset_name": get_current_dataset_name(state),
+                "entity_count": len(state.nodes_by_id),
+                "exportable_count": exportable_count,
+                "entity_counts": emit_counts,
+                "seek_url": seek_config.get("url", ""),
+            },
         )
 
     @app.get("/seek/isa-rdf")

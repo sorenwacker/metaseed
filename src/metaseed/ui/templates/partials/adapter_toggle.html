@@ -1,27 +1,50 @@
 <div class="adapter-row" id="adapter-{{ row.info.key }}"
      data-testid="adapter-{{ row.info.key }}"
-     style="display:flex; justify-content:space-between; align-items:center; gap:1rem; padding:0.75rem 0; border-bottom:1px solid var(--border, #ddd);">
-    <div>
-        <strong>{{ row.info.name }}</strong>
-        <span class="badge" style="font-size:0.75rem; opacity:0.7;">{{ row.info.direction }}</span>
-        <div class="muted" style="font-size:0.9rem;">{{ row.info.description }}</div>
-        {% if not row.available %}
-        <div class="muted" style="font-size:0.8rem;">Not installed — <code>pip install 'metaseed[{{ row.info.extra }}]'</code></div>
-        {% elif row.info.key == "seek" and row.enabled %}
-        <div style="font-size:0.85rem;"><a href="{{ base_url }}/seek" data-testid="link-seek-export">Open “Export to SEEK” →</a></div>
-        {% endif %}
+     style="padding:0.9rem 0; border-bottom:1px solid var(--border, #ddd);">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem;">
+        <div>
+            <strong>{{ row.info.name }}</strong>
+            <span class="badge" style="font-size:0.75rem; opacity:0.7;">{{ row.info.direction }}</span>
+            <div class="muted" style="font-size:0.9rem;">{{ row.info.description }}</div>
+            {% if not row.available %}
+            <div class="muted" style="font-size:0.8rem;">Not installed — <code>pip install 'metaseed[{{ row.info.extra }}]'</code></div>
+            {% elif row.enabled and row.info.action_path %}
+            <div style="font-size:0.85rem;"><a href="{{ base_url }}{{ row.info.action_path }}"
+                data-testid="link-{{ row.info.key }}-action">Open “{{ row.info.name }}” →</a></div>
+            {% endif %}
+        </div>
+        <div>
+            {% if row.available %}
+            <button class="btn {{ 'btn-primary' if row.enabled else 'btn-secondary' }}"
+                    data-testid="toggle-{{ row.info.key }}"
+                    hx-post="{{ base_url }}/settings/adapters/{{ row.info.key }}/toggle"
+                    hx-target="#adapter-{{ row.info.key }}" hx-swap="outerHTML">
+                {{ "Enabled" if row.enabled else "Disabled" }}
+            </button>
+            {% else %}
+            <button class="btn btn-secondary" disabled>Unavailable</button>
+            {% endif %}
+        </div>
     </div>
-    <div>
-        {% if row.available %}
-        <button class="btn {{ 'btn-primary' if row.enabled else 'btn-secondary' }}"
-                data-testid="toggle-{{ row.info.key }}"
-                hx-post="{{ base_url }}/settings/adapters/{{ row.info.key }}/toggle"
-                hx-target="#adapter-{{ row.info.key }}"
-                hx-swap="outerHTML">
-            {{ "Enabled" if row.enabled else "Disabled" }}
-        </button>
-        {% else %}
-        <button class="btn btn-secondary" disabled>Unavailable</button>
-        {% endif %}
-    </div>
+
+    {% if row.available and row.enabled and row.info.config_fields %}
+    <form class="adapter-config" data-testid="config-{{ row.info.key }}"
+          hx-post="{{ base_url }}/settings/adapters/{{ row.info.key }}/config"
+          hx-target="#adapter-{{ row.info.key }}" hx-swap="outerHTML"
+          style="display:flex; flex-wrap:wrap; align-items:flex-end; gap:0.6rem; margin-top:0.6rem;">
+        {% for field in row.info.config_fields %}
+        <label style="font-size:0.8rem; display:flex; flex-direction:column; gap:0.15rem;">
+            {{ field.label }}{% if field.secret and row.config.get(field.key) %}
+            <span class="muted">(configured — leave blank to keep)</span>{% endif %}
+            <input name="{{ field.key }}"
+                   type="{{ 'password' if field.secret else 'text' }}"
+                   data-testid="config-{{ row.info.key }}-{{ field.key }}"
+                   placeholder="{{ field.placeholder }}"
+                   autocomplete="off"
+                   value="{{ '' if field.secret else row.config.get(field.key, '') }}">
+        </label>
+        {% endfor %}
+        <button type="submit" class="btn btn-secondary btn-sm">Save config</button>
+    </form>
+    {% endif %}
 </div>

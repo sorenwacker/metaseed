@@ -1,4 +1,4 @@
-"""Routes for the Plugins settings page (adapter enable/disable feature switch)."""
+"""Routes for the Plugins settings page: enable/disable + per-adapter config."""
 
 from collections.abc import Callable
 from typing import Any
@@ -12,18 +12,14 @@ from metaseed.settings import Settings
 from metaseed.ui.state import AppState
 
 
-def _adapter_rows(settings: Settings) -> list[dict[str, Any]]:
-    """Build the per-adapter view rows (info + availability + enabled state)."""
-    rows: list[dict[str, Any]] = []
-    for info in adapters.ADAPTERS:
-        rows.append(
-            {
-                "info": info,
-                "available": adapters.is_available(info),
-                "enabled": settings.adapter_enabled(info.key),
-            }
-        )
-    return rows
+def _row(settings: Settings, info: adapters.AdapterInfo) -> dict[str, Any]:
+    """Build one adapter view row: availability, enabled state, and stored config."""
+    return {
+        "info": info,
+        "available": adapters.is_available(info),
+        "enabled": settings.adapter_enabled(info.key),
+        "config": settings.get_adapter_config(info.key),
+    }
 
 
 def register_settings_routes(
@@ -32,50 +28,58 @@ def register_settings_routes(
     _get_state: Callable[[], AppState],
     base_url: str = "",
 ) -> None:
-    """Register the Plugins settings page and its toggle endpoint.
-
-    Args:
-        app: FastAPI application instance.
-        templates: Jinja2 templates instance.
-        _get_state: Function to get app state (unused; kept for API consistency).
-        base_url: Base URL prefix (no trailing slash). Defaults to "".
-    """
+    """Register the Plugins settings page, its toggle, and its config endpoints."""
 
     def _settings(request: Request) -> Settings:
         store: Settings = request.app.state.settings
         return store
 
-    @app.get("/settings", response_class=HTMLResponse)
-    async def settings_page(request: Request) -> HTMLResponse:
-        """Render the Plugins page listing every adapter with a toggle."""
+    def _render_row(request: Request, info: adapters.AdapterInfo) -> HTMLResponse:
         return templates.TemplateResponse(
             request,
-            "settings/index.html",
-            {"adapters": _adapter_rows(_settings(request)), "base_url": base_url},
+            "partials/adapter_toggle.html",
+            {"row": _row(_settings(request), info), "base_url": base_url},
+        )
+
+    @app.get("/settings", response_class=HTMLResponse)
+    async def settings_page(request: Request) -> HTMLResponse:
+        """Render the Plugins page listing every adapter."""
+        settings = _settings(request)
+        rows = [_row(settings, info) for info in adapters.ADAPTERS]
+        return templates.TemplateResponse(
+            request, "settings/index.html", {"adapters": rows, "base_url": base_url}
         )
 
     @app.post("/settings/adapters/{key}/toggle", response_class=HTMLResponse)
     async def toggle_adapter(request: Request, key: str) -> HTMLResponse:
-        """Flip an adapter's enabled state and return its updated toggle row."""
-        settings = _settings(request)
+        """Flip an adapter's enabled state and return its updated row."""
         if not adapters.is_known(key):
             return HTMLResponse("Unknown adapter", status_code=404)
-
         info = adapters.get_adapter(key)
-        available = adapters.is_available(info)
-        # Only an available adapter can be toggled; unavailable ones stay off.
-        if available:
+        if adapters.is_available(info):  # unavailable adapters stay off
+            settings = _settings(request)
             settings.set_adapter_enabled(key, not settings.adapter_enabled(key))
+        return _render_row(request, info)
 
-        return templates.TemplateResponse(
-            request,
-            "partials/adapter_toggle.html",
-            {
-                "row": {
-                    "info": info,
-                    "available": available,
-                    "enabled": settings.adapter_enabled(key),
-                },
-                "base_url": base_url,
-            },
-        )
+    @app.post("/settings/adapters/{key}/config", response_class=HTMLResponse)
+    async def config_adapter(request: Request, key: str) -> HTMLResponse:
+        """Save an adapter's configuration and return its updated row."""
+        if not adapters.is_known(key):
+            return HTMLResponse("Unknown adapter", status_code=404)
+        info = adapters.get_adapter(key)
+        settings = _settings(request)
+        # Only a configurable, enabled adapter accepts config — mirror the UI gate.
+        if not info.config_fields or not settings.adapter_enabled(key):
+            return _render_row(request, info)
+
+        form = await request.form()
+        values: dict[str, str] = {}
+        for field in info.config_fields:
+            raw = form.get(field.key, "")
+            submitted = raw.strip() if isinstance(raw, str) else ""
+            # A blank secret means "leave unchanged"; a blank plain field clears it.
+            if field.secret and not submitted:
+                continue
+            values[field.key] = submitted
+        settings.set_adapter_config(key, values)
+        return _render_row(request, info)

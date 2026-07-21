@@ -65,6 +65,14 @@ _JERM: dict[str, tuple[str, str]] = {
     "OtherMaterial": ("Sample", "material"),
 }
 
+EXPORTED_TYPES: frozenset[str] = frozenset(_JERM)
+"""Entity type names that :func:`to_fair_data_station_rdf` actually emits.
+
+Any node whose ``entity_type`` is not in this set is skipped during export, so
+callers (e.g. the ``/seek`` page's "Will emit" preview) can filter to it instead
+of counting every node and overstating what the download contains.
+"""
+
 
 def _slug(value: str) -> str:
     return re.sub(r"[^A-Za-z0-9._-]+", "-", value).strip("-") or "x"

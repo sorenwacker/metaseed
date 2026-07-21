@@ -37,3 +37,46 @@ def test_toggle_disables_then_reenables(client):
 
 def test_toggle_unknown_adapter_is_404(client):
     assert client.post("/settings/adapters/nope/toggle").status_code == 404
+
+
+def test_seek_row_shows_config_form_and_action_link(client):
+    page = client.get("/settings").text
+    assert 'data-testid="config-seek"' in page  # config form present
+    assert 'data-testid="config-seek-api_key"' in page  # api key field
+    assert 'data-testid="link-seek-action"' in page  # Open action link
+
+
+def test_config_saves_and_masks_secret(client):
+    response = client.post(
+        "/settings/adapters/seek/config",
+        data={"url": "http://localhost:3001", "api_key": "s3cret"},
+    )
+    assert response.status_code == 200
+    # url is prefilled back; the api key is never rendered into the response.
+    assert "http://localhost:3001" in response.text
+    assert "s3cret" not in response.text
+    assert "configured — leave blank to keep" in response.text
+
+
+def test_config_unknown_adapter_is_404(client):
+    assert client.post("/settings/adapters/nope/config", data={}).status_code == 404
+
+
+def test_config_blank_secret_keeps_stored_key(client):
+    settings = client.app.state.settings
+    client.post(
+        "/settings/adapters/seek/config",
+        data={"url": "http://localhost:3001", "api_key": "keepme"},
+    )
+    # Re-submit with the api_key field blank (the UI never prefills a secret).
+    client.post("/settings/adapters/seek/config", data={"url": "http://elsewhere:3001"})
+    config = settings.get_adapter_config("seek")
+    assert config["api_key"] == "keepme"  # secret retained
+    assert config["url"] == "http://elsewhere:3001"  # plain field updated
+
+
+def test_config_refused_when_adapter_disabled(client):
+    settings = client.app.state.settings
+    settings.set_adapter_enabled("seek", False)
+    client.post("/settings/adapters/seek/config", data={"url": "http://x:3001"})
+    assert settings.get_adapter_config("seek") == {}  # nothing persisted

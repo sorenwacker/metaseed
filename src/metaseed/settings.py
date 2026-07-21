@@ -17,6 +17,15 @@ from metaseed.paths import get_user_config_path
 if TYPE_CHECKING:
     from pathlib import Path
 
+# Upper bound on a stored config value (URLs/keys are short; cap bloat).
+_MAX_CONFIG_VALUE_LEN = 4096
+
+# URL schemes that execute script if a stored value is later rendered as a link.
+# A config value beginning with one is dropped rather than stored — defence in
+# depth alongside the template only linkifying http/https (a service URL or API
+# key never legitimately starts with these).
+_BLOCKED_SCHEMES = ("javascript:", "data:", "vbscript:", "file:")
+
 
 class Settings:
     """Read/write instance settings backed by a JSON file.
@@ -83,4 +92,35 @@ class Settings:
                 f"cannot enable {key!r}: install it with 'pip install metaseed[{info.extra}]'"
             )
         self._data.setdefault("adapters", {})[key] = enabled
+        self._save()
+
+    def get_adapter_config(self, key: str) -> dict[str, str]:
+        """Return the stored config values for adapter ``key`` (empty if none)."""
+        stored = self._data.get("adapter_config", {}).get(key, {})
+        return dict(stored) if isinstance(stored, dict) else {}
+
+    def set_adapter_config(self, key: str, values: dict[str, str]) -> None:
+        """Persist config values for adapter ``key``.
+
+        Only fields declared in the adapter's ``config_fields`` are stored; unknown
+        keys, blank values, and values beginning with a script-executing URL
+        scheme are dropped. Empty strings clear a field.
+
+        Raises:
+            KeyError: If ``key`` is not a registered adapter.
+        """
+        info = adapters.get_adapter(key)  # raises KeyError for unknown keys
+        allowed = {f.key for f in info.config_fields}
+        current = self.get_adapter_config(key)
+        for field_key, value in values.items():
+            if field_key not in allowed:
+                continue
+            text = str(value).strip()[:_MAX_CONFIG_VALUE_LEN]  # bound stored size
+            if text and text.lower().startswith(_BLOCKED_SCHEMES):
+                continue  # refuse dangerous URL schemes (link-XSS defence)
+            if text:
+                current[field_key] = text
+            else:
+                current.pop(field_key, None)
+        self._data.setdefault("adapter_config", {})[key] = current
         self._save()
