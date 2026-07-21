@@ -1,0 +1,54 @@
+"""Route tests for the SEEK export page — gated by the plugin feature switch."""
+
+from __future__ import annotations
+
+import pytest
+from fastapi.testclient import TestClient
+
+from metaseed.settings import Settings
+from metaseed.ui.app import create_app
+from metaseed.ui.state import AppState
+
+
+@pytest.fixture
+def make_client(tmp_path):
+    def _make() -> tuple[TestClient, Settings, AppState]:
+        state = AppState(profile="isa", version="1.0")
+        app = create_app(state)
+        settings = Settings(tmp_path / "settings.json")
+        app.state.settings = settings
+        return TestClient(app), settings, state
+
+    return _make
+
+
+def test_seek_page_visible_when_enabled(make_client):
+    client, _settings, _state = make_client()  # seek enabled by default (httpx present)
+    response = client.get("/seek")
+    assert response.status_code == 200
+    assert 'data-testid="seek-export-rdf"' in response.text
+
+
+def test_seek_page_hidden_when_disabled(make_client):
+    client, settings, _state = make_client()
+    settings.set_adapter_enabled("seek", False)
+    assert client.get("/seek").status_code == 404
+    assert client.get("/seek/isa-rdf").status_code == 404
+
+
+def test_isa_rdf_download_requires_a_dataset(make_client):
+    client, _settings, _state = make_client()  # empty state
+    assert client.get("/seek/isa-rdf").status_code == 400
+
+
+def test_isa_rdf_exports_the_current_dataset(make_client):
+    client, _settings, _state = make_client()
+    client.post(
+        "/entity",
+        data={"_entity_type": "Investigation", "identifier": "INV1", "title": "T"},
+    )
+    response = client.get("/seek/isa-rdf")
+    assert response.status_code == 200
+    assert "text/turtle" in response.headers["content-type"]
+    assert "jerm:Investigation" in response.text
+    assert response.headers["content-disposition"].endswith('-seek.ttl"')

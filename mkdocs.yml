@@ -86,6 +86,7 @@ nav:
       - UI Helpers: architecture/ui-helpers.md
       - Spec Builder Engine: architecture/spec-builder.md
       - DCAT Export: architecture/dcat.md
+      - SEEK Export: architecture/seek-export.md
       - ENA Integration: architecture/ena-import.md
       - BrAPI Import: architecture/brapi-import.md
       - PRIDE Import: architecture/pride-import.md

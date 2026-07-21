@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="seek-page" style="padding: 1.5rem; max-width: 760px;">
+    <h2>Export to FAIRDOM-SEEK</h2>
+    <p class="muted">
+        Export the current dataset as ISA RDF that SEEK ingests through its own
+        built-in <em>Import from FAIR Data Station</em> feature — building the
+        Investigation → Study → Assay/Sample structure and its Extended Metadata.
+        No external tool is involved; metaseed generates the RDF directly.
+    </p>
+
+    <p>
+        <a href="{{ base_url }}/seek/isa-rdf" class="btn btn-primary"
+           data-testid="seek-export-rdf" download>Download SEEK ISA RDF (.ttl) →</a>
+    </p>
+
+    <h3 style="margin-top:1.5rem;">Then, in SEEK</h3>
+    <ol class="muted" style="line-height:1.6;">
+        <li>Enable the feature (admin, once): <em>Server administration → Enable/disable
+            features → FAIR Data Station import</em>.</li>
+        <li>Open your <strong>Project</strong> → <strong>Import from FAIR Data Station</strong>.</li>
+        <li>Upload the downloaded <code>.ttl</code> and submit.</li>
+    </ol>
+    <p class="muted" style="font-size:0.85rem;">
+        Note: SEEK reads the ISA levels positionally, so with the ISA profile (no
+        ObservationUnit level) entities below Study currently import one level high;
+        Investigation and Study round-trip cleanly.
+    </p>
+</div>
+{% endblock %}
