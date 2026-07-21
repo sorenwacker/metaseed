@@ -240,14 +240,19 @@ class SeekClient:
         """Return an existing Sample Type id matching ``title`` (else ``None``).
 
         When ``project_id`` is given, only a sample type attached to that project
-        matches — titles are unique per project, not globally.
+        matches — titles are unique per project, not globally. SEEK's
+        ``/sample_types`` *list* omits the ``projects`` relationship (it is only on
+        the single-resource view), so a title match is confirmed against the
+        resource detail when the list row can't prove the project.
         """
         for row in self.get("/sample_types").get("data", []):
             if row["attributes"].get("title") != title:
                 continue
-            if project_id is not None and not _relates_to_project(row, project_id):
-                continue
-            return str(row["id"])
+            if project_id is None or _relates_to_project(row, project_id):
+                return str(row["id"])
+            detail = self.get(f"/sample_types/{row['id']}").get("data", {})
+            if _relates_to_project(detail, project_id):
+                return str(row["id"])
         return None
 
     def find_controlled_vocab_id_by_title(self, title: str) -> str | None:

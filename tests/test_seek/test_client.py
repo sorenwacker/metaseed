@@ -115,26 +115,30 @@ def test_create_controlled_vocab_posts_terms():
 
 
 def test_find_sample_type_id_by_title_scopes_by_project():
+    # SEEK's /sample_types LIST omits the projects relationship; the project is
+    # confirmed against the single-resource detail view.
     def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/sample_types":
+            return httpx.Response(
+                200,
+                json={
+                    "data": [
+                        {"id": "10", "attributes": {"title": "Sample"}},
+                        {"id": "20", "attributes": {"title": "Sample"}},
+                    ]
+                },
+            )
+        proj = {"10": "1", "20": "2"}[request.url.path.rsplit("/", 1)[1]]
         return httpx.Response(
             200,
             json={
-                "data": [
-                    {
-                        "id": "10",
-                        "attributes": {"title": "Sample"},
-                        "relationships": {
-                            "projects": {"data": [{"id": "1", "type": "projects"}]}
-                        },
+                "data": {
+                    "id": request.url.path.rsplit("/", 1)[1],
+                    "attributes": {"title": "Sample"},
+                    "relationships": {
+                        "projects": {"data": [{"id": proj, "type": "projects"}]}
                     },
-                    {
-                        "id": "20",
-                        "attributes": {"title": "Sample"},
-                        "relationships": {
-                            "projects": {"data": [{"id": "2", "type": "projects"}]}
-                        },
-                    },
-                ]
+                }
             },
         )
 
@@ -145,6 +149,8 @@ def test_find_sample_type_id_by_title_scopes_by_project():
     assert client.find_sample_type_id_by_title("Sample", project_id="2") == "20"
     assert client.find_sample_type_id_by_title("Sample", project_id="9") is None
     assert client.find_sample_type_id_by_title("Missing", project_id="1") is None
+    # with no project filter, the first title match wins (no detail fetch needed)
+    assert client.find_sample_type_id_by_title("Sample") == "10"
 
 
 def test_find_controlled_vocab_id_by_title():
