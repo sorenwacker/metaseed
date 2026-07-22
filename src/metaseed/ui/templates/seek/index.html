@@ -55,6 +55,8 @@
             Pick the model (profile) to export, then <strong>Provision</strong> to create its
             Controlled Vocabularies (from closed value lists) + Sample Types (from sample-bearing
             entities) in SEEK over the API. Idempotent — re-running reuses what already exists.
+            To then sync a dataset, provision the profile it was built on
+            (loaded now: <strong>{{ profile }}</strong>).
         </p>
         <form action="{{ base_url }}/seek/provision" method="post" data-testid="seek-provision-form"
               style="display:flex; gap:0.6rem; align-items:flex-end; flex-wrap:wrap;">

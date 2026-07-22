@@ -244,8 +244,8 @@ def register_seek_routes(
             )
         try:
             turtle = to_fair_data_station_rdf(_facade_client(state))
-        except Exception as exc:
-            return HTMLResponse(f"Could not build SEEK RDF: {exc}", status_code=500)
+        except Exception:
+            return HTMLResponse("Could not build the SEEK RDF.", status_code=500)
 
         stem = _safe_filename(get_current_dataset_name(state) or "dataset")
         return Response(
@@ -269,9 +269,13 @@ def register_seek_routes(
             )
         try:
             spec = _load_profile_named(profile)
+        except ValueError:
+            # Do NOT echo the (attacker-controllable) profile value into HTML.
+            return HTMLResponse("Unknown profile requested.", status_code=400)
+        try:
             turtle = to_fair_data_station_model_rdf(spec)
-        except Exception as exc:
-            return HTMLResponse(f"Could not build model TTL: {exc}", status_code=500)
+        except Exception:
+            return HTMLResponse("Could not build the model TTL.", status_code=500)
 
         stem = _safe_filename(profile or get_state().get_or_create_facade().profile)
         return Response(
