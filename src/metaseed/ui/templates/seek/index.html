@@ -16,7 +16,7 @@
     {% endif %}
     {% if provision_result %}
     <div class="notification notification-success" data-testid="seek-provision-result" style="{{ box }}">
-        <strong>Model provisioned.</strong>
+        <strong>Model provisioned{% if provisioned_profile %} ({{ provisioned_profile }}){% endif %}.</strong>
         Created {{ provision_result.created|length }}, reused {{ provision_result.reused|length }}.
         {% if provision_result.created %}<div class="muted" style="font-size:0.85rem;">Created:
             {{ provision_result.created|join(", ") }}</div>{% endif %}
@@ -52,22 +52,47 @@
     <div style="{{ box }}">
         <h3 style="margin-top:0;">1 · Configure the model in SEEK</h3>
         <p class="muted" style="font-size:0.9rem;">
-            Creates Controlled Vocabularies (from this profile's closed value lists) and
-            Sample Types (from its sample-bearing entities). Idempotent — re-running reuses
-            what already exists.
+            Pick the model (profile) to export, then <strong>Provision</strong> to create its
+            Controlled Vocabularies (from closed value lists) + Sample Types (from sample-bearing
+            entities) in SEEK over the API. Idempotent — re-running reuses what already exists.
+            To then sync a dataset, provision the profile it was built on
+            (loaded now: <strong>{{ profile }}</strong>).
         </p>
         <form action="{{ base_url }}/seek/provision" method="post" data-testid="seek-provision-form"
-              style="display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap;">
+              style="display:flex; gap:0.6rem; align-items:flex-end; flex-wrap:wrap;">
+            <label style="font-size:0.85rem;">Model (profile)
+                <select name="profile" class="form-input" data-testid="seek-model-profile">
+                    {% for p in profiles %}
+                    <option value="{{ p }}"{% if p == profile %} selected{% endif %}>{{ p }}</option>
+                    {% endfor %}
+                </select>
+            </label>
             {% include "seek/_project_select.html" %}
             <button type="submit" class="btn btn-primary" data-testid="seek-provision-submit"
                     {% if not api_key_configured or not projects %}disabled{% endif %}>Provision model →</button>
         </form>
-        <p class="muted" style="font-size:0.85rem; margin-top:0.6rem;">
-            Custom fields on Investigation/Study/Assay need Extended Metadata Types, which only
-            a SEEK admin can create. Download the definitions and hand them over:
-            <a href="{{ base_url }}/seek/model-ttl" data-testid="seek-model-ttl" download>model TTL →</a>
-            (admin: <em>Extended Metadata Types → create from FAIR Data Station TTL</em>).
-        </p>
+
+        <div style="margin-top:0.9rem; padding-top:0.8rem; border-top:1px dashed var(--border, #ddd);">
+            <div style="font-size:0.9rem;"><strong>Extended Metadata</strong> (custom fields on
+                Investigation/Study/Assay) — SEEK only lets an <strong>admin</strong> create these,
+                so download the definitions and hand them over.</div>
+            <form action="{{ base_url }}/seek/model-ttl" method="get"
+                  style="display:flex; gap:0.6rem; align-items:flex-end; flex-wrap:wrap; margin-top:0.5rem;">
+                <label style="font-size:0.85rem;">Model (profile)
+                    <select name="profile" class="form-input">
+                        {% for p in profiles %}
+                        <option value="{{ p }}"{% if p == profile %} selected{% endif %}>{{ p }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <button type="submit" class="btn btn-secondary" data-testid="seek-model-ttl">
+                    Download Extended Metadata (.ttl) →</button>
+            </form>
+            <p class="muted" style="font-size:0.8rem; margin-top:0.4rem;">
+                Then, as a SEEK admin: <em>Server administration → Extended Metadata Types →
+                create from FAIR Data Station TTL</em> → upload the file.
+            </p>
+        </div>
     </div>
 
     {# ---- Phase 2: sync the data ---- #}

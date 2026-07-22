@@ -79,6 +79,19 @@ def register_seek_routes(
         facade = state.get_or_create_facade()
         return SpecLoader().load_profile(facade.version, facade.profile)
 
+    def _load_profile_named(name: str) -> Any:
+        """Load a profile by name (latest version); blank name = the active one."""
+        from metaseed.profiles import ProfileFactory
+        from metaseed.specs.loader import SpecLoader
+
+        name = (name or "").strip()
+        if not name:
+            return _load_profile(get_state())
+        version = ProfileFactory().get_latest_version(name)
+        if version is None:
+            raise ValueError(f"Unknown profile: {name}")
+        return SpecLoader(profile=name).load_profile(version, name)
+
     def _context(request: Request, **extra: Any) -> dict[str, Any]:
         """Shared template context: export preview + SEEK config + projects."""
         state = get_state()
@@ -112,12 +125,14 @@ def register_seek_routes(
         except Exception:  # not configured / unreachable / httpx absent
             projects = []
 
+        from metaseed.profiles import ProfileFactory
         from metaseed.ui.datasets import get_current_dataset_name
 
         context: dict[str, Any] = {
             "base_url": base_url,
             "profile": facade.profile,
             "version": facade.version,
+            "profiles": ProfileFactory().list_profiles(),
             "dataset_name": get_current_dataset_name(state),
             "entity_count": len(state.nodes_by_id),
             "exportable_count": sum(n for _, n in emit_counts),
@@ -146,9 +161,9 @@ def register_seek_routes(
 
     @app.post("/seek/provision", response_class=HTMLResponse)
     async def seek_provision(
-        request: Request, project_id: str = Form("")
+        request: Request, project_id: str = Form(""), profile: str = Form("")
     ) -> HTMLResponse:
-        """Provision Controlled Vocabularies + Sample Types from the profile."""
+        """Provision Controlled Vocabularies + Sample Types from a chosen profile."""
         if not _enabled(request):
             return HTMLResponse("SEEK plugin is disabled", status_code=404)
 
@@ -163,14 +178,16 @@ def register_seek_routes(
             )
 
             pid = project_id or client.default_project_id()
-            plan = build_provisioning_plan(_load_profile(get_state()))
+            plan = build_provisioning_plan(_load_profile_named(profile))
             return execute_provisioning_plan(client, plan, project_id=pid)
 
         try:
             result = await run_in_threadpool(work)
         except Exception as exc:
             return await _render(request, action_error=f"Provisioning failed: {exc}")
-        return await _render(request, provision_result=result)
+        return await _render(
+            request, provision_result=result, provisioned_profile=profile or None
+        )
 
     @app.post("/seek/sync", response_class=HTMLResponse)
     async def seek_sync(request: Request, project_id: str = Form("")) -> HTMLResponse:
@@ -227,8 +244,8 @@ def register_seek_routes(
             )
         try:
             turtle = to_fair_data_station_rdf(_facade_client(state))
-        except Exception as exc:
-            return HTMLResponse(f"Could not build SEEK RDF: {exc}", status_code=500)
+        except Exception:
+            return HTMLResponse("Could not build the SEEK RDF.", status_code=500)
 
         stem = _safe_filename(get_current_dataset_name(state) or "dataset")
         return Response(
@@ -238,8 +255,8 @@ def register_seek_routes(
         )
 
     @app.get("/seek/model-ttl")
-    async def seek_model_ttl(request: Request) -> Response:
-        """Download the profile's model-only TTL (for the admin Extended Metadata flow)."""
+    async def seek_model_ttl(request: Request, profile: str = "") -> Response:
+        """Download a profile's model-only TTL (for the admin Extended Metadata flow)."""
         if not _enabled(request):
             return HTMLResponse("SEEK plugin is disabled", status_code=404)
 
@@ -250,13 +267,17 @@ def register_seek_routes(
                 "SEEK export needs rdflib: pip install 'metaseed[seek]'.",
                 status_code=503,
             )
-        state = get_state()
         try:
-            turtle = to_fair_data_station_model_rdf(_load_profile(state))
-        except Exception as exc:
-            return HTMLResponse(f"Could not build model TTL: {exc}", status_code=500)
+            spec = _load_profile_named(profile)
+        except ValueError:
+            # Do NOT echo the (attacker-controllable) profile value into HTML.
+            return HTMLResponse("Unknown profile requested.", status_code=400)
+        try:
+            turtle = to_fair_data_station_model_rdf(spec)
+        except Exception:
+            return HTMLResponse("Could not build the model TTL.", status_code=500)
 
-        stem = _safe_filename(state.get_or_create_facade().profile)
+        stem = _safe_filename(profile or get_state().get_or_create_facade().profile)
         return Response(
             turtle,
             media_type="text/turtle",
