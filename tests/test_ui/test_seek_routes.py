@@ -80,6 +80,21 @@ def test_model_ttl_downloads_profile_definitions(make_client):
     assert response.headers["content-disposition"].endswith('-model.ttl"')
 
 
+def test_model_ttl_honors_selected_profile(make_client):
+    # A different profile can be exported than the active session profile.
+    client, _settings, _state = make_client()  # active profile is isa
+    response = client.get("/seek/model-ttl", params={"profile": "miappe"})
+    assert response.status_code == 200
+    assert response.headers["content-disposition"].endswith('"miappe-model.ttl"')
+
+
+def test_seek_page_offers_a_profile_selector(make_client):
+    client, _settings, _state = make_client()
+    page = client.get("/seek").text
+    assert 'data-testid="seek-model-profile"' in page
+    assert ">miappe</option>" in page and ">isa</option>" in page  # multiple profiles
+
+
 def test_provision_without_config_reports_error(make_client):
     # No SEEK url/key configured -> a readable error, not a crash or network call.
     client, _settings, _state = make_client()
