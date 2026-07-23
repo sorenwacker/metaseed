@@ -59,9 +59,7 @@ def test_sample_type_payload_embeds_attributes():
 
 
 def test_sample_payload_links_type_and_project():
-    doc = payloads.sample_payload(
-        sample_type_id=2, project_id=1, data={"name": "x"}
-    )
+    doc = payloads.sample_payload(sample_type_id=2, project_id=1, data={"name": "x"})
     assert doc["data"]["attributes"]["data"] == {"name": "x"}
     rels = doc["data"]["relationships"]
     assert rels["sample_type"]["data"] == {"type": "sample_types", "id": "2"}
@@ -107,9 +105,9 @@ def test_controlled_vocab_payload_shape():
     assert data["type"] == "sample_controlled_vocabs"
     assert data["attributes"]["title"] == "Organism"
     assert data["attributes"]["source_ontology"] == "ncbitaxon"
-    assert data["attributes"]["sample_controlled_vocab_terms_attributes"][0]["label"] == (
-        "human"
-    )
+    assert data["attributes"]["sample_controlled_vocab_terms_attributes"][0][
+        "label"
+    ] == ("human")
     assert "relationships" not in data  # CVs are not project-scoped in the payload
 
 

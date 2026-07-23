@@ -281,7 +281,5 @@ def register_seek_routes(
         return Response(
             turtle,
             media_type="text/turtle",
-            headers={
-                "Content-Disposition": f'attachment; filename="{stem}-model.ttl"'
-            },
+            headers={"Content-Disposition": f'attachment; filename="{stem}-model.ttl"'},
         )

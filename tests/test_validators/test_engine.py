@@ -376,9 +376,7 @@ class TestExplicitRuleTypes:
         engine = create_engine_for_entity(
             "BiologicalMaterial", version="1.1", profile="miappe"
         )
-        assert not any(
-            isinstance(r, EntityReferenceRule) for r in engine.rules
-        )
+        assert not any(isinstance(r, EntityReferenceRule) for r in engine.rules)
 
 
 class TestInferredRuleTypes:

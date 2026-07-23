@@ -187,9 +187,7 @@ made_up_field: whatever
         assert len(type_errors) == 1
         assert "NotARealEntity" in type_errors[0].message
 
-    def test_validate_directory_flags_unknown_type_file(
-        self, tmp_path: Path
-    ) -> None:
+    def test_validate_directory_flags_unknown_type_file(self, tmp_path: Path) -> None:
         """An unknown-_type file in a directory is flagged, not skipped silently."""
         (tmp_path / "bogus.yaml").write_text("_type: Nope\nunique_id: X\n")
 
@@ -383,9 +381,7 @@ studies:
         assert len(uniq_errors) == 1
         assert "OU-DUP" in uniq_errors[0].message
 
-    def test_same_id_under_different_parents_is_allowed(
-        self, tmp_path: Path
-    ) -> None:
+    def test_same_id_under_different_parents_is_allowed(self, tmp_path: Path) -> None:
         """Parent scope permits the same id under different parents."""
         content = """
 unique_id: INV001

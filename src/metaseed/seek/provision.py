@@ -304,9 +304,7 @@ def execute_provisioning_plan(
                     type_id_cache[attr.attribute_type_title] = (
                         client.sample_attribute_type_id(attr.attribute_type_title)
                     )
-                attr_cv_id = (
-                    result.cv_ids.get(attr.cv_title) if attr.cv_title else None
-                )
+                attr_cv_id = result.cv_ids.get(attr.cv_title) if attr.cv_title else None
                 attributes.append(
                     payloads.sample_attribute(
                         title=attr.title,

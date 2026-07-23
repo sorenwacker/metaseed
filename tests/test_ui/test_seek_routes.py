@@ -50,7 +50,8 @@ def test_seek_page_disables_export_when_no_exportable_types(make_client):
     # must NOT show an enabled download that yields an empty file.
     client, _settings, state = make_client()
     client.post(
-        "/entity", data={"_entity_type": "Person", "identifier": "P1", "last_name": "Doe"}
+        "/entity",
+        data={"_entity_type": "Person", "identifier": "P1", "last_name": "Doe"},
     )
     assert [n.entity_type for n in state.nodes_by_id.values()] == ["Person"]
     response = client.get("/seek")

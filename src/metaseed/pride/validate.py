@@ -162,7 +162,9 @@ def validate_submission(client: MetaseedClient) -> list[ValidationError]:
         )
     if submission_type == "PARTIAL" and not mtd.get("reason_for_partial"):
         errors.append(
-            _err("PARTIAL submissions require 'reason_for_partial'", "reason_for_partial")
+            _err(
+                "PARTIAL submissions require 'reason_for_partial'", "reason_for_partial"
+            )
         )
 
     # File mapping: FME columns are file_id, file_type, file_path.

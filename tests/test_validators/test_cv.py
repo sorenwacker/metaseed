@@ -63,9 +63,7 @@ def test_free_text_is_not_flagged():
 
 
 def test_outage_fails_open():
-    errors = validate_cv_terms(
-        [("a", "MS:9999999")], service=_FakeService(outage=True)
-    )
+    errors = validate_cv_terms([("a", "MS:9999999")], service=_FakeService(outage=True))
     assert errors == []
 
 
