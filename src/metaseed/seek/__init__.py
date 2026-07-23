@@ -5,7 +5,9 @@ Two phases over the SEEK JSON:API:
 - **provision** (:mod:`metaseed.seek.provision`) — project a profile onto SEEK
   Controlled Vocabularies + Sample Types;
 - **sync** (:mod:`metaseed.seek.sync`) — push a loaded dataset as Investigations,
-  Studies, Assays and Samples.
+  Studies, Assays and Samples;
+- **import** (:mod:`metaseed.seek.importer`) — the read direction: reconstruct a
+  metaseed dataset from a SEEK Investigation (SEEK -> metaseed).
 
     >>> from metaseed.seek import SeekClient, client_from_settings
     >>> client = SeekClient("http://localhost:3001", token="...")  # metaseed[seek]
@@ -19,6 +21,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from metaseed.seek.importer import import_from_seek
 from metaseed.seek.payloads import (
     assay_payload,
     controlled_vocab_payload,
@@ -48,6 +51,7 @@ __all__ = [
     "client_from_settings",
     "controlled_vocab_payload",
     "execute_provisioning_plan",
+    "import_from_seek",
     "investigation_payload",
     "sample_attribute",
     "sample_payload",

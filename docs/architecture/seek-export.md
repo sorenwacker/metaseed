@@ -204,6 +204,33 @@ End-to-end, driving both apps by hand:
 5. **Update** — edit values in metaseed, re-download the RDF, then in SEEK on the
    imported Investigation → Actions → **Update from FAIR Data Station** → upload.
 
+## Importing from SEEK (SEEK → metaseed)
+
+The read direction mirrors the export: `import_from_seek(seek_client,
+investigation_id)` walks a SEEK Investigation over the JSON:API
+(Investigation → Study → ObservationUnit → Sample), reads each Sample's
+`attribute_map` plus the ISA core fields, and reconstructs a metaseed dataset.
+
+```python
+from metaseed.seek import client_from_settings, import_from_seek
+
+seek = client_from_settings({"url": "https://fairdomhub.org"})  # public read needs no key
+dataset = import_from_seek(seek, "8")     # -> a MetaseedClient
+```
+
+Because SEEK's Sample Types and Extended Metadata are user-defined, the profile is
+**derived from the instance** (one entity per ISA level; Sample fields taken from
+the Sample Types encountered) rather than assumed — so no field is dropped. The
+derived-spec dataset re-exports through `to_fair_data_station_rdf` (which reads the
+facade's in-memory spec), closing the loop: pull from one instance
+(e.g. FAIRDOMHub), edit, push to another (e.g. a local instance).
+
+Instances without ISA-JSON compliance answer the `observation_units` sub-route
+with a 4xx; the import degrades gracefully to the Investigation/Study skeleton
+(no samples) rather than aborting. Full Extended-Metadata fidelity
+(reconstructing custom EMT attribute types) is a follow-up; core ISA + Sample
+fields round-trip today.
+
 ## Status of the JSON:API sync path
 
 The `POST /seek/sync` / `sync_dataset_to_seek` path (creating Investigations/

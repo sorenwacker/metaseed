@@ -131,7 +131,11 @@ def _profile_index(
     module docstring), so declaring ``role=ObservationUnit`` re-types but does not
     itself insert an ObservationUnit level.
     """
-    profile = SpecLoader().load_profile(client.version, client.profile)
+    # A dataset built from a derived spec (e.g. imported via
+    # ``metaseed.seek.importer``) carries its ProfileSpec in memory and has no
+    # file to load; fall back to loading by name for installed profiles.
+    in_memory = getattr(client._facade, "_spec", None)
+    profile = in_memory or SpecLoader().load_profile(client.version, client.profile)
     fields = {
         name: {f.name: f for f in entity.fields}
         for name, entity in profile.entities.items()
