@@ -235,6 +235,52 @@ class UniqueIdPatternRule(ValidationRule):
         return []
 
 
+class PatternRule(ValidationRule):
+    """Validates that a field's value matches a regex pattern.
+
+    Used for rule-level ``pattern`` constraints on field types the model factory
+    cannot enforce with a Pydantic pattern — notably ``uri`` (which maps to
+    ``AnyUrl``, on which a regex constraint is invalid) and ``ontology_term``.
+    String-typed patterns are already merged onto the field and enforced by
+    Pydantic (see ``loader._merge_rule_constraints_into_fields``); this rule
+    covers the rest. An absent/empty value passes — requiredness is a separate
+    rule.
+    """
+
+    def __init__(self: Self, field: str, pattern: str, message: str | None = None):
+        """Initialize the rule.
+
+        Args:
+            field: Name of the field to validate.
+            pattern: Regex the value must match.
+            message: Optional custom error message.
+        """
+        self.field = field
+        self.pattern = re.compile(pattern)
+        self._message = message
+
+    @property
+    def name(self: Self) -> str:
+        """Return the rule name."""
+        return "pattern"
+
+    def validate(self: Self, data: dict[str, Any]) -> list[ValidationError]:
+        """Validate the field value matches the pattern (str-coerced)."""
+        value = data.get(self.field)
+        if value in (None, ""):
+            return []
+        if not self.pattern.match(str(value)):
+            return [
+                ValidationError(
+                    field=self.field,
+                    message=self._message
+                    or f"Field '{self.field}' does not match the required pattern",
+                    rule=self.name,
+                )
+            ]
+        return []
+
+
 class EntityReferenceRule(ValidationRule):
     """Validates that entity references point to existing entities.
 

@@ -17,12 +17,6 @@ validation_rules:
   - Person
   field: email
   pattern: ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$
-- name: orcid_format
-  description: ORCID must be in standard format
-  applies_to:
-  - Person
-  field: orcid
-  pattern: ^[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X]$
 - name: assay_filename_format
   description: Assay filename should follow ISA-Tab pattern
   applies_to:
