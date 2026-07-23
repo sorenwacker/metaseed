@@ -107,7 +107,7 @@ flowchart TB
 |----------|----------|
 | **Project** | Project, Institution |
 | **ISA Core** | Investigation, Study, Assay |
-| **Assets** | DataFile, Model, SOP, Document, Presentation, Workflow, Collection |
+| **Assets** | DataFile, Model, SOP, Document, Presentation, Workflow, Collection, CollectionItem |
 | **Biological** | Sample, SampleType, Organism, Strain |
 | **People** | Person, Publication, Event |
 | **Annotations** | OntologyAnnotation, Factor |

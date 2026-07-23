@@ -81,7 +81,7 @@ flowchart TB
 | **Collection Event** | Event, Location, Georeference |
 | **Agents** | Agent, AgentRole |
 | **Metadata** | Assertion, Citation, Identifier, EntityRelationship |
-| **Extensions** | SpecimenPart, ChronometricAge, TombstoneMetadata |
+| **Extensions** | SpecimenPart, ChronometricAge, TombstoneMetadata, RelatedPid |
 
 ## Key Concepts
 

@@ -426,6 +426,6 @@ Official ISA specifications and resources:
 from metaseed import isa
 
 i = isa()
-source = i.Source(unique_id="SRC001", name="Patient 1")
-sample = i.Sample(unique_id="SAM001", name="Blood sample", derives_from=[source])
+source = i.Source(study_id="STU001", name="Patient 1")
+sample = i.Sample(study_id="STU001", name="Blood sample", derives_from=["Patient 1"])
 ```
