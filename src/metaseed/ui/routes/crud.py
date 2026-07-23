@@ -338,6 +338,12 @@ def render_entity_form(
 
     child_entity_types = list(helper.child_fields.values())
 
+    from .import_export import export_options_for_profile
+
+    export_options = (
+        export_options_for_profile(state.profile) if state is not None else []
+    )
+
     response = templates.TemplateResponse(
         request,
         "partials/form.html",
@@ -359,6 +365,7 @@ def render_entity_form(
             "inline_tables": ctx.inline_tables,
             "child_entity_types": child_entity_types,
             "field_errors": field_errors or {},
+            "export_options": export_options,
         },
     )
     response.headers["HX-Trigger"] = "entityCreated" if created else "entityUpdated"

@@ -22,6 +22,15 @@
             <a href="/export" class="btn btn-secondary btn-sm" data-testid="btn-export" download>
                 Export All
             </a>
+            {% for opt in export_options %}
+            <a href="/export/adapter/{{ opt.key }}"
+               class="btn btn-secondary btn-sm"
+               data-testid="btn-export-{{ opt.key }}"
+               title="Download {{ opt.label }} files"
+               download>
+                {{ opt.label }}
+            </a>
+            {% endfor %}
             {% elif example_available %}
             <a href="/load-example/{{ current_profile }}/{{ current_version }}"
                class="btn btn-outline-secondary btn-sm"

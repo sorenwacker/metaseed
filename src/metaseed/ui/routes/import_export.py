@@ -6,11 +6,16 @@ from an uploaded JSON file.
 
 from __future__ import annotations
 
+import importlib
+import zipfile
+from io import BytesIO
 from typing import TYPE_CHECKING
 
-from fastapi import UploadFile
+from fastapi import HTTPException, UploadFile
 from fastapi.responses import HTMLResponse, StreamingResponse
 from starlette.requests import Request
+
+from metaseed import adapters
 
 from ..datasets import import_dataset
 from ..services.export import export_to_bytes, generate_filename
@@ -22,6 +27,19 @@ if TYPE_CHECKING:
     from fastapi.templating import Jinja2Templates
 
     from ..state import AppState
+
+
+def export_options_for_profile(profile: str) -> list[dict[str, str]]:
+    """Return ``[{key, label}]`` adapter-export options for a profile's UI.
+
+    Derived from the adapter registry (:mod:`metaseed.adapters`), so a new
+    exporter is offered in the UI by declaring it there — not by editing this
+    route.
+    """
+    return [
+        {"key": export.key, "label": export.label}
+        for export in adapters.exports_for_profile(profile)
+    ]
 
 
 def register_export_routes(
@@ -49,6 +67,50 @@ def register_export_routes(
             output,
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+
+    @app.get("/export/adapter/{fmt}")
+    async def export_adapter(fmt: str, _request: Request) -> StreamingResponse:
+        """Export the current dataset via an adapter, as a zip of its files."""
+        export = adapters.find_export(fmt)
+        if export is None:
+            raise HTTPException(status_code=404, detail=f"Unknown export format: {fmt}")
+
+        state = get_state()
+        from metaseed.api.client import MetaseedClient
+
+        client = MetaseedClient.__new__(MetaseedClient)
+        client._facade = state.get_or_create_facade()
+
+        try:
+            export_fn = getattr(importlib.import_module(export.module), export.function)
+        except ModuleNotFoundError as exc:  # extra not installed
+            raise HTTPException(
+                status_code=400,
+                detail=f"{fmt} export requires the matching metaseed extra.",
+            ) from exc
+
+        files: dict[str, str] = export_fn(client)
+        if not files:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Nothing to export for {fmt}: the dataset is empty or does "
+                    f"not match this format's expected structure."
+                ),
+            )
+
+        buffer = BytesIO()
+        with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+            for name, content in files.items():
+                archive.writestr(name, content)
+        buffer.seek(0)
+
+        stem = generate_filename(state).rsplit(".", 1)[0] or "dataset"
+        return StreamingResponse(
+            buffer,
+            media_type="application/zip",
+            headers={"Content-Disposition": f'attachment; filename="{stem}-{fmt}.zip"'},
         )
 
 
