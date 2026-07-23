@@ -45,6 +45,8 @@ _FENCE = re.compile(r"```(\w+)\n(.*?)```", re.DOTALL)
 _ENTITY_OPEN = re.compile(r"^([A-Za-z]\w*)\s*\{")
 _FIELD = re.compile(r"^\S+\s+([A-Za-z]\w*)")
 _RELATION = re.compile(r"^([A-Za-z]\w*)\s+\S+\s+([A-Za-z]\w*)\s*:")
+# A ||--o{ B : label  ->  (A, cardinality, B, label)
+_EDGE = re.compile(r"^([A-Za-z]\w*)\s+(\S+)\s+([A-Za-z]\w*)\s*:\s*(\w+)")
 
 
 def _blocks(text: str, lang: str) -> list[str]:
@@ -82,6 +84,31 @@ def _parse_erd(text: str) -> dict[str, set[str]]:
     return entities
 
 
+def _parse_edges(text: str) -> list[tuple[str, str, str, str]]:
+    """Containment relationship edges ``(A, cardinality, B, label)`` from ERDs.
+
+    Only edges written with the ``||--`` (one-to-many containment) form are
+    returned; ``}o--`` / FK-style edges are excluded — pages use those
+    deliberately for scalar foreign keys, which are not nested fields.
+    """
+    edges: list[tuple[str, str, str, str]] = []
+    for block in _blocks(text, "mermaid"):
+        if "erDiagram" not in block:
+            continue
+        inside_entity = False
+        for raw in block.splitlines():
+            line = raw.strip()
+            if _ENTITY_OPEN.match(line):
+                inside_entity = True
+            elif line == "}":
+                inside_entity = False
+            elif not inside_entity:
+                edge = _EDGE.match(line)
+                if edge and edge.group(2).startswith("||"):
+                    edges.append(edge.groups())  # type: ignore[arg-type]
+    return edges
+
+
 def _doc_ids() -> list[str]:
     return sorted(PROFILE_DOCS)
 
@@ -116,6 +143,29 @@ def test_erd_entities_and_fields_exist(profile_doc: tuple[str, str, str]) -> Non
             f"{profile}.{entity_name}: page ERD lists fields absent from the "
             f"spec: {unknown}"
         )
+
+
+def test_erd_containment_edges_are_real_nested_fields(
+    profile_doc: tuple[str, str, str],
+) -> None:
+    # A ||--o{ B : label must be a real nested field: A.label exists, is nested,
+    # and points at B. This is the dominant #139 error class (a relationship
+    # drawn for a field that is scalar, absent, or points elsewhere).
+    text, profile, version = profile_doc
+    spec = SpecLoader(profile=profile).load_profile(version, profile)
+    problems: list[str] = []
+    for src, _card, dst, label in _parse_edges(text):
+        if src not in spec.entities:
+            problems.append(f"{src} (unknown entity)")
+            continue
+        field = next((f for f in spec.entities[src].fields if f.name == label), None)
+        if field is None:
+            problems.append(f"{src} ||--o{{ {dst} : {label} — no such field on {src}")
+        elif not field.is_nested():
+            problems.append(f"{src}.{label} is scalar, drawn as a containment edge")
+        elif field.items != dst:
+            problems.append(f"{src}.{label} points at {field.items}, not {dst}")
+    assert not problems, f"{profile}: wrong ERD edges:\n  " + "\n  ".join(problems)
 
 
 def test_every_spec_entity_is_documented(profile_doc: tuple[str, str, str]) -> None:

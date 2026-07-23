@@ -3,8 +3,10 @@
 The `miappe-htp` profile is a high-throughput-phenotyping variant of MIAPPE. It
 keeps the MIAPPE investigation/study backbone but expands the model to 28
 entities that capture observation levels, spatial layout, growth facilities and
-the trait/method/scale decomposition of observed variables. Entities are keyed by
-`name`, and the root entity is **`Investigation`**.
+the trait/method/scale decomposition of observed variables. Most entities are
+keyed by `name` (a few — `Observation`, `FactorValue`, `ExperimentalDesign`,
+`SpatialDistribution` — use other identifying fields). The root entity is
+**`Investigation`**.
 
 ## Entities
 
@@ -37,7 +39,7 @@ erDiagram
     }
     Observation {
         string value
-        string variable
+        string timestamp
     }
     ObservedVariable {
         string name
@@ -53,10 +55,10 @@ erDiagram
     }
 
     Investigation ||--o{ Study : studies
-    Study ||--o{ ObservationUnit : observation_units
-    ObservationUnit ||--o{ Sample : samples
+    ObservationUnit }o--|| Study : study
+    Sample }o--|| ObservationUnit : observation_unit
     ObservationUnit ||--o{ Observation : observations
-    Observation }o--|| ObservedVariable : observed_variable
+    Observation }o--|| ObservedVariable : variable
     ObservedVariable }o--|| Trait : trait
     ObservedVariable }o--|| Method : method
     ObservedVariable }o--|| Scale : scale
