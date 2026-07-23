@@ -430,6 +430,84 @@ class TestValidation:
         ]
         assert child_issues, "child of an empty node should still be validated"
 
+    def test_cardinality_satisfied_by_created_children(
+        self, client: MetaseedClient
+    ) -> None:
+        """A parent with its required children created is valid (issue #141).
+
+        MIAPPE requires an Investigation to have >=1 study and >=1 contact.
+        Creating those as child nodes must satisfy the cardinality rules, even
+        though the client stores them flat rather than in the parent's list.
+        """
+        inv = client.create_entity(
+            "Investigation", {"unique_id": "INV-001", "title": "Drought study"}
+        )
+        client.create_entity(
+            "Study",
+            {
+                "unique_id": "STU-001",
+                "title": "Field trial",
+                "investigation_id": "INV-001",
+            },
+            parent_id=inv.id,
+        )
+        client.create_entity(
+            "Person",
+            {"name": "Jane Doe", "email": "jane@example.org"},
+            parent_id=inv.id,
+        )
+
+        result = client.validate()
+
+        cardinality_issues = [
+            issue for issue in result.issues if "at least" in issue.message
+        ]
+        assert not cardinality_issues, (
+            f"cardinality rules should be satisfied by children: {cardinality_issues}"
+        )
+        assert result.valid is True
+
+    def test_cardinality_still_fails_without_children(
+        self, client: MetaseedClient
+    ) -> None:
+        """An Investigation with no studies/contacts remains invalid."""
+        client.create_entity(
+            "Investigation", {"unique_id": "INV-001", "title": "Incomplete"}
+        )
+
+        result = client.validate()
+
+        messages = " ".join(issue.message for issue in result.issues)
+        assert "at least 1 item" in messages
+        assert result.valid is False
+
+    def test_cardinality_survives_serialize_load_round_trip(
+        self, client: MetaseedClient
+    ) -> None:
+        """Children reattach after a serialize/load cycle, so validity holds."""
+        inv = client.create_entity(
+            "Investigation", {"unique_id": "INV-001", "title": "Drought study"}
+        )
+        client.create_entity(
+            "Study",
+            {
+                "unique_id": "STU-001",
+                "title": "Field trial",
+                "investigation_id": "INV-001",
+            },
+            parent_id=inv.id,
+        )
+        client.create_entity(
+            "Person",
+            {"name": "Jane Doe", "email": "jane@example.org"},
+            parent_id=inv.id,
+        )
+
+        reloaded = MetaseedClient("miappe", "1.2")
+        reloaded.load(client.serialize())
+
+        assert reloaded.validate().valid is True
+
     def test_validate_entity_by_id(self, client: MetaseedClient) -> None:
         """Validate specific entity returns result."""
         entity = client.create_entity(
@@ -441,6 +519,35 @@ class TestValidation:
         assert isinstance(result, ValidationResult)
         # Validation should return issues (studies/contacts required) or pass
         assert isinstance(result.issues, list)
+
+    def test_validate_entity_by_id_counts_children_for_cardinality(
+        self, client: MetaseedClient
+    ) -> None:
+        """validate_entity(id) on a parent counts its children for cardinality."""
+        inv = client.create_entity(
+            "Investigation", {"unique_id": "INV-001", "title": "Drought study"}
+        )
+        client.create_entity(
+            "Study",
+            {
+                "unique_id": "STU-001",
+                "title": "Field trial",
+                "investigation_id": "INV-001",
+            },
+            parent_id=inv.id,
+        )
+        client.create_entity(
+            "Person",
+            {"name": "Jane Doe", "email": "jane@example.org"},
+            parent_id=inv.id,
+        )
+
+        result = client.validate_entity(inv.id)
+
+        cardinality_issues = [
+            issue for issue in result.issues if "at least" in issue.message
+        ]
+        assert not cardinality_issues
 
     def test_validate_entity_not_found_raises(self, client: MetaseedClient) -> None:
         """Validating nonexistent entity raises EntityNotFoundError."""

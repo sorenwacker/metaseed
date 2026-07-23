@@ -20,6 +20,54 @@ class ValidationMixin(InstanceDataMixin):
 
     _facade: ProfileFacade
 
+    def _data_with_children(self: Self, node: Any) -> dict[str, Any]:
+        """Return a node's data with its child nodes embedded in nested fields.
+
+        The client stores children as sibling nodes, so a parent's nested list
+        field is empty on its own instance even when children exist. List
+        cardinality rules (``min_items``/``max_items``) would then always report
+        the parent as invalid. Re-attaching each child into the matching nested
+        field lets those rules validate against the real subtree, while the
+        child's own content is still validated when the traversal reaches it.
+
+        A child is matched to a field by entity type. When a parent nests the
+        same type in more than one field, all such children land in the first
+        of those fields; no shipped cardinality rule targets an
+        ambiguously-typed field, and per-child validation is unaffected. Which
+        field a child truly belongs to is not recorded today (see issue #137).
+
+        Args:
+            node: The entity node whose data to reconstruct.
+
+        Returns:
+            The node's JSON data dict, with children embedded in nested fields.
+        """
+        data = self._get_instance_data(node.instance)
+        if not node.children:
+            return data
+
+        helper = self._facade.get_helper(node.entity_type)
+        if helper is None:
+            return data
+
+        # entity type -> first nested field of that type
+        field_for_type: dict[str, str] = {}
+        for field_name, entity_type in helper.nested_fields.items():
+            field_for_type.setdefault(entity_type, field_name)
+
+        for child in node.children:
+            target_field = field_for_type.get(child.entity_type)
+            if target_field is None:
+                continue
+            child_data = self._get_instance_data(child.instance)
+            existing = data.get(target_field)
+            if isinstance(existing, list):
+                existing.append(child_data)
+            else:
+                # A single (non-list) nested entity field, empty on the parent.
+                data[target_field] = child_data
+        return data
+
     def validate(self: Self) -> ValidationResult:
         """Validate all entities.
 
@@ -33,7 +81,7 @@ class ValidationMixin(InstanceDataMixin):
         all_issues: list[ValidationIssue] = []
 
         def validate_node(node: Any) -> None:
-            data = self._get_instance_data(node.instance)
+            data = self._data_with_children(node)
             if data:
                 errors = validate_entity(
                     data,
@@ -80,7 +128,7 @@ class ValidationMixin(InstanceDataMixin):
         if node is None:
             raise EntityNotFoundError(entity_id)
 
-        data = self._get_instance_data(node.instance)
+        data = self._data_with_children(node)
 
         errors = validate_fn(
             data,
