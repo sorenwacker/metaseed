@@ -18,7 +18,6 @@ from .core import get_profile_display_info, register_core_routes
 from .crud import (
     register_entity_crud_routes,
     render_entity_form,
-    render_form_with_errors,
 )
 from .examples import register_example_routes
 from .explore import register_explore_routes
@@ -46,5 +45,4 @@ __all__ = [
     "register_table_routes",
     "register_validation_routes",
     "render_entity_form",
-    "render_form_with_errors",
 ]

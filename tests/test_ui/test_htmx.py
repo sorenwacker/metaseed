@@ -130,16 +130,30 @@ class TestCreateEntity:
         assert response.status_code == 200
         assert "required" in response.text.lower()
 
-    def test_create_entity_validation_error(self, client):
-        """Create with invalid data shows validation error."""
+    def test_create_entity_saves_draft_with_validation_warning(self, client):
+        """Create with incomplete data is never blocked: it saves a draft and
+        surfaces a non-blocking warning listing the missing-field hints."""
         response = client.post(
             "/entity",
             data={
+                # Missing required fields (unique_id, title).
                 "_entity_type": "Investigation",
             },
         )
+        # Saving is not blocked by validation.
         assert response.status_code == 200
-        assert "Validation error" in response.text
+        # Non-blocking warning notification, not a blocking error.
+        assert 'data-testid="form-warning"' in response.text
+        assert 'data-testid="form-error"' not in response.text
+        # Message reports a draft save and lists the missing-field hints.
+        assert "Saved draft" in response.text
+        assert "incomplete" in response.text
+        assert "title" in response.text
+        assert "required" in response.text.lower()
+        # The entity is still persisted as a draft.
+        assert response.headers.get("HX-Trigger") == "entityCreated"
+        state = client.app.state.ui_state
+        assert len(state.nodes_by_id) == 1
 
 
 class TestEditEntity:
@@ -811,8 +825,12 @@ class TestUpdateEntity:
         )
         assert response.status_code == 200
 
-    def test_update_entity_validation_error(self, client_with_entity):
-        """Update entity with invalid data shows validation error."""
+    def test_update_entity_saves_draft_with_validation_warning(
+        self, client_with_entity
+    ):
+        """Update with incomplete data is never blocked: it saves the entity as
+        a draft and surfaces a non-blocking warning listing the missing-field
+        hints."""
         state = client_with_entity.app.state.ui_state
         node_id = next(iter(state.nodes_by_id.keys()))
 
@@ -820,8 +838,19 @@ class TestUpdateEntity:
             f"/entity/{node_id}",
             data={},  # Missing required fields
         )
+        # Saving is not blocked by validation.
         assert response.status_code == 200
-        assert "Validation error" in response.text
+        # Non-blocking warning notification, not a blocking error.
+        assert 'data-testid="form-warning"' in response.text
+        assert 'data-testid="form-error"' not in response.text
+        # Message reports a draft save and lists the missing-field hints.
+        assert "Saved draft" in response.text
+        assert "incomplete" in response.text
+        assert "title" in response.text
+        assert "required" in response.text.lower()
+        # The entity is still persisted (updated in place, not rejected).
+        assert response.headers.get("HX-Trigger") == "entityUpdated"
+        assert node_id in state.nodes_by_id
 
 
 class TestProfileDisplayInfo:

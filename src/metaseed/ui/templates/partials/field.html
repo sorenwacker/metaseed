@@ -1,4 +1,5 @@
-<div class="form-group">
+{% set field_error = field_errors.get(field.name) if field_errors is defined and field_errors else None %}
+<div class="form-group{% if field_error %} has-error{% endif %}">
     <label class="form-label" for="field-{{ field.name }}">
         {{ field.name }}
         {% if field.required %}<span class="required">*</span>{% endif %}
@@ -140,6 +141,9 @@
            data-testid="input-{{ field.name|replace('_', '-') }}">
     {% endif %}
 
+    {% if field_error %}
+    <p class="form-error" data-testid="field-error-{{ field.name|replace('_', '-') }}">{{ field_error }}</p>
+    {% endif %}
     {% if field.description %}
     <p class="form-help">{{ field.description }}</p>
     {% endif %}

@@ -590,6 +590,24 @@ body::before {
     line-height: 1.4;
 }
 
+/* Inline per-field validation feedback (non-blocking draft save). */
+.form-group.has-error .form-input,
+.form-group.has-error .form-textarea {
+    border-color: #d9534f;
+    background-color: #fdf3f2;
+}
+
+.form-group.has-error .form-label {
+    color: #b52b27;
+}
+
+.form-error {
+    font-size: 0.8125rem;
+    color: #b52b27;
+    margin-top: var(--space-xs);
+    line-height: 1.4;
+}
+
 .form-actions {
     display: flex;
     gap: var(--space-md);

@@ -17,6 +17,7 @@ from ..helpers import (
     build_inline_tables,
     collect_form_values,
     extract_nested_items,
+    field_errors_from_validation,
     format_validation_errors,
     process_reference_linked_children,
     rebuild_nested_items_with_failures,
@@ -76,41 +77,56 @@ def register_entity_crud_routes(
 
         values = collect_form_values(dict(form_data), helper)
 
+        # Progressive editing: creating an entity must never be blocked by
+        # validation. When the values are valid, create normally; otherwise save
+        # an incomplete draft (skip_validation) and surface the issues as a
+        # non-blocking warning, so a user can create a root entity and fill its
+        # required children afterwards.
         try:
             instance = helper.create(**values)
-            node = state.add_node(entity_type, instance, parent_id=parent_id)
-            state.editing_node_id = node.id
-
-            state.current_nested_items = extract_nested_items(instance, helper)
-
-            from ..datasets import auto_save
-
-            auto_save(state)
-
-            return render_entity_form(
-                request,
-                templates,
-                facade,
-                helper,
-                str(entity_type),
-                node.id,
-                instance,
-                f"Created {entity_type}: {node.label}",
-                state,
-                created=True,
-            )
-
+            warning = None
+            field_errors: dict[str, str] = {}
         except ValidationError as e:
-            return render_form_with_errors(
-                request,
-                templates,
-                facade,
-                helper,
-                str(entity_type),
-                None,
-                values,
-                e,
+            instance = helper.create(skip_validation=True, **values)
+            warning = format_validation_errors(e)
+            field_errors = field_errors_from_validation(e)
+
+        node = state.add_node(
+            entity_type,
+            instance,
+            parent_id=parent_id,
+            skip_validation=warning is not None,
+        )
+        state.editing_node_id = node.id
+        state.current_nested_items = extract_nested_items(instance, helper)
+
+        from ..datasets import auto_save
+
+        auto_save(state)
+
+        if warning:
+            message = (
+                f"Saved draft {entity_type}: {node.label} (incomplete — {warning})"
             )
+            message_type = "warning"
+        else:
+            message = f"Created {entity_type}: {node.label}"
+            message_type = "success"
+
+        return render_entity_form(
+            request,
+            templates,
+            facade,
+            helper,
+            str(entity_type),
+            node.id,
+            instance,
+            message,
+            state,
+            message_type=message_type,
+            created=True,
+            field_errors=field_errors,
+        )
 
     @app.put("/entity/{node_id}", response_class=HTMLResponse)
     async def update_entity(request: Request, node_id: str) -> HTMLResponse:
@@ -139,80 +155,84 @@ def register_entity_crud_routes(
         # embedded into the parent here -- embedding as well would list each item
         # twice in the edit view (once from the parent, once from the child node).
 
+        # Saving must never be blocked by validation. Persist the parent as a
+        # draft (skip_validation) when it is incomplete, collecting the issues as
+        # a non-blocking warning alongside any child reference-linking failures.
         try:
             instance = helper.create(**values)
-            state.update_node(node_id, instance)
-
-            parent_data = (
-                instance.model_dump() if hasattr(instance, "model_dump") else {}
-            )
-            parent_identifier = parent_data.get("alias") or parent_data.get("unique_id")
-
-            validation_result = process_reference_linked_children(
-                state=state,
-                facade=facade,
-                node_id=node_id,
-                entity_type=entity_type,
-                parent_identifier=parent_identifier,
-            )
-
-            rebuild_nested_items_with_failures(
-                state=state,
-                node_id=node_id,
-                helper=helper,
-                facade=facade,
-                failed_items=validation_result.failed_items,
-            )
-
-            if not validation_result.has_errors():
-                from ..datasets import auto_save
-
-                auto_save(state)
-
-            action = form_data.get("_action", "")
-
-            if validation_result.has_errors():
-                msg = (
-                    f"Validation errors - please fix: "
-                    f"{'; '.join(validation_result.errors)}"
-                )
-                msg_type = "error"
-            else:
-                msg = f"Saved {entity_type}: {node.label}"
-                msg_type = "success"
-
-            if action == "back":
-                return templates.TemplateResponse(
-                    request,
-                    "index.html",
-                    {
-                        "tree_nodes": state.get_tree_data(),
-                        "root_types": state.get_root_entity_types()[:3],
-                        "current_profile": state.profile,
-                        "version": facade.version,
-                        "notification": {"type": msg_type, "message": msg},
-                        "base_url": base_url,
-                    },
-                )
-
-            return render_entity_form(
-                request,
-                templates,
-                facade,
-                helper,
-                entity_type,
-                node_id,
-                instance,
-                msg,
-                state,
-                message_type=msg_type,
-                created=False,
-            )
-
+            parent_warning = None
+            field_errors: dict[str, str] = {}
         except ValidationError as e:
-            return render_form_with_errors(
-                request, templates, facade, helper, entity_type, node_id, values, e
+            instance = helper.create(skip_validation=True, **values)
+            parent_warning = format_validation_errors(e)
+            field_errors = field_errors_from_validation(e)
+
+        state.update_node(node_id, instance, skip_validation=parent_warning is not None)
+
+        parent_data = instance.model_dump() if hasattr(instance, "model_dump") else {}
+        parent_identifier = parent_data.get("alias") or parent_data.get("unique_id")
+
+        validation_result = process_reference_linked_children(
+            state=state,
+            facade=facade,
+            node_id=node_id,
+            entity_type=entity_type,
+            parent_identifier=parent_identifier,
+        )
+
+        rebuild_nested_items_with_failures(
+            state=state,
+            node_id=node_id,
+            helper=helper,
+            facade=facade,
+            failed_items=validation_result.failed_items,
+        )
+
+        # Always persist — a draft save is not rejected for incompleteness.
+        from ..datasets import auto_save
+
+        auto_save(state)
+
+        action = form_data.get("_action", "")
+
+        problems = list(validation_result.errors)
+        if parent_warning:
+            problems.append(parent_warning)
+        if problems:
+            msg = f"Saved draft {entity_type}: {node.label} (incomplete — {'; '.join(problems)})"
+            msg_type = "warning"
+        else:
+            msg = f"Saved {entity_type}: {node.label}"
+            msg_type = "success"
+
+        if action == "back":
+            return templates.TemplateResponse(
+                request,
+                "index.html",
+                {
+                    "tree_nodes": state.get_tree_data(),
+                    "root_types": state.get_root_entity_types()[:3],
+                    "current_profile": state.profile,
+                    "version": facade.version,
+                    "notification": {"type": msg_type, "message": msg},
+                    "base_url": base_url,
+                },
             )
+
+        return render_entity_form(
+            request,
+            templates,
+            facade,
+            helper,
+            entity_type,
+            node_id,
+            instance,
+            msg,
+            state,
+            message_type=msg_type,
+            created=False,
+            field_errors=field_errors,
+        )
 
     @app.delete("/entity/{node_id}", response_class=HTMLResponse)
     async def delete_entity(request: Request, node_id: str) -> HTMLResponse:
@@ -302,6 +322,7 @@ def render_entity_form(
     state: AppState | None = None,
     message_type: str = "success",
     created: bool = False,
+    field_errors: dict[str, str] | None = None,
 ) -> HTMLResponse:
     """Render entity form after successful create/update."""
     values = (
@@ -337,40 +358,8 @@ def render_entity_form(
             ),
             "inline_tables": ctx.inline_tables,
             "child_entity_types": child_entity_types,
+            "field_errors": field_errors or {},
         },
     )
     response.headers["HX-Trigger"] = "entityCreated" if created else "entityUpdated"
     return response
-
-
-def render_form_with_errors(
-    request: Request,
-    templates: Jinja2Templates,
-    facade: ProfileFacade,
-    helper: Any,
-    entity_type: str,
-    node_id: str | None,
-    values: dict[str, Any],
-    error: ValidationError,
-) -> HTMLResponse:
-    """Render form with validation errors."""
-    errors = format_validation_errors(error)
-    ctx = _build_form_context(helper, entity_type, values, node_id, facade)
-
-    return templates.TemplateResponse(
-        request,
-        "partials/form.html",
-        {
-            "entity_type": ctx.entity_type,
-            "is_edit": ctx.is_edit,
-            "node_id": ctx.node_id,
-            "description": ctx.description,
-            "ontology_term": ctx.ontology_term,
-            "required_fields": ctx.get_required_fields(),
-            "optional_fields": ctx.get_optional_fields(),
-            "nested_fields": ctx.get_nested_fields(),
-            "values": ctx.values,
-            "auto_fields": ctx.auto_fields,
-            "error_message": f"Validation error: {errors}",
-        },
-    )
