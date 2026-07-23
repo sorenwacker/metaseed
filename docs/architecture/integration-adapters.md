@@ -60,9 +60,16 @@ was built first as the reference and the rest mirror it.
 - **Shared helpers removed duplication.** `metaseed._http.request_json`
   (retry/backoff) and `metaseed.isatab.to_isatab` are written once and reused by
   all the relevant adapters.
-- **Schema-valid output where it counts.** The ENA exporter's study/sample/run
-  XML **validate against ENA's official SRA XSDs** — i.e. the output is not just
-  well-formed, it would be accepted.
+- **Every exporter has a conformance test.** The ENA export **validates against
+  ENA's official SRA XSDs** (external schema — the gold standard); the PRIDE,
+  MetaboLights, and BrAPI exports have structural/shape conformance tests
+  (required px `MTD`/`FMH`/`FME` lines, the ISA-Tab sections + study/assay/MAF
+  files, and the BrAPI v2 object shape via jsonschema). All are `@network`
+  round-trips against a real record.
+- **Importers tested across diverse accessions.** Each importer was run against
+  several real, varied accessions (ENA run/sample/study incl. a 495-file study;
+  four PXD projects incl. a 2384-file one; four MTBLS studies) without surfacing
+  new mapping gaps.
 
 ## What didn't work (and the lessons)
 
@@ -90,9 +97,9 @@ was built first as the reference and the rest mirror it.
 
 ## Honest status
 
-The eight adapters are a real first step, **not production-validated.** Each was
-smoke-tested against a single live record (which already caught real bugs), and
-the clients now page and retry. Still open: broader accession coverage, export
-validation for BrAPI/PRIDE/MetaboLights (ENA is XSD-valid), and verification that
-exports are accepted by the live submission systems. Tracking: umbrella #75,
-importers epic #76.
+The eight adapters now page and retry, each importer has been exercised across
+several diverse live accessions, and every exporter has a conformance test
+(ENA against the official XSD; the rest structural/shape). The one remaining
+unknown is **acceptance by the live submission systems** — no export has yet
+been round-tripped through a real ENA/PRIDE/MetaboLights/BrAPI submission
+endpoint. Tracking: umbrella #75, importers epic #76.
