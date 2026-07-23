@@ -12,9 +12,9 @@ The storage module provides a unified interface for saving and loading metadata 
 from pathlib import Path
 from metaseed.storage.json_backend import JsonStorage
 from metaseed.storage.yaml_backend import YamlStorage
-from metaseed.models.registry import get_model
+from metaseed.models import get_model
 
-# Get a model from the registry
+# Get a generated model
 Study = get_model("Study", profile="miappe", version="1.1")
 
 # Create an instance

@@ -41,19 +41,17 @@ graph TB
 
 | Component | Location | Responsibility |
 |-----------|----------|----------------|
-| **DatasetRepository** | `metaseed.repositories.dataset_repository` | Sync abstract interface |
-| **AsyncDatasetRepository** | `metaseed.repositories.dataset_repository` | Async abstract interface |
+| **DatasetRepository** | `metaseed.repositories.dataset_repository` | Abstract storage interface |
 | **DatasetInfo** | `metaseed.repositories.dataset_repository` | Summary info for listing |
 | **DatasetData** | `metaseed.repositories.dataset_repository` | Full dataset contents |
 | **FilesystemDatasetRepository** | `metaseed.repositories.filesystem_dataset` | JSON file-based storage |
-| **DatasetManager** | `metaseed.ui.dataset_manager` | Sync business logic + state |
-| **AsyncDatasetManager** | `metaseed.ui.dataset_manager` | Async business logic + state |
+| **DatasetManager** | `metaseed.ui.dataset_manager` | Business logic + state integration |
+| **DatasetManagerFactory** | `metaseed.ui.dataset_manager` | Creates managers bound to an `AppState` |
 
-## DatasetRepository Interfaces
+## DatasetRepository Interface
 
-Two interfaces are provided: sync for filesystem/simple backends, async for database backends.
-
-### Sync Interface
+The repository interface defines the storage contract. Backends (filesystem,
+database, object store) implement it and are injected via `DatasetManagerFactory`.
 
 ```python
 from metaseed.repositories import DatasetRepository, DatasetInfo, DatasetData
@@ -64,22 +62,6 @@ class DatasetRepository(ABC):
     def load(self, name: str) -> DatasetData: ...
     def delete(self, name: str) -> bool: ...
     def exists(self, name: str) -> bool: ...
-
-    @staticmethod
-    def validate_name(name: str) -> str | None: ...
-```
-
-### Async Interface
-
-```python
-from metaseed.repositories import AsyncDatasetRepository, DatasetInfo, DatasetData
-
-class AsyncDatasetRepository(ABC):
-    async def list(self) -> list[DatasetInfo]: ...
-    async def save(self, name: str, data: DatasetData) -> DatasetInfo: ...
-    async def load(self, name: str) -> DatasetData: ...
-    async def delete(self, name: str) -> bool: ...
-    async def exists(self, name: str) -> bool: ...
 
     @staticmethod
     def validate_name(name: str) -> str | None: ...
@@ -119,14 +101,16 @@ class DatasetData:
 
 ### Standalone Metaseed (Default)
 
-Uses filesystem storage automatically:
+Uses filesystem storage automatically. A `DatasetManagerFactory` creates a
+manager bound to an `AppState` (the default factory uses
+`FilesystemDatasetRepository`):
 
 ```python
-from metaseed.ui.dataset_manager import get_manager
+from metaseed.ui.dataset_manager import DatasetManagerFactory
 from metaseed.ui.state import AppState
 
 state = AppState(profile="miappe")
-manager = get_manager(state)
+manager = DatasetManagerFactory().get_manager(state)
 
 # List datasets
 datasets = manager.list_datasets()
@@ -141,136 +125,61 @@ info = manager.load_dataset("my-experiment")
 manager.delete_dataset("old-experiment")
 ```
 
-### metaseed-hub Integration (Async)
-
-Swap in an async database backend at app startup:
+Inside a request handler, use `resolve_dataset_manager(app, state)` instead of
+constructing a factory directly; it reuses the MCP-session factory when one is
+attached to the app so UI and MCP operations share a repository:
 
 ```python
-from datetime import datetime
+from metaseed.ui.dataset_manager import resolve_dataset_manager
 
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+manager = resolve_dataset_manager(app, state)
+info = manager.save_dataset("my-experiment")
+```
 
-from metaseed.repositories import AsyncDatasetRepository, DatasetInfo, DatasetData
-from metaseed.ui.dataset_manager import set_async_repository, get_async_manager
+### metaseed-hub Integration (Custom Backend)
+
+metaseed-hub swaps in a custom `DatasetRepository` by constructing a
+`DatasetManagerFactory` with it. The factory then hands out managers backed by
+that repository instead of the default filesystem store:
+
+```python
+from metaseed.repositories import DatasetRepository, DatasetInfo, DatasetData
+from metaseed.ui.dataset_manager import DatasetManagerFactory
 
 
-class DatabaseDatasetRepository(AsyncDatasetRepository):
-    """Async database-backed dataset storage for metaseed-hub."""
+class DatabaseDatasetRepository(DatasetRepository):
+    """Database-backed dataset storage for metaseed-hub."""
 
-    def __init__(self, session: AsyncSession):
+    def __init__(self, session):
         self._session = session
 
-    async def list(self) -> list[DatasetInfo]:
-        result = await self._session.execute(select(Dataset))
-        return [
-            DatasetInfo(
-                name=row.name,
-                profile=row.profile,
-                version=row.version,
-                entity_count=len(row.entities),
-                modified=row.modified.isoformat(),
-            )
-            for row in result.scalars()
-        ]
+    def list(self) -> list[DatasetInfo]:
+        ...
 
-    async def save(self, name: str, data: DatasetData) -> DatasetInfo:
+    def save(self, name: str, data: DatasetData) -> DatasetInfo:
         error = self.validate_name(name)
         if error:
             raise ValueError(error)
+        ...
 
-        result = await self._session.execute(
-            select(Dataset).filter_by(name=name)
-        )
-        dataset = result.scalar_one_or_none()
+    def load(self, name: str) -> DatasetData:
+        ...
 
-        if dataset:
-            dataset.profile = data.profile
-            dataset.version = data.version
-            dataset.entities = data.entities
-            dataset.modified = datetime.now()
-        else:
-            dataset = Dataset(
-                name=name,
-                profile=data.profile,
-                version=data.version,
-                entities=data.entities,
-            )
-            self._session.add(dataset)
+    def delete(self, name: str) -> bool:
+        ...
 
-        await self._session.commit()
-        return DatasetInfo(
-            name=name,
-            profile=data.profile,
-            version=data.version,
-            entity_count=len(data.entities),
-            modified=dataset.modified.isoformat(),
-        )
-
-    async def load(self, name: str) -> DatasetData:
-        result = await self._session.execute(
-            select(Dataset).filter_by(name=name)
-        )
-        dataset = result.scalar_one_or_none()
-        if not dataset:
-            raise FileNotFoundError(f"Dataset not found: {name}")
-        return DatasetData(
-            name=dataset.name,
-            profile=dataset.profile,
-            version=dataset.version,
-            entities=dataset.entities,
-            modified=dataset.modified.isoformat(),
-        )
-
-    async def delete(self, name: str) -> bool:
-        result = await self._session.execute(
-            select(Dataset).filter_by(name=name)
-        )
-        dataset = result.scalar_one_or_none()
-        if dataset:
-            await self._session.delete(dataset)
-            await self._session.commit()
-            return True
-        return False
-
-    async def exists(self, name: str) -> bool:
-        result = await self._session.execute(
-            select(Dataset).filter_by(name=name)
-        )
-        return result.scalar_one_or_none() is not None
+    def exists(self, name: str) -> bool:
+        ...
 
 
-# In metaseed-hub app startup:
-async def create_app(async_session: AsyncSession):
-    # Configure async repository BEFORE any dataset operations
-    set_async_repository(DatabaseDatasetRepository(async_session))
-
-    # Now routes can use async manager
-    from metaseed.ui.app import create_app as create_metaseed_app
-    return create_metaseed_app()
+# Build a factory bound to the custom repository, then create managers from it.
+factory = DatasetManagerFactory(sync_repo=DatabaseDatasetRepository(session))
+manager = factory.get_manager(state)
 ```
 
-### Using AsyncDatasetManager in Routes
-
-```python
-from metaseed.ui.dataset_manager import get_async_manager
-
-@app.get("/api/datasets")
-async def list_datasets_api():
-    state = get_state()
-    manager = get_async_manager(state)
-
-    if manager:
-        # Use async operations
-        datasets = await manager.list_datasets()
-        return {"datasets": [asdict(d) for d in datasets]}
-    else:
-        # Fall back to sync
-        from metaseed.ui.dataset_manager import get_manager
-        sync_manager = get_manager(state)
-        datasets = sync_manager.list_datasets()
-        return {"datasets": [asdict(d) for d in datasets]}
-```
+The factory is attached to the app (via the MCP context) so that
+`resolve_dataset_manager(app, state)` returns managers using this backend for
+every request in the session.
 
 ### Direct Repository Access
 
@@ -292,26 +201,27 @@ for entity in data.entities:
     print(f"  {entity['_type']}: {entity.get('title', entity.get('unique_id'))}")
 ```
 
-## Module-Level Functions
+## Dependency Injection API
 
-For dependency injection configuration:
+Managers are created through `DatasetManagerFactory` and resolved per request
+with `resolve_dataset_manager`:
 
 ```python
 from metaseed.ui.dataset_manager import (
-    # Sync
-    set_repository,       # Configure sync repository
-    get_repository,       # Get sync repository
-    get_manager,          # Get DatasetManager instance
-
-    # Async
-    set_async_repository, # Configure async repository
-    get_async_repository, # Get async repository
-    get_async_manager,    # Get AsyncDatasetManager instance
-
-    # Utilities
-    reset_manager,        # Clear all cached managers (for testing)
+    DatasetManager,          # Business logic + state integration
+    DatasetManagerFactory,   # Creates managers bound to an AppState
+    resolve_dataset_manager, # Resolves the manager for a request
 )
 ```
+
+| Symbol | Purpose |
+|--------|---------|
+| `DatasetManagerFactory(sync_repo=...)` | Holds the repository; `get_manager(state)` returns a manager for that state |
+| `DatasetManagerFactory.get_manager(state)` | Get or create the `DatasetManager` bound to `state` |
+| `resolve_dataset_manager(app, state)` | Prefer the MCP-session factory attached to `app`, else a default factory |
+
+The factory caches managers per `AppState` using a `WeakValueDictionary`, so
+managers are garbage-collected when their state is released.
 
 ## Backward Compatibility
 
@@ -361,8 +271,8 @@ FilesystemDatasetRepository stores datasets as JSON:
 
 ## Design Principles
 
-1. **Dependency Injection**: Repository set at startup, consumed via DatasetManager
-2. **Interface Segregation**: Focused DatasetRepository interface
-3. **Single Responsibility**: Manager handles state integration, repository handles storage
-4. **Open/Closed**: New backends (database, S3, etc.) without modifying existing code
-5. **Backward Compatibility**: Module functions preserve existing API
+The dataset repository follows the same repository-layer principles documented
+for the [entity repository](entity-repository.md#design-principles): dependency
+injection, interface segregation, single responsibility, and open/closed. In
+addition, the `metaseed.ui.datasets` module preserves a backward-compatible
+function API that delegates to `DatasetManager` internally.

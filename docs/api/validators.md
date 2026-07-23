@@ -14,7 +14,7 @@ The validators module handles the second layer.
 ## Quick Start
 
 ```python
-from metaseed.validators.engine import validate, create_engine_for_entity
+from metaseed.validators import validate
 
 # Simple validation
 errors = validate(
@@ -48,23 +48,20 @@ errors = engine.validate({
 })
 ```
 
-### Factory Functions
+### Factory Function
 
-Create pre-configured engines from profile specs:
+Create a pre-configured engine for an entity from its profile spec:
 
 ```python
-from metaseed.validators.engine import (
-    create_engine_for_entity,
-    create_engine_from_profile
-)
+from metaseed.validators.engine import create_engine_for_entity
 
-# Single entity
+# Engine with all rules defined for the entity in the profile
 engine = create_engine_for_entity("Study", version="1.1", profile="miappe")
-
-# All entities in profile
-engines = create_engine_from_profile(version="1.1", profile="miappe")
-study_engine = engines["Study"]
+errors = engine.validate({"unique_id": "STUDY001", "start_date": "2024-03-01"})
 ```
+
+The engine loads the `validation_rules` declared for the entity in the profile
+YAML and applies them alongside any rules you add manually.
 
 ## Validation Rules
 
