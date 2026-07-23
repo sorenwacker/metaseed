@@ -62,7 +62,8 @@ Fast, headless tests using FastAPI's TestClient to verify route behavior and HTM
 
 ```python
 from fastapi.testclient import TestClient
-from metaseed.ui.routes import AppState, create_app
+from metaseed.ui.app import create_app
+from metaseed.ui.state import AppState
 
 def test_create_entity(client):
     response = client.post(
@@ -105,7 +106,7 @@ Tests use a module-scoped server fixture that starts uvicorn on port 8081:
 def server():
     """Start the Metaseed server for testing."""
     proc = subprocess.Popen(
-        ["uv", "run", "uvicorn", "metaseed.ui.routes:app", "--port", "8081"],
+        ["uv", "run", "uvicorn", "metaseed.ui.app:app", "--port", "8081"],
         ...
     )
     # Wait for server to be ready

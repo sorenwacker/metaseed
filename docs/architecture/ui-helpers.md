@@ -1,30 +1,31 @@
 # UI Helper Modules
 
-The UI layer is organized into focused helper modules that handle specific concerns. This separation improves testability and reduces coupling in the route handlers.
+The UI layer is organized into focused helper modules that handle specific concerns. This separation improves testability and reduces coupling in the route handlers. The submodules live under the `metaseed.ui.helpers` package, whose `__init__` re-exports their public functions for convenient access.
 
 ```mermaid
 graph TD
-    Routes[Route Handlers] --> FH[form_helpers]
-    Routes --> EH[entity_helpers]
-    Routes --> TH[table_helpers]
-    Routes --> NH[navigation_helpers]
+    Routes[Route Handlers] --> H[metaseed.ui.helpers]
+    H --> EH[entity_helpers]
+    H --> TH[table_helpers]
+    H --> NH[navigation_helpers]
+    H --> FC[FormContext<br/>from metaseed.forms]
 
-    FH --> State[AppState]
-    EH --> State
+    EH --> State[AppState]
     TH --> State
     NH --> State
+    FC --> State
 ```
 
-## form_helpers
+## Form rendering
 
-Handles form rendering context and value collection.
+Form rendering context and value collection are exposed through the `metaseed.ui.helpers` package.
 
 ### FormContext
 
-Dataclass that encapsulates form rendering state, reducing parameter counts in template rendering.
+Dataclass that encapsulates form rendering state, reducing parameter counts in template rendering. It is defined in `metaseed.forms` and re-exported from `metaseed.ui.helpers`.
 
 ```python
-from metaseed.ui.form_helpers import FormContext
+from metaseed.ui.helpers import FormContext
 
 ctx = FormContext(
     entity_type="Study",
@@ -71,7 +72,7 @@ Handles entity traversal and nested item extraction.
 ### Example: Walking Nested Entities
 
 ```python
-from metaseed.ui.entity_helpers import walk_nested_entities
+from metaseed.ui.helpers.entity_helpers import walk_nested_entities
 
 investigation_data = {
     "unique_id": "INV-1",
@@ -135,7 +136,7 @@ Reference fields link entities to their parents. The helper checks two sources:
 2. Validation rules with `reference` attribute (legacy)
 
 ```python
-from metaseed.ui.navigation_helpers import get_reference_fields
+from metaseed.ui.helpers.navigation_helpers import get_reference_fields
 
 refs = get_reference_fields("miappe", "1.2", "Sample")
 # Returns:
@@ -150,10 +151,11 @@ refs = get_reference_fields("miappe", "1.2", "Sample")
 ## Module Dependencies
 
 ```
-form_helpers    (standalone)
-entity_helpers  (standalone)
-table_helpers   --> navigation_helpers (for reference fields)
-navigation_helpers --> specs.loader
+entity_helpers      (standalone)
+table_helpers       --> navigation_helpers (for reference fields)
+navigation_helpers  --> specs.loader
 ```
 
-All modules depend on `AppState` for session state access.
+`FormContext` is defined in `metaseed.forms` and re-exported from
+`metaseed.ui.helpers`. The helper modules depend on `AppState` for session
+state access.

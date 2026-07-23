@@ -45,6 +45,15 @@ data = client.serialize()
 client.load(data)
 ```
 
+!!! warning "Cardinality rules and flat storage"
+    `MetaseedClient` stores children as a flat sibling list keyed by parent id; it
+    does not populate the parent's nested list field. Profiles with list
+    **cardinality** rules (e.g. "Investigation must have ≥1 study") therefore
+    report the parent as invalid even after a child is created with
+    `parent_id=...`, because `serialize()` emits an empty list on the parent.
+    Validate the serialized nested tree if you rely on such rules. Tracked as a
+    separate issue.
+
 See [MetaseedClient API](../api/client.md) for complete documentation.
 
 ### Interactive Facade (Jupyter/Notebooks)

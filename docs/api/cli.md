@@ -162,6 +162,40 @@ Available merge strategies:
 | `least_restrictive` | required=False wins, looser constraints |
 | `prefer_<profile>` | Always prefer a specific profile (e.g., `prefer_miappe/1.1`) |
 
+### check
+
+Validate a dataset with cross-entity reference-integrity checking (stricter than
+`validate`, which checks a single entity).
+
+```bash
+metaseed check dataset.json
+```
+
+### example
+
+Export the example dataset bundled with a profile.
+
+```bash
+metaseed example miappe
+```
+
+### mcp
+
+Start the MCP (Model Context Protocol) server, exposing metaseed's tools to an
+MCP client.
+
+```bash
+metaseed mcp
+```
+
+### migrate
+
+Migrate stored datasets to use `unique_id` for entity references.
+
+```bash
+metaseed migrate
+```
+
 ## Global Options
 
 | Option | Description |

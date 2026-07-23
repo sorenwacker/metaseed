@@ -176,7 +176,7 @@ flowchart TB
 
 ## Entity-Relationship Diagram
 
-The following ERD shows all 121 fields across the 20 ISA entities: 53 scalar fields shown in entity boxes, 68 relationship fields shown as lines between entities. Fields marked with `PK` are primary keys.
+The following ERD shows a representative subset of the 139 fields across the 22 ISA entities (67 scalar, 72 relationship): scalar fields shown in entity boxes, relationship fields shown as lines between entities. Fields marked with `PK` are primary keys.
 
 ```mermaid
 erDiagram
@@ -313,7 +313,7 @@ erDiagram
 
     Assay ||--o{ DataFile : data_files
     Assay ||--o{ Process : process_sequence
-    Assay ||--o{ Sample : samples
+    Assay }o--o{ Sample : samples
     Assay ||--o| OntologyAnnotation : measurement_type
     Assay ||--o| OntologyAnnotation : technology_type
     Assay ||--o{ Comment : comments
@@ -371,7 +371,7 @@ erDiagram
     Process ||--o{ Comment : comments
 
     DataFile ||--o{ Sample : generated_from
-    DataFile ||--o{ LabeledExtract : derives_from
+    DataFile }o--o{ LabeledExtract : derives_from
     DataFile ||--o{ Comment : comments
 
     OntologyAnnotation ||--o| OntologySource : term_source
@@ -426,6 +426,6 @@ Official ISA specifications and resources:
 from metaseed import isa
 
 i = isa()
-source = i.Source(unique_id="SRC001", name="Patient 1")
-sample = i.Sample(unique_id="SAM001", name="Blood sample", derives_from=[source])
+source = i.Source(study_id="STU001", name="Patient 1")
+sample = i.Sample(study_id="STU001", name="Blood sample", derives_from=["Patient 1"])
 ```

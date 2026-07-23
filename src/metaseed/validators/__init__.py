@@ -20,6 +20,7 @@ from metaseed.validators.dataset import DatasetValidationResult, DatasetValidato
 from metaseed.validators.engine import ValidationEngine, create_engine_for_entity
 from metaseed.validators.rules import (
     DateRangeRule,
+    PatternRule,
     RequiredFieldsRule,
     UniqueIdPatternRule,
 )
@@ -28,6 +29,7 @@ __all__ = [
     "DatasetValidationResult",
     "DatasetValidator",
     "DateRangeRule",
+    "PatternRule",
     "RequiredFieldsRule",
     "UniqueIdPatternRule",
     "ValidationCheck",

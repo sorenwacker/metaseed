@@ -6,7 +6,7 @@ This module provides the validation engine that coordinates rule execution.
 from typing import Any, Self
 
 from metaseed.specs.loader import SpecLoader, SpecLoadError
-from metaseed.specs.schema import ValidationRuleSpec
+from metaseed.specs.schema import FieldType, ValidationRuleSpec
 from metaseed.validators.base import ValidationCheck, ValidationError, ValidationRule
 from metaseed.validators.rules import (
     ConditionalRule,
@@ -14,10 +14,17 @@ from metaseed.validators.rules import (
     DateRangeRule,
     EntityReferenceRule,
     ListCardinalityRule,
+    PatternRule,
     RequiredFieldsRule,
     UniqueIdPatternRule,
     UniquenessRule,
 )
+
+# Field types whose rule-level ``pattern`` the model factory cannot enforce via a
+# Pydantic pattern (uri -> AnyUrl; ontology_term). For these the engine adds a
+# PatternRule; string patterns are already merged onto the field (see
+# ``loader._merge_rule_constraints_into_fields``).
+_ENGINE_PATTERN_TYPES = frozenset({FieldType.URI, FieldType.ONTOLOGY_TERM})
 
 
 class ValidationEngine:
@@ -465,17 +472,45 @@ def create_engine_for_entity(
             if entity_lower in profile_entities:
                 entity_found = True
 
+            entity_def = next(
+                (
+                    e
+                    for n, e in profile_spec.entities.items()
+                    if n.lower() == entity_lower
+                ),
+                None,
+            )
+            field_types = (
+                {f.name: f.type for f in entity_def.fields} if entity_def else {}
+            )
+
             for rule_spec in profile_spec.validation_rules:
-                if _applies_to_entity(rule_spec, entity):
-                    rule = _create_rule_from_spec(rule_spec, available_refs)
-                    # Reference-integrity rules need the set of IDs that exist
-                    # elsewhere in the dataset, which a single-entity engine does
-                    # not have (no caller passes ``available_refs`` here). Such a
-                    # rule could therefore only ever no-op or false-positive, so
-                    # skip it: dataset-scope reference integrity is enforced by
-                    # DatasetValidator._validate_references instead.
-                    if rule and not isinstance(rule, EntityReferenceRule):
-                        engine.add_rule(rule)
+                if not _applies_to_entity(rule_spec, entity):
+                    continue
+                # A pattern on a uri/ontology_term field can't be a Pydantic
+                # constraint, so enforce it here rather than let it silently drop.
+                if (
+                    rule_spec.pattern
+                    and rule_spec.field
+                    and field_types.get(rule_spec.field) in _ENGINE_PATTERN_TYPES
+                ):
+                    engine.add_rule(
+                        PatternRule(
+                            field=rule_spec.field,
+                            pattern=rule_spec.pattern,
+                            message=rule_spec.message or rule_spec.description or None,
+                        )
+                    )
+                    continue
+                rule = _create_rule_from_spec(rule_spec, available_refs)
+                # Reference-integrity rules need the set of IDs that exist
+                # elsewhere in the dataset, which a single-entity engine does
+                # not have (no caller passes ``available_refs`` here). Such a
+                # rule could therefore only ever no-op or false-positive, so
+                # skip it: dataset-scope reference integrity is enforced by
+                # DatasetValidator._validate_references instead.
+                if rule and not isinstance(rule, EntityReferenceRule):
+                    engine.add_rule(rule)
     except SpecLoadError:
         # If profile not found, continue with basic rules only
         pass

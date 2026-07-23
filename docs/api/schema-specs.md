@@ -208,10 +208,14 @@ fields:
 | `boolean` | True/false | `bool` | `true` |
 | `date` | ISO 8601 date | `datetime.date` | `"2024-03-15"` |
 | `datetime` | ISO 8601 datetime | `datetime.datetime` | `"2024-03-15T14:30:00"` |
-| `uri` | Valid URI/URL | `pydantic.HttpUrl` | `"https://example.org"` |
+| `uri` | Valid URI/URL | `pydantic.AnyUrl` | `"https://example.org"` |
 | `ontology_term` | Ontology reference | `str` | `"GO:0008150"` |
-| `list` | Collection | `list[T]` | See below |
-| `entity` | Single nested object | nested model | See below |
+| `list` | Collection | `list[Any]` | See below |
+| `entity` | Single nested object | `Any` | See below |
+
+`uri` maps to `AnyUrl` (not `HttpUrl`), so `ftp://` and `mailto:` are accepted.
+`list` is `list[Any]` — the `items` type does not enter the annotation; `entity`
+maps to `Any`, not a generated nested model.
 
 ### Ontology Term Fields
 
@@ -377,10 +381,19 @@ Common patterns:
 
 | Field Type | Available Constraints |
 |------------|----------------------|
-| `string`, `uri` | pattern, min_length, max_length, enum |
+| `string` | pattern, min_length, max_length, enum |
 | `integer`, `float` | minimum, maximum |
 | `list` | min_items, max_items |
-| `boolean`, `date`, `datetime`, `entity`, `ontology_term` | none |
+| `uri`, `ontology_term`, `boolean`, `date`, `datetime`, `entity` | none (field-level) |
+
+A field-level `pattern` **constraint** is applied by the model factory only to
+`string` fields — Pydantic cannot compile a regex constraint onto a `uri`
+(`AnyUrl`) field, so declaring one there makes the field reject every value. A
+`pattern` on a `uri`/`ontology_term` field is instead enforced by a **rule** (see
+[Validation Rules](#validation-rules)): the validation engine runs a
+`PatternRule` for such rules, while a rule `pattern` on a `string` field is merged
+onto the field and enforced by Pydantic. A `pattern` rule on a `date`/`datetime`
+field is not enforced (the field's own date parsing applies).
 
 ## Relationships
 
@@ -697,6 +710,35 @@ Link fields to ontology terms for semantic interoperability:
     minimum: -180.0
     maximum: 180.0
 ```
+
+## Load-bearing behaviors and limitations
+
+Behaviors that affect how specs are interpreted but are easy to miss:
+
+- **`codename`** (on `FieldSpec`) — an alternative identifier used for import
+  column matching (`agent/mapping.py`), MCP field info, and ISA-Tab export. Its
+  format varies by profile (camelCase in MIAPPE, CURIEs in DiSSCo, XML tags in
+  ENA). Fields with no `codename` map source columns less well.
+- **`seek`** (on `EntityDefSpec`, a `SeekEntityConfig`) — routing metadata for the
+  SEEK exporter (e.g. an entity's JERM role). Absent from most profiles.
+- **`UniqueIdPatternRule`** — the engine automatically imposes
+  `^[A-Za-z0-9_-]+$` on any field named `unique_id` **or** `identifier`. This
+  conflicts with DOI- or URI-shaped identifiers; name such a field something else
+  or override with an explicit `pattern` rule.
+- **Rule-level pattern merge** — a `pattern`/`enum`/`minimum`/`maximum` declared on
+  a `validation_rule` is copied onto the matching field for Pydantic enforcement
+  **only when the field is `string`/`integer`/`float`**; on other field types the
+  merge is skipped (uri/ontology_term patterns are enforced by the engine
+  instead, dates by the field's own parsing).
+- **Not yet implemented** — `type: reference` rules and the field-level
+  `unique_within` attribute are parsed but not enforced (dataset-scope reference
+  integrity is handled separately by `DatasetValidator`; use a rule-level
+  `unique_within` for uniqueness). An unknown rule `type:` raises `ValueError`
+  rather than being silently ignored.
+- **Defaults** — a profile's `entities` and an entity's `fields` are optional
+  (default `{}` / `[]`); `enum` on a `list` field builds `list[Literal[...]]`; and
+  every `required: true` field also gets an engine-level required-fields check on
+  top of the Pydantic one.
 
 ## File Organization
 

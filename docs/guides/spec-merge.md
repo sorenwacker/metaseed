@@ -132,9 +132,13 @@ graph_data = visualizer.build_diff_graph(result)
 |---------|-------------|
 | `isa/1.0` | Investigation-Study-Assay framework |
 | `miappe/1.1`, `miappe/1.2` | Plant phenotyping metadata |
+| `miappe-htp/1.0` | High-throughput plant phenotyping |
 | `jerm/1.0` | Just Enough Results Model (FAIRDOM-SEEK) |
 | `darwin-core/1.0` | Biodiversity data standard |
 | `dissco/0.4` | Digital Specimen standard |
+| `ena/1.0` | European Nucleotide Archive submissions |
+| `metabolights/1.0` | Metabolomics studies |
+| `pride/1.0` | Proteomics (ProteomeXchange) datasets |
 
 ## Diff Types
 

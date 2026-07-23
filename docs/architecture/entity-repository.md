@@ -17,7 +17,7 @@ graph TB
     end
 
     subgraph Repositories["Repository Implementations"]
-        ASA[AppStateAdapter]
+        MER[MemoryEntityRepository]
         FER[FileEntityRepository]
         DBR[DatabaseRepository - Future]
     end
@@ -32,11 +32,11 @@ graph TB
     MCP --> ES
     Hub --> ES
 
-    ES --> ASA
+    ES --> MER
     ES --> FER
     ES --> DBR
 
-    ASA --> MEM
+    MER --> MEM
     FER --> FILE
     DBR --> DB
 ```
@@ -48,7 +48,7 @@ graph TB
 | **EntityRepository** | `metaseed.repositories.base` | Abstract interface for entity storage |
 | **EntityData** | `metaseed.repositories.base` | Transfer object with hierarchy info |
 | **FileEntityRepository** | `metaseed.repositories.file` | JSON file-based persistence |
-| **AppStateAdapter** | `metaseed.ui.services.entities` | Wraps AppState as repository |
+| **MemoryEntityRepository** | `metaseed.repositories.memory` | Wraps in-memory AppState as a repository |
 | **EntityService** | `metaseed.ui.services.entities` | Business logic layer |
 
 ## EntityRepository Interface
@@ -89,14 +89,15 @@ class EntityData:
 
 ### UI with AppState
 
-The UI uses `AppStateAdapter` to wrap the in-memory `AppState`:
+The UI uses `MemoryEntityRepository` to wrap the in-memory `AppState`:
 
 ```python
 from metaseed.ui.state import AppState
-from metaseed.ui.services.entities import EntityService, AppStateAdapter
+from metaseed.repositories import MemoryEntityRepository
+from metaseed.ui.services.entities import EntityService
 
 state = AppState(profile="miappe")
-repo = AppStateAdapter(state)
+repo = MemoryEntityRepository(state)
 service = EntityService(repo)
 
 # Create entity
@@ -198,28 +199,31 @@ repo._save()  # Write to file
 repo.reload()  # Read from file
 ```
 
-## Backwards Compatibility
+## Service Operations
 
-Module-level functions provide backwards compatibility:
+All entity operations are methods on `EntityService`; there are no module-level
+functions. Construct a service with a repository and call its methods:
 
 ```python
-from metaseed.ui.services.entities import (
-    set_state,      # Initialize with AppState
-    list_entities,  # List all entities
-    create_entity,  # Create entity
-    update_entity,  # Update entity
-    delete_entity,  # Delete entity
-    get_tree,       # Get tree structure
-)
+from metaseed.ui.state import AppState
+from metaseed.repositories import MemoryEntityRepository
+from metaseed.ui.services.entities import EntityService
 
-# Old code still works
-set_state(app_state)
-result = create_entity("Investigation", {"title": "Test"})
+service = EntityService(MemoryEntityRepository(AppState(profile="miappe")))
+
+result = service.create_entity("Investigation", {"title": "Test"})
+entities = service.list_entities()          # all entities, grouped by type
+tree = service.get_tree()                   # nested tree structure
+service.update_entity(result["id"], {"title": "Renamed"})
+service.delete_entity(result["id"])
 ```
 
 ## Design Principles
 
-1. **Dependency Injection**: Repository passed to service, not global state
-2. **Interface Segregation**: Small, focused `EntityRepository` interface
+The repository layer, shared by both the entity and dataset repositories,
+follows these principles:
+
+1. **Dependency Injection**: Repository passed to the service/manager, not global state
+2. **Interface Segregation**: Small, focused repository interfaces
 3. **Single Responsibility**: Service handles business logic, repository handles persistence
 4. **Open/Closed**: New backends added without modifying existing code

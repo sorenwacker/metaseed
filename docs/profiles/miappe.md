@@ -1,4 +1,4 @@
-# MIAPPE v1.1
+# MIAPPE v1.2
 
 MIAPPE (Minimum Information About Plant Phenotyping Experiments) is a metadata standard for describing plant phenotyping studies. It was developed by the plant science community to enable consistent reporting of field trials, greenhouse experiments, and growth chamber studies.
 
@@ -95,7 +95,7 @@ flowchart TB
 
 ## Entity-Relationship Diagram
 
-The following ERD shows all 138 fields across the 14 MIAPPE entities: 123 scalar fields shown in entity boxes, 15 relationship fields shown as lines between entities. Fields marked with `PK` are primary keys, `FK` indicates foreign keys.
+The following ERD shows a representative subset of the 163 fields across the 14 MIAPPE v1.2 entities (147 scalar, 16 relationship). Fields marked with `PK` are primary keys, `FK` indicates foreign keys.
 
 ```mermaid
 erDiagram
@@ -275,7 +275,7 @@ erDiagram
         float longitude
     }
 
-    Investigation ||--o{ Study : contains
+    Investigation ||--o{ Study : studies
     Investigation ||--o{ Person : contacts
     Study ||--o{ Person : persons
     Study ||--o| Location : geographic_location
