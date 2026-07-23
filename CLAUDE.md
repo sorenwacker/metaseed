@@ -52,3 +52,50 @@ Field types: `string`, `integer`, `float`, `boolean`, `date`, `datetime`, `uri`,
 - uv for dependency management
 - pytest for testing
 - MkDocs for documentation
+
+## Development Cycle
+
+Conventions that keep a green CI meaning "correct". Each is grounded in a defect
+that a passing suite failed to catch (see issue #139 and its follow-ups).
+
+### Tests must be able to fail
+
+- Before committing a test, confirm it goes red against the unfixed code. A test
+  that passes on broken output is worse than none: a conformance test once
+  certified a header-only MetaboLights export as valid, and an importer produced
+  zero samples under a passing test.
+- For adapters and validators, assert on content, not on existence or counts.
+- Do not record a bug or review finding without a runnable reproduction. An
+  unreproducible finding is a hypothesis.
+
+### Gates, not cleanup
+
+- Drift between two things that must agree is caught by a test, not a periodic
+  sweep. Existing gates in `tests/test_docs/`: every entity and field named in a
+  profile page's mermaid diagram must exist in the loaded `ProfileSpec`, every
+  fenced example must execute, and every `metaseed` import shown in the docs must
+  resolve. Keep these green rather than editing around them.
+- Proposed, not yet implemented: a per-profile
+  create -> serialize -> load -> validate round-trip test (would have caught the
+  #141 cardinality bug and the reload-fidelity gap); a public-API surface
+  snapshot guarding the metaseed-hub contract (#68); an ERD relationship-edge
+  check (a page edge must name a real nested field whose `items` is the target).
+
+### Local must match CI
+
+- `make test` and CI must exclude the same markers. CI runs
+  `-m "not selenium and not network"`; keep the Makefile in step so the local
+  default is neither slower nor less hermetic than CI.
+- `network`-marked tests hit live third-party APIs (EBI/MetaboLights) and are
+  excluded from CI, so they give no regression protection until recorded as
+  fixtures. Do not rely on them as the only cover for an adapter.
+- Formatting is gated in CI (`ruff format --check`). The pre-commit `ruff` pin
+  must match the `ruff` version resolved in `uv.lock`; drift produces repo-wide
+  reformat commits.
+
+### Commits and PRs
+
+- Atomic commits: never mix a formatting reflow with substantive content. A
+  `style:` commit that also adds code or docs hides that content from review.
+- Keep PRs small and current; rebase onto `main` rather than letting a branch
+  drift behind it.
