@@ -17,10 +17,25 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from metaseed.isatab.reader import (
+    read_data_files,
+    read_metabolites,
+    read_rows,
+    read_samples,
+)
+
 if TYPE_CHECKING:
     from metaseed.api.client import MetaseedClient
 
-__all__ = ["assay_filename", "study_filename", "to_isatab"]
+__all__ = [
+    "assay_filename",
+    "read_data_files",
+    "read_metabolites",
+    "read_rows",
+    "read_samples",
+    "study_filename",
+    "to_isatab",
+]
 
 TAB = "\t"
 
