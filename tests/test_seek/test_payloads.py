@@ -77,6 +77,15 @@ def test_sample_attribute_omits_cv_and_linked_by_default():
     }
 
 
+def test_sample_attribute_carries_pid_when_given():
+    attr = payloads.sample_attribute(
+        title="organism", attribute_type_id=8, pid="http://schema.org/organism"
+    )
+    assert attr["pid"] == "http://schema.org/organism"
+    # ...and omits it entirely otherwise (blank PIDs are meaningless to SEEK).
+    assert "pid" not in payloads.sample_attribute(title="n", attribute_type_id=8)
+
+
 def test_sample_attribute_carries_cv_pos_and_linked():
     attr = payloads.sample_attribute(
         title="organism",

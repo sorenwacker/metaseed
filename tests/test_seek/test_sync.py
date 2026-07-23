@@ -87,23 +87,87 @@ def test_sync_creates_isa_hierarchy_and_threads_ids():
     assert study_call["investigation_id"] == inv_id
     sample_call = next(c for k, c in seek.calls if k == "sample")
     assert sample_call["sample_type_id"] == "st-9"
-    assert sample_call["data"]["name"] == "sample-a"
+    # a core identity field (name) is routed onto the Sample Type's Title attribute
+    assert sample_call["data"]["Title"] == "sample-a"
 
 
-def test_sample_data_keeps_scalar_lists_drops_nested():
+def test_sample_data_routes_core_fields_and_keeps_scalar_lists():
     from metaseed.seek.sync import _sample_data
 
     data = _sample_data(
         {
             "_node_id": "x",  # metadata key dropped
-            "name": "s1",
+            "unique_id": "s1",  # core identity -> Title
+            "description": "d",  # core -> Description
             "empty": "",  # empty dropped
+            "organism": "human",  # non-core field kept under its own name
             "tags": ["a", "b"],  # scalar list kept (CV list)
             "nested": {"k": "v"},  # non-scalar dropped
             "mixed": ["a", {"k": 1}],  # list with a dict dropped
         }
     )
-    assert data == {"name": "s1", "tags": ["a", "b"]}
+    assert data == {
+        "Title": "s1",
+        "Description": "d",
+        "organism": "human",
+        "tags": ["a", "b"],
+    }
+
+
+def test_sync_consumes_an_in_memory_spec_dataset():
+    # A dataset built via ``from_spec`` (e.g. one produced by the SEEK importer)
+    # has no installed profile file. sync must read its in-memory ProfileSpec
+    # rather than calling SpecLoader unconditionally, which would raise
+    # SpecLoadError for the derived "seek-imported" profile.
+    spec = {
+        "name": "seek-imported",
+        "version": "1.0",
+        "root_entity": "Investigation",
+        "entities": {
+            "Investigation": {
+                "fields": [
+                    {"name": "identifier", "type": "string", "required": True},
+                    {"name": "title", "type": "string"},
+                    {"name": "studies", "type": "list", "items": "Study"},
+                ],
+                "seek": {"role": "Investigation"},
+            },
+            "Study": {
+                "fields": [{"name": "identifier", "type": "string", "required": True}],
+                "seek": {"role": "Study"},
+            },
+        },
+    }
+    dataset = MetaseedClient.from_spec(spec)
+    inv = dataset.create_entity(
+        "Investigation",
+        {"identifier": "INV1", "title": "Imported"},
+        skip_validation=True,
+    )
+    dataset.create_entity(
+        "Study", {"identifier": "STU1"}, parent_id=inv.id, skip_validation=True
+    )
+
+    seek = _FakeSeek()
+    result = sync_dataset_to_seek(
+        seek,  # type: ignore[arg-type]
+        dataset,
+        project_id="1",
+        sample_type_ids={},
+    )
+    assert [c[0] for c in seek.calls] == ["investigation", "study"]
+    assert not result.errors
+
+
+def test_sample_data_core_collapse_is_priority_ordered_not_dict_ordered():
+    from metaseed.seek.sync import _sample_data
+
+    # ``title`` appears first in dict order but ``identifier`` outranks it, so
+    # Title takes the identifier value regardless of insertion order.
+    assert _sample_data({"title": "label", "identifier": "ID-1"})["Title"] == "ID-1"
+    assert _sample_data({"identifier": "ID-1", "title": "label"})["Title"] == "ID-1"
+    # unique_id outranks identifier.
+    assert _sample_data({"identifier": "ID-1", "unique_id": "U-1"})["Title"] == "U-1"
 
 
 def test_sync_skips_sample_without_provisioned_type():

@@ -98,6 +98,7 @@ def sample_attribute(
     required: bool = False,
     is_title: bool = False,
     pos: int | None = None,
+    pid: str | None = None,
     sample_controlled_vocab_id: str | int | None = None,
     allow_cv_free_text: bool = False,
     linked_sample_type_id: str | int | None = None,
@@ -106,6 +107,12 @@ def sample_attribute(
 
     ``attribute_type_id`` is a SEEK base attribute-type id (e.g. 8 = String,
     4 = Integer, 7 = Text), as listed by ``GET /sample_attribute_types``.
+
+    ``pid`` is the attribute's persistent identifier (a property URI). SEEK's
+    FAIR-Data-Station import matches an RDF sample to a Sample Type by exact
+    string equality of attribute PIDs, discarding blank ones — so an attribute a
+    sample's field should populate on import must carry the *same* URI the data
+    RDF emits for that field (``http://schema.org/<field>``).
 
     ``sample_controlled_vocab_id`` binds a Controlled Vocabulary to the attribute
     and ``linked_sample_type_id`` binds another Sample Type. SEEK's
@@ -121,6 +128,8 @@ def sample_attribute(
     }
     if pos is not None:
         attribute["pos"] = pos
+    if pid is not None:
+        attribute["pid"] = pid
     if sample_controlled_vocab_id is not None:
         attribute["sample_controlled_vocab_id"] = str(sample_controlled_vocab_id)
         attribute["allow_cv_free_text"] = allow_cv_free_text
@@ -138,7 +147,10 @@ def sample_type_payload(
     """Build a POST body for ``/sample_types`` (a sample schema, per project).
 
     ``attributes`` is a list of :func:`sample_attribute` entries; exactly one
-    should set ``is_title=True``.
+    should set ``is_title=True``. The Sample Type is created private (SEEK's
+    default); its contributor can still view it, which is what the
+    FAIR-Data-Station import — run by the same person who provisioned it —
+    requires. Broader sharing is subject to the instance's sharing limits.
     """
     return _document(
         "sample_types",

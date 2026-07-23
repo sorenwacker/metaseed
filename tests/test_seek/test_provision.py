@@ -74,24 +74,39 @@ def test_plan_only_includes_sample_role_entities():
     assert plan.sample_types[0].title == "testprofile Sample"
 
 
-def test_plan_maps_field_types_and_skips_nested():
+def test_plan_maps_field_types_and_skips_nested_and_core():
     plan = build_provisioning_plan(_profile())
     attrs = {a.title: a for a in plan.sample_types[0].attributes}
     assert "source" not in attrs  # nested entity dropped
-    assert attrs["identifier"].attribute_type_title == "String"
+    assert "identifier" not in attrs  # core identity carried by the Title attribute
+    assert attrs["Description"].attribute_type_title == "String"
     assert attrs["count"].attribute_type_title == "Integer"
     assert attrs["depth"].attribute_type_title == "Real number"
     assert attrs["collected"].attribute_type_title == "Date"
     assert attrs["organism"].attribute_type_title == "Controlled Vocabulary"
 
 
-def test_plan_marks_identifier_as_title_and_positions():
+def test_plan_leads_with_title_and_description():
     plan = build_provisioning_plan(_profile())
     attrs = plan.sample_types[0].attributes
+    assert attrs[0].title == "Title" and attrs[1].title == "Description"
     title_attrs = [a for a in attrs if a.is_title]
-    assert len(title_attrs) == 1 and title_attrs[0].title == "identifier"
-    assert title_attrs[0].required is True  # title is forced required
-    assert [a.pos for a in attrs] == [1, 2, 3, 4, 5]  # 1-based, contiguous
+    assert len(title_attrs) == 1 and title_attrs[0].title == "Title"
+    assert title_attrs[0].required is True
+    assert attrs[1].is_title is False  # Description is not the title attribute
+    # Title, Description, then organism/count/depth/collected — 1-based, contiguous
+    assert [a.pos for a in attrs] == [1, 2, 3, 4, 5, 6]
+
+
+def test_plan_sets_schema_org_pid_on_field_attributes_only():
+    plan = build_provisioning_plan(_profile())
+    attrs = {a.title: a for a in plan.sample_types[0].attributes}
+    # PID must equal the URI the data RDF emits for that field, so an FDS import
+    # matches the sample to this Sample Type.
+    assert attrs["count"].pid == "http://schema.org/count"
+    assert attrs["organism"].pid == "http://schema.org/organism"
+    # Core Title/Description are matched by attribute title, not PID.
+    assert attrs["Title"].pid is None and attrs["Description"].pid is None
 
 
 def test_plan_builds_cv_from_enum():
@@ -179,6 +194,18 @@ def test_execute_creates_cv_before_sample_type_and_threads_id():
     ]
 
 
+def test_execute_posts_schema_org_pids():
+    plan = build_provisioning_plan(_profile())
+    seek = _FakeSeek(existing_cvs={}, existing_sample_types={})
+    execute_provisioning_plan(seek, plan, project_id="1")  # type: ignore[arg-type]
+
+    st_call = next(c[1] for c in seek.calls if c[0] == "create_sample_type")
+    count = next(a for a in st_call["attributes"] if a["title"] == "count")
+    assert count["pid"] == "http://schema.org/count"  # else FDS import can't match
+    title = next(a for a in st_call["attributes"] if a["title"] == "Title")
+    assert "pid" not in title  # core Title has no PID
+
+
 def test_execute_isolates_a_failing_create():
     # A SEEK failure on one create records an error and does not abort the rest.
     plan = build_provisioning_plan(_profile())
@@ -204,7 +231,7 @@ def test_execute_reuses_existing_and_posts_nothing():
     )
     result = execute_provisioning_plan(seek, plan, project_id="1")  # type: ignore[arg-type]
 
-    assert seek.calls == []  # nothing created
+    assert seek.calls == []  # nothing created; existing type reused as-is
     assert result.cv_ids["testprofile Sample.organism"] == "99"
     assert result.sample_type_ids["Sample"] == "77"
     assert result.created == []

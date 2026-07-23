@@ -30,7 +30,7 @@ from metaseed.specs.schema import FieldType
 if TYPE_CHECKING:
     from metaseed.seek.client import SeekClient
     from metaseed.services.ontology import OntologyService
-    from metaseed.specs.schema import EntityDefSpec, FieldSpec, ProfileSpec
+    from metaseed.specs.schema import FieldSpec, ProfileSpec
 
 # metaseed scalar FieldType -> SEEK base sample-attribute-type title. Titles are
 # resolved to instance ids at execution via ``client.sample_attribute_type_id``.
@@ -51,8 +51,16 @@ _CV_TYPE_TITLE = "Controlled Vocabulary"
 _CV_LIST_TYPE_TITLE = "Controlled Vocabulary List"
 _LIST_FALLBACK_TITLE = "Text"  # a list of primitives with no enum -> free text
 
-# Field names (in order) preferred as a Sample Type's title attribute.
-_TITLE_FIELD_NAMES = ("identifier", "unique_id", "name", "title")
+# Base of the property URI SEEK matches an FDS-imported sample to a Sample Type
+# attribute by; must equal the ``schema:`` namespace the data RDF emits
+# (:mod:`metaseed.seek.fairds`).
+_PID_BASE = "http://schema.org/"
+
+# Fields SEEK handles as a sample's core Title/Description rather than as a
+# PID-matched attribute of their own: the identifier maps to the ``is_title``
+# ``Title`` attribute, the description to ``Description``. Kept in sync with
+# ``fairds._CORE_FIELDS``.
+_CORE_FIELDS = frozenset({"identifier", "unique_id", "title", "name", "description"})
 
 
 @dataclass(frozen=True)
@@ -84,6 +92,7 @@ class AttributePlan:
     required: bool
     is_title: bool
     pos: int
+    pid: str | None = None  # property URI SEEK's FDS import matches samples by
     cv_title: str | None = None  # -> resolved to sample_controlled_vocab_id at exec
     allow_cv_free_text: bool = False
 
@@ -157,23 +166,17 @@ def _cv_terms(
     return tuple(terms)
 
 
-def _title_field_index(entity: EntityDefSpec, scalar_idx: list[int]) -> int | None:
-    """Index (into the entity's fields) of the attribute to mark ``is_title``.
-
-    Prefers a scalar field named like an identifier; else the first scalar field.
-    Returns ``None`` if the entity has no scalar (attribute-eligible) field.
-    """
-    by_name = {entity.fields[i].name: i for i in scalar_idx}
-    for name in _TITLE_FIELD_NAMES:
-        if name in by_name:
-            return by_name[name]
-    return scalar_idx[0] if scalar_idx else None
-
-
 def build_provisioning_plan(
     profile: ProfileSpec, *, ontology: OntologyService | None = None
 ) -> ProvisioningPlan:
     """Project ``profile`` onto SEEK CVs + Sample Types (pure, deterministic).
+
+    Every Sample Type leads with a ``Title`` (``is_title``) and ``Description``
+    attribute — the two SEEK's FAIR-Data-Station importer populates from a
+    sample's core annotations — followed by one PID-carrying attribute per
+    non-core scalar field. A field's PID is ``http://schema.org/<field>``, the
+    same URI :func:`metaseed.seek.fairds.to_fair_data_station_rdf` emits, so an
+    imported sample matches the provisioned type by attribute PID.
 
     Args:
         profile: The metaseed profile to provision.
@@ -189,14 +192,33 @@ def build_provisioning_plan(
 
     for entity_name in sorted(sample_role_entities(profile)):
         entity = profile.entities[entity_name]
-        # Attribute-eligible fields are the non-nested (scalar/list-of-scalar) ones.
-        scalar_idx = [i for i, f in enumerate(entity.fields) if not f.is_nested()]
-        title_idx = _title_field_index(entity, scalar_idx)
 
-        attributes: list[AttributePlan] = []
-        for pos, i in enumerate(scalar_idx, start=1):
+        attributes: list[AttributePlan] = [
+            AttributePlan(
+                title="Title",
+                attribute_type_title="String",
+                required=True,
+                is_title=True,
+                pos=1,
+            ),
+            AttributePlan(
+                title="Description",
+                attribute_type_title="String",
+                required=False,
+                is_title=False,
+                pos=2,
+            ),
+        ]
+        # Non-core, non-nested (scalar/list-of-scalar) fields become PID-matched
+        # attributes; core identity/description fields are carried by Title /
+        # Description above.
+        field_idx = [
+            i
+            for i, f in enumerate(entity.fields)
+            if not f.is_nested() and f.name not in _CORE_FIELDS
+        ]
+        for pos, i in enumerate(field_idx, start=len(attributes) + 1):
             field = entity.fields[i]
-            is_title = i == title_idx
             cv_title: str | None = None
             if _is_cv_field(field):
                 cv_title = _cv_title(profile, entity_name, field)
@@ -212,9 +234,10 @@ def build_provisioning_plan(
                 AttributePlan(
                     title=field.name,
                     attribute_type_title=_attribute_type_title(field),
-                    required=field.required or is_title,
-                    is_title=is_title,
+                    required=field.required,
+                    is_title=False,
                     pos=pos,
+                    pid=f"{_PID_BASE}{field.name}",
                     cv_title=cv_title,
                 )
             )
@@ -291,13 +314,6 @@ def execute_provisioning_plan(
 
     for st in plan.sample_types:
         try:
-            existing = client.find_sample_type_id_by_title(
-                st.title, project_id=project_id
-            )
-            if existing is not None:
-                result.sample_type_ids[st.entity_type] = existing
-                result.reused.append(f"Sample Type: {st.title}")
-                continue
             attributes: list[dict[str, object]] = []
             for attr in st.attributes:
                 if attr.attribute_type_title not in type_id_cache:
@@ -312,10 +328,26 @@ def execute_provisioning_plan(
                         required=attr.required,
                         is_title=attr.is_title,
                         pos=attr.pos,
+                        pid=attr.pid,
                         sample_controlled_vocab_id=attr_cv_id,
                         allow_cv_free_text=attr.allow_cv_free_text,
                     )
                 )
+
+            existing = client.find_sample_type_id_by_title(
+                st.title, project_id=project_id
+            )
+            if existing is not None:
+                # Reuse an existing Sample Type as-is. Editing its attributes over
+                # the API is not attempted: a PATCH replaces the whole attribute
+                # list, which would drop fields SEEK sets that we do not read back
+                # (allow_cv_free_text, description, unit, links) and can duplicate
+                # is_title/pos. Adding a column to a provisioned type is left to a
+                # SEEK admin.
+                result.sample_type_ids[st.entity_type] = existing
+                result.reused.append(f"Sample Type: {st.title}")
+                continue
+
             st_id = client.create_sample_type(
                 title=st.title, project_id=project_id, attributes=attributes
             )
