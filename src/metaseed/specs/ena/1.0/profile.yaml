@@ -6,7 +6,7 @@
 # - https://ena-docs.readthedocs.io/en/latest/submit/general-guide/metadata.html
 # - https://github.com/enasequence/webin-xml
 
-spec_version: '0.5'
+spec_version: '0.6'
 version: "1.0"
 name: ena
 display_name: ENA
@@ -1080,6 +1080,7 @@ entities:
         reference: Run.alias
 
       - name: filename
+        is_label: true
         codename: filename
         type: string
         required: true

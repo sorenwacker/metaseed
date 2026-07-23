@@ -26,6 +26,13 @@ class FieldInfo:
         ontology_term: Optional ontology term reference.
         items: For list/entity types, the type of items.
         constraints: Optional validation constraints dict.
+        example: Optional illustrative value (#98).
+        options: Optional allowed values (controlled vocabulary), falling back to
+            ``constraints.enum`` when the field declares no explicit options (#98).
+        unit: Optional expected unit (#98).
+        label: Optional human-readable label distinct from ``name`` (#98).
+        tier: Optional advisory completeness tier
+            ("required"/"recommended"/"optional") (#98).
     """
 
     name: str
@@ -35,6 +42,11 @@ class FieldInfo:
     ontology_term: str | None = None
     items: str | None = None
     constraints: dict[str, Any] | None = None
+    example: str | int | float | bool | list[Any] | None = None
+    options: list[str] | None = None
+    unit: str | None = None
+    label: str | None = None
+    tier: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

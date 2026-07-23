@@ -102,6 +102,30 @@ class EntityHelper:
         return [f.name for f in self._spec.fields]
 
     @property
+    def fields_by_tier(self: Self) -> dict[str, list[str]]:
+        """Field names grouped into required / recommended / optional (#98).
+
+        A completeness indicator can read this instead of hard-coding per-profile
+        field lists. ``required`` remains the validation source of truth: any
+        field with ``required: true`` lands in ``required`` (as does a field
+        whose advisory ``tier`` is ``"required"``). Otherwise the advisory
+        ``tier`` decides, defaulting to ``optional``.
+        """
+        tiers: dict[str, list[str]] = {
+            "required": [],
+            "recommended": [],
+            "optional": [],
+        }
+        for f in self._spec.fields:
+            if f.required or f.tier == "required":
+                tiers["required"].append(f.name)
+            elif f.tier == "recommended":
+                tiers["recommended"].append(f.name)
+            else:
+                tiers["optional"].append(f.name)
+        return tiers
+
+    @property
     def nested_fields(self: Self) -> dict[str, str]:
         """Fields that contain nested entities. Returns {field_name: entity_type}."""
         nested = {}
@@ -112,6 +136,26 @@ class EntityHelper:
             elif f.type == FieldType.ENTITY and f.items:
                 nested[f.name] = f.items
         return nested
+
+    @property
+    def child_fields(self: Self) -> dict[str, str]:
+        """Owning-parent (containment) relationship fields {field_name: entity_type}.
+
+        When any nested field on the entity is marked ``owns: true`` in the spec,
+        only the owned fields are returned — letting a consumer identify the
+        containment relationships and skip plain lookups (e.g. an entity-typed
+        reference to an OntologyAnnotation) without heuristics (#137). When no
+        nested field is marked, every nested field is returned, so
+        ``child_fields`` equals :attr:`nested_fields` for un-migrated profiles.
+        """
+        owned = {
+            f.name: f.items
+            for f in self._spec.fields
+            if f.owns and f.is_nested() and f.items
+        }
+        if owned:
+            return owned
+        return self.nested_fields
 
     @property
     def reference_fields(self: Self) -> dict[str, tuple[str, str]]:
@@ -134,12 +178,16 @@ class EntityHelper:
     def identifier_field(self: Self) -> str | None:
         """Field name used as the entity identifier (for indexing/node IDs).
 
-        By convention, the first non-reference field in the entity definition
-        is used as the identifier. This value is consumed for index keys and
-        node IDs; display labels are handled separately by derive_label /
-        get_label. Reference fields (e.g., run_ref, sample_ref) are skipped
-        since they point to other entities rather than identifying this one.
+        A field explicitly marked ``is_identifier`` in the spec wins. Absent a
+        declared identifier, the convention is the first non-reference field in
+        the entity definition. This value is consumed for index keys and node
+        IDs; display labels are handled separately by derive_label / get_label.
+        Reference fields (e.g., run_ref, sample_ref) are skipped since they point
+        to other entities rather than identifying this one.
         """
+        for f in self._spec.fields:
+            if f.is_identifier:
+                return f.name
         for f in self._spec.fields:
             # Skip reference fields (these point to other entities)
             if f.reference:
@@ -189,8 +237,32 @@ class EntityHelper:
                         for k, v in f.constraints.model_dump().items()
                         if v is not None
                     }
+                self._add_metadata(info, f)
                 return info
         raise KeyError(f"Field '{field_name}' not found in {self._name}")
+
+    @staticmethod
+    def _add_metadata(info: dict[str, Any], f: FieldSpec) -> None:
+        """Attach the richer #98 field metadata to a field-info dict.
+
+        ``example``/``unit``/``label``/``tier`` are copied when present.
+        ``options`` is the field's declared ``options``, falling back to a
+        ``constraints.enum`` when unset, so an enumerated field surfaces its
+        allowed values without the author restating them.
+        """
+        if f.example is not None:
+            info["example"] = f.example
+        options = f.options
+        if options is None and f.constraints and f.constraints.enum:
+            options = f.constraints.enum
+        if options:
+            info["options"] = options
+        if f.unit:
+            info["unit"] = f.unit
+        if f.label:
+            info["label"] = f.label
+        if f.tier:
+            info["tier"] = f.tier
 
     def get_label(self: Self, instance: BaseModel | dict[str, Any]) -> str:
         """Get a human-readable label for an entity instance.

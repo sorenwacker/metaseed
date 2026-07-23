@@ -75,7 +75,10 @@ def get_identifier_from_instance(
 def derive_label(entity_type: str, data: dict[str, Any], spec: Any = None) -> str:
     """Derive a display label from entity data.
 
-    By convention, the first field in the spec is used as the label.
+    A field explicitly marked ``is_label`` in the spec wins; otherwise the
+    convention is the first field. Declaring ``is_label`` lets entities whose
+    first field is a parent reference (e.g. isa Source's ``study_id``) show a
+    meaningful label instead of the reference.
 
     Args:
         entity_type: Type of entity.
@@ -85,11 +88,13 @@ def derive_label(entity_type: str, data: dict[str, Any], spec: Any = None) -> st
     Returns:
         Derived label string.
     """
-    # Use first field by convention
     if spec and hasattr(spec, "fields") and spec.fields:
-        first_field = spec.fields[0].name
-        if data.get(first_field):
-            return str(data[first_field])[:50]
+        label_field = next(
+            (f.name for f in spec.fields if getattr(f, "is_label", None)),
+            spec.fields[0].name,
+        )
+        if data.get(label_field):
+            return str(data[label_field])[:50]
 
     return f"New {entity_type}"
 

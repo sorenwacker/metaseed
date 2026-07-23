@@ -276,7 +276,7 @@ class FileEntityRepository(EntityRepository):
             # Validate parent-child relationship
             parent_helper = getattr(facade, parent.entity_type, None)
             if parent_helper:
-                valid_child_types = list(parent_helper.nested_fields.values())
+                valid_child_types = list(parent_helper.child_fields.values())
                 if entity_type not in valid_child_types:
                     raise ValueError(
                         f"Invalid parent: {parent.entity_type} cannot contain "

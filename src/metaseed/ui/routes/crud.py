@@ -315,7 +315,7 @@ def render_entity_form(
     if state and node_id and node_id in state.nodes_by_id:
         node_label = state.nodes_by_id[node_id].label
 
-    child_entity_types = list(helper.nested_fields.values())
+    child_entity_types = list(helper.child_fields.values())
 
     response = templates.TemplateResponse(
         request,
