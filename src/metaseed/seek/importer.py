@@ -7,9 +7,11 @@ live instance (e.g. pull from FAIRDOMHub, edit, push to a local instance).
 :func:`import_from_seek` walks a SEEK Investigation over the JSON:API
 (Investigation -> Study -> ObservationUnit -> Sample), reads each Sample's
 ``attribute_map`` and the ISA core fields, and reconstructs a metaseed dataset.
-Because SEEK's Sample Types and Extended Metadata are user-defined, the profile is
-**derived from the instance** rather than assumed: one entity per ISA level, with
-Sample fields taken from the Sample Types encountered — so no field is dropped.
+Because SEEK's Sample Types are user-defined, the profile is **derived from the
+instance** rather than assumed: one entity per ISA level, with Sample fields (and
+their types) taken from the Sample Types encountered. The non-Sample levels keep
+only identifier/title/description, and Assays are not imported — see
+``docs/architecture/seek-export.md`` for the current import scope.
 """
 
 from __future__ import annotations
@@ -25,6 +27,26 @@ if TYPE_CHECKING:
 # title/description rather than a field of their own (the inverse of the mapping
 # in :mod:`metaseed.seek.provision`).
 _CORE_ATTRIBUTES = {"Title": "title", "Description": "description"}
+
+# SEEK base sample-attribute type title -> metaseed field type. SEEK collapses
+# several presentation variants onto one storage type; anything unrecognised
+# falls back to ``string``. ``Controlled Vocabulary List`` and
+# ``Registered Sample List`` carry an array of scalars, so they map to ``list``.
+_SEEK_TYPE_TO_METASEED: dict[str, str] = {
+    "String": "string",
+    "Text": "string",
+    "Controlled Vocabulary": "string",
+    "Registered Sample": "string",
+    "Integer": "integer",
+    "Real number": "float",
+    "Float": "float",
+    "Date": "date",
+    "Date time": "datetime",
+    "DateTime": "datetime",
+    "Boolean": "boolean",
+    "Web link": "uri",
+}
+_SEEK_LIST_TYPES = {"Controlled Vocabulary List", "Registered Sample List"}
 
 
 def _core_fields(with_children: str | None) -> list[dict[str, Any]]:
@@ -70,15 +92,44 @@ def _observation_units(client: SeekClient, study_id: str) -> list[dict[str, Any]
     return data if isinstance(data, list) else []
 
 
-def _sample_field_names(client: SeekClient, sample_type_id: str) -> list[str]:
-    """Attribute titles of a Sample Type, minus the ones carried as core fields."""
+def _metaseed_field(attribute: dict[str, Any]) -> dict[str, Any]:
+    """Map one SEEK Sample Type attribute onto a metaseed field spec.
+
+    The SEEK base type (``sample_attribute_type.title``) sets the metaseed
+    ``type`` so the round trip keeps dates, numbers and lists instead of
+    collapsing everything to ``string`` (which the FDS re-export would then drop
+    for list-valued attributes).
+    """
+    type_title = attribute.get("sample_attribute_type", {}).get("title", "")
+    field: dict[str, Any] = {"name": attribute["title"]}
+    if type_title in _SEEK_LIST_TYPES:
+        field["type"] = "list"
+        field["items"] = "string"
+    else:
+        field["type"] = _SEEK_TYPE_TO_METASEED.get(type_title, "string")
+    return field
+
+
+def _sample_type_fields(
+    client: SeekClient, sample_type_id: str, cache: dict[str, list[dict[str, Any]]]
+) -> list[dict[str, Any]]:
+    """Field specs of a Sample Type (minus core fields), cached by type id.
+
+    Caching by ``sample_type_id`` avoids a ``GET /sample_types/{id}`` per sample:
+    thousands of samples sharing one type resolve their schema with a single
+    request.
+    """
+    if sample_type_id in cache:
+        return cache[sample_type_id]
     detail = client.get(f"/sample_types/{sample_type_id}").get("data", {})
     attributes = detail.get("attributes", {}).get("sample_attributes", [])
-    return [
-        a["title"]
+    fields = [
+        _metaseed_field(a)
         for a in attributes
         if a.get("title") and a["title"] not in _CORE_ATTRIBUTES
     ]
+    cache[sample_type_id] = fields
+    return fields
 
 
 def import_from_seek(
@@ -100,8 +151,9 @@ def import_from_seek(
 
     # -- pass 1: walk the tree, collecting nodes and the Sample field union -----
     studies: list[dict[str, Any]] = []
-    sample_fields: dict[str, None] = {}  # ordered set of Sample field names
-    for study_ref in inv["relationships"]["studies"]["data"]:
+    sample_fields: dict[str, dict[str, Any]] = {}  # ordered: field name -> spec
+    st_cache: dict[str, list[dict[str, Any]]] = {}  # sample_type_id -> field specs
+    for study_ref in inv.get("relationships", {}).get("studies", {}).get("data", []):
         study = client.get(f"/studies/{study_ref['id']}")["data"]
         ous: list[dict[str, Any]] = []
         for ou_ref in _observation_units(client, study_ref["id"]):
@@ -110,8 +162,8 @@ def import_from_seek(
             for sample_ref in ou["relationships"].get("samples", {}).get("data", []):
                 sample = client.get(f"/samples/{sample_ref['id']}")["data"]
                 st_id = sample["relationships"]["sample_type"]["data"]["id"]
-                for name in _sample_field_names(client, st_id):
-                    sample_fields.setdefault(name, None)
+                for field in _sample_type_fields(client, st_id, st_cache):
+                    sample_fields.setdefault(field["name"], field)
                 samples.append(sample)
             ou["_samples"] = samples
             ous.append(ou)
@@ -119,7 +171,7 @@ def import_from_seek(
         studies.append(study)
 
     # -- derive the profile from what the instance actually holds ---------------
-    sample_type_fields = [{"name": name, "type": "string"} for name in sample_fields]
+    sample_type_fields = list(sample_fields.values())
     spec = {
         "name": profile_name,
         "version": "1.0",

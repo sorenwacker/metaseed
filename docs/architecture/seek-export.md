@@ -219,18 +219,26 @@ seek = client_from_settings({"url": "https://fairdomhub.org"})  # public read ne
 dataset = import_from_seek(seek, "8")     # -> a MetaseedClient
 ```
 
-Because SEEK's Sample Types and Extended Metadata are user-defined, the profile is
-**derived from the instance** (one entity per ISA level; Sample fields taken from
-the Sample Types encountered) rather than assumed — so no field is dropped. The
-derived-spec dataset re-exports through `to_fair_data_station_rdf` (which reads the
-facade's in-memory spec), closing the loop: pull from one instance
-(e.g. FAIRDOMHub), edit, push to another (e.g. a local instance).
+Because SEEK's Sample Types are user-defined, the profile is **derived from the
+instance**: one entity per ISA level, with each Sample field taken from the Sample
+Types encountered — including its type, so a `Date` attribute imports as `date`
+and a `Controlled Vocabulary List` as a `list` (rather than collapsing to
+`string`, which the re-export would drop). The derived-spec dataset re-exports
+through `to_fair_data_station_rdf` (which reads the facade's in-memory spec),
+closing the loop: pull from one instance (e.g. FAIRDOMHub), edit, push to another
+(e.g. a local instance).
 
 Instances without ISA-JSON compliance answer the `observation_units` sub-route
 with a 4xx; the import degrades gracefully to the Investigation/Study skeleton
-(no samples) rather than aborting. Full Extended-Metadata fidelity
-(reconstructing custom EMT attribute types) is a follow-up; core ISA + Sample
-fields round-trip today.
+(no samples) rather than aborting.
+
+**Import scope (current).** The importer captures every Sample field with its
+type, but the Investigation/Study/ObservationUnit levels keep only their
+`identifier`/`title`/`description` — other core attributes on those levels are not
+yet read. Assays are not imported (the derived profile has no Assay level), so an
+ISA dataset pushed via the JSON:API sync and pulled back loses its Assays.
+Reconstructing custom Extended-Metadata attribute types on the non-Sample levels,
+and importing Assays, are follow-ups.
 
 ## Status of the JSON:API sync path
 

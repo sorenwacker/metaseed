@@ -55,6 +55,11 @@ _CORE_TO_ATTRIBUTE = {
     "description": "Description",
 }
 
+# When several core fields collapse onto the same single-valued SEEK attribute
+# (Title/Description), the winner is chosen by this priority rather than by dict
+# insertion order — the most identity-bearing field wins deterministically.
+_CORE_PRIORITY = {"unique_id": 0, "identifier": 1, "name": 2, "title": 3}
+
 
 def _sample_data(values: Mapping[str, Any]) -> dict[str, Any]:
     """The postable attribute map for a Sample: drop metadata keys and empties.
@@ -64,16 +69,32 @@ def _sample_data(values: Mapping[str, Any]) -> dict[str, Any]:
     :func:`metaseed.seek.provision.build_provisioning_plan` provisions. Scalars
     pass through; a list of scalars is kept (a Controlled Vocabulary List
     attribute expects an array); other structures (nested dicts) are dropped.
+
+    Several core fields can map onto one attribute (e.g. ``identifier`` and
+    ``title`` both onto ``Title``); the winner is picked deterministically by
+    :data:`_CORE_PRIORITY`, not by dict order.
     """
     data: dict[str, Any] = {}
+    core_winner: dict[str, int] = {}  # attribute -> priority of the value it holds
     for key, value in values.items():
         if key.startswith("_") or value in (None, "", [], {}):
             continue
-        if isinstance(value, (str, int, float, bool)) or (
-            isinstance(value, list)
-            and all(isinstance(v, (str, int, float, bool)) for v in value)
+        if not (
+            isinstance(value, (str, int, float, bool))
+            or (
+                isinstance(value, list)
+                and all(isinstance(v, (str, int, float, bool)) for v in value)
+            )
         ):
-            attribute = _CORE_TO_ATTRIBUTE.get(key, key)
+            continue
+        attribute = _CORE_TO_ATTRIBUTE.get(key, key)
+        if key in _CORE_PRIORITY:
+            rank = _CORE_PRIORITY[key]
+            if attribute in core_winner and core_winner[attribute] <= rank:
+                continue  # a higher-priority core field already claimed it
+            core_winner[attribute] = rank
+            data[attribute] = value
+        else:
             data.setdefault(attribute, value)
     return data
 
@@ -98,7 +119,12 @@ def sync_dataset_to_seek(
         A :class:`SyncResult` mapping each source node to its created SEEK id,
         plus any skipped/errored nodes.
     """
-    profile = SpecLoader().load_profile(
+    # A dataset built from a derived spec (e.g. imported via
+    # ``metaseed.seek.importer``) carries its ProfileSpec in memory and has no
+    # installed profile file to load; fall back to loading by name otherwise.
+    # Kept in sync with ``fairds._profile_index``.
+    in_memory = getattr(metaseed_client._facade, "_spec", None)
+    profile = in_memory or SpecLoader().load_profile(
         metaseed_client.version, metaseed_client.profile
     )
     roles = {

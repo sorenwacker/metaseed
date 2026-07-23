@@ -48,6 +48,7 @@ _RESPONSES: dict[str, Any] = {
                     "Description": None,
                     "plant_anatomical_entity": "leaf",
                     "collection_date": None,
+                    "traits": ["drought", "salt"],
                 },
             },
             "relationships": {"sample_type": {"data": {"id": "20"}}},
@@ -70,10 +71,25 @@ _RESPONSES: dict[str, Any] = {
         "data": {
             "attributes": {
                 "sample_attributes": [
-                    {"title": "Title"},
-                    {"title": "Description"},
-                    {"title": "plant_anatomical_entity"},
-                    {"title": "collection_date"},
+                    {"title": "Title", "sample_attribute_type": {"title": "String"}},
+                    {
+                        "title": "Description",
+                        "sample_attribute_type": {"title": "Text"},
+                    },
+                    {
+                        "title": "plant_anatomical_entity",
+                        "sample_attribute_type": {"title": "String"},
+                    },
+                    {
+                        "title": "collection_date",
+                        "sample_attribute_type": {"title": "Date"},
+                    },
+                    {
+                        "title": "traits",
+                        "sample_attribute_type": {
+                            "title": "Controlled Vocabulary List"
+                        },
+                    },
                 ]
             }
         }
@@ -177,3 +193,23 @@ def test_import_uses_external_identifier_not_internal_row_id():
     entities = _imported().serialize()["entities"]
     sample = next(e for e in entities if e["title"] == "CLEAN-A")
     assert sample["identifier"] == "CLEAN-A"  # not "5"
+
+
+def test_import_preserves_attribute_types_from_sample_type():
+    # SEEK base types map onto metaseed field types instead of collapsing to
+    # ``string``: a Date stays a date and a Controlled Vocabulary List stays a
+    # list (so its array value survives the FDS re-export rather than being
+    # dropped as a non-scalar in a string field).
+    profile = _imported()._facade._spec
+    fields = {f.name: f for f in profile.entities["Sample"].fields}
+    assert fields["collection_date"].type.value == "date"
+    assert fields["traits"].type.value == "list"
+    assert fields["traits"].items == "string"
+
+
+def test_import_caches_sample_type_lookups():
+    # The Sample Type schema is fetched once per type, not once per sample: both
+    # samples share type 20, so exactly one GET /sample_types/20 is issued.
+    fake = _FakeSeek()
+    import_from_seek(fake, "8")  # type: ignore[arg-type]
+    assert fake.reads.count("/sample_types/20") == 1
