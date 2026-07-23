@@ -1,0 +1,107 @@
+# PRIDE v1.0 Example: HeLa phosphoproteome under heat shock
+# Demonstrates the PRIDE ProteomeXchange submission model: a Dataset with its
+# species, instruments, modifications, contacts, publications, samples and the
+# result/raw files, wired to samples via sample_refs.
+
+identifier: PXD-EXAMPLE-HELA-HEATSHOCK
+accession: PXD012345
+title: Phosphoproteomic dynamics of HeLa cells during acute heat shock
+description: >
+  Quantitative phosphoproteomic analysis of HeLa cells subjected to acute heat
+  shock, profiling dynamic changes in protein phosphorylation across a two-hour
+  time course using TMT labelling and high-resolution LC-MS/MS.
+sample_processing_protocol: >
+  HeLa cells were lysed in 8 M urea, reduced with DTT and alkylated with
+  iodoacetamide. Proteins were digested with trypsin and phosphopeptides were
+  enriched on TiO2 prior to TMT 10-plex labelling and offline fractionation.
+data_processing_protocol: >
+  Raw files were processed with MaxQuant against the UniProt human reference
+  proteome. Phosphosite localisation used the PTM score, with a 1% false
+  discovery rate applied at both the peptide-spectrum match and protein level.
+submission_type: COMPLETE
+experiment_types:
+  - Shotgun proteomics
+  - Quantitative proteomics
+announcement_date: 2024-09-01
+keywords:
+  - phosphoproteomics
+  - heat shock
+  - HeLa
+  - TMT
+
+species:
+  - name: Homo sapiens
+    ncbi_taxonomy_id: "9606"
+
+instruments:
+  - name: Orbitrap Fusion Lumos
+    cv_accession: MS:1002732
+    cv_name: Orbitrap Fusion Lumos
+    source: nanoelectrospray
+    analyzer:
+      - quadrupole
+      - orbitrap
+    detector: inductive detector
+
+modifications:
+  - name: Phospho
+    cv_accession: UNIMOD:21
+    mass_delta: 79.96633
+    residues: STY
+    position: Anywhere
+  - name: TMT10plex
+    cv_accession: UNIMOD:737
+    mass_delta: 229.16293
+    residues: K
+    position: Any N-term
+
+contacts:
+  - name: Maria Alvarez
+    email: m.alvarez@example.org
+    affiliation: Institute for Proteome Research, Example University
+    orcid: 0000-0002-1825-0097
+    role: principal investigator
+  - name: Wei Chen
+    email: w.chen@example.org
+    affiliation: Institute for Proteome Research, Example University
+    role: submitter
+
+publications:
+  - title: Temporal control of the heat-shock phosphoproteome in human cells
+    doi: 10.1016/j.jprot.2024.104567
+    pubmed_id: "38765432"
+    reference: J Proteomics. 2024;300:104567
+
+samples:
+  - name: HeLa-control-rep1
+    species: Homo sapiens
+    ncbi_taxonomy_id: "9606"
+    tissue: cervix
+    cell_type: epithelial
+    disease: cervical adenocarcinoma
+    description: Untreated HeLa cells maintained at 37 C, biological replicate 1
+  - name: HeLa-heatshock-rep1
+    species: Homo sapiens
+    ncbi_taxonomy_id: "9606"
+    tissue: cervix
+    cell_type: epithelial
+    disease: cervical adenocarcinoma
+    description: HeLa cells heat-shocked at 43 C for 60 min, biological replicate 1
+
+files:
+  - filename: hela_heatshock_fraction01.raw
+    file_type: RAW
+    file_format: Thermo RAW
+    checksum: 9e107d9d372bb6826bd81d3542a419d6
+    file_size: 2147483648
+    sample_refs:
+      - HeLa-control-rep1
+      - HeLa-heatshock-rep1
+  - filename: hela_heatshock_maxquant_results.zip
+    file_type: RESULT
+    file_format: MaxQuant
+    checksum: 5eb63bbbe01eeed093cb22bb8f5acdc3
+    file_size: 524288000
+    sample_refs:
+      - HeLa-control-rep1
+      - HeLa-heatshock-rep1
