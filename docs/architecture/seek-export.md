@@ -39,8 +39,8 @@ Each import adds **one Investigation** (Investigation → Study → ObservationU
 Sample) to the shared project — it does **not** create a new project. A new
 project is only made when an admin explicitly creates one. The provisioned Sample
 Types are reused across every user import; re-provisioning is idempotent (a
-same-named CV/Sample Type is reused, and a new profile field is *added* as a
-column to the existing Sample Type — see [Updating existing content](#updating-existing-content)).
+same-named CV/Sample Type is reused as-is — editing a provisioned type's columns
+is left to an admin, see [Updating existing content](#updating-existing-content)).
 
 ## Using it from the web UI
 
@@ -183,12 +183,13 @@ edits — **changing `unique_id` makes SEEK create a new resource instead of
 updating the existing one.**
 
 **Adding a column** (a new profile field on a sample-bearing entity) is a schema
-change on the Sample Type. Re-running `execute_provisioning_plan` reuses the
-existing Sample Type and **adds** any attribute it lacks
-(`add_missing_sample_type_attributes`), preserving the existing attributes and
-their data; a newly-added attribute is created non-required (a required column
-would fail against the type's pre-existing samples). Then re-export and update the
-Investigation to populate the new column.
+change on the Sample Type. `execute_provisioning_plan` does **not** edit an
+existing Sample Type — it reuses it as-is. Editing attributes over the JSON:API
+means PATCHing the whole `sample_attributes` list, which would drop attribute
+facets SEEK holds but the API does not read back (`allow_cv_free_text`,
+`description`, `unit`, sample-type links) and can duplicate `is_title`/`pos`. So a
+new column is added by a SEEK admin (or by recreating the type on a clean
+project), not automatically.
 
 ## Manual UI test
 

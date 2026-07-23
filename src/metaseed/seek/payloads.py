@@ -13,10 +13,7 @@ id becomes the Assay's ``study`` relationship, and so on.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    from collections.abc import Mapping
+from typing import Any
 
 # A JERM assay type that always resolves on a stock SEEK; callers may override.
 DEFAULT_ASSAY_TYPE_URI = (
@@ -160,49 +157,6 @@ def sample_type_payload(
         {"title": title, "sample_attributes": attributes},
         {"projects": _to_many("projects", [project_id])},
     )
-
-
-def preserved_sample_attribute(existing: Mapping[str, Any]) -> dict[str, Any]:
-    """Normalize an attribute from a ``GET /sample_types`` response back into a
-    request attribute, keeping its ``id``.
-
-    A Sample Type update (:func:`sample_type_update_payload`) replaces the whole
-    ``sample_attributes`` list; an existing attribute must be re-sent *with its
-    id* so SEEK preserves it (and its data) rather than dropping and recreating
-    it. ``pid``/``pos``/CV binding are carried through when present.
-    """
-    attr: dict[str, Any] = {
-        "id": str(existing["id"]),
-        "title": existing["title"],
-        "required": bool(existing.get("required", False)),
-        "is_title": bool(existing.get("is_title", False)),
-        "sample_attribute_type": {"id": str(existing["sample_attribute_type"]["id"])},
-    }
-    if existing.get("pos") is not None:
-        attr["pos"] = existing["pos"]
-    if existing.get("pid"):
-        attr["pid"] = existing["pid"]
-    cv = existing.get("sample_controlled_vocab") or {}
-    if cv.get("id") is not None:
-        attr["sample_controlled_vocab_id"] = str(cv["id"])
-    return attr
-
-
-def sample_type_update_payload(
-    *, sample_type_id: str | int, attributes: list[dict[str, Any]]
-) -> dict[str, Any]:
-    """Build a PATCH body for ``/sample_types/{id}`` replacing its attributes.
-
-    ``attributes`` is the *full* desired list — existing attributes (via
-    :func:`preserved_sample_attribute`, keeping their ids) plus any new ones.
-    """
-    return {
-        "data": {
-            "id": str(sample_type_id),
-            "type": "sample_types",
-            "attributes": {"sample_attributes": attributes},
-        }
-    }
 
 
 def sample_payload(

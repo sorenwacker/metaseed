@@ -56,10 +56,17 @@ def _observation_units(client: SeekClient, study_id: str) -> list[dict[str, Any]
     answers the sub-route with a 4xx, so the study imports with no samples rather
     than aborting the whole import.
     """
+    import httpx
+
     try:
         data = client.get(f"/studies/{study_id}/observation_units").get("data", [])
-    except Exception:  # any read failure -> no observation units for this study
-        return []
+    except httpx.HTTPStatusError as exc:
+        # A 4xx means the instance has no ISA-JSON observation-unit route — degrade
+        # to "no observation units". Any other status (5xx) or a connect/timeout
+        # error is a real failure and must not masquerade as an empty study.
+        if 400 <= exc.response.status_code < 500:
+            return []
+        raise
     return data if isinstance(data, list) else []
 
 
@@ -129,8 +136,12 @@ def import_from_seek(
     # -- pass 2: build the entities ---------------------------------------------
     def core(node: dict[str, Any]) -> dict[str, Any]:
         attrs = node["attributes"]
+        # Use the FDS external identifier, not SEEK's internal row id: it is what a
+        # re-export emits as schema:identifier and what "Update from FAIR Data
+        # Station" matches on, so the round trip updates rather than duplicates.
+        external = attrs.get("external_identifier") or attrs.get("title")
         return {
-            "identifier": str(node["id"]),
+            "identifier": str(external or node["id"]),
             "title": attrs.get("title") or "",
             "description": attrs.get("description") or "",
         }
@@ -164,7 +175,10 @@ def _sample_data(sample: dict[str, Any]) -> dict[str, Any]:
     every other non-empty attribute keeps its name.
     """
     attribute_map = sample["attributes"].get("attribute_map", {})
-    data: dict[str, Any] = {"identifier": str(sample["id"])}
+    # A sample's FDS external identifier is its Title attribute (schema:identifier),
+    # not the instance row id — use it so a re-export matches the same resource.
+    external = attribute_map.get("Title") or sample["attributes"].get("title")
+    data: dict[str, Any] = {"identifier": str(external or sample["id"])}
     for key, value in attribute_map.items():
         if value in (None, ""):
             continue

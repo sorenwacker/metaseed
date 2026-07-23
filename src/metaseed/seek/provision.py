@@ -122,7 +122,6 @@ class ProvisionResult:
     sample_type_ids: dict[str, str] = dc_field(default_factory=dict)
     created: list[str] = dc_field(default_factory=list)
     reused: list[str] = dc_field(default_factory=list)
-    updated: list[str] = dc_field(default_factory=list)
     errors: list[str] = dc_field(default_factory=list)
 
 
@@ -339,16 +338,14 @@ def execute_provisioning_plan(
                 st.title, project_id=project_id
             )
             if existing is not None:
-                # Reuse the type, adding any attributes it lacks — so a profile
-                # field added after the first provision becomes a new column.
+                # Reuse an existing Sample Type as-is. Editing its attributes over
+                # the API is not attempted: a PATCH replaces the whole attribute
+                # list, which would drop fields SEEK sets that we do not read back
+                # (allow_cv_free_text, description, unit, links) and can duplicate
+                # is_title/pos. Adding a column to a provisioned type is left to a
+                # SEEK admin.
                 result.sample_type_ids[st.entity_type] = existing
-                added = client.add_missing_sample_type_attributes(existing, attributes)
-                if added:
-                    result.updated.append(
-                        f"Sample Type: {st.title} (+{', '.join(added)})"
-                    )
-                else:
-                    result.reused.append(f"Sample Type: {st.title}")
+                result.reused.append(f"Sample Type: {st.title}")
                 continue
 
             st_id = client.create_sample_type(

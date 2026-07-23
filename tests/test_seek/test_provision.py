@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from metaseed.seek.provision import (
@@ -137,8 +137,6 @@ class _FakeSeek:
 
     existing_cvs: dict[str, str]
     existing_sample_types: dict[str, str]
-    # titles ``add_missing_sample_type_attributes`` reports adding on reuse.
-    added_on_reuse: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         self.calls: list[tuple[str, Any]] = []
@@ -176,15 +174,6 @@ class _FakeSeek:
             ("create_sample_type", {"title": title, "attributes": attributes})
         )
         return self._next()
-
-    def add_missing_sample_type_attributes(
-        self, sample_type_id: str, attributes: list[dict[str, Any]]
-    ) -> list[str]:
-        if self.added_on_reuse:
-            self.calls.append(
-                ("update_sample_type", {"id": sample_type_id, "attributes": attributes})
-            )
-        return list(self.added_on_reuse)
 
 
 def test_execute_creates_cv_before_sample_type_and_threads_id():
@@ -242,32 +231,11 @@ def test_execute_reuses_existing_and_posts_nothing():
     )
     result = execute_provisioning_plan(seek, plan, project_id="1")  # type: ignore[arg-type]
 
-    assert seek.calls == []  # nothing created; existing type already complete
+    assert seek.calls == []  # nothing created; existing type reused as-is
     assert result.cv_ids["testprofile Sample.organism"] == "99"
     assert result.sample_type_ids["Sample"] == "77"
     assert result.created == []
-    assert result.updated == []
     assert set(result.reused) == {
         "CV: testprofile Sample.organism",
         "Sample Type: testprofile Sample",
     }
-
-
-def test_execute_adds_missing_attributes_to_existing_sample_type():
-    # A field added to the profile after the first provision becomes a new column
-    # on the already-provisioned Sample Type, rather than being skipped.
-    plan = build_provisioning_plan(_profile())
-    seek = _FakeSeek(
-        existing_cvs={"testprofile Sample.organism": "99"},
-        existing_sample_types={"testprofile Sample": "77"},
-        added_on_reuse=["count"],
-    )
-    result = execute_provisioning_plan(seek, plan, project_id="1")  # type: ignore[arg-type]
-
-    assert result.sample_type_ids["Sample"] == "77"  # reused, not recreated
-    assert result.updated == ["Sample Type: testprofile Sample (+count)"]
-    assert "Sample Type: testprofile Sample" not in result.reused
-    update = next(c[1] for c in seek.calls if c[0] == "update_sample_type")
-    assert update["id"] == "77"
-    # the desired full attribute set (incl. PIDs) is handed to the update
-    assert any(a.get("pid") == "http://schema.org/count" for a in update["attributes"])
