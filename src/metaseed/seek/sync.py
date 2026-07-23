@@ -53,9 +53,10 @@ def _sample_data(values: Mapping[str, Any]) -> dict[str, Any]:
     for key, value in values.items():
         if key.startswith("_") or value in (None, "", [], {}):
             continue
-        if isinstance(value, (str, int, float, bool)) or (isinstance(value, list) and all(
-            isinstance(v, (str, int, float, bool)) for v in value
-        )):
+        if isinstance(value, (str, int, float, bool)) or (
+            isinstance(value, list)
+            and all(isinstance(v, (str, int, float, bool)) for v in value)
+        ):
             data[key] = value
     return data
 

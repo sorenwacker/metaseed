@@ -66,7 +66,9 @@ def test_sample_siblings_get_distinct_uris_and_names():
         "Investigation", {"identifier": "INV1", "title": "I"}, skip_validation=True
     )
     study = client.create_entity(
-        "Study", {"identifier": "STU1", "title": "S"}, parent_id=inv.id,
+        "Study",
+        {"identifier": "STU1", "title": "S"},
+        parent_id=inv.id,
         skip_validation=True,
     )
     client.create_entity(

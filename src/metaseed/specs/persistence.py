@@ -39,9 +39,7 @@ def _specs_subpath(*parts: str) -> Path:
             raise ValueError("path component cannot be empty")
     candidate = base.joinpath(*parts).resolve()
     if not candidate.is_relative_to(base.resolve()):
-        raise ValueError(
-            f"path component escapes the specs directory: {parts!r}"
-        )
+        raise ValueError(f"path component escapes the specs directory: {parts!r}")
     return candidate
 
 

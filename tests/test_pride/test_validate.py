@@ -89,8 +89,18 @@ def _complete_dataset() -> dict:
         "experiment_types": ["Shotgun proteomics"],
         "keywords": ["proteomics"],
         "contacts": [
-            {"role": "submitter", "name": "J S", "email": "j@x.ac.uk", "affiliation": "U"},
-            {"role": "lab head", "name": "K L", "email": "k@x.ac.uk", "affiliation": "U"},
+            {
+                "role": "submitter",
+                "name": "J S",
+                "email": "j@x.ac.uk",
+                "affiliation": "U",
+            },
+            {
+                "role": "lab head",
+                "name": "K L",
+                "email": "k@x.ac.uk",
+                "affiliation": "U",
+            },
         ],
         "species": [{"name": "Homo sapiens"}],
         "instruments": [{"name": "LTQ Orbitrap"}],

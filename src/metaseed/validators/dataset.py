@@ -181,7 +181,9 @@ class DatasetValidator:
                 continue
             applies = rule.applies_to
             if applies == "all" or isinstance(applies, str):
-                applies_snake = {"all"} if applies == "all" else {to_snake_case(applies)}
+                applies_snake = (
+                    {"all"} if applies == "all" else {to_snake_case(applies)}
+                )
             else:
                 applies_snake = {to_snake_case(e) for e in applies}
             self._uniqueness_rules.append(
@@ -524,9 +526,7 @@ class DatasetValidator:
         # degenerate case the downstream traversal handles as a no-op; cast to
         # ``str`` to satisfy the helper signatures without altering behavior.
         detected_type = self._detect_entity_type(data)
-        entity_type = cast(
-            "str", detected_type or self._default_entity_type()
-        )
+        entity_type = cast("str", detected_type or self._default_entity_type())
 
         # A file that declares a _type naming no known entity would otherwise be
         # reported valid: the traversal and engine both swallow the resulting
@@ -601,9 +601,7 @@ class DatasetValidator:
                 # See validate_file: the fallback is None only for an unloadable
                 # profile; cast to str leaves runtime behavior unchanged.
                 detected_type = self._detect_entity_type(data)
-                entity_type = cast(
-                    "str", detected_type or self._default_entity_type()
-                )
+                entity_type = cast("str", detected_type or self._default_entity_type())
 
                 result.files_checked.append(file_path)
 
@@ -667,9 +665,7 @@ class DatasetValidator:
                 )
 
             # Validate declared uniqueness rules across records
-            uniq_errors = self._validate_uniqueness(
-                data, entity_type, uniqueness_seen
-            )
+            uniq_errors = self._validate_uniqueness(data, entity_type, uniqueness_seen)
             for error in uniq_errors:
                 result.errors.append(
                     ValidationError(

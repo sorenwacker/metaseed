@@ -24,8 +24,14 @@ def test_cv_terms_collects_organism_and_metabolite_accessions():
         {
             "_type": "Assay",
             "metabolites": [
-                {"metabolite_identification": "g", "database_identifier": "CHEBI:17234"},
-                {"metabolite_identification": "x", "database_identifier": "CHEBI:0000000"},
+                {
+                    "metabolite_identification": "g",
+                    "database_identifier": "CHEBI:17234",
+                },
+                {
+                    "metabolite_identification": "x",
+                    "database_identifier": "CHEBI:0000000",
+                },
             ],
         },
     ]
@@ -77,7 +83,9 @@ def _client(*, organism_term=None, metabolites=None) -> MetaseedClient:
 def test_valid_cv_terms_resolve():
     client = _client(
         organism_term="NCBITaxon:9606",
-        metabolites=[{"metabolite_identification": "g", "database_identifier": "CHEBI:17234"}],
+        metabolites=[
+            {"metabolite_identification": "g", "database_identifier": "CHEBI:17234"}
+        ],
     )
     assert validate_cv(client) == []
 
@@ -86,10 +94,10 @@ def test_valid_cv_terms_resolve():
 def test_unknown_organism_and_metabolite_terms_are_reported():
     client = _client(
         organism_term="NCBITaxon:9606",
-        metabolites=[{"metabolite_identification": "x", "database_identifier": "CHEBI:0000000"}],
+        metabolites=[
+            {"metabolite_identification": "x", "database_identifier": "CHEBI:0000000"}
+        ],
     )
     errors = validate_cv(client)
-    assert [e.field for e in errors] == [
-        "Assay[0].metabolites[0].database_identifier"
-    ]
+    assert [e.field for e in errors] == ["Assay[0].metabolites[0].database_identifier"]
     assert errors[0].rule == "cv_compliance"

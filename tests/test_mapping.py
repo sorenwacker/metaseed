@@ -7,9 +7,9 @@ from metaseed._mapping import clean, clean_all
 
 class TestClean:
     def test_drops_empty_values(self):
-        assert clean(
-            {"a": None, "b": "", "c": [], "d": {}, "e": "keep"}
-        ) == {"e": "keep"}
+        assert clean({"a": None, "b": "", "c": [], "d": {}, "e": "keep"}) == {
+            "e": "keep"
+        }
 
     def test_keeps_falsy_but_meaningful_values(self):
         # 0 / 0.0 / False are meaningful and must be kept.
