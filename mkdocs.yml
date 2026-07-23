@@ -81,7 +81,6 @@ nav:
       - Entity Relationships: discussion/entity-relationships.md
       - Profile Design: discussion/profile-design-approaches.md
       - MetaboLights Design: discussion/metabolights-design.md
-      - SEEK Adapter Design: discussion/seek-design.md
   - Architecture:
       - Overview: architecture/overview.md
       - Metadata Agent: architecture/metadata-agent.md
