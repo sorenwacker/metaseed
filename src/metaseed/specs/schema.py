@@ -7,7 +7,7 @@ profile entities and their fields.
 from enum import StrEnum
 from typing import Any, Literal, Self
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 
 
 class FieldType(StrEnum):
@@ -120,6 +120,23 @@ class FieldSpec(BaseModel):
         dcat: DCAT/DCAT-AP property this field maps to on the dataset card
             (e.g. "dct:title", "dct:issued", "dct:license", "dcat:contactPoint").
             Only meaningful on the profile's root entity. See metaseed.dcat.
+        owns: For a relationship (entity/list-of-entity) field, marks it as the
+            **owning-parent** relationship (this entity contains the target) rather
+            than a plain lookup/reference. Absent (None) = plain reference. Lets a
+            consumer identify the containment relationship without heuristics (#137).
+        is_identifier: Marks this field as the entity's declared identifier
+            (overrides the positional first-non-reference-field convention) (#143).
+        is_label: Marks this field as the entity's declared display label
+            (overrides the positional first-field convention) (#143).
+        example: An illustrative value for this field (drives example rows in
+            generated templates/forms) (#98).
+        options: The allowed values (controlled vocabulary) for the field, driving
+            dropdowns and pre-import checks. Falls back to ``constraints.enum`` when
+            unset (#98).
+        unit: The expected unit, where the standard defines one (#98).
+        label: A human-readable field label distinct from the machine ``name`` (#98).
+        tier: Advisory completeness tier ("required" / "recommended" / "optional").
+            Advisory only — ``required`` remains the validation source of truth (#98).
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -137,6 +154,14 @@ class FieldSpec(BaseModel):
     unique_within: str | None = None
     reference: str | None = None
     dcat: str | None = None
+    owns: bool | None = None
+    is_identifier: bool | None = None
+    is_label: bool | None = None
+    example: str | int | float | bool | list[Any] | None = None
+    options: list[str] | None = None
+    unit: str | None = None
+    label: str | None = None
+    tier: Literal["required", "recommended", "optional"] | None = None
 
     def is_nested(self: Self) -> bool:
         """Check if this field represents a nested entity.
@@ -152,6 +177,28 @@ class FieldSpec(BaseModel):
         if self.type == FieldType.LIST and self.items:
             return self.items not in PRIMITIVE_TYPES
         return False
+
+
+def _check_single_marked_field(fields: list[FieldSpec], entity_label: str) -> None:
+    """Reject an entity that marks more than one identifier or label field.
+
+    ``is_identifier`` and ``is_label`` each designate a single field; two of
+    either on one entity is an authoring error, caught at load time rather than
+    silently resolving to whichever the code happens to see first.
+
+    Args:
+        fields: The entity's field specs.
+        entity_label: A name for the entity, used in the error message.
+
+    Raises:
+        ValueError: If two fields set the same singular marker.
+    """
+    for marker in ("is_identifier", "is_label"):
+        marked = [f.name for f in fields if getattr(f, marker)]
+        if len(marked) > 1:
+            raise ValueError(
+                f"{entity_label}: at most one field may set {marker}; found {marked}"
+            )
 
 
 class EntitySpec(BaseModel):
@@ -174,6 +221,11 @@ class EntitySpec(BaseModel):
     description: str = ""
     fields: list[FieldSpec] = []
     example: dict[str, str | int | float | bool | list[Any]] | None = None
+
+    @model_validator(mode="after")
+    def _check_single_markers(self: Self) -> Self:
+        _check_single_marked_field(self.fields, self.name)
+        return self
 
     def get_required_fields(self: Self) -> list[FieldSpec]:
         """Return list of required fields.
@@ -205,6 +257,11 @@ class EntityDefSpec(BaseModel):
     fields: list[FieldSpec] = []
     example: dict[str, str | int | float | bool | list[Any]] | None = None
     seek: SeekEntityConfig | None = None
+
+    @model_validator(mode="after")
+    def _check_single_markers(self: Self) -> Self:
+        _check_single_marked_field(self.fields, "entity")
+        return self
 
 
 class ValidationRuleSpec(BaseModel):

@@ -431,3 +431,77 @@ class TestProfileSpecVersioning:
         )
         assert profile.ontology == "PPEO"
         assert profile.ontologies["PPEO"].ols_id == "ppeo"
+
+
+class TestFieldMarkers:
+    """Tests for the #137/#143/#98 relationship-role and metadata markers."""
+
+    def test_new_markers_default_to_none(self) -> None:
+        # None defaults keep un-migrated specs byte-stable under exclude_none.
+        f = FieldSpec(name="x", type=FieldType.STRING)
+        assert f.owns is None
+        assert f.is_identifier is None
+        assert f.is_label is None
+        assert f.example is None
+        assert f.options is None
+        assert f.unit is None
+        assert f.label is None
+        assert f.tier is None
+
+    def test_markers_round_trip(self) -> None:
+        f = FieldSpec(
+            name="value",
+            type=FieldType.STRING,
+            is_identifier=True,
+            is_label=True,
+            example="42",
+            options=["a", "b"],
+            unit="cm",
+            label="Value",
+            tier="recommended",
+        )
+        dumped = f.model_dump(exclude_none=True)
+        restored = FieldSpec.model_validate(dumped)
+        assert restored == f
+
+    def test_owns_marker_on_relationship(self) -> None:
+        f = FieldSpec(name="studies", type=FieldType.LIST, items="Study", owns=True)
+        assert f.owns is True
+        assert f.is_nested() is True
+
+    def test_tier_rejects_unknown_value(self) -> None:
+        with pytest.raises(ValidationError):
+            FieldSpec(name="x", type=FieldType.STRING, tier="mandatory")  # type: ignore[arg-type]
+
+    def test_two_identifier_fields_rejected_entitydef(self) -> None:
+        # Authoring guard: at most one is_identifier per entity.
+        with pytest.raises(ValidationError):
+            EntityDefSpec(
+                fields=[
+                    FieldSpec(name="a", type=FieldType.STRING, is_identifier=True),
+                    FieldSpec(name="b", type=FieldType.STRING, is_identifier=True),
+                ]
+            )
+
+    def test_two_label_fields_rejected_entitydef(self) -> None:
+        with pytest.raises(ValidationError):
+            EntityDefSpec(
+                fields=[
+                    FieldSpec(name="a", type=FieldType.STRING, is_label=True),
+                    FieldSpec(name="b", type=FieldType.STRING, is_label=True),
+                ]
+            )
+
+    def test_single_identifier_field_accepted(self) -> None:
+        ed = EntityDefSpec(
+            fields=[
+                FieldSpec(name="a", type=FieldType.STRING, is_identifier=True),
+                FieldSpec(name="b", type=FieldType.STRING),
+            ]
+        )
+        assert ed.fields[0].is_identifier is True
+
+    def test_unknown_field_key_still_forbidden(self) -> None:
+        # extra="forbid" must still reject typos even with the new optional keys.
+        with pytest.raises(ValidationError):
+            FieldSpec(name="x", type=FieldType.STRING, ownz=True)  # type: ignore[call-arg]
