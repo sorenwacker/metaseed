@@ -244,6 +244,13 @@ else:
         print(f"{issue.field}: {issue.message} (rule: {issue.rule})")
 ```
 
+Children are stored as flat sibling nodes, but validation reconstructs each
+parent's subtree first, so list-cardinality rules (for example "an Investigation
+must have at least one study") are satisfied by children created with
+`parent_id=...`. A child is matched to a nested field by its entity type; when a
+parent nests the same type in more than one field, the reconstruction cannot yet
+tell which field a child belongs to (see issue #137).
+
 ### Validate a specific entity
 
 ```python
