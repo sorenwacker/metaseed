@@ -87,23 +87,31 @@ def test_sync_creates_isa_hierarchy_and_threads_ids():
     assert study_call["investigation_id"] == inv_id
     sample_call = next(c for k, c in seek.calls if k == "sample")
     assert sample_call["sample_type_id"] == "st-9"
-    assert sample_call["data"]["name"] == "sample-a"
+    # a core identity field (name) is routed onto the Sample Type's Title attribute
+    assert sample_call["data"]["Title"] == "sample-a"
 
 
-def test_sample_data_keeps_scalar_lists_drops_nested():
+def test_sample_data_routes_core_fields_and_keeps_scalar_lists():
     from metaseed.seek.sync import _sample_data
 
     data = _sample_data(
         {
             "_node_id": "x",  # metadata key dropped
-            "name": "s1",
+            "unique_id": "s1",  # core identity -> Title
+            "description": "d",  # core -> Description
             "empty": "",  # empty dropped
+            "organism": "human",  # non-core field kept under its own name
             "tags": ["a", "b"],  # scalar list kept (CV list)
             "nested": {"k": "v"},  # non-scalar dropped
             "mixed": ["a", {"k": 1}],  # list with a dict dropped
         }
     )
-    assert data == {"name": "s1", "tags": ["a", "b"]}
+    assert data == {
+        "Title": "s1",
+        "Description": "d",
+        "organism": "human",
+        "tags": ["a", "b"],
+    }
 
 
 def test_sync_skips_sample_without_provisioned_type():

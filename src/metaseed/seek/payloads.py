@@ -13,7 +13,10 @@ id becomes the Assay's ``study`` relationship, and so on.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 # A JERM assay type that always resolves on a stock SEEK; callers may override.
 DEFAULT_ASSAY_TYPE_URI = (
@@ -98,6 +101,7 @@ def sample_attribute(
     required: bool = False,
     is_title: bool = False,
     pos: int | None = None,
+    pid: str | None = None,
     sample_controlled_vocab_id: str | int | None = None,
     allow_cv_free_text: bool = False,
     linked_sample_type_id: str | int | None = None,
@@ -106,6 +110,12 @@ def sample_attribute(
 
     ``attribute_type_id`` is a SEEK base attribute-type id (e.g. 8 = String,
     4 = Integer, 7 = Text), as listed by ``GET /sample_attribute_types``.
+
+    ``pid`` is the attribute's persistent identifier (a property URI). SEEK's
+    FAIR-Data-Station import matches an RDF sample to a Sample Type by exact
+    string equality of attribute PIDs, discarding blank ones — so an attribute a
+    sample's field should populate on import must carry the *same* URI the data
+    RDF emits for that field (``http://schema.org/<field>``).
 
     ``sample_controlled_vocab_id`` binds a Controlled Vocabulary to the attribute
     and ``linked_sample_type_id`` binds another Sample Type. SEEK's
@@ -121,6 +131,8 @@ def sample_attribute(
     }
     if pos is not None:
         attribute["pos"] = pos
+    if pid is not None:
+        attribute["pid"] = pid
     if sample_controlled_vocab_id is not None:
         attribute["sample_controlled_vocab_id"] = str(sample_controlled_vocab_id)
         attribute["allow_cv_free_text"] = allow_cv_free_text
@@ -138,13 +150,59 @@ def sample_type_payload(
     """Build a POST body for ``/sample_types`` (a sample schema, per project).
 
     ``attributes`` is a list of :func:`sample_attribute` entries; exactly one
-    should set ``is_title=True``.
+    should set ``is_title=True``. The Sample Type is created private (SEEK's
+    default); its contributor can still view it, which is what the
+    FAIR-Data-Station import — run by the same person who provisioned it —
+    requires. Broader sharing is subject to the instance's sharing limits.
     """
     return _document(
         "sample_types",
         {"title": title, "sample_attributes": attributes},
         {"projects": _to_many("projects", [project_id])},
     )
+
+
+def preserved_sample_attribute(existing: Mapping[str, Any]) -> dict[str, Any]:
+    """Normalize an attribute from a ``GET /sample_types`` response back into a
+    request attribute, keeping its ``id``.
+
+    A Sample Type update (:func:`sample_type_update_payload`) replaces the whole
+    ``sample_attributes`` list; an existing attribute must be re-sent *with its
+    id* so SEEK preserves it (and its data) rather than dropping and recreating
+    it. ``pid``/``pos``/CV binding are carried through when present.
+    """
+    attr: dict[str, Any] = {
+        "id": str(existing["id"]),
+        "title": existing["title"],
+        "required": bool(existing.get("required", False)),
+        "is_title": bool(existing.get("is_title", False)),
+        "sample_attribute_type": {"id": str(existing["sample_attribute_type"]["id"])},
+    }
+    if existing.get("pos") is not None:
+        attr["pos"] = existing["pos"]
+    if existing.get("pid"):
+        attr["pid"] = existing["pid"]
+    cv = existing.get("sample_controlled_vocab") or {}
+    if cv.get("id") is not None:
+        attr["sample_controlled_vocab_id"] = str(cv["id"])
+    return attr
+
+
+def sample_type_update_payload(
+    *, sample_type_id: str | int, attributes: list[dict[str, Any]]
+) -> dict[str, Any]:
+    """Build a PATCH body for ``/sample_types/{id}`` replacing its attributes.
+
+    ``attributes`` is the *full* desired list — existing attributes (via
+    :func:`preserved_sample_attribute`, keeping their ids) plus any new ones.
+    """
+    return {
+        "data": {
+            "id": str(sample_type_id),
+            "type": "sample_types",
+            "attributes": {"sample_attributes": attributes},
+        }
+    }
 
 
 def sample_payload(

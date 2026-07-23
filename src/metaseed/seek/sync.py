@@ -43,10 +43,26 @@ class SyncResult:
         )
 
 
+# Core identity/description fields map onto the provisioned Sample Type's
+# built-in Title/Description attributes (see :mod:`metaseed.seek.provision`);
+# every other scalar field keeps its own name. Kept in sync with
+# ``provision._CORE_FIELDS``.
+_CORE_TO_ATTRIBUTE = {
+    "identifier": "Title",
+    "unique_id": "Title",
+    "name": "Title",
+    "title": "Title",
+    "description": "Description",
+}
+
+
 def _sample_data(values: Mapping[str, Any]) -> dict[str, Any]:
     """The postable attribute map for a Sample: drop metadata keys and empties.
 
-    Scalars pass through; a list of scalars is kept (a Controlled Vocabulary List
+    Core identity/description fields are routed onto the Sample Type's ``Title`` /
+    ``Description`` attributes so the keys match what
+    :func:`metaseed.seek.provision.build_provisioning_plan` provisions. Scalars
+    pass through; a list of scalars is kept (a Controlled Vocabulary List
     attribute expects an array); other structures (nested dicts) are dropped.
     """
     data: dict[str, Any] = {}
@@ -57,7 +73,8 @@ def _sample_data(values: Mapping[str, Any]) -> dict[str, Any]:
             isinstance(value, list)
             and all(isinstance(v, (str, int, float, bool)) for v in value)
         ):
-            data[key] = value
+            attribute = _CORE_TO_ATTRIBUTE.get(key, key)
+            data.setdefault(attribute, value)
     return data
 
 

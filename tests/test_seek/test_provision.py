@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from metaseed.seek.provision import (
@@ -74,24 +74,39 @@ def test_plan_only_includes_sample_role_entities():
     assert plan.sample_types[0].title == "testprofile Sample"
 
 
-def test_plan_maps_field_types_and_skips_nested():
+def test_plan_maps_field_types_and_skips_nested_and_core():
     plan = build_provisioning_plan(_profile())
     attrs = {a.title: a for a in plan.sample_types[0].attributes}
     assert "source" not in attrs  # nested entity dropped
-    assert attrs["identifier"].attribute_type_title == "String"
+    assert "identifier" not in attrs  # core identity carried by the Title attribute
+    assert attrs["Description"].attribute_type_title == "String"
     assert attrs["count"].attribute_type_title == "Integer"
     assert attrs["depth"].attribute_type_title == "Real number"
     assert attrs["collected"].attribute_type_title == "Date"
     assert attrs["organism"].attribute_type_title == "Controlled Vocabulary"
 
 
-def test_plan_marks_identifier_as_title_and_positions():
+def test_plan_leads_with_title_and_description():
     plan = build_provisioning_plan(_profile())
     attrs = plan.sample_types[0].attributes
+    assert attrs[0].title == "Title" and attrs[1].title == "Description"
     title_attrs = [a for a in attrs if a.is_title]
-    assert len(title_attrs) == 1 and title_attrs[0].title == "identifier"
-    assert title_attrs[0].required is True  # title is forced required
-    assert [a.pos for a in attrs] == [1, 2, 3, 4, 5]  # 1-based, contiguous
+    assert len(title_attrs) == 1 and title_attrs[0].title == "Title"
+    assert title_attrs[0].required is True
+    assert attrs[1].is_title is False  # Description is not the title attribute
+    # Title, Description, then organism/count/depth/collected — 1-based, contiguous
+    assert [a.pos for a in attrs] == [1, 2, 3, 4, 5, 6]
+
+
+def test_plan_sets_schema_org_pid_on_field_attributes_only():
+    plan = build_provisioning_plan(_profile())
+    attrs = {a.title: a for a in plan.sample_types[0].attributes}
+    # PID must equal the URI the data RDF emits for that field, so an FDS import
+    # matches the sample to this Sample Type.
+    assert attrs["count"].pid == "http://schema.org/count"
+    assert attrs["organism"].pid == "http://schema.org/organism"
+    # Core Title/Description are matched by attribute title, not PID.
+    assert attrs["Title"].pid is None and attrs["Description"].pid is None
 
 
 def test_plan_builds_cv_from_enum():
@@ -122,6 +137,8 @@ class _FakeSeek:
 
     existing_cvs: dict[str, str]
     existing_sample_types: dict[str, str]
+    # titles ``add_missing_sample_type_attributes`` reports adding on reuse.
+    added_on_reuse: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         self.calls: list[tuple[str, Any]] = []
@@ -160,6 +177,15 @@ class _FakeSeek:
         )
         return self._next()
 
+    def add_missing_sample_type_attributes(
+        self, sample_type_id: str, attributes: list[dict[str, Any]]
+    ) -> list[str]:
+        if self.added_on_reuse:
+            self.calls.append(
+                ("update_sample_type", {"id": sample_type_id, "attributes": attributes})
+            )
+        return list(self.added_on_reuse)
+
 
 def test_execute_creates_cv_before_sample_type_and_threads_id():
     plan = build_provisioning_plan(_profile())
@@ -177,6 +203,18 @@ def test_execute_creates_cv_before_sample_type_and_threads_id():
         "CV: testprofile Sample.organism",
         "Sample Type: testprofile Sample",
     ]
+
+
+def test_execute_posts_schema_org_pids():
+    plan = build_provisioning_plan(_profile())
+    seek = _FakeSeek(existing_cvs={}, existing_sample_types={})
+    execute_provisioning_plan(seek, plan, project_id="1")  # type: ignore[arg-type]
+
+    st_call = next(c[1] for c in seek.calls if c[0] == "create_sample_type")
+    count = next(a for a in st_call["attributes"] if a["title"] == "count")
+    assert count["pid"] == "http://schema.org/count"  # else FDS import can't match
+    title = next(a for a in st_call["attributes"] if a["title"] == "Title")
+    assert "pid" not in title  # core Title has no PID
 
 
 def test_execute_isolates_a_failing_create():
@@ -204,11 +242,32 @@ def test_execute_reuses_existing_and_posts_nothing():
     )
     result = execute_provisioning_plan(seek, plan, project_id="1")  # type: ignore[arg-type]
 
-    assert seek.calls == []  # nothing created
+    assert seek.calls == []  # nothing created; existing type already complete
     assert result.cv_ids["testprofile Sample.organism"] == "99"
     assert result.sample_type_ids["Sample"] == "77"
     assert result.created == []
+    assert result.updated == []
     assert set(result.reused) == {
         "CV: testprofile Sample.organism",
         "Sample Type: testprofile Sample",
     }
+
+
+def test_execute_adds_missing_attributes_to_existing_sample_type():
+    # A field added to the profile after the first provision becomes a new column
+    # on the already-provisioned Sample Type, rather than being skipped.
+    plan = build_provisioning_plan(_profile())
+    seek = _FakeSeek(
+        existing_cvs={"testprofile Sample.organism": "99"},
+        existing_sample_types={"testprofile Sample": "77"},
+        added_on_reuse=["count"],
+    )
+    result = execute_provisioning_plan(seek, plan, project_id="1")  # type: ignore[arg-type]
+
+    assert result.sample_type_ids["Sample"] == "77"  # reused, not recreated
+    assert result.updated == ["Sample Type: testprofile Sample (+count)"]
+    assert "Sample Type: testprofile Sample" not in result.reused
+    update = next(c[1] for c in seek.calls if c[0] == "update_sample_type")
+    assert update["id"] == "77"
+    # the desired full attribute set (incl. PIDs) is handed to the update
+    assert any(a.get("pid") == "http://schema.org/count" for a in update["attributes"])

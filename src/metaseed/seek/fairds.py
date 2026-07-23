@@ -215,22 +215,33 @@ def to_fair_data_station_rdf(client: MetaseedClient) -> str:
         path = f"{parent_path}/{seg}" if parent_path else seg
         uri = URIRef(_BASE + path)
 
+        identity = node_identity(node)
         graph.add((uri, RDF.type, JERM[jerm_class]))
-        graph.add((uri, SCHEMA.identifier, Literal(node_identity(node))))
+        graph.add((uri, SCHEMA.identifier, Literal(identity)))
+
+        data = values_by_node.get(node.id, {})
+        # SEEK derives a resource's (required) title/name from schema:title /
+        # schema:name, not schema:identifier. Emit both for every instance,
+        # falling back to the identity when the entity has no title/name field,
+        # so identifier-keyed entities (e.g. a MIAPPE Sample) still import.
+        title_value = data.get("title") or data.get("name") or identity
+        graph.add((uri, SCHEMA.title, Literal(title_value)))
+        graph.add((uri, SCHEMA.name, Literal(data.get("name") or title_value)))
 
         entity_fields = fields.get(node.entity_type, {})
-        for key, value in values_by_node.get(node.id, {}).items():
-            if key.startswith("_") or key in ("identifier", "unique_id"):
+        for key, value in data.items():
+            if key.startswith("_") or key in (
+                "identifier",
+                "unique_id",
+                "title",
+                "name",
+            ):
                 continue
             if value in (None, "", [], {}) or not isinstance(
                 value, (str, int, float, bool)
             ):
                 continue
-            if key == "title":
-                graph.add((uri, SCHEMA.title, Literal(value)))
-            elif key == "name":
-                graph.add((uri, SCHEMA.name, Literal(value)))
-            elif key == "description":
+            if key == "description":
                 graph.add((uri, SCHEMA.description, Literal(value)))
             else:
                 graph.add((uri, SCHEMA[key], Literal(value)))

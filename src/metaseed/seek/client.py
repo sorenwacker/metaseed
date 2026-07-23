@@ -204,6 +204,37 @@ class SeekClient:
             ),
         )
 
+    def add_missing_sample_type_attributes(
+        self, sample_type_id: str, attributes: list[dict[str, Any]]
+    ) -> list[str]:
+        """Append any ``attributes`` (matched by title) the Sample Type lacks.
+
+        Enables provisioning to add a newly-added profile field as a column on an
+        already-provisioned Sample Type. Existing attributes are preserved with
+        their ids; a new attribute is added **non-required** (a required column
+        would fail validation against the type's pre-existing samples). Returns
+        the titles actually added (empty if the type already had them all).
+        """
+        detail = self.get(f"/sample_types/{sample_type_id}").get("data", {})
+        existing = detail.get("attributes", {}).get("sample_attributes", [])
+        existing_titles = {a.get("title") for a in existing}
+        to_add = [a for a in attributes if a.get("title") not in existing_titles]
+        if not to_add:
+            return []
+        merged = [payloads.preserved_sample_attribute(a) for a in existing]
+        added: list[str] = []
+        for attr in to_add:
+            merged.append({**attr, "required": False})
+            added.append(str(attr["title"]))
+        self._request(
+            "PATCH",
+            f"/sample_types/{sample_type_id}",
+            json=payloads.sample_type_update_payload(
+                sample_type_id=sample_type_id, attributes=merged
+            ),
+        )
+        return added
+
     def create_sample(
         self, *, sample_type_id: str, project_id: str, data: dict[str, Any]
     ) -> str:

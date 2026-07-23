@@ -86,6 +86,38 @@ def test_sample_siblings_get_distinct_uris_and_names():
     assert names == {"sample-a", "sample-b"}  # name emitted as schema:name
 
 
+def test_identifier_keyed_entity_gets_title_from_identifier():
+    # SEEK requires every resource to have a title (from schema:title), which it
+    # imposes as a required Sample Type attribute. A MIAPPE Sample is keyed by
+    # unique_id and has no title/name field, so schema:title must fall back to the
+    # identity — else the import fails validating the sample.
+    client = MetaseedClient("miappe", "1.2")
+    inv = client.create_entity(
+        "Investigation", {"unique_id": "INV1", "title": "I"}, skip_validation=True
+    )
+    study = client.create_entity(
+        "Study",
+        {"unique_id": "STU1", "title": "S"},
+        parent_id=inv.id,
+        skip_validation=True,
+    )
+    ou = client.create_entity(
+        "ObservationUnit",
+        {"unique_id": "OU1"},
+        parent_id=study.id,
+        skip_validation=True,
+    )
+    client.create_entity(
+        "Sample", {"unique_id": "SAMPLE-1"}, parent_id=ou.id, skip_validation=True
+    )
+    graph = Graph()
+    graph.parse(data=to_fair_data_station_rdf(client), format="turtle")
+
+    sample = next(graph.subjects(RDF.type, JERM.Sample))
+    assert str(next(graph.objects(sample, SCHEMA.title))) == "SAMPLE-1"
+    assert str(next(graph.objects(sample, SCHEMA.name))) == "SAMPLE-1"
+
+
 def test_field_property_definitions_carry_label_and_required():
     graph = _graph()
     # every schema property used as a predicate on a resource is declared with a
