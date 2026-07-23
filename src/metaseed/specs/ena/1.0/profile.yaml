@@ -16,35 +16,39 @@ ontology: SRA
 
 validation_rules:
   # Accession format validations
+  # INSDC accessions are mirrored across the three partners with a leading
+  # letter for the originating archive: E = ENA/EBI, S = NCBI, D = DDBJ. A record
+  # imported from any partner (e.g. a DDBJ PRJDA project with DRR runs) is a valid
+  # ENA object, so each pattern accepts all three variants, not ENA-only.
   - name: study_accession_format
-    description: Study accession must be PRJEB or ERP format
+    description: Study accession must be an INSDC BioProject (PRJEB/PRJNA/PRJDA/PRJDB) or secondary study (ERP/SRP/DRP)
     applies_to: [Study]
     field: accession
-    pattern: "^(PRJEB[0-9]+|ERP[0-9]{6,})$"
+    pattern: "^(PRJ[EDN][A-Z][0-9]+|[EDS]RP[0-9]{6,})$"
 
   - name: sample_accession_format
-    description: Sample accession must be an ENA/INSDC form (ERS, or BioSample SAMEA/SAMN/SAMD)
+    description: Sample accession must be an INSDC sample (ERS/SRS/DRS) or BioSample (SAMEA/SAMN/SAMD)
     applies_to: [Sample]
     field: accession
-    pattern: "^(ERS[0-9]{6,}|SAM(EA|N|D)[0-9]+)$"
+    pattern: "^([EDS]RS[0-9]{6,}|SAM[EDN][A-Z]?[0-9]+)$"
 
   - name: experiment_accession_format
-    description: Experiment accession must be ERX format
+    description: Experiment accession must be an INSDC experiment (ERX/SRX/DRX)
     applies_to: [Experiment]
     field: accession
-    pattern: "^ERX[0-9]{6,}$"
+    pattern: "^[EDS]RX[0-9]{6,}$"
 
   - name: run_accession_format
-    description: Run accession must be ERR format
+    description: Run accession must be an INSDC run (ERR/SRR/DRR)
     applies_to: [Run]
     field: accession
-    pattern: "^ERR[0-9]{6,}$"
+    pattern: "^[EDS]RR[0-9]{6,}$"
 
   - name: analysis_accession_format
-    description: Analysis accession must be ERZ format
+    description: Analysis accession must be an INSDC analysis (ERZ/SRZ/DRZ)
     applies_to: [Analysis]
     field: accession
-    pattern: "^ERZ[0-9]{6,}$"
+    pattern: "^[EDS]RZ[0-9]{6,}$"
 
   # Taxon ID validation
   - name: taxon_id_positive
