@@ -148,6 +148,14 @@ Assay:
 
 ### Decision: Option D (Merged Entity with Discriminator)
 
+!!! note "Partially superseded"
+    The shipped `metabolights/1.0` profile adopted the single merged `Assay`
+    entity, but **without** the `assay_type` discriminator field described below —
+    `assay_type` appears nowhere in the spec. Technology differentiation is left
+    to the assay's populated fields rather than an explicit discriminator. Treat
+    the discriminator parts of this document as a design proposal that was not
+    implemented.
+
 #### Why Not Option A (Separate Lists)?
 
 Option A was initially implemented but rejected because:
