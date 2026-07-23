@@ -13,7 +13,10 @@ repos:
       - id: debug-statements
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.7
+    # Keep in step with the ruff version resolved in uv.lock. When the two drift,
+    # the hook and CI format the same code differently and every toolchain bump
+    # produces a repo-wide reformat commit.
+    rev: v0.15.22
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix, .]

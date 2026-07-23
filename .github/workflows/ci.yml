@@ -30,6 +30,12 @@ jobs:
       - name: Run linting
         run: uv run ruff check .
 
+      - name: Check formatting
+        # Gate formatting in CI, not only in the pre-commit hook. Without this,
+        # drift is invisible to anyone who commits without the hook installed --
+        # which is how main reached 18 non-compliant files before #147.
+        run: uv run ruff format --check .
+
       - name: Run type checking
         run: uv run mypy src/metaseed
 
