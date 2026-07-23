@@ -108,10 +108,12 @@ def _configure_seek(driver, url="http://localhost:3001", api_key="SECRET-KEY-XYZ
     ).click()
     # HTMX swaps #adapter-seek; the URL prefills back once persisted.
     WebDriverWait(driver, 10).until(
-        lambda d: d.find_element(
-            By.CSS_SELECTOR, '[data-testid="config-seek-url"]'
-        ).get_attribute("value")
-        == url
+        lambda d: (
+            d.find_element(
+                By.CSS_SELECTOR, '[data-testid="config-seek-url"]'
+            ).get_attribute("value")
+            == url
+        )
     )
 
 

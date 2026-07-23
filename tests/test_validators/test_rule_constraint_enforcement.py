@@ -22,21 +22,36 @@ class TestRuleRangeEnforced:
     def test_altitude_above_max_rejected(self):
         # altitude_range rule: -500..9000, declared on the rule not the field.
         errs = _miappe(
-            {"unique_id": "S1", "title": "t", "investigation_id": "INV1", "altitude": 999999.0},
+            {
+                "unique_id": "S1",
+                "title": "t",
+                "investigation_id": "INV1",
+                "altitude": 999999.0,
+            },
             "Study",
         )
         assert errs, "altitude 999999 must be rejected"
 
     def test_altitude_below_min_rejected(self):
         errs = _miappe(
-            {"unique_id": "S2", "title": "t", "investigation_id": "INV1", "altitude": -9999.0},
+            {
+                "unique_id": "S2",
+                "title": "t",
+                "investigation_id": "INV1",
+                "altitude": -9999.0,
+            },
             "Study",
         )
         assert errs
 
     def test_altitude_in_range_passes(self):
         errs = _miappe(
-            {"unique_id": "S3", "title": "t", "investigation_id": "INV1", "altitude": 1200.0},
+            {
+                "unique_id": "S3",
+                "title": "t",
+                "investigation_id": "INV1",
+                "altitude": 1200.0,
+            },
             "Study",
         )
         assert errs == []
@@ -62,9 +77,9 @@ class TestRuleEnumEnforced:
         errs = validate_entity(
             {"library_strategy": "NOTREAL"}, "Experiment", version="1.0", profile="ena"
         )
-        assert any(
-            "library_strategy" in e.field or "WGS" in e.message for e in errs
-        ), "ENA library_strategy enum must be enforced"
+        assert any("library_strategy" in e.field or "WGS" in e.message for e in errs), (
+            "ENA library_strategy enum must be enforced"
+        )
 
 
 class TestFieldConstraintStillWins:

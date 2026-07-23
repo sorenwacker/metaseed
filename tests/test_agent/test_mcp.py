@@ -450,7 +450,11 @@ class TestMCPDatasetTools:
         )
         svc.create_entity(
             "ObservationUnit",
-            {"unique_id": "OU-1", "study_id": "STU-1", "observation_unit_type": "plant"},
+            {
+                "unique_id": "OU-1",
+                "study_id": "STU-1",
+                "observation_unit_type": "plant",
+            },
             parent_id=stu["id"],
         )
         svc.create_entity(
