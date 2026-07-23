@@ -8,8 +8,8 @@ identical results.
 
 ## Accessing the Spec Builder
 
-1. Start the Metaseed server: `metaseed serve`
-2. Navigate to `http://localhost:8765/spec-builder`
+1. Start the Metaseed web UI: `metaseed ui` (defaults to port 8080).
+2. Navigate to `http://localhost:8080/spec-builder`
 
 ## Creating a New Specification
 

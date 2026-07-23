@@ -28,9 +28,8 @@ handlers:
   parent and a back-reference field on the target when a nested field is added.
 
 Exposing spec authoring over MCP without extracting this logic would have
-duplicated it, creating the same drift risk as the historical reference-resolution
-defects (findings H2 and M19 in `docs/REVIEW.md`). Extraction makes one
-implementation authoritative.
+duplicated it, creating the same drift risk as historical reference-resolution
+defects. Extraction makes one implementation authoritative.
 
 ## Architecture
 

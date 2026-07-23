@@ -4,7 +4,7 @@
 
 # Metaseed
 
-Metaseed provides tools for creating, editing, and validating experimental metadata following MIAPPE (Minimum Information About Plant Phenotyping Experiments) standards.
+Metaseed provides tools for creating, editing, and validating experimental metadata across scientific standards — MIAPPE (plant phenotyping), ISA, Darwin Core, DiSSCo, ENA, JERM, PRIDE, and MetaboLights.
 
 Metadata structure is defined in YAML specification files, which are used to generate Pydantic models at runtime. This schema-driven approach allows the same codebase to support multiple metadata standards. Fields reference real ontologies (PPEO, ISA, PROV-O) for semantic interoperability.
 

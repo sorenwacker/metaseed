@@ -10,6 +10,7 @@ site_description: A schema-driven toolbox for creating, editing, and validating 
 exclude_docs: |
   REVIEW.md
   isa_demo.ipynb
+  .ipynb_checkpoints/
 
 theme:
   name: material
@@ -35,6 +36,7 @@ theme:
 
 plugins:
   - search
+  - panzoom  # declared in the `docs` extra; enables zoom/pan on the mermaid ERDs
 
 markdown_extensions:
   - admonition
@@ -71,6 +73,9 @@ nav:
       - ISA: profiles/isa.md
       - JERM: profiles/jerm.md
       - MIAPPE: profiles/miappe.md
+      - MIAPPE-HTP: profiles/miappe-htp.md
+      - MetaboLights: profiles/metabolights.md
+      - PRIDE: profiles/pride.md
   - Discussion:
       - ISA vs MIAPPE: discussion/comparison.md
       - Entity Relationships: discussion/entity-relationships.md
@@ -78,6 +83,8 @@ nav:
       - MetaboLights Design: discussion/metabolights-design.md
   - Architecture:
       - Overview: architecture/overview.md
+      - Metadata Agent: architecture/metadata-agent.md
+      - Facade as Entity Storage (ADR): architecture/decisions/001-facade-as-entity-storage.md
       - Integration Adapters: architecture/integration-adapters.md
       - Exceptions: architecture/exceptions.md
       - Model Factory: architecture/model-factory.md
@@ -104,3 +111,4 @@ nav:
   - Development:
       - Contributing: development/contributing.md
       - Testing: development/testing.md
+      - Testing Best Practices: development/testing-best-practices.md
