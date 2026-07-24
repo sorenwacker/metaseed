@@ -79,3 +79,67 @@ class TestActions:
         scoped = adapters.Action("export", "y", "Y", "m:f", profiles=("isa",))
         assert scoped.applies_to("isa")
         assert not scoped.applies_to("ena")
+
+
+@pytest.mark.parametrize(
+    "action",
+    [a for adapter in adapters.ADAPTERS for a in adapter.actions],
+    ids=lambda a: a.key,
+)
+def test_every_declared_action_ref_resolves(action) -> None:
+    """A typo in ``ref`` is invisible to mypy and ruff, so pin it with a test.
+
+    ``ref`` is an opaque "module:function" string; without this, a stale target
+    only surfaces as a 500 the first time a user clicks the control.
+    """
+    assert callable(action.resolve())
+
+
+def test_malformed_ref_is_rejected_at_construction() -> None:
+    with pytest.raises(ValueError, match="module:function"):
+        adapters.Action(kind="export", key="bad", label="Bad", ref="no-colon")
+
+
+def test_enumerating_the_registry_imports_no_plugin_modules() -> None:
+    """Enumeration must stay lazy: listing actions must not import adapters.
+
+    This is the central promise of the declarative model -- a host can list what
+    is on offer without paying for (or requiring) every optional extra.
+    """
+    import sys
+
+    heavy = [m for m in sys.modules if m.startswith("metaseed.ena")]
+    for m in heavy:
+        del sys.modules[m]
+
+    adapters.actions_for_profile("ena", kind="export")
+    adapters.find_action("ena")
+
+    assert not [m for m in sys.modules if m.startswith("metaseed.ena")], (
+        "enumerating the registry imported a plugin module"
+    )
+
+
+def test_profiles_tuple_offers_an_action_for_another_profile() -> None:
+    """An explicit ``profiles`` must be able to broaden, not only narrow.
+
+    Restricting the search to the adapter whose key equals the profile made this
+    field unreachable: it could only ever narrow to nothing.
+    """
+    action = adapters.Action(
+        kind="export",
+        key="probe",
+        label="Probe",
+        ref="metaseed.ena.export:to_ena_xml",
+        profiles=("isa",),
+    )
+    assert action.applies_to("isa", adapter_key="ena") is True
+    assert action.applies_to("miappe", adapter_key="ena") is False
+
+
+def test_action_without_profiles_follows_its_adapter_key() -> None:
+    action = adapters.Action(
+        kind="export", key="probe2", label="Probe", ref="metaseed.ena.export:to_ena_xml"
+    )
+    assert action.applies_to("ena", adapter_key="ena") is True
+    assert action.applies_to("miappe", adapter_key="ena") is False

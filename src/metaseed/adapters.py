@@ -65,17 +65,42 @@ class Action:
     profiles: tuple[str, ...] = ()
     """Profiles the action applies to; empty means the adapter's own ``key``."""
 
+    def __post_init__(self) -> None:
+        """Reject a malformed ``ref`` at construction rather than at dispatch.
+
+        Without this a ref missing its ``:`` resolves to ``getattr(mod, "")``,
+        surfacing as a 500 the first time a user clicks the control.
+        """
+        module_name, separator, attribute = self.ref.partition(":")
+        if not (module_name and separator and attribute):
+            msg = (
+                f"Action {self.key!r}: ref must be 'module:function', got {self.ref!r}"
+            )
+            raise ValueError(msg)
+
     def resolve(self) -> Callable[..., Any]:
-        """Import and return the action's callable (only when invoked)."""
+        """Import and return the action's callable (only when invoked).
+
+        Only ever called on registry-owned instances: ``Action`` must not be
+        constructed from user input, since ``resolve`` imports by name.
+        """
         module_name, _, attribute = self.ref.partition(":")
         return cast(
             "Callable[..., Any]",
             getattr(importlib.import_module(module_name), attribute),
         )
 
-    def applies_to(self, profile: str) -> bool:
-        """Whether this action is offered for ``profile``."""
-        return profile in self.profiles if self.profiles else True
+    def applies_to(self, profile: str, *, adapter_key: str | None = None) -> bool:
+        """Whether this action is offered for ``profile``.
+
+        An explicit ``profiles`` tuple wins. Otherwise the action is offered for
+        the profile its adapter serves, by the convention that an adapter's
+        ``key`` names that profile. ``adapter_key`` is omitted only when the
+        caller has already established the adapter matches.
+        """
+        if self.profiles:
+            return profile in self.profiles
+        return adapter_key is None or adapter_key == profile
 
 
 @dataclass(frozen=True)
@@ -225,18 +250,21 @@ def actions_for_profile(
 ) -> tuple[Action, ...]:
     """Actions a host should offer for ``profile``, from installed adapters.
 
-    An adapter's ``key`` matches the profile it serves (``ena`` adapter → ``ena``
-    profile), so an adapter's actions are offered when its extra is installed and
-    the action ``applies_to`` the profile. Optionally filter by ``kind``
+    Every installed adapter is consulted, and each action decides for itself via
+    ``applies_to``: an action with an explicit ``profiles`` tuple is offered for
+    those profiles, otherwise it falls back to the convention that an adapter's
+    ``key`` names the profile it serves (``ena`` adapter → ``ena`` profile).
+    Scanning all adapters is what makes ``profiles`` meaningful — restricting the
+    search to ``_BY_KEY[profile]`` would mean an action could only ever narrow to
+    nothing, never be offered for another profile. Optionally filter by ``kind``
     (import/export/push) and ``surface`` so a host can populate one UI area.
     """
-    adapter = _BY_KEY.get(profile)
-    if adapter is None or not is_available(adapter):
-        return ()
     return tuple(
         action
+        for adapter in ADAPTERS
+        if is_available(adapter)
         for action in adapter.actions
-        if action.applies_to(profile)
+        if action.applies_to(profile, adapter_key=adapter.key)
         and (kind is None or action.kind == kind)
         and (surface is None or action.surface == surface)
     )

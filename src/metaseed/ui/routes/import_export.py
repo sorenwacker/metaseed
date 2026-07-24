@@ -77,6 +77,18 @@ def register_export_routes(
             raise HTTPException(status_code=404, detail=f"Unknown export format: {fmt}")
 
         state = get_state()
+
+        # Gate on the same predicate that decides which buttons are rendered.
+        # Without this a hand-typed format runs an exporter against a profile it
+        # was never meant for and returns a successful download of header-only
+        # files (e.g. a darwin-core dataset exported as MetaboLights ISA-Tab).
+        offered = adapters.actions_for_profile(state.profile, kind="export")
+        if action not in offered:
+            raise HTTPException(
+                status_code=404,
+                detail=f"{fmt} export is not available for the {state.profile} profile.",
+            )
+
         from metaseed.api.client import MetaseedClient
 
         client = MetaseedClient.__new__(MetaseedClient)
@@ -89,8 +101,19 @@ def register_export_routes(
                 status_code=400,
                 detail=f"{fmt} export requires the matching metaseed extra.",
             ) from exc
+        except (ImportError, AttributeError) as exc:
+            # A broken transitive import or a stale ref: a plugin defect must
+            # degrade to an error message, not an unhandled 500.
+            raise HTTPException(
+                status_code=500, detail=f"{fmt} export is misconfigured."
+            ) from exc
 
-        files: dict[str, str] = export_fn(client)
+        try:
+            files: dict[str, str] = export_fn(client)
+        except Exception as exc:  # any plugin failure degrades to an error page
+            raise HTTPException(
+                status_code=500, detail=f"{fmt} export failed: {exc}"
+            ) from exc
         if not files:
             raise HTTPException(
                 status_code=400,
