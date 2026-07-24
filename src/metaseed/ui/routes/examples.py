@@ -23,6 +23,8 @@ if TYPE_CHECKING:
 
     from fastapi import FastAPI
 
+    from metaseed.facade import ProfileFacade
+
     from ..state import AppState
 
 UI_DIR = Path(__file__).parent.parent
@@ -31,7 +33,7 @@ EXAMPLES_DIR = UI_DIR.parent / "examples"
 
 def _materialize_children(
     state: AppState,
-    facade: object,
+    facade: ProfileFacade,
     parent_node_id: str,
     parent_type: str,
     parent_data: dict[str, object],
@@ -46,7 +48,15 @@ def _materialize_children(
     helper = getattr(facade, parent_type, None)
     if helper is None:
         return
-    for field_name, child_type in helper.nested_fields.items():
+    # When the profile declares containment (owns markers), materialize only the
+    # owned children -- so embedded value-objects (e.g. an OntologyAnnotation in
+    # Assay.measurement_type, or a Comment) stay inline instead of being pulled
+    # out as separate, un-linkable tree nodes that orphan on reload. Profiles
+    # without markers fall back to every nested field, unchanged.
+    child_fields = (
+        helper.owned_child_fields if facade.uses_ownership() else helper.nested_fields
+    )
+    for field_name, child_type in child_fields.items():
         items = parent_data.get(field_name)
         if isinstance(items, dict):
             items = [items]

@@ -922,3 +922,55 @@ class TestSpecBuilderApplyYaml:
         detail = response.json()["detail"]
         assert detail == "Invalid YAML: root must be a mapping"
         assert "Failed to parse" not in detail
+
+
+class TestSpecBuilderMarkers:
+    """The spec-builder field form exposes the spec_version 0.6 markers."""
+
+    def test_owns_and_metadata_markers_persist_through_the_field_form(self, client):
+        """owns / is_identifier / is_label / tier / label / unit / example / options
+        are editable in the builder and survive a field update."""
+        client.get("/spec-builder/new")
+        client.post("/spec-builder/entity", data={"name": "Investigation"})
+        client.post("/spec-builder/entity", data={"name": "Study"})
+        client.post(
+            "/spec-builder/entity/Investigation/field",
+            data={"name": "studies", "field_type": "list", "items": "Study"},
+        )
+
+        resp = client.put(
+            "/spec-builder/entity/Investigation/field/0",
+            data={
+                "name": "studies",
+                "field_type": "list",
+                "items": "Study",
+                "owns": "true",
+                "tier": "recommended",
+                "label": "Studies",
+                "unit": "",
+                "example": "",
+                "options": "",
+            },
+        )
+        assert resp.status_code == 200
+
+        preview = client.get("/spec-builder/preview").text
+        assert "owns: true" in preview
+        assert "tier: recommended" in preview
+        assert "label: Studies" in preview
+
+    def test_unset_markers_do_not_serialize_their_falsey_form(self, client):
+        """An unchecked owns must not write ``owns: false`` (no churn)."""
+        client.get("/spec-builder/new")
+        client.post("/spec-builder/entity", data={"name": "Sample"})
+        client.post(
+            "/spec-builder/entity/Sample/field",
+            data={"name": "name", "field_type": "string"},
+        )
+        client.put(
+            "/spec-builder/entity/Sample/field/0",
+            data={"name": "name", "field_type": "string"},
+        )
+        preview = client.get("/spec-builder/preview").text
+        assert "owns: false" not in preview
+        assert "is_identifier: false" not in preview

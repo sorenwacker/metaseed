@@ -477,6 +477,18 @@ class ProfileFacade:
         """
         return self._entities.get(entity_type)
 
+    def uses_ownership(self: Self) -> bool:
+        """Whether the profile declares any ``owns`` containment markers (#137).
+
+        When it does, containment is fully declared and a consumer should honour
+        the markers strictly -- including that an entity with no marked field has
+        no tree children. When it does not, no field is marked and consumers fall
+        back to treating every nested field as containment.
+        """
+        return any(
+            f.owns for helper in self._entities.values() for f in helper._spec.fields
+        )
+
     def require_helper(self: Self, entity_type: str) -> EntityHelper:
         """Resolve an entity helper or raise with the profile's vocabulary.
 

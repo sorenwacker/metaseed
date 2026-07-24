@@ -206,17 +206,17 @@ class TestEntityHelper:
 
     def test_child_fields_returns_only_owned_when_marked(self) -> None:
         # isa Assay marks its containment fields ``owns: true``; its
-        # OntologyAnnotation lookups (measurement_type/technology_type/...) are
-        # unmarked, so child_fields excludes them.
+        # OntologyAnnotation lookups (measurement_type/technology_type/...) and
+        # embedded Comment are unmarked, so child_fields excludes them.
         assay = ProfileFacade("isa", "1.0").Assay
         assert "OntologyAnnotation" in assay.nested_fields.values()  # still nested
         assert set(assay.child_fields.values()) == {
             "DataFile",
             "OtherMaterial",
             "Process",
-            "Comment",
         }
         assert "OntologyAnnotation" not in assay.child_fields.values()
+        assert "Comment" not in assay.child_fields.values()
 
     def test_nested_fields_meaning_unchanged_by_owns(self) -> None:
         # nested_fields still means "all nested", markers or not.
@@ -825,3 +825,25 @@ class TestEntityStoreIndex:
 
         assert store.get_entity_by_ref("STU1") is not None
         assert store.get_entity_by_ref("A1") is not None
+
+
+class TestOwnershipContainment:
+    """owned_child_fields / uses_ownership -- declared tree containment (#137)."""
+
+    def test_owned_child_fields_is_owns_only_and_may_be_empty(self) -> None:
+        from metaseed.facade import ProfileFacade
+
+        facade = ProfileFacade("isa", "1.0")
+        # Person's only nested fields are value-objects (roles, comments) -- a
+        # profile using ownership must be able to say it has no tree children.
+        assert facade.get_helper("Person").owned_child_fields == {}
+        # A structural parent keeps its real children.
+        assert "studies" in facade.get_helper("Investigation").owned_child_fields
+
+    def test_uses_ownership_reflects_whether_markers_exist(self) -> None:
+        from metaseed.facade import ProfileFacade
+
+        assert ProfileFacade("isa", "1.0").uses_ownership() is True
+        # A profile with no owns markers falls back to treating all nested as
+        # containment, so it must report False.
+        assert ProfileFacade("miappe", "1.2").uses_ownership() is False

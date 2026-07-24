@@ -31,6 +31,55 @@
                         Required
                     </label>
                 </div>
+                <div class="form-group">
+                    <label class="form-label" title="Recommended is advisory; Required stays the validation source of truth">Tier</label>
+                    <select name="tier" class="form-input">
+                        <option value="" {% if not field.tier %}selected{% endif %}>(unset)</option>
+                        <option value="required" {% if field.tier == 'required' %}selected{% endif %}>required</option>
+                        <option value="recommended" {% if field.tier == 'recommended' %}selected{% endif %}>recommended</option>
+                        <option value="optional" {% if field.tier == 'optional' %}selected{% endif %}>optional</option>
+                    </select>
+                </div>
+                <div class="form-group form-group-checkbox">
+                    <label class="form-checkbox" title="This field uniquely identifies the entity (used for node ids and references)">
+                        <input type="checkbox" name="is_identifier" value="true"
+                               {% if field.is_identifier %}checked{% endif %}>
+                        Identifier
+                    </label>
+                </div>
+                <div class="form-group form-group-checkbox">
+                    <label class="form-checkbox" title="This field's value is the entity's display label">
+                        <input type="checkbox" name="is_label" value="true"
+                               {% if field.is_label %}checked{% endif %}>
+                        Label
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label" title="Human-readable caption for the field (defaults to the name)">Display label</label>
+                    <input type="text" name="label" class="form-input"
+                           value="{{ field.label or '' }}" placeholder="e.g. Collection date">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" title="Unit of measure, if any">Unit</label>
+                    <input type="text" name="unit" class="form-input"
+                           value="{{ field.unit or '' }}" placeholder="e.g. cm">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label" title="An illustrative value shown when building forms/templates">Example</label>
+                    <input type="text" name="example" class="form-input"
+                           value="{{ field.example if field.example is not none else '' }}" placeholder="e.g. 2024-05-01">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" title="Explicit choice list (comma-separated); falls back to the enum constraint when empty">Options</label>
+                    <input type="text" name="options" class="form-input"
+                           value="{{ field.options|join(', ') if field.options else '' }}" placeholder="a, b, c">
+                </div>
             </div>
 
             <div class="form-group">
@@ -60,6 +109,17 @@
                     <option value="{{ ename }}">
                     {% endfor %}
                 </datalist>
+            </div>
+
+            <!-- Owning-parent (containment) marker -->
+            <div class="form-group form-group-checkbox type-setting" data-field-types="list,entity">
+                <label class="form-checkbox" title="This entity owns the referenced items as tree children. Leave unchecked for embedded value objects or plain lookups (e.g. an OntologyAnnotation).">
+                    <input type="checkbox"
+                           name="owns"
+                           value="true"
+                           {% if field.owns %}checked{% endif %}>
+                    Owns (containment child, not a lookup)
+                </label>
             </div>
 
             <!-- Ontology lookup filter -->
