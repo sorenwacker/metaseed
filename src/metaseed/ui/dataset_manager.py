@@ -115,7 +115,14 @@ class DatasetManager:
         self._state.version = data.version or None
         self._state.catalog_metadata = data.catalog_metadata
         self._state.facade = None
+        # Restoring is not a reset in the user's sense: the same dataset stays
+        # open. ``reset()`` clears the current-dataset pointer, and the polling
+        # routes (/api/graph, /api/validate) restore on every tick -- so the
+        # pointer was wiped mid-session and the next auto-save fell back to a
+        # label-derived name, writing the edit into a different file.
+        current = self._state._current_dataset
         self._state.reset()
+        self._state._current_dataset = current
 
         facade = self._state.get_or_create_facade()
         loaded_count = facade.load_from_dict(data.entities)
