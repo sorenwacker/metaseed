@@ -163,3 +163,86 @@ class DatasetRepository(ABC):
     def validate_name(name: str) -> str | None:
         """Validate a dataset name."""
         return validate_dataset_name(name)
+
+
+# Restored: removed in 0.11 as "0 impls, 0 callers", but metaseed-hub both
+# implements and calls it. It is the async half of the storage contract a
+# database-backed host needs, and it carries shared behaviour (validate_name),
+# not just an interface.
+class AsyncDatasetRepository(ABC):
+    """Abstract interface for asynchronous dataset persistence.
+
+    This interface defines the contract for async dataset CRUD operations,
+    suitable for database backends using async SQLAlchemy or similar.
+
+    For sync backends (filesystem), use DatasetRepository instead.
+    """
+
+    @abstractmethod
+    async def list(self) -> list[DatasetInfo]:
+        """List all saved datasets.
+
+        Returns:
+            List of DatasetInfo summaries, sorted by modified time (most recent first).
+        """
+        pass
+
+    @abstractmethod
+    async def save(self, name: str, data: DatasetData) -> DatasetInfo:
+        """Save a dataset.
+
+        Args:
+            name: Dataset name (must be valid per validate_name).
+            data: Dataset contents to save.
+
+        Returns:
+            DatasetInfo for the saved dataset.
+
+        Raises:
+            ValueError: If name is invalid.
+        """
+        pass
+
+    @abstractmethod
+    async def load(self, name: str) -> DatasetData:
+        """Load a dataset by name.
+
+        Args:
+            name: Dataset name to load.
+
+        Returns:
+            DatasetData with full contents.
+
+        Raises:
+            FileNotFoundError: If dataset doesn't exist.
+        """
+        pass
+
+    @abstractmethod
+    async def delete(self, name: str) -> bool:
+        """Delete a dataset.
+
+        Args:
+            name: Dataset name to delete.
+
+        Returns:
+            True if deleted, False if not found.
+        """
+        pass
+
+    @abstractmethod
+    async def exists(self, name: str) -> bool:
+        """Check if a dataset exists.
+
+        Args:
+            name: Dataset name to check.
+
+        Returns:
+            True if exists, False otherwise.
+        """
+        pass
+
+    @staticmethod
+    def validate_name(name: str) -> str | None:
+        """Validate a dataset name."""
+        return validate_dataset_name(name)
