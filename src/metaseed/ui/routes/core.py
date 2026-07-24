@@ -158,6 +158,8 @@ def register_core_routes(
                     status_code=404, detail=f"Dataset not found: {name}"
                 ) from None
 
+        from .import_export import export_options_for_profile
+
         facade = state.get_or_create_facade()
         profile_factory = ProfileFactory()
 
@@ -179,6 +181,7 @@ def register_core_routes(
                     editing_node.entity_type if editing_node else None
                 ),
                 "current_dataset": name,
+                "export_options": export_options_for_profile(state.profile),
                 "base_url": base_url,
             },
         )

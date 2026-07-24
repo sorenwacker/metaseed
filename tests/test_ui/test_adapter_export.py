@@ -76,3 +76,36 @@ def test_export_route_rejects_a_format_not_offered_for_the_profile() -> None:
     assert response.status_code == 404, (
         "a metabolights export must not be offered for a darwin-core dataset"
     )
+
+
+def test_dataset_page_offers_the_profiles_adapter_exports() -> None:
+    """Adapter exports must be reachable from the dataset page, not only the
+    entity form.
+
+    Previously ``export_options`` was passed from a single route (the response
+    after saving an entity), so the buttons appeared once and vanished as soon
+    as the user navigated -- effectively undiscoverable.
+    """
+    from metaseed.ui.state import AppState
+
+    state = AppState()
+    client = TestClient(create_app(state), follow_redirects=True)
+
+    response = client.get("/load-example/pride/1.0")
+
+    assert response.status_code == 200
+    assert 'data-testid="btn-export-pride"' in response.text
+    assert 'data-testid="btn-export-pride-sdrf"' in response.text
+
+
+def test_dataset_page_offers_no_exports_for_a_profile_without_any() -> None:
+    """A profile with no declared export actions shows no adapter buttons."""
+    from metaseed.ui.state import AppState
+
+    state = AppState()
+    client = TestClient(create_app(state), follow_redirects=True)
+
+    response = client.get("/load-example/darwin-core/1.0")
+
+    assert response.status_code == 200
+    assert "btn-export-metabolights" not in response.text
