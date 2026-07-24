@@ -49,9 +49,27 @@ jobs:
           files: dist/*
           generate_release_notes: true
 
-      # Uncomment to publish to PyPI
-      # - name: Publish to PyPI
-      #   env:
-      #     TWINE_USERNAME: __token__
-      #     TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
-      #   run: uv run twine upload dist/*
+      - name: Upload dist for the publish job
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    # Publishes to PyPI via Trusted Publishing (OIDC): no API token is stored in
+    # the repo. Requires a matching publisher on PyPI for this repo + workflow +
+    # environment. Runs only after the release job's tests and build succeed.
+    needs: release
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write  # mint the short-lived OIDC token PyPI verifies
+    steps:
+      - name: Download the built distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
