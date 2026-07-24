@@ -36,7 +36,7 @@ def _get_dataset_manager() -> DatasetManager:
     return factory.get_manager(state)
 
 
-def register_dataset_tools(
+def register_dataset_tools(  # noqa: C901
     mcp: FastMCP,
     get_mcp_state: Callable[[], AppState],
     reset_entity_service: Callable[[], None],

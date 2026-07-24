@@ -88,7 +88,7 @@ def _constraints(
     return Constraints(**values) if values else None
 
 
-def register_spec_builder_tools(
+def register_spec_builder_tools(  # noqa: C901
     mcp: FastMCP, get_mcp_state: Callable[[], AppState]
 ) -> None:
     """Register the spec-builder tools with the MCP server.

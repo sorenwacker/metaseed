@@ -34,7 +34,7 @@ UI_DIR = Path(__file__).parent.parent
 EXAMPLES_DIR = UI_DIR.parent / "examples"
 
 
-def register_form_routes(
+def register_form_routes(  # noqa: C901
     app: FastAPI,
     templates: Jinja2Templates,
     get_state: Callable[[], AppState],

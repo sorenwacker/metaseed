@@ -25,7 +25,7 @@ def _is_investigation_shaped(data: dict[str, Any]) -> bool:
     return isinstance(data, dict) and ("studies" in data or "contacts" in data)
 
 
-def _export_investigation_example_to_excel(data: dict[str, Any], output: Path) -> None:
+def _export_investigation_example_to_excel(data: dict[str, Any], output: Path) -> None:  # noqa: C901
     """Export Investigation-rooted (MIAPPE/ISA) example data to Excel.
 
     The sheet layout and entity names are specific to the MIAPPE/ISA
@@ -210,7 +210,7 @@ def _export_investigation_example_to_excel(data: dict[str, Any], output: Path) -
     wb.save(output)
 
 
-def export_example(
+def export_example(  # noqa: C901
     profile: Annotated[
         str | None,
         typer.Argument(help="Profile name (miappe, isa, isa-miappe-combined)"),

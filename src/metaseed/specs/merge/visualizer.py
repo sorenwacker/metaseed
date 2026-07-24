@@ -158,7 +158,7 @@ class DiffVisualizer:
             },
         }
 
-    def _create_entity_edges(
+    def _create_entity_edges(  # noqa: C901
         self: Self,
         entity_diffs: list[EntityDiff],
         entity_node_ids: dict[str, int],

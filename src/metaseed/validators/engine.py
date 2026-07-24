@@ -150,7 +150,7 @@ _VALID_RULE_TYPES = frozenset(
 )
 
 
-def _create_rule_by_type(
+def _create_rule_by_type(  # noqa: C901
     rule_spec: ValidationRuleSpec,
     available_refs: dict[str, set[str]] | None = None,
 ) -> ValidationRule | None:

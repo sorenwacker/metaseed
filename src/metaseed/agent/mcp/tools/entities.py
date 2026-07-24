@@ -388,7 +388,7 @@ def _handle_validation_error(
     return None
 
 
-def register_entity_tools(
+def register_entity_tools(  # noqa: C901
     mcp: FastMCP, get_entity_service: Callable[[], EntityService]
 ) -> None:
     """Register entity management tools with the MCP server.

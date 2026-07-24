@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from ..state import AppState
 
 
-def register_table_routes(
+def register_table_routes(  # noqa: C901
     app: FastAPI,
     templates: Jinja2Templates,
     get_state: Callable[[], AppState],

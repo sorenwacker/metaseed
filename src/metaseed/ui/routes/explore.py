@@ -18,7 +18,7 @@ from metaseed.ui.spec_provider import SpecProvider
 from metaseed.ui.state import AppState
 
 
-def register_explore_routes(
+def register_explore_routes(  # noqa: C901
     app: FastAPI,
     templates: Jinja2Templates,
     _get_state: Callable[[], AppState],

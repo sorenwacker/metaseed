@@ -41,7 +41,7 @@ def _safe_filename(name: str) -> str:
     return slug or "dataset"
 
 
-def register_seek_routes(
+def register_seek_routes(  # noqa: C901
     app: FastAPI,
     templates: Jinja2Templates,
     get_state: Callable[[], AppState],

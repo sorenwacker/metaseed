@@ -56,7 +56,7 @@ def get_tree(
     return [node_to_dict(r) for r in roots]
 
 
-def to_graph(
+def to_graph(  # noqa: C901
     store: EntityStore,
     entities: dict[str, EntityHelper],
 ) -> dict[str, Any]:

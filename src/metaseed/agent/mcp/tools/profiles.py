@@ -110,7 +110,7 @@ def _identifier_info(entity_def: Any) -> tuple[str | None, str | None]:
     return identifier, note
 
 
-def register_profile_tools(mcp: FastMCP) -> None:
+def register_profile_tools(mcp: FastMCP) -> None:  # noqa: C901
     """Register profile tools with the MCP server.
 
     Args:

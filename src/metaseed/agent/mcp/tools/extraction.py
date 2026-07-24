@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from mcp.server.fastmcp import FastMCP
 
 
-def register_extraction_tools(mcp: FastMCP, parser_registry: ParserRegistry) -> None:
+def register_extraction_tools(mcp: FastMCP, parser_registry: ParserRegistry) -> None:  # noqa: C901
     """Register file extraction tools with the MCP server.
 
     Args:

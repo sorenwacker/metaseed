@@ -126,6 +126,7 @@ select = [
     "RET",    # flake8-return
     "TC",     # flake8-type-checking
     "TRY",    # tryceratops
+    "C901",   # mccabe cyclomatic complexity (gate new complexity; see [mccabe])
 ]
 ignore = [
     "E501",    # line too long (handled by formatter)
@@ -154,6 +155,12 @@ ignore = [
     "PTH123",  # Path.open vs open (both are fine)
     "TRY301",  # raise in try block (acceptable for CLI)
 ]
+
+[tool.ruff.lint.mccabe]
+# Fail a function whose cyclomatic complexity exceeds this. Runs on every commit
+# (ruff pre-commit hook) and in CI. Existing over-threshold functions are
+# grandfathered with `# noqa: C901`; new/edited code must stay at or below.
+max-complexity = 15
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = [

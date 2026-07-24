@@ -161,7 +161,7 @@ def exportable_entity_types(client: MetaseedClient) -> frozenset[str]:
     return EXPORTED_TYPES | frozenset(roles)
 
 
-def to_fair_data_station_rdf(client: MetaseedClient) -> str:
+def to_fair_data_station_rdf(client: MetaseedClient) -> str:  # noqa: C901
     """Render a metaseed ISA dataset as FAIR Data Station Turtle RDF.
 
     Args:
