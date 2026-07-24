@@ -28,8 +28,12 @@ jobs:
         run: uv sync --extra dev
 
       - name: Run tests
+        # Match the CI gate: exclude network-marked tests. They hit live third-party
+        # APIs (EBI/MetaboLights) and flake for unrelated reasons, so a release must
+        # never be blocked by an external outage (per CLAUDE.md "Local must match CI").
         run: |
           uv run python -m pytest tests/ \
+            -m "not selenium and not network" \
             --ignore=tests/test_ui/test_selenium.py \
             --ignore=tests/test_ui/test_spec_builder_selenium.py \
             --ignore=tests/test_ui/test_validation_selenium.py \
