@@ -10,8 +10,11 @@ side effects.
 
 from __future__ import annotations
 
+import importlib
 import importlib.util
-from dataclasses import dataclass
+from collections.abc import Callable
+from dataclasses import dataclass, field
+from typing import Any, Literal, cast
 
 
 @dataclass(frozen=True)
@@ -28,23 +31,76 @@ class ConfigField:
     """Optional input placeholder."""
 
 
-@dataclass(frozen=True)
-class ExportFormat:
-    """A downloadable file export an adapter can produce from a dataset.
+ActionKind = Literal["import", "export", "push"]
 
-    The callable (``module``.``function``) takes a ``MetaseedClient`` and returns
-    ``{filename: text}``. Declared here so the UI derives its export buttons from
-    the registry rather than hard-coding a parallel list.
+
+@dataclass(frozen=True)
+class Action:
+    """A capability a plugin exposes to a host application.
+
+    An adapter declares its capabilities as actions so a host (the web UI, the
+    hub, a CLI) can enumerate, place, and invoke them from data alone.
+
+    ``ref`` is a lazy ``"module:function"`` path resolved only when the action is
+    invoked (:meth:`resolve`), so listing the registry never imports a plugin's
+    implementation or its optional dependencies — preserving this module's
+    no-heavy-imports guarantee.
+
+    ``surface`` names *where* a host should group the action's UI (e.g.
+    ``"export-menu"`` vs ``"import-menu"`` vs a dataset toolbar), making placement
+    data-driven instead of hard-coded per host. ``kind`` says what the action does
+    (``export`` returns ``{filename: text}``; ``import`` builds a dataset; ``push``
+    writes to a live service).
     """
 
+    kind: ActionKind
     key: str
-    """Stable identifier for the export (e.g. ``ena``, ``pride-sdrf``)."""
+    """Stable identifier for the action (e.g. ``ena``, ``pride-sdrf``)."""
     label: str
-    """Human-readable label shown on the download button."""
-    module: str
-    """Import path of the module holding the export function."""
-    function: str
-    """Name of the ``(client) -> {filename: text}`` export function."""
+    """Human-readable label shown on the control."""
+    ref: str
+    """Lazy target as ``"module:function"`` (e.g. ``metaseed.ena.export:to_ena_xml``)."""
+    surface: str = "export-menu"
+    """UI surface a host groups this action under."""
+    profiles: tuple[str, ...] = ()
+    """Profiles the action applies to; empty means the adapter's own ``key``."""
+
+    def __post_init__(self) -> None:
+        """Reject a malformed ``ref`` at construction rather than at dispatch.
+
+        Without this a ref missing its ``:`` resolves to ``getattr(mod, "")``,
+        surfacing as a 500 the first time a user clicks the control.
+        """
+        module_name, separator, attribute = self.ref.partition(":")
+        if not (module_name and separator and attribute):
+            msg = (
+                f"Action {self.key!r}: ref must be 'module:function', got {self.ref!r}"
+            )
+            raise ValueError(msg)
+
+    def resolve(self) -> Callable[..., Any]:
+        """Import and return the action's callable (only when invoked).
+
+        Only ever called on registry-owned instances: ``Action`` must not be
+        constructed from user input, since ``resolve`` imports by name.
+        """
+        module_name, _, attribute = self.ref.partition(":")
+        return cast(
+            "Callable[..., Any]",
+            getattr(importlib.import_module(module_name), attribute),
+        )
+
+    def applies_to(self, profile: str, *, adapter_key: str | None = None) -> bool:
+        """Whether this action is offered for ``profile``.
+
+        An explicit ``profiles`` tuple wins. Otherwise the action is offered for
+        the profile its adapter serves, by the convention that an adapter's
+        ``key`` names that profile. ``adapter_key`` is omitted only when the
+        caller has already established the adapter matches.
+        """
+        if self.profiles:
+            return profile in self.profiles
+        return adapter_key is None or adapter_key == profile
 
 
 @dataclass(frozen=True)
@@ -68,8 +124,8 @@ class AdapterInfo:
     """Per-instance configuration this adapter accepts (URLs, keys)."""
     action_path: str | None = None
     """UI path to the adapter's action page, if it has one (e.g. ``/seek``)."""
-    exports: tuple[ExportFormat, ...] = ()
-    """File exports this adapter can produce for its matching profile."""
+    actions: tuple[Action, ...] = field(default_factory=tuple)
+    """Capabilities (imports/exports/pushes) this adapter exposes to hosts."""
 
 
 ADAPTERS: tuple[AdapterInfo, ...] = (
@@ -80,7 +136,7 @@ ADAPTERS: tuple[AdapterInfo, ...] = (
         direction="import",
         extra="ena",
         requires=("httpx",),
-        exports=(ExportFormat("ena", "ENA XML", "metaseed.ena.export", "to_ena_xml"),),
+        actions=(Action("export", "ena", "ENA XML", "metaseed.ena.export:to_ena_xml"),),
     ),
     AdapterInfo(
         key="pride",
@@ -89,15 +145,18 @@ ADAPTERS: tuple[AdapterInfo, ...] = (
         direction="import",
         extra="pride",
         requires=("httpx",),
-        exports=(
-            ExportFormat(
+        actions=(
+            Action(
+                "export",
                 "pride",
                 "PRIDE submission",
-                "metaseed.pride.export",
-                "to_pride_submission",
+                "metaseed.pride.export:to_pride_submission",
             ),
-            ExportFormat(
-                "pride-sdrf", "PRIDE SDRF", "metaseed.pride.export", "to_pride_sdrf"
+            Action(
+                "export",
+                "pride-sdrf",
+                "PRIDE SDRF",
+                "metaseed.pride.export:to_pride_sdrf",
             ),
         ),
     ),
@@ -116,12 +175,19 @@ ADAPTERS: tuple[AdapterInfo, ...] = (
         direction="import",
         extra="metabolights",
         requires=("httpx",),
-        exports=(
-            ExportFormat(
+        actions=(
+            Action(
+                "export",
                 "metabolights",
                 "MetaboLights ISA-Tab",
-                "metaseed.metabolights.export",
-                "to_metabolights",
+                "metaseed.metabolights.export:to_metabolights",
+            ),
+            Action(
+                "import",
+                "metabolights-import",
+                "Import MetaboLights study",
+                "metaseed.metabolights:import_accession",
+                surface="import-menu",
             ),
         ),
     ),
@@ -176,23 +242,38 @@ def is_available(info: AdapterInfo) -> bool:
     return all(_module_present(module) for module in info.requires)
 
 
-def exports_for_profile(profile: str) -> tuple[ExportFormat, ...]:
-    """File exports available for a metaseed profile.
+def actions_for_profile(
+    profile: str,
+    *,
+    kind: ActionKind | None = None,
+    surface: str | None = None,
+) -> tuple[Action, ...]:
+    """Actions a host should offer for ``profile``, from installed adapters.
 
-    An adapter's ``key`` matches the profile it exports (``ena`` adapter → ``ena``
-    profile), so this returns that adapter's exports when its extra is installed,
-    else an empty tuple.
+    Every installed adapter is consulted, and each action decides for itself via
+    ``applies_to``: an action with an explicit ``profiles`` tuple is offered for
+    those profiles, otherwise it falls back to the convention that an adapter's
+    ``key`` names the profile it serves (``ena`` adapter → ``ena`` profile).
+    Scanning all adapters is what makes ``profiles`` meaningful — restricting the
+    search to ``_BY_KEY[profile]`` would mean an action could only ever narrow to
+    nothing, never be offered for another profile. Optionally filter by ``kind``
+    (import/export/push) and ``surface`` so a host can populate one UI area.
     """
-    adapter = _BY_KEY.get(profile)
-    if adapter is None or not is_available(adapter):
-        return ()
-    return adapter.exports
+    return tuple(
+        action
+        for adapter in ADAPTERS
+        if is_available(adapter)
+        for action in adapter.actions
+        if action.applies_to(profile, adapter_key=adapter.key)
+        and (kind is None or action.kind == kind)
+        and (surface is None or action.surface == surface)
+    )
 
 
-def find_export(key: str) -> ExportFormat | None:
-    """Return the :class:`ExportFormat` with ``key`` across all adapters, or None."""
+def find_action(key: str) -> Action | None:
+    """Return the :class:`Action` with ``key`` across all adapters, or None."""
     for adapter in ADAPTERS:
-        for export in adapter.exports:
-            if export.key == key:
-                return export
+        for action in adapter.actions:
+            if action.key == key:
+                return action
     return None

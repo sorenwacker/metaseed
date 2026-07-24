@@ -55,3 +55,24 @@ def test_export_button_renders_for_matching_profile():
     assert response.status_code == 200
     assert 'data-testid="btn-export-ena"' in response.text
     assert 'data-testid="btn-export-metabolights"' not in response.text
+
+
+def test_export_route_rejects_a_format_not_offered_for_the_profile() -> None:
+    """The route must gate on the same predicate that renders the buttons.
+
+    Ungated, a hand-typed format ran an exporter against a profile it was never
+    meant for and returned a 200 zip of header-only files.
+    """
+    from metaseed.ui.app import create_app
+    from metaseed.ui.state import AppState
+
+    state = AppState()
+    state.profile = "darwin-core"
+    state.version = "1.0"
+    client = TestClient(create_app(state))
+
+    response = client.get("/export/adapter/metabolights")
+
+    assert response.status_code == 404, (
+        "a metabolights export must not be offered for a darwin-core dataset"
+    )

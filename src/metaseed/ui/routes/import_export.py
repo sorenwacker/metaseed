@@ -6,7 +6,6 @@ from an uploaded JSON file.
 
 from __future__ import annotations
 
-import importlib
 import zipfile
 from io import BytesIO
 from typing import TYPE_CHECKING
@@ -30,15 +29,16 @@ if TYPE_CHECKING:
 
 
 def export_options_for_profile(profile: str) -> list[dict[str, str]]:
-    """Return ``[{key, label}]`` adapter-export options for a profile's UI.
+    """Return ``[{key, label, surface}]`` adapter-export options for a profile.
 
-    Derived from the adapter registry (:mod:`metaseed.adapters`), so a new
-    exporter is offered in the UI by declaring it there — not by editing this
-    route.
+    Derived from the adapter registry (:mod:`metaseed.adapters`) — the
+    ``export``-kind actions — so a new exporter is offered in the UI by declaring
+    it there, not by editing this route. ``surface`` lets the template group the
+    buttons.
     """
     return [
-        {"key": export.key, "label": export.label}
-        for export in adapters.exports_for_profile(profile)
+        {"key": action.key, "label": action.label, "surface": action.surface}
+        for action in adapters.actions_for_profile(profile, kind="export")
     ]
 
 
@@ -72,25 +72,48 @@ def register_export_routes(
     @app.get("/export/adapter/{fmt}")
     async def export_adapter(fmt: str, _request: Request) -> StreamingResponse:
         """Export the current dataset via an adapter, as a zip of its files."""
-        export = adapters.find_export(fmt)
-        if export is None:
+        action = adapters.find_action(fmt)
+        if action is None or action.kind != "export":
             raise HTTPException(status_code=404, detail=f"Unknown export format: {fmt}")
 
         state = get_state()
+
+        # Gate on the same predicate that decides which buttons are rendered.
+        # Without this a hand-typed format runs an exporter against a profile it
+        # was never meant for and returns a successful download of header-only
+        # files (e.g. a darwin-core dataset exported as MetaboLights ISA-Tab).
+        offered = adapters.actions_for_profile(state.profile, kind="export")
+        if action not in offered:
+            raise HTTPException(
+                status_code=404,
+                detail=f"{fmt} export is not available for the {state.profile} profile.",
+            )
+
         from metaseed.api.client import MetaseedClient
 
         client = MetaseedClient.__new__(MetaseedClient)
         client._facade = state.get_or_create_facade()
 
         try:
-            export_fn = getattr(importlib.import_module(export.module), export.function)
+            export_fn = action.resolve()
         except ModuleNotFoundError as exc:  # extra not installed
             raise HTTPException(
                 status_code=400,
                 detail=f"{fmt} export requires the matching metaseed extra.",
             ) from exc
+        except (ImportError, AttributeError) as exc:
+            # A broken transitive import or a stale ref: a plugin defect must
+            # degrade to an error message, not an unhandled 500.
+            raise HTTPException(
+                status_code=500, detail=f"{fmt} export is misconfigured."
+            ) from exc
 
-        files: dict[str, str] = export_fn(client)
+        try:
+            files: dict[str, str] = export_fn(client)
+        except Exception as exc:  # any plugin failure degrades to an error page
+            raise HTTPException(
+                status_code=500, detail=f"{fmt} export failed: {exc}"
+            ) from exc
         if not files:
             raise HTTPException(
                 status_code=400,
