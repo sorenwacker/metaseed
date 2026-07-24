@@ -7,6 +7,7 @@ This is the default implementation used by metaseed standalone.
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
@@ -21,6 +22,23 @@ from metaseed.repositories.dataset_repository import (
 
 DEFAULT_DATASETS_DIR = Path.home() / ".local" / "share" / "metaseed" / "datasets"
 
+#: Environment variable overriding where datasets are stored. Lets tests (and
+#: sandboxed deployments) point storage at a throwaway directory instead of the
+#: user's real data dir — the selenium suite uses it for hermetic isolation.
+DATASETS_DIR_ENV = "METASEED_DATASETS_DIR"
+
+
+def default_datasets_dir() -> Path:
+    """The datasets directory, honoring the ``METASEED_DATASETS_DIR`` override.
+
+    Falls back to :data:`DEFAULT_DATASETS_DIR` (read at call time, so tests that
+    patch it still take effect).
+    """
+    override = os.environ.get(DATASETS_DIR_ENV)
+    if override:
+        return Path(override)
+    return DEFAULT_DATASETS_DIR
+
 
 class FilesystemDatasetRepository(DatasetRepository):
     """Filesystem-based dataset storage.
@@ -34,9 +52,9 @@ class FilesystemDatasetRepository(DatasetRepository):
 
         Args:
             datasets_dir: Directory for dataset files. Defaults to
-                ~/.local/share/metaseed/datasets
+                ``$METASEED_DATASETS_DIR`` or ~/.local/share/metaseed/datasets.
         """
-        self._dir = datasets_dir or DEFAULT_DATASETS_DIR
+        self._dir = datasets_dir or default_datasets_dir()
         self._ensure_dir()
 
     def _ensure_dir(self: Self) -> None:

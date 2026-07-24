@@ -28,17 +28,21 @@ BASE_URL = "http://127.0.0.1:8082"
 
 
 @pytest.fixture(scope="module")
-def server():
-    """Start the Metaseed server for testing."""
+def server(tmp_path_factory):
+    """Start the Metaseed server for testing, with isolated dataset storage."""
+    import os
     from pathlib import Path
 
     cwd = Path(__file__).resolve().parent.parent.parent
+    datasets_dir = tmp_path_factory.mktemp("selenium-datasets")
+    env = {**os.environ, "METASEED_DATASETS_DIR": str(datasets_dir)}
 
     proc = subprocess.Popen(
         ["uv", "run", "uvicorn", "metaseed.ui.app:app", "--port", "8082"],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         cwd=cwd,
+        env=env,
     )
 
     # Wait for server to be ready

@@ -200,7 +200,7 @@ def get_current_dataset_name(state: AppState) -> str | None:
 
 def set_current_dataset_name(state: AppState, name: str | None) -> None:
     """Set the current dataset name in state."""
-    state._current_dataset = name  # type: ignore[attr-defined]
+    state._current_dataset = name
 
 
 def auto_save(state: AppState) -> None:
