@@ -361,11 +361,26 @@ class EntityStore:
             data["_node_id"] = node.id
             if parent_unique_id:
                 data["_parent_unique_id"] = parent_unique_id
-
             entities.append(data)
 
-            # Get this node's unique_id for children to reference
+            # The identifier value children reference. Consult the entity's own
+            # declared identifier field: hardcoding unique_id and alias produced
+            # no parent link at all for the seven profiles keyed on anything
+            # else, so their hierarchy flattened on every reload.
             node_unique_id = data.get("unique_id") or data.get("alias")
+            if not node_unique_id:
+                try:
+                    id_field = self._get_helper(node.entity_type).identifier_field
+                except (KeyError, AttributeError):
+                    id_field = None
+                if id_field:
+                    candidate = data.get(id_field)
+                    # Only a scalar can serve as a reference value: an
+                    # identifier field may itself be entity-typed (e.g. isa
+                    # ProtocolParameter.parameter_name), and a dict is neither
+                    # hashable nor meaningful as a parent reference.
+                    if isinstance(candidate, (str, int, float, bool)):
+                        node_unique_id = str(candidate)
 
             for child in node.children:
                 serialize_node(child, node_unique_id)

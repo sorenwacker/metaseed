@@ -221,3 +221,48 @@ def test_reloaded_draft_is_still_reported_invalid() -> None:
     reloaded.load(client.serialize())
 
     assert reloaded.validate().valid is False
+
+
+def test_hierarchy_survives_reload_without_a_unique_id_parent() -> None:
+    """Structure must persist for profiles not keyed on unique_id/alias.
+
+    ``_parent_unique_id`` is derived from the parent's identifier *value*, so it
+    was derived from a hardcoded unique_id/alias lookup, so it was empty for the
+    seven profiles keyed on anything else (pride/isa/jerm/dissco/metabolights/
+    darwin-core/miappe-htp) and their whole hierarchy flattened on reload --
+    every child came back as a root. The parent's declared identifier field is
+    consulted instead.
+    """
+    facade = ProfileFacade("pride", "1.0")
+    root = facade.add_entity(
+        "Dataset",
+        {
+            "identifier": "PXD000001",
+            "title": "A proteomics dataset",
+            "description": "A longer description of the dataset contents, well over any minimum length constraint.",
+            "sample_processing_protocol": "Samples were processed according to the standard protocol described at length here.",
+            "data_processing_protocol": "Data were processed according to the standard protocol described at length here.",
+            "submission_type": "COMPLETE",
+            "keywords": ["k"],
+        },
+        skip_validation=True,
+    )
+    facade.add_entity(
+        "Sample",
+        {"name": "S1", "species": "Homo sapiens", "ncbi_taxonomy_id": "9606"},
+        parent_id=root.id,
+        skip_validation=True,
+    )
+
+    serialized = facade.to_dict()
+    child = next(e for e in serialized if e["_type"] == "Sample")
+    assert child.get("_parent_unique_id") == "PXD000001", (
+        f"child must reference its parent by identifier value, got {child}"
+    )
+
+    reloaded = ProfileFacade("pride", "1.0")
+    reloaded.load_from_dict(serialized)
+
+    roots = reloaded.get_roots()
+    assert [r.entity_type for r in roots] == ["Dataset"]
+    assert [c.entity_type for c in roots[0].children] == ["Sample"]

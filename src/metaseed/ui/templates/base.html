@@ -33,6 +33,17 @@
                 <button id="dcat-btn" class="btn btn-header" onclick="showDcatCard()" data-testid="btn-dcat" title="DCAT catalog card">
                     DCAT
                 </button>
+                {# Adapter exports the active profile offers, straight from the
+                   plugin registry: a new exporter appears here by declaring
+                   itself, with no template change. #}
+                {% for opt in export_options %}
+                <a href="{{ base_url }}/export/adapter/{{ opt.key }}"
+                   class="btn btn-header"
+                   data-testid="btn-export-{{ opt.key }}"
+                   title="Download {{ opt.label }}" download>
+                    {{ opt.label }}
+                </a>
+                {% endfor %}
                 <span class="header-divider"></span>
                 <button id="mcp-toggle" class="btn btn-header" onclick="toggleMCP()" data-testid="btn-mcp" title="MCP Server">
                     <span id="mcp-status-indicator" class="status-indicator status-off"></span>
