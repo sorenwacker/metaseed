@@ -108,3 +108,26 @@ def test_versions_listed_newest_first() -> None:
     html = client.get("/new-dataset").text
     assert "profile-miappe-v1.2" in html and "profile-miappe-v1.1" in html
     assert html.index("profile-miappe-v1.2") < html.index("profile-miappe-v1.1")
+
+
+def test_example_materializes_nested_grandchildren() -> None:
+    """Loading an example materializes the whole tree, not just depth 1.
+
+    Regression: building the root model coerces the nested dicts in the example
+    payload into model instances *in place*, and the tree walk only descends
+    into dicts. Walking the mutated payload therefore stopped at the root's
+    direct children and dropped every grandchild (miappe 1.2 surfaced 4 of ~50
+    entities; isa 1.0 surfaced 6 of ~275).
+    """
+    state = AppState()
+    client = TestClient(create_app(state), follow_redirects=True)
+
+    response = client.get("/load-example/miappe/1.2")
+    assert response.status_code == 200
+
+    types = [node.entity_type for node in state.nodes_by_id.values()]
+    assert "Study" in types  # direct child of the root
+    # Grandchildren: these live under Study, one level deeper than the root.
+    assert "ObservationUnit" in types, f"grandchildren dropped: {sorted(set(types))}"
+    assert "BiologicalMaterial" in types, f"grandchildren dropped: {sorted(set(types))}"
+    assert len(types) > 20, f"expected the full tree, materialized only {len(types)}"

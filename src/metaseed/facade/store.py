@@ -455,7 +455,23 @@ class EntityStore:
                 if not k.startswith("_") and k in valid_fields
             }
 
-            instance = self._create_instance(entity_type, fields)
+            try:
+                instance = self._create_instance(entity_type, fields)
+            except ValidationError as exc:
+                # Distinguish an incomplete *draft* from corrupt data. The UI
+                # persists drafts on purpose (a root can be saved before its
+                # required children exist); dropping those on read lost user
+                # data, because several routes reload from disk on ordinary
+                # navigation. Only absent required fields qualify -- anything
+                # else (wrong types, unusable values) is still treated as
+                # malformed and skipped by the caller. ``validate()`` continues
+                # to report the draft's gaps.
+                errors = exc.errors()
+                if not errors or not all(err["type"] == "missing" for err in errors):
+                    raise
+                instance = self._create_instance(
+                    entity_type, fields, skip_validation=True
+                )
 
             # Restore the persisted node id so a node keeps the same identity
             # across reloads (the graph endpoint reloads from disk on every

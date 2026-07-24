@@ -5,6 +5,7 @@ Provides routes for loading example data into the application.
 
 from __future__ import annotations
 
+import copy
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -58,8 +59,15 @@ def _materialize_children(
             if not isinstance(item, dict):
                 continue  # a string reference, not an embedded child
             child_instance = child_helper.create(skip_validation=True, **item)
+            # add_node re-creates the instance through the facade; without
+            # skip_validation that second pass re-validates (including the
+            # network-backed ontology check), so a large example would issue one
+            # OLS request per entity.
             child_node = state.add_node(
-                child_type, child_instance, parent_id=parent_node_id
+                child_type,
+                child_instance,
+                parent_id=parent_node_id,
+                skip_validation=True,
             )
             _materialize_children(state, facade, child_node.id, child_type, item)
 
@@ -119,6 +127,13 @@ def register_example_routes(
         spec = loader.load_profile(version, profile_name)
         root_entity = spec.root_entity or "Investigation"
 
+        # Keep a pristine copy for materialization: building a model coerces the
+        # nested dicts in ``example_data`` into model instances *in place*, and
+        # _materialize_children only descends into dicts. Walking the mutated
+        # dict would therefore stop at depth 1 and silently drop every
+        # grandchild (e.g. a Study's ObservationUnits).
+        tree_data = copy.deepcopy(example_data)
+
         # Validate the example up front so a malformed file fails loudly rather
         # than loading a broken tree.
         try:
@@ -131,13 +146,13 @@ def register_example_routes(
 
         helper = getattr(facade, root_entity)
         root_instance = helper.create(skip_validation=True, **example_data)
-        node = state.add_node(root_entity, root_instance)
+        node = state.add_node(root_entity, root_instance, skip_validation=True)
         state.editing_node_id = node.id
 
         # Materialize every nested entity as its own tree node (recursively), so
         # the whole dataset is listed, not just the root. Children carried inline
         # in the parent's scalar fields would otherwise be invisible in the tree.
-        _materialize_children(state, facade, node.id, root_entity, example_data)
+        _materialize_children(state, facade, node.id, root_entity, tree_data)
 
         # Persist the loaded example as a named dataset and open its edit view.
         # The datasets overview at "/" does not render in-memory state, so a bare

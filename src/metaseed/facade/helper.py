@@ -446,12 +446,19 @@ class EntityHelper:
             ... )
         """
         if skip_validation:
-            instance = self._model.model_construct(**kwargs)
-        else:
-            instance = self._model(**kwargs)
-        # Validate ontology terms (warnings only, don't block)
-        self.validate_ontology_terms(kwargs, warn=True)
-        return instance
+            # Skipping validation must also skip the ontology check: it resolves
+            # terms against OLS over the network, so running it here made every
+            # draft creation do live I/O (and made loading an example with many
+            # ontology_term fields issue one request per entity).
+            return self._model.model_construct(**kwargs)
+
+        # Deliberately no ontology check here. ``validate_ontology_terms``
+        # resolves each term against OLS over the network, so running it as a
+        # side effect of construction meant one request per entity every time a
+        # dataset was loaded from disk or an example was materialised. It stays
+        # available as an explicit call (see the MCP ontology tools) and as part
+        # of validation, where the cost is expected.
+        return self._model(**kwargs)
 
     def __call__(self: Self, **kwargs: Any) -> BaseModel:
         """Create an instance and store it automatically.
