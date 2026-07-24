@@ -17,10 +17,25 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from metaseed.isatab.reader import (
+    read_data_files,
+    read_metabolites,
+    read_rows,
+    read_samples,
+)
+
 if TYPE_CHECKING:
     from metaseed.api.client import MetaseedClient
 
-__all__ = ["assay_filename", "study_filename", "to_isatab"]
+__all__ = [
+    "assay_filename",
+    "read_data_files",
+    "read_metabolites",
+    "read_rows",
+    "read_samples",
+    "study_filename",
+    "to_isatab",
+]
 
 TAB = "\t"
 
@@ -177,23 +192,54 @@ def _study_file(samples: list[dict[str, Any]]) -> str:
     return "\n".join(rows) + "\n"
 
 
-def _assay_file(assay: dict[str, Any]) -> str:
-    """Build an assay (``a_*.txt``) file as a header row.
+def _assay_file(assay: dict[str, Any], data_files: list[dict[str, Any]]) -> str:
+    """Build an assay (``a_*.txt``) file: a header row plus one row per DataFile.
 
-    The header carries a ``Metabolite Assignment File`` column referencing the
-    assay's MAF when the entity declares one (MetaboLights), keeping the assay
-    file self-describing without making this writer profile-specific.
+    Each DataFile row links the assay's sample (positionally, falling back to the
+    first) to the data file name, so the material→data linkage round-trips with
+    :func:`metaseed.isatab.reader.read_data_files`. The header carries a
+    ``Metabolite Assignment File`` column when the assay declares a MAF.
 
     Args:
         assay: An Assay entity dict.
+        data_files: The assay's DataFile entity dicts.
 
     Returns:
-        A single tab-delimited header row terminated by a newline.
+        Tab-delimited text: header plus one row per data file.
     """
+    maf = assay.get("metabolite_assignment_file")
     header = ["Sample Name", "Assay Name", "Raw Data File"]
-    if assay.get("metabolite_assignment_file"):
+    if maf:
         header.append("Metabolite Assignment File")
-    return TAB.join(header) + "\n"
+
+    sample_names = [str(s) for s in assay.get("samples") or []]
+    assay_name = str(assay.get("filename") or assay.get("identifier") or "")
+    rows = [TAB.join(header)]
+    for index, data_file in enumerate(data_files):
+        sample = ""
+        if sample_names:
+            sample = (
+                sample_names[index] if index < len(sample_names) else sample_names[0]
+            )
+        cells = [sample, assay_name, str(data_file.get("filename") or "")]
+        if maf:
+            cells.append(str(maf))
+        rows.append(TAB.join(cells))
+    return "\n".join(rows) + "\n"
+
+
+def _direct_parent_map(client: MetaseedClient) -> dict[str, str]:
+    """Map each node id to its direct parent node id, from the dataset tree."""
+    parent: dict[str, str] = {}
+
+    def descend(node: Any) -> None:
+        for child in node.children:
+            parent[child.id] = node.id
+            descend(child)
+
+    for root in client.get_tree():
+        descend(root)
+    return parent
 
 
 def to_isatab(client: MetaseedClient) -> dict[str, str]:
@@ -221,6 +267,7 @@ def to_isatab(client: MetaseedClient) -> dict[str, str]:
     protocols = by_type.get("Protocol", [])
     assays = by_type.get("Assay", [])
     samples = by_type.get("Sample", [])
+    data_files = by_type.get("DataFile", [])
 
     # Each entity's owning study (None = directly under the Investigation), so a
     # multi-study investigation routes factors/protocols/assays/samples and
@@ -257,8 +304,15 @@ def to_isatab(client: MetaseedClient) -> dict[str, str]:
         documents[study_filename(study)] = _study_file(
             of(samples, study.get("_node_id"))
         )
+    direct_parent = _direct_parent_map(client)
     for assay in assays:
-        documents[assay_filename(assay)] = _assay_file(assay)
+        assay_id = str(assay.get("_node_id"))
+        assay_data_files = [
+            df
+            for df in data_files
+            if direct_parent.get(str(df.get("_node_id"))) == assay_id
+        ]
+        documents[assay_filename(assay)] = _assay_file(assay, assay_data_files)
     return documents
 
 

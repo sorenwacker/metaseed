@@ -63,9 +63,40 @@ def to_metabolights(client: MetaseedClient) -> dict[str, str]:
     """
     documents = dict(to_isatab(client))
     assays = [e for e in client.serialize()["entities"] if e["_type"] == "Assay"]
+    # Metabolites may be embedded on the assay (authored datasets) or attached as
+    # child nodes (imported from a MAF, #146); fall back to the children so the
+    # round trip re-emits a populated MAF either way.
+    children = _metabolite_children_by_assay(client)
     for assay in assays:
-        documents[_maf_filename(assay)] = _maf_content(assay)
+        metabolites = assay.get("metabolites") or children.get(
+            str(assay.get("_node_id")), []
+        )
+        documents[_maf_filename(assay)] = _maf_content(
+            {**assay, "metabolites": metabolites}
+        )
     return documents
+
+
+def _metabolite_children_by_assay(client: MetaseedClient) -> dict[str, list[Any]]:
+    """Map each Assay node id to its child Metabolite entity dicts."""
+    parent: dict[str, str] = {}
+
+    def descend(node: Any) -> None:
+        for child in node.children:
+            parent[child.id] = node.id
+            descend(child)
+
+    for root in client.get_tree():
+        descend(root)
+
+    result: dict[str, list[Any]] = {}
+    for entity in client.serialize()["entities"]:
+        if entity["_type"] != "Metabolite":
+            continue
+        assay_id = parent.get(str(entity.get("_node_id")))
+        if assay_id:
+            result.setdefault(assay_id, []).append(entity)
+    return result
 
 
 def _maf_row(metabolite: dict[str, Any]) -> str:

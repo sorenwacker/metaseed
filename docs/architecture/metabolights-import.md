@@ -18,8 +18,16 @@ client.serialize()                     # the metabolights dataset
 Given a MetaboLights study accession (e.g. `MTBLS1`), it fetches the study's
 metadata document and builds an Investigation with its Contacts, Publications,
 and Studies — each Study carrying its Factors, Protocols (and their Parameters),
-Samples (and their Characteristics and Factor Values), and Assays (with
-referenced DataFiles).
+Samples (and their Characteristics and Factor Values), and Assays (with their
+DataFiles and Metabolites).
+
+The Samples, DataFiles and Metabolites are **not** in the ISA-JSON document —
+its `samples`/`dataFiles` arrays are empty for every study. They are recovered
+from the study's ISA-Tab files (`s_*.txt`, `a_*.txt`, `m_*.tsv`), which
+`MetaboLightsClient.study_files` fetches from the study's public download
+directory. This requires a **public** study; for an embargoed one the files are
+absent and only the ISA-JSON metadata (Investigation/Study/Assay backbone)
+imports.
 
 ## The seam
 
@@ -101,13 +109,12 @@ accession that does not exist. A transient OLS4 outage fails open. Pass
 
 ## Limitations
 
-- **The importer does not parse the sample and metabolite tables.** MetaboLights
-  stores per-sample rows and the metabolite assignment file (MAF) as separate
-  tabular files. The importer maps only the samples inline in the ISA document
-  and records the MAF filename (`metabolite_assignment_file`) when the assay
-  declares it; it does not download or parse the MAF, so it creates no
-  `Metabolite` entities. (The *exporter* does emit a populated MAF when a dataset
-  carries `Assay.metabolites` — see Export.)
+- **Public studies only for sample/metabolite data.** The Sample, DataFile and
+  Metabolite tables come from the study's ISA-Tab files on the public FTP
+  download root. An embargoed or otherwise non-public study exposes no such
+  files, so it imports the ISA-JSON backbone (Investigation/Study/Assay,
+  Contacts, Publications, Factors, Protocols) but no Samples, DataFiles, or
+  Metabolites.
 - **Free-text vs. enum values.** MetaboLights annotation values (e.g.
   `technology_type`, `measurement_type`) are recorded verbatim and may fall
   outside the profile's enumerations; `validate()` surfaces these.
