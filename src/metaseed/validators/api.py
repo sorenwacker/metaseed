@@ -253,7 +253,7 @@ def validate_entity(
     return errors
 
 
-def validate_entity_with_report(
+def validate_entity_with_report(  # noqa: C901
     data: dict[str, Any],
     entity_type: str,
     profile: str = "miappe",

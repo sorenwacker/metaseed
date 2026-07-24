@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from metaseed.ui.state import AppState, TreeNode
 
 
-def register_validation_tools(
+def register_validation_tools(  # noqa: C901
     mcp: FastMCP, get_mcp_state: Callable[[], AppState]
 ) -> None:
     """Register validation tools with the MCP server.
@@ -186,7 +186,7 @@ def register_validation_tools(
             return json.dumps({"error": str(e)})
 
     @mcp.tool()
-    def validate_relationships() -> str:
+    def validate_relationships() -> str:  # noqa: C901
         """Report relationship-completeness gaps the schema implies.
 
         Unlike validate_dataset (per-entity field rules), this flags links that

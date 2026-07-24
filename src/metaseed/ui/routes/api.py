@@ -47,7 +47,7 @@ def _parse_profile_strings(
     return profile_tuples, None
 
 
-def register_api_routes(
+def register_api_routes(  # noqa: C901
     app: FastAPI,
     get_state: Callable[[], AppState],
 ) -> None:

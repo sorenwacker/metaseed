@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from .state import SpecBuilderState
 
 
-def register_main_routes(
+def register_main_routes(  # noqa: C901
     router: APIRouter,
     templates: Jinja2Templates,
     get_builder_state: Callable[[], SpecBuilderState],

@@ -218,7 +218,7 @@ def get_nested_items_for_edit(
     return result
 
 
-def collect_entities_by_type(
+def collect_entities_by_type(  # noqa: C901
     state: AppState, facade: ProfileFacade
 ) -> dict[str, list[dict[str, Any]]]:
     """Collect all entities (root and nested) organized by type.

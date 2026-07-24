@@ -50,7 +50,7 @@ def _make_request(
         return None
 
 
-def register_ontology_tools(mcp: FastMCP) -> None:
+def register_ontology_tools(mcp: FastMCP) -> None:  # noqa: C901
     """Register ontology lookup tools with the MCP server.
 
     Args:

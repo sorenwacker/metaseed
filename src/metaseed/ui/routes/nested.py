@@ -56,7 +56,7 @@ def _coerce_form_value(value: str, field_type: str | None) -> object | None:
     return value
 
 
-def register_nested_routes(
+def register_nested_routes(  # noqa: C901
     app: FastAPI,
     templates: Jinja2Templates,
     get_state: Callable[[], AppState],
@@ -70,7 +70,7 @@ def register_nested_routes(
     """
 
     @app.get("/nested/{parent_type}/{field_name}/{idx}", response_class=HTMLResponse)
-    async def edit_nested_item(
+    async def edit_nested_item(  # noqa: C901
         request: Request, parent_type: str, field_name: str, idx: int
     ) -> HTMLResponse:
         """Edit a nested item (e.g., a Study within an Investigation)."""

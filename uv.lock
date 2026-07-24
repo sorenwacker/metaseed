@@ -1487,6 +1487,7 @@ dcat = [
 ]
 dev = [
     { name = "httpx" },
+    { name = "jsonschema" },
     { name = "jupyter" },
     { name = "mypy" },
     { name = "pre-commit" },
@@ -1540,6 +1541,7 @@ requires-dist = [
     { name = "httpx", marker = "extra == 'pride'", specifier = ">=0.27" },
     { name = "httpx", marker = "extra == 'seek'", specifier = ">=0.27" },
     { name = "jinja2", specifier = ">=3.1" },
+    { name = "jsonschema", marker = "extra == 'dev'", specifier = ">=4.0" },
     { name = "jupyter", marker = "extra == 'dev'", specifier = ">=1.0" },
     { name = "mcp", specifier = ">=1.0.0" },
     { name = "mkdocs", marker = "extra == 'docs'", specifier = ">=1.6,<2.0" },
