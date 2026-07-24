@@ -47,3 +47,32 @@ def test_reset_clears_current_dataset_pointer():
     assert response.status_code == 200
     assert manager.current_dataset is None
     assert getattr(state, "_current_dataset", None) is None
+
+
+def test_polling_the_graph_keeps_the_current_dataset_pointer(
+    tmp_path, monkeypatch
+) -> None:
+    """Reloading for a poll must not forget which dataset is open.
+
+    ``/api/graph`` and ``/api/validate`` reload from disk on every tick, which
+    goes through ``_restore_state_from_data`` -> ``AppState.reset()``. Since
+    reset clears the current-dataset pointer, the next auto-save fell back to a
+    label-derived name and wrote the user's edit into a *different* file.
+    """
+    monkeypatch.setenv("METASEED_DATASETS_DIR", str(tmp_path))
+    from fastapi.testclient import TestClient
+
+    from metaseed.ui.app import create_app
+    from metaseed.ui.datasets import get_current_dataset_name
+    from metaseed.ui.state import AppState
+
+    state = AppState()
+    client = TestClient(create_app(state), follow_redirects=True)
+    client.get("/load-example/pride/1.0")
+    assert get_current_dataset_name(state) == "pride-1_0-example"
+
+    client.get("/api/graph")
+
+    assert get_current_dataset_name(state) == "pride-1_0-example", (
+        "polling the graph forgot the open dataset; the next save would go elsewhere"
+    )
