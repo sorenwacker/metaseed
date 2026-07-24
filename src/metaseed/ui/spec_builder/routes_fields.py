@@ -209,6 +209,14 @@ def register_field_routes(  # noqa: C901
         enum_values: str = Form(""),
         unique_within: str = Form(""),
         reference: str = Form(""),
+        owns: bool = Form(False),
+        is_identifier: bool = Form(False),
+        is_label: bool = Form(False),
+        tier: str = Form(""),
+        label: str = Form(""),
+        unit: str = Form(""),
+        example: str = Form(""),
+        options: str = Form(""),
     ) -> HTMLResponse:
         """Update a field."""
         builder = _require_spec()
@@ -253,6 +261,21 @@ def register_field_routes(  # noqa: C901
         field.unique_within = update_data.unique_within.strip() or None
         field.reference = update_data.reference.strip() or None
         field.constraints = update_data.build_constraints()
+        # spec_version 0.6 markers (#137/#143/#98). Booleans default to None
+        # rather than False so an unset marker is dropped on serialization.
+        field.owns = owns or None
+        field.is_identifier = is_identifier or None
+        field.is_label = is_label or None
+        tier_value = tier.strip()
+        field.tier = (
+            tier_value  # type: ignore[assignment]
+            if tier_value in ("required", "recommended", "optional")
+            else None
+        )
+        field.label = label.strip() or None
+        field.unit = unit.strip() or None
+        field.example = example.strip() or None
+        field.options = [o.strip() for o in options.split(",") if o.strip()] or None
 
         builder.editing_field_idx = None
         builder.mark_changed()

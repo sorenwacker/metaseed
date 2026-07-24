@@ -138,6 +138,22 @@ class EntityHelper:
         return nested
 
     @property
+    def owned_child_fields(self: Self) -> dict[str, str]:
+        """Nested fields explicitly marked ``owns: true`` -- possibly empty.
+
+        Unlike :attr:`child_fields`, this never falls back to all nested fields.
+        It lets a profile that uses ownership markers say an entity has *no*
+        tree children (e.g. one whose only nested fields are embedded
+        value-objects like OntologyAnnotation/Comment), which the all-or-nothing
+        fallback of ``child_fields`` cannot express.
+        """
+        return {
+            f.name: f.items
+            for f in self._spec.fields
+            if f.owns and f.is_nested() and f.items
+        }
+
+    @property
     def child_fields(self: Self) -> dict[str, str]:
         """Owning-parent (containment) relationship fields {field_name: entity_type}.
 

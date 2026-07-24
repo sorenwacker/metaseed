@@ -42,6 +42,21 @@ Fields define the data within an entity. Each field has:
 | Required | Whether the field must have a value |
 | Description | Human-readable explanation |
 | Items/Target | For `list` and `entity` types, the target entity |
+| Owns | For `list`/`entity` fields, marks the target as a **containment child** rather than a lookup or embedded value-object. Drives the entity tree. |
+| Identifier / Label | Declare which field is the entity's identifier and which is its display label, instead of relying on field position. |
+| Tier | Advisory completeness tier (`required` / `recommended` / `optional`); `Required` remains the validation rule. |
+| Display label / Unit / Example / Options | Presentation metadata used when generating forms and templates. |
+
+The identity, ownership, and metadata markers correspond to the `owns`,
+`is_identifier`, `is_label`, `tier`, `label`, `unit`, `example`, and `options`
+keys in the [specification language](../api/schema-specs.md#field-markers).
+Leaving a marker unset writes nothing to the spec, so an existing profile is not
+changed by opening and re-saving it.
+
+> **Owns is all-or-nothing per profile.** Once any field in the spec is marked
+> *Owns*, the tree is built strictly from owned relationships across every
+> entity. Mark **all** genuine containment fields, or an unmarked child will
+> appear inline on its parent rather than as its own tree node.
 
 ### Field Types
 

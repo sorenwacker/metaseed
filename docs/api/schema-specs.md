@@ -226,13 +226,29 @@ un-migrated specs are unaffected.
 
 **`owns` — owning-parent relationship.** A relationship (`entity` or
 `list`-of-entity) field can be genuine *containment* (the target belongs to this
-entity) or a plain *lookup* (a reference to a shared entity). Both look identical
-in the spec, so `owns: true` marks the containment ones. When any relationship on
-an entity is marked, `EntityHelper.child_fields` (and the parent-child tree gate)
-return only the owned relationships; when none is marked, all nested relationships
-are treated as children (backward compatible). Example: isa `Assay.data_files`
-is `owns: true` while `Assay.measurement_type → OntologyAnnotation` is left
-unmarked, so the ontology annotation is a lookup, not a child.
+entity) or a plain *lookup* (a reference to a shared entity, or an embedded
+value-object such as an `OntologyAnnotation`). Both look identical in the spec,
+so `owns: true` marks the containment ones.
+
+Ownership is resolved at the **profile** level, not per entity. If a profile
+declares any `owns` marker (`ProfileFacade.uses_ownership()` is true), containment
+is treated as fully declared and honored strictly: each entity's tree children are
+exactly its `owns: true` relationships (`EntityHelper.owned_child_fields`) —
+including that an entity with *no* marked relationship has *no* children. This is
+what lets a value-object-only entity (e.g. isa `Person`, whose only relationships
+are `roles → OntologyAnnotation` and `comments → Comment`) keep those inline
+instead of pulling them out as separate, unlinkable tree nodes. If a profile
+declares no `owns` markers, every nested relationship is treated as a child
+(backward compatible).
+
+Consequence in the UI: loading an example materializes only owned children, so a
+declared profile (isa) renders as one clean tree rather than a flat list of
+orphaned annotations. Example: isa `Study.samples`/`assays`/… are `owns: true`
+while `Study.characteristic_categories → OntologyAnnotation` is left unmarked.
+
+Migration is complete-per-profile: mark **every** genuine containment field, since
+under strict mode an unmarked relationship is treated as a lookup (not dropped
+data — the value stays inline — but not shown as a child node).
 
 **`is_identifier` / `is_label` — declared identity.** By default the identifier is
 the first non-reference field and the label is the first field. These positional

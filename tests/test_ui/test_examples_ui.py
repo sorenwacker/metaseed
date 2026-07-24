@@ -131,3 +131,27 @@ def test_example_materializes_nested_grandchildren() -> None:
     assert "ObservationUnit" in types, f"grandchildren dropped: {sorted(set(types))}"
     assert "BiologicalMaterial" in types, f"grandchildren dropped: {sorted(set(types))}"
     assert len(types) > 20, f"expected the full tree, materialized only {len(types)}"
+
+
+def test_isa_example_is_a_single_tree_without_value_object_orphans() -> None:
+    """Value-objects stay inline; the example loads as one Investigation tree.
+
+    ISA nests OntologyAnnotation and Comment as property values across nearly
+    every entity. Materializing those as separate nodes gave them no parent to
+    link back to, so they orphaned at the root (the example showed 13 roots).
+    With ownership declared they stay inline and the tree has a single root.
+    """
+    state = AppState()
+    client = TestClient(create_app(state), follow_redirects=True)
+
+    response = client.get("/load-example/isa/1.0")
+    assert response.status_code == 200
+
+    roots = [n for n in state.nodes_by_id.values() if not getattr(n, "parent_id", None)]
+    assert [r.entity_type for r in roots] == ["Investigation"]
+
+    types = {n.entity_type for n in state.nodes_by_id.values()}
+    assert "OntologyAnnotation" not in types, "value-objects must stay inline"
+    assert "Comment" not in types
+    # Real structural entities are still materialized.
+    assert {"Study", "Assay", "Sample", "Protocol"} <= types
