@@ -211,7 +211,13 @@ def register_core_routes(
 
     @app.post("/reset", response_class=HTMLResponse)
     async def reset_state() -> HTMLResponse:
-        """Reset all application state. Used for testing."""
+        """Reset all application state. Used for testing.
+
+        Clears in-memory state and the *current dataset* pointer on both the
+        state and its manager, so a reset returns to a clean, empty datasets
+        overview (the manager tracks the current dataset separately).
+        """
         state = get_state()
         state.reset()
+        resolve_dataset_manager(app, state).current_dataset = None
         return HTMLResponse(content="OK")

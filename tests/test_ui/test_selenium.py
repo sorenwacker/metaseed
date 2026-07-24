@@ -39,20 +39,49 @@ CLICK_DELAY = 0.5  # Delay after button clicks
 BASE_URL = "http://127.0.0.1:8081"
 
 
+def _reset_state(base_url: str, *, attempts: int = 5) -> None:
+    """POST ``/reset``, retrying briefly; raise if the server never resets.
+
+    A failed reset must not be swallowed — the test would then run against the
+    previous test's leaked state, the suite's dominant flakiness source.
+    """
+    import urllib.error
+    import urllib.request
+
+    last_error: Exception | None = None
+    for _ in range(attempts):
+        try:
+            req = urllib.request.Request(f"{base_url}/reset", method="POST")
+            with urllib.request.urlopen(req, timeout=10) as response:
+                if response.status == 200:
+                    return
+        except (urllib.error.URLError, OSError) as exc:  # not ready / transient
+            last_error = exc
+        time.sleep(0.5)
+    raise RuntimeError(f"Could not reset server state at {base_url}: {last_error}")
+
+
 @pytest.fixture(scope="module")
-def server():
-    """Start the MIAPPE-API server for testing."""
+def server(tmp_path_factory):
+    """Start the metaseed UI server for testing, with isolated dataset storage."""
     import os
     import socket
 
-    # Set working directory to miappe-api root
+    # Set working directory to repo root
     cwd = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+    # Isolate persisted datasets in a throwaway dir so tests never pollute the
+    # user's real datasets or leak saved datasets between runs (a flakiness
+    # source: a persisted example dataset would linger in the overview).
+    datasets_dir = tmp_path_factory.mktemp("selenium-datasets")
+    env = {**os.environ, "METASEED_DATASETS_DIR": str(datasets_dir)}
 
     proc = subprocess.Popen(
         ["uv", "run", "uvicorn", "metaseed.ui.app:app", "--port", "8081"],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         cwd=cwd,
+        env=env,
     )
 
     # Wait for server to be ready by polling the port
@@ -94,14 +123,11 @@ def browser(server):
     driver = webdriver.Chrome(options=options)
     driver.implicitly_wait(5)
 
-    # Reset server state before each test
-    import urllib.request
-
-    try:
-        req = urllib.request.Request(f"{BASE_URL}/reset", method="POST")
-        urllib.request.urlopen(req, timeout=5)
-    except Exception:
-        pass  # Ignore errors if server not ready
+    # Reset server state before each test. This MUST succeed: a silently-skipped
+    # reset leaves the previous test's state loaded, which is the suite's main
+    # flakiness source (tests pass alone but fail in sequence). Retry briefly,
+    # then fail loudly rather than run a non-hermetic test.
+    _reset_state(BASE_URL)
 
     yield driver
     driver.quit()

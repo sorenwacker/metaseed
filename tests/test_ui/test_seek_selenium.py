@@ -39,7 +39,12 @@ def server():
     """Start a hermetic metaseed server (isolated settings dir) for the module."""
     cwd = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     data_dir = tempfile.mkdtemp(prefix="metaseed-seek-e2e-")
-    env = {**os.environ, "XDG_DATA_HOME": data_dir}  # redirect settings.json
+    env = {
+        **os.environ,
+        "XDG_DATA_HOME": data_dir,  # redirect settings.json
+        # Isolate datasets too (the datasets dir ignores XDG_DATA_HOME).
+        "METASEED_DATASETS_DIR": os.path.join(data_dir, "datasets"),
+    }
 
     proc = subprocess.Popen(
         ["uv", "run", "uvicorn", "metaseed.ui.app:app", "--port", str(PORT)],

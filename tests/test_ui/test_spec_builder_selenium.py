@@ -22,15 +22,18 @@ BASE_URL = "http://127.0.0.1:8765"
 
 
 @pytest.fixture(scope="module")
-def server():
-    """Start the server for testing."""
+def server(tmp_path_factory):
+    """Start the server for testing, with isolated dataset storage."""
     cwd = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    datasets_dir = tmp_path_factory.mktemp("selenium-datasets")
+    env = {**os.environ, "METASEED_DATASETS_DIR": str(datasets_dir)}
 
     proc = subprocess.Popen(
         ["uv", "run", "uvicorn", "metaseed.ui.app:app", "--port", "8765"],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         cwd=cwd,
+        env=env,
     )
 
     max_attempts = 30

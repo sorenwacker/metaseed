@@ -137,6 +137,8 @@ class AppState:
     _tree_cache: list[TreeNode] = field(default_factory=list)
     _nodes_cache: dict[str, TreeNode] = field(default_factory=dict)
     _cache_valid: bool = field(default=False)
+    # Name of the saved dataset currently loaded (None = unsaved/none).
+    _current_dataset: str | None = None
 
     def invalidate_cache(self: Self) -> None:
         """Invalidate the TreeNode cache.
@@ -404,3 +406,6 @@ class AppState:
         self.editing_node_id = None
         self.current_nested_items = {}
         self.nested_edit_stack = []
+        # Return to a clean datasets overview: forget the current dataset so a
+        # reset does not leave a previously loaded/saved dataset selected.
+        self._current_dataset = None
