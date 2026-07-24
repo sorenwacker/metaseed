@@ -20,6 +20,7 @@ from __future__ import annotations
 from metaseed.forms import (
     FormContext,
     collect_form_values,
+    field_errors_from_validation,
     filter_fields,
     format_validation_errors,
     get_field_data,
@@ -72,6 +73,7 @@ __all__ = [
     "error_response",
     "extract_nested_from_tree",
     "extract_nested_items",
+    "field_errors_from_validation",
     "filter_fields",
     "format_table_rows",
     "format_validation_errors",

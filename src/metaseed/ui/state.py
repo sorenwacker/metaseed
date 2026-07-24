@@ -258,6 +258,7 @@ class AppState:
         instance: Any,
         parent_id: str | None = None,
         node_id: str | None = None,
+        skip_validation: bool = False,
     ) -> TreeNode:
         """Add a new node to the tree.
 
@@ -270,6 +271,9 @@ class AppState:
             instance: The entity instance.
             parent_id: Optional parent node ID for hierarchy.
             node_id: Optional node ID to preserve (for loading saved datasets).
+            skip_validation: If True, skip Pydantic validation when the facade
+                rebuilds the instance. Required to persist an incomplete draft;
+                without it the facade re-validates the dumped data and rejects it.
         """
         facade = self.get_or_create_facade()
 
@@ -283,7 +287,11 @@ class AppState:
 
         # Add to facade
         entity_node = facade.add_entity(
-            entity_type, data, node_id=node_id, parent_id=parent_id
+            entity_type,
+            data,
+            node_id=node_id,
+            parent_id=parent_id,
+            skip_validation=skip_validation,
         )
 
         # Create TreeNode wrapper for backward compatibility
@@ -313,10 +321,22 @@ class AppState:
 
         return node
 
-    def update_node(self: Self, node_id: str, instance: Any) -> TreeNode | None:
+    def update_node(
+        self: Self,
+        node_id: str,
+        instance: Any,
+        skip_validation: bool = False,
+    ) -> TreeNode | None:
         """Update an existing node.
 
         Delegates to facade.update_entity() and returns updated TreeNode.
+
+        Args:
+            node_id: ID of the node to update.
+            instance: The entity instance (or dict) with new values.
+            skip_validation: If True, skip Pydantic validation when the facade
+                rebuilds the instance. Required to persist an incomplete draft;
+                without it the facade re-validates the dumped data and rejects it.
         """
         facade = self.get_or_create_facade()
 
@@ -328,7 +348,9 @@ class AppState:
         else:
             return None
 
-        entity_node = facade.update_entity(node_id, data)
+        entity_node = facade.update_entity(
+            node_id, data, skip_validation=skip_validation
+        )
         if not entity_node:
             return None
 

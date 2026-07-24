@@ -5,6 +5,7 @@ Provides the main page, profile switching, and shared helper functions.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException
@@ -25,6 +26,24 @@ if TYPE_CHECKING:
     from ..state import AppState
 
 
+# routes/ -> ui/ -> metaseed/ -> examples/ (mirrors routes/examples.py).
+_EXAMPLES_DIR = Path(__file__).parent.parent.parent / "examples"
+
+
+def _example_versions(profile_name: str, versions: list[str]) -> list[str]:
+    """Versions of a profile that ship a loadable example dataset.
+
+    Used to show the "Load Example" link only where an example file actually
+    exists, so it does not 404 for profiles/versions without one.
+    """
+    available = []
+    for version in versions:
+        version_dir = _EXAMPLES_DIR / profile_name / version
+        if version_dir.is_dir() and any(version_dir.glob("*.yaml")):
+            available.append(version)
+    return available
+
+
 def get_profile_display_info(factory: ProfileFactory) -> list[dict[str, Any]]:
     """Get display information for all available profiles.
 
@@ -35,7 +54,7 @@ def get_profile_display_info(factory: ProfileFactory) -> list[dict[str, Any]]:
 
     Returns:
         List of profile info dicts with name, display_name, description,
-        root_entity, and versions.
+        root_entity, versions, and example_versions (versions with an example).
     """
     profiles: list[dict[str, Any]] = []
     for name in factory.list_profiles():
@@ -45,6 +64,9 @@ def get_profile_display_info(factory: ProfileFactory) -> list[dict[str, Any]]:
             continue
 
         latest_version = versions[-1]
+        example_versions = _example_versions(name, versions)
+        # Show newest version first in the picker.
+        display_versions = list(reversed(versions))
         try:
             profile_spec = loader.load_profile(latest_version, name)
             profiles.append(
@@ -55,8 +77,9 @@ def get_profile_display_info(factory: ProfileFactory) -> list[dict[str, Any]]:
                         profile_spec.description or f"{name} metadata profile."
                     ),
                     "root_entity": profile_spec.root_entity,
-                    "versions": versions,
+                    "versions": display_versions,
                     "latest_version": latest_version,
+                    "example_versions": example_versions,
                 }
             )
         except SpecLoadError:
@@ -66,8 +89,9 @@ def get_profile_display_info(factory: ProfileFactory) -> list[dict[str, Any]]:
                     "display_name": name,
                     "description": f"{name} metadata profile.",
                     "root_entity": "Investigation",
-                    "versions": versions,
+                    "versions": display_versions,
                     "latest_version": latest_version,
+                    "example_versions": example_versions,
                 }
             )
     return profiles

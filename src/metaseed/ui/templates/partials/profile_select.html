@@ -27,12 +27,14 @@
                             data-testid="profile-{{ profile.name }}-v{{ version }}">
                         v{{ version }}{% if version == profile.latest_version %} (latest){% endif %}
                     </button>
+                    {% if version in profile.example_versions %}
                     <a class="btn btn-sm btn-outline-secondary"
                        href="/load-example/{{ profile.name }}/{{ version }}"
                        data-testid="example-{{ profile.name }}-v{{ version }}"
                        title="Load a fully populated example dataset for v{{ version }}">
                         Load Example
                     </a>
+                    {% endif %}
                 </div>
                 {% endfor %}
             </div>

@@ -29,6 +29,25 @@ class ConfigField:
 
 
 @dataclass(frozen=True)
+class ExportFormat:
+    """A downloadable file export an adapter can produce from a dataset.
+
+    The callable (``module``.``function``) takes a ``MetaseedClient`` and returns
+    ``{filename: text}``. Declared here so the UI derives its export buttons from
+    the registry rather than hard-coding a parallel list.
+    """
+
+    key: str
+    """Stable identifier for the export (e.g. ``ena``, ``pride-sdrf``)."""
+    label: str
+    """Human-readable label shown on the download button."""
+    module: str
+    """Import path of the module holding the export function."""
+    function: str
+    """Name of the ``(client) -> {filename: text}`` export function."""
+
+
+@dataclass(frozen=True)
 class AdapterInfo:
     """Static description of an optional integration adapter."""
 
@@ -49,6 +68,8 @@ class AdapterInfo:
     """Per-instance configuration this adapter accepts (URLs, keys)."""
     action_path: str | None = None
     """UI path to the adapter's action page, if it has one (e.g. ``/seek``)."""
+    exports: tuple[ExportFormat, ...] = ()
+    """File exports this adapter can produce for its matching profile."""
 
 
 ADAPTERS: tuple[AdapterInfo, ...] = (
@@ -59,6 +80,7 @@ ADAPTERS: tuple[AdapterInfo, ...] = (
         direction="import",
         extra="ena",
         requires=("httpx",),
+        exports=(ExportFormat("ena", "ENA XML", "metaseed.ena.export", "to_ena_xml"),),
     ),
     AdapterInfo(
         key="pride",
@@ -67,6 +89,17 @@ ADAPTERS: tuple[AdapterInfo, ...] = (
         direction="import",
         extra="pride",
         requires=("httpx",),
+        exports=(
+            ExportFormat(
+                "pride",
+                "PRIDE submission",
+                "metaseed.pride.export",
+                "to_pride_submission",
+            ),
+            ExportFormat(
+                "pride-sdrf", "PRIDE SDRF", "metaseed.pride.export", "to_pride_sdrf"
+            ),
+        ),
     ),
     AdapterInfo(
         key="brapi",
@@ -83,6 +116,14 @@ ADAPTERS: tuple[AdapterInfo, ...] = (
         direction="import",
         extra="metabolights",
         requires=("httpx",),
+        exports=(
+            ExportFormat(
+                "metabolights",
+                "MetaboLights ISA-Tab",
+                "metaseed.metabolights.export",
+                "to_metabolights",
+            ),
+        ),
     ),
     AdapterInfo(
         key="dcat",
@@ -133,3 +174,25 @@ def _module_present(module: str) -> bool:
 def is_available(info: AdapterInfo) -> bool:
     """Return whether the adapter's pip extra is installed (deps importable)."""
     return all(_module_present(module) for module in info.requires)
+
+
+def exports_for_profile(profile: str) -> tuple[ExportFormat, ...]:
+    """File exports available for a metaseed profile.
+
+    An adapter's ``key`` matches the profile it exports (``ena`` adapter → ``ena``
+    profile), so this returns that adapter's exports when its extra is installed,
+    else an empty tuple.
+    """
+    adapter = _BY_KEY.get(profile)
+    if adapter is None or not is_available(adapter):
+        return ()
+    return adapter.exports
+
+
+def find_export(key: str) -> ExportFormat | None:
+    """Return the :class:`ExportFormat` with ``key`` across all adapters, or None."""
+    for adapter in ADAPTERS:
+        for export in adapter.exports:
+            if export.key == key:
+                return export
+    return None

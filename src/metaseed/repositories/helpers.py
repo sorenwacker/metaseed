@@ -72,6 +72,15 @@ def get_identifier_from_instance(
     return get_identifier(data, helper)
 
 
+def _is_scalar(value: Any) -> bool:
+    """True when a value can stand on its own as a display label.
+
+    Nested entities (dicts, Pydantic models) and collections stringify into
+    unreadable dumps, so they are never used as a label.
+    """
+    return isinstance(value, (str, int, float, bool))
+
+
 def derive_label(entity_type: str, data: dict[str, Any], spec: Any = None) -> str:
     """Derive a display label from entity data.
 
@@ -93,8 +102,21 @@ def derive_label(entity_type: str, data: dict[str, Any], spec: Any = None) -> st
             (f.name for f in spec.fields if getattr(f, "is_label", None)),
             spec.fields[0].name,
         )
-        if data.get(label_field):
-            return str(data[label_field])[:50]
+        value = data.get(label_field)
+        if value:
+            if _is_scalar(value):
+                return str(value)[:50]
+            # The chosen field holds a nested entity (e.g. isa
+            # ProtocolParameter's entity-typed ``parameter_name``); stringifying
+            # it yields a dict dump, not a label. Fall through to the first
+            # scalar instead, skipping references — they identify the parent,
+            # not this entity.
+            for f in spec.fields:
+                if getattr(f, "reference", None) or f.name == label_field:
+                    continue
+                candidate = data.get(f.name)
+                if candidate and _is_scalar(candidate):
+                    return str(candidate)[:50]
 
     return f"New {entity_type}"
 

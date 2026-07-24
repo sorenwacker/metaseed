@@ -202,6 +202,21 @@ def collect_form_values(form_data: dict[str, Any], helper: Any) -> dict[str, Any
     return values
 
 
+def field_errors_from_validation(e: ValidationError) -> dict[str, str]:
+    """Map each field to its first validation message, for inline highlighting.
+
+    Keyed by the top-level field name (``loc[0]``) so a form can mark exactly the
+    offending fields rather than only showing a summary. Keeps the first message
+    per field.
+    """
+    result: dict[str, str] = {}
+    for err in e.errors():
+        loc = err.get("loc") or ()
+        if loc:
+            result.setdefault(str(loc[0]), err.get("msg", "Invalid value"))
+    return result
+
+
 def format_validation_errors(e: ValidationError) -> str:
     """Format validation errors for display with user-friendly messages."""
     friendly_messages = []

@@ -5,6 +5,7 @@ from typing import Any
 
 from pydantic import BaseModel, ValidationError
 
+from metaseed.facade import ProfileFacade
 from metaseed.facade.store import EntityStore
 
 
@@ -167,3 +168,56 @@ def test_node_ids_are_stable_across_reloads_without_identifier() -> None:
         reloaded.load_from_dict(serialized)
         reloaded_ids = {n.instance.name: nid for nid, n in reloaded._instances.items()}
         assert reloaded_ids == ids_by_name
+
+
+def _walk_types(nodes: list, out: list[str]) -> list[str]:
+    for node in nodes:
+        out.append(node.entity_type)
+        _walk_types(node.children, out)
+    return out
+
+
+def test_incomplete_draft_survives_reload() -> None:
+    """Drafts must not be dropped by the read path.
+
+    The UI persists incomplete entities on purpose (a root can be saved before
+    its required children exist). Validating on load discarded exactly those
+    entities with only a log warning, so a saved draft vanished the moment any
+    route reloaded the dataset from disk.
+    """
+    facade = ProfileFacade("miappe", "1.2")
+    root = facade.add_entity(
+        "Investigation", {"unique_id": "INV-1", "title": "root"}, skip_validation=True
+    )
+    # Draft Study: missing the required investigation_id and title.
+    facade.add_entity(
+        "Study", {"unique_id": "STU-1"}, parent_id=root.id, skip_validation=True
+    )
+
+    serialized = facade.to_dict()
+    assert len(serialized) == 2
+
+    reloaded = ProfileFacade("miappe", "1.2")
+    reloaded.load_from_dict(serialized)
+
+    types = _walk_types(reloaded.get_roots(), [])
+    assert "Study" in types, f"draft dropped on reload; got {types}"
+    assert len(types) == 2
+
+
+def test_reloaded_draft_is_still_reported_invalid() -> None:
+    """Lenient loading must not hide incompleteness -- validate() still flags it."""
+    from metaseed import MetaseedClient
+
+    client = MetaseedClient("miappe", "1.2")
+    root = client.create_entity(
+        "Investigation", {"unique_id": "INV-1", "title": "root"}, skip_validation=True
+    )
+    client.create_entity(
+        "Study", {"unique_id": "STU-1"}, parent_id=root.id, skip_validation=True
+    )
+
+    reloaded = MetaseedClient("miappe", "1.2")
+    reloaded.load(client.serialize())
+
+    assert reloaded.validate().valid is False
