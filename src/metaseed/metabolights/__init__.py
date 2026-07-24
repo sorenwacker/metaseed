@@ -44,11 +44,24 @@ def import_accession(
     Returns:
         A :class:`~metaseed.api.client.MetaseedClient` holding the imported
         Investigation and its Contacts, Publications, and Studies (with their
-        Factors, Protocols, Samples, and Assays). Call
+        Factors, Protocols, Samples, and Assays). The Samples (with their
+        Characteristics and Factor Values), the Assays' DataFiles, and their
+        Metabolites are recovered from the study's ISA-Tab files, which are
+        available only for public studies; an embargoed study imports the
+        ISA-JSON backbone only. Call
         :meth:`~metaseed.api.client.MetaseedClient.validate` to report gaps.
     """
+    import httpx
+
     from metaseed.metabolights.client import MetaboLightsClient
 
     client = client or MetaboLightsClient()
     document = client.study(accession)
-    return build_dataset(document, version=version)
+    # The ISA-JSON document leaves samples/dataFiles empty; recover them from the
+    # study's ISA-Tab files. Only public studies expose these on the FTP root, so
+    # degrade to the (metadata-only) ISA-JSON import if they are unavailable.
+    try:
+        isatab_files = client.study_files(accession)
+    except (httpx.HTTPError, OSError):
+        isatab_files = {}
+    return build_dataset(document, version=version, isatab_files=isatab_files)

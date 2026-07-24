@@ -23,6 +23,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from metaseed._mapping import clean as _clean
+from metaseed.isatab import read_data_files, read_metabolites, read_samples
 
 if TYPE_CHECKING:
     from metaseed.api.client import MetaseedClient
@@ -55,18 +56,145 @@ def _study_download_root(document: dict[str, Any]) -> str | None:
     return root.rstrip("/") if isinstance(root, str) and root else None
 
 
-def build_dataset(study: dict[str, Any], *, version: str = "1.0") -> MetaseedClient:
+def _isatab_for_prefix(files: dict[str, str], prefix: str) -> str | None:
+    """The single ISA-Tab file text whose name starts with ``prefix``, or None."""
+    matches = [text for name, text in files.items() if name.startswith(prefix)]
+    return matches[0] if len(matches) == 1 else None
+
+
+def _isatab_for_assay(files: dict[str, str], assay_filename: str | None) -> str | None:
+    """The assay's ``a_*.txt`` text: exact name match, else the sole assay file."""
+    if assay_filename and assay_filename in files:
+        return files[assay_filename]
+    return _isatab_for_prefix(files, "a_")
+
+
+def _isatab_characteristic(
+    characteristics: list[dict[str, Any]], category: str
+) -> str | None:
+    """Value of the ``category`` characteristic among parsed ISA-Tab rows."""
+    return next(
+        (c.get("value") for c in characteristics if c.get("category") == category),
+        None,
+    )
+
+
+def _add_samples_from_isatab(
+    client: MetaseedClient, study_file: str, *, parent_id: str
+) -> None:
+    """Create Samples (+ Characteristic/FactorValue children) from an s_ file."""
+    for row in read_samples(study_file):
+        characteristics = row.get("characteristics") or []
+        sample_entity = client.create_entity(
+            "Sample",
+            _clean(
+                {
+                    "name": row.get("name"),
+                    "organism": _isatab_characteristic(characteristics, "Organism"),
+                    "organism_part": _isatab_characteristic(
+                        characteristics, "Organism part"
+                    ),
+                    # organism_term intentionally left unset (see _add_sample).
+                }
+            ),
+            parent_id=parent_id,
+            skip_validation=True,
+        )
+        for characteristic in characteristics:
+            client.create_entity(
+                "Characteristic",
+                _clean(
+                    {
+                        "category": characteristic.get("category"),
+                        "value": characteristic.get("value"),
+                    }
+                ),
+                parent_id=sample_entity.id,
+                skip_validation=True,
+            )
+        for factor_value in row.get("factor_values") or []:
+            client.create_entity(
+                "FactorValue",
+                _clean(
+                    {
+                        "factor_name": factor_value.get("category"),
+                        "value": factor_value.get("value"),
+                    }
+                ),
+                parent_id=sample_entity.id,
+                skip_validation=True,
+            )
+
+
+_DATA_FILE_TYPES = (
+    ("Raw", "Raw Data File"),
+    ("Derived", "Derived Data File"),
+    ("Acquisition", "Acquisition Parameter Data File"),
+    ("Free Induction", "Free Induction Decay Data File"),
+)
+
+
+def _file_type_from_column(column: str) -> str:
+    """Map an assay data-file column header to a DataFile ``file_type`` value."""
+    for needle, file_type in _DATA_FILE_TYPES:
+        if needle in column:
+            return file_type
+    return column
+
+
+def _add_data_files_from_isatab(
+    client: MetaseedClient, assay_file: str, *, parent_id: str
+) -> None:
+    """Create DataFiles from an assay (``a_*.txt``) file's data-file columns."""
+    for data_file in read_data_files(assay_file):
+        client.create_entity(
+            "DataFile",
+            _clean(
+                {
+                    "filename": data_file.get("name"),
+                    "file_type": _file_type_from_column(data_file.get("kind", "")),
+                }
+            ),
+            parent_id=parent_id,
+            skip_validation=True,
+        )
+
+
+def _add_metabolites_from_isatab(
+    client: MetaseedClient, maf_file: str, *, parent_id: str
+) -> None:
+    """Create Metabolites from a MAF (``m_*.tsv``) file."""
+    for metabolite in read_metabolites(maf_file):
+        client.create_entity(
+            "Metabolite",
+            _clean(dict(metabolite)),
+            parent_id=parent_id,
+            skip_validation=True,
+        )
+
+
+def build_dataset(
+    study: dict[str, Any],
+    *,
+    version: str = "1.0",
+    isatab_files: dict[str, str] | None = None,
+) -> MetaseedClient:
     """Build a ``metabolights``-profile dataset from a MetaboLights document.
 
     Args:
         study: A MetaboLights study metadata document (the value returned by
             :meth:`MetaboLightsClient.study`).
         version: ``metabolights`` profile version.
+        isatab_files: Optional ``{filename: text}`` of the study's ISA-Tab files
+            (from :meth:`MetaboLightsClient.study_files`). The ISA-JSON payload
+            leaves ``samples``/``dataFiles`` empty, so Samples, DataFiles and
+            Metabolites are recovered from these ``s_``/``a_``/``m_`` files.
 
     Returns:
         A MetaseedClient holding the Investigation and its Contacts,
         Publications, Studies, and each study's Factors, Protocols, Samples, and
-        Assays (with referenced DataFiles). Empty if no investigation is present.
+        Assays (with referenced DataFiles and Metabolites). Empty if no
+        investigation is present.
     """
     from metaseed import MetaseedClient
 
@@ -74,6 +202,8 @@ def build_dataset(study: dict[str, Any], *, version: str = "1.0") -> MetaseedCli
     investigation = study.get("isaInvestigation") or {}
     if not investigation:
         return client
+
+    isatab_files = isatab_files or {}
 
     download_root = _study_download_root(study)
 
@@ -100,7 +230,13 @@ def build_dataset(study: dict[str, Any], *, version: str = "1.0") -> MetaseedCli
         _add_publication(client, publication, parent_id=inv.id)
 
     for study_record in investigation.get("studies") or []:
-        _add_study(client, study_record, download_root, parent_id=inv.id)
+        _add_study(
+            client,
+            study_record,
+            download_root,
+            parent_id=inv.id,
+            isatab_files=isatab_files,
+        )
 
     return client
 
@@ -153,8 +289,10 @@ def _add_study(
     download_root: str | None,
     *,
     parent_id: str,
+    isatab_files: dict[str, str] | None = None,
 ) -> None:
     """Create a Study entity and its factors, protocols, samples, and assays."""
+    isatab_files = isatab_files or {}
     descriptors = [
         d
         for d in (_term(item) for item in study.get("studyDesignDescriptors") or [])
@@ -198,11 +336,25 @@ def _add_study(
     for protocol in study.get("protocols") or []:
         _add_protocol(client, protocol, parent_id=study_entity.id)
 
-    for sample in study.get("samples") or []:
+    json_samples = study.get("samples") or []
+    for sample in json_samples:
         _add_sample(client, sample, parent_id=study_entity.id)
 
+    # The ISA-JSON payload leaves ``samples`` empty for every study; fall back to
+    # the study's ``s_*.txt`` ISA-Tab file when present (#146).
+    if not json_samples:
+        study_file = _isatab_for_prefix(isatab_files, "s_")
+        if study_file:
+            _add_samples_from_isatab(client, study_file, parent_id=study_entity.id)
+
     for assay in study.get("assays") or []:
-        _add_assay(client, assay, download_root, parent_id=study_entity.id)
+        _add_assay(
+            client,
+            assay,
+            download_root,
+            parent_id=study_entity.id,
+            isatab_files=isatab_files,
+        )
 
 
 def _add_protocol(
@@ -323,8 +475,10 @@ def _add_assay(
     download_root: str | None,
     *,
     parent_id: str,
+    isatab_files: dict[str, str] | None = None,
 ) -> None:
-    """Create an Assay entity and its referenced data files."""
+    """Create an Assay entity and its referenced data files and metabolites."""
+    isatab_files = isatab_files or {}
     filename = assay.get("filename")
     sample_names = [
         s.get("name")
@@ -350,7 +504,8 @@ def _add_assay(
         skip_validation=True,
     )
 
-    for data_file in assay.get("dataFiles") or []:
+    json_data_files = assay.get("dataFiles") or []
+    for data_file in json_data_files:
         if not isinstance(data_file, dict):
             continue
         name = data_file.get("filename") or data_file.get("name")
@@ -368,3 +523,13 @@ def _add_assay(
             parent_id=assay_entity.id,
             skip_validation=True,
         )
+
+    # The ISA-JSON payload leaves ``dataFiles`` empty; recover DataFiles from the
+    # assay's ``a_*.txt`` file and Metabolites from its MAF (``m_*.tsv``) (#146).
+    if not json_data_files:
+        assay_file = _isatab_for_assay(isatab_files, filename)
+        if assay_file:
+            _add_data_files_from_isatab(client, assay_file, parent_id=assay_entity.id)
+    maf_file = _isatab_for_prefix(isatab_files, "m_")
+    if maf_file:
+        _add_metabolites_from_isatab(client, maf_file, parent_id=assay_entity.id)

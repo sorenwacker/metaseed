@@ -8,6 +8,7 @@ hermetic testing.
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, Any
 
 try:
@@ -27,6 +28,13 @@ if TYPE_CHECKING:
 
 WS_BASE_URL = "https://www.ebi.ac.uk/metabolights/ws"
 USER_AGENT = "metaseed (+https://github.com/sorenwacker/metaseed)"
+
+# A published study's ISA-Tab metadata files (s_/a_/m_) are served here, one
+# directory per accession. The web-service ``/files`` listing sometimes reports
+# assay filenames that differ from the actual files, so the directory index is
+# the authoritative source of names.
+FTP_PUBLIC_BASE = "http://ftp.ebi.ac.uk/pub/databases/metabolights/studies/public"
+_ISATAB_HREF = re.compile(r'href="(s_[^"?/]+\.txt|a_[^"?/]+\.txt|m_[^"?/]+\.tsv)"')
 
 
 class MetaboLightsClient:
@@ -80,3 +88,38 @@ class MetaboLightsClient:
         if isinstance(content, dict):
             return content
         return data
+
+    def _get_text(self, url: str) -> str:
+        """GET ``url`` and return the response body as text."""
+        headers = {"User-Agent": USER_AGENT}
+        if self._client is not None:
+            response = self._client.get(url, headers=headers, follow_redirects=True)
+        else:
+            response = httpx.get(
+                url,
+                headers=headers,
+                timeout=self._timeout,
+                follow_redirects=True,
+            )
+        response.raise_for_status()
+        return response.text
+
+    def study_files(self, accession: str) -> dict[str, str]:
+        """Return the text of a study's ISA-Tab metadata files.
+
+        The material/metabolite tables (``s_*.txt`` samples, ``a_*.txt`` assays,
+        ``m_*.tsv`` MAF) that the ISA-JSON ``/studies`` payload leaves empty. File
+        names are discovered from the public download directory index and each is
+        fetched. Network-gated; requires the ``metaseed[metabolights]`` extra.
+
+        Args:
+            accession: A MetaboLights study accession (e.g. ``"MTBLS1"``).
+
+        Returns:
+            ``{filename: text}`` for every ``s_``/``a_``/``m_`` file found. Empty
+            if the study is not public (embargoed studies are not on the FTP root).
+        """
+        root = f"{FTP_PUBLIC_BASE}/{accession}"
+        index = self._get_text(f"{root}/")
+        names = sorted(set(_ISATAB_HREF.findall(index)))
+        return {name: self._get_text(f"{root}/{name}") for name in names}
