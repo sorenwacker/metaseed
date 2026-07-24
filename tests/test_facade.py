@@ -198,6 +198,32 @@ class TestEntityHelper:
         assert "studies" in nested
         assert nested["studies"] == "Study"
 
+    def test_child_fields_equals_nested_when_none_marked(
+        self, investigation_helper: EntityHelper
+    ) -> None:
+        # miappe declares no ``owns`` markers, so child_fields is all nested.
+        assert investigation_helper.child_fields == investigation_helper.nested_fields
+
+    def test_child_fields_returns_only_owned_when_marked(self) -> None:
+        # isa Assay marks its containment fields ``owns: true``; its
+        # OntologyAnnotation lookups (measurement_type/technology_type/...) are
+        # unmarked, so child_fields excludes them.
+        assay = ProfileFacade("isa", "1.0").Assay
+        assert "OntologyAnnotation" in assay.nested_fields.values()  # still nested
+        assert set(assay.child_fields.values()) == {
+            "DataFile",
+            "OtherMaterial",
+            "Process",
+            "Comment",
+        }
+        assert "OntologyAnnotation" not in assay.child_fields.values()
+
+    def test_nested_fields_meaning_unchanged_by_owns(self) -> None:
+        # nested_fields still means "all nested", markers or not.
+        assay = ProfileFacade("isa", "1.0").Assay
+        assert "measurement_type" in assay.nested_fields
+        assert assay.nested_fields["measurement_type"] == "OntologyAnnotation"
+
     def test_field_info(self, investigation_helper: EntityHelper) -> None:
         """Get detailed field information."""
         info = investigation_helper.field_info("unique_id")

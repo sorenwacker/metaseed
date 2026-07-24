@@ -55,6 +55,20 @@ def _field_to_dict(field: FieldSpec) -> dict[str, Any]:
         field_info["codename"] = field.codename
     if field.items:
         field_info["items"] = field.items
+    # Richer per-field metadata (#98), present only when declared.
+    if field.example is not None:
+        field_info["example"] = field.example
+    options = field.options
+    if options is None and field.constraints and field.constraints.enum:
+        options = field.constraints.enum
+    if options:
+        field_info["options"] = options
+    if field.unit:
+        field_info["unit"] = field.unit
+    if field.label:
+        field_info["label"] = field.label
+    if field.tier:
+        field_info["tier"] = field.tier
     return field_info
 
 
@@ -100,7 +114,10 @@ def _identifier_info(entity_def: Any) -> tuple[str | None, str | None]:
         the usual ``unique_id`` convention.
     """
     field_names = {f.name for f in entity_def.fields}
-    identifier = next((f.name for f in entity_def.fields if not f.reference), None)
+    identifier = next(
+        (f.name for f in entity_def.fields if f.is_identifier),
+        next((f.name for f in entity_def.fields if not f.reference), None),
+    )
     note = None
     if identifier and identifier != "unique_id" and "unique_id" not in field_names:
         note = (
@@ -342,24 +359,16 @@ def register_profile_tools(mcp: FastMCP) -> None:  # noqa: C901
                 if field_name and field.name != field_name:
                     continue
 
-                field_info = {
-                    "name": field.name,
-                    "type": field.type.value,
-                    "required": field.required,
-                    "description": field.description,
-                }
-                if field.codename:
-                    field_info["codename"] = field.codename
+                # _field_to_dict carries name/type/required/description/codename/
+                # items plus the #98 metadata (example/options/unit/label/tier);
+                # this tool additionally surfaces ontology_term and constraints.
+                field_info = _field_to_dict(field)
                 if field.ontology_term:
                     field_info["ontology_term"] = field.ontology_term
                 if field.constraints:
                     field_info["constraints"] = field.constraints.model_dump(
                         exclude_none=True
                     )
-                if field.items:
-                    field_info["items"] = field.items
-                if hasattr(field, "example") and field.example:
-                    field_info["example"] = field.example
 
                 fields.append(field_info)
 

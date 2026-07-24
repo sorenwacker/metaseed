@@ -218,7 +218,7 @@ def register_form_routes(  # noqa: C901
 
         inline_tables = build_inline_tables(state, facade, entity_type)
 
-        child_entity_types = list(helper.nested_fields.values())
+        child_entity_types = list(helper.child_fields.values())
 
         return templates.TemplateResponse(
             request,

@@ -133,16 +133,20 @@ def get_field_data(
             ]:
                 continue
 
-        fields.append(
-            {
-                "name": field_name,
-                "type": info["type"],
-                "required": info["required"],
-                "description": info.get("description", ""),
-                "items": info.get("items"),
-                "ontologies": info.get("ontologies"),
-            }
-        )
+        field_data = {
+            "name": field_name,
+            "type": info["type"],
+            "required": info["required"],
+            "description": info.get("description", ""),
+            "items": info.get("items"),
+            "ontologies": info.get("ontologies"),
+        }
+        # Richer per-field metadata (#98): present only when the field declares
+        # it (options also derives from constraints.enum — see field_info).
+        for key in ("example", "options", "unit", "label", "tier"):
+            if key in info:
+                field_data[key] = info[key]
+        fields.append(field_data)
     return fields
 
 

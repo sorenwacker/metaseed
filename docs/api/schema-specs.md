@@ -77,6 +77,7 @@ The `spec_version` field indicates which version of the specification language f
 | `0.3` | Adds explicit `type` and `message` fields to validation rules, plus `lat_field`, `lon_field`, `start_field`, `end_field` for explicit field configuration. |
 | `0.4` | Adds `ontologies` field to FieldSpec for scoping `ontology_term` type fields to specific OLS ontologies. |
 | `0.5` | Adds `dcat` field to FieldSpec for mapping a root entity's fields onto DCAT/DCAT-AP properties (see DCAT Mapping). |
+| `0.6` | Adds relationship-role and metadata markers to FieldSpec: `owns` (owning-parent relationship), `is_identifier`/`is_label` (declared identity/label), and `example`, `options`, `unit`, `label`, `tier` (form/template metadata). See Field Markers. |
 
 Existing specs without `spec_version` are automatically treated as version `0.1`.
 
@@ -144,13 +145,16 @@ Fields define the data attributes within an entity.
 
 ### Label Convention
 
-**The first field's value is used as the entity's display label.** This applies to:
+**By default the first field's value is used as the entity's display label, and
+the first non-reference field as its identifier.** This applies to node labels in
+graph visualization, tree view labels in the UI, and entity identification in
+references. A field marked `is_label: true` / `is_identifier: true` overrides this
+positional default (see Field Markers) — use the markers when the first field is a
+parent reference or a nested model rather than a scalar identifier.
 
-- Node labels in graph visualization
-- Tree view labels in the UI
-- Entity identification in references
-
-Place the field that best identifies the entity first in the field list. This could be `name`, `identifier`, `alias`, `title`, or any other field appropriate for the metadata model:
+Place the field that best identifies the entity first in the field list (or mark
+it explicitly). This could be `name`, `identifier`, `alias`, `title`, or any other
+field appropriate for the metadata model:
 
 ```yaml
 # ENA uses 'alias' as the identifying field
@@ -197,6 +201,53 @@ fields:
 | `reference` | no | Entity reference in format "Entity.field" (see Relationships) |
 | `unique_within` | no | Uniqueness scope: "parent" or "global" |
 | `dcat` | no | DCAT/DCAT-AP property this root-entity field maps to (see DCAT Mapping) |
+| `owns` | no | On a relationship field, marks it the owning-parent/containment relationship (see Field Markers) |
+| `is_identifier` | no | Marks this field as the entity's declared identifier (see Field Markers) |
+| `is_label` | no | Marks this field as the entity's declared display label (see Field Markers) |
+| `example` | no | Illustrative value for templates/forms |
+| `options` | no | Allowed values (controlled vocabulary); falls back to `constraints.enum` |
+| `unit` | no | Expected unit, where the standard defines one |
+| `label` | no | Human-readable field label distinct from the machine `name` |
+| `tier` | no | Advisory completeness tier: `required`, `recommended`, or `optional` |
+
+### Field Markers
+
+*(spec_version 0.6+)*
+
+**Why these exist.** Downstream consumers (form/template generators, completeness
+indicators) need to know an entity's owning-parent relationship, its identifier
+and label field, and per-field metadata such as allowed values and units. Before
+these markers that knowledge was not in the spec, so consumers reverse-engineered
+it with heuristics (scan for entity-typed fields, assume the first field is the
+label) or hard-coded it per profile — both of which pick wrong cases and drift out
+of date as the standard evolves. Putting the knowledge in the spec, once, keeps
+every consumer correct and profile-agnostic. All markers default to absent, so
+un-migrated specs are unaffected.
+
+**`owns` — owning-parent relationship.** A relationship (`entity` or
+`list`-of-entity) field can be genuine *containment* (the target belongs to this
+entity) or a plain *lookup* (a reference to a shared entity). Both look identical
+in the spec, so `owns: true` marks the containment ones. When any relationship on
+an entity is marked, `EntityHelper.child_fields` (and the parent-child tree gate)
+return only the owned relationships; when none is marked, all nested relationships
+are treated as children (backward compatible). Example: isa `Assay.data_files`
+is `owns: true` while `Assay.measurement_type → OntologyAnnotation` is left
+unmarked, so the ontology annotation is a lookup, not a child.
+
+**`is_identifier` / `is_label` — declared identity.** By default the identifier is
+the first non-reference field and the label is the first field. These positional
+rules mis-resolve entities whose first field is a nested model or a parent
+reference (e.g. isa `Source` would label by its parent `study_id`). Marking one
+field `is_identifier: true` and/or one field `is_label: true` overrides the
+convention. At most one field per entity may set each marker (enforced at load).
+
+**`example` / `options` / `unit` / `label` / `tier` — field metadata.** Surfaced
+through `get_field_data()`, the client's `FieldInfo`, and the MCP field tools so
+consumers can generate forms, spreadsheet templates, dropdowns and completeness
+indicators from the spec. `options` falls back to `constraints.enum` when unset;
+`tier` is advisory only — `required` remains the validation source of truth. The
+`EntityHelper.fields_by_tier` helper groups an entity's fields into
+required/recommended/optional.
 
 ## Field Types
 

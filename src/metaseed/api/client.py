@@ -379,6 +379,11 @@ class MetaseedClient(SerializationMixin, ValidationMixin):
                     ontology_term=info.get("ontology_term"),
                     items=info.get("items"),
                     constraints=info.get("constraints"),
+                    example=info.get("example"),
+                    options=info.get("options"),
+                    unit=info.get("unit"),
+                    label=info.get("label"),
+                    tier=info.get("tier"),
                 )
             )
         return fields
