@@ -25,7 +25,10 @@ jobs:
         uses: astral-sh/setup-uv@v4
 
       - name: Install dependencies
-        run: uv sync --extra dev
+        # Must match the CI gate's extras, not just its markers: tests/test_seek
+        # imports rdflib, so `--extra dev` alone fails at collection and the
+        # release never reaches the publish job.
+        run: uv sync --extra dev --extra dcat --extra seek
 
       - name: Run tests
         # Match the CI gate: exclude network-marked tests. They hit live third-party
