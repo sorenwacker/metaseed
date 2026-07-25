@@ -23,6 +23,7 @@ import time
 
 import pytest
 from selenium import webdriver
+from selenium.common.exceptions import StaleElementReferenceException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select, WebDriverWait
@@ -111,8 +112,13 @@ def _configure_seek(driver, url="http://localhost:3001", api_key="SECRET-KEY-XYZ
     driver.find_element(
         By.CSS_SELECTOR, '[data-testid="config-seek"] button[type="submit"]'
     ).click()
-    # HTMX swaps #adapter-seek; the URL prefills back once persisted.
-    WebDriverWait(driver, 10).until(
+    # HTMX swaps #adapter-seek; the URL prefills back once persisted. The submit
+    # replaces the panel, so the polled element can go stale mid-swap -- ignore
+    # that (WebDriverWait only ignores NoSuchElement by default) so the condition
+    # retries against the new panel instead of failing the test intermittently.
+    WebDriverWait(
+        driver, 10, ignored_exceptions=(StaleElementReferenceException,)
+    ).until(
         lambda d: (
             d.find_element(
                 By.CSS_SELECTOR, '[data-testid="config-seek-url"]'
