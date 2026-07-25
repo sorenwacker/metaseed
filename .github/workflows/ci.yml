@@ -5,10 +5,17 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 # Least privilege: CI only needs to read the repo.
 permissions:
   contents: read
+
+# Cancel an in-progress run when a newer commit lands on the same ref, so
+# repeated pushes to a PR don't stack up parallel full runs.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
@@ -66,6 +73,9 @@ jobs:
     # flakiness must never block a merge. ubuntu-latest ships Chrome, and
     # Selenium Manager (selenium>=4.20) resolves the driver; the tests start
     # their own uvicorn server, so no extra service setup is needed.
+    # Runs on pushes to main and manual dispatch -- not on every PR push -- to
+    # conserve Actions minutes (it never gates a merge).
+    if: github.event_name != 'pull_request'
     continue-on-error: true
     steps:
       - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
@@ -87,6 +97,8 @@ jobs:
     runs-on: ubuntu-latest
     # Advisory: a newly-disclosed CVE in a transitive dependency must not block
     # an unrelated PR — the vulnerability DB updates independently of this code.
+    # Runs on pushes to main and manual dispatch, not on every PR push.
+    if: github.event_name != 'pull_request'
     continue-on-error: true
     steps:
       - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
