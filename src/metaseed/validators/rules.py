@@ -7,7 +7,33 @@ import datetime
 import re
 from typing import Any, Self
 
+import regex
+
 from metaseed.validators.base import ValidationError, ValidationRule, has_value
+
+# Ceiling on evaluating a single user-supplied pattern against one value. Patterns
+# come from user-authored specs and are matched against user data, so a
+# catastrophic-backtracking pattern (e.g. ``(a+)+$``) could otherwise hang the
+# process for minutes on a short input. The ``regex`` module enforces this bound
+# mid-match (stdlib ``re`` cannot be interrupted); on timeout we fail the value
+# closed rather than let it block. One second is far above any legitimate match.
+_PATTERN_MATCH_TIMEOUT_SECONDS = 1.0
+
+
+def _matches_within_timeout(pattern: "regex.Pattern[str]", value: str) -> bool:
+    """Return whether ``value`` matches ``pattern``, treating a timeout as no match.
+
+    Args:
+        pattern: A compiled ``regex`` pattern.
+        value: The string to test.
+
+    Returns:
+        True if the value matches; False if it does not or the match timed out.
+    """
+    try:
+        return pattern.match(value, timeout=_PATTERN_MATCH_TIMEOUT_SECONDS) is not None
+    except TimeoutError:
+        return False
 
 
 class DateRangeRule(ValidationRule):
@@ -192,7 +218,7 @@ class UniqueIdPatternRule(ValidationRule):
             pattern: Optional custom regex pattern.
         """
         self.field = field
-        self.pattern = re.compile(pattern or self.DEFAULT_PATTERN)
+        self.pattern = regex.compile(pattern or self.DEFAULT_PATTERN)
 
     @property
     def name(self: Self) -> str:
@@ -223,7 +249,7 @@ class UniqueIdPatternRule(ValidationRule):
                 )
             ]
 
-        if not self.pattern.match(value):
+        if not _matches_within_timeout(self.pattern, value):
             return [
                 ValidationError(
                     field=self.field,
@@ -256,7 +282,7 @@ class PatternRule(ValidationRule):
             message: Optional custom error message.
         """
         self.field = field
-        self.pattern = re.compile(pattern)
+        self.pattern = regex.compile(pattern)
         self._message = message
 
     @property
@@ -269,7 +295,7 @@ class PatternRule(ValidationRule):
         value = data.get(self.field)
         if value in (None, ""):
             return []
-        if not self.pattern.match(str(value)):
+        if not _matches_within_timeout(self.pattern, str(value)):
             return [
                 ValidationError(
                     field=self.field,

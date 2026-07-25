@@ -1,15 +1,57 @@
 """Tests for validation rules."""
 
 import datetime
+import time
+
+import regex
 
 from metaseed.validators.rules import (
     ConditionalRule,
     CoordinatePairRule,
     DateRangeRule,
+    PatternRule,
     RequiredFieldsRule,
     UniqueIdPatternRule,
     ValidationError,
 )
+
+
+class TestPatternReDoS:
+    """User-supplied patterns must not hang validation (ReDoS).
+
+    ``(a+)+$`` against a non-matching input backtracks catastrophically under the
+    stdlib ``re`` engine -- the original code hung for minutes on ~35 characters.
+    These assert the bounded behaviour: matching runs on the ``regex`` engine with
+    a per-match timeout, so a pathological pattern returns a validation error
+    quickly instead of blocking.
+    """
+
+    _EVIL = r"(a+)+$"
+    _BAD_INPUT = "a" * 60 + "!"
+
+    def test_pattern_rule_does_not_hang(self) -> None:
+        rule = PatternRule(field="x", pattern=self._EVIL)
+        start = time.time()
+        errors = rule.validate({"x": self._BAD_INPUT})
+        assert time.time() - start < 2.0
+        assert errors  # non-matching input fails closed
+
+    def test_unique_id_pattern_rule_does_not_hang(self) -> None:
+        rule = UniqueIdPatternRule(field="x", pattern=self._EVIL)
+        start = time.time()
+        errors = rule.validate({"x": self._BAD_INPUT})
+        assert time.time() - start < 2.0
+        assert errors
+
+    def test_patterns_compile_on_the_regex_engine_not_stdlib_re(self) -> None:
+        # The regex engine (not stdlib re) is what makes the timeout possible.
+        assert isinstance(PatternRule(field="x", pattern="^a+$").pattern, regex.Pattern)
+        assert isinstance(UniqueIdPatternRule(field="x").pattern, regex.Pattern)
+
+    def test_normal_patterns_still_validate(self) -> None:
+        rule = PatternRule(field="x", pattern=r"^[A-Za-z0-9_-]+$")
+        assert rule.validate({"x": "ok_id-1"}) == []
+        assert rule.validate({"x": "bad!value"})
 
 
 class TestDateRangeRule:
