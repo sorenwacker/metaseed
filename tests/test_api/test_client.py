@@ -426,9 +426,11 @@ class TestValidation:
         result = client.validate()
 
         child_issues = [
-            issue for issue in result.issues if issue.field.startswith(invalid_child.id)
+            issue for issue in result.issues if issue.entity_id == invalid_child.id
         ]
         assert child_issues, "child of an empty node should still be validated"
+        # field is the bare name; the instance is carried in entity_id.
+        assert all("." not in issue.field for issue in child_issues)
 
     def test_cardinality_satisfied_by_created_children(
         self, client: MetaseedClient
