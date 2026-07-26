@@ -397,7 +397,13 @@ class AppState:
         return facade.get_tree()
 
     def reset(self: Self) -> None:
-        """Reset all state."""
+        """Reset the working entity state to a clean datasets overview.
+
+        Clears the facade entities, tree caches, editing and nested-edit state,
+        the selected dataset, and the catalog metadata. ``profile`` and
+        ``version`` are deliberately left intact so callers such as
+        ``switch_profile`` can set them and then reset without losing the choice.
+        """
         if self.facade:
             self.facade.clear()
         self._tree_cache = []
@@ -409,3 +415,6 @@ class AppState:
         # Return to a clean datasets overview: forget the current dataset so a
         # reset does not leave a previously loaded/saved dataset selected.
         self._current_dataset = None
+        # Catalog metadata is dataset-specific display state; a reset back to the
+        # overview must not carry a previous dataset's catalog forward.
+        self.catalog_metadata = None

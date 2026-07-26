@@ -174,7 +174,7 @@ def register_nested_routes(  # noqa: C901
         )
 
     @app.post("/nested/{parent_type}/{field_name}/{idx}", response_class=HTMLResponse)
-    async def save_nested_item(
+    async def save_nested_item(  # noqa: C901
         request: Request, parent_type: str, field_name: str, idx: int
     ) -> HTMLResponse:
         """Save changes to a nested item."""
@@ -207,6 +207,11 @@ def register_nested_routes(  # noqa: C901
                 coerced = _coerce_form_value(value, field_type)
                 if coerced is not None:
                     item[key] = coerced
+                elif value == "":
+                    # A blank submission clears the field, matching the table-cell
+                    # editors (which write the raw value); otherwise a nested field
+                    # could never be emptied once set.
+                    item[key] = ""
 
             if state.nested_edit_stack:
                 context = state.nested_edit_stack[-1]
