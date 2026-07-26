@@ -148,7 +148,7 @@ class MostRestrictiveStrategy(MergeStrategy):
         if not all_constraints:
             return None
 
-        # Start with first constraint as base
+        # Merge field-by-field into a fresh, empty Constraints
         merged = Constraints()
 
         # Pattern: use first non-None (patterns can't be easily merged)

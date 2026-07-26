@@ -115,6 +115,8 @@ class BrapiClient:
                 timeout=self._timeout,
                 http_client=self._client,
             )
+            if not isinstance(body, dict):
+                break
             data = (body.get("result") or {}).get("data")
             if isinstance(data, list):
                 collected.extend(d for d in data if isinstance(d, dict))

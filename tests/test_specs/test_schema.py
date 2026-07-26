@@ -21,11 +21,20 @@ class TestSeekEntityConfig:
     def test_accepts_a_known_role(self) -> None:
         assert SeekEntityConfig(role="ObservationUnit").role == "ObservationUnit"
 
+    def test_accepts_every_role_in_seek_roles(self) -> None:
+        # SEEK_ROLES is the single source of truth: role validation must accept
+        # exactly its members, so adding/removing a role there changes what is
+        # accepted without a second list to keep in sync.
+        from metaseed.specs.schema import SEEK_ROLES
+
+        for role in SEEK_ROLES:
+            assert SeekEntityConfig(role=role).role == role
+
     def test_rejects_an_unknown_role(self) -> None:
         # A hand-authored/merged profile with a typo must fail at load, not
         # silently export a nonexistent jerm: class.
         with pytest.raises(ValidationError):
-            SeekEntityConfig(role="studdy")  # type: ignore[arg-type]
+            SeekEntityConfig(role="studdy")
 
     def test_role_round_trips_through_entity_yaml(self) -> None:
         entity = EntityDefSpec(seek=SeekEntityConfig(role="Sample"))

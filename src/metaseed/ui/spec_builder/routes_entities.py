@@ -151,11 +151,7 @@ def register_entity_routes(  # noqa: C901
         # An empty or unrecognized value clears it (dropdown "— none —").
         if seek_role is not None:
             role = seek_role.strip()
-            entity.seek = (
-                SeekEntityConfig(role=role)  # type: ignore[arg-type]
-                if role in SEEK_ROLES
-                else None
-            )
+            entity.seek = SeekEntityConfig(role=role) if role in SEEK_ROLES else None
 
         # Handle rename
         final_name = name

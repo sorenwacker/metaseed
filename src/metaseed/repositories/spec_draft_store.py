@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import uuid
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -86,7 +87,7 @@ class MemorySpecDraftStore(AsyncSpecDraftStore):
     (and tests) control the ``modified`` timestamp.
     """
 
-    def __init__(self, now: Any = None) -> None:
+    def __init__(self, now: Callable[[], str] | None = None) -> None:
         self._drafts: dict[str, SpecDraftData] = {}
         self._now = now or _utc_now
 

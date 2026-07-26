@@ -94,7 +94,13 @@ def get_reference_fields(
             applies_to = [applies_to] if applies_to != "all" else []
 
         if entity_type in applies_to:
-            target_entity, target_field = rule.reference.split(".")
+            parts = rule.reference.split(".")
+            if len(parts) != 2:
+                # rule.reference is free-form text from the spec builder; a value
+                # without exactly one dot is not an entity reference. Skip rather
+                # than raise ValueError on the unpacking.
+                continue
+            target_entity, target_field = parts
             reference_fields[rule.field] = {
                 "target_entity": target_entity,
                 "target_field": target_field,

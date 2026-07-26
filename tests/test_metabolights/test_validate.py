@@ -41,6 +41,51 @@ def test_cv_terms_collects_organism_and_metabolite_accessions():
     assert collected["Assay[0].metabolites[1].database_identifier"] == "CHEBI:0000000"
 
 
+def test_cv_terms_folds_child_node_metabolites():
+    """Metabolites attached as child nodes (imported from a MAF) are collected.
+
+    The importer creates Metabolites as child entities, not inline on the Assay,
+    so without the child reconstruction their database_identifier CV terms were
+    silently never checked on the real import path.
+    """
+    from metaseed.metabolights.export import _metabolite_children_by_assay
+
+    client = MetaseedClient("metabolights", "1.0")
+    inv = client.create_entity(
+        "Investigation",
+        {"identifier": "I", "title": "t", "description": "d"},
+        skip_validation=True,
+    )
+    study = client.create_entity(
+        "Study",
+        {"identifier": "s", "title": "t"},
+        parent_id=inv.id,
+        skip_validation=True,
+    )
+    assay = client.create_entity(
+        "Assay",
+        {
+            "identifier": "a",
+            "filename": "a_a.txt",
+            "technology_type": "mass spectrometry",
+            "measurement_type": "metabolite profiling",
+        },
+        parent_id=study.id,
+        skip_validation=True,
+    )
+    client.create_entity(
+        "Metabolite",
+        {"metabolite_identification": "g", "database_identifier": "CHEBI:0000000"},
+        parent_id=assay.id,
+        skip_validation=True,
+    )
+
+    entities = client.serialize()["entities"]
+    children = _metabolite_children_by_assay(client)
+    collected = dict(_cv_terms(entities, children))
+    assert "CHEBI:0000000" in collected.values()
+
+
 # --- CV resolution against live OLS4 ---------------------------------------
 
 

@@ -3,6 +3,7 @@
 This module provides the validation engine that coordinates rule execution.
 """
 
+import re
 from typing import Any, Self
 
 from metaseed.specs.loader import SpecLoader, SpecLoadError
@@ -316,17 +317,19 @@ def _infer_rule_type(
     if rule_spec.condition:
         # Handle special cases first
         if "latitude" in rule_spec.condition and "longitude" in rule_spec.condition:
-            # Coordinate pair rule - extract field names
-            if "biological_material_latitude" in rule_spec.condition:
-                return CoordinatePairRule(
-                    lat_field="biological_material_latitude",
-                    lon_field="biological_material_longitude",
-                    rule_name=rule_spec.name,
-                    message=rule_spec.message,
-                )
+            # Coordinate pair rule: read the actual field names out of the
+            # condition rather than assuming a fixed prefix. This makes the rule
+            # target the real fields for any entity (material_source_latitude,
+            # biological_material_latitude, a bare latitude, ...) instead of
+            # silently validating nonexistent lat/lon fields.
+            tokens = re.findall(r"[A-Za-z_][A-Za-z0-9_]*", rule_spec.condition)
+            lat_field = next((t for t in tokens if t.endswith("latitude")), "latitude")
+            lon_field = next(
+                (t for t in tokens if t.endswith("longitude")), "longitude"
+            )
             return CoordinatePairRule(
-                lat_field="latitude",
-                lon_field="longitude",
+                lat_field=lat_field,
+                lon_field=lon_field,
                 rule_name=rule_spec.name,
                 message=rule_spec.message,
             )

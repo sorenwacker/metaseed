@@ -13,7 +13,7 @@ The format is tab-separated, one record per line, each prefixed by a line-type
 token:
 
 * ``MTD`` -- a metadata field (``MTD<TAB>key<TAB>value``).
-* ``FME`` -- a file-mapping entry (``FME<TAB>index<TAB>filename<TAB>type``).
+* ``FME`` -- a file-mapping entry (``FME<TAB>file_id<TAB>file_type<TAB>file_path``).
 
 This is the round-trip partner of :func:`metaseed.pride.import_accession`.
 """

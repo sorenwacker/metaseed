@@ -292,6 +292,25 @@ class TestExplicitRuleTypes:
         assert rule.lat_field == "latitude"
         assert rule.lon_field == "longitude"
 
+    def test_condition_coordinate_pair_uses_actual_field_names(self) -> None:
+        """A condition-inferred coordinate rule targets the real lat/lon fields.
+
+        Previously only the ``biological_material_`` prefix was special-cased and
+        every other entity fell back to a bare ``latitude``/``longitude`` that does
+        not exist, so the rule silently validated the wrong fields.
+        """
+        from metaseed.validators.engine import _infer_rule_type
+
+        spec = ValidationRuleSpec(
+            name="coord",
+            condition="material_source_latitude AND material_source_longitude",
+            message="m",
+        )
+        rule = _infer_rule_type(spec, None)
+        assert isinstance(rule, CoordinatePairRule)
+        assert rule.lat_field == "material_source_latitude"
+        assert rule.lon_field == "material_source_longitude"
+
     def test_explicit_cardinality_type(self) -> None:
         """Explicit cardinality type creates ListCardinalityRule."""
         spec = ValidationRuleSpec(

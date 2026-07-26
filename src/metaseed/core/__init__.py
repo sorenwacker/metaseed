@@ -1,4 +1,4 @@
-"""Core module for MIAPPE-API.
+"""Core module for metaseed.
 
 This module provides profile context, exception classes, and serialization
 utilities.

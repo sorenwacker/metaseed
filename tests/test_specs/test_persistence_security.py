@@ -88,8 +88,10 @@ class TestDeleteSpecTraversal:
         monkeypatch.setattr(
             "metaseed.specs.loader.SpecLoader.is_user_defined", lambda self, name: True
         )
-        with pytest.raises(ValueError):
-            persistence.delete_user_spec("../../victim2")
+        # Name normalization rewrites path separators to '-', so a traversal name
+        # cannot resolve outside the base: the delete matches nothing and touches
+        # no files (version traversal is still caught by the containment check).
+        assert persistence.delete_user_spec("../../victim2") is False
         assert victim.exists() and (victim / "keep.txt").exists()
 
     def test_valid_delete_roundtrip(self, specs_base, monkeypatch):
@@ -100,3 +102,19 @@ class TestDeleteSpecTraversal:
             "metaseed.specs.loader.SpecLoader.is_user_defined", lambda self, name: True
         )
         assert persistence.delete_user_spec("mytestprofile", "1.0") is True
+
+    def test_delete_normalizes_name_like_save(self, specs_base, monkeypatch):
+        # save_spec stores under a lowercased, sanitized directory; deleting by
+        # the original (mixed-case/spaced) name must resolve to the same path
+        # rather than silently matching nothing.
+        spec = _spec()
+        spec.name = "My Spec"
+        spec.version = "1.0"
+        saved = persistence.save_spec(spec, name="My Spec")
+        assert saved.exists()
+
+        monkeypatch.setattr(
+            "metaseed.specs.loader.SpecLoader.is_user_defined", lambda self, name: True
+        )
+        assert persistence.delete_user_spec("My Spec", "1.0") is True
+        assert not saved.parent.exists()

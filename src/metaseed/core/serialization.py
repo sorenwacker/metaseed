@@ -2,7 +2,7 @@
 
 This module provides a convenience helper for JSON-compatible output from
 Pydantic models. It wraps the standard ``model_dump(mode="json")`` call and
-also tolerates ``None`` and non-model inputs.
+returns an empty dict for a ``None`` instance.
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ def to_json_dict(
     """Serialize a Pydantic model instance to a JSON-compatible dictionary.
 
     Convenience wrapper around ``instance.model_dump(mode="json", ...)`` that
-    additionally returns an empty dict for ``None`` or non-model inputs. The
+    additionally returns an empty dict for a ``None`` instance. The
     ``mode="json"`` conversion turns dates, URLs, and other complex types into
     JSON-serializable values.
 

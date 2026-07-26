@@ -116,6 +116,37 @@ class TestGetEntity:
         assert repo.get_entity("nonexistent") is None
 
 
+class TestAccessorIsolation:
+    """Accessors must not leak the repository's live internal objects."""
+
+    @pytest.fixture
+    def repo(self, tmp_path):
+        path = tmp_path / "test.json"
+        r = FileEntityRepository(dataset_path=path, profile="miappe", version="1.2")
+        r.create_entity(
+            entity_type="Investigation",
+            data={"unique_id": "INV-001", "title": "Original"},
+        )
+        return r
+
+    def test_get_entity_returns_a_copy(self, repo):
+        """Mutating a get_entity result must not corrupt the store."""
+        entity_id = repo.list_entities()[0].id
+
+        got = repo.get_entity(entity_id)
+        got.data["title"] = "Mutated"
+
+        assert repo.get_entity(entity_id).data["title"] == "Original"
+
+    def test_list_entities_returns_copies(self, repo):
+        """Mutating a list_entities result must not corrupt the store."""
+        entity_id = repo.list_entities()[0].id
+
+        repo.list_entities()[0].data["title"] = "Mutated"
+
+        assert repo.get_entity(entity_id).data["title"] == "Original"
+
+
 class TestCreateEntity:
     """Test create_entity method."""
 

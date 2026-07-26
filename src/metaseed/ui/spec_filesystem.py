@@ -111,8 +111,6 @@ class FilesystemSpecPersistence(SpecPersistence):
             FileNotFoundError: If the template does not exist.
             ValueError: If the template cannot be parsed.
         """
-        from metaseed.specs.loader import SpecLoadError
-
         try:
             spec = self._loader.load_profile(version=version, profile=profile)
             return copy.deepcopy(spec)
@@ -189,8 +187,6 @@ class FilesystemSpecProvider(SpecProvider):
             FileNotFoundError: If the spec does not exist.
             ValueError: If the spec cannot be parsed.
         """
-        from metaseed.specs.loader import SpecLoadError
-
         try:
             return self._loader.load_profile(version=version, profile=profile)
         except SpecLoadError as e:

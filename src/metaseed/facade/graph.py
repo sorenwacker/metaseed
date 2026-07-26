@@ -206,6 +206,11 @@ def to_graph(  # noqa: C901
             if not ref_value:
                 continue
 
+            # The nested field's target entity type, so a dict item's identifier
+            # is read via that entity's identifier field. Without this helper
+            # get_identifier(item) always returns None and no edge is drawn.
+            target_helper = entities.get(helper.nested_fields[field_name])
+
             ref_ids = []
             if isinstance(ref_value, list):
                 for item in ref_value:
@@ -214,7 +219,7 @@ def to_graph(  # noqa: C901
                     elif isinstance(item, dict):
                         from metaseed.repositories.helpers import get_identifier
 
-                        item_id = get_identifier(item)
+                        item_id = get_identifier(item, target_helper)
                         if item_id:
                             ref_ids.append(item_id)
 

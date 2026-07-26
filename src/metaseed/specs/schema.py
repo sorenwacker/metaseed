@@ -7,7 +7,7 @@ profile entities and their fields.
 from enum import StrEnum
 from typing import Any, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 
 class FieldType(StrEnum):
@@ -95,9 +95,20 @@ class SeekEntityConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    role: (
-        Literal["Investigation", "Study", "ObservationUnit", "Sample", "Assay"] | None
-    ) = None
+    role: str | None = None
+
+    @field_validator("role")
+    @classmethod
+    def _role_must_be_known(cls, value: str | None) -> str | None:
+        """Reject a role that is not one of :data:`SEEK_ROLES`.
+
+        Validating against ``SEEK_ROLES`` (rather than a duplicated literal) keeps
+        it the single source of truth: editing the tuple changes what this field
+        accepts.
+        """
+        if value is not None and value not in SEEK_ROLES:
+            raise ValueError(f"role must be one of {SEEK_ROLES}, got {value!r}")
+        return value
 
 
 class FieldSpec(BaseModel):
