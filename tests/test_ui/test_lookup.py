@@ -371,7 +371,7 @@ class TestNormalizeReferenceFields:
             "geographic_location": {
                 "unique_id": "LOC-001",
                 "name": "Test Location",
-                "country": "USA",
+                "country": "Exampleland",
             },
         }
 
