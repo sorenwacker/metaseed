@@ -62,32 +62,26 @@ class FieldForm:
     options: str = ""  # comma-separated
 
     def build_constraints(self) -> Constraints | None:
-        """Return a ``Constraints`` from the constraint inputs, or None if none set."""
-        if not any(
-            [
-                self.pattern,
-                self.min_length,
-                self.max_length,
-                self.minimum,
-                self.maximum,
-                self.min_items,
-                self.max_items,
-                self.enum_values,
-            ]
-        ):
-            return None
-        return Constraints(
+        """Return a ``Constraints`` from the constraint inputs, or None if none set.
+
+        Numeric inputs are parsed leniently: an unparseable value (a user typo
+        like ``"abc"`` in a length field) is dropped to ``None`` rather than
+        raising, so one bad field cannot crash the whole save. The UI should still
+        constrain these inputs to numbers; this is the safety net.
+        """
+        constraints = Constraints(
             pattern=self.pattern.strip() or None,
-            min_length=int(self.min_length) if self.min_length.strip() else None,
-            max_length=int(self.max_length) if self.max_length.strip() else None,
-            minimum=float(self.minimum) if self.minimum.strip() else None,
-            maximum=float(self.maximum) if self.maximum.strip() else None,
-            min_items=int(self.min_items) if self.min_items.strip() else None,
-            max_items=int(self.max_items) if self.max_items.strip() else None,
-            enum=[v.strip() for v in self.enum_values.split("\n") if v.strip()]
-            if self.enum_values.strip()
-            else None,
+            min_length=_opt_int(self.min_length),
+            max_length=_opt_int(self.max_length),
+            minimum=_opt_float(self.minimum),
+            maximum=_opt_float(self.maximum),
+            min_items=_opt_int(self.min_items),
+            max_items=_opt_int(self.max_items),
+            enum=[v.strip() for v in self.enum_values.split("\n") if v.strip()] or None,
         )
+        if constraints == Constraints():
+            return None
+        return constraints
 
     def _tier(self) -> Tier | None:
         value = self.tier.strip()
@@ -131,3 +125,25 @@ class FieldForm:
         field = FieldSpec(name=self.name.strip(), type=FieldType(self.field_type))
         self.apply_to(field)
         return field
+
+
+def _opt_int(value: str) -> int | None:
+    """Parse an int, returning None for blank or unparseable input (no raise)."""
+    value = value.strip()
+    if not value:
+        return None
+    try:
+        return int(value)
+    except ValueError:
+        return None
+
+
+def _opt_float(value: str) -> float | None:
+    """Parse a float, returning None for blank or unparseable input (no raise)."""
+    value = value.strip()
+    if not value:
+        return None
+    try:
+        return float(value)
+    except ValueError:
+        return None

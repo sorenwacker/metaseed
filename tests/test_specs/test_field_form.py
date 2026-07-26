@@ -69,6 +69,23 @@ def test_invalid_tier_is_dropped() -> None:
     assert field.tier is None
 
 
+def test_unparseable_numeric_constraint_is_dropped_not_raised() -> None:
+    # A typo in a numeric constraint must not crash the whole field save; the bad
+    # value is dropped while valid ones are kept.
+    field = FieldForm(
+        name="x", min_length="abc", max_length="10", minimum="oops"
+    ).to_field_spec()
+    assert field.constraints is not None
+    assert field.constraints.min_length is None
+    assert field.constraints.max_length == 10
+    assert field.constraints.minimum is None
+
+
+def test_all_unparseable_constraints_yield_no_constraints() -> None:
+    field = FieldForm(name="x", min_length="abc", minimum="nope").to_field_spec()
+    assert field.constraints is None
+
+
 def test_apply_to_preserves_field_identity() -> None:
     existing = FieldSpec(name="old", type=FieldType.STRING)
     FieldForm(name="new", field_type="integer", is_identifier=True).apply_to(existing)
