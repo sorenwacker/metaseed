@@ -39,14 +39,12 @@ def _get_dataset_manager() -> DatasetManager:
 def register_dataset_tools(  # noqa: C901
     mcp: FastMCP,
     get_mcp_state: Callable[[], AppState],
-    reset_entity_service: Callable[[], None],
 ) -> None:
     """Register dataset management tools with the MCP server.
 
     Args:
         mcp: FastMCP server instance.
         get_mcp_state: Function to get MCP state.
-        reset_entity_service: Function to reset entity service after dataset change.
     """
 
     @mcp.tool()
@@ -137,11 +135,9 @@ def register_dataset_tools(  # noqa: C901
             # Explicitly update state's current dataset
             set_current_dataset_name(state, name)
 
-            # Reset entity service to use new state. Do NOT recreate the facade
-            # here: manager.load_dataset already rebuilt it with the loaded
-            # profile and entities, and discarding it would drop everything that
-            # was just loaded.
-            reset_entity_service()
+            # Do NOT recreate the facade here: manager.load_dataset already
+            # rebuilt it with the loaded profile and entities, and discarding it
+            # would drop everything that was just loaded.
 
             return json.dumps(
                 {
@@ -210,7 +206,6 @@ def register_dataset_tools(  # noqa: C901
             manager.save_dataset(name)
             # Update state's current dataset so auto_save uses correct target
             set_current_dataset_name(state, name)
-            reset_entity_service()
 
             return json.dumps(
                 {
