@@ -203,10 +203,15 @@ class EntityStore:
 
         The inverse of :meth:`_resolve_parent`: when a child is created under an
         explicit ``parent_id``, set its reference to the parent (e.g. a Study's
-        ``investigation_id``) from the parent's identifier, so callers need not
-        repeat it. Conservative: fills only a reference field the child actually
-        has (by the ``<parent_type>_id`` convention) that the caller left unset,
-        never overriding provided data.
+        ``investigation_id``, or an ENA Sample's ``study_ref``) so callers need
+        not repeat it. The field name and the parent value to copy both come from
+        the helper's parsed ``reference_fields`` map
+        (``{field_name: (target_entity_type, target_field)}``) -- matching the
+        parent's entity type -- rather than a name convention, so it works for any
+        reference field regardless of naming (``_id``, ``_ref``, etc.).
+        Conservative: fills only a reference field the caller left unset, and only
+        when the parent actually carries the referenced value; never overrides
+        provided data.
 
         Args:
             entity_type: Type of the child being created.
@@ -221,21 +226,20 @@ class EntityStore:
             return data
         try:
             helper = self._get_helper(entity_type)
-            parent_helper = self._get_helper(parent_node.entity_type)
         except (KeyError, AttributeError):
             return data
 
-        ref_field = f"{parent_node.entity_type.lower()}_id"
-        if ref_field not in helper.reference_fields or data.get(ref_field):
-            return data
+        for ref_field, (
+            target_entity_type,
+            target_field,
+        ) in helper.reference_fields.items():
+            if target_entity_type != parent_node.entity_type or data.get(ref_field):
+                continue
+            parent_value = getattr(parent_node.instance, target_field, None)
+            if parent_value is not None:
+                return {**data, ref_field: parent_value}
 
-        id_field = parent_helper.identifier_field
-        parent_value = (
-            getattr(parent_node.instance, id_field, None) if id_field else None
-        )
-        if parent_value is None:
-            return data
-        return {**data, ref_field: parent_value}
+        return data
 
     def _get_identifier_fields(self: Self, entity_type: str) -> list[str]:
         """Get all identifier fields for an entity type.
