@@ -282,8 +282,9 @@ class SpecBuilder:
         the parent ``identifier`` field and a back-reference on the target.
 
         Raises:
-            ValueError: If the field name is invalid, the entity is missing, or
-                the field already exists.
+            ValueError: If the field name is invalid, the entity is missing, the
+                field already exists, or an attribute is not a valid field
+                property.
         """
         error = validate_field_name(name)
         if error:
@@ -291,6 +292,12 @@ class SpecBuilder:
         entity_def = self._require_entity(entity)
         if any(f.name == name for f in entity_def.fields):
             raise ValueError(f"Field '{name}' already exists on '{entity}'")
+
+        unknown = set(attrs) - set(FieldSpec.model_fields)
+        if unknown:
+            raise ValueError(
+                f"Unknown field attribute(s): {', '.join(sorted(unknown))}"
+            )
 
         field = FieldSpec(name=name, type=FieldType(field_type), **attrs)
         entity_def.fields.append(field)

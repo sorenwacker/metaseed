@@ -233,6 +233,14 @@ class TestFields:
         with pytest.raises(ValueError):
             builder.add_field("Study", "title", FieldType.STRING)
 
+    def test_add_field_rejects_unknown_attribute(self):
+        # add_field rejects unknown attributes with the same friendly ValueError
+        # as update_field (rather than a raw pydantic ValidationError).
+        builder = SpecBuilder.empty("p", "0.1")
+        builder.add_entity("Study")
+        with pytest.raises(ValueError, match="Unknown field attribute"):
+            builder.add_field("Study", "title", FieldType.STRING, bogus_attr=True)
+
     def test_add_nested_list_field_creates_back_reference(self):
         builder = SpecBuilder.empty("p", "0.1")
         builder.add_entity("Investigation")

@@ -171,15 +171,6 @@ def get_entity_service() -> EntityService:
     return EntityService(repo)
 
 
-def reset_entity_service() -> None:
-    """Reset the entity service (no-op with context injection).
-
-    With context injection, get_entity_service() creates a fresh service
-    each call, so no reset is needed.
-    """
-    pass
-
-
 SERVER_INSTRUCTIONS = """\
 Metaseed builds validated, schema-driven metadata datasets for a chosen \
 profile (e.g. MIAPPE, ISA, DiSSCo, Darwin Core, ENA). Each profile defines its \
@@ -295,7 +286,7 @@ def create_server(
     from metaseed.agent.mcp.tools.validation import register_validation_tools
 
     register_profile_tools(mcp)
-    register_dataset_tools(mcp, get_mcp_state, reset_entity_service)
+    register_dataset_tools(mcp, get_mcp_state)
     register_entity_tools(mcp, get_entity_service)
     register_extraction_tools(mcp, _parser_registry)
     register_validation_tools(mcp, get_mcp_state)

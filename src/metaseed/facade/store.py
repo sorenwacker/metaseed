@@ -143,24 +143,11 @@ class EntityStore:
             parent_node = self._instances[resolved_parent_id]
             parent_node.children.append(node)
 
-        # Index by common identifier fields for reference lookups
-        for id_field in IDENTIFIER_FIELDS:
+        # Index by every identifier field (common + entity-specific) for lookups
+        for id_field in self._get_identifier_fields(entity_type):
             id_value = data.get(id_field)
             if id_value:
                 self._index[str(id_value)] = node.id
-
-        # Also index by the entity's specific identifier field (e.g., investigation_id)
-        try:
-            helper = self._get_helper(entity_type)
-            if (
-                helper.identifier_field
-                and helper.identifier_field not in IDENTIFIER_FIELDS
-            ):
-                id_value = data.get(helper.identifier_field)
-                if id_value:
-                    self._index[str(id_value)] = node.id
-        except (KeyError, AttributeError):
-            pass
 
         return node
 
