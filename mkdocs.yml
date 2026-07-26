@@ -61,6 +61,11 @@ nav:
   - Getting Started:
       - Installation: getting-started/installation.md
       - Quick Start: getting-started/quickstart.md
+  - Specification:
+      - Overview: specification/index.md
+      - System Specification: specification/system-specification.md
+      - Public API Contract: specification/api-contract.md
+      - Specification Language: api/schema-specs.md
   - Guides:
       - Spec Builder: guides/spec-builder.md
       - Ontology Lookup: guides/ontology-lookup.md
@@ -85,6 +90,7 @@ nav:
       - Overview: architecture/overview.md
       - Metadata Agent: architecture/metadata-agent.md
       - Facade as Entity Storage (ADR): architecture/decisions/001-facade-as-entity-storage.md
+      - Edge-Case Behavior (ADR): architecture/decisions/002-edge-case-behavior.md
       - Integration Adapters: architecture/integration-adapters.md
       - Exceptions: architecture/exceptions.md
       - Model Factory: architecture/model-factory.md
@@ -104,7 +110,6 @@ nav:
       - CLI: api/cli.md
       - Facade: api/facade.md
       - REST API: api/rest.md
-      - Specification Language: api/schema-specs.md
       - Spec Builder MCP: api/spec-builder-mcp.md
       - Validators: api/validators.md
       - Storage: api/storage.md

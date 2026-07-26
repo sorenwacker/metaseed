@@ -147,6 +147,58 @@ class TestAccessorIsolation:
         assert repo.get_entity(entity_id).data["title"] == "Original"
 
 
+class TestHierarchyEdgeCases:
+    """Loading and reloading behavior for malformed or vanished files."""
+
+    def test_dangling_parent_is_promoted_to_root(self, tmp_path):
+        """An entity whose parent_id is missing stays reachable as a root."""
+        path = tmp_path / "d.json"
+        path.write_text(
+            json.dumps(
+                {
+                    "profile": "miappe",
+                    "version": "1.2",
+                    "entities": [
+                        {
+                            "id": "a",
+                            "entity_type": "Investigation",
+                            "label": "A",
+                            "parent_id": None,
+                            "unique_id": "INV-1",
+                        },
+                        {
+                            "id": "b",
+                            "entity_type": "Study",
+                            "label": "B",
+                            "parent_id": "ghost",  # no such parent
+                            "unique_id": "STU-1",
+                        },
+                    ],
+                }
+            )
+        )
+        repo = FileEntityRepository(dataset_path=path, profile="miappe", version="1.2")
+
+        tree_ids = {e.id for e in repo.get_tree()}
+        assert "b" in tree_ids  # not silently dropped
+        assert repo.get_entity("b") is not None
+
+    def test_reload_keeps_state_when_file_deleted(self, tmp_path):
+        """A vanished backing file preserves the loaded state (no data loss)."""
+        path = tmp_path / "d.json"
+        repo = FileEntityRepository(dataset_path=path, profile="miappe", version="1.2")
+        repo.create_entity(
+            entity_type="Investigation",
+            data={"unique_id": "INV-1", "title": "T"},
+        )
+        assert len(repo.list_entities()) == 1
+
+        path.unlink()
+        repo.reload()
+
+        assert len(repo.list_entities()) == 1
+
+
 class TestCreateEntity:
     """Test create_entity method."""
 
