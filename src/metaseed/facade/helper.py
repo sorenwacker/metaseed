@@ -77,6 +77,11 @@ class EntityHelper:
         return self._name
 
     @property
+    def model(self: Self) -> type[BaseModel]:
+        """The generated Pydantic model for this entity type."""
+        return self._model
+
+    @property
     def description(self: Self) -> str:
         """Entity description from spec."""
         return self._spec.description

@@ -103,7 +103,7 @@ class MemoryEntityRepository(EntityRepository):
 
         # Auto-detect parent from reference fields if not explicitly provided
         if not parent_id:
-            parent_id = self._find_parent_from_references(facade, helper, data)
+            parent_id = self._find_parent_from_references(helper, data)
 
         # Validate parent
         parent = None
@@ -230,7 +230,6 @@ class MemoryEntityRepository(EntityRepository):
 
     def _find_parent_from_references(
         self: Self,
-        _facade: Any,
         helper: Any,
         data: dict[str, Any],
     ) -> str | None:

@@ -166,7 +166,9 @@ def to_fair_data_station_rdf(client: MetaseedClient) -> str:  # noqa: C901
 
     Args:
         client: A MetaseedClient holding an ISA-style dataset (Investigation at
-            the root). Only entities mapped in :data:`_JERM` are emitted.
+            the root). An entity is emitted when it resolves to a JERM class —
+            either via a profile-declared SEEK role or the default
+            :data:`_JERM` mapping (the profile role takes precedence).
 
     Returns:
         A Turtle string SEEK's "Import from FAIR Data Station" accepts.
