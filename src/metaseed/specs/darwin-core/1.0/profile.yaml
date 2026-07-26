@@ -407,8 +407,8 @@ entities:
       decimalLatitude: 45.5231
       decimalLongitude: -122.6765
       geodeticDatum: "WGS84"
-      country: "United States"
-      stateProvince: "Oregon"
+      country: "Exampleland"
+      stateProvince: "Example Province"
       locality: "Forest Park"
     fields:
       - name: locationID

@@ -367,8 +367,8 @@ entities:
       description: Randomized complete block design with 3 replicates testing 50 wheat cultivars
       start_date: '2024-05-01'
       end_date: '2024-09-30'
-      contact_institution: Wageningen University and Research
-      experimental_site_name: Wageningen Campus Field Station
+      contact_institution: Example Agricultural University
+      experimental_site_name: Example Campus Field Station
       latitude: 51.9851
       longitude: 5.6631
       altitude: 15.0
@@ -545,9 +545,9 @@ entities:
     ontology_term: PPEO:person
     description: A person involved in an investigation or study.
     example:
-      name: Dr. Maria van der Berg
-      email: m.vanderberg@wur.nl
-      institution: Wageningen University and Research
+      name: Dr. Alex Doe
+      email: a.doe@example.org
+      institution: Example Agricultural University
       role: Principal Investigator
       orcid: 0000-0001-2345-6789
       investigation_id: INV-WHEAT-2024
@@ -1252,15 +1252,15 @@ entities:
     example:
       unique_id: LOC-WUR
       study_id: STU-FIELD-2024
-      name: Wageningen Campus Field Station
+      name: Example Campus Field Station
       abbreviation: WUR-FS
-      country: Netherlands
+      country: Exampleland
       country_code: NLD
       latitude: 51.9851
       longitude: 5.6631
       altitude: 15.0
       description: Experimental field station with clay soil, temperate maritime climate
-      address: Droevendaalsesteeg 1, 6708 PB Wageningen, Netherlands
+      address: 1 Example Street, 00000 Exampleton, Exampleland
       location_type: field
     fields:
     - name: unique_id
@@ -1346,11 +1346,11 @@ entities:
     description: Source of biological material (genebank, institution).
     example:
       unique_id: SRC-CGNGENEBANK
-      name: Centre for Genetic Resources Netherlands
+      name: Example Genetic Resources Centre
       description: Dutch national genebank for plant genetic resources, part of WUR
       institute_code: NLD037
-      country: Netherlands
-      address: Droevendaalsesteeg 1, 6708 PB Wageningen, Netherlands
+      country: Exampleland
+      address: 1 Example Street, 00000 Exampleton, Exampleland
       latitude: 51.9851
       longitude: 5.6631
     fields:

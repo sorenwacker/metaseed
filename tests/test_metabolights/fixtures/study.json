@@ -153,10 +153,10 @@
         ],
         "people": [
           {
-            "firstName": "Reza",
-            "lastName": "Salek",
-            "email": "rms72@cam.ac.uk",
-            "affiliation": "University of Cambridge",
+            "firstName": "Sam",
+            "lastName": "Carter",
+            "email": "s.carter@example.org",
+            "affiliation": "Example University",
             "roles": [
               {
                 "annotationValue": "principal investigator role",
@@ -166,9 +166,9 @@
           },
           {
             "firstName": "Christian",
-            "lastName": "Steinbeck",
-            "email": "steinbeck@ebi.ac.uk",
-            "affiliation": "EMBL-EBI",
+            "lastName": "Fisher",
+            "email": "r.fisher@example.org",
+            "affiliation": "Example Bioinformatics Institute",
             "roles": [
               {
                 "annotationValue": "principal investigator role",
@@ -180,7 +180,7 @@
         "publications": [
           {
             "title": "A metabolomic study of urinary changes in type 2 diabetes.",
-            "authorList": "Salek RM, Maguire ML, Bentley E, et al.",
+            "authorList": "Carter RM, Maguire ML, Bentley E, et al.",
             "doi": "10.1152/physiolgenomics.90264.2008",
             "pubMedID": "17686970",
             "status": {

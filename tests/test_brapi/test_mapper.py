@@ -50,7 +50,7 @@ def test_ids_and_references_are_mapped():
 
     study = {s["unique_id"]: s for s in _by_type(client, "Study")}
     assert study["1001"]["investigation_id"] == "T01"
-    assert study["1001"]["experimental_site_name"] == "Wageningen field A"
+    assert study["1001"]["experimental_site_name"] == "Example field A"
 
     units = {u["unique_id"]: u for u in _by_type(client, "ObservationUnit")}
     assert units["OU1"]["study_id"] == "1001"

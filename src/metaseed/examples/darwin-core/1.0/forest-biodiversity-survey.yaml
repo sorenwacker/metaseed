@@ -10,7 +10,7 @@ sex: male
 lifeStage: adult
 behavior: perching
 establishmentMeans: native
-recordedBy: "Sarah Mitchell"
+recordedBy: "Jamie Lee"
 recordedByID: "https://orcid.org/0000-0001-2345-6789"
 occurrenceRemarks: "Adult male observed perching on dead snag, hunting behavior"
 associatedMedia: "https://example.org/images/hawk_001.jpg"
@@ -36,20 +36,20 @@ event:
   location:
     locationID: "LOC-FOREST-001"
     eventID: "EVT-FOREST-2024-001"
-    continent: "North America"
-    country: "United States"
+    continent: "Example Continent"
+    country: "Exampleland"
     countryCode: "US"
-    stateProvince: "Oregon"
+    stateProvince: "Example Province"
     county: "Multnomah"
-    locality: "Forest Park, Wildwood Trail Mile 3"
-    verbatimLocality: "Wildwood Trail near Pittock Mansion junction"
-    decimalLatitude: 45.5275
-    decimalLongitude: -122.7165
+    locality: "Example Park, Example Trail Mile 3"
+    verbatimLocality: "Example Trail near Example Landmark"
+    decimalLatitude: 12.1100
+    decimalLongitude: -34.2200
     geodeticDatum: "WGS84"
     coordinateUncertaintyInMeters: 10.0
     minimumElevationInMeters: 280.0
     maximumElevationInMeters: 290.0
-    georeferencedBy: "Sarah Mitchell"
+    georeferencedBy: "Jamie Lee"
     georeferencedDate: "2024-05-15"
     georeferenceProtocol: "GPS handheld, averaged 3 readings"
     georeferenceSources: "Garmin GPSMAP 66i"
@@ -58,7 +58,7 @@ event:
 identifications:
   - identificationID: "ID-FOREST-2024-001"
     occurrenceID: "urn:catalog:FOREST-2024:Bird:001"
-    identifiedBy: "Sarah Mitchell"
+    identifiedBy: "Jamie Lee"
     identifiedByID: "https://orcid.org/0000-0001-2345-6789"
     dateIdentified: "2024-05-15"
     identificationVerificationStatus: "verified by expert"

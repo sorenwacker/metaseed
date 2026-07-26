@@ -50,9 +50,9 @@ def test_metadata_lines_carry_project_and_submitter_fields():
 
     assert mtd["project_title"][0].startswith("TMT spikes")
     assert mtd["submission_type"] == ["COMPLETE"]
-    assert mtd["submitter_name"] == ["Laurent Gatto"]
-    assert mtd["submitter_email"] == ["lg390@cam.ac.uk"]
-    assert mtd["lab_head_name"] == ["Kathryn Lilley"]
+    assert mtd["submitter_name"] == ["Alex Rivera"]
+    assert mtd["submitter_email"] == ["a.rivera@example.org"]
+    assert mtd["lab_head_name"] == ["Jordan Blake"]
     assert mtd["keywords"] == ["Spikes, Tmt, Eriwinia"]
 
 

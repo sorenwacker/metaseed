@@ -29,8 +29,8 @@ Type of growth facility	growthFacilityType	Type of growth facility in which the 
 Cultural practices	culturalPractice	General description of the cultural practices of the study.	Irrigation was applied according needs during summer to prevent water stress.	Free text	0-1
 Map of experimental design	expeDesignMap	Representation of the experimental design.	https://urgi.versailles.inra.fr/files/ephesis/181000503/181000503_plan.xls	URL or File name (of gis or tabular file like csv or tsv)	0+
 PERSON		A human involved in the investigation or specifically any of its studies.			1+ per investigation / 0+ per study
-Person name	personName	The name of the person (either full name or as used in scientific publications)	Ines Chaves	Name	1
-Person email	personEmail	The electronic mail address of the person.	ichaves@itqb.unl.pt	email address	0-1
+Person name	personName	The name of the person (either full name or as used in scientific publications)	Ines Vale	Name	1
+Person email	personEmail	The electronic mail address of the person.	r.vale@example.org	email address	0-1
 Person ID	personId	An identifier for the data submitter. If that submitter is an individual, ORCID identifiers are recommended.	orcid.org/0000-0001-6494-0008 ; orcid.org/0000-0002-7054-800X	Unique identifier	0-1
 Person role	personRole	Type of contribution of the person to the investigation	data submitter ; author ; corresponding author	Free text (short)	1+
 Person affiliation	personAffiliation	The institution the person belongs to	ITQB, Portugal ; grid.10772.33	Free text (short)	1+

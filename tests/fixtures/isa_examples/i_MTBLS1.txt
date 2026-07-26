@@ -41,7 +41,7 @@ Study File Name	s_MTBLS1.txt
 Comment[Revision]	3
 Comment[Revision Date]	2025-09-02
 Comment[Revision Log]	updating data license
-Comment[License]	EMBL-EBI Terms of Use
+Comment[License]	Example Bioinformatics Institute Terms of Use
 Comment[Study Category]	other
 Comment[Template Version]	1.0
 Comment[Sample Template]	minimum
@@ -52,7 +52,7 @@ Study Design Type Term Source REF	EFO	EFO		CHMO	NCIT	MTBLS
 STUDY PUBLICATIONS
 Study PubMed ID	17190852
 Study Publication DOI	10.1152/physiolgenomics.00194.2006
-Study Publication Author List	Salek RM,Maguire ML,Bentley E,Rubtsov DV,Hough T,Cheeseman M,Nunez D,Sweatman BC,Haselden JN,Cox RD,Connor SC,Griffin JL
+Study Publication Author List	Carter RM,Maguire ML,Bentley E,Rubtsov DV,Hough T,Cheeseman M,Nunez D,Sweatman BC,Haselden JN,Cox RD,Connor SC,Morgan JL
 Study Publication Title	A metabolomic comparison of urinary changes in type 2 diabetes in mouse, rat, and human.
 Study Publication Status	published
 Study Publication Status Term Accession Number	http://www.ebi.ac.uk/efo/EFO_0001796
@@ -87,14 +87,14 @@ Study Protocol Components Type
 Study Protocol Components Type Term Accession Number
 Study Protocol Components Type Term Source REF
 STUDY CONTACTS
-Study Person Last Name	Salek	Griffin
-Study Person First Name	Reza	Jules
+Study Person Last Name	Carter	Morgan
+Study Person First Name	Sam	Casey
 Study Person Mid Initials	M	L
-Study Person Email	rms72@cam.ac.uk	jlg40@cam.ac.uk
+Study Person Email	s.carter@example.org	c.morgan@example.org
 Study Person Phone	01223674948	01223674922
 Study Person Fax
 Study Person Address	The Department of Biochemistry, The Sanger Building, 80 Tennis Court Road, Cambridge, CB2 1GA, UK.	The Department of Biochemistry, The Sanger Building, 80 Tennis Court Road, Cambridge, CB2 1GA, UK.
-Study Person Affiliation	University of Cambridge	University of Cambridge
+Study Person Affiliation	Example University	Example University
 Study Person Roles	principal investigator role	principal investigator role
 Study Person Roles Term Accession Number
 Study Person Roles Term Source REF

@@ -71,9 +71,9 @@ def test_contacts_split_into_submitter_and_lab_head():
     dataset = _dataset(build_dataset(_project(), _files()))
 
     by_role = {c["role"]: c for c in dataset["contacts"]}
-    assert by_role["submitter"]["name"] == "Laurent Gatto"
-    assert by_role["submitter"]["orcid"] == "0000-0002-1520-2268"
-    assert by_role["lab head"]["name"] == "Kathryn Lilley"
+    assert by_role["submitter"]["name"] == "Alex Rivera"
+    assert by_role["submitter"]["orcid"] == "0000-0001-2345-6789"
+    assert by_role["lab head"]["name"] == "Jordan Blake"
     # Empty orcid is dropped, not stored as a blank string.
     assert "orcid" not in by_role["lab head"]
 
