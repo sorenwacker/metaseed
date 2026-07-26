@@ -6,6 +6,7 @@ processes (UI, MCP) and for use in metaseed-hub.
 
 from __future__ import annotations
 
+import copy
 import json
 import logging
 import uuid
@@ -241,14 +242,21 @@ class FileEntityRepository(EntityRepository):
     # EntityRepository implementation
 
     def list_entities(self: Self, entity_type: str | None = None) -> list[EntityData]:
-        """List all entities, optionally filtered by type."""
-        if entity_type:
-            return [e for e in self._entities.values() if e.entity_type == entity_type]
-        return list(self._entities.values())
+        """List all entities, optionally filtered by type.
+
+        Returns deep copies so a caller mutating a result cannot corrupt the
+        repository's internal store.
+        """
+        return [
+            copy.deepcopy(e)
+            for e in self._entities.values()
+            if entity_type is None or e.entity_type == entity_type
+        ]
 
     def get_entity(self: Self, entity_id: str) -> EntityData | None:
-        """Get a single entity by ID."""
-        return self._entities.get(entity_id)
+        """Get a single entity by ID (a deep copy, so callers cannot mutate the store)."""
+        entity = self._entities.get(entity_id)
+        return copy.deepcopy(entity) if entity is not None else None
 
     def create_entity(
         self: Self,

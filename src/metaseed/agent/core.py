@@ -474,6 +474,36 @@ class ExtractionContext:
                         )
                     )
 
+            errors.extend(self._validate_cardinality(value, field_spec))
+
+        return errors
+
+    @staticmethod
+    def _validate_cardinality(
+        value: Any, field_spec: FieldSpec
+    ) -> list[ValidationIssue]:
+        """Enforce list min_items/max_items constraints for list values."""
+        constraints = field_spec.constraints
+        if constraints is None or not isinstance(value, list):
+            return []
+
+        errors: list[ValidationIssue] = []
+        if constraints.min_items is not None and len(value) < constraints.min_items:
+            errors.append(
+                ValidationIssue(
+                    field=field_spec.name,
+                    message=f"Must have at least {constraints.min_items} item(s)",
+                    value=value,
+                )
+            )
+        if constraints.max_items is not None and len(value) > constraints.max_items:
+            errors.append(
+                ValidationIssue(
+                    field=field_spec.name,
+                    message=f"Must have at most {constraints.max_items} item(s)",
+                    value=value,
+                )
+            )
         return errors
 
     def export_yaml(self: Self, entity_name: str | None = None) -> str:

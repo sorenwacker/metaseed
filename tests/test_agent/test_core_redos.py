@@ -65,3 +65,18 @@ def test_validate_field_normal_pattern_preserved():
     ctx = _ctx()
     assert ctx._validate_field("PXD000001", _field(r"^PXD[0-9]+$")) == []
     assert len(ctx._validate_field("BAD", _field(r"^PXD[0-9]+$"))) == 1
+
+
+def test_validate_field_enforces_list_cardinality():
+    """min_items/max_items on a list field are enforced (previously never checked)."""
+    from metaseed.specs.schema import Constraints, FieldSpec, FieldType
+
+    ctx = _ctx()
+    field = FieldSpec(
+        name="items",
+        type=FieldType.LIST,
+        constraints=Constraints(min_items=2, max_items=3),
+    )
+    assert len(ctx._validate_field(["a"], field)) == 1  # too few
+    assert len(ctx._validate_field(["a", "b", "c", "d"], field)) == 1  # too many
+    assert ctx._validate_field(["a", "b"], field) == []  # within bounds
