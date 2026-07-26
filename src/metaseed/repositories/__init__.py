@@ -22,9 +22,16 @@ from metaseed.repositories.helpers import (
     update_parent_reference,
 )
 from metaseed.repositories.memory import MemoryEntityRepository
+from metaseed.repositories.spec_draft_store import (
+    AsyncSpecDraftStore,
+    MemorySpecDraftStore,
+    SpecDraftData,
+    SpecDraftInfo,
+)
 
 __all__ = [
     "AsyncDatasetRepository",
+    "AsyncSpecDraftStore",
     "DatasetData",
     "DatasetInfo",
     "DatasetRepository",
@@ -33,6 +40,9 @@ __all__ = [
     "FileEntityRepository",
     "FilesystemDatasetRepository",
     "MemoryEntityRepository",
+    "MemorySpecDraftStore",
+    "SpecDraftData",
+    "SpecDraftInfo",
     "derive_label",
     "find_parent_ref_field",
     "get_identifier",
