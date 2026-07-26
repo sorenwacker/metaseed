@@ -504,7 +504,17 @@ class SpecBuilder:
             return
         target = self._spec.entities[target_name]
 
-        if not any(f.name == "identifier" for f in entity.fields):
+        # Resolve the parent's identifier field: a field already marked
+        # is_identifier wins, then one literally named "identifier". Only inject a
+        # synthetic "identifier" when the entity designates none -- otherwise an
+        # entity whose identifier is e.g. project_id would gain a redundant,
+        # required "identifier" and its generated model could not be instantiated.
+        id_field = next((f.name for f in entity.fields if f.is_identifier), None)
+        if id_field is None:
+            id_field = next(
+                (f.name for f in entity.fields if f.name == "identifier"), None
+            )
+        if id_field is None:
             entity.fields.insert(
                 0,
                 FieldSpec(
@@ -514,6 +524,7 @@ class SpecBuilder:
                     description="Unique identifier",
                 ),
             )
+            id_field = "identifier"
 
         has_back_ref = any(
             f.reference and f.reference.startswith(f"{entity_name}.")
@@ -527,7 +538,7 @@ class SpecBuilder:
                     type=FieldType.STRING,
                     required=True,
                     description=f"Reference to parent {entity_name}",
-                    reference=f"{entity_name}.identifier",
+                    reference=f"{entity_name}.{id_field}",
                 ),
             )
 
