@@ -467,53 +467,46 @@ def create_engine_for_entity(
 
     # Load profile validation rules
     try:
-        profile_spec = loader._load_profile(version, profile)
-        if profile_spec:
-            # Check if entity exists in profile
-            entity_lower = entity.lower()
-            profile_entities = [e.lower() for e in profile_spec.entities]
-            if entity_lower in profile_entities:
-                entity_found = True
+        profile_spec = loader.load_profile(version, profile)
+        # Check if entity exists in profile
+        entity_lower = entity.lower()
+        profile_entities = [e.lower() for e in profile_spec.entities]
+        if entity_lower in profile_entities:
+            entity_found = True
 
-            entity_def = next(
-                (
-                    e
-                    for n, e in profile_spec.entities.items()
-                    if n.lower() == entity_lower
-                ),
-                None,
-            )
-            field_types = (
-                {f.name: f.type for f in entity_def.fields} if entity_def else {}
-            )
+        entity_def = next(
+            (e for n, e in profile_spec.entities.items() if n.lower() == entity_lower),
+            None,
+        )
+        field_types = {f.name: f.type for f in entity_def.fields} if entity_def else {}
 
-            for rule_spec in profile_spec.validation_rules:
-                if not _applies_to_entity(rule_spec, entity):
-                    continue
-                # A pattern on a uri/ontology_term field can't be a Pydantic
-                # constraint, so enforce it here rather than let it silently drop.
-                if (
-                    rule_spec.pattern
-                    and rule_spec.field
-                    and field_types.get(rule_spec.field) in _ENGINE_PATTERN_TYPES
-                ):
-                    engine.add_rule(
-                        PatternRule(
-                            field=rule_spec.field,
-                            pattern=rule_spec.pattern,
-                            message=rule_spec.message or rule_spec.description or None,
-                        )
+        for rule_spec in profile_spec.validation_rules:
+            if not _applies_to_entity(rule_spec, entity):
+                continue
+            # A pattern on a uri/ontology_term field can't be a Pydantic
+            # constraint, so enforce it here rather than let it silently drop.
+            if (
+                rule_spec.pattern
+                and rule_spec.field
+                and field_types.get(rule_spec.field) in _ENGINE_PATTERN_TYPES
+            ):
+                engine.add_rule(
+                    PatternRule(
+                        field=rule_spec.field,
+                        pattern=rule_spec.pattern,
+                        message=rule_spec.message or rule_spec.description or None,
                     )
-                    continue
-                rule = _create_rule_from_spec(rule_spec, available_refs)
-                # Reference-integrity rules need the set of IDs that exist
-                # elsewhere in the dataset, which a single-entity engine does
-                # not have (no caller passes ``available_refs`` here). Such a
-                # rule could therefore only ever no-op or false-positive, so
-                # skip it: dataset-scope reference integrity is enforced by
-                # DatasetValidator._validate_references instead.
-                if rule and not isinstance(rule, EntityReferenceRule):
-                    engine.add_rule(rule)
+                )
+                continue
+            rule = _create_rule_from_spec(rule_spec, available_refs)
+            # Reference-integrity rules need the set of IDs that exist
+            # elsewhere in the dataset, which a single-entity engine does
+            # not have (no caller passes ``available_refs`` here). Such a
+            # rule could therefore only ever no-op or false-positive, so
+            # skip it: dataset-scope reference integrity is enforced by
+            # DatasetValidator._validate_references instead.
+            if rule and not isinstance(rule, EntityReferenceRule):
+                engine.add_rule(rule)
     except SpecLoadError:
         # If profile not found, continue with basic rules only
         pass
