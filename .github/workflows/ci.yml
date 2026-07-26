@@ -1,10 +1,12 @@
 name: CI
 
 on:
+  # Run the full suite online only on a version tag (a release) and on manual
+  # dispatch. Routine pushes and PRs rely on the local pre-push hook, which runs
+  # the same `-m "not selenium and not network"` suite, so day-to-day work
+  # consumes no Actions minutes. Tests gate the release, not every PR.
   push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+    tags: ["v*"]
   workflow_dispatch:
 
 # Least privilege: CI only needs to read the repo.
@@ -73,8 +75,8 @@ jobs:
     # flakiness must never block a merge. ubuntu-latest ships Chrome, and
     # Selenium Manager (selenium>=4.20) resolves the driver; the tests start
     # their own uvicorn server, so no extra service setup is needed.
-    # Runs on pushes to main and manual dispatch -- not on every PR push -- to
-    # conserve Actions minutes (it never gates a merge).
+    # Runs alongside the release suite (version tags) and on manual dispatch --
+    # never on routine work -- and never gates a merge.
     if: github.event_name != 'pull_request'
     continue-on-error: true
     steps:
@@ -97,7 +99,7 @@ jobs:
     runs-on: ubuntu-latest
     # Advisory: a newly-disclosed CVE in a transitive dependency must not block
     # an unrelated PR — the vulnerability DB updates independently of this code.
-    # Runs on pushes to main and manual dispatch, not on every PR push.
+    # Runs alongside the release suite (version tags) and on manual dispatch.
     if: github.event_name != 'pull_request'
     continue-on-error: true
     steps:
