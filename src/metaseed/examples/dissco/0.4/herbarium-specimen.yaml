@@ -18,10 +18,10 @@ physical_specimen_id_type: Local
 
 # Source and organisation
 source_system_id: https://hdl.handle.net/20.5000.1025/ABC-DEF-GHI
-source_system_name: Naturalis Biodiversity Center Collection Management System
+source_system_name: Example Natural History Museum Collection Management System
 organisation_id: https://ror.org/0566bfb96
 organisation_code: L
-organisation_name: Naturalis Biodiversity Center
+organisation_name: Example Natural History Museum
 
 # Collection information
 collection_code: WAG
@@ -42,7 +42,7 @@ is_known_to_contain_media: true
 
 # Data and rights
 license: https://creativecommons.org/licenses/by/4.0/
-rights_holder: Naturalis Biodiversity Center
+rights_holder: Example Natural History Museum
 
 # Taxonomic identification
 identifications:
@@ -66,7 +66,7 @@ identifications:
     agents:
       - type: schema:Person
         agent_identifier: https://orcid.org/0000-0002-3456-7890
-        name: Dr. Maria Taxonomist
+        name: Dr. Pat Quinn
         roles:
           - type: schema:Role
             role_name: identifier
@@ -107,20 +107,20 @@ events:
     habitat: Mixed deciduous forest on sandy soil
     location:
       type: ods:Location
-      country: Netherlands
+      country: Exampleland
       country_code: NL
       state_province: Gelderland
-      locality: Veluwe, near Apeldoorn
+      locality: Example Heath, near Exampleton
       georeference:
         type: ods:Georeference
-        decimal_latitude: 52.2112
-        decimal_longitude: 5.9699
+        decimal_latitude: 12.6500
+        decimal_longitude: 34.2300
         geodetic_datum: WGS84
         coordinate_uncertainty_in_meters: 100
     agents:
       - type: schema:Person
         agent_identifier: https://orcid.org/0000-0001-2345-6789
-        name: Dr. Jan de Botanist
+        name: Dr. Sam Ellis
         roles:
           - type: schema:Role
             role_name: collector
@@ -138,7 +138,7 @@ events:
         agents:
           - type: schema:Person
             agent_identifier: https://orcid.org/0000-0001-2345-6789
-            name: Dr. Jan de Botanist
+            name: Dr. Sam Ellis
             roles:
               - type: schema:Role
                 role_name: assertor
@@ -157,7 +157,7 @@ events:
             agents:
               - type: schema:Person
                 agent_identifier: https://orcid.org/0000-0001-2345-6789
-                name: Dr. Jan de Botanist
+                name: Dr. Sam Ellis
                 roles:
                   - type: schema:Role
                     role_name: author
@@ -172,7 +172,7 @@ events:
 agents:
   - type: schema:Person
     agent_identifier: https://orcid.org/0000-0001-2345-6789
-    name: Dr. Jan de Botanist
+    name: Dr. Sam Ellis
     roles:
       - type: schema:Role
         role_name: collector
@@ -225,13 +225,13 @@ assertions:
 citations:
   - type: ods:Citation
     citation_type: Reference
-    description: "de Botanist J (1986) Oak flora of the Netherlands"
+    description: "de Botanist J (1986) Oak flora of the Exampleland"
     date: "1986"
     bibliographic_citation: "Journal of Dutch Botany 45:123-145"
     agents:
       - type: schema:Person
         agent_identifier: https://orcid.org/0000-0001-2345-6789
-        name: Dr. Jan de Botanist
+        name: Dr. Sam Ellis
         roles:
           - type: schema:Role
             role_name: author

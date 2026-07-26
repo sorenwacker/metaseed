@@ -17,7 +17,7 @@
           "trialName": "Maize drought programme",
           "startDate": "2024-04-01",
           "endDate": "2024-09-30",
-          "locationName": "Wageningen field A",
+          "locationName": "Example field A",
           "experimentalDesign": {
             "PUI": "CO_715:0000145",
             "description": "RCBD"
@@ -42,7 +42,7 @@
           "trialDbId": "T01",
           "trialName": "Maize drought programme",
           "startDate": "2025-04-01",
-          "locationName": "Wageningen field B",
+          "locationName": "Example field B",
           "dataLinks": []
         }
       ]
@@ -169,8 +169,8 @@
           "genus": "Zea",
           "species": "Zea mays",
           "subtaxa": "subsp. mays",
-          "instituteCode": "USDA",
-          "instituteName": "USDA-ARS",
+          "instituteCode": "EXORG",
+          "instituteName": "Example Agricultural Institute",
           "studyDbIds": [
             "1001"
           ]
@@ -181,8 +181,8 @@
           "accessionNumber": "PI 558532",
           "genus": "Zea",
           "species": "Zea mays",
-          "instituteCode": "USDA",
-          "instituteName": "USDA-ARS"
+          "instituteCode": "EXORG",
+          "instituteName": "Example Agricultural Institute"
         }
       ]
     }

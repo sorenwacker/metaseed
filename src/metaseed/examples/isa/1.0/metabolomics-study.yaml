@@ -15,7 +15,7 @@ contacts:
   - last_name: Johnson
     first_name: Emily
     mid_initials: R
-    email: e.johnson@biolab.edu
+    email: e.johnson@example.org
     phone: "+1-555-123-4567"
     fax: "+1-555-123-4568"
     affiliation: Department of Plant Biology
@@ -121,7 +121,7 @@ studies:
       - last_name: Chen
         first_name: Wei
         mid_initials: L
-        email: w.chen@biolab.edu
+        email: w.chen@example.org
         phone: "+1-555-123-4570"
         fax: "+1-555-123-4571"
         affiliation: Department of Plant Biology

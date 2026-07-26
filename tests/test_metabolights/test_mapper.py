@@ -60,8 +60,8 @@ def test_people_publications_factors_and_protocols_are_mapped():
     client = build_dataset(_study())
 
     people = {p["last_name"]: p for p in _by_type(client, "Person")}
-    assert people["Salek"]["email"] == "rms72@cam.ac.uk"
-    assert people["Salek"]["roles"] == ["principal investigator role"]
+    assert people["Carter"]["email"] == "s.carter@example.org"
+    assert people["Carter"]["roles"] == ["principal investigator role"]
 
     publication = _by_type(client, "Publication")[0]
     assert publication["doi"] == "10.1152/physiolgenomics.90264.2008"

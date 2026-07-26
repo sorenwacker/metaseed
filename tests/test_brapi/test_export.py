@@ -45,7 +45,7 @@ def test_trials_and_studies_carry_their_ids_and_names():
     studies = {s["studyDbId"]: s for s in objects["studies"]}
     assert studies["1001"]["studyName"] == "Drought trial 2024"
     assert studies["1001"]["trialDbId"] == "T01"
-    assert studies["1001"]["locationName"] == "Wageningen field A"
+    assert studies["1001"]["locationName"] == "Example field A"
 
 
 def test_germplasm_carries_taxonomy_and_study_links():

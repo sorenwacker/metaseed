@@ -59,10 +59,12 @@ class TestAnnotatedDerivation:
     def test_publisher_from_annotated_field(self):
         # ENA-style: center_name -> dct:publisher
         fields = _fields(("center_name", "dct:publisher"))
-        ds = build_dcat_dataset(root_fields=fields, root_entity={"center_name": "EBI"})
+        ds = build_dcat_dataset(
+            root_fields=fields, root_entity={"center_name": "Example Center"}
+        )
 
         assert ds.publisher is not None
-        assert ds.publisher.name == "EBI"
+        assert ds.publisher.name == "Example Center"
 
     def test_unannotated_fields_ignored(self):
         fields = _fields(("title", "dct:title"), ("internal_note", None))
@@ -138,10 +140,14 @@ class TestRealSpecIntegration:
         study = spec.entities["Study"]
         ds = build_dcat_dataset(
             root_fields=study.fields,
-            root_entity={"accession": "PRJ1", "title": "T", "center_name": "EBI"},
+            root_entity={
+                "accession": "PRJ1",
+                "title": "T",
+                "center_name": "Example Center",
+            },
         )
         assert ds.identifier == "PRJ1"
-        assert ds.publisher is not None and ds.publisher.name == "EBI"
+        assert ds.publisher is not None and ds.publisher.name == "Example Center"
 
 
 class TestCatalog:

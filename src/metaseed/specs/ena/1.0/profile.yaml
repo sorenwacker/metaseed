@@ -388,7 +388,7 @@ entities:
       taxon_id: 3702
       scientific_name: Arabidopsis thaliana
       collection_date: "2024-06-15"
-      geographic_location_country: Germany
+      geographic_location_country: Exampleland
       tissue_type: leaf
     fields:
       - name: alias

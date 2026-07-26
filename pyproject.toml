@@ -107,6 +107,12 @@ version-file = "src/metaseed/_version.py"
 [tool.hatch.build.targets.wheel]
 packages = ["src/metaseed"]
 
+[tool.hatch.build.targets.sdist]
+# The source distribution must ship only the package and its build metadata.
+# It must NOT include tests/, docs/, or local tooling: test fixtures derived
+# from third-party records carry personal data that must not be redistributed.
+only-include = ["src/metaseed", "README.md", "LICENSE", "pyproject.toml"]
+
 [tool.ruff]
 target-version = "py311"
 line-length = 88

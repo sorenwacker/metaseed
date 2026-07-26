@@ -13,25 +13,25 @@
   "submitters": [
     {
       "title": "Dr",
-      "firstName": "Laurent",
-      "lastName": "Gatto",
-      "affiliation": "Department of Biochemistry, University of Cambridge",
-      "email": "lg390@cam.ac.uk",
-      "country": "United Kingdom",
-      "orcid": "0000-0002-1520-2268",
-      "name": "Laurent Gatto"
+      "firstName": "Alex",
+      "lastName": "Rivera",
+      "affiliation": "Department of Example Science, Example University",
+      "email": "a.rivera@example.org",
+      "country": "Exampleland",
+      "orcid": "0000-0001-2345-6789",
+      "name": "Alex Rivera"
     }
   ],
   "labPIs": [
     {
       "title": "Prof",
-      "firstName": "Kathryn",
-      "lastName": "Lilley",
-      "affiliation": "Department of Biochemistry, University of Cambridge",
-      "email": "kl1@cam.ac.uk",
-      "country": "United Kingdom",
+      "firstName": "Jordan",
+      "lastName": "Blake",
+      "affiliation": "Department of Example Science, Example University",
+      "email": "j.blake@example.org",
+      "country": "Exampleland",
       "orcid": "",
-      "name": "Kathryn Lilley"
+      "name": "Jordan Blake"
     }
   ],
   "instruments": [
@@ -69,7 +69,7 @@
   "diseases": [],
   "references": [
     {
-      "referenceLine": "Gatto L, Christoforou A; Using R and Bioconductor for proteomics data analysis., Biochim Biophys Acta, 2013 May 18",
+      "referenceLine": "Rivera L, Christoforou A; Using R and Bioconductor for proteomics data analysis., Biochim Biophys Acta, 2013 May 18",
       "pubmedID": 23692960,
       "doi": "10.1016/j.bbapap.2013.04.032"
     }

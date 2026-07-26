@@ -11,7 +11,7 @@ description: >
   response to dehydration. This study identifies differentially expressed
   genes and regulatory networks involved in drought tolerance mechanisms.
 study_type: Transcriptome Analysis
-center_name: Plant Genomics Institute
+center_name: Example Genomics Institute
 pubmed_ids:
   - "38123456"
 
@@ -35,11 +35,11 @@ samples:
       control condition, biological replicate 1
     checklist: ERC000011
     collection_date: "2024-03-15"
-    geographic_location_country: Germany
-    geographic_location_region: Bavaria, Munich
-    lat_lon: "48.1351 11.5820"
-    lat_lon_latitude: 48.1351
-    lat_lon_longitude: 11.5820
+    geographic_location_country: Exampleland
+    geographic_location_region: Example Province, Exampleton
+    lat_lon: "12.3400 34.5600"
+    lat_lon_latitude: 12.3400
+    lat_lon_longitude: 34.5600
     collected_by: Dr. Maria Schmidt
     ecotype: Col-0
     tissue_type: rosette leaf
@@ -61,7 +61,7 @@ samples:
     taxon_id: 3702
     scientific_name: Arabidopsis thaliana
     collection_date: "2024-03-15"
-    geographic_location_country: Germany
+    geographic_location_country: Exampleland
     ecotype: Col-0
     tissue_type: rosette leaf
     dev_stage: 4-week-old rosette
@@ -79,7 +79,7 @@ samples:
     taxon_id: 3702
     scientific_name: Arabidopsis thaliana
     collection_date: "2024-03-16"
-    geographic_location_country: Germany
+    geographic_location_country: Exampleland
     ecotype: Col-0
     tissue_type: rosette leaf
     dev_stage: 4-week-old rosette
@@ -100,7 +100,7 @@ samples:
     taxon_id: 3702
     scientific_name: Arabidopsis thaliana
     collection_date: "2024-03-18"
-    geographic_location_country: Germany
+    geographic_location_country: Exampleland
     ecotype: Col-0
     tissue_type: rosette leaf
     dev_stage: 4-week-old rosette
@@ -125,7 +125,7 @@ samples:
     taxon_id: 3702
     scientific_name: Arabidopsis thaliana
     collection_date: "2024-03-15"
-    geographic_location_country: Germany
+    geographic_location_country: Exampleland
     ecotype: Landsberg erecta
     tissue_type: rosette leaf
     dev_stage: 4-week-old rosette
@@ -143,7 +143,7 @@ samples:
     taxon_id: 3702
     scientific_name: Arabidopsis thaliana
     collection_date: "2024-03-18"
-    geographic_location_country: Germany
+    geographic_location_country: Exampleland
     ecotype: Landsberg erecta
     tissue_type: rosette leaf
     dev_stage: 4-week-old rosette

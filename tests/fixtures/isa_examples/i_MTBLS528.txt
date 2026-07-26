@@ -38,7 +38,7 @@ Study Description	Application of mass spectrometry-based metabolomics enables th
 Study Submission Date	2017-08-21
 Study Public Release Date	2018-04-03
 Study File Name	s_MTBLS528.txt
-Comment[License]	EMBL-EBI Terms of Use
+Comment[License]	Example Bioinformatics Institute Terms of Use
 Comment[Revision]	2
 Comment[Revision Date]	2025-09-04
 Comment[Revision Log]	updating data license
@@ -49,7 +49,7 @@ Study Design Type Term Source REF		MESH	BAO	CHMO
 STUDY PUBLICATIONS
 Study PubMed ID	29611844
 Study Publication DOI	10.1038/sdata.2018.51
-Study Publication Author List	Takayuki Tohge, Monica Borghi, Alisdair R. Fernie.
+Study Publication Author List	Taylor Nolan, Monica Borghi, Alisdair R. Fernie.
 Study Publication Title	The natural variance of the Arabidopsis floral secondary metabolites
 Study Publication Status	Published
 Study Publication Status Term Accession Number
@@ -84,10 +84,10 @@ Study Protocol Components Type
 Study Protocol Components Type Term Accession Number
 Study Protocol Components Type Term Source REF
 STUDY CONTACTS
-Study Person Last Name	Takayuki
-Study Person First Name	Tohge
+Study Person Last Name	Taylor
+Study Person First Name	Nolan
 Study Person Mid Initials
-Study Person Email	tohge@bs.naist.jp
+Study Person Email	t.nolan@example.org
 Study Person Phone	81-743-72-5480
 Study Person Fax
 Study Person Address	Nara, Ikoma, Japan

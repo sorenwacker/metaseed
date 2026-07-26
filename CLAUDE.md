@@ -99,3 +99,20 @@ that a passing suite failed to catch (see issue #139 and its follow-ups).
   `style:` commit that also adds code or docs hides that content from review.
 - Keep PRs small and current; rebase onto `main` rather than letting a branch
   drift behind it.
+
+### No real personal data in examples or fixtures
+
+- Never commit real sensitive data to the repository. Example specs, fixtures,
+  and documentation must use synthetic identities only: fictional person names,
+  `@example.org` emails, obviously-fake ORCIDs, and invented institutions,
+  addresses, coordinates, and place names.
+- This applies even when the source is a public database (PRIDE, MetaboLights,
+  ENA, etc.): importing a real record does not license redistributing the
+  submitters' names, emails, or affiliations in the test suite or the package.
+  De-identify on the way in.
+- Real technical references stay real: ontology/database URLs and accessions
+  (EFO, CHEBI, the EBI API endpoints the code actually calls) are not personal
+  data and must remain correct.
+- The source distribution ships only `src/metaseed` plus build metadata
+  (`[tool.hatch.build.targets.sdist]` `only-include`); `tests/` must never be
+  packaged, so fixtures never reach PyPI.
