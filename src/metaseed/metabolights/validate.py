@@ -18,11 +18,21 @@ if TYPE_CHECKING:
     from metaseed.validators.base import ValidationError
 
 
-def _cv_terms(entities: list[dict[str, Any]]) -> list[tuple[str, str | None]]:
-    """Collect ``(field_path, accession)`` pairs from metabolights entities."""
+def _cv_terms(
+    entities: list[dict[str, Any]],
+    children_by_assay: dict[str, list[Any]] | None = None,
+) -> list[tuple[str, str | None]]:
+    """Collect ``(field_path, accession)`` pairs from metabolights entities.
+
+    Metabolites may be embedded on the Assay (authored datasets) or attached as
+    child nodes (imported from a MAF, #146). ``children_by_assay`` maps an Assay
+    node id to its child Metabolite dicts; falling back to it means the CV check
+    covers imported studies too, matching the exporter.
+    """
     terms: list[tuple[str, str | None]] = []
     sample_i = 0
     assay_i = 0
+    children_by_assay = children_by_assay or {}
     for entity in entities:
         etype = entity.get("_type")
         if etype == "Sample":
@@ -31,7 +41,10 @@ def _cv_terms(entities: list[dict[str, Any]]) -> list[tuple[str, str | None]]:
             )
             sample_i += 1
         elif etype == "Assay":
-            for j, metabolite in enumerate(entity.get("metabolites") or []):
+            metabolites = entity.get("metabolites") or children_by_assay.get(
+                str(entity.get("_node_id")), []
+            )
+            for j, metabolite in enumerate(metabolites):
                 terms.append(
                     (
                         f"Assay[{assay_i}].metabolites[{j}].database_identifier",
@@ -57,5 +70,8 @@ def validate_cv(
         One ``ValidationError`` per unresolved accession; empty when there are no
         CV terms or all resolve.
     """
+    from metaseed.metabolights.export import _metabolite_children_by_assay
+
     entities = client.serialize()["entities"]
-    return validate_cv_terms(_cv_terms(entities), service=service)
+    children = _metabolite_children_by_assay(client)
+    return validate_cv_terms(_cv_terms(entities, children), service=service)
