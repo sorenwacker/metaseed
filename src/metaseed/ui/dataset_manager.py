@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import re
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Self
+from typing import TYPE_CHECKING, Self
 from weakref import WeakValueDictionary
 
 from metaseed.repositories.dataset_repository import (
@@ -32,6 +32,8 @@ from metaseed.repositories.filesystem_dataset import (
 )
 
 if TYPE_CHECKING:
+    from fastapi import FastAPI
+
     from metaseed.ui.state import AppState
 
 
@@ -299,12 +301,14 @@ class DatasetManagerFactory:
         return manager
 
 
-def resolve_dataset_manager(app: Any, state: AppState) -> DatasetManager:
+def resolve_dataset_manager(app: FastAPI, state: AppState) -> DatasetManager:
     """Resolve the DatasetManager for a request.
 
-    Prefers the MCP-context factory when one is attached to the app so all
-    operations in an MCP session share a repository; otherwise falls back to a
-    freshly created default factory.
+    The web request carries the MCP context on ``app.state`` (a ContextVar set in
+    the app lifespan is not visible to request handlers), so that is checked
+    first. Otherwise it delegates to the shared :func:`metaseed.ui.datasets._resolve_factory`
+    tool, which prefers the MCP context and falls back to a cached factory -- so
+    every path reuses the same repository rather than creating a fresh one.
 
     Args:
         app: FastAPI application, read for an optional ``state.mcp_context``.
@@ -313,8 +317,8 @@ def resolve_dataset_manager(app: Any, state: AppState) -> DatasetManager:
     Returns:
         A DatasetManager tied to the given state.
     """
+    from .datasets import _resolve_factory
+
     context = getattr(app.state, "mcp_context", None)
-    if context is not None:
-        manager: DatasetManager = context.dataset_factory.get_manager(state)
-        return manager
-    return DatasetManagerFactory().get_manager(state)
+    factory = context.dataset_factory if context is not None else _resolve_factory()
+    return factory.get_manager(state)

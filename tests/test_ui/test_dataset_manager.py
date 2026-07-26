@@ -12,6 +12,7 @@ from metaseed.repositories.dataset_repository import (
 from metaseed.ui.dataset_manager import (
     DatasetManager,
     DatasetManagerFactory,
+    resolve_dataset_manager,
 )
 from metaseed.ui.state import AppState
 
@@ -257,3 +258,27 @@ class TestDatasetManagerFactory:
         factory = DatasetManagerFactory(sync_repo=custom_repo)
 
         assert factory.sync_repo is custom_repo
+
+
+class TestResolveDatasetManager:
+    """resolve_dataset_manager must reuse the shared factory, not make a fresh one."""
+
+    def test_falls_back_to_shared_factory_across_calls(self):
+        """With no MCP context, repeated resolves reuse one repository.
+
+        The old implementation created a fresh DatasetManagerFactory per call, so
+        two resolves used different repositories; it now delegates to the shared
+        metaseed.ui.datasets._resolve_factory.
+        """
+        from types import SimpleNamespace
+
+        from metaseed.ui.datasets import _resolve_factory
+
+        app = SimpleNamespace(state=SimpleNamespace())  # no mcp_context
+
+        m1 = resolve_dataset_manager(app, AppState(profile="miappe"))
+        m2 = resolve_dataset_manager(app, AppState(profile="isa"))
+
+        # Same shared repository, and it is the one datasets.py resolves to.
+        assert m1.repository is m2.repository
+        assert m1.repository is _resolve_factory().sync_repo
