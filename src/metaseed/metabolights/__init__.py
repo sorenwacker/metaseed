@@ -51,8 +51,8 @@ def import_accession(
         ISA-JSON backbone only. Call
         :meth:`~metaseed.api.client.MetaseedClient.validate` to report gaps.
     """
-    import httpx
-
+    # Import the client first so a missing extra surfaces its friendly
+    # "install metaseed[metabolights]" error (httpx is imported below, by the try).
     from metaseed.metabolights.client import MetaboLightsClient
 
     client = client or MetaboLightsClient()
@@ -60,6 +60,8 @@ def import_accession(
     # The ISA-JSON document leaves samples/dataFiles empty; recover them from the
     # study's ISA-Tab files. Only public studies expose these on the FTP root, so
     # degrade to the (metadata-only) ISA-JSON import if they are unavailable.
+    import httpx
+
     try:
         isatab_files = client.study_files(accession)
     except (httpx.HTTPError, OSError):

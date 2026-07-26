@@ -55,11 +55,14 @@ def validate_cv(
         One ``ValidationError`` per unresolved accession; empty when the dataset
         has no CV terms or all resolve.
     """
-    entities = client.serialize()["entities"]
-    datasets = [e for e in entities if e.get("_type") == "Dataset"]
-    if not datasets:
+    from metaseed.pride.export import _dataset_with_children
+
+    # Fold child-node entities into the Dataset (the create-under-parent MCP flow)
+    # so their CV accessions are checked too, matching the exporter.
+    dataset = _dataset_with_children(client)
+    if dataset is None:
         return []
-    return validate_cv_terms(_cv_terms(datasets[0]), service=service)
+    return validate_cv_terms(_cv_terms(dataset), service=service)
 
 
 # --- PX submission structure ------------------------------------------------
