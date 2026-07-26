@@ -22,6 +22,7 @@ from .crud import (
     register_entity_crud_routes,
     render_entity_form,
 )
+from .dcat import register_dcat_routes
 from .examples import register_example_routes
 from .explore import register_explore_routes
 from .forms import register_form_routes
@@ -36,6 +37,7 @@ __all__ = [
     "get_profile_display_info",
     "register_api_routes",
     "register_core_routes",
+    "register_dcat_routes",
     "register_entity_crud_routes",
     "register_example_routes",
     "register_explore_routes",

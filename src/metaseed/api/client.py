@@ -451,7 +451,7 @@ class MetaseedClient(SerializationMixin, ValidationMixin):
         """
         entity_type = self._validate_entity_type(entity_type)
         helper = getattr(self._facade, entity_type)
-        return helper._model
+        return helper.model
 
     # ========================================================================
     # Private Helpers

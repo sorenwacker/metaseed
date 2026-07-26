@@ -281,7 +281,7 @@ class EntityBaseModel(BaseModel):
         return data
 
 
-TYPE_MAP: dict[FieldType, type] = {
+TYPE_MAP: dict[FieldType, Any] = {
     FieldType.STRING: str,
     FieldType.INTEGER: int,
     FieldType.FLOAT: float,
@@ -295,14 +295,18 @@ TYPE_MAP: dict[FieldType, type] = {
 }
 
 
-def _build_field_type(field: FieldSpec) -> type:
+def _build_field_type(field: FieldSpec) -> Any:
     """Build the Python type for a field spec.
+
+    Returns ``Any`` rather than ``type`` because the result may be a typing
+    special form (``list[...]``, an optional, a nested model union) that is not a
+    plain class.
 
     Args:
         field: Field specification.
 
     Returns:
-        Python type appropriate for the field.
+        The annotation to use for the field.
     """
     base_type = TYPE_MAP.get(field.type, str)
 
