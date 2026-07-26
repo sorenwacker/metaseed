@@ -751,3 +751,80 @@ class TestReferenceLinkedChildren:
             f"Expected 'files' after switching to Run. Got: {list(state.current_nested_items.keys())}"
         )
         assert len(state.current_nested_items["files"]) == 1
+
+
+class TestParentIdFillsReference:
+    """Creating a child under an explicit parent auto-fills its parent reference.
+
+    Before this, ``create_entity('Study', {...}, parent_id=inv)`` failed because
+    the required ``investigation_id`` was not derived from the parent -- only the
+    MCP tool layer filled it, so the shared client/facade was inconsistent.
+    """
+
+    def test_child_under_parent_gets_reference_filled(self) -> None:
+        import yaml
+
+        from metaseed import MetaseedClient
+
+        client = MetaseedClient("miappe", "1.2")
+        inv = client.create_entity(
+            "Investigation", {"unique_id": "INV-1", "title": "T"}
+        )
+        inv_id = inv["id"] if isinstance(inv, dict) else inv.id
+        # No investigation_id supplied; the explicit parent must provide it.
+        client.create_entity(
+            "Study", {"unique_id": "STU-1", "title": "S"}, parent_id=inv_id
+        )
+        assert "investigation_id: INV-1" in yaml.safe_dump(client.serialize())
+
+    def test_no_parent_still_requires_the_reference(self) -> None:
+        from metaseed import MetaseedClient
+        from metaseed.api.errors import ValidationError
+
+        client = MetaseedClient("miappe", "1.2")
+        try:
+            client.create_entity("Study", {"unique_id": "STU-1", "title": "S"})
+            raise AssertionError("expected ValidationError without a parent")
+        except ValidationError:
+            pass
+
+    def test_caller_supplied_reference_is_not_overridden(self) -> None:
+        import yaml
+
+        from metaseed import MetaseedClient
+
+        client = MetaseedClient("miappe", "1.2")
+        inv = client.create_entity(
+            "Investigation", {"unique_id": "INV-1", "title": "T"}
+        )
+        inv_id = inv["id"] if isinstance(inv, dict) else inv.id
+        client.create_entity(
+            "Study",
+            {"unique_id": "STU-1", "title": "S", "investigation_id": "OTHER"},
+            parent_id=inv_id,
+        )
+        assert "investigation_id: OTHER" in yaml.safe_dump(client.serialize())
+
+    def test_reference_field_not_named_by_id_convention_is_filled(self) -> None:
+        """The fill must follow the reference map, not a ``<parent>_id`` guess.
+
+        ENA links Sample -> Study through ``study_ref`` (not ``study_id``) and
+        copies the parent's ``alias`` (not an identifier named ``*_id``). A
+        convention-based fill silently skips this; the reference-map fill must
+        populate it from the explicit parent.
+        """
+        import yaml
+
+        from metaseed import MetaseedClient
+
+        client = MetaseedClient("ena", "1.0")
+        study = client.create_entity(
+            "Study", {"alias": "STU-A", "title": "t", "description": "d"}
+        )
+        study_id = study["id"] if isinstance(study, dict) else study.id
+        client.create_entity(
+            "Sample",
+            {"alias": "SAM-1", "title": "t", "taxon_id": 1},
+            parent_id=study_id,
+        )
+        assert "study_ref: STU-A" in yaml.safe_dump(client.serialize())
