@@ -22,6 +22,10 @@ concurrency:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # On a version tag the release workflow already runs the pytest gate before
+    # publishing, so skip this duplicate there. This job still runs on manual
+    # dispatch (its full lint/format/mypy/coverage gate).
+    if: github.ref_type != 'tag'
     steps:
       - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
 
