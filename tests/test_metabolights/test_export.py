@@ -127,3 +127,72 @@ def test_maf_without_metabolites_is_header_only():
     docs = to_metabolights(_client_with_metabolites([]))
     rows = _maf(docs)
     assert rows == [list(_MAF_HEADER)]
+
+
+# --- sample characteristics survive the study table ------------------------
+
+
+def _client_with_sample(sample_fields: dict) -> MetaseedClient:
+    """A metabolights dataset with a single study and one sample."""
+    client = MetaseedClient("metabolights", "1.0")
+    inv = client.create_entity(
+        "Investigation",
+        {"identifier": "MTBLS1", "title": "t", "description": "d"},
+        skip_validation=True,
+    )
+    study = client.create_entity(
+        "Study",
+        {"identifier": "S1", "title": "st"},
+        parent_id=inv.id,
+        skip_validation=True,
+    )
+    client.create_entity(
+        "Sample", sample_fields, parent_id=study.id, skip_validation=True
+    )
+    return client
+
+
+def _study_table(docs: dict[str, str]) -> str:
+    return docs[next(n for n in docs if n.startswith("s_"))]
+
+
+def test_sample_organism_is_emitted_as_a_characteristic_column():
+    """The required ``organism`` must reach the study table, not be dropped.
+
+    Before this the writer emitted only Source Name / Sample Name, silently
+    discarding the sample's required organism -- a conformant-looking but
+    content-empty export (the #146 class of defect).
+    """
+    docs = to_metabolights(
+        _client_with_sample({"name": "SAMP1", "organism": "Homo sapiens"})
+    )
+    table = _study_table(docs)
+    header = table.splitlines()[0]
+    assert "Characteristics[Organism]" in header
+    assert "Homo sapiens" in table
+
+
+def test_sample_characteristics_round_trip_through_the_study_table():
+    """Authored characteristics and factor values survive export -> read_samples."""
+    from metaseed.isatab.reader import read_samples
+
+    docs = to_metabolights(
+        _client_with_sample(
+            {
+                "name": "SAMP1",
+                "organism": "Homo sapiens",
+                "organism_part": "liver",
+                "characteristics": [{"category": "Age", "value": "42"}],
+                "factor_values": [{"category": "Dose", "value": "high"}],
+            }
+        )
+    )
+    back = read_samples(_study_table(docs))
+    assert len(back) == 1
+    sample = back[0]
+    chars = {c["category"]: c["value"] for c in sample.get("characteristics", [])}
+    factors = {f["category"]: f["value"] for f in sample.get("factor_values", [])}
+    assert chars.get("Organism") == "Homo sapiens"
+    assert chars.get("Organism part") == "liver"
+    assert chars.get("Age") == "42"
+    assert factors.get("Dose") == "high"

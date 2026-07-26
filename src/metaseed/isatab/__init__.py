@@ -183,12 +183,81 @@ def _study_sections(
     return lines
 
 
+def _sample_qualifiers(sample: dict[str, Any]) -> list[tuple[str, str, str, str]]:
+    """The sample's ISA-Tab qualified columns as ``(kind, category, value, accession)``.
+
+    Promotes the dedicated ``organism`` / ``organism_part`` fields (which the
+    MetaboLights importer recovers from ``Characteristics[Organism]`` /
+    ``Characteristics[Organism part]``) back to those standard columns, then
+    appends generic ``characteristics`` and ``factor_values`` list entries. This
+    is the inverse of :func:`metaseed.isatab.reader.read_samples`, so authored
+    sample content -- including the required organism -- survives export.
+    """
+    quals: list[tuple[str, str, str, str]] = []
+    organism = sample.get("organism")
+    if organism:
+        term = sample.get("organism_term")
+        accession = term.get("term_accession", "") if isinstance(term, dict) else ""
+        quals.append(("Characteristics", "Organism", str(organism), str(accession)))
+    organism_part = sample.get("organism_part")
+    if organism_part:
+        quals.append(("Characteristics", "Organism part", str(organism_part), ""))
+    for kind, key in (
+        ("Characteristics", "characteristics"),
+        ("Factor Value", "factor_values"),
+    ):
+        for item in sample.get(key) or []:
+            quals.append(
+                (
+                    kind,
+                    str(item.get("category", "")),
+                    str(item.get("value", "")),
+                    str(item.get("term_accession", "")),
+                )
+            )
+    return quals
+
+
 def _study_file(samples: list[dict[str, Any]]) -> str:
-    """Build a study (``s_*.txt``) file: header row plus one row per Sample."""
-    rows = ["Source Name" + TAB + "Sample Name"]
+    """Build a study (``s_*.txt``) file: header row plus one row per Sample.
+
+    Beyond Source/Sample Name, each sample's characteristics and factor values
+    become ``Characteristics[...]`` / ``Factor Value[...]`` columns (with a
+    trailing ``Term Source REF`` + ``Term Accession Number`` pair when any sample
+    supplies an accession). Columns are the union across samples in first-seen
+    order so rows stay aligned.
+    """
+    columns: list[tuple[str, str]] = []  # (kind, category), first-seen order
+    has_accession: dict[tuple[str, str], bool] = {}
+    per_sample: list[dict[tuple[str, str], tuple[str, str]]] = []
     for sample in samples:
+        mapping: dict[tuple[str, str], tuple[str, str]] = {}
+        for kind, category, value, accession in _sample_qualifiers(sample):
+            col = (kind, category)
+            if col not in has_accession:
+                columns.append(col)
+                has_accession[col] = False
+            if accession:
+                has_accession[col] = True
+            mapping[col] = (value, accession)
+        per_sample.append(mapping)
+
+    header = ["Source Name", "Sample Name"]
+    for kind, category in columns:
+        header.append(f"{kind}[{category}]")
+        if has_accession[(kind, category)]:
+            header += ["Term Source REF", "Term Accession Number"]
+
+    rows = [TAB.join(header)]
+    for sample, mapping in zip(samples, per_sample, strict=True):
         name = sample.get("name") or ""
-        rows.append(f"{name}{TAB}{name}")
+        cells = [str(name), str(name)]
+        for col in columns:
+            value, accession = mapping.get(col, ("", ""))
+            cells.append(value)
+            if has_accession[col]:
+                cells += ["", accession]
+        rows.append(TAB.join(cells))
     return "\n".join(rows) + "\n"
 
 
