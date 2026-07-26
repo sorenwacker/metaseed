@@ -16,7 +16,6 @@ from metaseed.specs.builder import (
     validate_field_name,
 )
 from metaseed.specs.persistence import (
-    _list_specs,
     delete_user_spec,
     get_custom_specs_dir,
     list_available_templates,
@@ -28,7 +27,6 @@ if TYPE_CHECKING:
     from metaseed.specs.schema import ProfileSpec
 
 __all__ = [
-    "_list_specs",
     "clone_spec",
     "create_empty_spec",
     "delete_user_spec",

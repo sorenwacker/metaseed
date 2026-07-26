@@ -60,9 +60,9 @@ class EntitySchema:
         name: Entity name (PascalCase).
         description: Human-readable description.
         ontology_term: Optional ontology term reference.
-        fields: List of field information objects.
-        required_fields: List of required field names.
-        optional_fields: List of optional field names.
+        fields: Tuple of field information objects.
+        required_fields: Tuple of required field names.
+        optional_fields: Tuple of optional field names.
     """
 
     name: str

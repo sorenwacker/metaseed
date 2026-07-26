@@ -776,6 +776,7 @@ __all__ = [
     "DateRangeRule",
     "EntityReferenceRule",
     "ListCardinalityRule",
+    "PatternRule",
     "RequiredFieldsRule",
     "UniqueIdPatternRule",
     "UniquenessRule",

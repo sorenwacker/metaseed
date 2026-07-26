@@ -63,7 +63,7 @@ def request_json(
                 response = httpx.get(
                     url, params=params, headers=headers, timeout=timeout
                 )
-        except (httpx.TimeoutException, httpx.TransportError):
+        except httpx.TransportError:  # TimeoutException is a TransportError subclass
             if attempt >= retries:
                 raise
             time.sleep(backoff * 2**attempt)

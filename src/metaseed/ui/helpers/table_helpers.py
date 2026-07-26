@@ -136,15 +136,6 @@ def build_inline_tables(
     # Build map of field_name -> nested_type from spec
     field_to_type = dict(helper.nested_fields)
 
-    # Also include reference-linked children from source (e.g., files linked via run_ref)
-    for field_name in source:
-        if field_name not in field_to_type:
-            inferred_type = infer_entity_type_from_field(
-                facade, entity_type, field_name
-            )
-            if inferred_type:
-                field_to_type[field_name] = inferred_type
-
     for field_name, nested_type in field_to_type.items():
         col_info = get_table_column_info(facade, nested_type)
 

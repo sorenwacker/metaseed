@@ -198,11 +198,7 @@ def get_nested_items_for_edit(
         instance_items = extract_nested_items(node.instance, helper)
         for field_name, items in instance_items.items():
             # Only include actual dicts, not string references
-            result[field_name] = [
-                item
-                for item in items
-                if isinstance(item, dict) and not isinstance(item, str)
-            ]
+            result[field_name] = [item for item in items if isinstance(item, dict)]
 
     # Then, add items from tree children (includes reference-linked children if facade provided)
     tree_items = extract_nested_from_tree(node, helper, facade)

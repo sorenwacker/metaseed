@@ -11,6 +11,9 @@ This package contains route handlers split by domain:
 - examples: Example loading
 - api: JSON API endpoints
 - explore: Profile exploration and comparison
+- seek: SEEK provisioning and export
+- dcat: DCAT catalog export
+- settings: Application settings
 """
 
 from .api import register_api_routes
