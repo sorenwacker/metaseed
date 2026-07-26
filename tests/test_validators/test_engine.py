@@ -397,6 +397,22 @@ class TestExplicitRuleTypes:
         )
         assert not any(isinstance(r, EntityReferenceRule) for r in engine.rules)
 
+    def test_missing_profile_raises_spec_load_error(self) -> None:
+        """A nonexistent profile is handled via SpecLoadError, not a crash.
+
+        The profile is loaded through the public ``SpecLoader.load_profile``,
+        which raises ``SpecLoadError`` when the profile is absent; the builder
+        catches it and, with no entity found either, re-raises SpecLoadError
+        rather than dereferencing a None spec.
+        """
+        from metaseed.specs.loader import SpecLoadError
+        from metaseed.validators.engine import create_engine_for_entity
+
+        with pytest.raises(SpecLoadError):
+            create_engine_for_entity(
+                "Investigation", version="1.2", profile="no-such-profile-xyz"
+            )
+
 
 class TestInferredRuleTypes:
     """Tests for backward-compatible rule type inference."""
