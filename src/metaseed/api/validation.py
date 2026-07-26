@@ -93,9 +93,10 @@ class ValidationMixin(InstanceDataMixin):
                 for err in errors:
                     all_issues.append(
                         ValidationIssue(
-                            field=f"{node.id}.{err.field}",
+                            field=err.field,
                             message=err.message,
                             rule=err.rule,
+                            entity_id=node.id,
                         )
                     )
 
@@ -138,7 +139,9 @@ class ValidationMixin(InstanceDataMixin):
         )
 
         issues = [
-            ValidationIssue(field=err.field, message=err.message, rule=err.rule)
+            ValidationIssue(
+                field=err.field, message=err.message, rule=err.rule, entity_id=node.id
+            )
             for err in errors
         ]
 

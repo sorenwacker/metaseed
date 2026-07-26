@@ -83,14 +83,19 @@ class ValidationIssue:
     """A single validation issue.
 
     Attributes:
-        field: Field path where the issue occurred.
+        field: Name of the field where the issue occurred (bare, e.g.
+            ``"latitude"``).
         message: Human-readable error message.
         rule: Rule that triggered the issue.
+        entity_id: Id of the entity instance the issue belongs to, when known.
+            Lets a caller identify which instance is at fault without encoding it
+            into ``field``.
     """
 
     field: str
     message: str
     rule: str
+    entity_id: str | None = None
 
 
 @dataclass(slots=True)
