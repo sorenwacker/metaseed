@@ -434,7 +434,7 @@ class ExtractionContext:
                         )
                     )
 
-            if constraints.min_length and isinstance(value, str):
+            if constraints.min_length is not None and isinstance(value, str):
                 if len(value) < constraints.min_length:
                     errors.append(
                         ValidationIssue(
@@ -444,7 +444,7 @@ class ExtractionContext:
                         )
                     )
 
-            if constraints.max_length and isinstance(value, str):
+            if constraints.max_length is not None and isinstance(value, str):
                 if len(value) > constraints.max_length:
                     errors.append(
                         ValidationIssue(

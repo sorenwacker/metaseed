@@ -80,3 +80,15 @@ def test_validate_field_enforces_list_cardinality():
     assert len(ctx._validate_field(["a"], field)) == 1  # too few
     assert len(ctx._validate_field(["a", "b", "c", "d"], field)) == 1  # too many
     assert ctx._validate_field(["a", "b"], field) == []  # within bounds
+
+
+def test_validate_field_enforces_max_length_zero():
+    """max_length=0 (empty-only) is enforced (a falsy-check previously skipped it)."""
+    from metaseed.specs.schema import Constraints, FieldSpec, FieldType
+
+    ctx = _ctx()
+    field = FieldSpec(
+        name="f", type=FieldType.STRING, constraints=Constraints(max_length=0)
+    )
+    assert len(ctx._validate_field("x", field)) == 1  # non-empty rejected
+    assert ctx._validate_field("", field) == []  # empty allowed

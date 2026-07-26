@@ -195,9 +195,12 @@ class FileEntityRepository(EntityRepository):
             if parent_id in entities:
                 entities[parent_id].children = children
 
-        # Collect root entities (no parent)
+        # Collect root entities. An entity is a root if it declares no parent, or
+        # if its parent_id points at an entity that is not present (a dangling
+        # reference): promoting the latter to root keeps it reachable rather than
+        # silently dropping it from the tree.
         for entity in entities.values():
-            if not entity.parent_id:
+            if not entity.parent_id or entity.parent_id not in entities:
                 tree.append(entity)
 
         return tree
