@@ -11,66 +11,13 @@ from typing import TYPE_CHECKING
 from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel
 
 from metaseed.specs.builder import SpecBuilder
-from metaseed.specs.schema import Constraints, EntityDefSpec, FieldSpec, FieldType
+from metaseed.specs.field_form import FieldForm
+from metaseed.specs.schema import EntityDefSpec, FieldSpec, FieldType
 
 if TYPE_CHECKING:
     from .state import SpecBuilderState
-
-
-class FieldUpdateData(BaseModel):
-    """Data for updating a field. Reduces parameter count."""
-
-    name: str
-    field_type: str = "string"
-    required: bool = False
-    description: str = ""
-    ontology_term: str = ""
-    codename: str = ""
-    items: str = ""
-    parent_ref: str = ""
-    pattern: str = ""
-    min_length: str = ""
-    max_length: str = ""
-    minimum: str = ""
-    maximum: str = ""
-    min_items: str = ""
-    max_items: str = ""
-    enum_values: str = ""
-    unique_within: str = ""
-    reference: str = ""
-
-    def build_constraints(self) -> Constraints | None:
-        """Build Constraints object from form data."""
-        has_constraints = any(
-            [
-                self.pattern,
-                self.min_length,
-                self.max_length,
-                self.minimum,
-                self.maximum,
-                self.min_items,
-                self.max_items,
-                self.enum_values,
-            ]
-        )
-        if not has_constraints:
-            return None
-
-        return Constraints(
-            pattern=self.pattern.strip() or None,
-            min_length=int(self.min_length) if self.min_length.strip() else None,
-            max_length=int(self.max_length) if self.max_length.strip() else None,
-            minimum=float(self.minimum) if self.minimum.strip() else None,
-            maximum=float(self.maximum) if self.maximum.strip() else None,
-            min_items=int(self.min_items) if self.min_items.strip() else None,
-            max_items=int(self.max_items) if self.max_items.strip() else None,
-            enum=[v.strip() for v in self.enum_values.split("\n") if v.strip()]
-            if self.enum_values.strip()
-            else None,
-        )
 
 
 def register_field_routes(  # noqa: C901
@@ -223,13 +170,15 @@ def register_field_routes(  # noqa: C901
         entity = _require_entity(builder, entity_name)
         _require_field(entity, idx)
 
-        # Build update data and constraints
-        update_data = FieldUpdateData(
+        # Map the form to the field via the shared, pure FieldForm mapping so the
+        # form -> FieldSpec logic (all markers) lives in one place.
+        FieldForm(
             name=name,
             field_type=field_type,
             required=required,
             description=description,
             ontology_term=ontology_term,
+            ontologies=ontologies,
             codename=codename,
             items=items,
             parent_ref=parent_ref,
@@ -243,39 +192,15 @@ def register_field_routes(  # noqa: C901
             enum_values=enum_values,
             unique_within=unique_within,
             reference=reference,
-        )
-
-        # Update field
-        field = entity.fields[idx]
-        field.name = update_data.name.strip()
-        field.type = FieldType(update_data.field_type)
-        field.required = update_data.required
-        field.description = update_data.description.strip()
-        field.ontology_term = update_data.ontology_term.strip() or None
-        # Parse ontologies from comma-separated string
-        ontologies_list = [o.strip() for o in ontologies.split(",") if o.strip()]
-        field.ontologies = ontologies_list or None
-        field.codename = update_data.codename.strip() or None
-        field.items = update_data.items.strip() or None
-        field.parent_ref = update_data.parent_ref.strip() or None
-        field.unique_within = update_data.unique_within.strip() or None
-        field.reference = update_data.reference.strip() or None
-        field.constraints = update_data.build_constraints()
-        # spec_version 0.6 markers (#137/#143/#98). Booleans default to None
-        # rather than False so an unset marker is dropped on serialization.
-        field.owns = owns or None
-        field.is_identifier = is_identifier or None
-        field.is_label = is_label or None
-        tier_value = tier.strip()
-        field.tier = (
-            tier_value  # type: ignore[assignment]
-            if tier_value in ("required", "recommended", "optional")
-            else None
-        )
-        field.label = label.strip() or None
-        field.unit = unit.strip() or None
-        field.example = example.strip() or None
-        field.options = [o.strip() for o in options.split(",") if o.strip()] or None
+            owns=owns,
+            is_identifier=is_identifier,
+            is_label=is_label,
+            tier=tier,
+            label=label,
+            unit=unit,
+            example=example,
+            options=options,
+        ).apply_to(entity.fields[idx])
 
         builder.editing_field_idx = None
         builder.mark_changed()
