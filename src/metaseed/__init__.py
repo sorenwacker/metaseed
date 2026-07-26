@@ -1,4 +1,7 @@
-"""Metaseed: Schema-driven API for MIAPPE-compliant phenotyping metadata.
+"""Metaseed: Schema-driven API for research metadata across scientific standards.
+
+Metadata structure is defined in YAML profiles (MIAPPE, ISA, Darwin Core, DiSSCo,
+ENA, JERM, PRIDE, MetaboLights) and used to generate Pydantic models at runtime.
 
 Programmatic API (recommended):
     >>> from metaseed import MetaseedClient
