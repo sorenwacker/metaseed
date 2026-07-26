@@ -207,3 +207,77 @@ def test_sdrf_from_archive_fixture_uses_synthesized_sample():
     assert len(rows) - 1 >= 1  # at least one sample row
     organism = rows[0].index("characteristics[organism]")
     assert rows[1][organism] == "Erwinia carotovora"
+
+
+# --- child-node construction (the MCP / tree flow) --------------------------
+
+
+def _child_node_client() -> MetaseedClient:
+    """A pride dataset built the MCP way: nested entities as child nodes.
+
+    The MCP server instructs creating entities root-first, each placed under a
+    valid parent via ``parent_id`` -- so Species/Instrument/Sample/DataFile are
+    separate child nodes, not inline lists on the Dataset. The export must see
+    them either way.
+    """
+    client = MetaseedClient("pride", "1.0")
+    ds = client.create_entity(
+        "Dataset",
+        {
+            "accession": "PXD000002",
+            "title": "Child-node dataset",
+            "description": "d",
+            "sample_processing_protocol": "spp",
+            "data_processing_protocol": "dpp",
+            "submission_type": "COMPLETE",
+            "keywords": ["proteomics"],
+        },
+        skip_validation=True,
+    )
+    client.create_entity(
+        "Species",
+        {"name": "Homo sapiens", "ncbi_taxonomy_id": "9606"},
+        parent_id=ds.id,
+        skip_validation=True,
+    )
+    client.create_entity(
+        "Instrument",
+        {"name": "Q Exactive", "cv_accession": "MS:1001911"},
+        parent_id=ds.id,
+        skip_validation=True,
+    )
+    client.create_entity(
+        "Sample",
+        {"name": "SAMP1", "species": "Homo sapiens", "ncbi_taxonomy_id": "9606"},
+        parent_id=ds.id,
+        skip_validation=True,
+    )
+    client.create_entity(
+        "DataFile",
+        {"filename": "run1.raw", "file_type": "RAW", "sample_refs": ["SAMP1"]},
+        parent_id=ds.id,
+        skip_validation=True,
+    )
+    return client
+
+
+def test_submission_sees_child_node_species_instrument_and_files():
+    text = to_pride_submission(_child_node_client())["submission.px"]
+    mtd = _mtd(text)
+    assert mtd.get("species") == ["Homo sapiens"]
+    assert mtd.get("instrument") == ["Q Exactive"]
+    fme = [line for line in text.splitlines() if line.startswith("FME\t")]
+    assert any("run1.raw" in line for line in fme)
+
+
+def test_sdrf_sees_child_node_samples():
+    rows = [
+        line.split("\t")
+        for line in to_pride_sdrf(_child_node_client())["sdrf.tsv"].splitlines()
+    ]
+    assert rows[0][0] == "source name"
+    assert len(rows) - 1 == 1  # one sample row
+    organism = rows[0].index("characteristics[organism]")
+    assert rows[1][organism] == "Homo sapiens"
+    data_file = rows[0].index("comment[data file]")
+    assert rows[1][data_file] == "run1.raw"
