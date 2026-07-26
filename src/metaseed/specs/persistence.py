@@ -55,6 +55,23 @@ def get_custom_specs_dir() -> Path:
     return get_user_specs_dir()
 
 
+def _normalize_profile_name(name: str) -> str:
+    """Normalize a profile name to its on-disk directory form.
+
+    Lowercases, strips, and replaces every non ``alnum``/``-``/``_`` character
+    with ``-`` -- the identical transform ``save_spec`` applies, so a name saved
+    under one form is found by the same name on delete rather than silently
+    missing.
+
+    Raises:
+        ValueError: If the name is empty after stripping.
+    """
+    normalized = name.lower().strip()
+    if not normalized:
+        raise ValueError("Profile name cannot be empty")
+    return "".join(c if c.isalnum() or c in "-_" else "-" for c in normalized)
+
+
 def save_spec(spec: ProfileSpec, name: str | None = None) -> Path:
     """Save a spec to ``specs/<name>/<version>/profile.yaml``.
 
@@ -70,11 +87,7 @@ def save_spec(spec: ProfileSpec, name: str | None = None) -> Path:
     """
     from metaseed.specs.loader import SpecLoader
 
-    profile_name = (name or spec.name).lower().strip()
-    if not profile_name:
-        raise ValueError("Profile name cannot be empty")
-
-    safe_name = "".join(c if c.isalnum() or c in "-_" else "-" for c in profile_name)
+    safe_name = _normalize_profile_name(name or spec.name)
 
     loader = SpecLoader()
     builtin_profiles = [
@@ -82,7 +95,7 @@ def save_spec(spec: ProfileSpec, name: str | None = None) -> Path:
     ]
     if safe_name in builtin_profiles:
         raise ValueError(
-            f"Cannot save with name '{profile_name}' - conflicts with built-in spec. "
+            f"Cannot save with name '{safe_name}' - conflicts with built-in spec. "
             f"Please choose a different name."
         )
 
@@ -165,6 +178,10 @@ def delete_user_spec(name: str, version: str | None = None) -> bool:
         ValueError: If the spec is built-in.
     """
     from metaseed.specs.loader import SpecLoader
+
+    # Match save_spec's on-disk naming so a delete by the original name is not a
+    # silent no-op against a differently-cased/sanitized directory.
+    name = _normalize_profile_name(name)
 
     loader = SpecLoader()
     if not loader.is_user_defined(name):
