@@ -116,6 +116,12 @@ class EntityStore:
             >>> store.add_entity("Sample", {"alias": "sam1", "study_ref": "s1", ...})
             >>> # Sample is auto-linked to Study via study_ref
         """
+        # When created under an explicit parent, fill the child's parent-reference
+        # field (e.g. investigation_id) from the parent so the caller need not
+        # repeat it -- otherwise a required reference fails validation below.
+        if parent_id is not None:
+            data = self._fill_parent_reference(entity_type, data, parent_id)
+
         instance = self._create_instance(entity_type, data, skip_validation)
 
         # Resolve parent: explicit parent_id takes precedence, then reference fields
@@ -186,6 +192,50 @@ class EntityStore:
                 return self._index[str(ref_value)]
 
         return None
+
+    def _fill_parent_reference(
+        self: Self,
+        entity_type: str,
+        data: dict[str, Any],
+        parent_id: str,
+    ) -> dict[str, Any]:
+        """Populate a child's parent-reference field from its explicit parent.
+
+        The inverse of :meth:`_resolve_parent`: when a child is created under an
+        explicit ``parent_id``, set its reference to the parent (e.g. a Study's
+        ``investigation_id``) from the parent's identifier, so callers need not
+        repeat it. Conservative: fills only a reference field the child actually
+        has (by the ``<parent_type>_id`` convention) that the caller left unset,
+        never overriding provided data.
+
+        Args:
+            entity_type: Type of the child being created.
+            data: The child's field values.
+            parent_id: The explicit parent node id.
+
+        Returns:
+            ``data`` (a copy with the reference filled, or unchanged).
+        """
+        parent_node = self._instances.get(parent_id)
+        if parent_node is None:
+            return data
+        try:
+            helper = self._get_helper(entity_type)
+            parent_helper = self._get_helper(parent_node.entity_type)
+        except (KeyError, AttributeError):
+            return data
+
+        ref_field = f"{parent_node.entity_type.lower()}_id"
+        if ref_field not in helper.reference_fields or data.get(ref_field):
+            return data
+
+        id_field = parent_helper.identifier_field
+        parent_value = (
+            getattr(parent_node.instance, id_field, None) if id_field else None
+        )
+        if parent_value is None:
+            return data
+        return {**data, ref_field: parent_value}
 
     def _get_identifier_fields(self: Self, entity_type: str) -> list[str]:
         """Get all identifier fields for an entity type.
