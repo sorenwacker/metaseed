@@ -251,6 +251,33 @@ class TestFields:
         ]
         assert len(study_back_ref) == 1
 
+    def test_nested_field_respects_existing_is_identifier(self):
+        """A parent that already designates an identifier must not gain a second.
+
+        The back-reference machinery injected a required field literally named
+        ``identifier`` whenever the parent had none by that name -- ignoring a
+        field already marked ``is_identifier``. The parent then required both its
+        real identifier and a phantom ``identifier``, so the generated model
+        could not be instantiated. Respect the marker: inject nothing, and point
+        the child's back-reference at the real identifier field.
+        """
+        builder = SpecBuilder.empty("p", "0.1")
+        builder.add_entity("Project")
+        builder.add_field("Project", "project_id", FieldType.STRING, is_identifier=True)
+        builder.add_entity("Item")
+
+        builder.add_field("Project", "items", FieldType.LIST, items="Item")
+
+        proj_fields = {f.name for f in builder.spec.entities["Project"].fields}
+        assert "identifier" not in proj_fields  # no phantom field
+        back_ref = [
+            f
+            for f in builder.spec.entities["Item"].fields
+            if f.reference and f.reference.startswith("Project.")
+        ]
+        assert len(back_ref) == 1
+        assert back_ref[0].reference == "Project.project_id"  # points at the real id
+
     def test_add_primitive_list_field_creates_no_back_reference(self):
         builder = SpecBuilder.empty("p", "0.1")
         builder.add_entity("Study")
