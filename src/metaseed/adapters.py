@@ -188,7 +188,11 @@ ADAPTERS: tuple[AdapterInfo, ...] = (
     AdapterInfo(
         key="brapi",
         name="BrAPI",
-        description="Import from a BrAPI v2 plant-breeding server; export BrAPI objects.",
+        # Import only, by design: BrAPI servers are read sources here, and
+        # writing back would need per-server credentials and write endpoints
+        # most deployments do not expose. ``to_brapi`` stays available as a
+        # library call but declares no export action, so no host offers one.
+        description="Import a BrAPI v2 plant-breeding server's studies into the miappe profile.",
         direction="import",
         extra="brapi",
         requires=("httpx",),
