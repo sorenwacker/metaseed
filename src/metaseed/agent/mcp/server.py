@@ -206,13 +206,13 @@ def create_server(
     from metaseed.agent.mcp.tools.spec_builder import register_spec_builder_tools
     from metaseed.agent.mcp.tools.validation import register_validation_tools
 
-    register_profile_tools(mcp)
-    register_dataset_tools(mcp, get_mcp_state)
+    register_profile_tools(mcp, context_module.resolve_default_context)
+    register_dataset_tools(mcp, context_module.resolve_default_context)
     register_entity_tools(mcp, context_module.resolve_default_context)
     register_extraction_tools(mcp, _parser_registry)
-    register_validation_tools(mcp, get_mcp_state)
-    register_ontology_tools(mcp)
-    register_spec_builder_tools(mcp, get_mcp_state)
+    register_validation_tools(mcp, context_module.resolve_default_context)
+    register_ontology_tools(mcp, context_module.resolve_default_context)
+    register_spec_builder_tools(mcp, context_module.resolve_default_context)
 
     # =========================================================================
     # Prompts - Guided workflows
