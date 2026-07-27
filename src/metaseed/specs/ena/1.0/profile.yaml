@@ -286,7 +286,11 @@ entities:
           max_length: 255
 
       - name: accession
-        dcat: dct:identifier
+        # dct:source, not dct:identifier: a metaseed dataset carrying an ENA
+        # accession was derived from that record, it is not that record. Claiming
+        # the accession as this card's identity makes two records assert the same
+        # identifier, so a harvester reads the card as a duplicate of ENA's.
+        dcat: dct:source
         codename: accession
         type: string
         required: false

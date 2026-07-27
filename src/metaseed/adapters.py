@@ -102,13 +102,16 @@ class Action:
     def applies_to(self, profile: str, *, adapter_key: str | None = None) -> bool:
         """Whether this action is offered for ``profile``.
 
-        An explicit ``profiles`` tuple wins. Otherwise the action is offered for
-        the profile its adapter serves, by the convention that an adapter's
-        ``key`` names that profile. ``adapter_key`` is omitted only when the
-        caller has already established the adapter matches.
+        An explicit ``profiles`` tuple wins, and ``"*"`` in it means every
+        profile — needed by an action like the DCAT card that describes any
+        dataset, including Spec-Builder profiles whose names cannot be listed
+        here. Otherwise the action is offered for the profile its adapter
+        serves, by the convention that an adapter's ``key`` names that profile.
+        ``adapter_key`` is omitted only when the caller has already established
+        the adapter matches.
         """
         if self.profiles:
-            return profile in self.profiles
+            return "*" in self.profiles or profile in self.profiles
         return adapter_key is None or adapter_key == profile
 
 
@@ -239,10 +242,22 @@ ADAPTERS: tuple[AdapterInfo, ...] = (
     AdapterInfo(
         key="dcat",
         name="DCAT",
-        description="Export a dataset as a DCAT catalogue (JSON-LD / Turtle).",
+        description="Export a dataset's catalogue record as DCAT (JSON-LD / Turtle).",
         direction="export",
         extra="dcat",
         requires=("rdflib",),
+        actions=(
+            Action(
+                "export",
+                "dcat",
+                "DCAT record (JSON-LD + Turtle)",
+                "metaseed.dcat.export:to_dcat",
+                # Every profile: a catalogue record describes any dataset, and
+                # the adapter key names a vocabulary rather than a profile, so
+                # the usual key-names-the-profile convention offers it to none.
+                profiles=("*",),
+            ),
+        ),
     ),
     AdapterInfo(
         key="seek",

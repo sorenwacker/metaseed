@@ -6,9 +6,16 @@ complementary to the domain content standards (MIAPPE, ISA, Darwin Core, …): t
 profile describes *what is inside* a dataset; DCAT describes *that the dataset
 exists and where to get it*.
 
-This page covers the DCAT model and the mapping from a metaseed dataset onto it.
-RDF/JSON-LD/Turtle serialization is layered on top separately (see issue #28).
-The design discussion is #25.
+This page covers the DCAT model, the mapping from a metaseed dataset onto it, and
+the RDF serialization. The design discussion is #25.
+
+Metaseed targets **DCAT 3**, the current W3C Recommendation. DCAT 2 and 3 share
+the `http://www.w3.org/ns/dcat#` namespace, so this is a matter of which terms
+are used rather than which IRI. One practical consequence: rdflib ships `DCAT` as
+a closed list of DCAT 2 terms, so DCAT 3 additions such as `dcat:version` are
+emitted through `metaseed.dcat.serialize.DCAT3`, an unvalidated view of the same
+namespace. The RDF is identical either way; without it a valid term looks like a
+typo in rdflib's warnings.
 
 ## Class mapping
 
@@ -58,6 +65,33 @@ Two sources are merged, **explicit wins**:
 `metaseed.dcat.resolver.build_dcat_dataset` reads the root entity's field specs
 (their `dcat` annotations) and merges in the explicit `CatalogMetadata`.
 
+### Which way the derivation runs
+
+A repository accession carried by a dataset — an ENA `PRJEB…`, a PRIDE `PXD…`, a
+MetaboLights `MTBLS…` — is annotated `dct:source`, not `dct:identifier`. That is
+the *default*, not a universal truth, and the distinction matters.
+
+The direction is genuinely ambiguous from the field alone. A dataset **imported**
+from ENA is derived from ENA's record, and claiming ENA's accession as its own
+identifier would make two records assert one identity — a harvester reads the
+card as a duplicate, and any FAIR score it shows is borrowed from ENA's
+persistent identifier. But a dataset **authored here for submission**, whose
+accession ENA later assigned to *it*, is the origin: there the accession really
+is this dataset's identifier, and `dct:source` understates it.
+
+Nothing in a dataset records which happened. `create_dataset_from_accession`
+discards the accession it imported by, and the value survives only as an
+ordinary, user-editable field. So the spec makes the claim that is safe in both
+directions — "this record relates to that accession" — and a platform that
+*knows* it originated the dataset promotes it, by passing the accession as the
+identifier when it builds the card (`fallback_identifier`, or the publication
+context once a caller supplies one). Understating provenance is recoverable;
+falsely claiming someone else's identifier is not.
+
+`dct:source` is serialized alongside `prov:wasDerivedFrom`, which states the same
+fact for a provenance reader. One model field drives both so they cannot drift.
+`dct:isVersionOf` is reserved for the narrower case of a straight copy.
+
 ## RDF serialization
 
 `metaseed.dcat.serialize` turns the model into RDF — `to_turtle()` and
@@ -71,6 +105,73 @@ pip install 'metaseed[dcat]'
 ```
 
 so the model and resolver remain usable without it.
+
+## Downloading the record
+
+The card is a registered export action, so every host that reads the adapter
+registry offers it:
+
+```python
+from metaseed.dcat.export import to_dcat
+
+files = to_dcat(client)   # {"dcat.jsonld": ..., "dcat.ttl": ...}
+```
+
+It is declared with `profiles=("*",)` — offered for **every** profile, not just
+one. That wildcard exists for this case: a catalogue record describes a dataset
+whatever standard its content follows, and the `dcat` adapter key names a
+vocabulary rather than a profile, so the registry's usual "an adapter's key names
+the profile it serves" convention would have offered it to nothing. It also
+reaches profiles authored in the Spec Builder, whose names cannot be enumerated
+here.
+
+`to_dcat` emits the **dataset**, not a `dcat:Catalog` wrapping it: a catalogue
+serializes to a JSON-LD `@graph`, which is the wrong shape for a consumer asking
+about one dataset and cannot be embedded in a page as-is. An empty dataset
+returns an empty mapping, which hosts already report as nothing to export, rather
+than a valid-looking record describing nothing.
+
+`metaseed.dcat.export.build_card` is the shared resolution step, used by both the
+export and metaseed's own `/dcat` page, so the page and the downloaded file
+cannot describe the same dataset differently.
+
+## Publishing the record elsewhere
+
+metaseed resolves what a dataset *is*. Where it can be fetched, what identifies
+it, and what may be done with it belong to whatever platform publishes it — a
+repository deposit, a portal, a lab's own site. `metaseed.dcat.publication` is
+how that platform supplies them:
+
+```python
+from metaseed.dcat import PublicationContext, build_published_dataset, origin_url
+
+published = build_published_dataset(
+    card,
+    PublicationContext(
+        landing_page="https://data.example.org/d/abc123",
+        identifier="https://doi.org/10.5281/zenodo.1234567",   # optional
+        license="CC-BY-4.0",
+        source=[origin_url("pride", "PXD000001") or ""],
+    ),
+)
+```
+
+`landing_page` is the only required field: without somewhere to fetch the
+dataset nothing else is assessable, and it stands in as the identifier until a
+DOI exists. The publisher's identifier replaces any derived from content, the
+publisher's licence and distributions win, and `source` and `conforms_to` are
+merged rather than replaced. The input card is never mutated, so one resolved
+card can be published to a staging URL and a real one without the first leaking
+into the second.
+
+`spdx_license_uri` upgrades a bare `"CC-BY-4.0"` to its spdx.org URI and passes
+an explicit URL through — a licence a consumer cannot resolve is not
+machine-readable. `origin_url` builds the landing page for a record in ENA,
+PRIDE, or MetaboLights, and returns `None` for a profile with no repository
+rather than guessing a URL that will not resolve.
+
+This module is pure, so a host can build a published card without the
+`metaseed[dcat]` extra and serialize it wherever it likes.
 
 ## Viewing and editing the card
 

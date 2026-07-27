@@ -32,33 +32,24 @@ def _build_card(state: AppState) -> tuple[DcatDataset, str, str]:
     Returns the dataset model plus its Turtle and JSON-LD serializations.
     Raises ModuleNotFoundError if the ``dcat`` extra (rdflib) is not installed.
     """
-    from metaseed.dcat import build_dcat_catalog
-    from metaseed.dcat.resolver import build_dcat_dataset_from_entities
+    from metaseed.api.client import MetaseedClient
+    from metaseed.dcat.export import build_card
+    from metaseed.dcat.model import DcatDataset
     from metaseed.dcat.serialize import to_jsonld, to_turtle
-    from metaseed.specs.loader import SpecLoader
     from metaseed.ui.datasets import get_current_dataset_name
 
     facade = state.get_or_create_facade()
-    spec = SpecLoader(profile=facade.profile).load_profile(
-        facade.version, facade.profile
-    )
     name = get_current_dataset_name(state) or "dataset"
-    root_def = spec.entities.get(spec.root_entity)
-    root_fields = root_def.fields if root_def else []
 
-    dataset = build_dcat_dataset_from_entities(
-        root_fields=root_fields,
-        root_entity_type=spec.root_entity,
-        entities=facade.to_dict(),
+    # Resolved through the same builder the export action uses, so the page and
+    # the downloaded file cannot describe the dataset differently.
+    dataset = build_card(
+        MetaseedClient.from_facade(facade),
         catalog_metadata=state.catalog_metadata,
         identifier=name,
-    )
-    catalog = build_dcat_catalog(
-        title=spec.display_name or facade.profile,
-        description=spec.description or None,
-        datasets=[dataset],
-    )
-    return dataset, to_turtle(catalog), to_jsonld(catalog)
+    ) or DcatDataset(identifier=name, title=name)
+
+    return dataset, to_turtle(dataset), to_jsonld(dataset)
 
 
 def _page(dataset: DcatDataset, turtle: str, jsonld: str) -> str:

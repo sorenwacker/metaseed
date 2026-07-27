@@ -74,6 +74,20 @@ class DcatDataset(BaseModel):
     keywords: list[str] = []
     themes: list[str] = []
     related: list[str] = []
+    version: str | None = None
+    """`dcat:version` — the label of the snapshot this card describes."""
+    is_version_of: str | None = None
+    """`dct:isVersionOf` — set only when this dataset is a copy of another record."""
+    source: list[str] = []
+    """Records this dataset was derived from.
+
+    Drives both `dct:source` and `prov:wasDerivedFrom`, which say the same thing
+    to different readers. One field rather than two, so they cannot disagree.
+    A derivation is not an identity: an imported dataset records the origin here
+    and keeps its own `identifier`.
+    """
+    conforms_to: list[str] = []
+    """`dct:conformsTo` — standards the content follows (e.g. MIAPPE, ISA)."""
     distributions: list[DcatDistribution] = []
 
 
