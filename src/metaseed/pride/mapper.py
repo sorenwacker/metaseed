@@ -31,6 +31,13 @@ def _taxon_id(accession: Any) -> str | None:
     return tail or None
 
 
+def _cv_names(values: Any) -> list[str]:
+    """Names of a list of CV params (e.g. ``experimentTypes``)."""
+    if not isinstance(values, list):
+        return []
+    return [str(v["name"]) for v in values if isinstance(v, dict) and v.get("name")]
+
+
 def _species(project: dict[str, Any]) -> list[dict[str, Any]]:
     """Map PRIDE ``organisms`` CV params into ``Species`` records."""
     rows = []
@@ -203,6 +210,16 @@ def build_dataset(
         return client
 
     accession = project.get("accession")
+    children: dict[str, list[dict[str, Any]]] = {
+        "Species": _species(project),
+        "Instrument": _instruments(project),
+        "Modification": _modifications(project),
+        "Contact": _contacts(project),
+        "Publication": _publications(project),
+        "Sample": _samples(project),
+        "DataFile": _files(files),
+    }
+
     data = _clean(
         {
             "identifier": accession,
@@ -212,16 +229,22 @@ def build_dataset(
             "sample_processing_protocol": project.get("sampleProcessingProtocol"),
             "data_processing_protocol": project.get("dataProcessingProtocol"),
             "submission_type": project.get("submissionType"),
+            "experiment_types": _cv_names(project.get("experimentTypes")),
+            "doi": project.get("doi"),
+            "license": project.get("license"),
+            "submission_date": project.get("submissionDate"),
             "announcement_date": project.get("publicationDate"),
             "keywords": list(project.get("keywords") or []),
-            "species": _species(project),
-            "instruments": _instruments(project),
-            "modifications": _modifications(project),
-            "contacts": _contacts(project),
-            "publications": _publications(project),
-            "samples": _samples(project),
-            "files": _files(files),
+            # Records are created as child entities below, not inline: the
+            # exporter folds children into these fields, so holding both would
+            # emit every species and file twice.
         }
     )
-    client.create_entity("Dataset", data, skip_validation=True)
+    dataset = client.create_entity("Dataset", data, skip_validation=True)
+
+    for entity_type, rows in children.items():
+        for row in rows:
+            client.create_entity(
+                entity_type, row, parent_id=dataset.id, skip_validation=True
+            )
     return client

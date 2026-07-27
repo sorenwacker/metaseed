@@ -8,8 +8,14 @@
   "submissionDate": "2012-03-13",
   "publicationDate": "2012-03-07",
   "doi": "10.6019/PXD000001",
-  "keywords": ["Spikes", "Tmt", "Eriwinia"],
-  "projectTags": ["Prime-xs project"],
+  "keywords": [
+    "Spikes",
+    "Tmt",
+    "Eriwinia"
+  ],
+  "projectTags": [
+    "Prime-xs project"
+  ],
   "submitters": [
     {
       "title": "Dr",
@@ -87,5 +93,6 @@
       "accession": "MOD:01720",
       "name": "TMT6plex-126 reporter+balance reagent acylated residue"
     }
-  ]
+  ],
+  "license": "EBI terms of use"
 }
