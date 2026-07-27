@@ -12,6 +12,7 @@ each method returns the ``result.data`` list.
 
 from __future__ import annotations
 
+from json import JSONDecodeError
 from typing import TYPE_CHECKING, Any
 
 try:
@@ -29,6 +30,47 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 USER_AGENT = "metaseed (+https://github.com/sorenwacker/metaseed)"
+
+
+class BrapiEndpointError(RuntimeError):
+    """A URL did not answer as a BrAPI v2 server.
+
+    Raised in place of the raw transport error, because the underlying failures
+    name nothing: a base URL missing its ``/brapi/v2`` suffix surfaces as a bare
+    ``404``, and a server returning an HTML error page surfaces as
+    ``JSONDecodeError: Expecting value: line 1 column 1``. Users reported being
+    unable to get any endpoint working, with these as the only diagnostics.
+    """
+
+
+def _not_a_brapi_endpoint(
+    base_url: str, url: str, exc: Exception
+) -> BrapiEndpointError:
+    """Turn a transport failure into a message naming the likely mistake."""
+    status = getattr(getattr(exc, "response", None), "status_code", None)
+
+    if isinstance(exc, JSONDecodeError):
+        detail = (
+            f"{url} did not return JSON. It is probably a web page rather than "
+            "a BrAPI endpoint"
+        )
+    elif status == 404:
+        detail = f"{url} does not exist (404)"
+    elif status in (401, 403):
+        detail = (
+            f"{url} requires authentication ({status}). Pass a bearer token for "
+            "this server"
+        )
+    else:
+        detail = f"{url} failed: {exc}"
+
+    hint = ""
+    if not base_url.rstrip("/").endswith("brapi/v2"):
+        hint = (
+            " The base URL must be the BrAPI v2 root, which usually ends in "
+            f"/brapi/v2 - '{base_url}' does not."
+        )
+    return BrapiEndpointError(f"{detail}.{hint}")
 
 
 class BrapiClient:
@@ -129,13 +171,16 @@ class BrapiClient:
         page = 0
         while True:
             query = {**(params or {}), "page": str(page)}
-            body = request_json(
-                url,
-                params=query,
-                headers=headers,
-                timeout=self._timeout,
-                http_client=self._client,
-            )
+            try:
+                body = request_json(
+                    url,
+                    params=query,
+                    headers=headers,
+                    timeout=self._timeout,
+                    http_client=self._client,
+                )
+            except (httpx.HTTPStatusError, JSONDecodeError) as exc:
+                raise _not_a_brapi_endpoint(self._base_url, url, exc) from exc
             if not isinstance(body, dict):
                 break
             data = (body.get("result") or {}).get("data")

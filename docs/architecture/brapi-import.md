@@ -24,6 +24,20 @@ ObservationUnits, ObservedVariables, and DataFile references. Pass
 `study_db_id=...` to restrict the import to a single study, or `token=...` for an
 authenticated server.
 
+## Choosing a base URL
+
+The base URL is the BrAPI **v2 root**, not the server's home page: it normally ends in `/brapi/v2`. Passing the site root instead is the most common mistake and produces a bare `404`, so the client translates that into a `BrapiEndpointError` naming the missing suffix. A server that answers with an HTML page rather than JSON, or that demands a token, is reported as such instead of as a `JSONDecodeError` or an anonymous failure.
+
+Public servers verified reachable without credentials (checked 260727):
+
+| Server | Base URL |
+| --- | --- |
+| BrAPI reference server | `https://test-server.brapi.org/brapi/v2` |
+| Cassavabase | `https://cassavabase.org/brapi/v2` |
+| Sweetpotatobase | `https://sweetpotatobase.org/brapi/v2` |
+
+Breedbase instances such as `wheat.triticeaetoolbox.org` and `musabase.org` implement BrAPI v2 but answer `401` without a token; pass one via `token=`. Not every deployment exposes BrAPI at the same path — Germinate mounts it under the instance path — so check the server's own API documentation when the `/brapi/v2` root does not answer.
+
 ## The seam
 
 `base URL → fetch metadata → map (spec-driven) → validate → dataset`, in three
