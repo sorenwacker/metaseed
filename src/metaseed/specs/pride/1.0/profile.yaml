@@ -90,6 +90,7 @@ entities:
     description: Top-level container for a PRIDE/ProteomeXchange submission. Represents a complete proteomics dataset.
     fields:
     - name: identifier
+      dcat: dct:identifier
       type: string
       required: true
       description: A locally unique identifier for the dataset
@@ -98,11 +99,16 @@ entities:
         max_length: 100
 
     - name: accession
+      # dct:source, not dct:identifier: see docs/architecture/dcat.md.
+      # A submitted dataset may legitimately be identified by its accession;
+      # a platform that knows it originated the dataset promotes it.
+      dcat: dct:source
       type: string
       required: false
       description: ProteomeXchange accession number (assigned upon submission)
 
     - name: title
+      dcat: dct:title
       type: string
       required: true
       description: A concise descriptive title for the dataset
@@ -111,6 +117,7 @@ entities:
         max_length: 500
 
     - name: description
+      dcat: dct:description
       type: string
       required: true
       description: Detailed description of the dataset and experimental goals
@@ -150,11 +157,13 @@ entities:
       description: Why the submission is PARTIAL (required by PX for PARTIAL submissions)
 
     - name: announcement_date
+      dcat: dct:issued
       type: date
       required: false
       description: Date the dataset was announced
 
     - name: keywords
+      dcat: dcat:keyword
       type: list
       items: string
       required: true
@@ -179,6 +188,7 @@ entities:
       description: Protein/peptide modifications
 
     - name: contacts
+      dcat: dcat:contactPoint
       type: list
       items: Contact
       required: true

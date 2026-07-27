@@ -108,6 +108,7 @@ entities:
     description: Top-level container for a MetaboLights submission. Contains study metadata and links to studies.
     fields:
     - name: identifier
+      dcat: dct:identifier
       type: string
       required: true
       description: A locally unique identifier for the investigation
@@ -116,11 +117,16 @@ entities:
         max_length: 100
 
     - name: accession
+      # dct:source, not dct:identifier: see docs/architecture/dcat.md.
+      # A submitted investigation may legitimately be identified by its
+      # accession; a platform that knows it originated it promotes this.
+      dcat: dct:source
       type: string
       required: false
       description: MetaboLights accession number (assigned upon submission)
 
     - name: title
+      dcat: dct:title
       type: string
       required: true
       description: A concise descriptive title for the investigation
@@ -129,6 +135,7 @@ entities:
         max_length: 500
 
     - name: description
+      dcat: dct:description
       type: string
       required: true
       description: Detailed description of the investigation aims and scope
@@ -136,6 +143,7 @@ entities:
         min_length: 50
 
     - name: submission_date
+      dcat: dct:issued
       type: date
       required: false
       description: Date the investigation was submitted
@@ -146,6 +154,7 @@ entities:
       description: Date the investigation becomes publicly available
 
     - name: contacts
+      dcat: dcat:contactPoint
       type: list
       items: Person
       required: true

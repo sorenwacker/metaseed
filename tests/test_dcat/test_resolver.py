@@ -197,3 +197,55 @@ class TestCatalog:
         assert cat.title == "C"
         assert cat.publisher is not None and cat.publisher.name == "Org"
         assert len(cat.datasets) == 1
+
+
+class TestImportableProfilesDescribeThemselves:
+    """PRIDE and MetaboLights are container-rooted: their root entity already
+    holds title, description and dates, so a card built from one should not be
+    untitled. Both shipped with no ``dcat`` annotations at all, which made every
+    card for an imported proteomics or metabolomics dataset unusable.
+    """
+
+    def test_pride_derives_its_descriptive_metadata(self):
+        spec = SpecLoader(profile="pride").load_profile("1.0", "pride")
+
+        ds = build_dcat_dataset(
+            root_fields=spec.entities["Dataset"].fields,
+            root_entity={
+                "identifier": "local-1",
+                "accession": "PXD000001",
+                "title": "TMT spikes",
+                "description": "A proteomics submission.",
+                "keywords": ["proteomics", "TMT"],
+                "announcement_date": "2012-03-07",
+            },
+            fallback_identifier="unused",
+        )
+
+        assert ds.title == "TMT spikes"
+        assert ds.description == "A proteomics submission."
+        assert ds.keywords == ["proteomics", "TMT"]
+        assert ds.source == ["PXD000001"], "the PXD accession is provenance"
+        assert ds.identifier == "local-1", "not the PRIDE accession"
+
+    def test_metabolights_derives_its_descriptive_metadata(self):
+        spec = SpecLoader(profile="metabolights").load_profile("1.0", "metabolights")
+
+        ds = build_dcat_dataset(
+            root_fields=spec.entities["Investigation"].fields,
+            root_entity={
+                "identifier": "local-2",
+                "accession": "MTBLS1",
+                "title": "A metabolomics study",
+                "description": "Urine samples.",
+                "submission_date": "2012-01-01",
+                "public_release_date": "2013-01-01",
+            },
+            fallback_identifier="unused",
+        )
+
+        assert ds.title == "A metabolomics study"
+        assert ds.description == "Urine samples."
+        assert ds.issued == "2012-01-01"
+        assert ds.source == ["MTBLS1"]
+        assert ds.identifier == "local-2"
