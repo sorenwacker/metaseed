@@ -82,3 +82,89 @@ def test_turtle_and_jsonld_are_nonempty_strings():
     assert len(to_graph(cat)) == len(
         rdflib.Graph().parse(data=jsonld, format="json-ld")
     )
+
+
+# --- provenance: derived from, not identical to --------------------------
+
+
+def _published_card():
+    """A card describing a dataset derived from an ENA record."""
+    from metaseed.dcat.model import DcatDataset
+
+    return DcatDataset(
+        identifier="https://example.org/d/1",
+        title="Derived dataset",
+        source=["https://www.ebi.ac.uk/ena/browser/view/PRJEB12345"],
+        is_version_of="https://www.ebi.ac.uk/ena/browser/view/PRJEB12345",
+        version="2",
+        conforms_to=["https://www.miappe.org/"],
+    )
+
+
+def test_one_source_emits_both_dct_source_and_prov_was_derived_from():
+    """The two predicates state the same fact for different readers, so they
+    must point at the same object rather than drift apart."""
+    from metaseed.dcat.serialize import PROV
+
+    graph = to_graph(_published_card())
+    node = next(graph.subjects(RDF.type, DCAT.Dataset))
+
+    sources = set(graph.objects(node, DCTERMS.source))
+    derived = set(graph.objects(node, PROV.wasDerivedFrom))
+    assert sources == derived
+    assert str(next(iter(sources))).endswith("PRJEB12345")
+
+
+def test_is_version_of_is_a_reference_not_a_string():
+    graph = to_graph(_published_card())
+    node = next(graph.subjects(RDF.type, DCAT.Dataset))
+
+    from metaseed.dcat.serialize import DCAT3
+
+    value = graph.value(node, DCTERMS.isVersionOf)
+    assert isinstance(value, rdflib.URIRef), "a URL must serialize as a reference"
+    assert str(graph.value(node, DCAT3.version)) == "2"
+
+
+def test_conforms_to_names_the_standard():
+    graph = to_graph(_published_card())
+    node = next(graph.subjects(RDF.type, DCAT.Dataset))
+
+    assert str(graph.value(node, DCTERMS.conformsTo)) == "https://www.miappe.org/"
+
+
+def test_a_card_carries_exactly_one_identifier():
+    """Guards the regression this work exists to prevent: a card that also
+    claims the origin's identifier asserts two identities for one record."""
+    graph = to_graph(_published_card())
+    node = next(graph.subjects(RDF.type, DCAT.Dataset))
+
+    identifiers = list(graph.objects(node, DCTERMS.identifier))
+    assert [str(i) for i in identifiers] == ["https://example.org/d/1"]
+
+
+def test_the_provenance_survives_a_jsonld_round_trip():
+    """An unbound prov namespace would silently drop or mangle the triple."""
+    from metaseed.dcat.serialize import PROV
+
+    parsed = rdflib.Graph().parse(data=to_jsonld(_published_card()), format="json-ld")
+
+    assert any(parsed.triples((None, PROV.wasDerivedFrom, None)))
+    assert len(parsed) == len(to_graph(_published_card()))
+
+
+def test_a_catalog_publisher_uri_is_honoured_like_a_dataset_publisher():
+    """The catalog used to mint a blank node even when given a URI, so the same
+    publisher appeared as two different subjects depending on where it sat."""
+    from metaseed.dcat.model import DcatAgent, DcatDataset
+
+    agent = DcatAgent(name="Example Org", uri="https://example.org/org")
+    cat = build_dcat_catalog(title="c", datasets=[DcatDataset(identifier="d1")])
+    cat.publisher = agent
+
+    graph = to_graph(cat)
+    node = next(graph.subjects(RDF.type, DCAT.Catalog))
+
+    assert graph.value(node, DCTERMS.publisher) == rdflib.URIRef(
+        "https://example.org/org"
+    )

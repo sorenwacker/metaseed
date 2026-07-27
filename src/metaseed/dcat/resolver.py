@@ -137,6 +137,8 @@ def build_dcat_dataset(
         else _as_str_list(d("dcat:keyword")),
         themes=list(cm.themes) if cm and cm.themes else _as_str_list(d("dcat:theme")),
         related=_as_str_list(d("dct:relation")),
+        source=_as_str_list(d("dct:source")),
+        conforms_to=_as_str_list(d("dct:conformsTo")),
     )
 
 

@@ -1,5 +1,9 @@
 """Serialize the DCAT model to RDF (JSON-LD / Turtle).
 
+Targets **DCAT 3** (the current W3C Recommendation). DCAT 2 and 3 share the
+``http://www.w3.org/ns/dcat#`` namespace, so this is a question of which terms
+are used, not of which IRI: see :data:`DCAT3`.
+
 This is the only DCAT module that depends on ``rdflib``; it is imported lazily
 (never from ``metaseed.dcat.__init__``) so the model and resolver remain usable
 without the ``metaseed[dcat]`` extra installed.
@@ -27,6 +31,7 @@ if TYPE_CHECKING:
     from rdflib.term import Node
 
     from metaseed.dcat.model import (
+        DcatAgent,
         DcatCatalog,
         DcatContactPoint,
         DcatDataset,
@@ -34,6 +39,16 @@ if TYPE_CHECKING:
     )
 
 VCARD = Namespace("http://www.w3.org/2006/vcard/ns#")
+PROV = Namespace("http://www.w3.org/ns/prov#")
+DCAT3 = Namespace(str(DCAT))
+"""The DCAT namespace, unvalidated, for terms newer than rdflib knows.
+
+rdflib 7.6 ships ``DCAT`` as a closed list of 36 DCAT 2 terms: reaching
+``DCAT.version`` (or ``DatasetSeries``, ``inSeries``, ``previousVersion``)
+through it emits a spurious "not defined in namespace" warning even though
+the term is valid DCAT 3. Same namespace IRI, so the emitted RDF is identical
+either way; this just stops a correct term from looking like a typo.
+"""
 SPDX = Namespace("http://spdx.org/rdf/terms#")
 _BASE = Namespace("urn:metaseed:")
 
@@ -45,6 +60,7 @@ _JSONLD_CONTEXT: dict[str, str] = {
     "foaf": str(FOAF),
     "vcard": str(VCARD),
     "spdx": str(SPDX),
+    "prov": str(PROV),
 }
 
 
@@ -79,6 +95,23 @@ def _node_for(identifier: str | None) -> Node:
 def _uri_or_literal(value: str) -> Node:
     """Render a value as a URIRef when it is a usable IRI, else a literal."""
     return URIRef(value) if "://" in value and _iri_ok(value) else Literal(value)
+
+
+def _add_agent(graph: Graph, agent: DcatAgent) -> Node:
+    """Add a ``foaf:Agent`` node and return it.
+
+    Shared by dataset and catalog publishers so the two cannot drift: the
+    catalog previously always minted a blank node, discarding a publisher URI
+    the dataset would have honoured.
+    """
+    uri = agent.uri
+    node = URIRef(uri) if uri and _iri_ok(uri) else BNode()
+    graph.add((node, RDF.type, FOAF.Agent))
+    if agent.name:
+        graph.add((node, FOAF.name, Literal(agent.name)))
+    if agent.email:
+        graph.add((node, FOAF.mbox, Literal(agent.email)))
+    return node
 
 
 def _add_contact(graph: Graph, contact: DcatContactPoint) -> Node:
@@ -124,6 +157,22 @@ def _add_distribution(graph: Graph, dist: DcatDistribution) -> Node:
     return node
 
 
+def _add_provenance(graph: Graph, node: Node, dataset: DcatDataset) -> None:
+    """Emit where this dataset came from and which version it is."""
+    if dataset.version:
+        graph.add((node, DCAT3.version, Literal(dataset.version)))
+    if dataset.is_version_of:
+        graph.add((node, DCTERMS.isVersionOf, _uri_or_literal(dataset.is_version_of)))
+    for origin in dataset.source:
+        # Both predicates, one object: dct:source is the DCAT-AP reader's term
+        # and prov:wasDerivedFrom the provenance reader's, for the same fact.
+        origin_node = _uri_or_literal(origin)
+        graph.add((node, DCTERMS.source, origin_node))
+        graph.add((node, PROV.wasDerivedFrom, origin_node))
+    for standard in dataset.conforms_to:
+        graph.add((node, DCTERMS.conformsTo, _uri_or_literal(standard)))
+
+
 def _add_dataset(graph: Graph, dataset: DcatDataset) -> Node:
     node = _node_for(dataset.identifier)
     graph.add((node, RDF.type, DCAT.Dataset))
@@ -149,12 +198,9 @@ def _add_dataset(graph: Graph, dataset: DcatDataset) -> Node:
         graph.add((node, DCAT.theme, _uri_or_literal(theme)))
     for relation in dataset.related:
         graph.add((node, DCTERMS.relation, _uri_or_literal(relation)))
+    _add_provenance(graph, node, dataset)
     if dataset.publisher and dataset.publisher.name:
-        pub_uri = dataset.publisher.uri
-        pub = URIRef(pub_uri) if pub_uri and _iri_ok(pub_uri) else BNode()
-        graph.add((pub, RDF.type, FOAF.Agent))
-        graph.add((pub, FOAF.name, Literal(dataset.publisher.name)))
-        graph.add((node, DCTERMS.publisher, pub))
+        graph.add((node, DCTERMS.publisher, _add_agent(graph, dataset.publisher)))
     if dataset.contact_point:
         graph.add((node, DCAT.contactPoint, _add_contact(graph, dataset.contact_point)))
     for dist in dataset.distributions:
@@ -172,10 +218,7 @@ def _add_catalog(graph: Graph, catalog: DcatCatalog) -> Node:
     if catalog.homepage:
         graph.add((node, FOAF.homepage, _safe_uriref(catalog.homepage)))
     if catalog.publisher and catalog.publisher.name:
-        pub = BNode()
-        graph.add((pub, RDF.type, FOAF.Agent))
-        graph.add((pub, FOAF.name, Literal(catalog.publisher.name)))
-        graph.add((node, DCTERMS.publisher, pub))
+        graph.add((node, DCTERMS.publisher, _add_agent(graph, catalog.publisher)))
     for dataset in catalog.datasets:
         graph.add((node, DCAT.dataset, _add_dataset(graph, dataset)))
     return node
@@ -190,6 +233,7 @@ def to_graph(obj: DcatCatalog | DcatDataset) -> Graph:
     graph.bind("dct", DCTERMS)
     graph.bind("foaf", FOAF)
     graph.bind("vcard", VCARD)
+    graph.bind("prov", PROV)
     if isinstance(obj, DcatCatalog):
         _add_catalog(graph, obj)
     else:

@@ -6,9 +6,16 @@ complementary to the domain content standards (MIAPPE, ISA, Darwin Core, …): t
 profile describes *what is inside* a dataset; DCAT describes *that the dataset
 exists and where to get it*.
 
-This page covers the DCAT model and the mapping from a metaseed dataset onto it.
-RDF/JSON-LD/Turtle serialization is layered on top separately (see issue #28).
-The design discussion is #25.
+This page covers the DCAT model, the mapping from a metaseed dataset onto it, and
+the RDF serialization. The design discussion is #25.
+
+Metaseed targets **DCAT 3**, the current W3C Recommendation. DCAT 2 and 3 share
+the `http://www.w3.org/ns/dcat#` namespace, so this is a matter of which terms
+are used rather than which IRI. One practical consequence: rdflib ships `DCAT` as
+a closed list of DCAT 2 terms, so DCAT 3 additions such as `dcat:version` are
+emitted through `metaseed.dcat.serialize.DCAT3`, an unvalidated view of the same
+namespace. The RDF is identical either way; without it a valid term looks like a
+typo in rdflib's warnings.
 
 ## Class mapping
 
@@ -57,6 +64,33 @@ Two sources are merged, **explicit wins**:
 
 `metaseed.dcat.resolver.build_dcat_dataset` reads the root entity's field specs
 (their `dcat` annotations) and merges in the explicit `CatalogMetadata`.
+
+### Which way the derivation runs
+
+A repository accession carried by a dataset — an ENA `PRJEB…`, a PRIDE `PXD…`, a
+MetaboLights `MTBLS…` — is annotated `dct:source`, not `dct:identifier`. That is
+the *default*, not a universal truth, and the distinction matters.
+
+The direction is genuinely ambiguous from the field alone. A dataset **imported**
+from ENA is derived from ENA's record, and claiming ENA's accession as its own
+identifier would make two records assert one identity — a harvester reads the
+card as a duplicate, and any FAIR score it shows is borrowed from ENA's
+persistent identifier. But a dataset **authored here for submission**, whose
+accession ENA later assigned to *it*, is the origin: there the accession really
+is this dataset's identifier, and `dct:source` understates it.
+
+Nothing in a dataset records which happened. `create_dataset_from_accession`
+discards the accession it imported by, and the value survives only as an
+ordinary, user-editable field. So the spec makes the claim that is safe in both
+directions — "this record relates to that accession" — and a platform that
+*knows* it originated the dataset promotes it, by passing the accession as the
+identifier when it builds the card (`fallback_identifier`, or the publication
+context once a caller supplies one). Understating provenance is recoverable;
+falsely claiming someone else's identifier is not.
+
+`dct:source` is serialized alongside `prov:wasDerivedFrom`, which states the same
+fact for a provenance reader. One model field drives both so they cannot drift.
+`dct:isVersionOf` is reserved for the narrower case of a straight copy.
 
 ## RDF serialization
 

@@ -146,8 +146,48 @@ class TestRealSpecIntegration:
                 "center_name": "Example Center",
             },
         )
-        assert ds.identifier == "PRJ1"
         assert ds.publisher is not None and ds.publisher.name == "Example Center"
+
+    def test_the_ena_accession_is_a_source_not_this_record_s_identity(self):
+        """A metaseed card describes a dataset derived from the ENA record, not
+        the ENA record itself.
+
+        Claiming ``PRJ1`` as ``dct:identifier`` makes two records assert the same
+        identity, so a harvester treats this card as a duplicate of ENA's — and
+        any FAIR score it earns is borrowed from ENA's persistent identifier.
+        """
+        spec = SpecLoader(profile="ena").load_profile("1.0", "ena")
+        study = spec.entities["Study"]
+
+        ds = build_dcat_dataset(
+            root_fields=study.fields,
+            root_entity={"accession": "PRJ1", "title": "T"},
+            fallback_identifier="local-dataset",
+        )
+
+        assert ds.source == ["PRJ1"], "the accession must be recorded as provenance"
+        assert ds.identifier != "PRJ1", "the card must not claim ENA's identifier"
+        assert ds.identifier == "local-dataset"
+
+    def test_a_platform_that_originated_the_dataset_can_claim_the_accession(self):
+        """Which way the derivation runs is not knowable from the field.
+
+        A dataset authored here for submission, whose accession ENA assigned to
+        *it*, really is identified by that accession. The spec makes the claim
+        that is safe either way; a caller that knows it is the origin promotes
+        it. Without this the safe default would be a ceiling, not a default.
+        """
+        spec = SpecLoader(profile="ena").load_profile("1.0", "ena")
+        study = spec.entities["Study"]
+
+        ds = build_dcat_dataset(
+            root_fields=study.fields,
+            root_entity={"accession": "PRJ1", "title": "T"},
+            fallback_identifier="PRJ1",
+        )
+
+        assert ds.identifier == "PRJ1"
+        assert ds.source == ["PRJ1"]
 
 
 class TestCatalog:
