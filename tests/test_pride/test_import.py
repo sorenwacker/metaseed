@@ -30,10 +30,25 @@ def test_import_accession_builds_a_pride_dataset():
 
     assert client.profile == "pride"
     entities = client.serialize()["entities"]
-    assert {e["_type"] for e in entities} == {"Dataset"}
+    # A tree, not a single node: every record the API returns is its own
+    # entity, so a user can open and edit them one at a time.
+    assert {e["_type"] for e in entities} == {
+        "Dataset",
+        "Species",
+        "Instrument",
+        "Modification",
+        "Contact",
+        "Publication",
+        "Sample",
+        "DataFile",
+    }
 
     dataset = entities[0]
     assert dataset["accession"] == "PXD000001"
-    assert len(dataset["files"]) == 3
-    assert len(dataset["contacts"]) == 2
-    assert dataset["species"][0]["name"] == "Erwinia carotovora"
+
+    by_type: dict[str, list[dict]] = {}
+    for entity in entities:
+        by_type.setdefault(entity["_type"], []).append(entity)
+    assert len(by_type["DataFile"]) == 3
+    assert len(by_type["Contact"]) == 2
+    assert by_type["Species"][0]["name"] == "Erwinia carotovora"

@@ -156,6 +156,22 @@ entities:
       required: false
       description: Why the submission is PARTIAL (required by PX for PARTIAL submissions)
 
+    - name: doi
+      type: string
+      required: false
+      description: DOI assigned to the dataset by ProteomeXchange
+
+    - name: license
+      dcat: dct:license
+      type: string
+      required: false
+      description: Terms under which the dataset may be reused
+
+    - name: submission_date
+      type: date
+      required: false
+      description: Date the dataset was submitted
+
     - name: announcement_date
       dcat: dct:issued
       type: date
