@@ -56,7 +56,8 @@ class TestActions:
 
     def test_actions_for_profile_filters_by_kind_and_surface(self):
         exports = adapters.actions_for_profile("pride", kind="export")
-        assert {a.key for a in exports} == {"pride", "pride-sdrf"}
+        # "dcat" is offered for every profile; "pride" is the profile-specific one.
+        assert {a.key for a in exports} == {"pride", "pride-sdrf", "dcat"}
         assert all(a.kind == "export" for a in exports)
 
         imports = adapters.actions_for_profile("metabolights", kind="import")
@@ -67,8 +68,13 @@ class TestActions:
         monkeypatch.setattr(importlib.util, "find_spec", lambda _m: None)
         assert adapters.actions_for_profile("ena") == ()
 
-    def test_actions_for_profile_empty_for_unknown_profile(self):
-        assert adapters.actions_for_profile("darwin-core") == ()
+    def test_a_profile_with_no_adapter_gets_only_the_universal_record(self):
+        """darwin-core has no repository adapter of its own, so the DCAT
+        catalogue record is the only thing offered — and nothing else leaks in
+        from an adapter that does not serve it."""
+        keys = {a.key for a in adapters.actions_for_profile("darwin-core")}
+
+        assert keys == {"dcat"}
 
     def test_find_action_unknown_key_is_none(self):
         assert adapters.find_action("does-not-exist") is None
@@ -143,3 +149,25 @@ def test_action_without_profiles_follows_its_adapter_key() -> None:
     )
     assert action.applies_to("ena", adapter_key="ena") is True
     assert action.applies_to("miappe", adapter_key="ena") is False
+
+
+def test_a_wildcard_action_applies_to_every_profile() -> None:
+    """A record like DCAT describes any dataset, including Spec-Builder
+    profiles whose names cannot be listed in the registry."""
+    action = adapters.Action(
+        "export", "card", "Card", "metaseed.dcat.export:to_dcat", profiles=("*",)
+    )
+
+    assert action.applies_to("miappe", adapter_key="dcat")
+    assert action.applies_to("a-profile-invented-yesterday", adapter_key="dcat")
+
+
+def test_the_wildcard_is_not_implemented_as_always_true() -> None:
+    """A scoped action must still refuse a profile it does not list, or the
+    wildcard would have widened every action in the registry."""
+    scoped = adapters.Action(
+        "export", "y", "Y", "metaseed.ena.export:to_ena_xml", profiles=("isa",)
+    )
+
+    assert scoped.applies_to("isa")
+    assert not scoped.applies_to("miappe")

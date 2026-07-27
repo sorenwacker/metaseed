@@ -13,16 +13,21 @@ from metaseed.ui.state import AppState
 
 
 def test_export_options_are_profile_specific():
-    assert [o["key"] for o in export_options_for_profile("ena")] == ["ena"]
-    assert [o["key"] for o in export_options_for_profile("pride")] == [
+    """Each profile is offered its own repository format, plus the DCAT
+    catalogue record, which describes a dataset under any profile."""
+    assert {o["key"] for o in export_options_for_profile("ena")} == {"ena", "dcat"}
+    assert {o["key"] for o in export_options_for_profile("pride")} == {
         "pride",
         "pride-sdrf",
-    ]
-    assert [o["key"] for o in export_options_for_profile("metabolights")] == [
-        "metabolights"
-    ]
-    # A profile with no exporter offers nothing rather than a broken button.
-    assert export_options_for_profile("darwin-core") == []
+        "dcat",
+    }
+    assert {o["key"] for o in export_options_for_profile("metabolights")} == {
+        "metabolights",
+        "dcat",
+    }
+    # A profile with no repository adapter is offered no repository format —
+    # only the universal record, never another profile's exporter.
+    assert {o["key"] for o in export_options_for_profile("darwin-core")} == {"dcat"}
 
 
 def test_adapter_export_returns_zip_of_files():

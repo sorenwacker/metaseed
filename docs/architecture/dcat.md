@@ -106,6 +106,35 @@ pip install 'metaseed[dcat]'
 
 so the model and resolver remain usable without it.
 
+## Downloading the record
+
+The card is a registered export action, so every host that reads the adapter
+registry offers it:
+
+```python
+from metaseed.dcat.export import to_dcat
+
+files = to_dcat(client)   # {"dcat.jsonld": ..., "dcat.ttl": ...}
+```
+
+It is declared with `profiles=("*",)` — offered for **every** profile, not just
+one. That wildcard exists for this case: a catalogue record describes a dataset
+whatever standard its content follows, and the `dcat` adapter key names a
+vocabulary rather than a profile, so the registry's usual "an adapter's key names
+the profile it serves" convention would have offered it to nothing. It also
+reaches profiles authored in the Spec Builder, whose names cannot be enumerated
+here.
+
+`to_dcat` emits the **dataset**, not a `dcat:Catalog` wrapping it: a catalogue
+serializes to a JSON-LD `@graph`, which is the wrong shape for a consumer asking
+about one dataset and cannot be embedded in a page as-is. An empty dataset
+returns an empty mapping, which hosts already report as nothing to export, rather
+than a valid-looking record describing nothing.
+
+`metaseed.dcat.export.build_card` is the shared resolution step, used by both the
+export and metaseed's own `/dcat` page, so the page and the downloaded file
+cannot describe the same dataset differently.
+
 ## Viewing and editing the card
 
 The UI's **DCAT** panel shows the card (Turtle + JSON-LD) for the loaded dataset,
