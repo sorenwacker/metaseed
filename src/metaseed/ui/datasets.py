@@ -203,7 +203,7 @@ def set_current_dataset_name(state: AppState, name: str | None) -> None:
     state._current_dataset = name
 
 
-def auto_save(state: AppState) -> None:
+def auto_save(state: AppState, factory: DatasetManagerFactory | None = None) -> None:
     """Auto-save the current state.
 
     Saves to the current dataset if one is loaded, otherwise derives a name
@@ -212,8 +212,12 @@ def auto_save(state: AppState) -> None:
 
     Args:
         state: AppState to save.
+        factory: The factory to save through. A caller serving a specific
+            session passes its own, so the write lands in that session's
+            repository; resolving ambiently here would send reads and writes to
+            different places once a host serves more than one caller.
     """
-    factory = _resolve_factory()
+    factory = factory or _resolve_factory()
     manager = factory.get_manager(state)
     manager.current_dataset = get_current_dataset_name(state)
     manager.auto_save()

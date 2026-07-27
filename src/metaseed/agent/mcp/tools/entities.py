@@ -6,7 +6,6 @@ Uses EntityService for all CRUD operations to avoid code duplication.
 from __future__ import annotations
 
 import json
-from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 from pydantic import ValidationError
@@ -16,31 +15,34 @@ from metaseed.utils.json import DateAwareEncoder
 if TYPE_CHECKING:
     from mcp.server.fastmcp import FastMCP
 
+    from metaseed.agent.mcp.context import MCPContext, ResolveContext
     from metaseed.ui.services.entities import EntityService
+    from metaseed.ui.state import AppState
 
 
-def _auto_save_dataset() -> None:
-    """Auto-save the current dataset after entity operations."""
-    from metaseed.agent.mcp.server import get_mcp_state
+def _auto_save_dataset(ctx: MCPContext) -> None:
+    """Auto-save the dataset of the session this call is serving.
+
+    Takes the whole context, not just the state: the write must go through the
+    session's own factory, or a host serving two callers would read from one
+    repository and write to another.
+    """
     from metaseed.logging import get_logger
     from metaseed.ui.datasets import auto_save
 
     logger = get_logger(__name__)
 
     try:
-        state = get_mcp_state()
-        auto_save(state)
+        auto_save(ctx.state, factory=ctx.dataset_factory)
     except Exception as e:
         logger.debug(f"MCP auto-save skipped: {e}")
 
 
-def _get_current_dataset_info() -> dict[str, Any]:
+def _get_current_dataset_info(state: AppState) -> dict[str, Any]:
     """Get info about the current dataset for safety checks."""
-    from metaseed.agent.mcp.server import get_mcp_state
     from metaseed.ui.datasets import get_current_dataset_name
 
     try:
-        state = get_mcp_state()
         return {
             "dataset": get_current_dataset_name(state),
             "profile": state.profile,
@@ -50,12 +52,12 @@ def _get_current_dataset_info() -> dict[str, Any]:
         return {"dataset": None, "profile": None, "version": None}
 
 
-def _check_dataset(expected_dataset: str | None) -> str | None:
+def _check_dataset(state: AppState, expected_dataset: str | None) -> str | None:
     """Check if expected dataset matches current. Returns error message if mismatch."""
     if expected_dataset is None:
         return None
 
-    info = _get_current_dataset_info()
+    info = _get_current_dataset_info(state)
     current = info.get("dataset")
 
     if current != expected_dataset:
@@ -63,7 +65,7 @@ def _check_dataset(expected_dataset: str | None) -> str | None:
     return None
 
 
-def _get_entity_field_info(entity_type: str) -> dict[str, Any] | None:
+def _get_entity_field_info(state: AppState, entity_type: str) -> dict[str, Any] | None:
     """Get field info for an entity type from the current facade.
 
     Returns dict with valid_fields, required_fields, the identifier_field, and a
@@ -71,10 +73,7 @@ def _get_entity_field_info(entity_type: str) -> dict[str, Any] | None:
     is included so callers stop assuming a generic ``unique_id`` on entities
     (e.g. Person) that key on a different field.
     """
-    from metaseed.agent.mcp.server import get_mcp_state
-
     try:
-        state = get_mcp_state()
         facade = state.get_or_create_facade()
         helper = getattr(facade, entity_type, None)
         if not helper:
@@ -97,7 +96,7 @@ def _get_entity_field_info(entity_type: str) -> dict[str, Any] | None:
         return None
 
 
-def _creation_hints(entity_type: str) -> dict[str, Any] | None:
+def _creation_hints(state: AppState, entity_type: str) -> dict[str, Any] | None:
     """Build next-step hints for a freshly created entity.
 
     Surfaces the child types it can contain, a suggested next action, and which
@@ -110,10 +109,7 @@ def _creation_hints(entity_type: str) -> dict[str, Any] | None:
     Returns:
         Hints dict, or None if no relationships apply or the type is unknown.
     """
-    from metaseed.agent.mcp.server import get_mcp_state
-
     try:
-        state = get_mcp_state()
         facade = state.get_or_create_facade()
         helper = getattr(facade, entity_type, None)
         if not helper:
@@ -146,7 +142,7 @@ def _creation_hints(entity_type: str) -> dict[str, Any] | None:
 
 
 def _field_constraint_detail(
-    entity_type: str, field_name: str
+    state: AppState, entity_type: str, field_name: str
 ) -> dict[str, Any] | None:
     """Return a field's description and constraints for error feedback.
 
@@ -160,10 +156,7 @@ def _field_constraint_detail(
     Returns:
         Dict with optional ``description`` and ``constraints``, or None.
     """
-    from metaseed.agent.mcp.server import get_mcp_state
-
     try:
-        state = get_mcp_state()
         helper = getattr(state.get_or_create_facade(), entity_type, None)
         if not helper:
             return None
@@ -180,6 +173,7 @@ def _field_constraint_detail(
 
 
 def _auto_fill_reference_fields(
+    state: AppState,
     entity_type: str,
     entity_data: dict[str, Any],
     service: Any,
@@ -200,10 +194,7 @@ def _auto_fill_reference_fields(
     import logging
 
     logger = logging.getLogger(__name__)
-    from metaseed.agent.mcp.server import get_mcp_state
-
     try:
-        state = get_mcp_state()
         facade = state.get_or_create_facade()
         helper = getattr(facade, entity_type, None)
         if not helper:
@@ -243,6 +234,7 @@ def _auto_fill_reference_fields(
 
 
 def _find_parent_from_references(
+    state: AppState,
     entity_type: str,
     entity_data: dict[str, Any],
     service: Any,
@@ -260,10 +252,7 @@ def _find_parent_from_references(
     Returns:
         Tuple of (parent_node_id, parent_field_name) or (None, None) if not found.
     """
-    from metaseed.agent.mcp.server import get_mcp_state
-
     try:
-        state = get_mcp_state()
         facade = state.get_or_create_facade()
         helper = getattr(facade, entity_type, None)
         if not helper:
@@ -307,6 +296,7 @@ def _find_parent_from_references(
 
 
 def _format_validation_error(
+    state: AppState,
     error: ValidationError,
     entity_type: str,
 ) -> dict[str, Any]:
@@ -331,7 +321,7 @@ def _format_validation_error(
         # Attach the expected format (description, pattern, range, enum) so a
         # bad value is corrected against the spec, not just flagged.
         if loc:
-            constraint = _field_constraint_detail(entity_type, str(loc[0]))
+            constraint = _field_constraint_detail(state, entity_type, str(loc[0]))
             if constraint:
                 detail.update(constraint)
         details.append(detail)
@@ -342,7 +332,7 @@ def _format_validation_error(
     }
 
     # Add field hints
-    field_info = _get_entity_field_info(entity_type)
+    field_info = _get_entity_field_info(state, entity_type)
     if field_info:
         result["identifier_field"] = field_info["identifier_field"]
         result["valid_fields"] = field_info["valid_fields"]
@@ -370,7 +360,7 @@ def _format_validation_error(
 
 
 def _handle_validation_error(
-    error: Exception, entity_type: str
+    state: AppState, error: Exception, entity_type: str
 ) -> dict[str, Any] | None:
     """Check if exception is or wraps a ValidationError and format it.
 
@@ -382,21 +372,34 @@ def _handle_validation_error(
         Formatted error dict if ValidationError, None otherwise.
     """
     if isinstance(error, ValidationError):
-        return _format_validation_error(error, entity_type)
+        return _format_validation_error(state, error, entity_type)
     if hasattr(error, "__cause__") and isinstance(error.__cause__, ValidationError):
-        return _format_validation_error(error.__cause__, entity_type)
+        return _format_validation_error(state, error.__cause__, entity_type)
     return None
 
 
 def register_entity_tools(  # noqa: C901
-    mcp: FastMCP, get_entity_service: Callable[[], EntityService]
+    mcp: FastMCP, resolve_context: ResolveContext
 ) -> None:
     """Register entity management tools with the MCP server.
 
     Args:
         mcp: FastMCP server instance.
-        get_entity_service: Function to get EntityService instance.
+        resolve_context: Returns the context for the call being served. Called
+            inside each tool body, which is the only scope where the caller is
+            identifiable, so two callers on one process never share a session.
     """
+
+    def current_state() -> AppState:
+        """The state of the session this call is serving.
+
+        Named to avoid colliding with the ``state`` locals several tools use.
+        """
+        return resolve_context().state
+
+    def get_entity_service() -> EntityService:
+        """The entity service of the session this call is serving."""
+        return resolve_context().get_entity_service()
 
     @mcp.tool()
     def list_entities(entity_type: str | None = None) -> str:
@@ -486,7 +489,7 @@ def register_entity_tools(  # noqa: C901
         """
         # Safety check: verify we're editing the expected dataset
         if expected_dataset:
-            mismatch_error = _check_dataset(expected_dataset)
+            mismatch_error = _check_dataset(current_state(), expected_dataset)
             if mismatch_error:
                 return json.dumps({"error": mismatch_error})
 
@@ -495,12 +498,14 @@ def register_entity_tools(  # noqa: C901
             entity_data = json.loads(data)
 
             # Auto-fill missing reference fields (e.g., study_ref) when unambiguous
-            entity_data = _auto_fill_reference_fields(entity_type, entity_data, service)
+            entity_data = _auto_fill_reference_fields(
+                current_state(), entity_type, entity_data, service
+            )
 
             # Auto-detect parent from reference fields if not explicitly provided
             if not parent_id:
                 auto_detected_parent, _ = _find_parent_from_references(
-                    entity_type, entity_data, service
+                    current_state(), entity_type, entity_data, service
                 )
                 if auto_detected_parent:
                     parent_id = auto_detected_parent
@@ -509,10 +514,10 @@ def register_entity_tools(  # noqa: C901
             result = service.create_entity(entity_type, entity_data, parent_id)
 
             # Add dataset info to response
-            result["_dataset"] = _get_current_dataset_info()
+            result["_dataset"] = _get_current_dataset_info(current_state())
 
             # Suggest how to keep building the dataset relationally
-            hints = _creation_hints(entity_type)
+            hints = _creation_hints(current_state(), entity_type)
             if hints:
                 result["hints"] = hints
 
@@ -521,10 +526,7 @@ def register_entity_tools(  # noqa: C901
                 parent = service.get_entity(parent_id)
                 if parent:
                     # Find which field on parent references this entity type
-                    from metaseed.agent.mcp.server import get_mcp_state
-
-                    state = get_mcp_state()
-                    facade = state.get_or_create_facade()
+                    facade = current_state().get_or_create_facade()
                     parent_helper = getattr(facade, parent["entity_type"], None)
                     if parent_helper:
                         for field_name, ref_type in parent_helper.nested_fields.items():
@@ -533,13 +535,13 @@ def register_entity_tools(  # noqa: C901
                                 break
 
             # Auto-save to persist changes
-            _auto_save_dataset()
+            _auto_save_dataset(resolve_context())
 
             return json.dumps(result, indent=2)
         except json.JSONDecodeError as e:
             return json.dumps({"error": f"Invalid JSON: {e}"})
         except Exception as e:
-            validation_error = _handle_validation_error(e, entity_type)
+            validation_error = _handle_validation_error(current_state(), e, entity_type)
             if validation_error:
                 return json.dumps(validation_error, indent=2)
             return json.dumps({"error": str(e)})
@@ -566,7 +568,7 @@ def register_entity_tools(  # noqa: C901
         """
         # Safety check
         if expected_dataset:
-            mismatch_error = _check_dataset(expected_dataset)
+            mismatch_error = _check_dataset(current_state(), expected_dataset)
             if mismatch_error:
                 return json.dumps({"error": mismatch_error})
 
@@ -574,10 +576,10 @@ def register_entity_tools(  # noqa: C901
             service = get_entity_service()
             updates = json.loads(data)
             result = service.update_entity(node_id, updates)
-            result["_dataset"] = _get_current_dataset_info()
+            result["_dataset"] = _get_current_dataset_info(current_state())
 
             # Auto-save to persist changes
-            _auto_save_dataset()
+            _auto_save_dataset(resolve_context())
 
             return json.dumps(result, indent=2)
         except json.JSONDecodeError as e:
@@ -601,17 +603,17 @@ def register_entity_tools(  # noqa: C901
         """
         # Safety check
         if expected_dataset:
-            mismatch_error = _check_dataset(expected_dataset)
+            mismatch_error = _check_dataset(current_state(), expected_dataset)
             if mismatch_error:
                 return json.dumps({"error": mismatch_error})
 
         try:
             service = get_entity_service()
             result = service.delete_entity(node_id)
-            result["_dataset"] = _get_current_dataset_info()
+            result["_dataset"] = _get_current_dataset_info(current_state())
 
             # Auto-save to persist changes
-            _auto_save_dataset()
+            _auto_save_dataset(resolve_context())
 
             return json.dumps(result, indent=2)
         except Exception as e:
@@ -635,7 +637,7 @@ def register_entity_tools(  # noqa: C901
         """
         # Safety check
         if expected_dataset:
-            mismatch_error = _check_dataset(expected_dataset)
+            mismatch_error = _check_dataset(current_state(), expected_dataset)
             if mismatch_error:
                 return json.dumps({"error": mismatch_error})
 
@@ -670,7 +672,7 @@ def register_entity_tools(  # noqa: C901
                     )
 
             # Auto-save to persist changes
-            _auto_save_dataset()
+            _auto_save_dataset(resolve_context())
 
             return json.dumps(
                 {
@@ -678,7 +680,7 @@ def register_entity_tools(  # noqa: C901
                     "updated": sum(1 for r in results if r["status"] == "updated"),
                     "errors": sum(1 for r in results if r["status"] == "error"),
                     "results": results,
-                    "_dataset": _get_current_dataset_info(),
+                    "_dataset": _get_current_dataset_info(current_state()),
                 },
                 indent=2,
             )
@@ -712,7 +714,7 @@ def register_entity_tools(  # noqa: C901
         """
         # Safety check: verify we're editing the expected dataset
         if expected_dataset:
-            mismatch_error = _check_dataset(expected_dataset)
+            mismatch_error = _check_dataset(current_state(), expected_dataset)
             if mismatch_error:
                 return json.dumps({"error": mismatch_error})
 
@@ -743,7 +745,9 @@ def register_entity_tools(  # noqa: C901
                     # Match create_entity: fill a missing reference field when
                     # exactly one candidate parent exists, so batched entities
                     # are linked consistently with singly-created ones.
-                    data = _auto_fill_reference_fields(entity_type, data, service)
+                    data = _auto_fill_reference_fields(
+                        current_state(), entity_type, data, service
+                    )
                     result = service.create_entity(entity_type, data, parent_id)
                     created = {
                         "index": idx,
@@ -752,12 +756,14 @@ def register_entity_tools(  # noqa: C901
                         "entity_type": entity_type,
                         "label": result.get("label"),
                     }
-                    hints = _creation_hints(entity_type)
+                    hints = _creation_hints(current_state(), entity_type)
                     if hints:
                         created["hints"] = hints
                     results.append(created)
                 except Exception as e:
-                    validation_error = _handle_validation_error(e, entity_type)
+                    validation_error = _handle_validation_error(
+                        current_state(), e, entity_type
+                    )
                     if validation_error:
                         results.append(
                             {
@@ -779,7 +785,7 @@ def register_entity_tools(  # noqa: C901
                         )
 
             # Auto-save to persist changes
-            _auto_save_dataset()
+            _auto_save_dataset(resolve_context())
 
             return json.dumps(
                 {
@@ -787,7 +793,7 @@ def register_entity_tools(  # noqa: C901
                     "created": sum(1 for r in results if r["status"] == "created"),
                     "failed": sum(1 for r in results if r["status"] == "error"),
                     "results": results,
-                    "_dataset": _get_current_dataset_info(),
+                    "_dataset": _get_current_dataset_info(current_state()),
                 },
                 indent=2,
             )
