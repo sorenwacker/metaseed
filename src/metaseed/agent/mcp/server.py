@@ -27,7 +27,7 @@ from typing import TYPE_CHECKING
 from mcp.server.fastmcp import FastMCP
 
 from metaseed.agent.mcp import context as context_module
-from metaseed.agent.mcp.context import MCPContext
+from metaseed.agent.mcp.context import MCPContext, ResolveContext
 from metaseed.agent.parsers.registry import create_default_registry
 from metaseed.specs.loader import SpecLoader, SpecLoadError
 
@@ -118,21 +118,24 @@ profile supports; pick one of those rather than guessing again.
 
 def create_server(
     name: str = "metaseed",
-    context: MCPContext | None = None,
+    resolve_context: ResolveContext | None = None,
 ) -> FastMCP:
     """Create and configure the MCP server.
 
     Args:
         name: Server name.
-        context: Optional MCPContext for dependency injection.
-            If provided, tools will use context dependencies.
-            If None, tools will use module-level state (backward compatible).
+        resolve_context: How each tool obtains the session it is serving,
+            called inside the tool body. A host serving more than one caller
+            passes its own, so nothing is shared between them; see
+            :func:`metaseed.agent.mcp.caller.current_request` for identifying
+            the caller. Omitted, tools serve the single session this process
+            has — correct for ``metaseed mcp`` and the web UI, and wrong for
+            anything serving two people.
 
     Returns:
         Configured FastMCP server instance.
     """
-    if context is not None:
-        set_context(context)
+    resolve = resolve_context or context_module.resolve_default_context
 
     mcp = FastMCP(name=name, instructions=SERVER_INSTRUCTIONS)
     _parser_registry = create_default_registry()
@@ -206,13 +209,13 @@ def create_server(
     from metaseed.agent.mcp.tools.spec_builder import register_spec_builder_tools
     from metaseed.agent.mcp.tools.validation import register_validation_tools
 
-    register_profile_tools(mcp, context_module.resolve_default_context)
-    register_dataset_tools(mcp, context_module.resolve_default_context)
-    register_entity_tools(mcp, context_module.resolve_default_context)
+    register_profile_tools(mcp, resolve)
+    register_dataset_tools(mcp, resolve)
+    register_entity_tools(mcp, resolve)
     register_extraction_tools(mcp, _parser_registry)
-    register_validation_tools(mcp, context_module.resolve_default_context)
-    register_ontology_tools(mcp, context_module.resolve_default_context)
-    register_spec_builder_tools(mcp, context_module.resolve_default_context)
+    register_validation_tools(mcp, resolve)
+    register_ontology_tools(mcp, resolve)
+    register_spec_builder_tools(mcp, resolve)
 
     # =========================================================================
     # Prompts - Guided workflows
