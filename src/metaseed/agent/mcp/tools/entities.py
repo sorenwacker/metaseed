@@ -390,8 +390,11 @@ def register_entity_tools(  # noqa: C901
             identifiable, so two callers on one process never share a session.
     """
 
-    def state() -> AppState:
-        """The state of the session this call is serving."""
+    def current_state() -> AppState:
+        """The state of the session this call is serving.
+
+        Named to avoid colliding with the ``state`` locals several tools use.
+        """
         return resolve_context().state
 
     def get_entity_service() -> EntityService:
@@ -486,7 +489,7 @@ def register_entity_tools(  # noqa: C901
         """
         # Safety check: verify we're editing the expected dataset
         if expected_dataset:
-            mismatch_error = _check_dataset(state(), expected_dataset)
+            mismatch_error = _check_dataset(current_state(), expected_dataset)
             if mismatch_error:
                 return json.dumps({"error": mismatch_error})
 
@@ -496,13 +499,13 @@ def register_entity_tools(  # noqa: C901
 
             # Auto-fill missing reference fields (e.g., study_ref) when unambiguous
             entity_data = _auto_fill_reference_fields(
-                state(), entity_type, entity_data, service
+                current_state(), entity_type, entity_data, service
             )
 
             # Auto-detect parent from reference fields if not explicitly provided
             if not parent_id:
                 auto_detected_parent, _ = _find_parent_from_references(
-                    state(), entity_type, entity_data, service
+                    current_state(), entity_type, entity_data, service
                 )
                 if auto_detected_parent:
                     parent_id = auto_detected_parent
@@ -511,10 +514,10 @@ def register_entity_tools(  # noqa: C901
             result = service.create_entity(entity_type, entity_data, parent_id)
 
             # Add dataset info to response
-            result["_dataset"] = _get_current_dataset_info(state())
+            result["_dataset"] = _get_current_dataset_info(current_state())
 
             # Suggest how to keep building the dataset relationally
-            hints = _creation_hints(state(), entity_type)
+            hints = _creation_hints(current_state(), entity_type)
             if hints:
                 result["hints"] = hints
 
@@ -523,7 +526,7 @@ def register_entity_tools(  # noqa: C901
                 parent = service.get_entity(parent_id)
                 if parent:
                     # Find which field on parent references this entity type
-                    facade = state().get_or_create_facade()
+                    facade = current_state().get_or_create_facade()
                     parent_helper = getattr(facade, parent["entity_type"], None)
                     if parent_helper:
                         for field_name, ref_type in parent_helper.nested_fields.items():
@@ -538,7 +541,7 @@ def register_entity_tools(  # noqa: C901
         except json.JSONDecodeError as e:
             return json.dumps({"error": f"Invalid JSON: {e}"})
         except Exception as e:
-            validation_error = _handle_validation_error(state(), e, entity_type)
+            validation_error = _handle_validation_error(current_state(), e, entity_type)
             if validation_error:
                 return json.dumps(validation_error, indent=2)
             return json.dumps({"error": str(e)})
@@ -565,7 +568,7 @@ def register_entity_tools(  # noqa: C901
         """
         # Safety check
         if expected_dataset:
-            mismatch_error = _check_dataset(state(), expected_dataset)
+            mismatch_error = _check_dataset(current_state(), expected_dataset)
             if mismatch_error:
                 return json.dumps({"error": mismatch_error})
 
@@ -573,7 +576,7 @@ def register_entity_tools(  # noqa: C901
             service = get_entity_service()
             updates = json.loads(data)
             result = service.update_entity(node_id, updates)
-            result["_dataset"] = _get_current_dataset_info(state())
+            result["_dataset"] = _get_current_dataset_info(current_state())
 
             # Auto-save to persist changes
             _auto_save_dataset(resolve_context())
@@ -600,14 +603,14 @@ def register_entity_tools(  # noqa: C901
         """
         # Safety check
         if expected_dataset:
-            mismatch_error = _check_dataset(state(), expected_dataset)
+            mismatch_error = _check_dataset(current_state(), expected_dataset)
             if mismatch_error:
                 return json.dumps({"error": mismatch_error})
 
         try:
             service = get_entity_service()
             result = service.delete_entity(node_id)
-            result["_dataset"] = _get_current_dataset_info(state())
+            result["_dataset"] = _get_current_dataset_info(current_state())
 
             # Auto-save to persist changes
             _auto_save_dataset(resolve_context())
@@ -634,7 +637,7 @@ def register_entity_tools(  # noqa: C901
         """
         # Safety check
         if expected_dataset:
-            mismatch_error = _check_dataset(state(), expected_dataset)
+            mismatch_error = _check_dataset(current_state(), expected_dataset)
             if mismatch_error:
                 return json.dumps({"error": mismatch_error})
 
@@ -677,7 +680,7 @@ def register_entity_tools(  # noqa: C901
                     "updated": sum(1 for r in results if r["status"] == "updated"),
                     "errors": sum(1 for r in results if r["status"] == "error"),
                     "results": results,
-                    "_dataset": _get_current_dataset_info(state()),
+                    "_dataset": _get_current_dataset_info(current_state()),
                 },
                 indent=2,
             )
@@ -711,7 +714,7 @@ def register_entity_tools(  # noqa: C901
         """
         # Safety check: verify we're editing the expected dataset
         if expected_dataset:
-            mismatch_error = _check_dataset(state(), expected_dataset)
+            mismatch_error = _check_dataset(current_state(), expected_dataset)
             if mismatch_error:
                 return json.dumps({"error": mismatch_error})
 
@@ -743,7 +746,7 @@ def register_entity_tools(  # noqa: C901
                     # exactly one candidate parent exists, so batched entities
                     # are linked consistently with singly-created ones.
                     data = _auto_fill_reference_fields(
-                        state(), entity_type, data, service
+                        current_state(), entity_type, data, service
                     )
                     result = service.create_entity(entity_type, data, parent_id)
                     created = {
@@ -753,12 +756,14 @@ def register_entity_tools(  # noqa: C901
                         "entity_type": entity_type,
                         "label": result.get("label"),
                     }
-                    hints = _creation_hints(state(), entity_type)
+                    hints = _creation_hints(current_state(), entity_type)
                     if hints:
                         created["hints"] = hints
                     results.append(created)
                 except Exception as e:
-                    validation_error = _handle_validation_error(state(), e, entity_type)
+                    validation_error = _handle_validation_error(
+                        current_state(), e, entity_type
+                    )
                     if validation_error:
                         results.append(
                             {
@@ -788,7 +793,7 @@ def register_entity_tools(  # noqa: C901
                     "created": sum(1 for r in results if r["status"] == "created"),
                     "failed": sum(1 for r in results if r["status"] == "error"),
                     "results": results,
-                    "_dataset": _get_current_dataset_info(state()),
+                    "_dataset": _get_current_dataset_info(current_state()),
                 },
                 indent=2,
             )

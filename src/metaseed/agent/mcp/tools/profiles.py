@@ -11,6 +11,9 @@ from metaseed.specs.schema import EntityDefSpec, FieldSpec
 if TYPE_CHECKING:
     from mcp.server.fastmcp import FastMCP
 
+    from metaseed.agent.mcp.context import ResolveContext
+    from metaseed.ui.state import AppState
+
 
 def _load_entity_def(
     entity_type: str, profile: str, version: str
@@ -127,12 +130,26 @@ def _identifier_info(entity_def: Any) -> tuple[str | None, str | None]:
     return identifier, note
 
 
-def register_profile_tools(mcp: FastMCP) -> None:  # noqa: C901
+def register_profile_tools(  # noqa: C901
+    mcp: FastMCP, resolve_context: ResolveContext
+) -> None:
     """Register profile tools with the MCP server.
+
+    Most of these read only the spec files, but ``get_field_spec`` reports
+    against the active dataset's profile, so this registrar is not stateless
+    despite looking it.
 
     Args:
         mcp: FastMCP server instance.
+        resolve_context: Returns the context for the call being served.
     """
+
+    def current_state() -> AppState:
+        """The state of the session this call is serving.
+
+        Named to avoid colliding with the ``state`` locals several tools use.
+        """
+        return resolve_context().state
 
     @mcp.tool()
     def list_profiles() -> str:
@@ -343,12 +360,10 @@ def register_profile_tools(mcp: FastMCP) -> None:  # noqa: C901
         Returns:
             JSON with field specifications.
         """
-        from metaseed.agent.mcp.server import get_mcp_state
-
-        state = get_mcp_state()
+        session = current_state()
 
         try:
-            facade = state.get_or_create_facade()
+            facade = session.get_or_create_facade()
 
             helper = getattr(facade, entity_type, None)
             if not helper:

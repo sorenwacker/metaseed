@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 from metaseed.agent.core import ExtractionContext
@@ -13,19 +12,27 @@ from metaseed.utils.json import DateAwareEncoder
 if TYPE_CHECKING:
     from mcp.server.fastmcp import FastMCP
 
+    from metaseed.agent.mcp.context import ResolveContext
     from metaseed.facade import ProfileFacade
     from metaseed.ui.state import AppState, TreeNode
 
 
 def register_validation_tools(  # noqa: C901
-    mcp: FastMCP, get_mcp_state: Callable[[], AppState]
+    mcp: FastMCP, resolve_context: ResolveContext
 ) -> None:
     """Register validation tools with the MCP server.
 
     Args:
         mcp: FastMCP server instance.
-        get_mcp_state: Function to get MCP state.
+        resolve_context: Returns the context for the call being served.
     """
+
+    def current_state() -> AppState:
+        """The state of the session this call is serving.
+
+        Named to avoid colliding with the ``state`` locals several tools use.
+        """
+        return resolve_context().state
 
     @mcp.tool()
     def validate_extracted(data: str, profile: str, version: str, entity: str) -> str:
@@ -91,7 +98,7 @@ def register_validation_tools(  # noqa: C901
         """
         from metaseed.validators import validate_entity_with_report
 
-        state = get_mcp_state()
+        state = current_state()
 
         try:
             node = state.nodes_by_id.get(node_id)
@@ -162,7 +169,7 @@ def register_validation_tools(  # noqa: C901
         Returns:
             JSON with validation summary and detailed results.
         """
-        state = get_mcp_state()
+        state = current_state()
 
         try:
             facade = state.get_or_create_facade()
@@ -203,7 +210,7 @@ def register_validation_tools(  # noqa: C901
         Returns:
             JSON with total_warnings and a warnings list of {entity, type, issue}.
         """
-        state = get_mcp_state()
+        state = current_state()
 
         try:
             facade = state.get_or_create_facade()
