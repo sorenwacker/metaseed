@@ -208,7 +208,7 @@ def create_server(
 
     register_profile_tools(mcp)
     register_dataset_tools(mcp, get_mcp_state)
-    register_entity_tools(mcp, get_entity_service)
+    register_entity_tools(mcp, context_module.resolve_default_context)
     register_extraction_tools(mcp, _parser_registry)
     register_validation_tools(mcp, get_mcp_state)
     register_ontology_tools(mcp)
