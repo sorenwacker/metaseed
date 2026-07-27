@@ -78,10 +78,11 @@ entity types as nested lists.
 ## Export
 
 ```python
-from metaseed.pride import to_pride_sdrf, to_pride_submission
+from metaseed.pride import to_pride_bundle, to_pride_sdrf, to_pride_submission
 
 docs = to_pride_submission(client)   # {"submission.px": ...}
 sdrf = to_pride_sdrf(client)         # {"sdrf.tsv": ...}
+both = to_pride_bundle(client)       # {"submission.px": ..., "sdrf.tsv": ...}
 ```
 
 `to_pride_submission` renders a `pride` dataset as the PRIDE px-submission
@@ -96,8 +97,28 @@ type`, and `comment[...]` columns (data file, instrument). Files link to samples
 via `DataFile.sample_refs`; missing values render as `not available`. Returns
 `{}` when the dataset has no samples.
 
-Both are pure and dependency-free. With `import_accession` this makes metaseed a
-round-trip PRIDE bridge.
+`to_pride_bundle` returns both documents in one mapping. A ProteomeXchange
+submission needs the `submission.px` and its SDRF table together, so this is the
+form the adapter registry declares (action key `pride`) and the form hosts offer
+as a single download: one archive holding both files. The SDRF is omitted when
+the dataset has no samples, rather than shipping a header-only table.
+
+All three are pure and dependency-free. With `import_accession` this makes
+metaseed a round-trip PRIDE bridge.
+
+## Registry actions
+
+The adapter registry (`metaseed.adapters`) declares what a host application
+offers for a `pride` dataset:
+
+| Action key | Kind | Surface | Target |
+| --- | --- | --- | --- |
+| `pride` | export | `export-menu` | `to_pride_bundle` — `submission.px` + `sdrf.tsv` |
+| `pride-import` | import | `import-menu` | `import_accession` — fetch a PXD accession |
+
+The export is one action rather than two because the two documents are parts of
+one submission, not alternatives; splitting them into separate controls made a
+host render two buttons for one deliverable.
 
 ## CV-term compliance
 

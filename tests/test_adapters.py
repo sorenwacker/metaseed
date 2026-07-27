@@ -55,13 +55,72 @@ class TestActions:
         assert fn is to_ena_xml
 
     def test_actions_for_profile_filters_by_kind_and_surface(self):
+        # PRIDE offers one export: the px file and its SDRF are two parts of one
+        # submission, so they ship together rather than as rival controls.
         exports = adapters.actions_for_profile("pride", kind="export")
-        assert {a.key for a in exports} == {"pride", "pride-sdrf"}
+        assert {a.key for a in exports} == {"pride"}
         assert all(a.kind == "export" for a in exports)
 
         imports = adapters.actions_for_profile("metabolights", kind="import")
         assert [a.key for a in imports] == ["metabolights-import"]
         assert imports[0].surface == "import-menu"
+
+    def test_pride_export_resolves_to_the_bundle(self):
+        action = adapters.find_action("pride")
+        assert action is not None
+        from metaseed.pride.export import to_pride_bundle
+
+        assert action.resolve() is to_pride_bundle
+
+    def test_pride_offers_an_accession_importer(self):
+        # A host's import-from-source flow finds an importer by surface, so a
+        # PRIDE dataset without one cannot be filled from an accession.
+        imports = adapters.actions_for_profile("pride", kind="import")
+        assert [a.key for a in imports] == ["pride-import"]
+        assert imports[0].surface == "import-menu"
+        from metaseed.pride import import_accession
+
+        assert imports[0].resolve() is import_accession
+
+    @pytest.mark.parametrize(
+        ("profile", "key", "ref"),
+        [
+            ("ena", "ena-import", "metaseed.ena:import_accession"),
+            ("pride", "pride-import", "metaseed.pride:import_accession"),
+            (
+                "metabolights",
+                "metabolights-import",
+                "metaseed.metabolights:import_accession",
+            ),
+            # BrAPI imports a breeding server into the miappe profile, so its
+            # action names that profile rather than the adapter's own key.
+            ("miappe", "brapi-import", "metaseed.brapi:import_brapi"),
+        ],
+    )
+    def test_every_importer_is_offered_on_the_import_surface(self, profile, key, ref):
+        """Each adapter that can import declares it, so hosts need no per-repo
+        knowledge to offer the whole set."""
+        imports = adapters.actions_for_profile(
+            profile, kind="import", surface="import-menu"
+        )
+        action = next((a for a in imports if a.key == key), None)
+        assert action is not None, f"{profile} offers no {key} action"
+        assert action.ref == ref
+        assert callable(action.resolve())
+
+    def test_import_actions_describe_the_value_they_take(self):
+        """Hosts render one text input per importer; the label must say what to
+        type, since an accession and a server URL are not interchangeable."""
+        for action in (
+            adapters.find_action("pride-import"),
+            adapters.find_action("brapi-import"),
+        ):
+            assert action is not None
+            assert action.input_label
+            assert action.input_placeholder
+
+        assert "URL" in adapters.find_action("brapi-import").input_label
+        assert "accession" in adapters.find_action("pride-import").input_label.lower()
 
     def test_actions_for_profile_empty_when_extra_missing(self, monkeypatch):
         monkeypatch.setattr(importlib.util, "find_spec", lambda _m: None)

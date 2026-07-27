@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 from metaseed import MetaseedClient
-from metaseed.pride import to_pride_sdrf, to_pride_submission
+from metaseed.pride import to_pride_bundle, to_pride_sdrf, to_pride_submission
 from metaseed.pride.mapper import build_dataset
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -207,6 +207,44 @@ def test_sdrf_from_archive_fixture_uses_synthesized_sample():
     assert len(rows) - 1 >= 1  # at least one sample row
     organism = rows[0].index("characteristics[organism]")
     assert rows[1][organism] == "Erwinia carotovora"
+
+
+# --- the bundle (one submission, both documents) -----------------------------
+
+
+def test_bundle_carries_both_documents():
+    # A ProteomeXchange submission is the px file *and* its SDRF table, so the
+    # bundle is what a host offers as a single download.
+    bundle = to_pride_bundle(_sdrf_client())
+
+    assert set(bundle) == {"submission.px", "sdrf.tsv"}
+    assert bundle["submission.px"].startswith("# PRIDE submission.px")
+    assert bundle["sdrf.tsv"].startswith("source name\t")
+
+
+def test_bundle_documents_match_the_individual_exporters():
+    client = _sdrf_client()
+    assert to_pride_bundle(client) == {
+        **to_pride_submission(client),
+        **to_pride_sdrf(client),
+    }
+
+
+def test_bundle_omits_the_sdrf_when_there_are_no_samples():
+    # An imported-only dataset has no per-sample rows; ship the px file alone
+    # rather than a header-only table.
+    client = MetaseedClient("pride", "1.0")
+    client.create_entity(
+        "Dataset",
+        {"accession": "PXD000003", "title": "No samples"},
+        skip_validation=True,
+    )
+
+    assert set(to_pride_bundle(client)) == {"submission.px"}
+
+
+def test_bundle_empty_without_dataset():
+    assert to_pride_bundle(build_dataset({}, [])) == {}
 
 
 # --- child-node construction (the MCP / tree flow) --------------------------

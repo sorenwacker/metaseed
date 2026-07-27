@@ -14,10 +14,7 @@ from metaseed.ui.state import AppState
 
 def test_export_options_are_profile_specific():
     assert [o["key"] for o in export_options_for_profile("ena")] == ["ena"]
-    assert [o["key"] for o in export_options_for_profile("pride")] == [
-        "pride",
-        "pride-sdrf",
-    ]
+    assert [o["key"] for o in export_options_for_profile("pride")] == ["pride"]
     assert [o["key"] for o in export_options_for_profile("metabolights")] == [
         "metabolights"
     ]
@@ -95,7 +92,8 @@ def test_dataset_page_offers_the_profiles_adapter_exports() -> None:
 
     assert response.status_code == 200
     assert 'data-testid="btn-export-pride"' in response.text
-    assert 'data-testid="btn-export-pride-sdrf"' in response.text
+    # One control for the submission, not one per document in it.
+    assert 'data-testid="btn-export-pride-sdrf"' not in response.text
 
 
 def test_dataset_page_offers_no_exports_for_a_profile_without_any() -> None:
