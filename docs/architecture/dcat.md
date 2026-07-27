@@ -135,6 +135,44 @@ than a valid-looking record describing nothing.
 export and metaseed's own `/dcat` page, so the page and the downloaded file
 cannot describe the same dataset differently.
 
+## Publishing the record elsewhere
+
+metaseed resolves what a dataset *is*. Where it can be fetched, what identifies
+it, and what may be done with it belong to whatever platform publishes it — a
+repository deposit, a portal, a lab's own site. `metaseed.dcat.publication` is
+how that platform supplies them:
+
+```python
+from metaseed.dcat import PublicationContext, build_published_dataset, origin_url
+
+published = build_published_dataset(
+    card,
+    PublicationContext(
+        landing_page="https://data.example.org/d/abc123",
+        identifier="https://doi.org/10.5281/zenodo.1234567",   # optional
+        license="CC-BY-4.0",
+        source=[origin_url("pride", "PXD000001") or ""],
+    ),
+)
+```
+
+`landing_page` is the only required field: without somewhere to fetch the
+dataset nothing else is assessable, and it stands in as the identifier until a
+DOI exists. The publisher's identifier replaces any derived from content, the
+publisher's licence and distributions win, and `source` and `conforms_to` are
+merged rather than replaced. The input card is never mutated, so one resolved
+card can be published to a staging URL and a real one without the first leaking
+into the second.
+
+`spdx_license_uri` upgrades a bare `"CC-BY-4.0"` to its spdx.org URI and passes
+an explicit URL through — a licence a consumer cannot resolve is not
+machine-readable. `origin_url` builds the landing page for a record in ENA,
+PRIDE, or MetaboLights, and returns `None` for a profile with no repository
+rather than guessing a URL that will not resolve.
+
+This module is pure, so a host can build a published card without the
+`metaseed[dcat]` extra and serialize it wherever it likes.
+
 ## Viewing and editing the card
 
 The UI's **DCAT** panel shows the card (Turtle + JSON-LD) for the loaded dataset,
