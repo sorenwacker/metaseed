@@ -192,6 +192,10 @@ max-complexity = 15
     "N812",    # import alias - selenium EC convention
     "PTH",     # pathlib - existing tests use os.path
 ]
+"scripts/**/*.py" = [
+    "T201",    # print is the output of a developer CLI utility
+    "S101",    # assert - the fixture recorder asserts its de-identification
+]
 "docs/**/*.ipynb" = [
     "T201",    # print is expected in notebooks
     "F401",    # unused imports - notebooks may import for display

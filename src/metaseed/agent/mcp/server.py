@@ -22,153 +22,74 @@ Prompts:
 from __future__ import annotations
 
 import json
-from contextvars import ContextVar
-from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from mcp.server.fastmcp import FastMCP
 
+from metaseed.agent.mcp import context as context_module
+from metaseed.agent.mcp.context import MCPContext, ResolveContext
 from metaseed.agent.parsers.registry import create_default_registry
 from metaseed.specs.loader import SpecLoader, SpecLoadError
 
 if TYPE_CHECKING:
-    from metaseed.agent.mcp.context import MCPContext
-    from metaseed.ui.dataset_manager import DatasetManagerFactory
     from metaseed.ui.services.entities import EntityService
     from metaseed.ui.state import AppState
 
 
-@dataclass
-class _MCPStateHolder:
-    """Singleton holder for MCP standalone state.
-
-    Avoids global variables by encapsulating state in a class instance.
-    """
-
-    state: AppState | None = None
-    factory: DatasetManagerFactory | None = field(default=None)
-
-    def get_or_create_state(self) -> AppState:
-        """Get cached state or create new one."""
-        if self.state is None:
-            from metaseed.ui.state import AppState
-
-            self.state = AppState()
-        return self.state
-
-    def get_or_create_factory(self) -> DatasetManagerFactory:
-        """Get cached factory or create new one."""
-        if self.factory is None:
-            from metaseed.ui.dataset_manager import DatasetManagerFactory
-
-            self.factory = DatasetManagerFactory()
-        return self.factory
-
-    def reset(self) -> None:
-        """Reset all cached state."""
-        self.state = None
-        self.factory = None
-
-
-# Single instance for standalone mode
-_standalone = _MCPStateHolder()
-
-# Context variable for request-scoped MCP context
-_context_var: ContextVar[MCPContext | None] = ContextVar("mcp_context", default=None)
-
-
 def set_context(context: MCPContext | None) -> None:
-    """Set the MCP context for dependency injection.
+    """Bind the session this process serves.
 
-    Args:
-        context: MCPContext instance with all dependencies, or None to clear.
+    Writes both the scope binding and the process default, so a tool resolves the
+    same session whether or not the ContextVar reaches it — the #32 fix. Passing
+    ``None`` clears only the scope binding, leaving the default in place, which
+    is what the UI's per-request isolation depends on.
     """
-    _context_var.set(context)
-    # Keep the standalone fallback pointed at the same AppState so get_mcp_state()
-    # resolves one consistent state whether or not the ContextVar is visible in
-    # the current async task. Without this, a per-request task where the
-    # ContextVar did not propagate falls back to a fresh, default-profile state
-    # and silently operates against the wrong profile (bug #32).
+    context_module.set_scope(context)
     if context is not None:
-        _standalone.state = context.state
-        _standalone.factory = context.dataset_factory
+        context_module.set_default_context(context)
 
 
 def get_context() -> MCPContext | None:
-    """Get the current MCP context if set."""
-    return _context_var.get()
+    """The context bound to the current scope, if any."""
+    return context_module.bound_context()
 
 
 def get_mcp_state() -> AppState:
-    """Get the shared MCP state.
+    """The state of the session this process serves.
 
-    Prefers context if available, otherwise uses a cached standalone state.
-    This function maintains backward compatibility for standalone MCP server mode.
-
-    The standalone state is cached to ensure all MCP tools share the same state
-    across calls (e.g., create_dataset followed by create_entity).
+    A host that serves more than one caller must not use this: it takes no
+    argument identifying the caller, so it can only ever answer for the process
+    default. Such a host passes ``resolve_context=`` to :func:`create_server`.
     """
-    ctx = _context_var.get()
-    if ctx is not None:
-        return ctx.state
-
-    return _standalone.get_or_create_state()
-
-
-def get_standalone_factory() -> DatasetManagerFactory:
-    """Get the standalone dataset factory."""
-    return _standalone.get_or_create_factory()
+    return context_module.resolve_default_context().state
 
 
 def set_mcp_state(state: AppState) -> None:
-    """Set the MCP state for tests and standalone mode.
-
-    Creates a new context with the given state, allowing tests
-    to inject state without going through the full app initialization.
-    """
-    from metaseed.agent.mcp.context import MCPContext
+    """Bind a session built around ``state`` (tests and standalone use)."""
     from metaseed.repositories.memory import MemoryEntityRepository
     from metaseed.ui.dataset_manager import DatasetManagerFactory
     from metaseed.ui.datasets import auto_save
     from metaseed.ui.services.entities import EntityService
 
-    context = MCPContext(
-        state=state,
-        get_entity_service=lambda: EntityService(
-            MemoryEntityRepository(state, on_change=auto_save)
-        ),
-        dataset_factory=DatasetManagerFactory(),
+    set_context(
+        MCPContext(
+            state=state,
+            get_entity_service=lambda: EntityService(
+                MemoryEntityRepository(state, on_change=auto_save)
+            ),
+            dataset_factory=DatasetManagerFactory(),
+        )
     )
-    set_context(context)
-    # Also update standalone state for consistency
-    _standalone.state = state
 
 
 def reset_mcp_state() -> None:
-    """Reset the MCP state (for tests).
-
-    Clears both the context and standalone state cache.
-    """
-    _standalone.reset()
-    set_context(None)
+    """Forget the bound session and the process default (for tests)."""
+    context_module.clear_context()
 
 
 def get_entity_service() -> EntityService:
-    """Get the entity service for operations.
-
-    Uses context if available, otherwise creates a fresh service.
-    """
-    ctx = _context_var.get()
-    if ctx is not None:
-        return ctx.get_entity_service()
-
-    from metaseed.repositories.memory import MemoryEntityRepository
-    from metaseed.ui.datasets import auto_save
-    from metaseed.ui.services.entities import EntityService
-
-    state = get_mcp_state()
-    repo = MemoryEntityRepository(state, on_change=auto_save)
-    return EntityService(repo)
+    """The entity service of the session this process serves."""
+    return context_module.resolve_default_context().get_entity_service()
 
 
 SERVER_INSTRUCTIONS = """\
@@ -197,21 +118,24 @@ profile supports; pick one of those rather than guessing again.
 
 def create_server(
     name: str = "metaseed",
-    context: MCPContext | None = None,
+    resolve_context: ResolveContext | None = None,
 ) -> FastMCP:
     """Create and configure the MCP server.
 
     Args:
         name: Server name.
-        context: Optional MCPContext for dependency injection.
-            If provided, tools will use context dependencies.
-            If None, tools will use module-level state (backward compatible).
+        resolve_context: How each tool obtains the session it is serving,
+            called inside the tool body. A host serving more than one caller
+            passes its own, so nothing is shared between them; see
+            :func:`metaseed.agent.mcp.caller.current_request` for identifying
+            the caller. Omitted, tools serve the single session this process
+            has — correct for ``metaseed mcp`` and the web UI, and wrong for
+            anything serving two people.
 
     Returns:
         Configured FastMCP server instance.
     """
-    if context is not None:
-        set_context(context)
+    resolve = resolve_context or context_module.resolve_default_context
 
     mcp = FastMCP(name=name, instructions=SERVER_INSTRUCTIONS)
     _parser_registry = create_default_registry()
@@ -285,13 +209,13 @@ def create_server(
     from metaseed.agent.mcp.tools.spec_builder import register_spec_builder_tools
     from metaseed.agent.mcp.tools.validation import register_validation_tools
 
-    register_profile_tools(mcp)
-    register_dataset_tools(mcp, get_mcp_state)
-    register_entity_tools(mcp, get_entity_service)
+    register_profile_tools(mcp, resolve)
+    register_dataset_tools(mcp, resolve)
+    register_entity_tools(mcp, resolve)
     register_extraction_tools(mcp, _parser_registry)
-    register_validation_tools(mcp, get_mcp_state)
-    register_ontology_tools(mcp)
-    register_spec_builder_tools(mcp, get_mcp_state)
+    register_validation_tools(mcp, resolve)
+    register_ontology_tools(mcp, resolve)
+    register_spec_builder_tools(mcp, resolve)
 
     # =========================================================================
     # Prompts - Guided workflows

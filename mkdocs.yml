@@ -67,6 +67,7 @@ nav:
       - Public API Contract: specification/api-contract.md
       - Specification Language: api/schema-specs.md
   - Guides:
+      - Connecting an MCP client: guides/mcp-setup.md
       - Spec Builder: guides/spec-builder.md
       - Ontology Lookup: guides/ontology-lookup.md
       - Profile Comparison: guides/spec-merge.md

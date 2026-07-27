@@ -3,49 +3,48 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Callable
 from dataclasses import asdict
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from mcp.server.fastmcp import FastMCP
 
+    from metaseed.agent.mcp.context import MCPContext, ResolveContext
     from metaseed.ui.dataset_manager import DatasetManager
     from metaseed.ui.state import AppState
 
 
-def _get_dataset_manager() -> DatasetManager:
-    """Get the dataset manager using context.
+def _get_dataset_manager(context: MCPContext) -> DatasetManager:
+    """The dataset manager for the session a call is serving.
+
+    Takes the context rather than resolving one: a manager built from a factory
+    other than the caller's would send reads and writes to different
+    repositories.
 
     Returns:
-        DatasetManager instance from context.
+        A DatasetManager bound to that session's state.
     """
-    from metaseed.agent.mcp.server import (
-        get_context,
-        get_mcp_state,
-        get_standalone_factory,
-    )
-
-    context = get_context()
-    if context is not None:
-        return context.dataset_factory.get_manager(context.state)
-
-    # Fallback: use cached factory from standalone state holder
-    state = get_mcp_state()
-    factory = get_standalone_factory()
-    return factory.get_manager(state)
+    manager: DatasetManager = context.dataset_factory.get_manager(context.state)
+    return manager
 
 
 def register_dataset_tools(  # noqa: C901
     mcp: FastMCP,
-    get_mcp_state: Callable[[], AppState],
+    resolve_context: ResolveContext,
 ) -> None:
     """Register dataset management tools with the MCP server.
 
     Args:
         mcp: FastMCP server instance.
-        get_mcp_state: Function to get MCP state.
+        resolve_context: Returns the context for the call being served.
     """
+
+    def current_state() -> AppState:
+        """The state of the session this call is serving.
+
+        Named to avoid colliding with the ``state`` locals several tools use.
+        """
+        return resolve_context().state
 
     @mcp.tool()
     def list_datasets() -> str:
@@ -56,7 +55,7 @@ def register_dataset_tools(  # noqa: C901
             version, entity_count, modified) and a ``count``.
         """
         try:
-            manager = _get_dataset_manager()
+            manager = _get_dataset_manager(resolve_context())
             datasets = [asdict(d) for d in manager.list_datasets()]
             return json.dumps(
                 {
@@ -83,8 +82,8 @@ def register_dataset_tools(  # noqa: C901
         from metaseed.ui.datasets import set_current_dataset_name
 
         try:
-            state = get_mcp_state()
-            manager = _get_dataset_manager()
+            state = current_state()
+            manager = _get_dataset_manager(resolve_context())
             result = manager.save_dataset(name)
             # Update state's current dataset so auto_save uses correct target
             set_current_dataset_name(state, name)
@@ -113,20 +112,15 @@ def register_dataset_tools(  # noqa: C901
         Returns:
             JSON with loaded dataset info or error.
         """
-        from metaseed.agent.mcp.server import get_context
-        from metaseed.repositories.filesystem_dataset import FilesystemDatasetRepository
         from metaseed.ui.dataset_manager import DatasetManager
         from metaseed.ui.datasets import set_current_dataset_name
 
         try:
-            state = get_mcp_state()
-            context = get_context()
-
-            # Get repository from context if available, otherwise create default
-            if context is not None:
-                repo = context.dataset_factory.sync_repo
-            else:
-                repo = FilesystemDatasetRepository()
+            context = resolve_context()
+            state = context.state
+            # The caller's own repository: falling back to a default one here
+            # would load a dataset from somewhere the caller never wrote to.
+            repo = context.dataset_factory.sync_repo
 
             # Create fresh manager to avoid stale state issues
             manager = DatasetManager(repo, state)
@@ -164,7 +158,7 @@ def register_dataset_tools(  # noqa: C901
             JSON with deletion status.
         """
         try:
-            manager = _get_dataset_manager()
+            manager = _get_dataset_manager(resolve_context())
             deleted = manager.delete_dataset(name)
             return json.dumps(
                 {
@@ -194,7 +188,7 @@ def register_dataset_tools(  # noqa: C901
         from metaseed.ui.datasets import set_current_dataset_name
 
         try:
-            state = get_mcp_state()
+            state = current_state()
             state.profile = profile
             state.version = version
             state.facade = None
@@ -202,7 +196,7 @@ def register_dataset_tools(  # noqa: C901
 
             facade = state.get_or_create_facade()
 
-            manager = _get_dataset_manager()
+            manager = _get_dataset_manager(resolve_context())
             manager.save_dataset(name)
             # Update state's current dataset so auto_save uses correct target
             set_current_dataset_name(state, name)
@@ -232,7 +226,7 @@ def register_dataset_tools(  # noqa: C901
         from metaseed.ui.datasets import get_current_dataset_name
 
         try:
-            state = get_mcp_state()
+            state = current_state()
 
             # Count every entity, including nested children, so the per-type
             # breakdown is consistent with total_entities below.

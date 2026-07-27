@@ -74,10 +74,31 @@ class BrapiClient:
     def observations(self, study_db_id: str) -> list[dict[str, Any]]:
         """Return BrAPI ``observations`` objects for a study.
 
+        Not every server honours this filter: the BrAPI reference server answers
+        it with zero rows even for studies whose observations carry that
+        ``studyDbId``. :meth:`observations_for_unit` is what the importer uses
+        for that reason.
+
         Args:
             study_db_id: The ``studyDbId`` to filter observations by.
         """
         return self._get("observations", {"studyDbId": study_db_id})
+
+    def observations_for_unit(
+        self, observation_unit_db_id: str
+    ) -> list[dict[str, Any]]:
+        """Return BrAPI ``observations`` objects for one observation unit.
+
+        An observation belongs to an observation unit, and filtering by unit is
+        honoured where filtering by study is not, so this is the reliable way to
+        collect a study's measurements: one request per unit already fetched.
+
+        Args:
+            observation_unit_db_id: The ``observationUnitDbId`` to filter by.
+        """
+        return self._get(
+            "observations", {"observationUnitDbId": observation_unit_db_id}
+        )
 
     def germplasm(self) -> list[dict[str, Any]]:
         """Return BrAPI ``germplasm`` objects."""

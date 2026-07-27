@@ -18,6 +18,9 @@ import httpx
 if TYPE_CHECKING:
     from mcp.server.fastmcp import FastMCP
 
+    from metaseed.agent.mcp.context import ResolveContext
+    from metaseed.ui.state import AppState
+
 logger = logging.getLogger(__name__)
 
 OLS4_BASE_URL = "https://www.ebi.ac.uk/ols4/api"
@@ -50,12 +53,26 @@ def _make_request(
         return None
 
 
-def register_ontology_tools(mcp: FastMCP) -> None:  # noqa: C901
+def register_ontology_tools(  # noqa: C901
+    mcp: FastMCP, resolve_context: ResolveContext
+) -> None:
     """Register ontology lookup tools with the MCP server.
+
+    Lookups hit OLS4 and need no session, but ``validate_ontology_terms``
+    checks the active dataset's terms, so this registrar is not stateless
+    despite looking it.
 
     Args:
         mcp: FastMCP server instance.
+        resolve_context: Returns the context for the call being served.
     """
+
+    def current_state() -> AppState:
+        """The state of the session this call is serving.
+
+        Named to avoid colliding with the ``state`` locals several tools use.
+        """
+        return resolve_context().state
 
     @mcp.tool()
     def search_ontology(query: str, ontology: str | None = None, rows: int = 10) -> str:
@@ -294,13 +311,11 @@ def register_ontology_tools(mcp: FastMCP) -> None:  # noqa: C901
             JSON with total_checked and results of {entity, type, field, value,
             valid, suggestions:[{id, label}]}.
         """
-        from metaseed.agent.mcp.server import get_mcp_state
-
-        state = get_mcp_state()
+        session = current_state()
         try:
-            facade = state.get_or_create_facade()
+            facade = session.get_or_create_facade()
             results = []
-            for node in state.nodes_by_id.values():
+            for node in session.nodes_by_id.values():
                 helper = getattr(facade, node.entity_type, None)
                 if not helper or not node.instance:
                     continue

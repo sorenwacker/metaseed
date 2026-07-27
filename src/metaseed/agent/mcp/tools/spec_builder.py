@@ -16,10 +16,9 @@ from metaseed.specs.builder import SpecBuilder
 from metaseed.specs.schema import Constraints
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-
     from mcp.server.fastmcp import FastMCP
 
+    from metaseed.agent.mcp.context import ResolveContext
     from metaseed.ui.state import AppState
 
 
@@ -89,14 +88,21 @@ def _constraints(
 
 
 def register_spec_builder_tools(  # noqa: C901
-    mcp: FastMCP, get_mcp_state: Callable[[], AppState]
+    mcp: FastMCP, resolve_context: ResolveContext
 ) -> None:
     """Register the spec-builder tools with the MCP server.
 
     Args:
         mcp: FastMCP server instance.
-        get_mcp_state: Callable returning the active session AppState.
+        resolve_context: Returns the context for the call being served.
     """
+
+    def current_state() -> AppState:
+        """The state of the session this call is serving.
+
+        Named to avoid colliding with the ``state`` locals several tools use.
+        """
+        return resolve_context().state
 
     # ------------------------------------------------------------------
     # Draft lifecycle
@@ -117,7 +123,7 @@ def register_spec_builder_tools(  # noqa: C901
             description=description,
             ontology=ontology,
         )
-        _set_draft(get_mcp_state(), builder)
+        _set_draft(current_state(), builder)
         return json.dumps(_status(builder), indent=2)
 
     @mcp.tool()
@@ -127,7 +133,7 @@ def register_spec_builder_tools(  # noqa: C901
             builder = SpecBuilder.from_template(profile, version)
         except ValueError as exc:
             return json.dumps({"error": str(exc)})
-        _set_draft(get_mcp_state(), builder)
+        _set_draft(current_state(), builder)
         return json.dumps(_status(builder), indent=2)
 
     @mcp.tool()
@@ -137,14 +143,14 @@ def register_spec_builder_tools(  # noqa: C901
             builder = SpecBuilder.from_yaml(yaml_text)
         except ValueError as exc:
             return json.dumps({"error": str(exc)})
-        _set_draft(get_mcp_state(), builder)
+        _set_draft(current_state(), builder)
         return json.dumps(_status(builder), indent=2)
 
     @mcp.tool()
     def spec_status() -> str:
         """Summarize the current draft (name, version, root, entities, rules)."""
         try:
-            builder = _require_draft(get_mcp_state())
+            builder = _require_draft(current_state())
         except ValueError as exc:
             return json.dumps({"error": str(exc)})
         return json.dumps(_status(builder), indent=2)
@@ -153,7 +159,7 @@ def register_spec_builder_tools(  # noqa: C901
     def spec_preview_yaml() -> str:
         """Return the current draft serialized to YAML."""
         try:
-            builder = _require_draft(get_mcp_state())
+            builder = _require_draft(current_state())
         except ValueError as exc:
             return json.dumps({"error": str(exc)})
         return builder.to_yaml()
@@ -162,7 +168,7 @@ def register_spec_builder_tools(  # noqa: C901
     def spec_validate() -> str:
         """Validate the draft via a full model build; returns the issue list."""
         try:
-            builder = _require_draft(get_mcp_state())
+            builder = _require_draft(current_state())
         except ValueError as exc:
             return json.dumps({"error": str(exc)})
         issues = builder.validate()
@@ -174,7 +180,7 @@ def register_spec_builder_tools(  # noqa: C901
         from metaseed.specs.persistence import save_spec
 
         try:
-            builder = _require_draft(get_mcp_state())
+            builder = _require_draft(current_state())
             path = save_spec(builder.spec, name)
         except ValueError as exc:
             return json.dumps({"error": str(exc)})
@@ -193,7 +199,7 @@ def register_spec_builder_tools(  # noqa: C901
     ) -> str:
         """Update profile-level fields. Unset arguments are left unchanged."""
         try:
-            builder = _require_draft(get_mcp_state())
+            builder = _require_draft(current_state())
             builder.set_metadata(
                 **_clean(
                     {
@@ -213,7 +219,7 @@ def register_spec_builder_tools(  # noqa: C901
     def spec_set_root_entity(entity: str) -> str:
         """Set the root entity (must already exist)."""
         try:
-            builder = _require_draft(get_mcp_state())
+            builder = _require_draft(current_state())
             builder.set_root_entity(entity)
         except ValueError as exc:
             return json.dumps({"error": str(exc)})
@@ -228,7 +234,7 @@ def register_spec_builder_tools(  # noqa: C901
     ) -> str:
         """Add an entity to the draft."""
         try:
-            builder = _require_draft(get_mcp_state())
+            builder = _require_draft(current_state())
             builder.add_entity(
                 name, description=description, ontology_term=ontology_term
             )
@@ -244,7 +250,7 @@ def register_spec_builder_tools(  # noqa: C901
     ) -> str:
         """Update an entity's description and/or ontology term."""
         try:
-            builder = _require_draft(get_mcp_state())
+            builder = _require_draft(current_state())
             builder.update_entity(
                 name, description=description, ontology_term=ontology_term
             )
@@ -256,7 +262,7 @@ def register_spec_builder_tools(  # noqa: C901
     def spec_rename_entity(old_name: str, new_name: str) -> str:
         """Rename an entity, cascading every reference to it."""
         try:
-            builder = _require_draft(get_mcp_state())
+            builder = _require_draft(current_state())
             builder.rename_entity(old_name, new_name)
         except ValueError as exc:
             return json.dumps({"error": str(exc)})
@@ -266,7 +272,7 @@ def register_spec_builder_tools(  # noqa: C901
     def spec_delete_entity(name: str) -> str:
         """Delete an entity from the draft."""
         try:
-            builder = _require_draft(get_mcp_state())
+            builder = _require_draft(current_state())
             builder.delete_entity(name)
         except ValueError as exc:
             return json.dumps({"error": str(exc)})
@@ -297,7 +303,7 @@ def register_spec_builder_tools(  # noqa: C901
     ) -> str:
         """Add a field. Nested fields auto-create the parent id and back-reference."""
         try:
-            builder = _require_draft(get_mcp_state())
+            builder = _require_draft(current_state())
             constraints = _constraints(
                 pattern,
                 min_length,
@@ -342,7 +348,7 @@ def register_spec_builder_tools(  # noqa: C901
     ) -> str:
         """Update a field in place. Only supplied attributes change."""
         try:
-            builder = _require_draft(get_mcp_state())
+            builder = _require_draft(current_state())
             builder.update_field(
                 entity,
                 field_name,
@@ -366,7 +372,7 @@ def register_spec_builder_tools(  # noqa: C901
     def spec_delete_field(entity: str, field_name: str) -> str:
         """Delete a field by name."""
         try:
-            builder = _require_draft(get_mcp_state())
+            builder = _require_draft(current_state())
             builder.delete_field(entity, field_name)
         except ValueError as exc:
             return json.dumps({"error": str(exc)})
@@ -376,7 +382,7 @@ def register_spec_builder_tools(  # noqa: C901
     def spec_move_field(entity: str, field_name: str, direction: str) -> str:
         """Reorder a field one position 'up' or 'down'."""
         try:
-            builder = _require_draft(get_mcp_state())
+            builder = _require_draft(current_state())
             builder.move_field(entity, field_name, direction)
         except ValueError as exc:
             return json.dumps({"error": str(exc)})
@@ -396,7 +402,7 @@ def register_spec_builder_tools(  # noqa: C901
     ) -> str:
         """Add a validation rule to the draft."""
         try:
-            builder = _require_draft(get_mcp_state())
+            builder = _require_draft(current_state())
             builder.add_rule(
                 name,
                 **_clean(
@@ -423,7 +429,7 @@ def register_spec_builder_tools(  # noqa: C901
     ) -> str:
         """Update a validation rule in place. Only supplied attributes change."""
         try:
-            builder = _require_draft(get_mcp_state())
+            builder = _require_draft(current_state())
             builder.update_rule(
                 rule_name,
                 **_clean(
@@ -443,7 +449,7 @@ def register_spec_builder_tools(  # noqa: C901
     def spec_delete_rule(rule_name: str) -> str:
         """Delete a validation rule by name."""
         try:
-            builder = _require_draft(get_mcp_state())
+            builder = _require_draft(current_state())
             builder.delete_rule(rule_name)
         except ValueError as exc:
             return json.dumps({"error": str(exc)})
