@@ -90,11 +90,12 @@ m.Investigation.help()  # Tab completion and help
 
 ## Dependency Injection
 
-The codebase uses dependency injection via `ContextVar` for request-scoped state, avoiding module-level globals.
+The codebase uses dependency injection rather than module-level globals.
 
 ### MCPContext
 
-`MCPContext` holds dependencies for MCP tools:
+`MCPContext` holds what an MCP tool needs: the session's state, a factory for
+its entity service, and its dataset factory.
 
 ```python
 from metaseed.agent.mcp.context import MCPContext
@@ -104,8 +105,43 @@ context = MCPContext(
     get_entity_service=lambda: EntityService(repo),
     dataset_factory=DatasetManagerFactory(),
 )
-set_context(context)
 ```
+
+**A tool never resolves its own context.** It is handed one per call, because
+that is the only way two callers can share a process without sharing a session.
+How it is handed one depends on how many callers there are:
+
+- **One caller** — `metaseed mcp` and the web UI. `create_server()` with no
+  argument serves a single process-wide session; `set_context` binds it. This
+  is the intended use of the default, not a shortcut.
+- **Several callers** — an HTTP host serving different people. It passes a
+  resolver, called inside each tool body:
+
+  ```python
+  from metaseed.agent.mcp.caller import current_request
+  from metaseed.agent.mcp.context import ContextUnavailableError
+
+  def resolve() -> MCPContext:
+      request = current_request()
+      if request is None:
+          raise ContextUnavailableError("no MCP request in scope")
+      return context_for(authenticate(request))
+
+  server = create_server(resolve_context=resolve)
+  ```
+
+  Note the missing fallback. A host that cannot identify its caller must fail,
+  because the only thing left to fall back to is another caller's session.
+
+The resolver is called *inside* the tool body deliberately: an MCP server
+dispatches each handler from its own task group, so a context bound around the
+HTTP request is not visible by the time the tool runs. `current_request()` reads
+the SDK's own per-request channel, which is.
+
+A gate (`tests/test_agent/test_mcp_tools_have_no_ambient_state.py`) fails the
+build if a module under `agent/mcp/tools/` imports the server or picks its own
+context — at any nesting depth, since the recurring mistake is an import inside
+a function body that import-graph linters do not see.
 
 | Field | Type | Description |
 |-------|------|-------------|
