@@ -73,6 +73,16 @@ class TestMetaseedClientInit:
         assert client.version == "1.0"
         assert "Sample" in client.list_entity_types()
 
+    def test_from_facade_wraps_existing_facade(self) -> None:
+        """from_facade reuses a facade so serialization matches the source."""
+        client = MetaseedClient("miappe", "1.2")
+        client.create_entity("Investigation", {"unique_id": "INV-1", "title": "T"})
+
+        wrapped = MetaseedClient.from_facade(client._facade)
+
+        assert wrapped.profile == client.profile
+        assert wrapped.serialize(format="tree") == client.serialize(format="tree")
+
     def test_repr(self) -> None:
         """Client has informative repr."""
         client = MetaseedClient("miappe", "1.2")
