@@ -1,15 +1,21 @@
 """Two MCP sessions in one process must not see each other's dataset.
 
-metaseed's MCP server resolves a session's state through a ContextVar with a
-module-level singleton fallback (`_MCPStateHolder`). The singleton is what makes
-state survive a task boundary the ContextVar does not cross (#32), and it is
-correct for the stdio server: one process, one user, one session.
+metaseed's MCP server resolves a session's state through `get_mcp_state()`, which
+reads a ContextVar and falls back to a module-level singleton (`_MCPStateHolder`).
+Both are process-wide and last-writer-wins, and — the point — **the accessor takes
+no argument identifying the caller**. Whichever session was bound most recently
+answers for everyone. No implementation of a zero-argument accessor can do better;
+the fix is a resolver the host passes in, so a tool resolves its caller's context
+per invocation (issue #168).
 
-It stops being correct the moment a host serves more than one caller from one
-process, which is what metaseed-hub's planned HTTP MCP endpoint does — and the
-hub already runs two uvicorn workers. The test below states the property such a
-host needs. It is expected to fail today: it is the target for making the
-context injectable per call (issue #168), not a claim about current behaviour.
+That is correct as it stands for the stdio server: one process, one user, one
+session, where a process-wide default is honest. It stops being correct the moment
+a host serves two callers from one process, which is what metaseed-hub's planned
+HTTP MCP endpoint does — and the hub already runs two uvicorn workers.
+
+The test below states the property such a host needs. It is expected to fail
+today: it is the target, not a claim about current behaviour, and it will be
+rewritten against the resolver seam when that lands.
 """
 
 from __future__ import annotations
@@ -41,10 +47,10 @@ def _session(profile: str, version: str) -> tuple[AppState, MCPContext]:
 
 @pytest.mark.xfail(
     reason=(
-        "The standalone singleton is shared, so the most recent session wins "
-        "wherever the ContextVar is not visible. Making the context resolve per "
-        "call is the fix (#168); until then a host must not serve two callers "
-        "from one process."
+        "get_mcp_state() takes no argument identifying the caller, so the "
+        "most recently bound session answers for every caller in the process. "
+        "Passing the host a resolver is the fix (#168); until then a host must "
+        "not serve two callers from one process."
     ),
     strict=True,
 )
@@ -61,9 +67,9 @@ def test_a_second_session_does_not_take_over_the_first() -> None:
         # runs. Two callers on one process interleave exactly like this.
         set_context(bob_context)
 
-        # Alice's tool now resolves state in a task the ContextVar does not
-        # reach — the situation #32 documents — so it falls back to the shared
-        # singleton, which Bob's request has just overwritten.
+        # Alice's tool now resolves its state. Note the ContextVar *is* visible
+        # here — asyncio.to_thread copies the context — so this is not the #32
+        # fallback path: both channels simply hold whatever was bound last.
         async def resolve_in_a_fresh_task() -> str:
             return await asyncio.to_thread(lambda: get_mcp_state().profile)
 
