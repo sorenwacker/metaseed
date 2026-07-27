@@ -10,7 +10,7 @@ against the wrong profile.
 
 from __future__ import annotations
 
-from metaseed.agent.mcp import server
+from metaseed.agent.mcp import context
 from metaseed.agent.mcp.context import MCPContext
 from metaseed.agent.mcp.server import get_mcp_state, reset_mcp_state, set_context
 from metaseed.repositories.memory import MemoryEntityRepository
@@ -36,10 +36,9 @@ def test_state_consistent_when_contextvar_not_visible() -> None:
         state = AppState(profile="darwin-core", version="1.0")
         set_context(_context_for(state))
 
-        # Simulate a per-request async task where the ContextVar did not
-        # propagate: _context_var.get() returns None, so resolution falls
-        # through to the standalone source.
-        server._context_var.set(None)
+        # Simulate a per-request async task where the scope binding did not
+        # propagate, so resolution falls through to the process default.
+        context.set_scope(None)
 
         resolved = get_mcp_state()
         assert resolved is state
@@ -61,7 +60,7 @@ def test_profile_binding_survives_contextvar_loss() -> None:
         get_mcp_state().version = "1.0"
 
         # ContextVar not visible on a subsequent call
-        server._context_var.set(None)
+        context.set_scope(None)
 
         assert get_mcp_state().profile == "isa"
         assert get_mcp_state().version == "1.0"

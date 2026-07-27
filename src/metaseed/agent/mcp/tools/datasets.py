@@ -15,25 +15,21 @@ if TYPE_CHECKING:
 
 
 def _get_dataset_manager() -> DatasetManager:
-    """Get the dataset manager using context.
+    """The dataset manager for the session this process serves.
+
+    One lookup, not two: the resolved context always carries a factory, so the
+    old fallback branch built a *different* factory than the context's whenever
+    the ContextVar was not visible — reads and writes could land in different
+    repositories.
 
     Returns:
-        DatasetManager instance from context.
+        A DatasetManager bound to the session's state.
     """
-    from metaseed.agent.mcp.server import (
-        get_context,
-        get_mcp_state,
-        get_standalone_factory,
-    )
+    from metaseed.agent.mcp.context import resolve_default_context
 
-    context = get_context()
-    if context is not None:
-        return context.dataset_factory.get_manager(context.state)
-
-    # Fallback: use cached factory from standalone state holder
-    state = get_mcp_state()
-    factory = get_standalone_factory()
-    return factory.get_manager(state)
+    context = resolve_default_context()
+    manager: DatasetManager = context.dataset_factory.get_manager(context.state)
+    return manager
 
 
 def register_dataset_tools(  # noqa: C901
