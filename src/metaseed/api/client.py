@@ -143,6 +143,24 @@ class MetaseedClient(SerializationMixin, ValidationMixin):
         return instance
 
     @classmethod
+    def from_facade(cls, facade: ProfileFacade) -> MetaseedClient:
+        """Wrap an already-configured ``ProfileFacade`` in a client.
+
+        Lets a consumer that already holds a facade (for example metaseed-hub's
+        ``AppState.facade``) reuse the client's serialization and validation
+        instead of reimplementing them, without reaching into a private field.
+
+        Args:
+            facade: The ``ProfileFacade`` to wrap.
+
+        Returns:
+            A :class:`MetaseedClient` backed by the given facade.
+        """
+        instance = cls.__new__(cls)
+        instance._facade = facade
+        return instance
+
+    @classmethod
     def from_yaml(cls, path: str) -> MetaseedClient:
         """Create client from a custom spec YAML file.
 
