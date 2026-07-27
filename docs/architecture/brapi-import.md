@@ -39,7 +39,15 @@ parts:
 - **`metaseed.brapi.mapper.build_dataset`** — pure and network-free: maps the
   BrAPI objects into `miappe`-profile entities. Importable without the extra.
 - **`metaseed.brapi.import_brapi`** — wires the two together, iterating studies
-  to gather their observation units and observations.
+  to gather their observation units, then each unit's observations.
+
+Observations are collected **per observation unit**, not per study. Servers do
+not reliably honour a `studyDbId` filter on `/observations`: the BrAPI reference
+server answers it with zero rows even for studies whose observation records
+carry that `studyDbId`, so asking that way imported a dataset with no
+measurements at all while reporting success. Filtering by `observationUnitDbId`
+is honoured, and costs one request per unit already fetched. An observation
+returned under more than one unit is imported once, keyed by `observationDbId`.
 
 ## BrAPI to MIAPPE mapping
 
@@ -91,7 +99,23 @@ bridge.
 
 ## Testing
 
-The mapper is tested from a recorded BrAPI fixture; the client is tested with an
-`httpx` mock transport (request shape, auth header, and JSON parsing). One live
-smoke test against the public `test-server.brapi.org` server is marked `network`
-and excluded from the default run.
+The mapper is tested from a hand-written BrAPI fixture; the client is tested with
+an `httpx` mock transport (request shape, auth header, and JSON parsing). One
+live smoke test against the public `test-server.brapi.org` server is marked
+`network` and excluded from the default run.
+
+Those alone proved only self-consistency: the hand-written fixture answers every
+request with the same canned payload regardless of query parameters, so an
+importer asking the wrong question still got data back. `fixtures/brapi_v2_recorded.json`
+closes that gap. It stores the exact `(endpoint, params) -> response` pairs the
+reference server returned, including the `studyDbId` query that comes back
+empty, and the replaying test answers an unrecorded query the way the server
+did — with nothing. That is what makes "an import of a real server produces
+measurements" a testable claim, and it is what caught the observation-filter bug
+above.
+
+The recording is de-identified on the way in: names, emails, ORCIDs, and
+institutions are replaced with synthetic values, while accessions and database
+identifiers are kept because the mapper depends on them. A test asserts no real
+identity survives. The same replay also covers the BrAPI v2 export shape, so
+that conformance check now runs in CI rather than only in the `network` job.

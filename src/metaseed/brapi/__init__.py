@@ -67,8 +67,27 @@ def import_brapi(
     observation_units: list[dict[str, Any]] = []
     observations: list[dict[str, Any]] = []
     for study_id in study_ids:
-        observation_units.extend(client.observation_units(study_id))
-        observations.extend(client.observations(study_id))
+        units = client.observation_units(study_id)
+        observation_units.extend(units)
+        # Collected per observation unit, not per study: servers do not reliably
+        # honour a studyDbId filter on /observations (the BrAPI reference server
+        # returns nothing), which silently imported a dataset with no
+        # measurements at all. One request per unit we already have.
+        seen_observations: set[str] = set()
+        for unit in units:
+            unit_id = unit.get("observationUnitDbId")
+            if not unit_id:
+                continue
+            for observation in client.observations_for_unit(unit_id):
+                # Guard against a server returning one observation under more
+                # than one unit: per-unit collection would otherwise import the
+                # same measurement twice.
+                key = observation.get("observationDbId")
+                if key is not None:
+                    if key in seen_observations:
+                        continue
+                    seen_observations.add(str(key))
+                observations.append(observation)
 
     germplasm = client.germplasm()
 

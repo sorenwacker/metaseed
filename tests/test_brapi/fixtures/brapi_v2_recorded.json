@@ -1,0 +1,1155 @@
+[
+  {
+    "endpoint": "studies",
+    "params": {},
+    "response": {
+      "@context": null,
+      "metadata": {
+        "datafiles": [],
+        "pagination": {
+          "currentPage": 0,
+          "pageSize": 3,
+          "totalCount": 3,
+          "totalPages": 1
+        },
+        "status": []
+      },
+      "result": {
+        "data": [
+          {
+            "active": true,
+            "additionalInfo": {
+              "dummyData": true
+            },
+            "commonCropName": "Tomatillo",
+            "contacts": [
+              {
+                "contactDbId": "study_contact_1",
+                "email": "contact0@example.org",
+                "instituteName": "Fictional Crop Institute",
+                "name": "Sam Okafor",
+                "orcid": "0000-0000-0000-0000",
+                "type": "Breeder"
+              }
+            ],
+            "culturalPractices": "Irrigation was applied according needs during summer to prevent water stress",
+            "dataLinks": [
+              {
+                "dataFormat": "Image Archive",
+                "description": "Raw drone images collected for this study",
+                "fileFormat": "application/zip",
+                "name": "Kit Nakamura",
+                "provenance": "Image Processing Pipeline, built at the University of Antarctica: https://github.com/antarctica/pipeline",
+                "scientificType": "Environmental",
+                "url": "https://brapi.org/image-archive.zip",
+                "version": "1.0.3"
+              }
+            ],
+            "documentationURL": "https://brapi.org",
+            "endDate": "2014-01-01T00:00:00Z",
+            "environmentParameters": [
+              {
+                "description": "the soil type was clay",
+                "parameterName": "soil type",
+                "parameterPUI": "PECO:0007155",
+                "unit": "pH",
+                "unitPUI": "PECO:0007059",
+                "value": "clay soil",
+                "valuePUI": "ENVO:00002262"
+              }
+            ],
+            "experimentalDesign": {
+              "PUI": "CO_715:0000145",
+              "description": "Lines were repeated twice at each location using a complete block design. In order to limit competition effects, each block was organized into four sub-blocks corresponding to earliest groups based on a prior information."
+            },
+            "externalReferences": [
+              {
+                "referenceID": "https://brapi.org/specification",
+                "referenceId": "https://brapi.org/specification",
+                "referenceSource": "BrAPI Doc"
+              }
+            ],
+            "growthFacility": {
+              "PUI": "CO_715:0000162",
+              "description": "field environment condition, greenhouse"
+            },
+            "lastUpdate": {
+              "timestamp": "2020-04-02T20:55:19Z",
+              "version": "1.2.3"
+            },
+            "license": "https://creativecommons.org/licenses/by/4.0",
+            "locationDbId": "location_01",
+            "locationName": "Location 1",
+            "observationLevels": [
+              {
+                "levelName": "field",
+                "levelOrder": 0
+              },
+              {
+                "levelName": "block",
+                "levelOrder": 1
+              },
+              {
+                "levelName": "plot",
+                "levelOrder": 2
+              },
+              {
+                "levelName": "plant",
+                "levelOrder": 3
+              }
+            ],
+            "observationUnitsDescription": "Observation units consisted in individual plots themselves consisting of a row of 15 plants at a density of approximately six plants per square meter.",
+            "observationVariableDbIds": [
+              "variable1"
+            ],
+            "seasons": [
+              "spring_2013",
+              "summer_2013",
+              "fall_2013",
+              "winter_2013"
+            ],
+            "startDate": "2013-01-01T00:00:00Z",
+            "studyCode": "Yield_2013",
+            "studyDbId": "study1",
+            "studyDescription": "This is a yield trial for 2013",
+            "studyName": "Paw paw 2013 yield trial",
+            "studyPUI": "doi:10.155454/fake/12345",
+            "studyType": "Phenotyping",
+            "trialDbId": "trial1",
+            "trialName": "Peru Yield Trial 1"
+          },
+          {
+            "active": true,
+            "additionalInfo": {
+              "dummyData": true
+            },
+            "commonCropName": "Tomatillo",
+            "contacts": [
+              {
+                "contactDbId": "study_contact_2",
+                "email": "contact2@example.org",
+                "instituteName": "Fictional Crop Institute",
+                "name": "Lee Fontaine",
+                "orcid": "0000-0000-0000-0000",
+                "type": "Breeder"
+              }
+            ],
+            "culturalPractices": "Irrigation was applied according needs during summer to prevent water stress",
+            "dataLinks": [
+              {
+                "dataFormat": "Image Archive",
+                "description": "Raw drone images collected for this study",
+                "fileFormat": "application/zip",
+                "name": "Robin Alvarez",
+                "provenance": "Image Processing Pipeline, built at the University of Antarctica: https://github.com/antarctica/pipeline",
+                "scientificType": "Environmental",
+                "url": "https://brapi.org/image-archive.zip",
+                "version": "2.0.3"
+              }
+            ],
+            "documentationURL": "https://brapi.org",
+            "endDate": "2014-02-02T00:00:00Z",
+            "environmentParameters": [
+              {
+                "description": "the soil type was clay",
+                "parameterName": "soil type",
+                "parameterPUI": "PECO:0007255",
+                "unit": "pH",
+                "unitPUI": "PECO:0007059",
+                "value": "clay soil",
+                "valuePUI": "ENVO:00002262"
+              }
+            ],
+            "experimentalDesign": {
+              "PUI": "CO_725:0000245",
+              "description": "Lines were repeated twice at each location using a complete block design. In order to limit competition effects, each block was organized into four sub-blocks corresponding to earliest groups based on a prior information."
+            },
+            "externalReferences": [
+              {
+                "referenceID": "https://brapi.org/specification",
+                "referenceId": "https://brapi.org/specification",
+                "referenceSource": "BrAPI Doc"
+              }
+            ],
+            "growthFacility": {
+              "PUI": "CO_725:0000262",
+              "description": "field environment condition, greenhouse"
+            },
+            "lastUpdate": {
+              "timestamp": "2020-04-02T20:55:29Z",
+              "version": "2.2.3"
+            },
+            "license": "https://creativecommons.org/licenses/by/4.0",
+            "locationDbId": "location_02",
+            "locationName": "Location 2",
+            "observationLevels": [
+              {
+                "levelName": "field",
+                "levelOrder": 0
+              },
+              {
+                "levelName": "block",
+                "levelOrder": 1
+              },
+              {
+                "levelName": "plot",
+                "levelOrder": 2
+              },
+              {
+                "levelName": "plant",
+                "levelOrder": 3
+              }
+            ],
+            "observationUnitsDescription": "Observation units consisted in individual plots themselves consisting of a row of 15 plants at a density of approximately six plants per square meter.",
+            "observationVariableDbIds": [
+              "variable4",
+              "variable3",
+              "variable2"
+            ],
+            "seasons": [
+              "spring_2012",
+              "summer_2012",
+              "fall_2012",
+              "winter_2012"
+            ],
+            "startDate": "2013-02-02T00:00:00Z",
+            "studyCode": "Yield_2013",
+            "studyDbId": "study2",
+            "studyDescription": "This is a yield trial for 2013",
+            "studyName": "Paw paw 2013 yield trial",
+            "studyPUI": "doi:10.255454/fake/22345",
+            "studyType": "Phenotyping",
+            "trialDbId": "trial2",
+            "trialName": "Peru Yield Trial 2"
+          },
+          {
+            "active": true,
+            "additionalInfo": {
+              "dummyData": true
+            },
+            "commonCropName": "Tomatillo",
+            "contacts": [
+              {
+                "contactDbId": "study_contact_3",
+                "email": "contact4@example.org",
+                "instituteName": "Fictional Crop Institute",
+                "name": "Sam Okafor",
+                "orcid": "0000-0000-0000-0000",
+                "type": "Breeder"
+              }
+            ],
+            "culturalPractices": null,
+            "dataLinks": [],
+            "documentationURL": "https://brapi.org",
+            "endDate": "2023-02-02T00:00:00Z",
+            "environmentParameters": [],
+            "experimentalDesign": null,
+            "externalReferences": [
+              {
+                "referenceID": "https://brapi.org/specification",
+                "referenceId": "https://brapi.org/specification",
+                "referenceSource": "BrAPI Doc"
+              }
+            ],
+            "growthFacility": null,
+            "lastUpdate": {
+              "timestamp": "2020-04-02T20:55:29Z",
+              "version": "2.2.3"
+            },
+            "license": "https://creativecommons.org/licenses/by/4.0",
+            "locationDbId": "location_02",
+            "locationName": "Location 2",
+            "observationLevels": [
+              {
+                "levelName": "field",
+                "levelOrder": 0
+              },
+              {
+                "levelName": "block",
+                "levelOrder": 1
+              },
+              {
+                "levelName": "plot",
+                "levelOrder": 2
+              },
+              {
+                "levelName": "plant",
+                "levelOrder": 3
+              }
+            ],
+            "observationUnitsDescription": null,
+            "observationVariableDbIds": [],
+            "seasons": [
+              "spring_2012",
+              "summer_2012",
+              "fall_2012",
+              "winter_2012"
+            ],
+            "startDate": "2023-02-02T00:00:00Z",
+            "studyCode": "Geno_2023",
+            "studyDbId": "study3",
+            "studyDescription": "Dummy Genotyping Study",
+            "studyName": "Dummy Genotyping Study",
+            "studyPUI": "doi:10.255454/fake/32345",
+            "studyType": "genotype",
+            "trialDbId": "trial2",
+            "trialName": "Peru Yield Trial 2"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "endpoint": "observationunits",
+    "params": {
+      "studyDbId": "study1"
+    },
+    "response": {
+      "@context": null,
+      "metadata": {
+        "datafiles": [],
+        "pagination": {
+          "currentPage": 0,
+          "pageSize": 3,
+          "totalCount": 3,
+          "totalPages": 1
+        },
+        "status": []
+      },
+      "result": {
+        "data": [
+          {
+            "additionalInfo": {
+              "dummyData": true
+            },
+            "crossDbId": "cross1",
+            "crossName": "germ1 X germ2",
+            "externalReferences": [
+              {
+                "referenceID": "https://brapi.org/specification",
+                "referenceId": "https://brapi.org/specification",
+                "referenceSource": "BrAPI Doc"
+              }
+            ],
+            "germplasmDbId": "germplasm1",
+            "germplasmName": "Tomatillo Fantastico",
+            "locationDbId": "location_01",
+            "locationName": "Location 1",
+            "observationUnitDbId": "observation_unit1",
+            "observationUnitName": "Plot 1",
+            "observationUnitPUI": "doi:10.12345/plot/1a9afc14",
+            "observationUnitPosition": {
+              "entryType": "TEST",
+              "geoCoordinates": {
+                "geometry": {
+                  "coordinates": [
+                    42.44423,
+                    -76.46313,
+                    123.0
+                  ],
+                  "type": "Point"
+                },
+                "type": "Feature"
+              },
+              "observationLevel": {
+                "levelCode": "plot_1",
+                "levelName": "plot",
+                "levelOrder": 4
+              },
+              "observationLevelRelationships": [
+                {
+                  "levelCode": "fieldA",
+                  "levelName": "field",
+                  "levelOrder": 1,
+                  "observationUnitDbId": null
+                },
+                {
+                  "levelCode": "rep1",
+                  "levelName": "rep",
+                  "levelOrder": 2,
+                  "observationUnitDbId": null
+                },
+                {
+                  "levelCode": "block1",
+                  "levelName": "block",
+                  "levelOrder": 3,
+                  "observationUnitDbId": null
+                }
+              ],
+              "positionCoordinateX": "1",
+              "positionCoordinateXType": "PLANTED_ROW",
+              "positionCoordinateY": "1",
+              "positionCoordinateYType": "PLANTED_INDIVIDUAL"
+            },
+            "observations": null,
+            "programDbId": "program1",
+            "programName": "The BrAPI Breeding Program",
+            "seedLotDbId": "seed_lot1",
+            "seedLotName": "Seed Lot 1",
+            "studyDbId": "study1",
+            "studyName": "Paw paw 2013 yield trial",
+            "treatments": [
+              {
+                "factor": "fertilizer",
+                "modality": "low fertilizer"
+              }
+            ],
+            "trialDbId": "trial1",
+            "trialName": "Peru Yield Trial 1"
+          },
+          {
+            "additionalInfo": {
+              "dummyData": true
+            },
+            "crossDbId": "cross1",
+            "crossName": "germ1 X germ2",
+            "externalReferences": [
+              {
+                "referenceID": "https://brapi.org/specification",
+                "referenceId": "https://brapi.org/specification",
+                "referenceSource": "BrAPI Doc"
+              }
+            ],
+            "germplasmDbId": "germplasm2",
+            "germplasmName": "Tomatillo Fantastico",
+            "locationDbId": "location_01",
+            "locationName": "Location 1",
+            "observationUnitDbId": "observation_unit2",
+            "observationUnitName": "Plot 2",
+            "observationUnitPUI": "doi:10.12345/plot/2a9afc24",
+            "observationUnitPosition": {
+              "entryType": "TEST",
+              "geoCoordinates": {
+                "geometry": {
+                  "coordinates": [
+                    42.44423,
+                    -76.46313,
+                    123.0
+                  ],
+                  "type": "Point"
+                },
+                "type": "Feature"
+              },
+              "observationLevel": {
+                "levelCode": "plot_2",
+                "levelName": "plot",
+                "levelOrder": 4
+              },
+              "observationLevelRelationships": [
+                {
+                  "levelCode": "fieldA",
+                  "levelName": "field",
+                  "levelOrder": 1,
+                  "observationUnitDbId": null
+                },
+                {
+                  "levelCode": "rep1",
+                  "levelName": "rep",
+                  "levelOrder": 2,
+                  "observationUnitDbId": null
+                },
+                {
+                  "levelCode": "block2",
+                  "levelName": "block",
+                  "levelOrder": 3,
+                  "observationUnitDbId": null
+                }
+              ],
+              "positionCoordinateX": "1",
+              "positionCoordinateXType": "PLANTED_ROW",
+              "positionCoordinateY": "2",
+              "positionCoordinateYType": "PLANTED_INDIVIDUAL"
+            },
+            "observations": null,
+            "programDbId": "program1",
+            "programName": "The BrAPI Breeding Program",
+            "seedLotDbId": "seed_lot1",
+            "seedLotName": "Seed Lot 1",
+            "studyDbId": "study1",
+            "studyName": "Paw paw 2013 yield trial",
+            "treatments": [
+              {
+                "factor": "fertilizer",
+                "modality": "low fertilizer"
+              }
+            ],
+            "trialDbId": "trial1",
+            "trialName": "Peru Yield Trial 1"
+          },
+          {
+            "additionalInfo": {
+              "dummyData": true
+            },
+            "crossDbId": "cross2",
+            "crossName": "germ2 X germ3",
+            "externalReferences": [
+              {
+                "referenceID": "https://brapi.org/specification",
+                "referenceId": "https://brapi.org/specification",
+                "referenceSource": "BrAPI Doc"
+              }
+            ],
+            "germplasmDbId": "germplasm3",
+            "germplasmName": "Tomatillo Fantastico",
+            "locationDbId": "location_01",
+            "locationName": "Location 1",
+            "observationUnitDbId": "observation_unit3",
+            "observationUnitName": "Plot 3",
+            "observationUnitPUI": "doi:10.12345/plot/3a9afc34",
+            "observationUnitPosition": {
+              "entryType": "TEST",
+              "geoCoordinates": {
+                "geometry": {
+                  "coordinates": [
+                    42.44423,
+                    -76.46313,
+                    123.0
+                  ],
+                  "type": "Point"
+                },
+                "type": "Feature"
+              },
+              "observationLevel": {
+                "levelCode": "plot_3",
+                "levelName": "plot",
+                "levelOrder": 4
+              },
+              "observationLevelRelationships": [
+                {
+                  "levelCode": "fieldA",
+                  "levelName": "field",
+                  "levelOrder": 1,
+                  "observationUnitDbId": null
+                },
+                {
+                  "levelCode": "rep2",
+                  "levelName": "rep",
+                  "levelOrder": 2,
+                  "observationUnitDbId": null
+                },
+                {
+                  "levelCode": "block1",
+                  "levelName": "block",
+                  "levelOrder": 3,
+                  "observationUnitDbId": null
+                }
+              ],
+              "positionCoordinateX": "1",
+              "positionCoordinateXType": "PLANTED_ROW",
+              "positionCoordinateY": "3",
+              "positionCoordinateYType": "PLANTED_INDIVIDUAL"
+            },
+            "observations": null,
+            "programDbId": "program1",
+            "programName": "The BrAPI Breeding Program",
+            "seedLotDbId": "seed_lot1",
+            "seedLotName": "Seed Lot 1",
+            "studyDbId": "study1",
+            "studyName": "Paw paw 2013 yield trial",
+            "treatments": [
+              {
+                "factor": "fertilizer",
+                "modality": "low fertilizer"
+              }
+            ],
+            "trialDbId": "trial1",
+            "trialName": "Peru Yield Trial 1"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "endpoint": "observations",
+    "params": {
+      "studyDbId": "study1"
+    },
+    "response": {
+      "@context": null,
+      "metadata": {
+        "datafiles": [],
+        "pagination": {
+          "currentPage": 0,
+          "pageSize": 0,
+          "totalCount": 0,
+          "totalPages": 0
+        },
+        "status": []
+      },
+      "result": {
+        "data": []
+      }
+    }
+  },
+  {
+    "endpoint": "observations",
+    "params": {
+      "observationUnitDbId": "observation_unit1"
+    },
+    "response": {
+      "@context": null,
+      "metadata": {
+        "datafiles": [],
+        "pagination": {
+          "currentPage": 0,
+          "pageSize": 2,
+          "totalCount": 2,
+          "totalPages": 1
+        },
+        "status": []
+      },
+      "result": {
+        "data": [
+          {
+            "additionalInfo": {
+              "dummyData": true
+            },
+            "collector": "Kit Nakamura",
+            "externalReferences": [
+              {
+                "referenceID": "https://brapi.org/specification",
+                "referenceId": "https://brapi.org/specification",
+                "referenceSource": "BrAPI Doc"
+              }
+            ],
+            "geoCoordinates": {
+              "geometry": {
+                "coordinates": [
+                  42.41423,
+                  -76.44313,
+                  123.0
+                ],
+                "type": "Point"
+              },
+              "type": "Feature"
+            },
+            "germplasmDbId": "germplasm1",
+            "germplasmName": "Tomatillo Fantastico",
+            "observationDbId": "observation1",
+            "observationTimeStamp": "2013-05-13T09:09:09Z",
+            "observationUnitDbId": "observation_unit1",
+            "observationUnitName": "Plot 1",
+            "observationVariableDbId": "variable1",
+            "observationVariableName": "Corn Stalk Height",
+            "season": {
+              "seasonDbId": "spring_2013",
+              "seasonName": "spring",
+              "year": 2013
+            },
+            "studyDbId": "study1",
+            "uploadedBy": "Lee Fontaine",
+            "value": "10"
+          },
+          {
+            "additionalInfo": {
+              "dummyData": true
+            },
+            "collector": "Robin Alvarez",
+            "externalReferences": [
+              {
+                "referenceID": "https://brapi.org/specification",
+                "referenceId": "https://brapi.org/specification",
+                "referenceSource": "BrAPI Doc"
+              }
+            ],
+            "geoCoordinates": {
+              "geometry": {
+                "coordinates": [
+                  42.42423,
+                  -76.43313,
+                  123.0
+                ],
+                "type": "Point"
+              },
+              "type": "Feature"
+            },
+            "germplasmDbId": "germplasm1",
+            "germplasmName": "Tomatillo Fantastico",
+            "observationDbId": "observation2",
+            "observationTimeStamp": "2013-05-13T09:09:09Z",
+            "observationUnitDbId": "observation_unit1",
+            "observationUnitName": "Plot 1",
+            "observationVariableDbId": "variable1",
+            "observationVariableName": "Corn Stalk Height",
+            "season": {
+              "seasonDbId": "spring_2013",
+              "seasonName": "spring",
+              "year": 2013
+            },
+            "studyDbId": "study1",
+            "uploadedBy": "Sam Okafor",
+            "value": "20"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "endpoint": "observations",
+    "params": {
+      "observationUnitDbId": "observation_unit2"
+    },
+    "response": {
+      "@context": null,
+      "metadata": {
+        "datafiles": [],
+        "pagination": {
+          "currentPage": 0,
+          "pageSize": 2,
+          "totalCount": 2,
+          "totalPages": 1
+        },
+        "status": []
+      },
+      "result": {
+        "data": [
+          {
+            "additionalInfo": {
+              "dummyData": true
+            },
+            "collector": "Kit Nakamura",
+            "externalReferences": [
+              {
+                "referenceID": "https://brapi.org/specification",
+                "referenceId": "https://brapi.org/specification",
+                "referenceSource": "BrAPI Doc"
+              }
+            ],
+            "geoCoordinates": {
+              "geometry": {
+                "coordinates": [
+                  42.43423,
+                  -76.42313,
+                  123.0
+                ],
+                "type": "Point"
+              },
+              "type": "Feature"
+            },
+            "germplasmDbId": "germplasm2",
+            "germplasmName": "Tomatillo Fantastico",
+            "observationDbId": "observation3",
+            "observationTimeStamp": "2013-05-13T09:09:09Z",
+            "observationUnitDbId": "observation_unit2",
+            "observationUnitName": "Plot 2",
+            "observationVariableDbId": "variable1",
+            "observationVariableName": "Corn Stalk Height",
+            "season": {
+              "seasonDbId": "spring_2013",
+              "seasonName": "spring",
+              "year": 2013
+            },
+            "studyDbId": "study1",
+            "uploadedBy": "Lee Fontaine",
+            "value": "30"
+          },
+          {
+            "additionalInfo": {
+              "dummyData": true
+            },
+            "collector": "Robin Alvarez",
+            "externalReferences": [
+              {
+                "referenceID": "https://brapi.org/specification",
+                "referenceId": "https://brapi.org/specification",
+                "referenceSource": "BrAPI Doc"
+              }
+            ],
+            "geoCoordinates": {
+              "geometry": {
+                "coordinates": [
+                  42.44423,
+                  -76.41313,
+                  123.0
+                ],
+                "type": "Point"
+              },
+              "type": "Feature"
+            },
+            "germplasmDbId": "germplasm2",
+            "germplasmName": "Tomatillo Fantastico",
+            "observationDbId": "observation4",
+            "observationTimeStamp": "2013-05-13T09:09:09Z",
+            "observationUnitDbId": "observation_unit2",
+            "observationUnitName": "Plot 2",
+            "observationVariableDbId": "variable1",
+            "observationVariableName": "Corn Stalk Height",
+            "season": {
+              "seasonDbId": "spring_2013",
+              "seasonName": "spring",
+              "year": 2013
+            },
+            "studyDbId": "study1",
+            "uploadedBy": "Sam Okafor",
+            "value": "40"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "endpoint": "observations",
+    "params": {
+      "observationUnitDbId": "observation_unit3"
+    },
+    "response": {
+      "@context": null,
+      "metadata": {
+        "datafiles": [],
+        "pagination": {
+          "currentPage": 0,
+          "pageSize": 0,
+          "totalCount": 0,
+          "totalPages": 0
+        },
+        "status": []
+      },
+      "result": {
+        "data": []
+      }
+    }
+  },
+  {
+    "endpoint": "observationunits",
+    "params": {
+      "studyDbId": "study2"
+    },
+    "response": {
+      "@context": null,
+      "metadata": {
+        "datafiles": [],
+        "pagination": {
+          "currentPage": 0,
+          "pageSize": 0,
+          "totalCount": 0,
+          "totalPages": 0
+        },
+        "status": []
+      },
+      "result": {
+        "data": []
+      }
+    }
+  },
+  {
+    "endpoint": "observations",
+    "params": {
+      "studyDbId": "study2"
+    },
+    "response": {
+      "@context": null,
+      "metadata": {
+        "datafiles": [],
+        "pagination": {
+          "currentPage": 0,
+          "pageSize": 0,
+          "totalCount": 0,
+          "totalPages": 0
+        },
+        "status": []
+      },
+      "result": {
+        "data": []
+      }
+    }
+  },
+  {
+    "endpoint": "observationunits",
+    "params": {
+      "studyDbId": "study3"
+    },
+    "response": {
+      "@context": null,
+      "metadata": {
+        "datafiles": [],
+        "pagination": {
+          "currentPage": 0,
+          "pageSize": 0,
+          "totalCount": 0,
+          "totalPages": 0
+        },
+        "status": []
+      },
+      "result": {
+        "data": []
+      }
+    }
+  },
+  {
+    "endpoint": "observations",
+    "params": {
+      "studyDbId": "study3"
+    },
+    "response": {
+      "@context": null,
+      "metadata": {
+        "datafiles": [],
+        "pagination": {
+          "currentPage": 0,
+          "pageSize": 0,
+          "totalCount": 0,
+          "totalPages": 0
+        },
+        "status": []
+      },
+      "result": {
+        "data": []
+      }
+    }
+  },
+  {
+    "endpoint": "germplasm",
+    "params": {},
+    "response": {
+      "@context": null,
+      "metadata": {
+        "datafiles": [],
+        "pagination": {
+          "currentPage": 0,
+          "pageSize": 3,
+          "totalCount": 3,
+          "totalPages": 1
+        },
+        "status": []
+      },
+      "result": {
+        "data": [
+          {
+            "accessionNumber": "A0000002",
+            "acquisitionDate": "2000-04-09",
+            "additionalInfo": {
+              "dummyData": true
+            },
+            "biologicalStatusOfAccessionCode": "120",
+            "biologicalStatusOfAccessionDescription": "Semi-natural/wild",
+            "breedingMethodDbId": "breeding_method1",
+            "breedingMethodName": "Male Backcross",
+            "collection": "Fake Foods Collection",
+            "commonCropName": "Tomatillo",
+            "countryOfOriginCode": "USA",
+            "defaultDisplayName": "Fantastico",
+            "documentationURL": "https://wiki.brapi.org",
+            "donors": [
+              {
+                "donorAccessionNumber": "A2222222",
+                "donorInstituteCode": "Example Plant Research Centre",
+                "germplasmPUI": "doi:10.12345/A2222222"
+              }
+            ],
+            "externalReferences": [
+              {
+                "referenceID": "https://brapi.org/specification",
+                "referenceId": "https://brapi.org/specification",
+                "referenceSource": "BrAPI Doc"
+              }
+            ],
+            "genus": "Aspergillus",
+            "germplasmDbId": "germplasm2",
+            "germplasmName": "Tomatillo Fantastico",
+            "germplasmOrigin": [
+              {
+                "coordinateUncertainty": "20",
+                "coordinates": {
+                  "geometry": {
+                    "coordinates": [
+                      42.53514,
+                      -76.55404,
+                      123.0998
+                    ],
+                    "type": "Point"
+                  },
+                  "type": "Feature"
+                }
+              }
+            ],
+            "germplasmPUI": "doi:10.12345/A0000002",
+            "germplasmPreprocessing": "EO:0007210; transplanted from study 2351 observation unit ID: pot:894",
+            "instituteCode": "Example Plant Research Centre",
+            "instituteName": "Example Plant Research Centre",
+            "pedigree": "A2342345/A4564565",
+            "seedSource": "Root Stock",
+            "seedSourceDescription": "Branches were collected from a 10-year-old tree growing in a progeny trial established in a loamy brown earth soil.",
+            "species": "fructus",
+            "speciesAuthority": "Smith, 1822",
+            "storageTypes": [
+              {
+                "code": "10",
+                "description": "Seed collection"
+              }
+            ],
+            "subtaxa": "Aspergillus fructus A",
+            "subtaxaAuthority": "Smith, 1822",
+            "synonyms": [
+              {
+                "synonym": "Variety 234",
+                "type": "Pre-Code"
+              }
+            ],
+            "taxonIds": [
+              {
+                "sourceName": "NCBI",
+                "taxonId": "2026747"
+              }
+            ]
+          },
+          {
+            "accessionNumber": "A0000003",
+            "acquisitionDate": "2000-04-09",
+            "additionalInfo": {
+              "dummyData": true
+            },
+            "biologicalStatusOfAccessionCode": "120",
+            "biologicalStatusOfAccessionDescription": "Semi-natural/wild",
+            "breedingMethodDbId": "breeding_method1",
+            "breedingMethodName": "Male Backcross",
+            "collection": "Fake Foods Collection",
+            "commonCropName": "Tomatillo",
+            "countryOfOriginCode": "USA",
+            "defaultDisplayName": "Fantastico",
+            "documentationURL": "https://wiki.brapi.org",
+            "donors": [
+              {
+                "donorAccessionNumber": "A3333333",
+                "donorInstituteCode": "Example Plant Research Centre",
+                "germplasmPUI": "doi:10.12345/A3333333"
+              }
+            ],
+            "externalReferences": [
+              {
+                "referenceID": "https://brapi.org/specification",
+                "referenceId": "https://brapi.org/specification",
+                "referenceSource": "BrAPI Doc"
+              }
+            ],
+            "genus": "Aspergillus",
+            "germplasmDbId": "germplasm3",
+            "germplasmName": "Tomatillo Fantastico",
+            "germplasmOrigin": [
+              {
+                "coordinateUncertainty": "20",
+                "coordinates": {
+                  "geometry": {
+                    "coordinates": [
+                      42.53514,
+                      -76.55404,
+                      123.0998
+                    ],
+                    "type": "Point"
+                  },
+                  "type": "Feature"
+                }
+              }
+            ],
+            "germplasmPUI": "doi:10.12345/A0000003",
+            "germplasmPreprocessing": "EO:0007210; transplanted from study 2351 observation unit ID: pot:894",
+            "instituteCode": "Example Plant Research Centre",
+            "instituteName": "Example Plant Research Centre",
+            "pedigree": "A0000001/A0000002",
+            "seedSource": "Root Stock",
+            "seedSourceDescription": "Branches were collected from a 10-year-old tree growing in a progeny trial established in a loamy brown earth soil.",
+            "species": "fructus",
+            "speciesAuthority": "Smith, 1822",
+            "storageTypes": [
+              {
+                "code": "10",
+                "description": "Seed collection"
+              }
+            ],
+            "subtaxa": "Aspergillus fructus A",
+            "subtaxaAuthority": "Smith, 1822",
+            "synonyms": [
+              {
+                "synonym": "Variety 345",
+                "type": "Pre-Code"
+              }
+            ],
+            "taxonIds": [
+              {
+                "sourceName": "NCBI",
+                "taxonId": "2026747"
+              }
+            ]
+          },
+          {
+            "accessionNumber": "A0000001",
+            "acquisitionDate": "2000-04-09",
+            "additionalInfo": {
+              "dummyData": true
+            },
+            "biologicalStatusOfAccessionCode": "120",
+            "biologicalStatusOfAccessionDescription": "Semi-natural/wild",
+            "breedingMethodDbId": "breeding_method1",
+            "breedingMethodName": "Male Backcross",
+            "collection": "Fake Foods Collection",
+            "commonCropName": "Tomatillo",
+            "countryOfOriginCode": "USA",
+            "defaultDisplayName": "Fantastico",
+            "documentationURL": "https://wiki.brapi.org",
+            "donors": [
+              {
+                "donorAccessionNumber": "A1111111",
+                "donorInstituteCode": "Example Plant Research Centre",
+                "germplasmPUI": "doi:10.12345/A1111111"
+              }
+            ],
+            "externalReferences": [
+              {
+                "referenceID": "https://brapi.org/specification",
+                "referenceId": "https://brapi.org/specification",
+                "referenceSource": "BrAPI Doc"
+              }
+            ],
+            "genus": "Aspergillus",
+            "germplasmDbId": "germplasm1",
+            "germplasmName": "Tomatillo Fantastico",
+            "germplasmOrigin": [
+              {
+                "coordinateUncertainty": "20",
+                "coordinates": {
+                  "geometry": {
+                    "coordinates": [
+                      42.53514,
+                      -76.55404,
+                      123.0998
+                    ],
+                    "type": "Point"
+                  },
+                  "type": "Feature"
+                }
+              }
+            ],
+            "germplasmPUI": "doi:10.12345/A0000001",
+            "germplasmPreprocessing": "EO:0007210; transplanted from study 2351 observation unit ID: pot:894",
+            "instituteCode": "Example Plant Research Centre",
+            "instituteName": "Example Plant Research Centre",
+            "pedigree": "A2342345/A1231234",
+            "seedSource": "Root Stock",
+            "seedSourceDescription": "Branches were collected from a 10-year-old tree growing in a progeny trial established in a loamy brown earth soil.",
+            "species": "fructus",
+            "speciesAuthority": "Smith, 1822",
+            "storageTypes": [
+              {
+                "code": "10",
+                "description": "Seed collection"
+              }
+            ],
+            "subtaxa": "Aspergillus fructus A",
+            "subtaxaAuthority": "Smith, 1822",
+            "synonyms": [
+              {
+                "synonym": "Variety 123",
+                "type": "Pre-Code"
+              }
+            ],
+            "taxonIds": [
+              {
+                "sourceName": "NCBI",
+                "taxonId": "2026747"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+]
