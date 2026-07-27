@@ -8,6 +8,7 @@ auth are out of scope):
   ProteomeXchange ``px-submission-tool``. Data files are *referenced* by name
   and type in file-mapping (``FME``) lines.
 * :func:`to_pride_sdrf` -- the SDRF-Proteomics sample-to-data table.
+* :func:`to_pride_bundle` -- both of the above, since a submission needs both.
 
 The format is tab-separated, one record per line, each prefixed by a line-type
 token:
@@ -288,3 +289,23 @@ def to_pride_submission(client: MetaseedClient) -> dict[str, str]:
 
     lines = [_HEADER, *_metadata_lines(dataset), *_file_lines(dataset)]
     return {"submission.px": "\n".join(lines) + "\n"}
+
+
+def to_pride_bundle(client: MetaseedClient) -> dict[str, str]:
+    """Render both PRIDE submission documents together.
+
+    A ProteomeXchange submission consists of the ``submission.px`` file *and*
+    its SDRF sample table, so they are one deliverable rather than two
+    alternatives. This is the form the adapter registry declares, letting a host
+    offer a single download holding both.
+
+    Args:
+        client: A MetaseedClient bound to the ``pride`` profile.
+
+    Returns:
+        Mapping of document name to text, holding ``submission.px`` and
+        ``sdrf.tsv``. The SDRF is absent when the dataset has no samples (an
+        imported-only dataset), so a header-only table is never shipped. Empty
+        when the client holds no Dataset.
+    """
+    return {**to_pride_submission(client), **to_pride_sdrf(client)}

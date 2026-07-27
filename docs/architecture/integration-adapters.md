@@ -23,8 +23,34 @@ was built first as the reference and the rest mirror it.
 |------|---------------|---------------|
 | ENA | `ena` profile | SRA submission XML |
 | BrAPI | `miappe` profile | BrAPI v2 JSON |
-| PRIDE | `pride` profile | `submission.px` |
+| PRIDE | `pride` profile | `submission.px` + SDRF |
 | MetaboLights | `metabolights` profile | ISA-Tab + MAF |
+
+## The action registry
+
+`metaseed.adapters` is the single declarative list of what each adapter offers.
+An `Action` names a `kind` (`import`, `export`, `push`), a lazy
+`"module:function"` `ref`, and a `surface` telling a host where to group its
+control. `actions_for_profile(profile, kind=..., surface=...)` is the only call a
+host needs: a new adapter capability appears in the web UI and in the hub by
+declaring itself here, never by editing a host.
+
+| Action | Kind | Profile | Takes |
+|--------|------|---------|-------|
+| `ena-import` | import | `ena` | ENA accession |
+| `pride-import` | import | `pride` | ProteomeXchange accession |
+| `metabolights-import` | import | `metabolights` | MetaboLights study accession |
+| `brapi-import` | import | `miappe` | BrAPI v2 server URL |
+| `ena` | export | `ena` | — |
+| `pride` | export | `pride` | — |
+| `metabolights` | export | `metabolights` | — |
+
+Every import action takes exactly one string, so a host renders one text input
+and calls `action.resolve()(value)`. What that string *means* differs — an
+accession for the three archives, a server URL for BrAPI — so each action
+carries an `input_label` and `input_placeholder` for the prompt. Without them a
+host would have to hard-code per-adapter wording, which is the coupling the
+registry exists to remove.
 
 ## Decisions (and why)
 

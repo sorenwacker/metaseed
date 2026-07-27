@@ -64,6 +64,15 @@ class Action:
     """UI surface a host groups this action under."""
     profiles: tuple[str, ...] = ()
     """Profiles the action applies to; empty means the adapter's own ``key``."""
+    input_label: str = ""
+    """For an ``import`` action, what the single string argument is.
+
+    Import actions share one call shape -- ``fn(value)`` -- but not one meaning:
+    ENA/PRIDE/MetaboLights take an accession, BrAPI a server URL. A host renders
+    this as the field label so the prompt is honest about which it wants.
+    """
+    input_placeholder: str = ""
+    """Example value for ``input_label`` (e.g. ``PXD000001``)."""
 
     def __post_init__(self) -> None:
         """Reject a malformed ``ref`` at construction rather than at dispatch.
@@ -136,27 +145,43 @@ ADAPTERS: tuple[AdapterInfo, ...] = (
         direction="import",
         extra="ena",
         requires=("httpx",),
-        actions=(Action("export", "ena", "ENA XML", "metaseed.ena.export:to_ena_xml"),),
+        actions=(
+            Action("export", "ena", "ENA XML", "metaseed.ena.export:to_ena_xml"),
+            Action(
+                "import",
+                "ena-import",
+                "Import ENA accession",
+                "metaseed.ena:import_accession",
+                surface="import-menu",
+                input_label="ENA accession",
+                input_placeholder="PRJEB1234",
+            ),
+        ),
     ),
     AdapterInfo(
         key="pride",
         name="PRIDE",
-        description="Import a PRIDE Archive proteomics project; export SDRF / submission.px.",
+        description="Import a PRIDE Archive proteomics project; export submission.px + SDRF.",
         direction="import",
         extra="pride",
         requires=("httpx",),
         actions=(
+            # One export, not two: the px file and its SDRF table are parts of a
+            # single ProteomeXchange submission, so they travel together.
             Action(
                 "export",
                 "pride",
                 "PRIDE submission",
-                "metaseed.pride.export:to_pride_submission",
+                "metaseed.pride.export:to_pride_bundle",
             ),
             Action(
-                "export",
-                "pride-sdrf",
-                "PRIDE SDRF",
-                "metaseed.pride.export:to_pride_sdrf",
+                "import",
+                "pride-import",
+                "Import PRIDE project",
+                "metaseed.pride:import_accession",
+                surface="import-menu",
+                input_label="ProteomeXchange accession",
+                input_placeholder="PXD000001",
             ),
         ),
     ),
@@ -167,6 +192,20 @@ ADAPTERS: tuple[AdapterInfo, ...] = (
         direction="import",
         extra="brapi",
         requires=("httpx",),
+        actions=(
+            Action(
+                "import",
+                "brapi-import",
+                "Import BrAPI server",
+                "metaseed.brapi:import_brapi",
+                surface="import-menu",
+                # BrAPI reads a breeding server into the miappe profile, so the
+                # adapter-key-names-the-profile convention does not apply.
+                profiles=("miappe",),
+                input_label="BrAPI v2 server URL",
+                input_placeholder="https://test-server.brapi.org/brapi/v2",
+            ),
+        ),
     ),
     AdapterInfo(
         key="metabolights",
@@ -188,6 +227,8 @@ ADAPTERS: tuple[AdapterInfo, ...] = (
                 "Import MetaboLights study",
                 "metaseed.metabolights:import_accession",
                 surface="import-menu",
+                input_label="MetaboLights study accession",
+                input_placeholder="MTBLS1",
             ),
         ),
     ),
