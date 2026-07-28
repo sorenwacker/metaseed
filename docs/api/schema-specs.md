@@ -707,6 +707,28 @@ Rules without a `type` field continue to work. The engine infers the type from o
 
 Using explicit `type` is recommended for clarity and to avoid ambiguity.
 
+## Feedback comes from the spec
+
+Everything a user or an agent is told about what is wrong or missing in a dataset is derived from the specification. Nothing re-implements those checks, and nothing should: a second source of truth would only let the two disagree.
+
+`MetaseedClient.validate()` returns a `ValidationResult`, whose `issues` are `ValidationIssue` records carrying:
+
+| Field | Meaning |
+| --- | --- |
+| `field` | The bare field name the issue is about |
+| `message` | Human-readable description |
+| `rule` | **Which spec rule failed** — `required_fields`, a named `validation_rules` entry, a constraint |
+| `entity_id` | Which entity instance |
+
+`rule` is the part worth surfacing: it distinguishes "a required field is empty" from "a relationship needs at least one item", so a caller can group and act on issues rather than parsing prose. A host that reports only `valid: true/false` gives an agent nothing to do next — and an agent that believes it has finished stops, leaving a half-filled dataset.
+
+Two consequences for anything consuming this:
+
+- **Pass the issues through; do not re-derive them.** A host that recomputes "which fields are required" from the spec has duplicated the rule engine, and will drift from it.
+- **`ValidationResult` is not a list.** Iterating it raises `TypeError`, and the object is truthy even when `valid` is `False`. Read `.issues` and `.valid` explicitly.
+
+The same applies to a profile's schema: `required`, `description`, and `ontology_term` on each `FieldSpec` are what let a caller fill a dataset correctly in the first place, so a schema surfaced without them forces the caller to guess.
+
 ## Design Patterns
 
 ### Field Ordering
