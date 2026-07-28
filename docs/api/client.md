@@ -405,9 +405,10 @@ result.get_field_errors("field")  # Filter issues by field
 A single validation issue:
 
 ```python
-issue.field    # Field path
-issue.message  # Error message
-issue.rule     # Rule that triggered the issue
+issue.field      # The bare field name, e.g. "title"
+issue.entity_id  # Which entity instance the issue is about
+issue.message    # Error message
+issue.rule       # Which spec rule failed, e.g. "required_fields"
 ```
 
 ## Comparison with ProfileFacade
