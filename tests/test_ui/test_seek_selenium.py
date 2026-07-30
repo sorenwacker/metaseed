@@ -213,7 +213,14 @@ def test_spec_builder_seek_role_serializes_to_yaml(driver):
     driver.execute_script("selectEntity('Sampling')")
 
     # The editor shows the SEEK role dropdown; choose a role and click Apply.
-    role_select = _wait(driver, '[data-testid="entity-seek-role"]')
+    # Wait for visibility, not presence: the HTMX swap inserts the select into
+    # the DOM before the editor panel is shown, and a present-but-hidden select
+    # is not interactable.
+    role_select = WebDriverWait(driver, 10).until(
+        EC.visibility_of_element_located(
+            (By.CSS_SELECTOR, '[data-testid="entity-seek-role"]')
+        )
+    )
     Select(role_select).select_by_visible_text("Sample")
     driver.find_element(
         By.CSS_SELECTOR, "#entity-details-form button[type='submit']"
