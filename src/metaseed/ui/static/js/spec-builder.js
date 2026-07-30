@@ -211,14 +211,20 @@ function buildEntityEdges(name, fields) {
     fields.forEach(field => {
         // Nested entity relationships
         if ((field.type === 'entity' || field.type === 'list') && field.items && entities[field.items]) {
-            edgeData.push(createEdge(name, field.items, field.name, 'nested'));
+            edgeData.push(createEdge(name, field.items, field.name, 'nested',
+                name + '.' + field.name + ' contains ' + field.items));
         }
 
-        // Reference relationships
+        // Reference relationships: label both connected fields, not just the
+        // source field, so the edge names the exact columns it joins.
         if (field.reference) {
-            const targetEntity = field.reference.split('.')[0];
+            const parts = field.reference.split('.');
+            const targetEntity = parts[0];
+            const targetField = parts[1];
             if (entities[targetEntity]) {
-                edgeData.push(createEdge(name, targetEntity, field.name, 'reference'));
+                const label = targetField ? field.name + ' → ' + targetField : field.name;
+                edgeData.push(createEdge(name, targetEntity, label, 'reference',
+                    name + '.' + field.name + ' → ' + field.reference));
             }
         }
     });
@@ -227,9 +233,10 @@ function buildEntityEdges(name, fields) {
 }
 
 /**
- * Create an edge configuration object.
+ * Create an edge configuration object. The title renders as the hover tooltip
+ * with the fully qualified Entity.field endpoints.
  */
-function createEdge(from, to, label, type) {
+function createEdge(from, to, label, type, title) {
     const colors = type === 'reference' ? EDGE_COLORS.reference : EDGE_COLORS.nested;
     const fontColor = type === 'reference' ? '#6b5a62' : '#5a6b62';
 
@@ -237,6 +244,7 @@ function createEdge(from, to, label, type) {
         from: from,
         to: to,
         label: label,
+        title: title,
         arrows: { to: { enabled: true, type: 'arrow' } },
         color: colors,
         font: { size: 11, color: fontColor, background: 'white', strokeWidth: 0 },

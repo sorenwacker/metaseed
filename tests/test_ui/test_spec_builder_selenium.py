@@ -229,6 +229,34 @@ class TestEntityCreation:
         time.sleep(0.5)
         assert "GraphEntity" in driver.page_source
 
+    def test_reference_edge_names_both_connected_fields(self, driver):
+        """A reference edge names the exact fields it joins on label and tooltip.
+
+        The old edge builder dropped the target half of ``reference``
+        ("Target.field"), so the graph showed which entities were related but
+        not which fields carried the relation.
+        """
+        reset_spec_builder(driver)
+        driver.get(f"{BASE_URL}/spec-builder/new")
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "#editor-content"))
+        )
+
+        edge = driver.execute_script(
+            """
+            entities['RefSource'] = {fields: []};
+            entities['RefTarget'] = {fields: []};
+            return buildEntityEdges('RefSource', [
+                {name: 'target_id', type: 'string',
+                 reference: 'RefTarget.identifier'}
+            ])[0];
+            """
+        )
+        assert edge["from"] == "RefSource"
+        assert edge["to"] == "RefTarget"
+        assert edge["label"] == "target_id → identifier"
+        assert edge["title"] == "RefSource.target_id → RefTarget.identifier"
+
 
 class TestSaveSpec:
     """Test spec saving functionality."""
