@@ -36,7 +36,7 @@ dependencies = [
     "jinja2>=3.1",
     "python-multipart>=0.0.9",
     "openpyxl>=3.1",
-    "mcp>=1.0.0",
+    "mcp>=1.28,<2",
     # regex (not stdlib re) so user-supplied validation patterns can be matched
     # with a per-match timeout; the stdlib re holds the GIL during matching and
     # cannot be preempted, so a catastrophic-backtracking pattern would hang.
