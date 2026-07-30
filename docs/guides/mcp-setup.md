@@ -2,7 +2,7 @@
 
 metaseed ships a [Model Context Protocol](https://modelcontextprotocol.io) server that exposes its profiles, datasets, entities, ontology lookup, validation, and the [spec builder](spec-builder.md) as tools an AI assistant can call. This page covers connecting a client to it. For what the individual tools do, see the [Spec Builder MCP reference](../api/spec-builder-mcp.md) and [`metaseed mcp`](../api/cli.md).
 
-The server runs locally against your own filesystem and specs. It is part of the `metaseed` package, not of metaseed-hub; the hub is a web application and exposes no MCP endpoint.
+The server runs locally against your own filesystem and specs. It is part of the `metaseed` package; metaseed-hub additionally hosts its own MCP endpoint over the hub's database, authenticated with personal access tokens — see the hub's documentation for that.
 
 ## The command
 

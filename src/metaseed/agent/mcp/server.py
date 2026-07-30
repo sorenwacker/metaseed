@@ -92,7 +92,7 @@ def get_entity_service() -> EntityService:
     return context_module.resolve_default_context().get_entity_service()
 
 
-SERVER_INSTRUCTIONS = """\
+DATASET_INSTRUCTIONS = """\
 Metaseed builds validated, schema-driven metadata datasets for a chosen \
 profile (e.g. MIAPPE, ISA, DiSSCo, Darwin Core, ENA). Each profile defines its \
 own entity types, fields, root entity, and parent-child hierarchy.
@@ -114,6 +114,29 @@ infer, or fill placeholder values; leave unknown fields empty.
 If a tool reports an unsupported entity type, it lists the types the active \
 profile supports; pick one of those rather than guessing again.
 """
+
+SPEC_BUILDING_INSTRUCTIONS = """\
+The spec_* tools author a new profile (a specification), not a dataset. A \
+profile is a TREE of entities: every entity except the root must be nested \
+under a parent, or datasets built from the profile can never reach it.
+
+1. spec_create - start a draft.
+2. spec_add_entity - define each entity type.
+3. Link every entity to its parent: on the parent, call spec_add_field with \
+field_type "list" (many children) or "entity" (exactly one child) and \
+items=<ChildEntityName>. This nesting field IS the parent-child hierarchy; \
+the parent identifier and the child's back-reference are created \
+automatically. An entity that is not the root and is not named in any other \
+entity's items is an orphan the profile cannot use - spec_validate does NOT \
+flag orphans, so link as you build instead of relying on validation.
+4. spec_set_root_entity - mark the top of the tree.
+5. spec_add_field on each entity for its plain data fields (string, date, \
+ontology_term, ...).
+6. spec_validate, then spec_preview_yaml - fix every reported issue and \
+confirm the entities nest as intended before saving.
+"""
+
+SERVER_INSTRUCTIONS = DATASET_INSTRUCTIONS + "\n" + SPEC_BUILDING_INSTRUCTIONS
 
 
 def create_server(

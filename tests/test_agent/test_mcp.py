@@ -31,6 +31,26 @@ class TestMCPServer:
         assert "get_profile_schema" in instructions
         assert "list_profiles" in instructions
 
+    def test_instructions_teach_spec_entity_linkage(self) -> None:
+        """The instructions state how spec entities are linked into a tree.
+
+        Without this an agent builds a flat spec: it defines entities but
+        never adds the parent field whose ``items`` names the child, and
+        spec_validate does not flag orphaned entities.
+        """
+        server = create_server()
+        instructions = server.instructions or ""
+        for tool in (
+            "spec_create",
+            "spec_add_entity",
+            "spec_add_field",
+            "spec_set_root_entity",
+            "spec_validate",
+        ):
+            assert tool in instructions
+        assert "items" in instructions
+        assert "orphan" in instructions
+
     def test_list_profiles_tool(self) -> None:
         """List profiles tool returns profile info."""
         server = create_server()

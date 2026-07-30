@@ -17,6 +17,10 @@ The tools operate on a single **active draft** held in the MCP session — one
 There is no draft until one is started; editing tools return an error if called
 first. Starting a new draft replaces any unsaved one.
 
+## Linking entities
+
+A profile is a tree, not a set: every entity except the root must be nested under a parent, or datasets built from the profile can never reach it. The link is a field on the parent whose `type` is `list` (many children) or `entity` (exactly one child) and whose `items` names the child entity — adding it auto-creates the parent `identifier` field and the child's back-reference. `spec_set_root_entity` marks the top of the tree. An entity that is not the root and is not named in any other entity's `items` is orphaned; `spec_validate` does not currently flag orphans, so the linking step cannot be skipped and left for validation to catch. The server's MCP instructions state this workflow, so connected agents link entities as they build.
+
 ## Addressing
 
 Entities, fields, and rules are addressed **by name**, not list index. Field
