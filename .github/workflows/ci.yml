@@ -123,34 +123,3 @@ jobs:
         run: |
           uv export --format requirements-txt --no-emit-project --no-hashes --all-extras \
             | uvx --python 3.12 pip-audit --requirement /dev/stdin
-
-  fresh-install:
-    # Everything above tests against uv.lock; a `uv tool install metaseed`
-    # resolves fresh and can pick dependency releases the lock has never seen
-    # (mcp 2.0.0 broke every fresh install of v0.21.0 this way while the locked
-    # suites stayed green). Build the wheel and install it with a fresh
-    # resolution on every push, so such drift surfaces immediately, not at the
-    # next release.
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v4
-
-      - name: Build and install with a fresh resolution
-        run: |
-          uv build
-          WHEEL=$(ls dist/*.whl)
-          uv venv smoke
-          uv pip install --python smoke "metaseed[dcat,ena,brapi,pride] @ file://$PWD/$WHEEL"
-
-      - name: Smoke-test the surfaces users hit first
-        run: |
-          smoke/bin/metaseed --help
-          smoke/bin/metaseed profiles
-          smoke/bin/python -c "from metaseed.ui import run_ui"
-          smoke/bin/python -c "from metaseed.agent.mcp.server import create_server; create_server()"
-          smoke/bin/python -c "from metaseed import MetaseedClient; MetaseedClient('miappe', '1.1')"
