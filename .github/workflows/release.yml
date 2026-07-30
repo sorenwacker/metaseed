@@ -58,11 +58,62 @@ jobs:
           name: dist
           path: dist/
 
+  fresh-install-smoke:
+    # The release job tests against uv.lock; `uv tool install metaseed` resolves
+    # dependencies fresh. Those can diverge: mcp 2.0.0 satisfied the unbounded
+    # `mcp>=1.0.0` pin and removed mcp.server.fastmcp, so every fresh install of
+    # v0.21.0 crashed on `metaseed ui` while the locked test suites stayed green.
+    # This job does what a user does -- installs the built wheel with a fresh
+    # resolution and all feature extras -- and gates the publish on it.
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Download the built distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Install the wheel with a fresh dependency resolution
+        run: |
+          WHEEL=$(ls dist/*.whl)
+          uv venv smoke
+          uv pip install --python smoke "metaseed[dcat,ena,brapi,pride] @ file://$PWD/$WHEEL"
+
+      - name: Smoke-test the entry point and every import users hit first
+        run: |
+          smoke/bin/metaseed --help
+          smoke/bin/metaseed version
+          smoke/bin/metaseed profiles
+          smoke/bin/python -c "from metaseed.ui import run_ui"
+          smoke/bin/python -c "from metaseed.agent.mcp.server import create_server; create_server()"
+          smoke/bin/python -c "from metaseed import MetaseedClient; MetaseedClient('miappe', '1.1')"
+
+      - name: Boot the web UI and probe it
+        run: |
+          smoke/bin/metaseed ui --port 8899 &
+          UI_PID=$!
+          for i in $(seq 1 20); do
+            sleep 1
+            if curl -sf http://127.0.0.1:8899/ >/dev/null; then
+              echo "UI answered"
+              kill $UI_PID
+              exit 0
+            fi
+          done
+          kill $UI_PID || true
+          echo "UI never answered" >&2
+          exit 1
+
   publish:
     # Publishes to PyPI via Trusted Publishing (OIDC): no API token is stored in
     # the repo. Requires a matching publisher on PyPI for this repo + workflow +
-    # environment. Runs only after the release job's tests and build succeed.
-    needs: release
+    # environment. Runs only after the release job's tests and build succeed AND
+    # the wheel survives a fresh-resolution install (fresh-install-smoke).
+    needs: [release, fresh-install-smoke]
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
