@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Any
 
-from metaseed.specs.builder import SpecBuilder
+from metaseed.specs.builder import SpecBuilder, validate_constraint_names
 from metaseed.specs.schema import Constraints
 
 if TYPE_CHECKING:
@@ -405,8 +405,44 @@ def register_spec_builder_tools(  # noqa: C901
         ontology_term: str | None = None,
         reference: str | None = None,
         parent_ref: str | None = None,
+        pattern: str | None = None,
+        min_length: int | None = None,
+        max_length: int | None = None,
+        minimum: float | None = None,
+        maximum: float | None = None,
+        min_items: int | None = None,
+        max_items: int | None = None,
+        enum: list[str] | None = None,
+        clear: list[str] | None = None,
     ) -> str:
-        """Update a field in place. Only supplied attributes change."""
+        """Update a field in place. Unset arguments keep their current value.
+
+        Constraints merge: a supplied constraint overwrites that one value and
+        leaves the field's other constraints intact (and creates the constraints
+        block if the field had none). Because an omitted argument means
+        "unchanged", removal needs `clear` -- a list of constraint names
+        (pattern, min_length, max_length, minimum, maximum, min_items, max_items,
+        enum) to unset. Naming a constraint in both `clear` and an argument is an
+        error. Clearing the last constraint drops the block entirely.
+        """
+        constraint_values = _clean(
+            {
+                "pattern": pattern,
+                "min_length": min_length,
+                "max_length": max_length,
+                "minimum": minimum,
+                "maximum": maximum,
+                "min_items": min_items,
+                "max_items": max_items,
+                "enum": enum,
+            }
+        )
+        # Checked before the first mutation: the attribute update and the
+        # constraint merge are two calls, so a bad `clear` name caught by the
+        # second would otherwise leave the first already applied.
+        name_error = validate_constraint_names(clear or ())
+        if name_error:
+            return json.dumps({"error": name_error})
         try:
             builder = _require_draft(current_state())
             builder.update_field(
@@ -424,6 +460,10 @@ def register_spec_builder_tools(  # noqa: C901
                     }
                 ),
             )
+            if constraint_values or clear:
+                builder.update_field_constraints(
+                    entity, field_name, clear=clear or (), **constraint_values
+                )
         except ValueError as exc:
             return json.dumps({"error": str(exc)})
         return json.dumps(_status(builder), indent=2)

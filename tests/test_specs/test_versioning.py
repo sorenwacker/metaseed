@@ -17,7 +17,14 @@ import yaml
 
 import metaseed.specs
 from metaseed.specs.builder import SpecBuilder
-from metaseed.specs.schema import EntityDefSpec, FieldSpec, FieldType, ProfileSpec
+from metaseed.specs.loader import SpecLoader
+from metaseed.specs.schema import (
+    EntityDefSpec,
+    FieldSpec,
+    FieldType,
+    ProfileSpec,
+    ValidationRuleSpec,
+)
 from metaseed.specs.versioning import (
     PROFILE_VERSION_PATTERN,
     check_profile_version,
@@ -324,3 +331,55 @@ class TestSaveRefusesAnUnloadableVersion:
             persistence.save_spec(spec)
 
         assert list(tmp_path.iterdir()) == []
+
+
+class TestLoaderConstraintInjection:
+    """Loading must not invent an empty constraints block.
+
+    ``_merge_rule_constraints_into_fields`` creates ``Constraints()`` before it
+    knows whether any value applies, so a rule that writes nothing leaves an
+    all-None object where the spec declared none. ``exclude_none`` keeps that
+    object as an empty mapping while a genuine ``None`` is dropped, so the same
+    content hashes two ways -- breaking the round-trip stability the hash
+    promises.
+    """
+
+    @staticmethod
+    def _load(tmp_path: Path) -> ProfileSpec:
+        """Write a spec whose numeric rule targets a string field, and load it.
+
+        The rule passes the type gate (a string field is a valid target) but
+        every guarded assignment inside it is skipped, so nothing is written.
+        """
+        spec = _spec(
+            validation_rules=[
+                ValidationRuleSpec(
+                    name="title_range", applies_to="Film", field="title", minimum=1
+                )
+            ]
+        )
+        profile_dir = tmp_path / "cinema" / "1.0"
+        profile_dir.mkdir(parents=True)
+        (profile_dir / "profile.yaml").write_text(SpecBuilder.from_spec(spec).to_yaml())
+
+        loader = SpecLoader(profile="cinema")
+        loader._user_specs_dir = tmp_path
+        return loader.load_profile(version="1.0", profile="cinema")
+
+    def test_a_rule_that_sets_nothing_leaves_the_field_without_constraints(
+        self, tmp_path: Path
+    ) -> None:
+        loaded = self._load(tmp_path)
+
+        title = next(f for f in loaded.entities["Film"].fields if f.name == "title")
+        assert title.constraints is None
+
+    def test_such_a_spec_still_round_trips_to_the_same_hash(
+        self, tmp_path: Path
+    ) -> None:
+        loaded = self._load(tmp_path)
+
+        on_disk = SpecBuilder.from_yaml(
+            (tmp_path / "cinema" / "1.0" / "profile.yaml").read_text()
+        ).spec
+        assert loaded.content_hash == on_disk.content_hash

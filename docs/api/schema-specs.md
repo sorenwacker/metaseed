@@ -96,6 +96,8 @@ A profile at `version` `1.2` written in `spec_version` `0.6` is normal: the two 
 
 `version` is `MAJOR.MINOR`: exactly two dot-separated runs of digits, matching `^\d+\.\d+$`. `"1.0"`, `"0.4"` and `"12.3"` are valid; `"1"`, `"1.0.0"`, `"1.1-dev"`, `"v1.1"` and `"latest"` are not. A non-conforming value is rejected when the spec is validated, in an error naming the offending value and the rule.
 
+A spec file written before this rule existed is listed but cannot be loaded. [`metaseed migrate-specs`](cli.md#migrate-specs) finds those files and normalizes the value.
+
 There is no patch component. A spec has no implementation that can be fixed independently of its content: every content change either keeps existing datasets valid or does not.
 
 | Component | Meaning |

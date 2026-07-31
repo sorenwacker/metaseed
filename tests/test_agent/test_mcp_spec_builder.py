@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 
 import pytest
+import yaml
 
 from metaseed.agent.mcp.server import create_server, reset_mcp_state
 from tests.test_agent.helpers import get_tool
@@ -138,6 +139,161 @@ class TestEntitiesAndFields:
         call(server, "spec_add_entity", name="Study")
         result = call(server, "spec_add_entity", name="Study")
         assert "error" in result
+
+
+class TestFieldConstraintsOverMcp:
+    """`spec_update_field` merges constraints instead of replacing them.
+
+    The tool's documented promise is that unset arguments keep their value. A
+    field's eight constraints live in one object, so honoring that promise means
+    merging, with an explicit `clear` list for removal.
+    """
+
+    def _constrained_draft(self, server):
+        """A draft whose `Study.rating` carries enum, maximum and pattern."""
+        call(server, "spec_create", name="p", version="0.1")
+        call(server, "spec_add_entity", name="Study")
+        call(
+            server,
+            "spec_add_field",
+            entity="Study",
+            name="rating",
+            field_type="string",
+            enum=["low", "high"],
+            maximum=10,
+            pattern="^[a-z]+$",
+        )
+
+    @staticmethod
+    def _field(server, entity, field_name):
+        """Read a field back out of the draft as the client sees it (via YAML)."""
+        spec = yaml.safe_load(get_tool(server, "spec_preview_yaml")())
+        return next(
+            f for f in spec["entities"][entity]["fields"] if f["name"] == field_name
+        )
+
+    def test_updating_one_constraint_keeps_the_others(self, server):
+        """The regression: `minimum=1` must not wipe enum, maximum and pattern."""
+        self._constrained_draft(server)
+
+        call(
+            server,
+            "spec_update_field",
+            entity="Study",
+            field_name="rating",
+            minimum=1,
+        )
+
+        constraints = self._field(server, "Study", "rating")["constraints"]
+        assert constraints["minimum"] == 1
+        assert constraints["enum"] == ["low", "high"]
+        assert constraints["maximum"] == 10
+        assert constraints["pattern"] == "^[a-z]+$"
+
+    def test_updating_another_attribute_keeps_constraints(self, server):
+        self._constrained_draft(server)
+
+        call(
+            server,
+            "spec_update_field",
+            entity="Study",
+            field_name="rating",
+            required=True,
+        )
+
+        field = self._field(server, "Study", "rating")
+        assert field["required"] is True
+        assert field["constraints"]["enum"] == ["low", "high"]
+
+    def test_clear_removes_only_the_named_constraint(self, server):
+        self._constrained_draft(server)
+
+        call(
+            server,
+            "spec_update_field",
+            entity="Study",
+            field_name="rating",
+            clear=["maximum"],
+        )
+
+        constraints = self._field(server, "Study", "rating")["constraints"]
+        assert "maximum" not in constraints
+        assert constraints["enum"] == ["low", "high"]
+        assert constraints["pattern"] == "^[a-z]+$"
+
+    def test_set_and_clear_in_one_call(self, server):
+        self._constrained_draft(server)
+
+        call(
+            server,
+            "spec_update_field",
+            entity="Study",
+            field_name="rating",
+            minimum=0,
+            clear=["enum", "pattern"],
+        )
+
+        constraints = self._field(server, "Study", "rating")["constraints"]
+        assert constraints["minimum"] == 0
+        assert constraints["maximum"] == 10
+        assert "enum" not in constraints
+        assert "pattern" not in constraints
+
+    def test_clearing_the_last_constraint_drops_the_block(self, server):
+        call(server, "spec_create", name="p", version="0.1")
+        call(server, "spec_add_entity", name="Study")
+        call(
+            server,
+            "spec_add_field",
+            entity="Study",
+            name="rating",
+            field_type="string",
+            maximum=10,
+        )
+
+        call(
+            server,
+            "spec_update_field",
+            entity="Study",
+            field_name="rating",
+            clear=["maximum"],
+        )
+
+        assert "constraints" not in self._field(server, "Study", "rating")
+
+    def test_merging_onto_a_field_without_constraints_creates_them(self, server):
+        call(server, "spec_create", name="p", version="0.1")
+        call(server, "spec_add_entity", name="Study")
+        call(
+            server, "spec_add_field", entity="Study", name="title", field_type="string"
+        )
+
+        call(
+            server,
+            "spec_update_field",
+            entity="Study",
+            field_name="title",
+            max_length=50,
+        )
+
+        assert self._field(server, "Study", "title")["constraints"]["max_length"] == 50
+
+    def test_unknown_clear_name_reports_the_valid_options(self, server):
+        self._constrained_draft(server)
+
+        result = call(
+            server,
+            "spec_update_field",
+            entity="Study",
+            field_name="rating",
+            clear=["maxmium"],
+        )
+
+        assert "maxmium" in result["error"]
+        assert "maximum" in result["error"]
+        assert "enum" in result["error"]
+        # the bad call left the field untouched
+        assert self._field(server, "Study", "rating")["constraints"]["maximum"] == 10
 
 
 class TestRulesAndValidation:

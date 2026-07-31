@@ -92,7 +92,7 @@ table and the bump rule.
 | Tool | Arguments | Description |
 |------|-----------|-------------|
 | `spec_add_field` | `entity`, `name`, `type`, `required?`, `description?`, `items?`, `ontology_term?`, `reference?`, `parent_ref?`, constraint fields | Add a field. A nested field (`type` is `list`/`entity` with `items` naming an existing entity) auto-creates the parent `identifier` and the back-reference on the target. |
-| `spec_update_field` | `entity`, `field_name`, editable fields | Update a field in place. |
+| `spec_update_field` | `entity`, `field_name`, `field_type?`, `required?`, `description?`, `items?`, `ontology_term?`, `reference?`, `parent_ref?`, constraint fields, `clear?` | Update a field in place. Unset arguments keep their current value; supplied constraints merge into the field's existing ones, and `clear` names constraints to remove. |
 | `spec_delete_field` | `entity`, `field_name` | Remove a field. |
 | `spec_move_field` | `entity`, `field_name`, `direction` | Reorder a field (`up` / `down`). |
 
@@ -101,6 +101,39 @@ table and the bump rule.
 `Constraints`: `pattern`, `min_length`, `max_length`, `minimum`, `maximum`,
 `min_items`, `max_items`, `enum`. See
 [Specification Language](schema-specs.md) for field semantics.
+
+#### Editing constraints
+
+A field's constraints are one `Constraints` object holding all eight values, so
+"change the minimum" and "replace the constraints" are different operations and
+the tools keep them apart.
+
+`spec_update_field` **merges**. A supplied constraint overwrites that one value
+and leaves every other constraint on the field intact, so tightening a range
+does not discard an existing `enum` or `pattern`. It creates the constraints
+block if the field had none. Because an omitted argument means *unchanged*, it
+cannot express removal; that is what `clear` is for — a list of constraint names
+to set back to unset.
+
+```
+spec_update_field(entity="Study", field_name="rating", minimum=1)
+  # enum, maximum and pattern survive untouched
+
+spec_update_field(entity="Study", field_name="rating", clear=["maximum"])
+  # removes maximum only
+
+spec_update_field(entity="Study", field_name="rating", minimum=0, clear=["enum"])
+  # set and clear in one call
+```
+
+Naming the same constraint both as an argument and in `clear` is rejected: the
+two say opposite things, and guessing which wins would hide the mistake. An
+unknown name in `clear` is rejected with the list of valid names.
+
+Clearing the last remaining constraint drops the whole `constraints` block
+rather than leaving an all-unset one, so the field serializes without a
+`constraints:` key and the spec's `content_hash` matches an otherwise identical
+spec whose field never carried constraints.
 
 ### Validation rules
 

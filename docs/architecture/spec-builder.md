@@ -76,7 +76,7 @@ mutations are defined.
 |-------|---------|
 | Profile | `set_metadata(**fields)`, `set_root_entity(name)` |
 | Entities | `add_entity(name, *, description="", ontology_term=None)`, `update_entity(name, **fields)`, `rename_entity(old, new)`, `delete_entity(name)` |
-| Fields | `add_field(entity, name, type, **fields)`, `update_field(entity, field_name, **fields)`, `delete_field(entity, field_name)`, `move_field(entity, field_name, direction)` |
+| Fields | `add_field(entity, name, type, **fields)`, `update_field(entity, field_name, **fields)`, `update_field_constraints(entity, field_name, *, clear=(), **values)`, `delete_field(entity, field_name)`, `move_field(entity, field_name, direction)` |
 | Rules | `add_rule(name, **fields)`, `update_rule(rule_name, **fields)`, `delete_rule(rule_name)` |
 | Output | `to_yaml()`, `validate()` |
 
@@ -87,6 +87,41 @@ the pre-extraction UI behavior.
 
 Index bookkeeping (which field is being edited) is a UI concern and stays in
 `SpecBuilderState`; `SpecBuilder` addresses fields and rules by name.
+
+### Update semantics: whole attributes versus constraints
+
+The `update_*` methods assign each supplied attribute onto the target object.
+Per attribute this is a replacement, which for a scalar (`required`,
+`description`) is indistinguishable from a partial update. It is not
+indistinguishable for `FieldSpec.constraints`, because one attribute holds eight
+values: `update_field(entity, name, constraints=Constraints(minimum=1))` sets the
+field's constraints *to that object*, discarding any `enum`, `pattern` or
+`maximum` it previously carried.
+
+`update_field_constraints` is the partial-update path, kept a separate method
+rather than a flag on `update_field` for two reasons. The two methods take
+different key spaces — `update_field(**attrs)` takes `FieldSpec` attribute names,
+`update_field_constraints(**values)` takes `Constraints` field names, and
+`pattern`, `minimum` and `maximum` exist in neither dictionary as the same thing
+— so merging them into one signature would make `pattern=` ambiguous. And a
+caller that genuinely holds a complete constraint set (the web field editor,
+below) should not have to opt out of merging.
+
+It merges the supplied values over the field's current constraints, creates the
+object when the field has none, and takes `clear` — an iterable of constraint
+names to unset, since an omitted keyword cannot mean "remove". A name that is
+neither in `Constraints` nor valid for `clear` raises `ValueError` listing the
+valid names; a name given both as a value and in `clear` raises rather than
+resolving an order of precedence.
+
+When the merge leaves every constraint unset, `constraints` is set to `None`
+rather than an all-`None` object. Both would validate, but they are not
+interchangeable downstream: `canonical_json` dumps with `exclude_none=True`, so
+an empty `Constraints` survives as `"constraints":{}` while `None` drops out
+entirely, and the same spec would otherwise carry two different
+`content_hash` values depending on its edit history. `SpecBuilder.to_yaml` uses
+the same `exclude_none=True` dump, so the distinction is equally visible in the
+saved file.
 
 ### Validation
 
@@ -120,6 +155,11 @@ interface can save a draft.
 
 - **UI**: `routes_*.py` hold an in-progress `ProfileSpec` in
   `SpecBuilderState.spec` and call `SpecBuilder(state.spec).<op>()` per request,
-  then track edit indices and unsaved-changes flags for rendering.
+  then track edit indices and unsaved-changes flags for rendering. The field
+  editor posts every constraint input on every save, so it goes through
+  `FieldForm.apply_to` and replaces the constraints wholesale — an omitted value
+  there means the user emptied the box, not that the value is unchanged. This is
+  the one place where whole-object replacement is the correct reading of the
+  input.
 - **MCP**: one `SpecBuilder` draft lives in the MCP session. See
   [Spec Builder MCP Tools](../api/spec-builder-mcp.md) for the tool reference.

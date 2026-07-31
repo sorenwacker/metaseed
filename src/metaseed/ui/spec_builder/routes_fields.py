@@ -172,6 +172,15 @@ def register_field_routes(  # noqa: C901
 
         # Map the form to the field via the shared, pure FieldForm mapping so the
         # form -> FieldSpec logic (all markers) lives in one place.
+        #
+        # This deliberately *replaces* the constraints rather than merging them
+        # (SpecBuilder.update_field_constraints). The field editor renders an
+        # input for every constraint and posts all of them on every save, so an
+        # empty box means the user cleared that constraint, not that it is
+        # unchanged. Merging here would make constraints impossible to remove
+        # from the UI. FieldForm.build_constraints collapses an all-empty form to
+        # None, matching the merge path's rule that no constraints means no
+        # constraints block.
         FieldForm(
             name=name,
             field_type=field_type,

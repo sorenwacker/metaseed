@@ -429,5 +429,35 @@ def migrate_datasets(
     print_migration_report(reports)
 
 
+@app.command(name="migrate-specs")
+def migrate_spec_versions(
+    apply: Annotated[
+        bool, typer.Option("--apply", help="Write changes (default is dry run)")
+    ] = False,
+) -> None:
+    """Repair profile specs whose version is not MAJOR.MINOR.
+
+    Since 0.22 a spec version must match ^\\d+\\.\\d+$, so a spec written by an
+    earlier release (for example version '1.2-dev-a1b2c3') is listed but cannot
+    be loaded. This scans the built-in and user spec directories and normalizes
+    those values, rewriting the version and nothing else.
+
+    Values with no derivable version, and repairs that would put two specs at
+    the same name+version path, are reported rather than guessed or overwritten.
+    """
+    from metaseed.cli import migrate_specs
+
+    if not apply:
+        typer.echo("DRY RUN - use --apply to write changes")
+    else:
+        typer.echo("APPLYING CHANGES")
+
+    migrations = migrate_specs.migrate_spec_versions(dry_run=not apply)
+    migrate_specs.print_migration_report(migrations, dry_run=not apply)
+
+    if apply and migrate_specs.has_failures(migrations):
+        raise typer.Exit(ExitCode.VALIDATION_ERROR)
+
+
 if __name__ == "__main__":
     app()

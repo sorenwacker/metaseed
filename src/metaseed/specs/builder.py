@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, Any, Self
 import yaml
 
 from metaseed.specs.schema import (
+    Constraints,
     EntityDefSpec,
     FieldSpec,
     FieldType,
@@ -31,6 +32,13 @@ if TYPE_CHECKING:
 _PROFILE_METADATA_FIELDS = frozenset(
     {"name", "version", "display_name", "description", "ontology", "spec_version"}
 )
+
+CONSTRAINT_NAMES: tuple[str, ...] = tuple(Constraints.model_fields)
+"""The names :meth:`SpecBuilder.update_field_constraints` accepts and can clear.
+
+Derived from :class:`~metaseed.specs.schema.Constraints` so adding a constraint
+to the schema makes it editable and clearable without a second edit here.
+"""
 
 
 def validate_entity_name(name: str) -> str | None:
@@ -49,6 +57,29 @@ def validate_entity_name(name: str) -> str | None:
     if not name.replace("_", "").isalnum():
         return "Entity name can only contain letters, numbers, and underscores"
     return None
+
+
+def validate_constraint_names(names: Iterable[str]) -> str | None:
+    """Validate names used as constraints (to set or to clear).
+
+    Exposed alongside :meth:`SpecBuilder.update_field_constraints` so an adapter
+    can reject a bad name before it starts mutating a draft, rather than leaving
+    a half-applied edit behind when the merge raises.
+
+    Args:
+        names: Candidate constraint names.
+
+    Returns:
+        Error message naming the offenders and the valid options, or None if
+        every name is a constraint.
+    """
+    unknown = sorted(set(names) - set(CONSTRAINT_NAMES))
+    if not unknown:
+        return None
+    return (
+        f"Unknown constraint name(s): {', '.join(unknown)}. "
+        f"Valid constraint names: {', '.join(CONSTRAINT_NAMES)}"
+    )
 
 
 def validate_field_name(name: str) -> str | None:
@@ -308,6 +339,13 @@ class SpecBuilder:
     def update_field(self: Self, entity: str, field_name: str, **attrs: Any) -> None:
         """Update a field in place. Only supplied attributes change.
 
+        Each supplied attribute is assigned whole. For ``constraints`` that means
+        **replacement, not merge**: passing ``constraints=Constraints(minimum=1)``
+        substitutes the entire object, so any ``enum``, ``pattern`` or other
+        constraint the field already carried is discarded. Use
+        :meth:`update_field_constraints` to change individual constraints while
+        keeping the rest.
+
         Raises:
             ValueError: If the entity or field is missing, or an attribute is
                 not a valid field property.
@@ -323,6 +361,61 @@ class SpecBuilder:
             if key == "type" and value is not None:
                 value = FieldType(value)
             setattr(field, key, value)
+
+    def update_field_constraints(
+        self: Self,
+        entity: str,
+        field_name: str,
+        *,
+        clear: Iterable[str] = (),
+        **values: Any,
+    ) -> None:
+        """Merge constraint values into a field's existing constraints.
+
+        The partial-update counterpart to ``update_field(constraints=...)``:
+        supplied values overwrite those constraints only, every other constraint
+        on the field is preserved, and the ``Constraints`` object is created if
+        the field had none.
+
+        An omitted keyword means "unchanged", so it cannot express removal;
+        ``clear`` names the constraints to unset. When the merge leaves every
+        constraint unset, ``constraints`` becomes ``None`` rather than an
+        all-``None`` object: both dump to nothing under ``exclude_none``, but an
+        empty object still serializes as an empty mapping and would give the same
+        spec a second :attr:`~metaseed.specs.schema.ProfileSpec.content_hash`.
+
+        Args:
+            entity: Name of the entity owning the field.
+            field_name: Name of the field to edit.
+            clear: Constraint names to unset. Must be disjoint from ``values``.
+            **values: Constraint names from :data:`CONSTRAINT_NAMES` mapped to
+                their new values.
+
+        Raises:
+            ValueError: If the entity or field is missing, a name in ``values``
+                or ``clear`` is not a constraint, a name appears in both (the two
+                requests contradict each other), or a value fails the
+                ``Constraints`` schema. The field is left untouched.
+        """
+        field = self._require_field(entity, field_name)
+        cleared = set(clear)
+        name_error = validate_constraint_names(set(values) | cleared)
+        if name_error:
+            raise ValueError(name_error)
+        conflicting = sorted(set(values) & cleared)
+        if conflicting:
+            raise ValueError(
+                "Cannot set and clear the same constraint(s) in one call: "
+                f"{', '.join(conflicting)}"
+            )
+
+        merged: dict[str, Any] = (
+            field.constraints.model_dump() if field.constraints else {}
+        )
+        merged.update(values)
+        merged.update(dict.fromkeys(cleared))
+        constraints = Constraints(**merged)
+        field.constraints = None if constraints == Constraints() else constraints
 
     def delete_field(self: Self, entity: str, field_name: str) -> None:
         """Delete a field by name.

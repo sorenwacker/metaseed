@@ -11,7 +11,7 @@ from __future__ import annotations
 import pytest
 
 from metaseed.specs.builder import SpecBuilder
-from metaseed.specs.schema import FieldType, ProfileSpec
+from metaseed.specs.schema import Constraints, FieldType, ProfileSpec
 
 
 class TestConstruction:
@@ -353,6 +353,181 @@ class TestFields:
 
         names = [f.name for f in builder.spec.entities["Study"].fields]
         assert names == ["a", "b"]
+
+
+class TestFieldConstraints:
+    """Partial edits of the eight-valued ``FieldSpec.constraints`` object.
+
+    ``constraints`` is one attribute holding eight values, so assigning it (what
+    ``update_field`` does) is a wholesale replacement. ``update_field_constraints``
+    is the merging path; these tests pin both semantics against each other.
+    """
+
+    @staticmethod
+    def _builder_with_constrained_field() -> SpecBuilder:
+        """A ``Study.rating`` carrying enum, maximum and pattern."""
+        builder = SpecBuilder.empty("p", "0.1")
+        builder.add_entity("Study")
+        builder.add_field(
+            "Study",
+            "rating",
+            FieldType.STRING,
+            constraints=Constraints(
+                enum=["low", "high"], maximum=10, pattern="^[a-z]+$"
+            ),
+        )
+        return builder
+
+    @staticmethod
+    def _rating(builder: SpecBuilder):
+        return next(
+            f for f in builder.spec.entities["Study"].fields if f.name == "rating"
+        )
+
+    def test_merge_preserves_constraints_that_were_not_supplied(self):
+        """The regression: editing one constraint must not drop the other seven."""
+        builder = self._builder_with_constrained_field()
+
+        builder.update_field_constraints("Study", "rating", minimum=1)
+
+        constraints = self._rating(builder).constraints
+        assert constraints is not None
+        assert constraints.minimum == 1
+        assert constraints.enum == ["low", "high"]
+        assert constraints.maximum == 10
+        assert constraints.pattern == "^[a-z]+$"
+
+    def test_clear_removes_only_the_named_constraint(self):
+        builder = self._builder_with_constrained_field()
+
+        builder.update_field_constraints("Study", "rating", clear=["maximum"])
+
+        constraints = self._rating(builder).constraints
+        assert constraints is not None
+        assert constraints.maximum is None
+        assert constraints.enum == ["low", "high"]
+        assert constraints.pattern == "^[a-z]+$"
+
+    def test_set_and_clear_in_one_call(self):
+        builder = self._builder_with_constrained_field()
+
+        builder.update_field_constraints(
+            "Study", "rating", minimum=0, clear=["enum", "pattern"]
+        )
+
+        constraints = self._rating(builder).constraints
+        assert constraints is not None
+        assert constraints.minimum == 0
+        assert constraints.enum is None
+        assert constraints.pattern is None
+        assert constraints.maximum == 10
+
+    def test_setting_and_clearing_the_same_name_raises(self):
+        builder = self._builder_with_constrained_field()
+
+        with pytest.raises(ValueError, match="minimum"):
+            builder.update_field_constraints(
+                "Study", "rating", minimum=1, clear=["minimum"]
+            )
+
+    def test_clearing_the_last_constraint_leaves_none(self):
+        builder = SpecBuilder.empty("p", "0.1")
+        builder.add_entity("Study")
+        builder.add_field(
+            "Study", "rating", FieldType.STRING, constraints=Constraints(maximum=10)
+        )
+
+        builder.update_field_constraints("Study", "rating", clear=["maximum"])
+
+        assert self._rating(builder).constraints is None
+
+    def test_cleared_field_hashes_like_one_that_never_had_constraints(self):
+        """An all-None Constraints and None must not be two different documents.
+
+        ``canonical_json`` dumps with ``exclude_none=True``: an empty Constraints
+        survives as an empty mapping while None drops out, so leaving the object
+        behind would give the same spec two content hashes.
+        """
+        edited = SpecBuilder.empty("p", "0.1")
+        edited.add_entity("Study")
+        edited.add_field(
+            "Study", "rating", FieldType.STRING, constraints=Constraints(maximum=10)
+        )
+        edited.update_field_constraints("Study", "rating", clear=["maximum"])
+
+        pristine = SpecBuilder.empty("p", "0.1")
+        pristine.add_entity("Study")
+        pristine.add_field("Study", "rating", FieldType.STRING)
+
+        assert edited.spec.content_hash == pristine.spec.content_hash
+
+    def test_unknown_clear_name_raises_listing_valid_names(self):
+        builder = self._builder_with_constrained_field()
+
+        with pytest.raises(ValueError) as exc:
+            builder.update_field_constraints("Study", "rating", clear=["maxmium"])
+
+        message = str(exc.value)
+        assert "maxmium" in message
+        for name in (
+            "pattern",
+            "min_length",
+            "max_length",
+            "minimum",
+            "maximum",
+            "min_items",
+            "max_items",
+            "enum",
+        ):
+            assert name in message
+
+    def test_unknown_constraint_value_raises(self):
+        builder = self._builder_with_constrained_field()
+
+        with pytest.raises(ValueError, match="nonsense"):
+            builder.update_field_constraints("Study", "rating", nonsense=1)
+
+    def test_merge_creates_constraints_when_the_field_has_none(self):
+        builder = SpecBuilder.empty("p", "0.1")
+        builder.add_entity("Study")
+        builder.add_field("Study", "title", FieldType.STRING)
+
+        builder.update_field_constraints("Study", "title", max_length=50)
+
+        field = next(
+            f for f in builder.spec.entities["Study"].fields if f.name == "title"
+        )
+        assert field.constraints is not None
+        assert field.constraints.max_length == 50
+
+    def test_merge_on_missing_field_raises(self):
+        builder = SpecBuilder.empty("p", "0.1")
+        builder.add_entity("Study")
+
+        with pytest.raises(ValueError):
+            builder.update_field_constraints("Study", "nope", minimum=1)
+
+    def test_update_field_replaces_the_whole_constraints_object(self):
+        """Pin the documented replace semantics of ``update_field``.
+
+        This is not the bug; it is the deliberate other half of the pair, and the
+        docstring must say so.
+        """
+        builder = self._builder_with_constrained_field()
+
+        builder.update_field("Study", "rating", constraints=Constraints(minimum=1))
+
+        constraints = self._rating(builder).constraints
+        assert constraints is not None
+        assert constraints.minimum == 1
+        assert constraints.enum is None
+        assert constraints.maximum is None
+        assert constraints.pattern is None
+
+    def test_update_field_docstring_states_the_replacement(self):
+        doc = SpecBuilder.update_field.__doc__ or ""
+        assert "constraints" in doc
+        assert "update_field_constraints" in doc
 
 
 class TestRules:

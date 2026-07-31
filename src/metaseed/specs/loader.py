@@ -98,6 +98,7 @@ def _merge_rule_constraints_into_fields(profile: ProfileSpec) -> None:
                 # A constraint on e.g. a datetime/uri field can't be applied as a
                 # Pydantic pattern/range; the field type already validates it.
                 continue
+            invented = field.constraints is None
             if field.constraints is None:
                 field.constraints = Constraints()
             constraints = field.constraints
@@ -109,6 +110,12 @@ def _merge_rule_constraints_into_fields(profile: ProfileSpec) -> None:
                 constraints.minimum = rule.minimum
             if is_numeric and rule.maximum is not None and constraints.maximum is None:
                 constraints.maximum = rule.maximum
+            if invented and constraints == Constraints():
+                # Every assignment above was skipped -- a numeric rule aimed at a
+                # string field, say. Leaving the empty object behind would make
+                # the loaded spec serialize `constraints: {}` where the source
+                # had nothing, so identical content would hash two ways.
+                field.constraints = None
 
 
 class SpecLoader:
