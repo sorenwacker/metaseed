@@ -546,7 +546,7 @@ class SpecBuilder:
         if spec.root_entity and spec.root_entity not in spec.entities:
             issues.append(f"root_entity '{spec.root_entity}' is not a defined entity")
 
-        issues.extend(self._reference_issues(spec.entities.items()))
+        issues.extend(self._field_issues(spec.entities.items()))
 
         try:
             from metaseed.facade.core import ProfileFacade
@@ -655,15 +655,38 @@ class SpecBuilder:
                 ),
             )
 
-    def _reference_issues(
+    def _field_issues(
         self: Self, entities: Iterable[tuple[str, EntityDefSpec]]
     ) -> list[str]:
-        """Report nested/reference targets that name an undefined entity."""
+        """Report container fields with no element type, and dangling targets.
+
+        A ``list`` or ``entity`` field must name its element type in ``items``.
+        The model build cannot catch an omission -- ``list`` becomes
+        ``list[Any]`` and ``entity`` becomes ``Any`` whatever ``items`` says --
+        so such a field validates while accepting anything and is never
+        resolved as a nested entity. For a ``list``, ``items`` may name a
+        primitive (``string``, ``integer``, ...); anything else must name a
+        defined entity.
+
+        Args:
+            entities: The (name, definition) pairs to inspect.
+
+        Returns:
+            One human-readable issue per offending field.
+        """
         issues: list[str] = []
         defined = set(self._spec.entities)
         for entity_name, entity_def in entities:
             for field in entity_def.fields:
-                if field.is_nested() and field.items and field.items not in defined:
+                if (
+                    field.type in (FieldType.LIST, FieldType.ENTITY)
+                    and not (field.items or "").strip()
+                ):
+                    issues.append(
+                        f"{entity_name}.{field.name}: {field.type.value} field "
+                        f"has no 'items' element type"
+                    )
+                elif field.is_nested() and field.items and field.items not in defined:
                     issues.append(
                         f"{entity_name}.{field.name}: items target "
                         f"'{field.items}' is not a defined entity"

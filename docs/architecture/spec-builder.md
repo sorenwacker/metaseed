@@ -140,6 +140,8 @@ editable and still catches the problem before `save_spec` writes the file
 (which refuses it outright). See
 [Profile Versioning](../api/schema-specs.md#profile-versioning).
 
+`validate()` reports a container field that names no element type: a `list` or `entity` field with no `items`. The model build cannot catch this — `list` maps to `list[Any]` and `entity` to `Any` regardless of `items` — so such a field builds cleanly while accepting anything and never resolving as a nested entity. An `items` value naming a primitive (`string`, `integer`, …, see `specs.schema.PRIMITIVE_TYPES`) is a valid list element type and is not an issue; only an absent or empty `items` is.
+
 `validate()` returns a list of issues; an empty list means the spec builds
 cleanly.
 

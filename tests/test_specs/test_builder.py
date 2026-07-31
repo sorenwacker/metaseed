@@ -8,8 +8,11 @@ and full-build validation.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
+import metaseed.specs
 from metaseed.specs.builder import SpecBuilder
 from metaseed.specs.schema import Constraints, FieldType, ProfileSpec
 
@@ -612,6 +615,81 @@ class TestValidation:
 
         issues = builder.validate()
         assert any("root" in issue.lower() for issue in issues)
+
+    def test_list_field_without_items_reported(self):
+        builder = SpecBuilder.empty("movies", "1.0")
+        builder.add_entity("Movie")
+        builder.set_root_entity("Movie")
+        builder.add_field("Movie", "title", FieldType.STRING)
+        builder.add_field("Movie", "tags", FieldType.LIST)
+
+        issues = builder.validate()
+        assert any("Movie.tags" in issue and "no 'items'" in issue for issue in issues)
+
+    def test_entity_field_without_items_reported(self):
+        builder = SpecBuilder.empty("movies", "1.0")
+        builder.add_entity("Movie")
+        builder.set_root_entity("Movie")
+        builder.add_field("Movie", "director", FieldType.ENTITY)
+
+        issues = builder.validate()
+        assert any(
+            "Movie.director" in issue and "no 'items'" in issue for issue in issues
+        )
+
+    def test_list_field_with_primitive_items_is_clean(self):
+        """``items: string`` is a valid element type, not a missing target."""
+        builder = SpecBuilder.empty("movies", "1.0")
+        builder.add_entity("Movie")
+        builder.set_root_entity("Movie")
+        builder.add_field("Movie", "tags", FieldType.LIST, items="string")
+
+        assert builder.validate() == []
+
+    def test_blank_items_counts_as_missing_not_as_a_dangling_target(self):
+        builder = SpecBuilder.empty("movies", "1.0")
+        builder.add_entity("Movie")
+        builder.set_root_entity("Movie")
+        builder.add_field("Movie", "tags", FieldType.LIST, items="   ")
+
+        issues = builder.validate()
+        assert any("Movie.tags" in issue and "no 'items'" in issue for issue in issues)
+        assert not any("is not a defined entity" in issue for issue in issues)
+
+
+def _shipped_profiles() -> list[tuple[str, str]]:
+    """Every ``profile.yaml`` shipped in the package, as (profile, version).
+
+    Raises:
+        RuntimeError: If none are found, which would leave the gate below
+            parametrized with nothing and passing without testing anything.
+    """
+    specs_dir = Path(metaseed.specs.__file__).parent
+    profiles = sorted(
+        (path.parent.parent.name, path.parent.name)
+        for path in specs_dir.glob("*/*/profile.yaml")
+    )
+    if not profiles:
+        raise RuntimeError(f"No shipped profiles found under {specs_dir}")
+    return profiles
+
+
+_SHIPPED_PROFILES = _shipped_profiles()
+
+
+@pytest.mark.parametrize(
+    ("profile", "version"),
+    _SHIPPED_PROFILES,
+    ids=[f"{p}-{v}" for p, v in _SHIPPED_PROFILES],
+)
+def test_shipped_profile_validates_clean(profile: str, version: str) -> None:
+    """Every shipped profile must satisfy every rule ``validate()`` enforces.
+
+    A rule that the package's own profiles violate is either a wrong rule or a
+    broken profile; this gate forces that to be decided when the rule is added,
+    not discovered by a user authoring against a profile as a template.
+    """
+    assert SpecBuilder.from_template(profile, version).validate() == []
 
 
 def _list_field(name: str, items: str):

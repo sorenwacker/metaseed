@@ -493,6 +493,8 @@ Lists contain multiple items. Use `items` to specify the element type:
   items: Sample
 ```
 
+`items` is required on `list` and `entity` fields. Omitting it is not rejected at load time — the generated model is `list[Any]` or `Any` either way — but [`validate()`](../architecture/spec-builder.md#validation) reports it, because a container with no element type accepts anything and is never resolved as a nested entity.
+
 ### Entity Fields
 
 Single nested object (one-to-one relationship):
