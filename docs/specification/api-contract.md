@@ -27,6 +27,7 @@ print(metaseed.__all__)
 | `SpecLoader` | class | Load and cache profile specifications. |
 | `validate` | function | Validate a dataset and return a `ValidationResult`. |
 | `Entity`, `EntityNode`, `EntitySchema`, `FieldInfo` | classes | Immutable domain objects returned by the client. |
+| `SkippedNode` | class | A payload node a permissive `MetaseedClient.load` dropped, passed to its `on_skip` callback. |
 | `ValidationResult`, `ValidationIssue` | classes | Structured validation output. |
 | `JsonStorage`, `YamlStorage` | classes | Default storage adapters. |
 | `MetaseedError`, `EntityNotFoundError`, `EntityTypeNotFoundError`, `ProfileNotFoundError` | exceptions | The exception hierarchy; all library errors derive from `MetaseedError`. |
@@ -47,6 +48,7 @@ from metaseed import (
     EntityNode,
     EntitySchema,
     FieldInfo,
+    SkippedNode,
     ValidationResult,
     ValidationIssue,
     JsonStorage,
@@ -118,6 +120,27 @@ When a public symbol is to be removed, it SHOULD first be marked deprecated in a
 release — kept working, documented as deprecated in the changelog — before removal
 in a later release. Because the project is pre-1.0, a deprecation-then-removal
 cycle MAY span minor versions rather than requiring a major bump.
+
+### How to deprecate
+
+A deprecation MUST be machine-visible, not only prose: mark the callable with `@deprecated` so consumers see it at runtime rather than at removal.
+
+```python
+from metaseed.deprecation import deprecated
+
+
+@deprecated(since="0.23", removed_in="1.0", use_instead="MetaseedClient.load")
+def load_dataset(path: str) -> None:
+    """Load a dataset from a file."""
+```
+
+Calling it emits a `DeprecationWarning` naming the callable, the version that deprecated it, the replacement, and the version scheduled for removal, reported against the caller's line. The decorator also appends the same note to the docstring, so `help()` and the rendered API docs carry it.
+
+`deprecated` is a maintenance tool, not consumer surface: it is imported from `metaseed.deprecation` and is deliberately absent from the top-level `__all__`, so decorating a symbol never enlarges the public API it governs.
+
+`since` and `removed_in` are both required. `removed_in` gives the consumer a deadline instead of an open-ended warning, and it is what makes the policy enforceable — the removal release is decided when the deprecation ships, not when someone remembers. `use_instead` is optional, for a symbol that goes away with no replacement.
+
+Deprecating a symbol is a change to the public surface and MUST be recorded in the changelog for the release that introduces the warning, and again for the release that removes the symbol.
 
 ## Consumer contract
 
