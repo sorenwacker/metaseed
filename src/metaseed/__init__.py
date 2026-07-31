@@ -36,6 +36,7 @@ from metaseed.api import (
     MetaseedClient,
     MetaseedError,
     ProfileNotFoundError,
+    SkippedNode,
     ValidationIssue,
     ValidationResult,
 )
@@ -94,6 +95,7 @@ __all__ = [
     "MetaseedError",
     "ProfileFacade",
     "ProfileNotFoundError",
+    "SkippedNode",
     "SpecLoader",
     "ValidationIssue",
     "ValidationResult",

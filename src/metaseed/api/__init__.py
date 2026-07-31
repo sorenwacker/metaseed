@@ -30,6 +30,7 @@ from metaseed.api.schema import (
     ValidationIssue,
     ValidationResult,
 )
+from metaseed.api.serialization import SkippedNode
 
 if TYPE_CHECKING:
     from metaseed.api.rest import app
@@ -60,6 +61,7 @@ __all__ = [
     "MetaseedClient",
     "MetaseedError",
     "ProfileNotFoundError",
+    "SkippedNode",
     "ValidationError",
     "ValidationIssue",
     "ValidationResult",

@@ -193,6 +193,34 @@ client.load(data)
 client.load_yaml("dataset.yaml")
 ```
 
+A tree node without an `id` is loaded under a generated one, and its children are attached to that generated id — a stored id is not required to keep a subtree together.
+
+### Permissive loading
+
+`load()` is strict by default: a tree node whose `entity_type` is missing or not defined by the profile aborts the whole load, so one bad node makes a whole dataset unreadable. Pass `on_skip` to load permissively instead. The callback turns the mode on *and* receives every dropped node, so a permissive load cannot discard data without telling the caller:
+
+```python
+from metaseed import MetaseedClient, SkippedNode
+
+skipped: list[SkippedNode] = []
+client = MetaseedClient("miappe", "1.2")
+loaded = client.load(data, on_skip=skipped.append)
+
+for skip in skipped:
+    print(f"dropped {skip.entity_type!r}: {skip.reason}")
+```
+
+A skipped node takes its subtree with it. Re-parenting the orphans to the skipped node's parent would assert a parent-child link the payload never stated and the profile may not permit, so `load()` drops what it cannot place rather than inventing structure. `SkippedNode.node` holds the raw payload node, including the dropped subtree, so a caller that wants to recover the children has them.
+
+| `SkippedNode` field | Meaning |
+|---------------------|---------|
+| `entity_type` | The node's `entity_type`, or `None` if absent or not a string |
+| `reason` | Why the node could not be loaded |
+| `node` | The raw payload node, including its dropped subtree |
+| `descendants_dropped` | Number of nodes below it that were dropped with it |
+
+`on_skip` applies to the tree format. The flat format is loaded entity by entity and already drops entities it cannot reconstruct, with a warning log.
+
 ### Serialization Formats
 
 **Flat format** (default):
