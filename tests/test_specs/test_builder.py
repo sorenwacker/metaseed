@@ -46,10 +46,15 @@ class TestConstruction:
         other = SpecBuilder.from_template("miappe", "1.2")
         assert len(other.spec.entities) > len(builder.spec.entities)
 
-    def test_from_template_marks_version_as_derivative(self):
+    def test_from_template_keeps_the_source_version(self):
+        """The clone is a derivative *of* 1.2, and must stay MAJOR.MINOR.
+
+        A marker suffix would make the draft unloadable: ProfileSpec.version is
+        MAJOR.MINOR, so a suffixed draft could be saved but never read back.
+        """
         builder = SpecBuilder.from_template("miappe", "1.2")
 
-        assert "-dev" in builder.spec.version
+        assert builder.spec.version == "1.2"
 
     def test_from_template_unknown_profile_raises(self):
         with pytest.raises(ValueError):

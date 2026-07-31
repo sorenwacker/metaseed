@@ -64,7 +64,7 @@ mutations are defined.
 | Constructor | Behavior |
 |-------------|----------|
 | `SpecBuilder.empty(name, version, *, display_name=None, description="", ontology=None)` | New spec with no entities. |
-| `SpecBuilder.from_template(profile, version)` | Deep-copy a built-in or user spec loaded via `SpecLoader`; the version is suffixed to mark it as a derivative. |
+| `SpecBuilder.from_template(profile, version)` | Deep-copy a built-in or user spec loaded via `SpecLoader`, keeping its `version`. The draft is a derivative of that version; the author sets the new profile name and version with `set_metadata` before saving. Profile versions are `MAJOR.MINOR` ([Profile Versioning](../api/schema-specs.md#profile-versioning)), so a draft cannot carry a marker suffix and stay loadable. |
 | `SpecBuilder.from_yaml(text)` | Parse YAML and validate with `ProfileSpec.model_validate`. |
 | `SpecBuilder.from_spec(spec)` | Wrap an existing `ProfileSpec` (used by the UI to adopt `SpecBuilderState.spec`). |
 
@@ -96,6 +96,14 @@ every entity through `models.factory.create_model_from_spec`. This exercises the
 same code path a real load uses, so type, constraint, and reference errors
 surface during authoring. The facade accepts a pre-loaded `spec`
 (`facade/core.py`), so validation runs in memory without writing a file.
+
+`validate()` also reports a `version` that is not `MAJOR.MINOR`. `ProfileSpec`
+rejects such a value when a spec is *loaded*, but attribute assignment on an
+existing draft is not re-validated, so `set_metadata(version=…)` can leave a
+draft that would not load back. Reporting it as an issue keeps the draft
+editable and still catches the problem before `save_spec` writes the file
+(which refuses it outright). See
+[Profile Versioning](../api/schema-specs.md#profile-versioning).
 
 `validate()` returns a list of issues; an empty list means the spec builds
 cleanly.

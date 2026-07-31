@@ -83,9 +83,15 @@ def save_spec(spec: ProfileSpec, name: str | None = None) -> Path:
         Path to the saved ``profile.yaml`` file.
 
     Raises:
-        ValueError: If the name is empty or conflicts with a built-in spec.
+        ValueError: If the name is empty, the version is not ``MAJOR.MINOR``,
+            or the name conflicts with a built-in spec.
     """
     from metaseed.specs.loader import SpecLoader
+    from metaseed.specs.versioning import require_profile_version
+
+    # Checked before touching the filesystem: the version is also the directory
+    # name, and a spec written with a malformed version could not be loaded back.
+    require_profile_version(spec.version)
 
     safe_name = _normalize_profile_name(name or spec.name)
 

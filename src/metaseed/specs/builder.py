@@ -11,7 +11,6 @@ See `docs/architecture/spec-builder.md` for the design.
 from __future__ import annotations
 
 import copy
-import secrets
 from typing import TYPE_CHECKING, Any, Self
 
 import yaml
@@ -23,6 +22,7 @@ from metaseed.specs.schema import (
     ProfileSpec,
     ValidationRuleSpec,
 )
+from metaseed.specs.versioning import check_profile_version
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -116,7 +116,12 @@ class SpecBuilder:
     def from_template(cls, profile: str, version: str) -> SpecBuilder:
         """Create a builder from a deep copy of an existing profile.
 
-        The version is suffixed to mark the result as a derivative.
+        The clone keeps the source ``version``: it is a derivative *of that
+        version*, and the author sets the new name and version with
+        :meth:`set_metadata` before saving. A marker suffix is not an option --
+        a profile version is ``MAJOR.MINOR`` (see
+        :mod:`metaseed.specs.versioning`), so a suffixed draft would serialize
+        to YAML that could not be loaded back.
 
         Raises:
             ValueError: If the profile/version cannot be loaded.
@@ -131,10 +136,7 @@ class SpecBuilder:
                 f"Cannot load profile {profile} v{version}: {exc}"
             ) from exc
 
-        cloned = copy.deepcopy(source)
-        base_version = source.version.split("-dev")[0]
-        cloned.version = f"{base_version}-dev-{secrets.token_hex(3)}"
-        return cls(cloned)
+        return cls(copy.deepcopy(source))
 
     @classmethod
     def from_yaml(cls, text: str) -> SpecBuilder:
@@ -430,12 +432,23 @@ class SpecBuilder:
         every entity through the model factory, and additionally checks that the
         root entity and all entity references resolve.
 
+        The ``version`` format is reported here rather than raised on
+        assignment: ``ProfileSpec`` rejects a malformed version when a spec is
+        *loaded*, but pydantic does not re-validate attribute assignment, so
+        ``set_metadata(version=...)`` can leave a draft that would not load
+        back. Reporting keeps the draft editable and still catches the problem
+        before ``save_spec`` (which refuses it) writes the file.
+
         Returns:
             A list of human-readable issues. An empty list means the spec is
             structurally sound and builds cleanly.
         """
         issues: list[str] = []
         spec = self._spec
+
+        version_problem = check_profile_version(spec.version)
+        if version_problem is not None:
+            issues.append(version_problem)
 
         if spec.root_entity and spec.root_entity not in spec.entities:
             issues.append(f"root_entity '{spec.root_entity}' is not a defined entity")

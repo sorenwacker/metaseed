@@ -177,3 +177,94 @@ class TestRulesAndValidation:
         result = call(server, "spec_validate")
         assert result["valid"] is True
         assert result["issues"] == []
+
+
+class TestSpecCompare:
+    """`spec_compare` reports what the draft's edits imply for the version.
+
+    Classification itself is unit-tested in tests/test_specs/test_compare.py;
+    these pin the tool layer.
+    """
+
+    def test_compare_before_a_draft_errors(self, server):
+        result = call(server, "spec_compare", profile="miappe", version="1.2")
+        assert "error" in result
+
+    def test_compare_against_an_unknown_release_errors(self, server):
+        call(server, "spec_create", name="p", version="1.0")
+        result = call(server, "spec_compare", profile="nope", version="9.9")
+        assert "error" in result
+
+    def test_an_untouched_clone_needs_no_bump(self, server):
+        call(server, "spec_clone", profile="miappe", version="1.2")
+
+        result = call(server, "spec_compare", profile="miappe", version="1.2")
+
+        assert result["required_bump"] == "none"
+        assert result["breaking"] == []
+        assert result["compatible"] == []
+        assert result["old"]["content_hash"] == result["new"]["content_hash"]
+
+    def test_a_new_required_field_demands_a_major_bump(self, server):
+        call(server, "spec_clone", profile="miappe", version="1.2")
+        call(
+            server,
+            "spec_add_field",
+            entity="Investigation",
+            name="funding_statement",
+            field_type="string",
+            required=True,
+        )
+
+        result = call(server, "spec_compare", profile="miappe", version="1.2")
+
+        assert result["required_bump"] == "major"
+        assert result["declared_bump"] == "none"
+        assert result["bump_satisfied"] is False
+        assert [c["target"] for c in result["breaking"]] == [
+            "Investigation.funding_statement"
+        ]
+        assert result["breaking"][0]["message"]
+
+    def test_declaring_the_required_bump_satisfies_the_check(self, server):
+        call(server, "spec_clone", profile="miappe", version="1.2")
+        call(
+            server,
+            "spec_add_field",
+            entity="Investigation",
+            name="funding_statement",
+            field_type="string",
+            required=True,
+        )
+        call(server, "spec_set_metadata", version="2.0")
+
+        result = call(server, "spec_compare", profile="miappe", version="1.2")
+
+        assert result["required_bump"] == "major"
+        assert result["declared_bump"] == "major"
+        assert result["bump_satisfied"] is True
+
+    def test_an_optional_field_only_needs_a_minor_bump(self, server):
+        call(server, "spec_clone", profile="miappe", version="1.2")
+        call(
+            server,
+            "spec_add_field",
+            entity="Investigation",
+            name="funding_statement",
+            field_type="string",
+        )
+        call(server, "spec_set_metadata", version="1.3")
+
+        result = call(server, "spec_compare", profile="miappe", version="1.2")
+
+        assert result["required_bump"] == "minor"
+        assert result["bump_satisfied"] is True
+        assert result["breaking"] == []
+
+    def test_a_malformed_draft_version_is_reported(self, server):
+        call(server, "spec_clone", profile="miappe", version="1.2")
+        call(server, "spec_set_metadata", version="1.3-dev")
+
+        result = call(server, "spec_compare", profile="miappe", version="1.2")
+
+        assert "MAJOR.MINOR" in result["error"]

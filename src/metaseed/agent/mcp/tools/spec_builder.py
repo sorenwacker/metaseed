@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from mcp.server.fastmcp import FastMCP
 
     from metaseed.agent.mcp.context import ResolveContext
+    from metaseed.specs.schema import ProfileSpec
     from metaseed.ui.state import AppState
 
 
@@ -53,6 +54,54 @@ def _status(builder: SpecBuilder) -> dict[str, Any]:
             for entity_name, entity in spec.entities.items()
         },
         "validation_rules": [r.name for r in spec.validation_rules],
+    }
+
+
+_BUMP_RANK = {"downgrade": -1, "none": 0, "minor": 1, "major": 2}
+"""Orders bump levels so a declared bump can be checked against a required one."""
+
+
+def _load_released(profile: str, version: str) -> ProfileSpec:
+    """Load a released profile as the 'old' side of a comparison.
+
+    Raises:
+        ValueError: If the profile or version cannot be loaded.
+    """
+    from metaseed.specs.loader import SpecLoader, SpecLoadError
+
+    try:
+        return SpecLoader(profile=profile).load_profile(
+            version=version, profile=profile
+        )
+    except SpecLoadError as exc:
+        raise ValueError(f"Cannot load profile {profile} v{version}: {exc}") from exc
+
+
+def _comparison_payload(
+    profile: str, released: ProfileSpec, draft: ProfileSpec
+) -> dict[str, Any]:
+    """Render a draft-versus-release comparison as the tool's JSON result.
+
+    Raises:
+        ValueError: If either version is not ``MAJOR.MINOR``.
+    """
+    from metaseed.specs.compare import compare_specs
+    from metaseed.specs.versioning import declared_bump
+
+    comparison = compare_specs(released, draft)
+    declared = declared_bump(released.version, draft.version)
+    return {
+        "old": {
+            "profile": profile,
+            "version": released.version,
+            "content_hash": released.short_hash,
+        },
+        "new": {"version": draft.version, "content_hash": draft.short_hash},
+        "required_bump": comparison.required_bump,
+        "declared_bump": declared,
+        "bump_satisfied": _BUMP_RANK[declared] >= _BUMP_RANK[comparison.required_bump],
+        "breaking": [change.to_dict() for change in comparison.breaking],
+        "compatible": [change.to_dict() for change in comparison.compatible],
     }
 
 
@@ -173,6 +222,17 @@ def register_spec_builder_tools(  # noqa: C901
             return json.dumps({"error": str(exc)})
         issues = builder.validate()
         return json.dumps({"valid": not issues, "issues": issues}, indent=2)
+
+    @mcp.tool()
+    def spec_compare(profile: str, version: str) -> str:
+        """Compare the draft against a released version; report the required bump."""
+        try:
+            builder = _require_draft(current_state())
+            released = _load_released(profile, version)
+            payload = _comparison_payload(profile, released, builder.spec)
+        except ValueError as exc:
+            return json.dumps({"error": str(exc)})
+        return json.dumps(payload, indent=2)
 
     @mcp.tool()
     def spec_save(name: str | None = None) -> str:

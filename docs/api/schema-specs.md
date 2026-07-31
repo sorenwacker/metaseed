@@ -57,7 +57,7 @@ validation_rules:
 |-------|----------|-------------|
 | `spec_version` | no | Specification format version (default: "0.1") |
 | `name` | yes | Profile identifier (lowercase, hyphens) |
-| `version` | yes | Version string (e.g., "1.0", "2.1") |
+| `version` | yes | Profile version, `MAJOR.MINOR` (e.g., "1.0", "2.1") — see [Profile Versioning](#profile-versioning) |
 | `display_name` | no | Human-friendly name for UI |
 | `description` | no | Profile description |
 | `ontology` | no | Base ontology prefix (e.g., PPEO, OBI) |
@@ -80,6 +80,123 @@ The `spec_version` field indicates which version of the specification language f
 | `0.6` | Adds relationship-role and metadata markers to FieldSpec: `owns` (owning-parent relationship), `is_identifier`/`is_label` (declared identity/label), and `example`, `options`, `unit`, `label`, `tier` (form/template metadata). See Field Markers. |
 
 Existing specs without `spec_version` are automatically treated as version `0.1`.
+
+## Profile Versioning
+
+A spec carries two independent version fields. They are easy to confuse, so state which one is meant:
+
+| Field | Versions | Changes when |
+|-------|----------|--------------|
+| `spec_version` | the **specification format** — the YAML vocabulary metaseed understands | metaseed adds a new construct to the format (table above) |
+| `version` | the **profile** — one metadata standard, such as MIAPPE or Darwin Core | the profile author changes that standard's entities, fields, or constraints |
+
+A profile at `version` `1.2` written in `spec_version` `0.6` is normal: the two numbers are unrelated.
+
+### Version format
+
+`version` is `MAJOR.MINOR`: exactly two dot-separated runs of digits, matching `^\d+\.\d+$`. `"1.0"`, `"0.4"` and `"12.3"` are valid; `"1"`, `"1.0.0"`, `"1.1-dev"`, `"v1.1"` and `"latest"` are not. A non-conforming value is rejected when the spec is validated, in an error naming the offending value and the rule.
+
+There is no patch component. A spec has no implementation that can be fixed independently of its content: every content change either keeps existing datasets valid or does not.
+
+| Component | Meaning |
+|-----------|---------|
+| MAJOR | **Breaking.** A dataset that validated under the previous version may fail under this one. |
+| MINOR | **Compatible.** Additive: every dataset valid under the previous version is still valid. |
+
+The bump is a claim about datasets, not about effort. Narrowing `Credit.role` to an enum is a one-line edit and a MAJOR change.
+
+### Content hash
+
+A version number says how a spec relates to its predecessor; it does not identify a spec. Two files can both declare `cinema` `1.1` and hold different content — a local draft and a published release, for instance. `ProfileSpec` therefore exposes a content hash:
+
+```python
+from metaseed.specs import SpecLoader
+
+spec = SpecLoader(profile="miappe").load_profile(version="1.2", profile="miappe")
+spec.content_hash  # 'sha256:<64 hex characters>'
+spec.short_hash    # 'sha256:<first 12 hex characters>' — for display
+```
+
+Equal hashes mean identical content; different hashes mean the specs differ somewhere. The short form is for logs and UI labels only; compare on `content_hash`.
+
+#### Canonicalization rule
+
+The hash is `sha256` over the spec serialized as JSON with:
+
+- `mode="json"` — enums and other rich types become their JSON scalars, so a spec built in memory hashes the same as the same spec loaded from YAML.
+- `exclude_none=True` — an omitted optional key and an explicit `null` are the same statement in a profile YAML, so they must not hash differently. This matches what `SpecBuilder.to_yaml()` writes, which is what makes the round-trip stable.
+- Defaults kept (`exclude_defaults=False`) — a field written as `required: false` and one omitting `required` both load as `False` and hash alike, and the hash does not silently shift when a value happens to equal a default.
+- `sort_keys=True`, compact separators — mapping key order in the source YAML is not content. Reordering `entities`, or the keys within a field, does not change the hash.
+
+Two consequences follow from the rule:
+
+- **Lists are ordered content.** `fields` is a YAML sequence, so reordering fields *does* change the content hash. That is intentional: field order drives form and template layout. The [comparator](#comparing-versions) still classifies a pure reorder as compatible, so a reorder changes the hash without requiring a version bump.
+- **The hash covers the whole document**, including `name`, `version` and `spec_version`. It answers "is this the same spec?", not "is this the same schema?".
+
+### Comparing versions
+
+`metaseed.specs.compare` decides what a bump has to be, rather than trusting the author's claim:
+
+```python
+from metaseed.specs.compare import compare_specs, required_bump
+
+comparison = compare_specs(old_spec, new_spec)
+for change in comparison.breaking:
+    print(change)          # e.g. "Credit.person became required"
+comparison.required_bump   # 'major'
+required_bump(old_spec, new_spec)  # same value, without the change list
+```
+
+`compare_specs` returns a `SpecComparison`: `changes` (all of them, in a stable order), `breaking` and `compatible` (the two partitions), and `required_bump`. Each `SpecChange` carries `kind`, `compatibility`, `target` (`Entity` or `Entity.field`), a human-readable `message`, and the `old` / `new` values behind it.
+
+`required_bump` is `"major"` if any change is breaking, `"minor"` if there are only compatible changes, and `"none"` if the two specs have identical content.
+
+#### Classification
+
+| Change | Classification | Kind |
+|--------|----------------|------|
+| Root entity changed | breaking | `root_entity_changed` |
+| Entity removed | breaking | `entity_removed` |
+| Field removed | breaking | `field_removed` |
+| Required field added | breaking | `required_field_added` |
+| Optional field became required | breaking | `field_became_required` |
+| Field type changed | breaking | `field_type_changed` |
+| Nesting link (`items`) retargeted | breaking | `nesting_retargeted` |
+| Nesting link (`items`) removed | breaking | `nesting_removed` |
+| Enum introduced, or values removed from it | breaking | `enum_narrowed` |
+| `minimum` / `min_length` / `min_items` raised or introduced | breaking | `constraint_tightened` |
+| `maximum` / `max_length` / `max_items` lowered or introduced | breaking | `constraint_tightened` |
+| `pattern` added or changed | breaking | `pattern_tightened` |
+| Validation rule added or changed | breaking | `validation_rule_added`, `validation_rule_changed` |
+| Any other semantic field attribute changed (`reference`, `parent_ref`, `unique_within`, `owns`, `is_identifier`, `options`) | breaking | `field_changed` |
+| Entity added | compatible | `entity_added` |
+| Optional field added | compatible | `optional_field_added` |
+| Required field became optional | compatible | `field_became_optional` |
+| Enum widened or dropped | compatible | `enum_widened` |
+| A bound loosened or dropped | compatible | `constraint_loosened` |
+| `pattern` removed | compatible | `pattern_relaxed` |
+| Fields reordered within an entity | compatible | `fields_reordered` |
+| `description`, `ontology_term`, `display_name`, `label`, `codename`, `example`, `unit`, `tier`, `dcat`, `is_label` changed | compatible | `field_metadata_changed`, `entity_metadata_changed`, `profile_metadata_changed` |
+| Validation rule removed | compatible | `validation_rule_removed` |
+
+Three rules resolve the cases classification cannot decide by inspection, all erring toward breaking:
+
+- **A changed `pattern` is breaking.** Whether one regex accepts a superset of another is not decidable here, so any change to a `pattern` that remains set counts as tightening. Only removing it is compatible.
+- **An introduced bound or enum is breaking.** Going from unconstrained to constrained can only reject values that previously passed.
+- **An unrecognized semantic attribute is breaking.** Field attributes are split into a cosmetic set (the last compatible row above) and everything else. A change to anything outside the cosmetic set is reported as `field_changed` and classified breaking, so a field attribute added to the format in a future `spec_version` is conservatively flagged until it is classified deliberately.
+
+`spec_version` and `version` differences are not themselves changes: the comparator describes the content, and the version is the claim being checked against it.
+
+### Where the rules are enforced
+
+| Point | Behavior |
+|-------|----------|
+| `ProfileSpec` validation | Rejects a `version` that is not `MAJOR.MINOR`. Applies on load, on `model_validate`, and on YAML import. |
+| `SpecBuilder.validate()` | Reports a malformed `version` as an issue alongside structural issues, so an in-progress draft can be edited freely and checked before saving. |
+| `save_spec()` | Refuses to write a spec whose `version` is malformed, since the resulting file could not be loaded back. |
+| [`spec_compare`](spec-builder-mcp.md) MCP tool | Compares the active draft against a released version and reports the required bump. Advisory: it does not block saving. |
+
+Saving is deliberately *not* gated on the comparator. `spec_save` is the only persistence path and is used repeatedly while editing, and a half-finished draft legitimately differs from the released version by removals it will re-add. Enforcing a bump there would block the normal authoring loop, so the check is reported by `spec_compare` and left to the author.
 
 ## Ontologies Section
 

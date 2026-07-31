@@ -9,6 +9,16 @@ from typing import Any, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
+from metaseed.specs.versioning import (
+    content_hash as _content_hash,
+)
+from metaseed.specs.versioning import (
+    require_profile_version,
+)
+from metaseed.specs.versioning import (
+    short_hash as _short_hash,
+)
+
 
 class FieldType(StrEnum):
     """Supported field types in profile specifications.
@@ -348,8 +358,13 @@ class ProfileSpec(BaseModel):
     in a single YAML file.
 
     Attributes:
-        spec_version: Specification format version (e.g., "0.1", "0.2").
-        version: Profile version (e.g., "1.1").
+        spec_version: Version of the **specification format** -- the YAML
+            vocabulary metaseed understands (e.g., "0.1", "0.2"). Changes when
+            metaseed adds a construct, never because a profile was edited.
+        version: Version of the **profile** itself -- this metadata standard
+            (e.g., "1.1"). Must be ``MAJOR.MINOR``: MAJOR means a dataset valid
+            under the previous version may fail, MINOR means it stays valid.
+            Unrelated to ``spec_version``; see metaseed.specs.versioning.
         name: Profile name (e.g., "MIAPPE").
         display_name: Human-friendly name for UI (e.g., "MIAPPE").
         description: Description of the profile.
@@ -372,6 +387,32 @@ class ProfileSpec(BaseModel):
     root_entity: str = "Investigation"
     validation_rules: list[ValidationRuleSpec] = []
     entities: dict[str, EntityDefSpec] = {}
+
+    @field_validator("version")
+    @classmethod
+    def _version_must_be_major_minor(cls, value: str) -> str:
+        """Reject a profile version that is not ``MAJOR.MINOR``.
+
+        Enforced here rather than at the call sites so every entry point --
+        ``SpecLoader``, YAML import, direct construction -- agrees, and so a
+        version that could not be compared or ordered never enters the system.
+        """
+        return require_profile_version(value)
+
+    @property
+    def content_hash(self: Self) -> str:
+        """Canonical hash of this spec's exact content (``sha256:<64 hex>``).
+
+        Identifies the document, where ``version`` only relates it to its
+        predecessor: two specs may both declare version "1.1" and differ. See
+        :func:`metaseed.specs.versioning.canonical_json` for the rule.
+        """
+        return _content_hash(self)
+
+    @property
+    def short_hash(self: Self) -> str:
+        """Abbreviated :attr:`content_hash` for display (``sha256:<12 hex>``)."""
+        return _short_hash(self)
 
     def _to_pascal_case(self: Self, name: str) -> str:
         """Convert snake_case to PascalCase.

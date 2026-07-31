@@ -164,7 +164,7 @@ loader.load_entity("Investigation", ctx=ctx)
 | Attribute | Type | Description |
 |-----------|------|-------------|
 | `profile` | `str` | Profile name (e.g., "miappe", "isa", "darwin-core") |
-| `version` | `str` | Version string (e.g., "1.1", "1.0") |
+| `version` | `str` | Profile version, `MAJOR.MINOR` (e.g., "1.1", "1.0") — see [Profile Versioning](../api/schema-specs.md#profile-versioning) |
 | `cache_key` | `str` | Generated key in format "profile:version" |
 
 The `cache_key` property enables consistent caching across components that operate on profile-version combinations.

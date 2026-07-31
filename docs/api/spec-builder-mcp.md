@@ -12,7 +12,9 @@ The tools operate on a single **active draft** held in the MCP session — one
 1. `spec_create` or `spec_clone` or `spec_import_yaml` — start a draft.
 2. `spec_add_entity`, `spec_add_field`, `spec_add_rule`, … — edit it.
 3. `spec_validate` — confirm it builds.
-4. `spec_save` — persist it.
+4. `spec_compare` — when the draft revises an existing profile, see whether the
+   edits are breaking and which version bump they require.
+5. `spec_save` — persist it.
 
 There is no draft until one is started; editing tools return an error if called
 first. Starting a new draft replaces any unsaved one.
@@ -40,7 +42,34 @@ agent can edit without tracking positions. The single exception is
 | `spec_status` | — | Summary of the draft: name, version, display name, root entity, each entity's field names, and rule names. |
 | `spec_preview_yaml` | — | Current draft serialized to YAML. |
 | `spec_validate` | — | Full model build; returns `{"valid": bool, "issues": [...]}` (empty issues = valid). |
+| `spec_compare` | `profile`, `version` | Compare the draft against a released version of `profile`; returns the classified changes and the required version bump. |
 | `spec_save` | `name?` | Persist the draft to the user specs directory. |
+
+`spec_compare` answers "what do my edits imply?" before the draft is saved. It
+loads `profile` at `version` as the *old* side and the active draft as the
+*new* side, then returns:
+
+```json
+{
+  "old": {"profile": "cinema", "version": "1.0", "content_hash": "sha256:1f0a2b3c4d5e"},
+  "new": {"version": "1.1", "content_hash": "sha256:9e8d7c6b5a40"},
+  "required_bump": "major",
+  "declared_bump": "minor",
+  "bump_satisfied": false,
+  "breaking": [
+    {"kind": "field_became_required", "target": "Credit.person",
+     "message": "Credit.person became required", "old": false, "new": true}
+  ],
+  "compatible": []
+}
+```
+
+`required_bump` is what the content changes demand, `declared_bump` is what the
+draft's `version` claims relative to `version`, and `bump_satisfied` is whether
+the claim covers the demand. The tool is advisory — it reports, it does not
+block `spec_save`. See
+[Profile Versioning](schema-specs.md#profile-versioning) for the classification
+table and the bump rule.
 
 ### Profile metadata
 
