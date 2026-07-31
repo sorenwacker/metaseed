@@ -1,10 +1,16 @@
 name: CI
 
 on:
-  # Run the full suite online only on a version tag (a release) and on manual
-  # dispatch. Routine pushes and PRs rely on the local pre-push hook, which runs
-  # the same `-m "not selenium and not network"` suite, so day-to-day work
-  # consumes no Actions minutes. Tests gate the release, not every PR.
+  # Pull requests run the fast gate (lint, format, types, and the non-selenium,
+  # non-network tests). Releases keep the heavier work: the release workflow runs
+  # the same suite plus selenium, the dependency audit and a fresh-resolution
+  # install smoke test before publishing. Routine pushes to a branch still cost
+  # nothing -- the local pre-push hook runs the same suite.
+  #
+  # PRs are triggered deliberately: branch protection requires the `test`
+  # context, and before this it could never report, because the workflow ran
+  # only on tags where the job skips itself.
+  pull_request:
   push:
     tags: ["v*"]
   workflow_dispatch:
