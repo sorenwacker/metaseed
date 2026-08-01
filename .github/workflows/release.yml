@@ -30,10 +30,15 @@ jobs:
         # release never reaches the publish job.
         run: uv sync --extra dev --extra dcat --extra seek
 
-      - name: Run tests
+      - name: Run tests with coverage
         # Match the CI gate: exclude network-marked tests. They hit live third-party
         # APIs (EBI/MetaboLights) and flake for unrelated reasons, so a release must
         # never be blocked by an external outage (per CLAUDE.md "Local must match CI").
+        #
+        # Coverage is measured here and nowhere else in CI. Measuring it on every
+        # pull request trebled that gate for a number nobody reads mid-review;
+        # measuring it on the release means the threshold still blocks a publish,
+        # at a cost paid once per version instead of once per push.
         run: |
           uv run python -m pytest tests/ \
             -m "not selenium and not network" \
@@ -41,7 +46,17 @@ jobs:
             --ignore=tests/test_ui/test_spec_builder_selenium.py \
             --ignore=tests/test_ui/test_validation_selenium.py \
             --ignore=tests/test_ui/selenium/ \
+            --cov=src/metaseed \
+            --cov-report=xml \
+            --cov-fail-under=78 \
             -q
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@0565863a31f2c772f9f0395002a31e3f06189574 # v5.4.0
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.xml
+          fail_ci_if_error: false
 
       - name: Build package
         run: uv build
