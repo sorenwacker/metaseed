@@ -8,12 +8,16 @@ handling, name-based addressing, JSON contract, and error reporting.
 
 from __future__ import annotations
 
+import inspect
 import json
 
 import pytest
 import yaml
 
 from metaseed.agent.mcp.server import create_server, reset_mcp_state
+from metaseed.facade.core import ProfileFacade
+from metaseed.specs.builder import FIELD_MARKER_NAMES
+from metaseed.specs.schema import ProfileSpec
 from tests.test_agent.helpers import get_tool
 
 
@@ -296,6 +300,205 @@ class TestFieldConstraintsOverMcp:
         assert self._field(server, "Study", "rating")["constraints"]["maximum"] == 10
 
 
+class TestFieldMarkersOverMcp:
+    """#210: the declarative field markers are reachable from the MCP tools.
+
+    They were settable in the spec and in the web field editor but not here, so a
+    profile built through an MCP client could not declare its own identifier.
+    """
+
+    @staticmethod
+    def _field(server, entity, field_name):
+        spec = yaml.safe_load(get_tool(server, "spec_preview_yaml")())
+        return next(
+            f for f in spec["entities"][entity]["fields"] if f["name"] == field_name
+        )
+
+    @staticmethod
+    def _content_hash(server):
+        spec = ProfileSpec.model_validate(
+            yaml.safe_load(get_tool(server, "spec_preview_yaml")())
+        )
+        return spec.content_hash
+
+    def _draft(self, server):
+        call(server, "spec_create", name="p", version="1.0")
+        call(server, "spec_add_entity", name="Assay")
+        call(server, "spec_add_field", entity="Assay", name="f", field_type="string")
+
+    def test_every_marker_is_a_parameter_of_both_field_tools(self, server):
+        """Drift gate: a new FieldSpec marker must reach the tools, or be excluded."""
+        for tool in ("spec_add_field", "spec_update_field"):
+            parameters = inspect.signature(get_tool(server, tool)).parameters
+            missing = [n for n in FIELD_MARKER_NAMES if n not in parameters]
+            assert not missing, f"{tool} does not expose {missing}"
+
+    @pytest.mark.parametrize(
+        ("marker", "value"),
+        [
+            ("is_identifier", True),
+            ("is_label", True),
+            ("owns", True),
+            ("tier", "recommended"),
+            ("label", "Assay name"),
+            ("unit", "cm"),
+            ("example", "leaf area"),
+            ("options", ["a", "b"]),
+            ("codename", "assayName"),
+            ("ontologies", ["po"]),
+            ("unique_within", "parent"),
+            ("dcat", "dct:title"),
+        ],
+    )
+    def test_marker_set_on_add_survives_a_yaml_round_trip(self, server, marker, value):
+        call(server, "spec_create", name="p", version="1.0")
+        call(server, "spec_add_entity", name="Assay")
+        call(
+            server,
+            "spec_add_field",
+            entity="Assay",
+            name="f",
+            field_type="string",
+            **{marker: value},
+        )
+
+        assert self._field(server, "Assay", "f")[marker] == value
+
+        # Re-import the rendered YAML: the marker must survive a full round trip.
+        call(
+            server,
+            "spec_import_yaml",
+            yaml_text=get_tool(server, "spec_preview_yaml")(),
+        )
+        assert self._field(server, "Assay", "f")[marker] == value
+
+    def test_marker_can_be_set_by_update(self, server):
+        self._draft(server)
+
+        call(
+            server,
+            "spec_update_field",
+            entity="Assay",
+            field_name="f",
+            is_identifier=True,
+        )
+
+        assert self._field(server, "Assay", "f")["is_identifier"] is True
+
+    def test_an_unset_marker_is_left_alone_on_update(self, server):
+        """The tool's promise: an omitted argument keeps its current value."""
+        call(server, "spec_create", name="p", version="1.0")
+        call(server, "spec_add_entity", name="Assay")
+        call(
+            server,
+            "spec_add_field",
+            entity="Assay",
+            name="f",
+            field_type="string",
+            is_identifier=True,
+            unit="cm",
+            tier="recommended",
+        )
+
+        call(server, "spec_update_field", entity="Assay", field_name="f", label="Area")
+
+        field = self._field(server, "Assay", "f")
+        assert field["is_identifier"] is True
+        assert field["unit"] == "cm"
+        assert field["tier"] == "recommended"
+        assert field["label"] == "Area"
+
+    @pytest.mark.parametrize(
+        ("marker", "initial", "empty"),
+        [
+            ("is_identifier", True, False),
+            ("unit", "cm", ""),
+            ("options", ["x"], []),
+        ],
+    )
+    def test_an_explicit_empty_value_unsets_a_marker(
+        self, server, marker, initial, empty
+    ):
+        call(server, "spec_create", name="p", version="1.0")
+        call(server, "spec_add_entity", name="Assay")
+        call(
+            server,
+            "spec_add_field",
+            entity="Assay",
+            name="f",
+            field_type="string",
+            **{marker: initial},
+        )
+
+        call(
+            server,
+            "spec_update_field",
+            entity="Assay",
+            field_name="f",
+            **{marker: empty},
+        )
+
+        # Unset means absent, not `false`/`""` -- otherwise the hash records the toggle.
+        assert marker not in self._field(server, "Assay", "f")
+
+    def test_setting_a_marker_changes_the_content_hash(self, server):
+        self._draft(server)
+        before = self._content_hash(server)
+
+        call(server, "spec_update_field", entity="Assay", field_name="f", unit="cm")
+
+        assert self._content_hash(server) != before
+
+    def test_a_no_op_update_leaves_the_content_hash_alone(self, server):
+        self._draft(server)
+        before = self._content_hash(server)
+
+        call(server, "spec_update_field", entity="Assay", field_name="f")
+
+        assert self._content_hash(server) == before
+
+    def test_a_bad_tier_is_rejected_without_touching_the_draft(self, server):
+        self._draft(server)
+        before = self._content_hash(server)
+
+        result = call(
+            server,
+            "spec_update_field",
+            entity="Assay",
+            field_name="f",
+            tier="mandatory",
+            unit="cm",
+        )
+
+        assert "tier" in result["error"]
+        assert self._content_hash(server) == before
+
+    def test_a_declared_identifier_beats_positional_inference(self, server):
+        """End to end through the tools: what the facade resolves must follow the mark."""
+        call(server, "spec_create", name="p", version="1.0")
+        call(server, "spec_add_entity", name="Assay")
+        call(server, "spec_set_root_entity", entity="Assay")
+        call(
+            server, "spec_add_field", entity="Assay", name="input", field_type="string"
+        )
+        call(
+            server,
+            "spec_add_field",
+            entity="Assay",
+            name="file_name",
+            field_type="string",
+            is_identifier=True,
+        )
+
+        spec = ProfileSpec.model_validate(
+            yaml.safe_load(get_tool(server, "spec_preview_yaml")())
+        )
+        facade = ProfileFacade(spec.name, spec.version, spec=spec)
+
+        # `input` is positionally first and would win without the marker.
+        assert facade.Assay.identifier_field == "file_name"
+
+
 class TestRulesAndValidation:
     def test_rule_lifecycle(self, server):
         call(server, "spec_create", name="p", version="0.1")
@@ -333,6 +536,62 @@ class TestRulesAndValidation:
         result = call(server, "spec_validate")
         assert result["valid"] is True
         assert result["issues"] == []
+
+    def test_validate_warns_about_a_weak_inferred_identifier(self, server):
+        """#210: inference always yields something, so a meaningless identity
+        was reported as simply valid."""
+        call(server, "spec_create", name="p", version="1.0")
+        call(server, "spec_add_entity", name="Assay")
+        call(server, "spec_set_root_entity", entity="Assay")
+        call(
+            server,
+            "spec_add_field",
+            entity="Assay",
+            name="variable_name",
+            field_type="string",
+        )
+
+        result = call(server, "spec_validate")
+
+        # Advisory, not a defect: the spec still builds.
+        assert result["valid"] is True
+        assert result["issues"] == []
+        assert len(result["warnings"]) == 1
+        assert "variable_name" in result["warnings"][0]
+
+    def test_declaring_the_identifier_silences_the_warning(self, server):
+        call(server, "spec_create", name="p", version="1.0")
+        call(server, "spec_add_entity", name="Assay")
+        call(server, "spec_set_root_entity", entity="Assay")
+        call(
+            server,
+            "spec_add_field",
+            entity="Assay",
+            name="variable_name",
+            field_type="string",
+            is_identifier=True,
+        )
+
+        assert call(server, "spec_validate")["warnings"] == []
+
+    def test_two_declared_identifiers_are_an_issue_not_a_warning(self, server):
+        """Two markers make the spec unloadable, so it is a defect."""
+        call(server, "spec_create", name="p", version="1.0")
+        call(server, "spec_add_entity", name="Assay")
+        for name in ("a", "b"):
+            call(
+                server,
+                "spec_add_field",
+                entity="Assay",
+                name=name,
+                field_type="string",
+                is_identifier=True,
+            )
+
+        result = call(server, "spec_validate")
+
+        assert result["valid"] is False
+        assert any("is_identifier" in issue for issue in result["issues"])
 
 
 class TestSpecCompare:

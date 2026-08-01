@@ -41,9 +41,45 @@ agent can edit without tracking positions. The single exception is
 | `spec_import_yaml` | `yaml_text` | Start a draft from YAML. |
 | `spec_status` | — | Summary of the draft: name, version, display name, root entity, each entity's field names, and rule names. |
 | `spec_preview_yaml` | — | Current draft serialized to YAML. |
-| `spec_validate` | — | Full model build; returns `{"valid": bool, "issues": [...]}` (empty issues = valid). |
+| `spec_validate` | — | Full model build; returns `{"valid": bool, "issues": [...], "warnings": [...]}` (empty issues = valid; warnings never affect `valid`). |
 | `spec_compare` | `profile`, `version` | Compare the draft against a released version of `profile`; returns the classified changes and the required version bump. |
 | `spec_save` | `name?` | Persist the draft to the user specs directory. |
+
+#### Issues versus warnings
+
+`spec_validate` reports two lists and they are not the same kind of finding.
+
+- **`issues`** are defects: the spec does not build, a reference dangles, the
+  `version` is malformed. `valid` is `false` while any issue remains.
+- **`warnings`** are advisory: the spec builds and loads, but something in it is
+  likely not what the author meant. Warnings never set `valid` to `false` and
+  never block `spec_save`.
+
+The current warning is a **weak inferred identifier**: an entity that declares no
+`is_identifier` and whose positionally-inferred identifier is an optional,
+unconstrained string. Such a field can be absent, duplicated across rows, and
+free-form, yet it is what index keys and node IDs are built from — and because
+inference always yields *something*, the spec is otherwise reported as valid. The
+warning names the entity, the field it would infer, and the fix:
+
+```json
+{
+  "valid": true,
+  "issues": [],
+  "warnings": [
+    "Assay: no field declares is_identifier, so the identifier is inferred as 'variable_name', an optional free-text field. Mark the intended field with is_identifier: true."
+  ]
+}
+```
+
+The check uses the same rule the facade uses (`EntityHelper.identifier_field`),
+so it cannot disagree with the identifier a dataset actually gets. It stays quiet
+when the entity declares `is_identifier`, when the inferred field is `required`,
+when it is not a string, when a `pattern`, `enum`, `options` or `unique_within`
+already pins its shape or uniqueness, and when the field's own name states that
+it is an identifier (`id`, `sample_id`, `locationID`, `database_identifier`, …).
+A name that states a *label* (`name`, `title`) is not exempt: an entity's display
+label is exactly what the markers exist to keep separate from its identity.
 
 `spec_compare` answers "what do my edits imply?" before the draft is saved. It
 loads `profile` at `version` as the *old* side and the active draft as the
@@ -91,16 +127,20 @@ table and the bump rule.
 
 | Tool | Arguments | Description |
 |------|-----------|-------------|
-| `spec_add_field` | `entity`, `name`, `type`, `required?`, `description?`, `items?`, `ontology_term?`, `reference?`, `parent_ref?`, constraint fields | Add a field. A nested field (`type` is `list`/`entity` with `items` naming an existing entity) auto-creates the parent `identifier` and the back-reference on the target. |
-| `spec_update_field` | `entity`, `field_name`, `field_type?`, `required?`, `description?`, `items?`, `ontology_term?`, `reference?`, `parent_ref?`, constraint fields, `clear?` | Update a field in place. Unset arguments keep their current value; supplied constraints merge into the field's existing ones, and `clear` names constraints to remove. |
+| `spec_add_field` | `entity`, `name`, `field_type`, `required?`, `description?`, `items?`, `ontology_term?`, `reference?`, `parent_ref?`, constraint fields, marker fields | Add a field. A nested field (`field_type` is `list`/`entity` with `items` naming an existing entity) auto-creates the parent `identifier` and the back-reference on the target. |
+| `spec_update_field` | `entity`, `field_name`, `field_type?`, `required?`, `description?`, `items?`, `ontology_term?`, `reference?`, `parent_ref?`, constraint fields, marker fields, `clear?` | Update a field in place. Unset arguments keep their current value; supplied constraints merge into the field's existing ones, and `clear` names constraints to remove. |
 | `spec_delete_field` | `entity`, `field_name` | Remove a field. |
 | `spec_move_field` | `entity`, `field_name`, `direction` | Reorder a field (`up` / `down`). |
 
-`type` is one of: `string`, `integer`, `float`, `boolean`, `date`, `datetime`,
-`uri`, `ontology_term`, `list`, `entity`. Constraint fields map to
+`field_type` is one of: `string`, `integer`, `float`, `boolean`, `date`,
+`datetime`, `uri`, `ontology_term`, `list`, `entity`. Constraint fields map to
 `Constraints`: `pattern`, `min_length`, `max_length`, `minimum`, `maximum`,
-`min_items`, `max_items`, `enum`. See
-[Specification Language](schema-specs.md) for field semantics.
+`min_items`, `max_items`, `enum`. Marker fields are the remaining `FieldSpec`
+attributes: `codename`, `ontologies`, `unique_within`, `dcat`, `owns`,
+`is_identifier`, `is_label`, `example`, `options`, `unit`, `label`, `tier`. See
+[Specification Language](schema-specs.md) for field semantics and
+[Field Markers](schema-specs.md#field-markers) for what each marker means — this
+page documents only how to set them, not what they do.
 
 #### Editing constraints
 
@@ -134,6 +174,57 @@ Clearing the last remaining constraint drops the whole `constraints` block
 rather than leaving an all-unset one, so the field serializes without a
 `constraints:` key and the spec's `content_hash` matches an otherwise identical
 spec whose field never carried constraints.
+
+#### Declaring identity and labels
+
+An entity's identifier and display label are otherwise inferred from field
+*position* — the identifier is the first non-reference field, the label is the
+first field. `is_identifier` and `is_label` override that, so field order stays a
+presentation decision instead of silently deciding entity identity. The markers
+are read whatever the spec's `spec_version` is.
+
+```
+spec_add_field(entity="Assay", name="input", field_type="string")
+spec_add_field(entity="Assay", name="file_name", field_type="string",
+               required=True, is_identifier=True, is_label=True)
+  # identifier is file_name, not the positionally-first `input`
+```
+
+Marking a field already in the draft is one call:
+
+```
+spec_update_field(entity="Assay", field_name="file_name", is_identifier=True)
+```
+
+At most one field per entity may set each marker. A second one is reported by
+`spec_validate` as an issue (it is what makes the spec unloadable), so mark the
+new field and unmark the old one in either order and validate before saving.
+
+#### Setting and unsetting markers
+
+Every marker follows the same rule as the rest of `spec_update_field`: an
+**omitted** argument leaves the current value alone. Unlike a constraint, a
+marker has an expressible empty value, so removal does not need `clear` —
+passing `false` for a boolean marker, `""` for a text marker, or `[]` for a list
+marker unsets it. An unset marker is absent from the YAML rather than written as
+`false` or `""`, so a spec's `content_hash` does not depend on whether a marker
+was ever toggled.
+
+```
+spec_update_field(entity="Assay", field_name="file_name", unit="")
+  # removes the unit; every other marker on the field is untouched
+```
+
+A list-valued marker (`options`, `ontologies`) is **replaced**, not merged. This
+mirrors constraints, where the merge granularity is the named constraint and the
+list-valued `enum` is likewise swapped whole: `options` is one controlled
+vocabulary, not eight independent values, so appending a term means resending the
+list.
+
+`tier` accepts only `required`, `recommended` or `optional`; any other value is
+rejected before the draft is touched. `example` is set as a string here — richer
+example types (numbers, booleans, lists) remain available to hand-authored YAML
+through `spec_import_yaml`.
 
 ### Validation rules
 

@@ -14,6 +14,7 @@ import copy
 from typing import TYPE_CHECKING, Any, Self
 
 import yaml
+from pydantic import ValidationError
 
 from metaseed.specs.schema import (
     Constraints,
@@ -26,7 +27,7 @@ from metaseed.specs.schema import (
 from metaseed.specs.versioning import check_profile_version
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Mapping
 
 
 _PROFILE_METADATA_FIELDS = frozenset(
@@ -39,6 +40,98 @@ CONSTRAINT_NAMES: tuple[str, ...] = tuple(Constraints.model_fields)
 Derived from :class:`~metaseed.specs.schema.Constraints` so adding a constraint
 to the schema makes it editable and clearable without a second edit here.
 """
+
+_CORE_FIELD_ATTRIBUTES: frozenset[str] = frozenset(
+    {
+        "name",
+        "type",
+        "required",
+        "description",
+        "items",
+        "ontology_term",
+        "reference",
+        "parent_ref",
+        "constraints",
+    }
+)
+"""The :class:`FieldSpec` attributes a field editor already takes as its own argument.
+
+``constraints`` is here because it is exposed flattened, as the eight
+:data:`CONSTRAINT_NAMES` arguments, rather than as one object.
+"""
+
+FIELD_MARKER_NAMES: tuple[str, ...] = tuple(
+    name for name in FieldSpec.model_fields if name not in _CORE_FIELD_ATTRIBUTES
+)
+"""Every other declarative :class:`FieldSpec` attribute a field editor can set.
+
+Derived by subtracting :data:`_CORE_FIELD_ATTRIBUTES` from the model, so a marker
+added to the schema becomes settable without a second edit here -- the same
+contract as :data:`CONSTRAINT_NAMES`, and exported for the same reason: an
+adapter (the MCP field tools, and the metaseed-hub tools that mirror them) reads
+the set instead of hardcoding the names.
+"""
+
+
+def normalize_markers(values: Mapping[str, Any]) -> dict[str, Any]:
+    """Split "not supplied" from "unset this" in raw marker input.
+
+    A marker, unlike a numeric constraint, has a representable empty value, so it
+    needs no ``clear`` list: ``False``, ``""`` and ``[]`` *are* the removal
+    request. They are mapped onto ``None`` -- matching
+    :meth:`~metaseed.specs.field_form.FieldForm.apply_to` -- so an unset marker is
+    absent from the serialized spec rather than written as ``owns: false``, and a
+    spec's ``content_hash`` does not record whether a marker was ever toggled.
+
+    Args:
+        values: Raw marker input, where ``None`` means the caller did not supply
+            the marker at all.
+
+    Returns:
+        The markers to assign, with omitted ones dropped and explicitly emptied
+        ones mapped to ``None``. Suitable to splat into
+        :meth:`SpecBuilder.update_field`.
+    """
+    normalized: dict[str, Any] = {}
+    for name, value in values.items():
+        if value is None:
+            continue
+        # `is False` rather than `not value`: 0 is a legitimate `example`.
+        normalized[name] = None if (value is False or value in ("", [])) else value
+    return normalized
+
+
+def validate_marker_values(values: Mapping[str, Any]) -> str | None:
+    """Validate marker names and values against :class:`FieldSpec`.
+
+    Exposed alongside :data:`FIELD_MARKER_NAMES` so an adapter can reject bad
+    input before it starts mutating a draft, rather than leaving a half-applied
+    edit behind. Checking by constructing a throwaway ``FieldSpec`` keeps the
+    schema the only place a marker's allowed values are written down: ``tier``'s
+    three levels are not restated here.
+
+    Args:
+        values: Marker names mapped to their proposed values.
+
+    Returns:
+        Error message naming the offenders, or None if every name and value is
+        acceptable.
+    """
+    unknown = sorted(set(values) - set(FIELD_MARKER_NAMES))
+    if unknown:
+        return (
+            f"Unknown field marker(s): {', '.join(unknown)}. "
+            f"Valid field markers: {', '.join(FIELD_MARKER_NAMES)}"
+        )
+    try:
+        FieldSpec(name="_probe", type=FieldType.STRING, **dict(values))
+    except ValidationError as exc:
+        problems = "; ".join(
+            f"{'.'.join(str(part) for part in error['loc'])}: {error['msg']}"
+            for error in exc.errors()
+        )
+        return f"Invalid field marker value(s): {problems}"
+    return None
 
 
 def validate_entity_name(name: str) -> str | None:
@@ -80,6 +173,35 @@ def validate_constraint_names(names: Iterable[str]) -> str | None:
         f"Unknown constraint name(s): {', '.join(unknown)}. "
         f"Valid constraint names: {', '.join(CONSTRAINT_NAMES)}"
     )
+
+
+_IDENTIFIER_NAME_HINTS: tuple[str, ...] = (
+    "id",
+    "identifier",
+    "uuid",
+    "accession",
+    "doi",
+    "code",
+)
+"""Field-name words that state the field is an identifier.
+
+Used only to keep the weak-identifier advisory quiet, never to resolve identity:
+resolution reads ``is_identifier``. A field the author named ``sample_id`` is
+taken at its word even though it is optional; a field named ``name`` or ``title``
+is not, because those state a display *label*, which is precisely what the
+markers exist to keep separate from identity.
+"""
+
+
+def _name_states_an_identifier(name: str) -> bool:
+    """Whether a field's own name claims it identifies the entity."""
+    lowered = name.lower()
+    if lowered in _IDENTIFIER_NAME_HINTS:
+        return True
+    if any(lowered.endswith(f"_{hint}") for hint in _IDENTIFIER_NAME_HINTS):
+        return True
+    # camelCase identifiers such as Darwin Core's `locationID`.
+    return len(name) > 2 and name.endswith("ID")
 
 
 def validate_field_name(name: str) -> str | None:
@@ -557,9 +679,68 @@ class SpecBuilder:
 
         return issues
 
+    def warnings(self: Self) -> list[str]:
+        """Advisory findings: the spec builds, but something is likely unintended.
+
+        Kept separate from :meth:`validate` rather than folded into its list.
+        An advisory is not a defect -- positional inference always yields a
+        working identifier, so a draft that trips one still builds, loads and
+        validates datasets. ``validate()`` returning only defects also keeps its
+        documented ``list[str]`` shape intact for the callers that treat a
+        non-empty result as "this spec is broken".
+
+        Returns:
+            A list of human-readable advisories. An empty list means nothing
+            looks suspect.
+        """
+        return self._weak_identifier_warnings()
+
     # ------------------------------------------------------------------
     # Internals
     # ------------------------------------------------------------------
+    def _weak_identifier_warnings(self: Self) -> list[str]:
+        """Report an entity whose identifier is inferred onto a weak field.
+
+        Inference is duplicated from
+        :attr:`~metaseed.facade.helper.EntityHelper.identifier_field` -- a
+        declared ``is_identifier`` wins, otherwise the first non-reference field
+        -- so the advisory cannot name a different field than the one a dataset
+        actually gets indexed by. Importing the helper is not an option: it needs
+        a built ``EntitySpec``, and a draft mid-edit may not build.
+
+        A field is "weak" when nothing in the spec says its value will be present
+        (not ``required``), distinguishing (no ``unique_within``) or shaped (no
+        ``pattern``, ``enum`` or ``options``), it is free text (``string``), and
+        its own name does not state that it is an identifier.
+        """
+        issues: list[str] = []
+        for entity_name, entity_def in self._spec.entities.items():
+            if any(field.is_identifier for field in entity_def.fields):
+                continue
+            inferred = next(
+                (field for field in entity_def.fields if not field.reference), None
+            )
+            if inferred is None or not self._is_weak_identifier(inferred):
+                continue
+            issues.append(
+                f"{entity_name}: no field declares is_identifier, so the "
+                f"identifier is inferred as '{inferred.name}', an optional "
+                f"free-text field. Mark the intended field with "
+                f"is_identifier: true."
+            )
+        return issues
+
+    @staticmethod
+    def _is_weak_identifier(field: FieldSpec) -> bool:
+        """Whether a field is too unconstrained to be a credible identifier."""
+        if field.required or field.type != FieldType.STRING:
+            return False
+        if field.options or field.unique_within:
+            return False
+        if field.constraints and (field.constraints.pattern or field.constraints.enum):
+            return False
+        return not _name_states_an_identifier(field.name)
+
     def _require_entity(self: Self, name: str) -> EntityDefSpec:
         if name not in self._spec.entities:
             raise ValueError(f"Entity '{name}' not found")

@@ -376,6 +376,13 @@ reference (e.g. isa `Source` would label by its parent `study_id`). Marking one
 field `is_identifier: true` and/or one field `is_label: true` overrides the
 convention. At most one field per entity may set each marker (enforced at load).
 
+Both markers are set from the web field editor and from the MCP
+[`spec_add_field` / `spec_update_field`](spec-builder-mcp.md#fields) tools, and are
+read whatever the spec's `spec_version` says. When an entity declares no
+`is_identifier` and the positional fallback lands on an optional free-text field,
+`spec_validate` reports it as a warning rather than leaving the spec silently
+valid — see [Issues versus warnings](spec-builder-mcp.md#issues-versus-warnings).
+
 **`example` / `options` / `unit` / `label` / `tier` — field metadata.** Surfaced
 through `get_field_data()`, the client's `FieldInfo`, and the MCP field tools so
 consumers can generate forms, spreadsheet templates, dropdowns and completeness

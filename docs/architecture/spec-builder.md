@@ -78,7 +78,7 @@ mutations are defined.
 | Entities | `add_entity(name, *, description="", ontology_term=None)`, `update_entity(name, **fields)`, `rename_entity(old, new)`, `delete_entity(name)` |
 | Fields | `add_field(entity, name, type, **fields)`, `update_field(entity, field_name, **fields)`, `update_field_constraints(entity, field_name, *, clear=(), **values)`, `delete_field(entity, field_name)`, `move_field(entity, field_name, direction)` |
 | Rules | `add_rule(name, **fields)`, `update_rule(rule_name, **fields)`, `delete_rule(rule_name)` |
-| Output | `to_yaml()`, `validate()` |
+| Output | `to_yaml()`, `validate()`, `warnings()` |
 
 `rename_entity` performs the reference cascade. `add_field` performs auto
 back-reference creation when the new field is nested (`type` is `list` or
@@ -114,6 +114,35 @@ neither in `Constraints` nor valid for `clear` raises `ValueError` listing the
 valid names; a name given both as a value and in `clear` raises rather than
 resolving an order of precedence.
 
+The same reading extends to the field markers (`owns`, `is_identifier`,
+`is_label`, `example`, `options`, `unit`, `label`, `tier`, plus `codename`,
+`ontologies`, `unique_within` and `dcat`). Each is one whole attribute, so
+`update_field` assigns it whole and no third convention is needed: the scalar
+markers are indistinguishable from a partial update, and the two list-valued ones
+(`options`, `ontologies`) are single values — one controlled vocabulary, one
+ontology list — not containers of independently addressable named values the way
+`Constraints` is. `Constraints` earned `update_field_constraints` because one
+attribute holds eight *named* values; a list has no names to merge on, which is
+why `enum` is already swapped whole inside that merge. `options` and `ontologies`
+are replaced for the same reason.
+
+Markers also need no `clear` counterpart. `clear` exists because an omitted
+numeric constraint cannot express "remove"; a marker can, because its empty value
+is representable — `False`, `""`, `[]`. `specs.builder.normalize_markers` maps
+those onto `None`, matching `FieldForm.apply_to`, so an unset marker is absent from the
+serialized spec rather than written as `owns: false` and the `content_hash` does
+not record whether a marker was ever toggled.
+
+`FIELD_MARKER_NAMES` is derived from `FieldSpec.model_fields` by subtracting the
+core authoring attributes the field tools already took as named arguments
+(`name`, `type`, `required`, `description`, `items`, `ontology_term`,
+`reference`, `parent_ref`, `constraints`). It is exported for the same reason as
+`CONSTRAINT_NAMES`: an adapter (the MCP tools here, the metaseed-hub spec tools
+downstream) mirrors the set instead of hardcoding it, and a new `FieldSpec`
+attribute becomes settable without a second edit. A test asserts every name in the
+tuple is a parameter of both field tools, so adding an attribute to the schema
+fails the suite until it is either exposed or deliberately added to the core set.
+
 When the merge leaves every constraint unset, `constraints` is set to `None`
 rather than an all-`None` object. Both would validate, but they are not
 interchangeable downstream: `canonical_json` dumps with `exclude_none=True`, so
@@ -144,6 +173,49 @@ editable and still catches the problem before `save_spec` writes the file
 
 `validate()` returns a list of issues; an empty list means the spec builds
 cleanly.
+
+### Advisories: `warnings()`
+
+`warnings()` reports findings that are not defects. The spec builds, loads and
+validates datasets; something in it is merely unlikely to be what the author
+meant. It is a second method rather than extra entries in `validate()` for two
+reasons. A non-empty `validate()` means "this spec is broken" to every caller —
+the MCP `spec_validate` tool derives `valid` from it, and metaseed-hub's spec
+tools surface it as `problems` at a dozen call sites — so an advisory placed
+there would flip valid specs to invalid. And the documented `list[str]` return
+shape stays exactly as it was, so no caller has to change to keep working.
+
+The one advisory today is a **weak inferred identifier**. `EntityHelper` resolves
+an entity's identifier from a declared `is_identifier` marker, falling back to the
+first non-reference field. The fallback always yields *something*, so an entity
+identified by an optional, free-form column validates silently while its index
+keys and node IDs are built on a value that may be absent or repeated. The check
+duplicates that inference rule (the helper needs a built `EntitySpec`, which a
+draft mid-edit may not produce) so the advisory cannot name a different field
+than the one a dataset is actually keyed by.
+
+A field is reported only when nothing in the spec says its value will be present
+(`required`), distinguishing (`unique_within`) or shaped (`pattern`, `enum`,
+`options`), it is a `string`, and its own name does not state that it is an
+identifier — `id`, `sample_id`, `locationID`, `database_identifier` are taken at
+their word. `name` and `title` are not exempt: they state a display *label*, and
+keeping labels distinct from identity is the reason the markers exist.
+
+The name check is a heuristic, and it is confined to suppressing advice. It never
+resolves identity and never changes what a dataset is keyed by; at worst it
+withholds a suggestion. That is a different risk class from the heuristics the
+markers replaced, which silently picked the wrong field.
+
+Across the ten shipped profiles the advisory fires five times — `isa` 1.0
+(`Process.name`), `miappe-htp` 1.0 (`Location.name`,
+`ObservationLevelHierarchy.name`, `SpatialDistribution.description`) and `pride`
+1.0 (`Publication.title`); the other seven are clean. Those five are real: each
+identifies an entity by an optional free-text column. They are left as advisories
+rather than fixed in place, because adding `is_identifier` to a released profile
+is classified breaking by the [comparator](../api/schema-specs.md#comparing-versions)
+and would force a MAJOR bump on three shipped standards to record an identifier
+that inference already resolves to the same field. A test pins the expected set
+per profile, so a profile edit cannot introduce a new weak identifier unnoticed.
 
 ## Persistence
 

@@ -12,7 +12,12 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Any
 
-from metaseed.specs.builder import SpecBuilder, validate_constraint_names
+from metaseed.specs.builder import (
+    SpecBuilder,
+    normalize_markers,
+    validate_constraint_names,
+    validate_marker_values,
+)
 from metaseed.specs.schema import Constraints
 
 if TYPE_CHECKING:
@@ -136,6 +141,50 @@ def _constraints(
     return Constraints(**values) if values else None
 
 
+def _markers(
+    *,
+    codename: str | None,
+    ontologies: list[str] | None,
+    unique_within: str | None,
+    dcat: str | None,
+    owns: bool | None,
+    is_identifier: bool | None,
+    is_label: bool | None,
+    example: str | None,
+    options: list[str] | None,
+    unit: str | None,
+    label: str | None,
+    tier: str | None,
+) -> dict[str, Any]:
+    """Collect the field markers both field tools accept.
+
+    The parameter list is the tools' marker signature written once. It is checked
+    against :data:`~metaseed.specs.builder.FIELD_MARKER_NAMES` by a test, so a
+    marker added to ``FieldSpec`` cannot quietly stay unreachable here.
+
+    Returns:
+        The markers to assign: omitted ones dropped, explicitly emptied ones
+        mapped to None. See
+        :func:`~metaseed.specs.builder.normalize_markers`.
+    """
+    return normalize_markers(
+        {
+            "codename": codename,
+            "ontologies": ontologies,
+            "unique_within": unique_within,
+            "dcat": dcat,
+            "owns": owns,
+            "is_identifier": is_identifier,
+            "is_label": is_label,
+            "example": example,
+            "options": options,
+            "unit": unit,
+            "label": label,
+            "tier": tier,
+        }
+    )
+
+
 def register_spec_builder_tools(  # noqa: C901
     mcp: FastMCP, resolve_context: ResolveContext
 ) -> None:
@@ -215,13 +264,21 @@ def register_spec_builder_tools(  # noqa: C901
 
     @mcp.tool()
     def spec_validate() -> str:
-        """Validate the draft via a full model build; returns the issue list."""
+        """Validate the draft via a full model build; returns issues and warnings.
+
+        `issues` are defects that make the spec invalid; `warnings` are advisory
+        (e.g. an entity whose identifier is inferred onto an optional free-text
+        field) and never affect `valid`.
+        """
         try:
             builder = _require_draft(current_state())
         except ValueError as exc:
             return json.dumps({"error": str(exc)})
         issues = builder.validate()
-        return json.dumps({"valid": not issues, "issues": issues}, indent=2)
+        return json.dumps(
+            {"valid": not issues, "issues": issues, "warnings": builder.warnings()},
+            indent=2,
+        )
 
     @mcp.tool()
     def spec_compare(profile: str, version: str) -> str:
@@ -360,8 +417,45 @@ def register_spec_builder_tools(  # noqa: C901
         min_items: int | None = None,
         max_items: int | None = None,
         enum: list[str] | None = None,
+        codename: str | None = None,
+        ontologies: list[str] | None = None,
+        unique_within: str | None = None,
+        dcat: str | None = None,
+        owns: bool | None = None,
+        is_identifier: bool | None = None,
+        is_label: bool | None = None,
+        example: str | None = None,
+        options: list[str] | None = None,
+        unit: str | None = None,
+        label: str | None = None,
+        tier: str | None = None,
     ) -> str:
-        """Add a field. Nested fields auto-create the parent id and back-reference."""
+        """Add a field. Nested fields auto-create the parent id and back-reference.
+
+        Beyond the constraints, the declarative markers can be set here:
+        `is_identifier` / `is_label` declare which field identifies and which
+        labels the entity (overriding the positional convention), `owns` marks a
+        containment relationship, and `codename`, `ontologies`, `unique_within`,
+        `dcat`, `example`, `options`, `unit`, `label` and `tier` carry field
+        metadata. `tier` is one of required/recommended/optional.
+        """
+        markers = _markers(
+            codename=codename,
+            ontologies=ontologies,
+            unique_within=unique_within,
+            dcat=dcat,
+            owns=owns,
+            is_identifier=is_identifier,
+            is_label=is_label,
+            example=example,
+            options=options,
+            unit=unit,
+            label=label,
+            tier=tier,
+        )
+        marker_error = validate_marker_values(markers)
+        if marker_error:
+            return json.dumps({"error": marker_error})
         try:
             builder = _require_draft(current_state())
             constraints = _constraints(
@@ -389,6 +483,9 @@ def register_spec_builder_tools(  # noqa: C901
                         "constraints": constraints,
                     }
                 ),
+                # On a new field an emptied marker and an omitted one are the
+                # same request, so the Nones are dropped rather than assigned.
+                **_clean(markers),
             )
         except ValueError as exc:
             return json.dumps({"error": str(exc)})
@@ -413,6 +510,18 @@ def register_spec_builder_tools(  # noqa: C901
         min_items: int | None = None,
         max_items: int | None = None,
         enum: list[str] | None = None,
+        codename: str | None = None,
+        ontologies: list[str] | None = None,
+        unique_within: str | None = None,
+        dcat: str | None = None,
+        owns: bool | None = None,
+        is_identifier: bool | None = None,
+        is_label: bool | None = None,
+        example: str | None = None,
+        options: list[str] | None = None,
+        unit: str | None = None,
+        label: str | None = None,
+        tier: str | None = None,
         clear: list[str] | None = None,
     ) -> str:
         """Update a field in place. Unset arguments keep their current value.
@@ -424,6 +533,11 @@ def register_spec_builder_tools(  # noqa: C901
         (pattern, min_length, max_length, minimum, maximum, min_items, max_items,
         enum) to unset. Naming a constraint in both `clear` and an argument is an
         error. Clearing the last constraint drops the block entirely.
+
+        The markers (`is_identifier`, `is_label`, `owns`, `codename`,
+        `ontologies`, `unique_within`, `dcat`, `example`, `options`, `unit`,
+        `label`, `tier`) are assigned whole and need no `clear`: pass `false`,
+        `""` or `[]` to unset one. A list marker is replaced, not merged.
         """
         constraint_values = _clean(
             {
@@ -437,10 +551,26 @@ def register_spec_builder_tools(  # noqa: C901
                 "enum": enum,
             }
         )
+        markers = _markers(
+            codename=codename,
+            ontologies=ontologies,
+            unique_within=unique_within,
+            dcat=dcat,
+            owns=owns,
+            is_identifier=is_identifier,
+            is_label=is_label,
+            example=example,
+            options=options,
+            unit=unit,
+            label=label,
+            tier=tier,
+        )
         # Checked before the first mutation: the attribute update and the
         # constraint merge are two calls, so a bad `clear` name caught by the
         # second would otherwise leave the first already applied.
-        name_error = validate_constraint_names(clear or ())
+        name_error = validate_constraint_names(clear or ()) or validate_marker_values(
+            markers
+        )
         if name_error:
             return json.dumps({"error": name_error})
         try:
@@ -459,6 +589,8 @@ def register_spec_builder_tools(  # noqa: C901
                         "parent_ref": parent_ref,
                     }
                 ),
+                # Not _clean'd: a normalized None here is an explicit "unset".
+                **markers,
             )
             if constraint_values or clear:
                 builder.update_field_constraints(
