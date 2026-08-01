@@ -1,0 +1,24 @@
+{# Import controls the active profile offers, straight from the adapter
+   registry: a new importer appears here by declaring itself, with no template
+   change. The field wording comes from the action because an accession and a
+   server URL are not interchangeable. #}
+{% for opt in import_options %}
+<form class="import-source"
+      hx-post="{{ base_url }}/import/source"
+      hx-target="#notification-container"
+      hx-swap="beforeend">
+    <input type="hidden" name="key" value="{{ opt.key }}">
+    <input type="text"
+           class="form-input import-source-input"
+           name="value"
+           required
+           aria-label="{{ opt.input_label }}"
+           placeholder="{{ opt.input_label }} (e.g. {{ opt.input_placeholder }})">
+    <button type="submit"
+            class="btn btn-secondary btn-sm"
+            data-testid="btn-import-{{ opt.key }}"
+            title="{{ opt.label }}">
+        {{ opt.label }}
+    </button>
+</form>
+{% endfor %}

@@ -26,6 +26,7 @@
             </a>
         </div>
     </div>
+    {% include "partials/import_source.html" %}
     <div class="entity-list">
         {% for node in tree_nodes recursive %}
         <div class="entity-item {% if loop.depth > 1 %}child{% endif %}">
@@ -58,7 +59,9 @@
 <div class="welcome">
     <h2>{{ current_dataset or 'Empty Dataset' }}</h2>
     <p class="welcome-meta">{{ current_profile }} {{ version }}</p>
-    <p>This dataset has no entities yet. Create your first entity to get started.</p>
+    <p>This dataset has no entities yet. Create your first entity to get started,
+       or fill it from a public record.</p>
+    {% include "partials/import_source.html" %}
     <div class="welcome-actions">
         {% for root_type in root_types %}
         <button class="btn btn-primary"
