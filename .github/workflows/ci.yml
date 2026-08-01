@@ -58,26 +58,21 @@ jobs:
       - name: Run type checking
         run: uv run mypy src/metaseed
 
-      - name: Run tests with coverage
+      - name: Run tests
         # Exclude network-marked tests: they hit live third-party services
         # (e.g. the EBI/MetaboLights API), so an external outage would fail CI
         # for unrelated changes. Exclude selenium-marked tests: they drive a real
         # browser and run in the dedicated `selenium` job below. This matches the
         # project's pre-push hook.
+        #
+        # No coverage here. Measuring it roughly trebled the wall clock of this
+        # job (33 minutes against 9 locally) for a number nobody reads on a pull
+        # request. Coverage is a local tool -- `make coverage` -- where it is
+        # read while the code is still being written.
         run: |
           uv run pytest \
             -m "not selenium and not network" \
-            --cov=src/metaseed \
-            --cov-report=xml \
-            --cov-fail-under=78 \
             -q
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@0565863a31f2c772f9f0395002a31e3f06189574 # v5.4.0
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage.xml
-          fail_ci_if_error: false
 
   selenium:
     runs-on: ubuntu-latest
