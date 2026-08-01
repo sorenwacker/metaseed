@@ -52,6 +52,40 @@ carries an `input_label` and `input_placeholder` for the prompt. Without them a
 host would have to hard-code per-adapter wording, which is the coupling the
 registry exists to remove.
 
+## Running an import
+
+Resolving the action is only half of an import: the returned `MetaseedClient`
+has to replace what the host is editing. `metaseed.ui.datasets.import_from_source`
+does both — it looks the action up with `adapters.import_action_for_profile`,
+calls it, installs the resulting facade on the `AppState`, and returns the
+imported profile, version and root count. Every host in this repository goes
+through it, so an importer cannot behave differently depending on where it was
+started from.
+
+Two failures are distinguished, because the fix differs:
+
+- `NoImporterError` — the profile declares no import action. The message lists
+  the profiles that do.
+- `EmptyImportError` — the importer ran and returned nothing. The accession is
+  wrong or has no public metadata; the dataset is left untouched.
+
+`ModuleNotFoundError` is left to propagate: it means the adapter's extra
+(`metaseed[pride]`) is not installed, which no host can resolve on the user's
+behalf.
+
+### The hosts
+
+| Host | Entry point |
+|------|-------------|
+| Web UI | `POST /import/source` with `key` and `value` form fields; the control is rendered on the dataset page from `import_options_for_profile` |
+| MCP | the `import_from_database` tool (`profile`, `accession`, `name`) |
+| Library | `metaseed.<repo>.import_accession(...)` directly |
+
+The web UI renders one import control per action the active profile offers, next
+to the adapter exports, and saves nothing until the import succeeds. The MCP
+tool additionally saves the result under a dataset name, because an agent has no
+page to leave the result sitting on.
+
 ## Decisions (and why)
 
 - **Optional extras, not core deps.** Each adapter installs with

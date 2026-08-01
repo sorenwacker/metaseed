@@ -5554,6 +5554,19 @@ details.sidebar-section summary:hover {
     margin-top: var(--space-lg);
 }
 
+/* Import a public record by accession (adapter import actions) */
+.import-source {
+    display: flex;
+    gap: var(--space-sm);
+    align-items: center;
+    margin-top: var(--space-md);
+}
+
+.import-source-input {
+    flex: 1 1 auto;
+    max-width: 28rem;
+}
+
 /* DCAT card panel */
 .dcat-card-hint {
     color: var(--text-secondary, #555);
