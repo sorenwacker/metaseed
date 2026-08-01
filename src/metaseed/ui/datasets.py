@@ -177,6 +177,81 @@ def import_dataset(state: AppState, raw: bytes | str) -> dict[str, Any]:
     return asdict(manager.import_data(data))
 
 
+class ImportSourceError(ValueError):
+    """A source-database import could not be completed."""
+
+
+class NoImporterError(ImportSourceError):
+    """The profile declares no importer, so nothing could be fetched."""
+
+
+class EmptyImportError(ImportSourceError):
+    """The importer ran but the record held no metadata.
+
+    Separate from :class:`NoImporterError` because the remedy differs: retype
+    the accession rather than choose another profile.
+    """
+
+
+def import_from_source(state: AppState, profile: str, value: str) -> dict[str, Any]:
+    """Import a public record into ``state`` through the adapter registry.
+
+    Resolves the profile's registered importer (:func:`metaseed.adapters.
+    import_action_for_profile`), runs it, and installs the result as the dataset
+    being edited. Every host — the web UI route, the MCP tool — goes through
+    here, so an import cannot behave differently depending on where it started.
+
+    The state is replaced only once the import has produced entities: a wrong
+    accession leaves the current dataset intact.
+
+    Args:
+        state: AppState the imported dataset replaces.
+        profile: Profile to import into (e.g. ``"pride"``, ``"miappe"``).
+        value: The single string the importer takes — an accession for the
+            archives, a server URL for BrAPI.
+
+    Returns:
+        Dict with the imported ``profile``, ``version``, ``root_count`` and
+        ``entity_count``.
+
+    Raises:
+        NoImporterError: If no installed adapter imports into ``profile``.
+        EmptyImportError: If the importer returned no entities.
+        ModuleNotFoundError: If the adapter's extra is not installed. Left to
+            propagate: no host can install a package on the user's behalf.
+    """
+    from metaseed import adapters
+
+    action = adapters.import_action_for_profile(profile)
+    if action is None:
+        importable = ", ".join(adapters.importable_profiles()) or "none"
+        raise NoImporterError(
+            f"No importer for profile '{profile}'. Importable profiles: {importable}."
+        )
+
+    client = action.resolve()(value)
+    if not client.get_roots():
+        raise EmptyImportError(
+            f"'{value}' returned no {profile} metadata; nothing was imported."
+        )
+
+    state.profile = client.profile
+    state.version = client.version
+    # Adopt the importer's facade wholesale rather than replaying entities into
+    # the old one: it already holds the validated nested structure, and
+    # state.reset() would clear the entities that were just fetched.
+    state.facade = client.facade
+    state.editing_node_id = None
+    state.invalidate_cache()
+
+    return {
+        "profile": client.profile,
+        "version": client.version,
+        "root_count": len(client.get_roots()),
+        "entity_count": len(state.nodes_by_id),
+    }
+
+
 def delete_dataset(name: str) -> bool:
     """Delete a dataset.
 
