@@ -215,6 +215,63 @@ def register_dataset_tools(  # noqa: C901
             return json.dumps({"error": str(e)})
 
     @mcp.tool()
+    def import_from_database(profile: str, accession: str, name: str) -> str:
+        """Import a public record from a source database and save it.
+
+        Runs metaseed's registered importer for the profile, replaces the
+        current dataset with the fetched record, and saves it under ``name``.
+        The same adapter registry the web UI uses is consulted, so no importer
+        is reimplemented here and a newly declared one is available at once.
+
+        Args:
+            profile: Profile to import into ("ena", "pride", "metabolights",
+                or "miappe" for a BrAPI server).
+            accession: The public accession (e.g. "MTBLS1", "PXD000001",
+                "PRJEB1234") or, for "miappe", a BrAPI v2 server URL.
+            name: Name to save the imported dataset under.
+
+        Returns:
+            JSON with the import status (profile, version, accession,
+            entity_count), or an error naming the importable profiles.
+        """
+        from metaseed import adapters
+        from metaseed.ui.datasets import (
+            ImportSourceError,
+            import_from_source,
+            set_current_dataset_name,
+        )
+
+        try:
+            context = resolve_context()
+            state = context.state
+
+            try:
+                info = import_from_source(state, profile, accession)
+            except ImportSourceError as exc:
+                return json.dumps(
+                    {
+                        "error": str(exc),
+                        "available": list(adapters.importable_profiles()),
+                    }
+                )
+
+            manager = _get_dataset_manager(context)
+            manager.save_dataset(name)
+            set_current_dataset_name(state, name)
+
+            return json.dumps(
+                {
+                    "status": "imported",
+                    "name": name,
+                    "accession": accession,
+                    **info,
+                },
+                indent=2,
+            )
+        except Exception as e:
+            return json.dumps({"error": str(e)})
+
+    @mcp.tool()
     def get_dataset_info() -> str:
         """Get information about the current dataset.
 

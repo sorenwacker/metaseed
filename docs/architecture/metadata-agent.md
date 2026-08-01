@@ -172,6 +172,7 @@ Exposes agent capabilities via Model Context Protocol:
 | `load_dataset` | Load a dataset into the editor |
 | `save_dataset` | Save current entities to a dataset |
 | `create_dataset` | Create a new empty dataset with a profile |
+| `import_from_database` | Import a public record by accession through the adapter registry and save it under a name |
 
 **Entity Management Tools:**
 

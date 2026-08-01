@@ -124,6 +124,39 @@ class TestActions:
         assert "URL" in adapters.find_action("brapi-import").input_label
         assert "accession" in adapters.find_action("pride-import").input_label.lower()
 
+    def test_import_action_for_profile_picks_the_import_menu_entry(self):
+        """Hosts ask for "the importer for this profile" rather than filtering.
+
+        Three hosts (web UI, MCP, CLI) had to agree on kind *and* surface; one
+        of them omitting the surface filter would have offered a non-menu
+        import action in a text-input control that cannot drive it.
+        """
+        action = adapters.import_action_for_profile("pride")
+        assert action is not None
+        assert action.key == "pride-import"
+
+        from metaseed.pride import import_accession
+
+        assert action.resolve() is import_accession
+        assert adapters.import_action_for_profile("darwin-core") is None
+
+    def test_importable_profiles_names_profiles_not_adapter_keys(self):
+        """The list is what a host shows after refusing an import, so it must
+        name what the user would type as a profile. BrAPI is the case that
+        separates the two: its adapter key is ``brapi`` but it imports into
+        ``miappe``."""
+        importable = adapters.importable_profiles()
+        assert {"ena", "pride", "metabolights", "miappe"} <= set(importable)
+        assert "brapi" not in importable
+        assert "darwin-core" not in importable
+        assert list(importable) == sorted(importable)
+
+    def test_importable_profiles_empty_when_extras_missing(self, monkeypatch):
+        """An uninstalled extra must drop its profile from the offer, not
+        advertise an importer that cannot be resolved."""
+        monkeypatch.setattr(importlib.util, "find_spec", lambda _m: None)
+        assert adapters.importable_profiles() == ()
+
     def test_actions_for_profile_empty_when_extra_missing(self, monkeypatch):
         monkeypatch.setattr(importlib.util, "find_spec", lambda _m: None)
         assert adapters.actions_for_profile("ena") == ()

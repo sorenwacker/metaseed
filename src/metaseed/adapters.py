@@ -330,6 +330,47 @@ def actions_for_profile(
     )
 
 
+def import_action_for_profile(profile: str) -> Action | None:
+    """The importer a host should offer for ``profile``, or None.
+
+    Every host that offers "fill this dataset from an archive" needs the same
+    lookup — an ``import`` action on the ``import-menu`` surface — and each one
+    filtering for itself is how the web UI and an agent tool come to disagree
+    about what is on offer.
+
+    Args:
+        profile: Profile name the dataset uses (e.g. ``"pride"``).
+
+    Returns:
+        The action to run, or None when the profile has no installed importer.
+    """
+    return next(
+        iter(actions_for_profile(profile, kind="import", surface="import-menu")),
+        None,
+    )
+
+
+def importable_profiles() -> tuple[str, ...]:
+    """Profiles an installed adapter can import into, sorted.
+
+    Names profiles rather than adapter keys, because that is what a caller was
+    asked for and what it would retry with: BrAPI's adapter key is ``brapi`` but
+    it imports into ``miappe``.
+
+    Returns:
+        Sorted, de-duplicated profile names.
+    """
+    profiles: set[str] = set()
+    for adapter in ADAPTERS:
+        if not is_available(adapter):
+            continue
+        for action in adapter.actions:
+            if action.kind != "import" or action.surface != "import-menu":
+                continue
+            profiles.update(action.profiles or (adapter.key,))
+    return tuple(sorted(profiles))
+
+
 def find_action(key: str) -> Action | None:
     """Return the :class:`Action` with ``key`` across all adapters, or None."""
     for adapter in ADAPTERS:
