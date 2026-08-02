@@ -83,7 +83,10 @@ def create_app(state: AppState | None = None, base_url: str = "") -> FastAPI:
         get_entity_service=get_entity_service,
         dataset_factory=dataset_factory,
     )
-    app.state.mcp_context = context
+    # The app supplies its own dependency rather than letting a request handler
+    # reach into the agent layer for it. A ContextVar set in the lifespan is not
+    # visible to request handlers, so the binding lives on the app object.
+    app.state.dataset_factory = dataset_factory
 
     # Install the shared MCP context only once the app starts serving — never at
     # construction. A module-level `app = create_app()` (used by uvicorn) runs at

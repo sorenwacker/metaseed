@@ -304,14 +304,16 @@ class DatasetManagerFactory:
 def resolve_dataset_manager(app: FastAPI, state: AppState) -> DatasetManager:
     """Resolve the DatasetManager for a request.
 
-    The web request carries the MCP context on ``app.state`` (a ContextVar set in
-    the app lifespan is not visible to request handlers), so that is checked
-    first. Otherwise it delegates to the shared :func:`metaseed.ui.datasets._resolve_factory`
-    tool, which prefers the MCP context and falls back to a cached factory -- so
-    every path reuses the same repository rather than creating a fresh one.
+    The app carries the factory it was composed with on ``app.state`` -- a
+    ContextVar set in the lifespan is not visible to request handlers -- so that
+    is used when present. Otherwise it falls back to the session's bound factory,
+    so every path reuses one repository rather than creating a fresh one.
+
+    This reads a factory, not an agent session: the interface depends on the
+    thing it needs, and whoever composes the app decides what that is.
 
     Args:
-        app: FastAPI application, read for an optional ``state.mcp_context``.
+        app: FastAPI application, read for an optional ``state.dataset_factory``.
         state: AppState the manager should be tied to.
 
     Returns:
@@ -319,6 +321,5 @@ def resolve_dataset_manager(app: FastAPI, state: AppState) -> DatasetManager:
     """
     from .datasets import _resolve_factory
 
-    context = getattr(app.state, "mcp_context", None)
-    factory = context.dataset_factory if context is not None else _resolve_factory()
+    factory = getattr(app.state, "dataset_factory", None) or _resolve_factory()
     return factory.get_manager(state)

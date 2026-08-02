@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from .dataset_manager import DatasetManagerFactory
     from .state import AppState
 
-from contextvars import ContextVar
+from contextvars import ContextVar, Token
 
 # Context variable for request-scoped factory
 _factory_var: ContextVar[DatasetManagerFactory | None] = ContextVar(
@@ -24,8 +24,58 @@ _factory_var: ContextVar[DatasetManagerFactory | None] = ContextVar(
 )
 
 
-def _get_factory() -> DatasetManagerFactory:
-    """Get or create the factory for current context."""
+def factory_token(
+    factory: DatasetManagerFactory | None,
+) -> Token[DatasetManagerFactory | None]:
+    """Bind ``factory`` and return the token that restores what it replaced.
+
+    For a caller that binds a factory for the duration of a block and must put
+    the previous one back afterwards, rather than clearing it.
+
+    Args:
+        factory: The factory to bind, or None to unbind.
+
+    Returns:
+        The token to pass to :func:`reset_factory`.
+    """
+    return _factory_var.set(factory)
+
+
+def reset_factory(token: Token[DatasetManagerFactory | None]) -> None:
+    """Restore the factory that was bound before ``token`` was issued.
+
+    Args:
+        token: The token returned by :func:`factory_token`.
+    """
+    _factory_var.reset(token)
+
+
+def set_factory(factory: DatasetManagerFactory | None) -> None:
+    """Bind the factory this session's saves and loads go through.
+
+    Called by whoever composes the application -- the web app, the MCP host, a
+    test -- so that every path in the session writes to one repository. Passing
+    None clears the binding, and the next resolution creates a private default.
+
+    Args:
+        factory: The factory to use, or None to unbind.
+    """
+    _factory_var.set(factory)
+
+
+def _resolve_factory() -> DatasetManagerFactory:
+    """The factory this session saves and loads through.
+
+    Returns whatever was bound by :func:`set_factory`, and otherwise creates a
+    private one and binds it. It does not look around for an owner: this module
+    used to import the MCP server to ask whether an agent session was running,
+    which made the interface depend on the agent layer, hid the dependency from
+    every signature, and left a test no way to supply its own factory except by
+    patching internals. The owner now pushes its factory in.
+
+    Returns:
+        The dataset factory to use for repository-backed operations.
+    """
     factory = _factory_var.get()
     if factory is None:
         from .dataset_manager import DatasetManagerFactory
@@ -33,29 +83,6 @@ def _get_factory() -> DatasetManagerFactory:
         factory = DatasetManagerFactory()
         _factory_var.set(factory)
     return factory
-
-
-def _resolve_factory() -> DatasetManagerFactory:
-    """Resolve the active dataset factory.
-
-    Prefers the factory from the MCP context when one is set (which keeps
-    save, load, and auto-save pointed at the same repository during MCP
-    sessions and test isolation), and otherwise falls back to the
-    context-variable factory from :func:`_get_factory`.
-
-    Returns:
-        The dataset factory to use for repository-backed operations.
-    """
-    try:
-        from metaseed.agent.mcp.server import get_context
-
-        ctx = get_context()
-    except ImportError:
-        ctx = None
-
-    if ctx is not None:
-        return ctx.dataset_factory
-    return _get_factory()
 
 
 def validate_dataset_name(name: str) -> str | None:

@@ -274,7 +274,7 @@ class TestResolveDatasetManager:
 
         from metaseed.ui.datasets import _resolve_factory
 
-        app = SimpleNamespace(state=SimpleNamespace())  # no mcp_context
+        app = SimpleNamespace(state=SimpleNamespace())  # nothing injected
 
         m1 = resolve_dataset_manager(app, AppState(profile="miappe"))
         m2 = resolve_dataset_manager(app, AppState(profile="isa"))

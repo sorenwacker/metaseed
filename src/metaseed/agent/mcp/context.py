@@ -76,8 +76,14 @@ _override: ContextVar[MCPContext | None] = ContextVar("mcp_context", default=Non
 
 
 def set_default_context(context: MCPContext | None) -> None:
-    """Bind the process-wide default session."""
+    """Bind the process-wide default session.
+
+    Also hands the session's factory to the UI, so a save reaches the same
+    repository whether it came from a tool call or a browser click. The UI does
+    not look for us; binding a session is what supplies it.
+    """
     _default.context = context
+    ui_datasets.set_factory(context.dataset_factory if context is not None else None)
 
 
 def default_context() -> MCPContext | None:
@@ -91,8 +97,13 @@ def bound_context() -> MCPContext | None:
 
 
 def set_scope(context: MCPContext | None) -> None:
-    """Bind (or clear) the context for the current scope."""
+    """Bind (or clear) the context for the current scope.
+
+    Supplies the UI with this session's factory too, for the same reason as
+    :func:`set_default_context`.
+    """
     _override.set(context)
+    ui_datasets.set_factory(context.dataset_factory if context is not None else None)
 
 
 @contextmanager
@@ -103,10 +114,12 @@ def use_context(context: MCPContext) -> Iterator[None]:
     default and cannot leak into a sibling task.
     """
     token = _override.set(context)
+    factory_token = ui_datasets.factory_token(context.dataset_factory)
     try:
         yield
     finally:
         _override.reset(token)
+        ui_datasets.reset_factory(factory_token)
 
 
 def resolve_default_context() -> MCPContext:
