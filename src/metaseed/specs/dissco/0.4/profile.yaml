@@ -31,12 +31,6 @@ validation_rules:
     minimum: 0
     maximum: 3
 
-  - name: scientific_name_required
-    description: TaxonIdentification must have scientific name
-    applies_to: [TaxonIdentification]
-    field: scientific_name
-    condition: required
-
 entities:
   DigitalSpecimen:
     ontology_term: ods:DigitalSpecimen
