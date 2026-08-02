@@ -1,5 +1,141 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+- Validating an extracted record now runs the profile's cross-field validation
+  rules, not only the record's own field constraints. `validate_extracted`
+  previously ignored `validation_rules` entirely, so a profile rule could not
+  reject a record on that path. Rules needing sibling records (`uniqueness`) or
+  a child collection (`cardinality` over children) still cannot be evaluated on
+  a single record and are skipped rather than reported as passing.
+- The core no longer imports the web application. Importing
+  `metaseed.cli.migrate` used to construct the FastAPI app; `get_datasets_dir`
+  moved to `metaseed.paths`, `metaseed.ui` resolves the app lazily, and the MCP
+  host's dependency on the shared editing session is declared once in
+  `metaseed.agent.mcp.ui_session`.
+- The dataset factory is supplied to the UI rather than discovered by it.
+  `metaseed.ui.datasets` no longer imports the MCP server to find out whether an
+  agent session is running; `set_factory` is called by whoever composes the
+  application.
+- `DEFAULT_DATASETS_DIR` was hardcoded to `~/.local/share` in two modules, so
+  `XDG_DATA_HOME` was honoured for specs and ignored for datasets. Both now
+  derive from the same base.
+
+### Removed
+- `UniquenessRule` and `EntityReferenceRule` from the validation engine, with
+  the `available_refs` parameter that fed the latter. Neither could ever fire:
+  a fresh engine is built per record, and the reference rule was constructed and
+  then discarded. Uniqueness and reference integrity are enforced by
+  `DatasetValidator`, which is unchanged.
+- The dissco 0.4 rule `scientific_name_required`, which duplicated a field
+  already declared `required: true` and whose `condition: required` could never
+  pass.
+
+### Fixed
+- A save callback bound `auto_save` when the session was built, so a test that
+  patched it afterwards still ran the real one and wrote to the user's datasets
+  directory.
+
+### Added
+- `tests/test_public_api.py` gates the public surface: the stable-surface table
+  in `docs/specification/api-contract.md` is compared against `metaseed.__all__`
+  in both directions, every promised name must resolve, and the documented
+  import example must run.
+
+## v0.25.0 (2026-08-02)
+
+### Added
+- `import_from_database` MCP tool and a matching web route, so a public record
+  can be imported by accession from the editor as well as from a tool call.
+  Both go through one seam in `metaseed.adapters`.
+
+### Changed
+- Coverage is measured once per release instead of on every pull request, where
+  it trebled the gate for a number nobody reads mid-review. The threshold still
+  blocks a publish.
+
+### Removed
+- `tests/fixtures/isa_examples/`, referenced by nothing and carrying real
+  researcher names, institutional addresses, telephone numbers and ORCIDs.
+  `tests/test_no_real_personal_data.py` gates the parts a test can decide.
+
+## v0.24.0 (2026-08-01)
+
+### Added
+- The twelve declarative field markers are settable from the MCP spec tools:
+  `codename`, `ontologies`, `unique_within`, `dcat`, `owns`, `is_identifier`,
+  `is_label`, `example`, `options`, `unit`, `label`, `tier`. The set is derived
+  from `FieldSpec.model_fields`, so it cannot drift from the schema. An unset
+  marker is absent from the serialized spec rather than written as `false`, so
+  the content hash does not record whether one was toggled.
+- `SpecBuilder.warnings()`, advisory findings that never affect validity, and a
+  `warnings` key on `spec_validate`. The first warning reports an entity whose
+  identifier is not declared and whose inferred one is an optional free-text
+  field. It finds five such cases in shipped profiles (issue #212).
+
+## v0.23.0 (2026-07-31)
+
+### Added
+- `metaseed.deprecation.deprecated`, giving the documented deprecation policy a
+  mechanism: it warns at the caller's line, requires a removal version, and
+  appends the notice to the docstring. Deliberately absent from `__all__`.
+- `MetaseedClient.load(data, on_skip=...)` and the public `SkippedNode`.
+  Permissive loading is opt-in and the callback both enables it and receives the
+  reports, so it cannot be switched on without somewhere for them to go.
+
+### Fixed
+- A nested entity whose parent node carried no `id` was flattened into a root,
+  because recursion passed the stored id rather than the one the node was
+  created under.
+- `SpecBuilder.validate()` now reports a `list` or `entity` field with no
+  `items`, which previously validated clean. `items` naming a primitive is
+  still valid.
+
+### Changed
+- Pull requests run the fast gate (lint, format, types, tests). Before this the
+  workflow ran only on tags, where the job skips itself, so branch protection
+  required a check that could never report.
+
+## v0.22.1 (2026-07-31)
+
+### Added
+- `metaseed migrate-specs`, repairing profile versions the 0.22.0 validator made
+  unloadable. Dry-run by default; normalisation is explicit (strip a leading
+  `v`, pad a single integer, drop a pre-release suffix, truncate three or more
+  components and flag it lossy), and anything underivable is reported rather
+  than guessed.
+- `SpecBuilder.update_field_constraints(entity, field, *, clear=(), **values)`,
+  merging constraint edits. Constraints are one object holding eight named
+  values, so assigning it wholesale silently dropped the seven not supplied.
+
+### Fixed
+- The loader created an empty `Constraints` object when a rule applied nothing
+  to a field, so identical content hashed two ways and broke the round-trip
+  stability the content hash promises.
+
+## v0.22.0 (2026-07-31)
+
+### Added
+- Profile versions are validated as `MAJOR.MINOR` and mean something: MAJOR
+  signals that datasets valid under the previous version may fail.
+- `content_hash` and `short_hash` on `ProfileSpec`, a canonical fingerprint that
+  is stable across a YAML round trip and unaffected by key order, so two specs
+  claiming the same name and version can be told apart.
+- `compare_specs` and `required_bump`, classifying every change between two
+  specs as breaking or compatible, and the `spec_compare` MCP tool.
+
+### Changed
+- Publishing is gated on a fresh-resolution install of the built wheel. The
+  locked test suites cannot see resolver drift: mcp 2.0.0 satisfied an unbounded
+  `mcp>=1.0.0` pin and removed `mcp.server.fastmcp`, so every fresh install of
+  v0.21.0 crashed while CI stayed green.
+
+### Note on earlier releases
+
+Entries for v0.13.0 through v0.21.1 were not written at the time and are not
+reconstructed here; `git log` between the tags is the record for those versions.
+
 ## v0.12.0 (2026-06-29)
 
 A bidirectional bridge to scientific data repositories: import public metadata
