@@ -21,6 +21,10 @@ from metaseed.agent.parsers import ParsedContent, ParserRegistry
 from metaseed.agent.parsers.registry import create_default_registry
 from metaseed.specs.loader import SpecLoader
 from metaseed.specs.schema import EntitySpec, FieldSpec, ProfileSpec
+from metaseed.validators.engine import (
+    ValidationEngine,
+    create_engine_for_extracted_record,
+)
 
 
 @lru_cache(maxsize=512)
@@ -124,11 +128,20 @@ class ValidationIssue(BaseModel):
     This is a plain data record describing one problem with a field; it is not
     an exception and is never raised. Named to avoid implying it can be caught
     like ``pydantic.ValidationError``.
+
+    Attributes:
+        field: The field the issue is about. A profile rule spanning several
+            fields names all of them, comma-separated.
+        message: Human-readable description of the problem.
+        value: The offending value, where the issue is about one field's value.
+        rule: Name of the profile validation rule that produced the issue, or
+            None for the required-field and field-constraint checks.
     """
 
     field: str
     message: str
     value: Any = None
+    rule: str | None = None
 
 
 class ExtractionResult(BaseModel):
@@ -168,6 +181,9 @@ class ExtractionContext:
         self.mappings: dict[str, ColumnMapping] = {}
         self.extracted: dict[str, list[dict[str, Any]]] = {}
         self._parser_registry = parser_registry or create_default_registry()
+        # One engine per entity, built on first use: validation runs per row and
+        # the profile does not change for the life of the context.
+        self._rule_engines: dict[str, ValidationEngine] = {}
 
     @classmethod
     def from_profile(
@@ -378,14 +394,21 @@ class ExtractionContext:
         data: dict[str, Any],
         entity_name: str,
     ) -> list[ValidationIssue]:
-        """Validate an extracted instance against entity spec.
+        """Validate an extracted instance against the entity spec and profile rules.
+
+        Checks required fields and field-level constraints, then runs the
+        profile's ``validation_rules`` through the shared validation engine.
+        A record is flat - its children are extracted separately and its
+        siblings are not visible - so the rules that need more than one record
+        are not run against it; see
+        :func:`~metaseed.validators.engine.create_engine_for_extracted_record`.
 
         Args:
             data: The instance data to validate.
             entity_name: Name of the entity.
 
         Returns:
-            List of validation errors.
+            List of validation issues. Empty if the instance passes.
         """
         entity_spec = self.get_entity_spec(entity_name)
         errors: list[ValidationIssue] = []
@@ -404,7 +427,35 @@ class ExtractionContext:
                 field_errors = self._validate_field(data[field.name], field)
                 errors.extend(field_errors)
 
+        errors.extend(self._profile_rule_issues(data, entity_name))
+
         return errors
+
+    def _profile_rule_issues(
+        self: Self, data: dict[str, Any], entity_name: str
+    ) -> list[ValidationIssue]:
+        """Run the profile rules a single extracted record can answer.
+
+        Args:
+            data: The instance data to validate.
+            entity_name: Name of the entity.
+
+        Returns:
+            One issue per rule the record violates, each naming the rule.
+        """
+        engine = self._rule_engines.get(entity_name)
+        if engine is None:
+            engine = create_engine_for_extracted_record(entity_name, self.profile)
+            self._rule_engines[entity_name] = engine
+        return [
+            ValidationIssue(
+                field=error.field,
+                message=error.message,
+                value=data.get(error.field),
+                rule=error.rule,
+            )
+            for error in engine.validate(data)
+        ]
 
     def _validate_field(
         self: Self, value: Any, field_spec: FieldSpec

@@ -14,10 +14,8 @@ from metaseed.validators.rules import (
     ConditionalRule,
     CoordinatePairRule,
     DateRangeRule,
-    EntityReferenceRule,
     ListCardinalityRule,
     RequiredFieldsRule,
-    UniquenessRule,
 )
 
 
@@ -306,7 +304,7 @@ class TestExplicitRuleTypes:
             condition="material_source_latitude AND material_source_longitude",
             message="m",
         )
-        rule = _infer_rule_type(spec, None)
+        rule = _infer_rule_type(spec)
         assert isinstance(rule, CoordinatePairRule)
         assert rule.lat_field == "material_source_latitude"
         assert rule.lon_field == "material_source_longitude"
@@ -326,33 +324,29 @@ class TestExplicitRuleTypes:
         assert rule.min_items == 1
         assert rule.max_items == 10
 
-    def test_explicit_uniqueness_type(self) -> None:
-        """Explicit uniqueness type creates UniquenessRule."""
+    def test_explicit_uniqueness_type_builds_no_engine_rule(self) -> None:
+        """A uniqueness rule spans records, so no engine rule is built for it.
+
+        It is enforced over the whole tree by DatasetValidator; an engine rule
+        would see one record and could never fire.
+        """
         spec = ValidationRuleSpec(
             name="test_rule",
             type="uniqueness",
             field="identifier",
             unique_within="parent",
         )
-        rule = _create_rule_from_spec(spec)
-        assert isinstance(rule, UniquenessRule)
-        assert rule.field == "identifier"
-        assert rule.scope == "parent"
+        assert _create_rule_from_spec(spec) is None
 
-    def test_explicit_reference_type(self) -> None:
-        """Explicit reference type creates EntityReferenceRule."""
-        available_refs = {"Protocol": {"PROT-001", "PROT-002"}}
+    def test_explicit_reference_type_builds_no_engine_rule(self) -> None:
+        """A reference rule needs dataset-wide ids, so no engine rule is built."""
         spec = ValidationRuleSpec(
             name="test_rule",
             type="reference",
             field="protocol_id",
             reference="Protocol.identifier",
         )
-        rule = _create_rule_from_spec(spec, available_refs)
-        assert isinstance(rule, EntityReferenceRule)
-        assert rule.field == "protocol_id"
-        assert rule.reference_id_field == "identifier"
-        assert rule.available_ids == {"PROT-001", "PROT-002"}
+        assert _create_rule_from_spec(spec) is None
 
     def test_custom_message_passed_to_rule(self) -> None:
         """Custom message is passed to created rule."""
@@ -387,7 +381,7 @@ class TestExplicitRuleTypes:
 
         BiologicalMaterial declares a Study.unique_id reference rule. At
         single-entity scope there is no set of dataset-wide IDs, so such a rule
-        can only no-op or false-positive; it must be skipped (reference
+        can only no-op or false-positive; it must not be built (reference
         integrity is enforced by DatasetValidator instead).
         """
         from metaseed.validators.engine import create_engine_for_entity
@@ -395,7 +389,7 @@ class TestExplicitRuleTypes:
         engine = create_engine_for_entity(
             "BiologicalMaterial", version="1.1", profile="miappe"
         )
-        assert not any(isinstance(r, EntityReferenceRule) for r in engine.rules)
+        assert not any(rule.name == "entity_reference" for rule in engine.rules)
 
     def test_missing_profile_raises_spec_load_error(self) -> None:
         """A nonexistent profile is handled via SpecLoadError, not a crash.
@@ -417,27 +411,23 @@ class TestExplicitRuleTypes:
 class TestInferredRuleTypes:
     """Tests for backward-compatible rule type inference."""
 
-    def test_infer_uniqueness_from_unique_within(self) -> None:
-        """Rule with unique_within creates UniquenessRule."""
+    def test_inferred_uniqueness_builds_no_engine_rule(self) -> None:
+        """An untyped unique_within rule builds nothing here either."""
         spec = ValidationRuleSpec(
             name="test_rule",
             field="identifier",
             unique_within="global",
         )
-        rule = _create_rule_from_spec(spec)
-        assert isinstance(rule, UniquenessRule)
-        assert rule.scope == "global"
+        assert _create_rule_from_spec(spec) is None
 
-    def test_infer_reference_from_reference_field(self) -> None:
-        """Rule with reference creates EntityReferenceRule."""
-        available_refs = {"Study": {"STU-001"}}
+    def test_inferred_reference_builds_no_engine_rule(self) -> None:
+        """An untyped reference rule builds nothing here either."""
         spec = ValidationRuleSpec(
             name="test_rule",
             field="study_id",
             reference="Study.identifier",
         )
-        rule = _create_rule_from_spec(spec, available_refs)
-        assert isinstance(rule, EntityReferenceRule)
+        assert _create_rule_from_spec(spec) is None
 
     def test_pattern_rule_skipped(self) -> None:
         """Pattern rules return None (handled by Pydantic)."""

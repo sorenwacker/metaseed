@@ -342,6 +342,63 @@ class TestColumnMapping:
         assert mapping.fields[0].confidence == 1.0
 
 
+class TestProfileRulesOnExtractedRecords:
+    """The extracted-data path runs the profile's validation rules."""
+
+    @staticmethod
+    def _context() -> ExtractionContext:
+        """An extraction context for MIAPPE 1.2."""
+        return ExtractionContext.from_profile("miappe", "1.2")
+
+    def test_record_violating_a_profile_rule_is_reported(self) -> None:
+        # MIAPPE declares observed_variable_trait_required:
+        # "trait OR trait_accession_number". Neither is a required field, so
+        # only the rule can catch this record.
+        ctx = self._context()
+
+        errors = ctx.validate_instance(
+            {"unique_id": "OV-001", "variable_name": "Plant height"},
+            "ObservedVariable",
+        )
+
+        assert "observed_variable_trait_required" in {e.rule for e in errors}
+
+    def test_record_satisfying_the_rule_is_not_reported(self) -> None:
+        ctx = self._context()
+
+        errors = ctx.validate_instance(
+            {
+                "unique_id": "OV-001",
+                "variable_name": "Plant height",
+                "trait": "plant height",
+                "method": "ruler",
+                "scale": "cm",
+            },
+            "ObservedVariable",
+        )
+
+        assert [e for e in errors if e.rule == "observed_variable_trait_required"] == []
+
+    def test_issue_from_a_field_check_carries_no_rule_name(self) -> None:
+        ctx = self._context()
+
+        errors = ctx.validate_instance({}, "ObservedVariable")
+
+        missing = [e for e in errors if e.field == "unique_id"]
+        assert missing and missing[0].rule is None
+
+    def test_absent_child_collections_do_not_fault_a_row(self) -> None:
+        # investigation_has_studies is a cardinality rule over a child
+        # collection, which an extracted row never carries.
+        ctx = self._context()
+
+        errors = ctx.validate_instance(
+            {"unique_id": "INV-001", "title": "Test"}, "Investigation"
+        )
+
+        assert errors == []
+
+
 class TestValidationIssue:
     """Tests for ValidationIssue class."""
 

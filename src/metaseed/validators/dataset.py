@@ -160,9 +160,10 @@ class DatasetValidator:
         """Load declared uniqueness rules from the profile.
 
         Cross-record identifier uniqueness (e.g. MIAPPE's ``unique_within:
-        parent`` on ``unique_id``) is a dataset-level concern: the per-record
-        ``UniquenessRule`` in the engine cannot see sibling records. These
-        definitions drive :meth:`_validate_uniqueness` over the full tree.
+        parent`` on ``unique_id``) is a dataset-level concern: an engine rule
+        sees one record and cannot see its siblings, so this is the only place
+        a ``uniqueness`` rule is enforced. These definitions drive
+        :meth:`_validate_uniqueness` over the full tree.
         """
         try:
             profile_spec = self._loader.load_profile(

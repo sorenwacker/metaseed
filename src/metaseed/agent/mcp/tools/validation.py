@@ -38,7 +38,9 @@ def register_validation_tools(  # noqa: C901
     def validate_extracted(data: str, profile: str, version: str, entity: str) -> str:
         """Validate extracted data against the entity specification.
 
-        Checks required fields, type constraints, and field-level validations.
+        Checks required fields, type constraints and field-level validations,
+        then runs the profile's validation rules that a single extracted record
+        can answer. An error produced by such a rule names it in ``rule``.
 
         Args:
             data: JSON string of extracted instances.
@@ -64,7 +66,12 @@ def register_validation_tools(  # noqa: C901
                         "index": i,
                         "valid": len(errors) == 0,
                         "errors": [
-                            {"field": e.field, "message": e.message, "value": e.value}
+                            {
+                                "field": e.field,
+                                "message": e.message,
+                                "value": e.value,
+                                "rule": e.rule,
+                            }
                             for e in errors
                         ],
                     }

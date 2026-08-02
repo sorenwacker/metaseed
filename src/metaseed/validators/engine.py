@@ -7,18 +7,16 @@ import re
 from typing import Any, Self
 
 from metaseed.specs.loader import SpecLoader, SpecLoadError
-from metaseed.specs.schema import FieldType, ValidationRuleSpec
+from metaseed.specs.schema import FieldType, ProfileSpec, ValidationRuleSpec
 from metaseed.validators.base import ValidationCheck, ValidationError, ValidationRule
 from metaseed.validators.rules import (
     ConditionalRule,
     CoordinatePairRule,
     DateRangeRule,
-    EntityReferenceRule,
     ListCardinalityRule,
     PatternRule,
     RequiredFieldsRule,
     UniqueIdPatternRule,
-    UniquenessRule,
 )
 
 # Field types whose rule-level ``pattern`` the model factory cannot enforce via a
@@ -151,18 +149,17 @@ _VALID_RULE_TYPES = frozenset(
 )
 
 
-def _create_rule_by_type(  # noqa: C901
+def _create_rule_by_type(
     rule_spec: ValidationRuleSpec,
-    available_refs: dict[str, set[str]] | None = None,
 ) -> ValidationRule | None:
     """Create a rule based on explicit type field.
 
     Args:
         rule_spec: The rule specification.
-        available_refs: Optional dict of entity -> available IDs for reference rules.
 
     Returns:
-        A ValidationRule instance, or None if type not recognized.
+        A ValidationRule instance, or None for a declared type that this engine
+        does not enforce (see the ``uniqueness`` and ``reference`` branches).
     """
     rule_type = rule_spec.type
 
@@ -223,48 +220,26 @@ def _create_rule_by_type(  # noqa: C901
             message=rule_spec.message,
         )
 
-    if rule_type == "uniqueness":
-        if not rule_spec.field:
-            return None
-        return UniquenessRule(
-            field=rule_spec.field,
-            scope=rule_spec.unique_within or "parent",
-            rule_name=rule_spec.name,
-            message=rule_spec.message,
-        )
-
-    if rule_type == "reference":
-        if not rule_spec.field or not rule_spec.reference:
-            return None
-        # Parse Entity.field reference
-        parts = rule_spec.reference.split(".")
-        if len(parts) != 2:
-            return None
-        target_entity, target_field = parts
-        # Get available IDs from context
-        ids = available_refs.get(target_entity, set()) if available_refs else set()
-        return EntityReferenceRule(
-            field=rule_spec.field,
-            reference_id_field=target_field,
-            available_ids=ids,
-            message=rule_spec.message,
-        )
-
+    # A uniqueness or reference rule is a question about the records around
+    # this one - siblings sharing a value, an identifier defined elsewhere -
+    # and this engine only ever sees one record. Both are enforced over the
+    # whole tree by DatasetValidator (_validate_uniqueness, _validate_
+    # references), which reads the rule spec directly. Building an engine rule
+    # here would produce one that can never fire.
     return None
 
 
 def _infer_rule_type(
     rule_spec: ValidationRuleSpec,
-    available_refs: dict[str, set[str]] | None = None,
 ) -> ValidationRule | None:
     """Infer rule type from fields (backward compatibility).
 
     Args:
         rule_spec: The rule specification.
-        available_refs: Optional dict of entity -> available IDs for reference rules.
 
     Returns:
-        A ValidationRule instance, or None if type cannot be inferred.
+        A ValidationRule instance, or None if type cannot be inferred or is
+        enforced elsewhere.
     """
     # Skip rules handled by Pydantic constraints (these are documented in the spec
     # but shouldn't create engine rules)
@@ -291,27 +266,10 @@ def _infer_rule_type(
             message=rule_spec.message,
         )
 
-    # Uniqueness rules
-    if rule_spec.unique_within and rule_spec.field:
-        return UniquenessRule(
-            field=rule_spec.field,
-            scope=rule_spec.unique_within,
-            rule_name=rule_spec.name,
-            message=rule_spec.message,
-        )
-
-    # Reference rules
-    if rule_spec.reference and rule_spec.field:
-        parts = rule_spec.reference.split(".")
-        if len(parts) == 2:
-            target_entity, target_field = parts
-            ids = available_refs.get(target_entity, set()) if available_refs else set()
-            return EntityReferenceRule(
-                field=rule_spec.field,
-                reference_id_field=target_field,
-                available_ids=ids,
-                message=rule_spec.message,
-            )
+    # Uniqueness and reference rules span records, so they are enforced by
+    # DatasetValidator over the whole tree, not here (see _create_rule_by_type).
+    if (rule_spec.unique_within or rule_spec.reference) and rule_spec.field:
+        return None
 
     # Conditional rules
     if rule_spec.condition:
@@ -362,17 +320,15 @@ def _infer_rule_type(
 
 def _create_rule_from_spec(
     rule_spec: ValidationRuleSpec,
-    available_refs: dict[str, set[str]] | None = None,
 ) -> ValidationRule | None:
     """Create a ValidationRule instance from a ValidationRuleSpec.
 
     Args:
         rule_spec: The rule specification from the YAML.
-        available_refs: Optional dict mapping entity names to sets of available IDs.
-            Used for reference validation rules.
 
     Returns:
-        A ValidationRule instance, or None if rule type not supported.
+        A ValidationRule instance, or None if the rule is enforced somewhere
+        other than this engine.
 
     Note:
         If `type` field is set, uses explicit type creation.
@@ -383,6 +339,9 @@ def _create_rule_from_spec(
         - Pattern rules (Pydantic pattern constraint)
         - Numeric range rules (Pydantic ge/le constraints)
         - Enum rules (Pydantic Literal types)
+
+        Uniqueness and reference rules also return None: they span records and
+        are enforced by DatasetValidator.
     """
     # Explicit type takes precedence
     if rule_spec.type:
@@ -392,10 +351,10 @@ def _create_rule_from_spec(
                 f"Validation rule '{rule_spec.name}' has unknown type "
                 f"'{rule_spec.type}'. Valid types are: {valid}."
             )
-        return _create_rule_by_type(rule_spec, available_refs)
+        return _create_rule_by_type(rule_spec)
 
     # Legacy: infer from fields (backward compatibility)
-    return _infer_rule_type(rule_spec, available_refs)
+    return _infer_rule_type(rule_spec)
 
 
 def _applies_to_entity(rule_spec: ValidationRuleSpec, entity: str) -> bool:
@@ -420,11 +379,123 @@ def _applies_to_entity(rule_spec: ValidationRuleSpec, entity: str) -> bool:
     return applies_to.lower() == entity_lower
 
 
+def _profile_rules_for_entity(
+    entity: str,
+    profile_spec: ProfileSpec,
+) -> list[ValidationRule]:
+    """Build the rules a profile declares for one entity.
+
+    Args:
+        entity: Entity name (e.g., "Investigation").
+        profile_spec: The loaded profile specification.
+
+    Returns:
+        One ValidationRule per declared rule that applies to the entity and is
+        not already enforced as a Pydantic constraint.
+    """
+    entity_lower = entity.lower()
+    entity_def = next(
+        (e for n, e in profile_spec.entities.items() if n.lower() == entity_lower),
+        None,
+    )
+    field_types = {f.name: f.type for f in entity_def.fields} if entity_def else {}
+
+    rules: list[ValidationRule] = []
+    for rule_spec in profile_spec.validation_rules:
+        if not _applies_to_entity(rule_spec, entity):
+            continue
+        # A pattern on a uri/ontology_term field can't be a Pydantic
+        # constraint, so enforce it here rather than let it silently drop.
+        if (
+            rule_spec.pattern
+            and rule_spec.field
+            and field_types.get(rule_spec.field) in _ENGINE_PATTERN_TYPES
+        ):
+            rules.append(
+                PatternRule(
+                    field=rule_spec.field,
+                    pattern=rule_spec.pattern,
+                    message=rule_spec.message or rule_spec.description or None,
+                )
+            )
+            continue
+        rule = _create_rule_from_spec(rule_spec)
+        if rule:
+            rules.append(rule)
+    return rules
+
+
+def _child_collection_fields(entity: str, profile_spec: ProfileSpec) -> set[str]:
+    """Field names on ``entity`` that hold child entities rather than values.
+
+    Args:
+        entity: Entity name (e.g., "Investigation").
+        profile_spec: The loaded profile specification.
+
+    Returns:
+        The names of list fields whose ``items`` is another entity of the
+        profile. Empty if the profile does not define the entity.
+    """
+    entity_lower = entity.lower()
+    entity_def = next(
+        (e for n, e in profile_spec.entities.items() if n.lower() == entity_lower),
+        None,
+    )
+    if entity_def is None:
+        return set()
+
+    entity_names = {name.lower() for name in profile_spec.entities}
+    return {
+        f.name
+        for f in entity_def.fields
+        if f.type == FieldType.LIST and f.items and f.items.lower() in entity_names
+    }
+
+
+def create_engine_for_extracted_record(
+    entity: str,
+    profile_spec: ProfileSpec,
+) -> ValidationEngine:
+    """Create an engine for a single extracted record.
+
+    An extracted record is one source row mapped onto an entity: it is flat,
+    its child entities are extracted as records of their own, and the records
+    around it are not visible. Only the profile rules that such a record can
+    answer are added, because a rule that cannot see its data does not pass -
+    it reports every record as bad.
+
+    Excluded here, on top of what no engine enforces (``uniqueness`` and
+    ``reference``, which span records and belong to ``DatasetValidator``):
+
+    - ``cardinality`` over a child collection: the children are separate
+      records, so the parent never holds them and the count is always zero.
+    - Rules derived from the entity spec rather than declared by the profile
+      (required fields, identifier patterns): ``ExtractionContext`` reports
+      missing required fields itself.
+
+    Args:
+        entity: Entity name (e.g., "Investigation").
+        profile_spec: The loaded profile specification the record belongs to.
+
+    Returns:
+        Configured ValidationEngine instance, empty if the profile declares no
+        applicable rule for the entity.
+    """
+    child_collections = _child_collection_fields(entity, profile_spec)
+    engine = ValidationEngine()
+
+    for rule in _profile_rules_for_entity(entity, profile_spec):
+        if isinstance(rule, ListCardinalityRule) and rule.field in child_collections:
+            continue
+        engine.add_rule(rule)
+
+    return engine
+
+
 def create_engine_for_entity(
     entity: str,
     version: str = "1.2",
     profile: str = "miappe",
-    available_refs: dict[str, set[str]] | None = None,
 ) -> ValidationEngine:
     """Create a validation engine configured for a specific entity.
 
@@ -435,9 +506,6 @@ def create_engine_for_entity(
         entity: Entity name (e.g., "Investigation").
         version: Profile version (e.g., "1.1").
         profile: Profile name (e.g., "miappe", "combined").
-        available_refs: Optional dict mapping entity names to sets of available IDs.
-            Used for reference validation rules. If not provided, reference rules
-            will use empty ID sets.
 
     Returns:
         Configured ValidationEngine instance.
@@ -474,39 +542,8 @@ def create_engine_for_entity(
         if entity_lower in profile_entities:
             entity_found = True
 
-        entity_def = next(
-            (e for n, e in profile_spec.entities.items() if n.lower() == entity_lower),
-            None,
-        )
-        field_types = {f.name: f.type for f in entity_def.fields} if entity_def else {}
-
-        for rule_spec in profile_spec.validation_rules:
-            if not _applies_to_entity(rule_spec, entity):
-                continue
-            # A pattern on a uri/ontology_term field can't be a Pydantic
-            # constraint, so enforce it here rather than let it silently drop.
-            if (
-                rule_spec.pattern
-                and rule_spec.field
-                and field_types.get(rule_spec.field) in _ENGINE_PATTERN_TYPES
-            ):
-                engine.add_rule(
-                    PatternRule(
-                        field=rule_spec.field,
-                        pattern=rule_spec.pattern,
-                        message=rule_spec.message or rule_spec.description or None,
-                    )
-                )
-                continue
-            rule = _create_rule_from_spec(rule_spec, available_refs)
-            # Reference-integrity rules need the set of IDs that exist
-            # elsewhere in the dataset, which a single-entity engine does
-            # not have (no caller passes ``available_refs`` here). Such a
-            # rule could therefore only ever no-op or false-positive, so
-            # skip it: dataset-scope reference integrity is enforced by
-            # DatasetValidator._validate_references instead.
-            if rule and not isinstance(rule, EntityReferenceRule):
-                engine.add_rule(rule)
+        for rule in _profile_rules_for_entity(entity, profile_spec):
+            engine.add_rule(rule)
     except SpecLoadError:
         # If profile not found, continue with basic rules only
         pass

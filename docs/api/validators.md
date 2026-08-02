@@ -111,37 +111,6 @@ rule = UniqueIdPatternRule(field="code", pattern=r"^[A-Z]{3}[0-9]{3}$")
 errors = rule.validate({"code": "ABC123"})  # Valid
 ```
 
-### EntityReferenceRule
-
-Validates that references point to existing entities.
-
-```python
-from metaseed.validators.rules import EntityReferenceRule
-
-# Available study IDs
-available_ids = {"STUDY001", "STUDY002", "STUDY003"}
-
-rule = EntityReferenceRule(
-    field="study",
-    reference_id_field="study_id",
-    available_ids=available_ids
-)
-
-errors = rule.validate({"study": {"study_id": "STUDY999"}})
-# Error: Reference 'STUDY999' not found in available study_ids
-```
-
-For list fields, set `is_list=True`:
-
-```python
-rule = EntityReferenceRule(
-    field="studies",
-    reference_id_field="study_id",
-    available_ids=available_ids,
-    is_list=True
-)
-```
-
 ### ConditionalRule
 
 Validates conditional field requirements using boolean expressions.
@@ -199,6 +168,46 @@ rule = ListCardinalityRule(
 errors = rule.validate({"samples": []})
 # Error: 'samples' must have at least 1 item(s), but has 0
 ```
+
+## Rules on a single extracted record
+
+`ExtractionContext.validate_instance` validates one row extracted from a source
+file. A row is a flat record: its child entities are extracted separately, and
+sibling rows are not visible to it. `create_engine_for_extracted_record` builds
+an engine from a loaded `ProfileSpec` containing only the rules that such a
+record can answer.
+
+```python
+from metaseed.validators.engine import create_engine_for_extracted_record
+from metaseed.specs.loader import SpecLoader
+
+profile_spec = SpecLoader(profile="miappe").load_profile("1.2", "miappe")
+engine = create_engine_for_extracted_record("ObservedVariable", profile_spec)
+errors = engine.validate({"unique_id": "OV-1", "trait": "plant height"})
+```
+
+Which of the profile's `validation_rules` run:
+
+| Rule type | On a single extracted record | Reason |
+|-----------|------------------------------|--------|
+| `conditional` | Runs | Reads only the record's own fields. |
+| `date_range` | Runs | Reads only the record's own fields. |
+| `coordinate_pair` | Runs | Reads only the record's own fields. |
+| `pattern` on a `uri` / `ontology_term` field | Runs | Single-value check. A pattern on a `string` field is merged onto the field's constraints at load and is applied by the field-level checks instead. |
+| `minimum` / `maximum` / `enum` | Runs as a field constraint | Merged onto the field at load; applied by the field-level checks, not by an engine rule. |
+| `cardinality` over a list of scalars | Runs | The list is a value of the record. A missing field counts as zero items, as it does on every other path. |
+| `cardinality` over a child collection | Skipped | The children are extracted as their own records, so the parent record never holds them and the rule would report zero items for every row. |
+| `uniqueness` | Not built by any engine | Needs the sibling records, which no engine sees. Enforced over the whole tree by `DatasetValidator`. |
+| `reference` | Not built by any engine | Needs the identifiers held elsewhere in the dataset. Enforced over the whole tree by `DatasetValidator`. |
+
+Rules derived from the entity spec rather than declared in the profile
+(`RequiredFieldsRule`, `UniqueIdPatternRule`) are not added either:
+`validate_instance` reports missing required fields itself.
+
+`uniqueness` and `reference` remain valid rule types in a profile; they are
+simply enforced somewhere other than the engine. `create_engine_for_entity`
+does not build them either, so a rule of either type never reaches a
+`ValidationEngine`.
 
 ## ValidationError
 

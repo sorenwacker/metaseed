@@ -17,7 +17,11 @@ from metaseed.validators.base import (
     has_value,
 )
 from metaseed.validators.dataset import DatasetValidationResult, DatasetValidator
-from metaseed.validators.engine import ValidationEngine, create_engine_for_entity
+from metaseed.validators.engine import (
+    ValidationEngine,
+    create_engine_for_entity,
+    create_engine_for_extracted_record,
+)
 from metaseed.validators.rules import (
     DateRangeRule,
     PatternRule,
@@ -37,6 +41,7 @@ __all__ = [
     "ValidationError",
     "ValidationRule",
     "create_engine_for_entity",
+    "create_engine_for_extracted_record",
     "has_value",
     "validate",
     "validate_entity",

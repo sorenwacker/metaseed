@@ -75,7 +75,7 @@ class ExtractionContext:
         """Extract entity instances from a source."""
 
     def validate_instance(self, data: dict, entity_name: str) -> list[ValidationIssue]:
-        """Validate extracted data against entity spec."""
+        """Validate extracted data against entity spec and profile rules."""
 
     def export_yaml(self, entity_name: str | None = None) -> str:
         """Export extracted entities to YAML."""
@@ -83,6 +83,14 @@ class ExtractionContext:
     def export_json(self, entity_name: str | None = None) -> str:
         """Export extracted entities to JSON."""
 ```
+
+`validate_instance` reports missing required fields and field-level constraints
+itself, then runs the profile's `validation_rules` through the shared validation
+engine. Each issue carries the name of the rule that produced it. A row is a
+flat record with no children and no siblings, so the rules that need a child
+collection or the rest of the dataset are not run against it; the table in
+[Validators](../api/validators.md#rules-on-a-single-extracted-record) states
+which run and which do not.
 
 ### 2. Column Mapping (`src/metaseed/agent/mapping.py`)
 
@@ -161,7 +169,7 @@ Exposes agent capabilities via Model Context Protocol:
 | `parse_source_file` | Parse a file and return structure |
 | `analyze_mapping` | Suggest how file columns map to entity fields |
 | `extract_entities` | Extract entity instances from file using mapping |
-| `validate_extracted` | Validate extracted data against profile |
+| `validate_extracted` | Validate extracted data against the entity spec and the profile's validation rules |
 | `export_metadata` | Export extracted metadata to YAML/JSON |
 
 **Dataset Management Tools:**
