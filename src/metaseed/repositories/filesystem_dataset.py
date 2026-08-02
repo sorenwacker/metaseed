@@ -13,6 +13,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Self
 
+from metaseed.paths import user_data_base
 from metaseed.repositories.dataset_repository import (
     CatalogMetadata,
     DatasetData,
@@ -20,7 +21,14 @@ from metaseed.repositories.dataset_repository import (
     DatasetRepository,
 )
 
-DEFAULT_DATASETS_DIR = Path.home() / ".local" / "share" / "metaseed" / "datasets"
+DEFAULT_DATASETS_DIR = user_data_base() / "datasets"
+"""Where datasets live when nothing overrides it.
+
+Derived from the same base as every other metaseed data directory, so
+``XDG_DATA_HOME`` (and ``%LOCALAPPDATA%`` on Windows) is honoured here as it
+is for specs. It was hardcoded to ``~/.local/share`` in two places, which
+meant a redirected data directory silently kept datasets in the real one.
+"""
 
 #: Environment variable overriding where datasets are stored. Lets tests (and
 #: sandboxed deployments) point storage at a throwaway directory instead of the

@@ -14,6 +14,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Self
 
+from metaseed.paths import user_data_base
 from metaseed.repositories.base import EntityData, EntityRepository
 from metaseed.repositories.helpers import (
     derive_label,
@@ -25,7 +26,14 @@ from metaseed.repositories.helpers import (
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_DATASETS_DIR = Path.home() / ".local" / "share" / "metaseed" / "datasets"
+DEFAULT_DATASETS_DIR = user_data_base() / "datasets"
+"""Where datasets live when nothing overrides it.
+
+Derived from the same base as every other metaseed data directory, so
+``XDG_DATA_HOME`` (and ``%LOCALAPPDATA%`` on Windows) is honoured here as it
+is for specs. It was hardcoded to ``~/.local/share`` in two places, which
+meant a redirected data directory silently kept datasets in the real one.
+"""
 
 
 class FileEntityRepository(EntityRepository):

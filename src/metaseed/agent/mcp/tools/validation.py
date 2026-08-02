@@ -13,8 +13,8 @@ if TYPE_CHECKING:
     from mcp.server.fastmcp import FastMCP
 
     from metaseed.agent.mcp.context import ResolveContext
+    from metaseed.agent.mcp.ui_session import AppState, TreeNode
     from metaseed.facade import ProfileFacade
-    from metaseed.ui.state import AppState, TreeNode
 
 
 def register_validation_tools(  # noqa: C901

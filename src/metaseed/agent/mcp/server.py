@@ -22,18 +22,20 @@ Prompts:
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING
 
 from mcp.server.fastmcp import FastMCP
 
 from metaseed.agent.mcp import context as context_module
 from metaseed.agent.mcp.context import MCPContext, ResolveContext
+from metaseed.agent.mcp.ui_session import (
+    AppState,
+    DatasetManagerFactory,
+    EntityService,
+    ui_datasets,
+)
 from metaseed.agent.parsers.registry import create_default_registry
+from metaseed.repositories.memory import MemoryEntityRepository
 from metaseed.specs.loader import SpecLoader, SpecLoadError
-
-if TYPE_CHECKING:
-    from metaseed.ui.services.entities import EntityService
-    from metaseed.ui.state import AppState
 
 
 def set_context(context: MCPContext | None) -> None:
@@ -66,16 +68,11 @@ def get_mcp_state() -> AppState:
 
 def set_mcp_state(state: AppState) -> None:
     """Bind a session built around ``state`` (tests and standalone use)."""
-    from metaseed.repositories.memory import MemoryEntityRepository
-    from metaseed.ui.dataset_manager import DatasetManagerFactory
-    from metaseed.ui.datasets import auto_save
-    from metaseed.ui.services.entities import EntityService
-
     set_context(
         MCPContext(
             state=state,
             get_entity_service=lambda: EntityService(
-                MemoryEntityRepository(state, on_change=auto_save)
+                MemoryEntityRepository(state, on_change=ui_datasets.auto_save)
             ),
             dataset_factory=DatasetManagerFactory(),
         )

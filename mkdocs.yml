@@ -93,6 +93,7 @@ nav:
       - Facade as Entity Storage (ADR): architecture/decisions/001-facade-as-entity-storage.md
       - Edge-Case Behavior (ADR): architecture/decisions/002-edge-case-behavior.md
       - Value-Dependent Validation Rules (ADR): architecture/decisions/003-value-dependent-validation-rules.md
+      - Core Does Not Import the Web App (ADR): architecture/decisions/004-core-does-not-import-the-web-app.md
       - Integration Adapters: architecture/integration-adapters.md
       - Exceptions: architecture/exceptions.md
       - Model Factory: architecture/model-factory.md

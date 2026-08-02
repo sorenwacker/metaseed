@@ -3,11 +3,88 @@
 This module defines the abstract interface for entity CRUD operations,
 following the same DI pattern as SpecPersistence/SpecProvider.
 Implementations handle the actual storage mechanism (memory, filesystem, database).
+
+It also defines the shape of the in-memory entity tree a repository may wrap
+(:class:`EntityTreeState`, :class:`EntityTreeNode`). These are protocols rather
+than imports of the editor's ``AppState`` and ``TreeNode``: the data layer
+describes what it needs and the host supplies something that fits, so the
+dependency points at the core instead of at the web app (ADR 004).
 """
 
 from abc import ABC, abstractmethod
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Protocol
+
+
+class EntityTreeNode(Protocol):
+    """One node of an in-memory entity tree.
+
+    Attributes:
+        id: Node identifier, unique within the tree.
+        entity_type: Entity type name (e.g. "Investigation").
+        label: Human-readable label derived from the instance.
+        instance: The entity instance (a generated Pydantic model).
+        parent_id: Identifier of the parent node, or None for a root.
+    """
+
+    id: str
+    entity_type: str
+    label: str
+    instance: Any
+    parent_id: str | None
+
+    @property
+    def children(self) -> Sequence["EntityTreeNode"]:
+        """The node's child nodes."""
+        ...
+
+
+class EntityTreeState(Protocol):
+    """The entity tree a memory-backed repository reads and writes.
+
+    Only the members a repository actually uses are declared, so a host is free
+    to carry whatever else its own session needs.
+
+    Attributes:
+        profile: Active profile name.
+        version: Active profile version, or None for latest.
+        facade: The ProfileFacade backing the tree; set to None to force a
+            rebuild after a profile change. Typed loosely to keep the data
+            layer independent of the facade's import.
+    """
+
+    profile: str
+    version: str | None
+    facade: Any
+
+    @property
+    def entity_tree(self) -> Sequence[EntityTreeNode]:
+        """Root nodes of the tree."""
+        ...
+
+    @property
+    def nodes_by_id(self) -> Mapping[str, EntityTreeNode]:
+        """Every node in the tree, indexed by identifier."""
+        ...
+
+    def get_or_create_facade(self) -> Any:
+        """The ProfileFacade for the active profile, created if needed."""
+        ...
+
+    def add_node(
+        self, entity_type: str, instance: Any, parent_id: str | None = None
+    ) -> EntityTreeNode:
+        """Add an entity to the tree and return the node created for it."""
+        ...
+
+    def update_node(self, node_id: str, instance: Any) -> EntityTreeNode | None:
+        """Replace a node's instance, returning the updated node or None."""
+        ...
+
+    def delete_node(self, node_id: str) -> bool:
+        """Delete a node and its children, returning whether it existed."""
+        ...
 
 
 @dataclass

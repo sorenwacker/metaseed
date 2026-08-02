@@ -1,14 +1,21 @@
 """In-memory entity repository implementation.
 
-Wraps AppState as an EntityRepository for use with EntityService.
-This allows existing AppState-based code to work with the unified API.
+Wraps an entity tree (the editor's ``AppState``) as an EntityRepository for use
+with EntityService. The tree is taken as the :class:`EntityTreeState` protocol,
+not as an import of the UI's class, so the data layer stays independent of the
+web app (ADR 004).
 """
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Self
 
-from metaseed.repositories.base import EntityData, EntityRepository
+from metaseed.repositories.base import (
+    EntityData,
+    EntityRepository,
+    EntityTreeNode,
+    EntityTreeState,
+)
 from metaseed.repositories.helpers import (
     find_parent_ref_field,
     get_identifier_from_instance,
@@ -19,37 +26,36 @@ from metaseed.repositories.helpers import (
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from metaseed.ui.state import AppState, TreeNode
-
 
 class MemoryEntityRepository(EntityRepository):
-    """In-memory repository adapter for AppState.
+    """In-memory repository adapter for an entity tree.
 
-    This adapter allows existing AppState-based code to work with the
+    This adapter allows existing state-based code to work with the
     EntityService while providing a clean repository interface.
     """
 
     def __init__(
         self: Self,
-        state: AppState,
-        on_change: Callable[[AppState], None] | None = None,
+        state: EntityTreeState,
+        on_change: Callable[[Any], None] | None = None,
     ) -> None:
-        """Initialize with AppState.
+        """Initialize with the state to wrap.
 
         Args:
-            state: The AppState instance to wrap.
+            state: The entity tree to wrap.
             on_change: Optional callback invoked with the state after each
                 create/update/delete. The composition root wires this to the
-                UI's ``auto_save`` so the data layer need not import the UI.
+                UI's ``auto_save`` so the data layer need not import the UI;
+                its parameter is therefore typed by whoever wires it, not here.
         """
         self._state = state
         self._on_change = on_change
 
     def list_entities(self: Self, entity_type: str | None = None) -> list[EntityData]:
-        """List all entities from AppState."""
+        """List all entities from the wrapped state."""
         result: list[EntityData] = []
 
-        def collect(node: TreeNode) -> None:
+        def collect(node: EntityTreeNode) -> None:
             if entity_type is None or node.entity_type == entity_type:
                 data = {}
                 if node.instance and hasattr(node.instance, "model_dump"):
@@ -72,7 +78,7 @@ class MemoryEntityRepository(EntityRepository):
         return result
 
     def get_entity(self: Self, entity_id: str) -> EntityData | None:
-        """Get entity from AppState."""
+        """Get an entity from the wrapped state."""
         node = self._state.nodes_by_id.get(entity_id)
         if not node:
             return None
@@ -96,7 +102,7 @@ class MemoryEntityRepository(EntityRepository):
         data: dict[str, Any],
         parent_id: str | None = None,
     ) -> EntityData:
-        """Create entity in AppState."""
+        """Create an entity in the wrapped state."""
         facade = self._state.get_or_create_facade()
 
         helper = facade.require_helper(entity_type)
@@ -147,7 +153,7 @@ class MemoryEntityRepository(EntityRepository):
         return self._node_to_entity(node, include_children=False)
 
     def update_entity(self: Self, entity_id: str, data: dict[str, Any]) -> EntityData:
-        """Update entity in AppState."""
+        """Update an entity in the wrapped state."""
         node = self._state.nodes_by_id.get(entity_id)
         if not node:
             raise ValueError(f"Entity not found: {entity_id}")
@@ -177,37 +183,37 @@ class MemoryEntityRepository(EntityRepository):
         return self._node_to_entity(updated or node, include_children=False)
 
     def delete_entity(self: Self, entity_id: str) -> bool:
-        """Delete entity from AppState."""
+        """Delete an entity from the wrapped state."""
         result = self._state.delete_node(entity_id)
         if result and self._on_change is not None:
             self._on_change(self._state)
         return result
 
     def get_tree(self: Self) -> list[EntityData]:
-        """Get tree from AppState."""
+        """Get the tree from the wrapped state."""
         return [self._node_to_entity(n) for n in self._state.entity_tree]
 
     def get_profile(self: Self) -> str:
-        """Get profile from AppState."""
+        """Get the profile from the wrapped state."""
         return self._state.profile
 
     def get_version(self: Self) -> str | None:
-        """Get version from AppState."""
+        """Get the version from the wrapped state."""
         return self._state.version
 
     def set_profile(self: Self, profile: str, version: str | None = None) -> None:
-        """Set profile in AppState."""
+        """Set the profile in the wrapped state."""
         self._state.profile = profile
         self._state.version = version
         self._state.facade = None
 
     def _node_to_entity(
-        self: Self, node: TreeNode, include_children: bool = True
+        self: Self, node: EntityTreeNode, include_children: bool = True
     ) -> EntityData:
-        """Convert TreeNode to EntityData.
+        """Convert a tree node to EntityData.
 
         Args:
-            node: TreeNode to convert.
+            node: Tree node to convert.
             include_children: Whether to recursively include children.
 
         Returns:
@@ -256,8 +262,8 @@ class MemoryEntityRepository(EntityRepository):
     def _update_parent_ref(
         self: Self,
         facade: Any,
-        parent_node: TreeNode,
-        child_node: TreeNode,
+        parent_node: EntityTreeNode,
+        child_node: EntityTreeNode,
     ) -> None:
         """Update parent's reference field to include child."""
         parent_data = {}

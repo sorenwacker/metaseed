@@ -63,6 +63,10 @@ graph TB
 4. **Interface-agnostic**: Core logic separated from interfaces
 5. **Clean API boundary**: Public API decoupled from internal implementation
 
+## Dependency Direction
+
+Dependencies point one way: the interfaces (CLI, web UI, REST API, MCP server) depend on the core, and the core never imports an interface. In particular no package outside `metaseed.ui` imports `metaseed.ui`, so a consumer can import the tools without loading FastAPI. Two seams are exempt and named in [ADR 004](decisions/004-core-does-not-import-the-web-app.md), which also documents the gate (`tests/test_modularity.py`) that fails the build on a new edge.
+
 ## Public API Design
 
 The `MetaseedClient` class provides a clean public API boundary that:

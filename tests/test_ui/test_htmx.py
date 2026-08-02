@@ -1158,7 +1158,8 @@ class TestDatasetStability:
         """
         import json
 
-        from metaseed.ui.datasets import get_datasets_dir, save_dataset
+        from metaseed.paths import get_datasets_dir
+        from metaseed.ui.datasets import save_dataset
 
         state = client_with_entity.app.state.ui_state
         facade = state.get_or_create_facade()

@@ -39,7 +39,6 @@ def temp_datasets_dir(tmp_path):
                 "metaseed.repositories.filesystem_dataset.DEFAULT_DATASETS_DIR",
                 datasets_dir,
             ),
-            patch("metaseed.ui.datasets.DATASETS_DIR", datasets_dir),
         ):
             yield datasets_dir
     finally:

@@ -24,8 +24,8 @@ if TYPE_CHECKING:
     from mcp.server.fastmcp import FastMCP
 
     from metaseed.agent.mcp.context import ResolveContext
+    from metaseed.agent.mcp.ui_session import AppState
     from metaseed.specs.schema import ProfileSpec
-    from metaseed.ui.state import AppState
 
 
 # The active draft is held on the session AppState (AppState.spec_draft), so

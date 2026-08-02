@@ -10,12 +10,14 @@ from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from metaseed.ui.dataset_manager import DatasetManagerFactory
-    from metaseed.ui.services.entities import EntityService
-    from metaseed.ui.state import AppState
+from metaseed.agent.mcp.ui_session import (
+    AppState,
+    DatasetManagerFactory,
+    EntityService,
+    ui_datasets,
+)
+from metaseed.repositories.memory import MemoryEntityRepository
 
 
 @dataclass
@@ -124,18 +126,23 @@ def resolve_default_context() -> MCPContext:
 
 
 def _build_default_context() -> MCPContext:
-    """Create the single session a standalone process serves."""
-    from metaseed.repositories.memory import MemoryEntityRepository
-    from metaseed.ui.dataset_manager import DatasetManagerFactory
-    from metaseed.ui.datasets import auto_save
-    from metaseed.ui.services.entities import EntityService
-    from metaseed.ui.state import AppState
+    """Create the single session a standalone process serves.
 
+    The save callback resolves ``auto_save`` when it is called rather than when
+    the context is built. Binding the function object here captured whichever
+    one existed at build time, so a test that replaced it afterwards still ran
+    the real one and wrote to the user's datasets directory.
+    """
     state = AppState()
     return MCPContext(
         state=state,
         get_entity_service=lambda: EntityService(
-            MemoryEntityRepository(state, on_change=auto_save)
+            # The wrapper is deliberate: inlining it passes the function object
+            # bound now, which is the defect this exists to avoid.
+            MemoryEntityRepository(
+                state,
+                on_change=lambda s: ui_datasets.auto_save(s),  # noqa: PLW0108
+            )
         ),
         dataset_factory=DatasetManagerFactory(),
     )

@@ -10,7 +10,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from metaseed.ui.datasets import get_datasets_dir
+from metaseed.paths import get_datasets_dir
 
 
 def is_node_id(value: str) -> bool:

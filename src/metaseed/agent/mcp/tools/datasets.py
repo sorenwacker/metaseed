@@ -6,12 +6,13 @@ import json
 from dataclasses import asdict
 from typing import TYPE_CHECKING
 
+from metaseed.agent.mcp.ui_session import DatasetManager, ui_datasets
+
 if TYPE_CHECKING:
     from mcp.server.fastmcp import FastMCP
 
     from metaseed.agent.mcp.context import MCPContext, ResolveContext
-    from metaseed.ui.dataset_manager import DatasetManager
-    from metaseed.ui.state import AppState
+    from metaseed.agent.mcp.ui_session import AppState
 
 
 def _get_dataset_manager(context: MCPContext) -> DatasetManager:
@@ -79,14 +80,12 @@ def register_dataset_tools(  # noqa: C901
         Returns:
             JSON with save status and dataset info.
         """
-        from metaseed.ui.datasets import set_current_dataset_name
-
         try:
             state = current_state()
             manager = _get_dataset_manager(resolve_context())
             result = manager.save_dataset(name)
             # Update state's current dataset so auto_save uses correct target
-            set_current_dataset_name(state, name)
+            ui_datasets.set_current_dataset_name(state, name)
             return json.dumps(
                 {
                     "status": "saved",
@@ -112,9 +111,6 @@ def register_dataset_tools(  # noqa: C901
         Returns:
             JSON with loaded dataset info or error.
         """
-        from metaseed.ui.dataset_manager import DatasetManager
-        from metaseed.ui.datasets import set_current_dataset_name
-
         try:
             context = resolve_context()
             state = context.state
@@ -127,7 +123,7 @@ def register_dataset_tools(  # noqa: C901
             result = manager.load_dataset(name)
 
             # Explicitly update state's current dataset
-            set_current_dataset_name(state, name)
+            ui_datasets.set_current_dataset_name(state, name)
 
             # Do NOT recreate the facade here: manager.load_dataset already
             # rebuilt it with the loaded profile and entities, and discarding it
@@ -185,8 +181,6 @@ def register_dataset_tools(  # noqa: C901
         Returns:
             JSON with created dataset info or error.
         """
-        from metaseed.ui.datasets import set_current_dataset_name
-
         try:
             state = current_state()
             state.profile = profile
@@ -199,7 +193,7 @@ def register_dataset_tools(  # noqa: C901
             manager = _get_dataset_manager(resolve_context())
             manager.save_dataset(name)
             # Update state's current dataset so auto_save uses correct target
-            set_current_dataset_name(state, name)
+            ui_datasets.set_current_dataset_name(state, name)
 
             return json.dumps(
                 {
@@ -235,19 +229,14 @@ def register_dataset_tools(  # noqa: C901
             entity_count), or an error naming the importable profiles.
         """
         from metaseed import adapters
-        from metaseed.ui.datasets import (
-            ImportSourceError,
-            import_from_source,
-            set_current_dataset_name,
-        )
 
         try:
             context = resolve_context()
             state = context.state
 
             try:
-                info = import_from_source(state, profile, accession)
-            except ImportSourceError as exc:
+                info = ui_datasets.import_from_source(state, profile, accession)
+            except ui_datasets.ImportSourceError as exc:
                 return json.dumps(
                     {
                         "error": str(exc),
@@ -257,7 +246,7 @@ def register_dataset_tools(  # noqa: C901
 
             manager = _get_dataset_manager(context)
             manager.save_dataset(name)
-            set_current_dataset_name(state, name)
+            ui_datasets.set_current_dataset_name(state, name)
 
             return json.dumps(
                 {
@@ -280,8 +269,6 @@ def register_dataset_tools(  # noqa: C901
         Returns:
             JSON with current dataset information.
         """
-        from metaseed.ui.datasets import get_current_dataset_name
-
         try:
             state = current_state()
 
@@ -294,7 +281,7 @@ def register_dataset_tools(  # noqa: C901
 
             return json.dumps(
                 {
-                    "dataset_name": get_current_dataset_name(state),
+                    "dataset_name": ui_datasets.get_current_dataset_name(state),
                     "profile": state.profile,
                     "version": state.version,
                     "entity_counts": entity_counts,

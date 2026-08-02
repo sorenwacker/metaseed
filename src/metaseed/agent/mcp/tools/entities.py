@@ -10,14 +10,14 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import ValidationError
 
+from metaseed.agent.mcp.ui_session import ui_datasets
 from metaseed.utils.json import DateAwareEncoder
 
 if TYPE_CHECKING:
     from mcp.server.fastmcp import FastMCP
 
     from metaseed.agent.mcp.context import MCPContext, ResolveContext
-    from metaseed.ui.services.entities import EntityService
-    from metaseed.ui.state import AppState
+    from metaseed.agent.mcp.ui_session import AppState, EntityService
 
 
 def _auto_save_dataset(ctx: MCPContext) -> None:
@@ -28,23 +28,20 @@ def _auto_save_dataset(ctx: MCPContext) -> None:
     repository and write to another.
     """
     from metaseed.logging import get_logger
-    from metaseed.ui.datasets import auto_save
 
     logger = get_logger(__name__)
 
     try:
-        auto_save(ctx.state, factory=ctx.dataset_factory)
+        ui_datasets.auto_save(ctx.state, factory=ctx.dataset_factory)
     except Exception as e:
         logger.debug(f"MCP auto-save skipped: {e}")
 
 
 def _get_current_dataset_info(state: AppState) -> dict[str, Any]:
     """Get info about the current dataset for safety checks."""
-    from metaseed.ui.datasets import get_current_dataset_name
-
     try:
         return {
-            "dataset": get_current_dataset_name(state),
+            "dataset": ui_datasets.get_current_dataset_name(state),
             "profile": state.profile,
             "version": state.version,
         }

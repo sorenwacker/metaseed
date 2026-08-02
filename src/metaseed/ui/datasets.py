@@ -8,21 +8,15 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from metaseed.repositories.dataset_repository import DatasetData, DatasetRepository
-from metaseed.repositories.filesystem_dataset import (
-    DEFAULT_DATASETS_DIR,
-)
 
 if TYPE_CHECKING:
     from .dataset_manager import DatasetManagerFactory
     from .state import AppState
 
 from contextvars import ContextVar
-
-DATASETS_DIR = DEFAULT_DATASETS_DIR
 
 # Context variable for request-scoped factory
 _factory_var: ContextVar[DatasetManagerFactory | None] = ContextVar(
@@ -62,12 +56,6 @@ def _resolve_factory() -> DatasetManagerFactory:
     if ctx is not None:
         return ctx.dataset_factory
     return _get_factory()
-
-
-def get_datasets_dir() -> Path:
-    """Get the datasets directory, creating it if needed."""
-    DATASETS_DIR.mkdir(parents=True, exist_ok=True)
-    return DATASETS_DIR
 
 
 def validate_dataset_name(name: str) -> str | None:

@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from mcp.server.fastmcp import FastMCP
 
     from metaseed.agent.mcp.context import ResolveContext
-    from metaseed.ui.state import AppState
+    from metaseed.agent.mcp.ui_session import AppState
 
 
 def _load_entity_def(
