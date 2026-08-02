@@ -144,8 +144,18 @@ Deprecating a symbol is a change to the public surface and MUST be recorded in t
 
 ## Consumer contract
 
-metaseed-hub is a first-class downstream consumer and depends only on the public
-surface defined here. Changes that remove or rename a public symbol MUST be
-checked against metaseed-hub before release. A public-API surface snapshot test
-guarding this contract is a planned gate (issue
-[#68](https://github.com/sorenwacker/metaseed/issues/68)).
+metaseed-hub is a first-class downstream consumer. Changes that remove or rename
+a public symbol MUST be checked against metaseed-hub before release.
+
+The table above is the snapshot: `tests/test_public_api.py` compares it against
+`metaseed.__all__` and fails when they disagree in either direction, so a symbol
+cannot become public without the promise being written down, and a documented
+symbol cannot quietly stop being exported. It also checks that every promised
+name resolves and that the import example above still runs.
+
+One qualification on "depends only on the public surface": metaseed-hub imports
+`metaseed.ui.state.AppState` and `TreeNode`, which are not on this list. Those
+imports are confined to a single boundary module on the hub side and enforced
+there; the session layer they belong to is not yet part of the core (see
+[ADR 004](../architecture/decisions/004-core-does-not-import-the-web-app.md) and
+issue [#168](https://github.com/sorenwacker/metaseed/issues/168)).
