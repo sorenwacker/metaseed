@@ -260,6 +260,28 @@
                     <input type="text" name="parent_ref" class="form-input"
                            value="{{ field.parent_ref or '' }}" placeholder="Entity.field">
                 </div>
+                <div class="form-group">
+                    <label class="form-label" title="The property of the dataset's DCAT catalogue record this field's value fills. Read on the root entity only.">DCAT Property</label>
+                    <input type="text" name="dcat" class="form-input"
+                           value="{{ field.dcat or '' }}" placeholder="dct:title"
+                           list="dcat-properties">
+                    <datalist id="dcat-properties">
+                        <option value="dct:title">
+                        <option value="dct:description">
+                        <option value="dct:identifier">
+                        <option value="dct:issued">
+                        <option value="dct:license">
+                        <option value="dct:accessRights">
+                        <option value="dct:publisher">
+                        <option value="dct:relation">
+                        <option value="dct:source">
+                        <option value="dct:conformsTo">
+                        <option value="dcat:contactPoint">
+                        <option value="dcat:landingPage">
+                        <option value="dcat:keyword">
+                        <option value="dcat:theme">
+                    </datalist>
+                </div>
             </div>
         </details>
 

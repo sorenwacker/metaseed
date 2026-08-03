@@ -60,6 +60,7 @@ class FieldForm:
     unit: str = ""
     example: str = ""
     options: str = ""  # comma-separated
+    dcat: str = ""  # DCAT/DCAT-AP property, root entity only
 
     def build_constraints(self) -> Constraints | None:
         """Return a ``Constraints`` from the constraint inputs, or None if none set.
@@ -119,6 +120,7 @@ class FieldForm:
         field.options = [
             o.strip() for o in self.options.split(",") if o.strip()
         ] or None
+        field.dcat = self.dcat.strip() or None
 
     def to_field_spec(self) -> FieldSpec:
         """Build a fresh ``FieldSpec`` from this form."""

@@ -975,3 +975,53 @@ class TestSpecBuilderMarkers:
         preview = client.get("/spec-builder/preview").text
         assert "owns: false" not in preview
         assert "is_identifier: false" not in preview
+
+
+class TestSpecBuilderDcat:
+    """The DCAT property is editable in the builder.
+
+    ``FieldSpec.dcat`` has existed since the dcat support landed, but no builder
+    control ever set it, so the only way to reach it was to hand-edit YAML or use
+    a consumer that forked the field form to add its own input.
+    """
+
+    def test_the_dcat_property_persists_through_the_field_form(self, client):
+        client.get("/spec-builder/new")
+        client.post("/spec-builder/entity", data={"name": "Sample"})
+        client.post(
+            "/spec-builder/entity/Sample/field",
+            data={"name": "title", "field_type": "string"},
+        )
+
+        resp = client.put(
+            "/spec-builder/entity/Sample/field/0",
+            data={"name": "title", "field_type": "string", "dcat": "dct:title"},
+        )
+        assert resp.status_code == 200
+
+        assert "dcat: dct:title" in client.get("/spec-builder/preview").text
+
+    def test_an_empty_dcat_does_not_serialize(self, client):
+        """A blank box must clear the property, not write an empty string."""
+        client.get("/spec-builder/new")
+        client.post("/spec-builder/entity", data={"name": "Sample"})
+        client.post(
+            "/spec-builder/entity/Sample/field",
+            data={"name": "title", "field_type": "string"},
+        )
+        client.put(
+            "/spec-builder/entity/Sample/field/0",
+            data={"name": "title", "field_type": "string", "dcat": ""},
+        )
+        assert "dcat:" not in client.get("/spec-builder/preview").text
+
+    def test_the_field_form_offers_a_dcat_control(self, client):
+        """Without the input the property is unreachable from the UI."""
+        client.get("/spec-builder/new")
+        client.post("/spec-builder/entity", data={"name": "Sample"})
+        client.post(
+            "/spec-builder/entity/Sample/field",
+            data={"name": "title", "field_type": "string"},
+        )
+        html = client.get("/spec-builder/entity/Sample/field/0").text
+        assert 'name="dcat"' in html
