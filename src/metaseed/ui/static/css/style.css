@@ -4117,8 +4117,11 @@ details.sidebar-section summary:hover {
     width: 100%;
 }
 
+/* Checkbox and radio keep their own size from .form-checkbox input. This rule
+   has the same specificity and comes later, so a bare `input` here would win
+   and stretch a checkbox across the panel, stranding its label to the right. */
 .field-edit-form .form-input,
-.field-edit-form input,
+.field-edit-form input:not([type="checkbox"]):not([type="radio"]),
 .field-edit-form select,
 .field-edit-form textarea {
     width: 100%;

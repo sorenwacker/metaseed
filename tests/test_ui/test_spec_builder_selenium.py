@@ -573,6 +573,75 @@ class TestFieldOperations:
         assert "ChildEntity" in page
 
 
+class TestFieldEditorLayout:
+    """The field editor's checkboxes must read as checkboxes."""
+
+    def test_marker_checkboxes_are_not_stretched_to_full_width(self, driver):
+        """A marker checkbox stays checkbox-sized instead of filling the panel.
+
+        ``.field-edit-form input`` sets ``width: 100%`` for the text inputs and
+        matches the bare ``input`` of a checkbox too. It has the same specificity
+        as ``.form-checkbox input`` (18px) but comes later in the stylesheet, so
+        it won: the checkbox stretched across the panel and its label text sat
+        far to the right of the box it belongs to.
+        """
+        reset_spec_builder(driver)
+
+        assert create_entity_via_fetch(driver, "LayoutEntity")
+        driver.execute_async_script(
+            """
+            const callback = arguments[arguments.length - 1];
+            fetch('/spec-builder/entity/LayoutEntity/field', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: 'name=title&field_type=string'
+            }).then(() => callback());
+            """
+        )
+        time.sleep(0.3)
+
+        # Load the field editor into the page and reveal the collapsed sections.
+        driver.execute_async_script(
+            """
+            const callback = arguments[arguments.length - 1];
+            fetch('/spec-builder/entity/LayoutEntity/field/0')
+                .then(r => r.text())
+                .then(html => {
+                    document.getElementById('editor-content').innerHTML = html;
+                    document.querySelectorAll('details').forEach(d => d.open = true);
+                    callback();
+                });
+            """
+        )
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "[name='is_identifier']"))
+        )
+
+        measured = driver.execute_script(
+            """
+            const out = {};
+            for (const name of ['is_identifier', 'is_label', 'owns']) {
+                const box = document.querySelector(`[name="${name}"]`);
+                if (!box) continue;
+                const label = box.closest('label');
+                out[name] = {
+                    width: box.getBoundingClientRect().width,
+                    gap: label ? label.getBoundingClientRect().right
+                                 - box.getBoundingClientRect().right : null
+                };
+            }
+            return out;
+            """
+        )
+
+        assert measured, "no marker checkboxes rendered"
+        for name, box in measured.items():
+            assert box["width"] <= 30, (
+                f"{name} rendered {box['width']}px wide; a checkbox must stay "
+                "checkbox-sized, not stretch across the panel"
+            )
+
+
 class TestCloneTemplate:
     """Test cloning templates."""
 
