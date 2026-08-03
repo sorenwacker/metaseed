@@ -40,20 +40,6 @@
                         <option value="optional" {% if field.tier == 'optional' %}selected{% endif %}>optional</option>
                     </select>
                 </div>
-                <div class="form-group form-group-checkbox">
-                    <label class="form-checkbox" title="This field uniquely identifies the entity (used for node ids and references)">
-                        <input type="checkbox" name="is_identifier" value="true"
-                               {% if field.is_identifier %}checked{% endif %}>
-                        Identifier
-                    </label>
-                </div>
-                <div class="form-group form-group-checkbox">
-                    <label class="form-checkbox" title="This field's value is the entity's display label">
-                        <input type="checkbox" name="is_label" value="true"
-                               {% if field.is_label %}checked{% endif %}>
-                        Label
-                    </label>
-                </div>
             </div>
 
             <div class="form-row">
@@ -91,6 +77,31 @@
             </div>
         </fieldset>
 
+        <!-- Markers: the role this field plays for its entity, as opposed to
+             the validation rules above. `owns` applies to list/entity fields
+             only, so it keeps the type-setting class that shows and hides it. -->
+        <fieldset class="form-section">
+            <legend>Markers</legend>
+            <div class="form-checkbox-group">
+                <label class="form-checkbox" title="This field uniquely identifies the entity (used for node ids and references)">
+                    <input type="checkbox" name="is_identifier" value="true"
+                           {% if field.is_identifier %}checked{% endif %}>
+                    Identifier
+                </label>
+                <label class="form-checkbox" title="This field's value is the entity's display label">
+                    <input type="checkbox" name="is_label" value="true"
+                           {% if field.is_label %}checked{% endif %}>
+                    Label
+                </label>
+                <label class="form-checkbox type-setting" data-field-types="list,entity"
+                       title="This entity owns the referenced items as tree children. Leave unchecked for embedded value objects or plain lookups (e.g. an OntologyAnnotation).">
+                    <input type="checkbox" name="owns" value="true"
+                           {% if field.owns %}checked{% endif %}>
+                    Owns
+                </label>
+            </div>
+        </fieldset>
+
         <!-- Type-specific settings -->
         <fieldset class="form-section" id="type-settings">
             <legend>Type Settings</legend>
@@ -109,17 +120,6 @@
                     <option value="{{ ename }}">
                     {% endfor %}
                 </datalist>
-            </div>
-
-            <!-- Owning-parent (containment) marker -->
-            <div class="form-group form-group-checkbox type-setting" data-field-types="list,entity">
-                <label class="form-checkbox" title="This entity owns the referenced items as tree children. Leave unchecked for embedded value objects or plain lookups (e.g. an OntologyAnnotation).">
-                    <input type="checkbox"
-                           name="owns"
-                           value="true"
-                           {% if field.owns %}checked{% endif %}>
-                    Owns (containment child, not a lookup)
-                </label>
             </div>
 
             <!-- Ontology lookup filter -->
@@ -287,9 +287,12 @@
 
         <div class="field-form-actions">
             <button type="submit" class="btn btn-primary btn-sm">Save Field</button>
+            {# The only URL this template names. A consumer that mounts the spec
+               builder elsewhere (a prefix, a per-draft path) supplies its own
+               entity_url; everything else routes through the JS config.url. #}
             <button type="button"
                     class="btn btn-secondary btn-sm"
-                    hx-get="/spec-builder/entity/{{ entity_name }}"
+                    hx-get="{{ entity_url or '/spec-builder/entity/' ~ entity_name }}"
                     hx-target="#editor-content"
                     hx-swap="innerHTML">
                 Cancel
