@@ -311,7 +311,7 @@ fields:
 |-------|----------|-------------|
 | `name` | yes | Field identifier (snake_case) |
 | `type` | yes | Data type (see Field Types) |
-| `required` | no | Whether mandatory (default: false) |
+| `required` | no | Whether a **valid** entity must carry it (default: false). Reported by validation, not enforced when the entity is built — see [Required fields](#required-fields) |
 | `description` | no | Human-readable description |
 | `ontology_term` | no | Semantic ontology reference (e.g., `MIAPPE:DM-1`) |
 | `ontologies` | no | List of OLS IDs to search for `ontology_term` type fields |
@@ -680,6 +680,27 @@ fields:
 ```
 
 Field constraints are enforced by Pydantic when creating model instances. Invalid data raises a validation error immediately.
+
+`required` is the exception: it is not enforced at creation. See below.
+
+### Required fields
+
+`required: true` says what a **valid** entity must carry. It does not stop an entity being created or saved without it — validation reports the gap instead.
+
+```python
+client.create_entity("Investigation", {"title": "Work in progress"})  # no unique_id: fine
+client.validate()   # reports: unique_id — Field 'unique_id' is required
+```
+
+The reason is that metadata is gathered a piece at a time. Refusing the whole entity because one field is not known yet would throw away the fields that are known, which is the opposite of useful when an agent or a person is working through a source document.
+
+What this does **not** relax:
+
+- A **wrong** value is still refused at creation. `unique_id: "not a valid id!"` breaks the field's `pattern` and raises, exactly as before. Only absence is tolerated.
+- The generated JSON Schema still lists the profile's required fields, so a consumer reading the schema can enforce whatever it likes.
+- Any surface that saves an entity reports which required fields were missing when it saved.
+
+A parent–child edge comes from the tree, so a child placed under its parent is linked whether or not it also carries a reference back. Marking that reference `required` is a profile decision, reported like any other required field.
 
 ### Validation Rules (Engine Layer)
 

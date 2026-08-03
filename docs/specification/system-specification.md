@@ -38,8 +38,8 @@ reference. This document specifies the *behavior* built on top of it.
 
 A profile defines a directed hierarchy of entity types rooted at one
 `root_entity`. At runtime metaseed generates one Pydantic model per entity type
-from the profile, so field types, requiredness, and constraints are enforced by
-model construction.
+from the profile, so field types and constraints are enforced by model
+construction. Requiredness is not: see [Required fields](#required-fields).
 
 A dataset is a tree of entities:
 
@@ -72,12 +72,14 @@ produce the same model surface (field names, types, requiredness).
 
 Validation has two layers, and both run before a dataset is considered valid.
 
-1. **Field constraints (model layer).** Type, requiredness, and per-field
-   constraints (`pattern`, `min_length`/`max_length`, `minimum`/`maximum`,
+1. **Field constraints (model layer).** Type and per-field constraints
+   (`pattern`, `min_length`/`max_length`, `minimum`/`maximum`,
    `min_items`/`max_items`, `enum`) are enforced when an entity model is
    constructed. A validator MUST check every constraint it advertises: list
    cardinality and zero-valued length bounds are enforced, not silently skipped
    (see [ADR 002](../architecture/decisions/002-edge-case-behavior.md)).
+   Requiredness is deliberately excluded here and reported by the engine layer
+   instead; see [Required fields](#required-fields).
 2. **Validation rules (engine layer).** Cross-field and cross-entity rules
    (uniqueness, coordinate pairs, conditional requirements, reference integrity)
    run over the assembled dataset.
@@ -98,6 +100,34 @@ offending field or rule; it MUST NOT raise for ordinary validation failures.
 The distinction between the two layers, and when to use a field constraint versus
 a rule, is detailed in
 [Specification Language › Validation](../api/schema-specs.md#validation-field-constraints-vs-rules).
+
+### Required fields
+
+`required: true` states what a **valid** entity must carry. It does not gate
+construction: an entity with a required field missing is built and stored, and
+validation reports the gap.
+
+This is deliberate. Metadata is assembled a piece at a time, often by an agent
+reading a source document, and refusing the whole entity because one field is
+not known yet would discard the fields that are. The purpose of `required` is to
+guide an incomplete record towards a correct one, not to prevent the incomplete
+record existing.
+
+Three consequences follow, and an implementation MUST honour all three:
+
+- A **missing** value is allowed; a **wrong** value is not. A field that breaks
+  its `pattern`, bounds, or type is still rejected at construction.
+- The published JSON Schema MUST continue to declare the profile's required
+  fields, so a consumer can decide for itself what to enforce. The generated
+  model no longer expresses requiredness, so this list comes from the profile
+  via `spec_required_fields()`.
+- Any surface that saves an entity MUST report the missing required fields it
+  saved with. Nothing raises, so the guidance has to be looked for rather than
+  caught.
+
+A parent–child edge is carried by the tree, not by the child's reference field.
+Whether a child must also name its parent is the profile's decision, expressed
+as `required` on that reference and reported by validation like any other.
 
 ## Serialization
 

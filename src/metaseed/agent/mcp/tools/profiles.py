@@ -443,10 +443,12 @@ def register_profile_tools(  # noqa: C901
 
     @mcp.tool()
     def get_required_fields(entity_type: str, profile: str, version: str) -> str:
-        """Get only the required field names for an entity type.
+        """Get the field names a profile marks required for an entity type.
 
-        Returns a simple list of field names that are mandatory when
-        creating an entity. Use this for quick validation checks.
+        Required drives validation reporting, not creation: an entity saves
+        with any of these missing, and validate_dataset then reports each gap.
+        Record what the source actually states and leave the rest empty rather
+        than inventing a value to satisfy this list.
 
         Args:
             entity_type: Entity type name (e.g., "Investigation", "Study").

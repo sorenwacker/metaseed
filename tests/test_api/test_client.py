@@ -180,25 +180,35 @@ class TestEntityCRUD:
     def test_create_entity_invalid_data_raises_api_validation_error(
         self, client: MetaseedClient
     ) -> None:
-        """Missing required field raises the public api ValidationError."""
+        """A wrong value is refused; a missing one is not.
+
+        Required says what a valid entity needs, so an entity still being filled
+        in saves and validation reports the gap. A value that breaks the
+        profile's rules is a different matter and is still rejected here.
+        """
         with pytest.raises(ValidationError) as exc_info:
-            client.create_entity("Investigation", {"title": "no unique_id"})
+            client.create_entity(
+                "Investigation", {"unique_id": "not a valid id!", "title": "T"}
+            )
 
         error = exc_info.value
         assert isinstance(error, MetaseedError)
         assert any(detail["field"] == "unique_id" for detail in error.errors)
 
+        # Missing, as opposed to wrong, is allowed through.
+        client.create_entity("Investigation", {"title": "no unique_id"})
+
     def test_update_entity_invalid_data_raises_api_validation_error(
         self, client: MetaseedClient
     ) -> None:
-        """Updating with invalid data raises the public api ValidationError."""
+        """Updating to a wrong value raises; clearing a required one does not."""
         entity = client.create_entity(
             "Investigation",
             {"unique_id": "INV-001", "title": "Original"},
         )
 
         with pytest.raises(ValidationError) as exc_info:
-            client.update_entity(entity.id, {"title": "missing unique_id"})
+            client.update_entity(entity.id, {"unique_id": "not a valid id!"})
 
         assert any(detail["field"] == "unique_id" for detail in exc_info.value.errors)
 
@@ -864,20 +874,21 @@ class TestSkipValidation:
         assert entity.data.get("title") == "Work in progress"
         assert entity.id is not None
 
-    def test_create_entity_without_skip_validation_raises(
+    def test_create_entity_without_skip_validation_allows_a_missing_field(
         self, client: MetaseedClient
     ) -> None:
-        """Create entity without skip_validation raises on missing required field.
+        """A missing required field no longer needs skip_validation.
 
-        The public boundary translates pydantic errors into the documented
-        ``metaseed.api.errors.ValidationError`` rather than leaking the
-        internal pydantic exception.
+        skip_validation remains the way to store a value that breaks the
+        profile's rules; absence alone is an ordinary in-progress state.
         """
-        with pytest.raises(ValidationError):
-            client.create_entity(
-                "Investigation",
-                {"title": "Incomplete"},  # missing unique_id
-            )
+        entity = client.create_entity(
+            "Investigation",
+            {"title": "Incomplete"},  # missing unique_id
+        )
+
+        assert entity.data.get("title") == "Incomplete"
+        assert entity.data.get("unique_id") is None
 
     def test_update_entity_skip_validation(self, client: MetaseedClient) -> None:
         """Update entity with skip_validation bypasses validation."""

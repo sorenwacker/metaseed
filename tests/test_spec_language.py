@@ -1440,8 +1440,12 @@ class TestEdgeCases:
         instance = Model(value=None)
         assert instance.value is None
 
-    def test_required_field_cannot_be_none(self) -> None:
-        """Required field cannot be None."""
+    def test_a_required_field_may_be_unset_while_work_is_in_progress(self) -> None:
+        """Required states what a valid entity needs, not what building one needs.
+
+        Metadata arrives a piece at a time; the missing value is reported by
+        validation rather than refused here.
+        """
         spec = EntitySpec(
             name="Test",
             version="1.0",
@@ -1453,8 +1457,8 @@ class TestEdgeCases:
             ],
         )
         Model = create_model_from_spec(spec)
-        with pytest.raises(ValidationError):
-            Model(value=None)
+        assert Model(value=None).value is None
+        assert "value" in Model.spec_required_fields()
 
     def test_extra_fields_rejected(self) -> None:
         """Extra fields not in spec are rejected."""

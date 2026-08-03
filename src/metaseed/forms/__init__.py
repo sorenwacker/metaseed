@@ -242,3 +242,38 @@ def format_validation_errors(e: ValidationError) -> str:
         friendly_messages.append(f"{field}: {msg}")
 
     return "; ".join(friendly_messages)
+
+
+def missing_required_fields(instance: Any, values: dict[str, Any]) -> list[str]:
+    """Return the profile-required fields this entity has not filled in yet.
+
+    Required no longer stops an entity being built, so a missing value raises
+    nothing to report. The guidance still has to reach the user, and this is
+    where it comes from.
+
+    Args:
+        instance: The created entity instance.
+        values: The submitted values.
+
+    Returns:
+        The names of required fields with no value, in the profile's order.
+    """
+    required = getattr(type(instance), "spec_required_fields", lambda: ())()
+    return [
+        name
+        for name in required
+        if values.get(name) in (None, "", [], {})
+        and getattr(instance, name, None) in (None, "", [], {})
+    ]
+
+
+def format_missing_required(names: list[str]) -> str:
+    """Format missing required field names the way validation errors read.
+
+    Args:
+        names: Field names with no value.
+
+    Returns:
+        A semicolon-separated string, empty when nothing is missing.
+    """
+    return "; ".join(f"{name}: This field is required" for name in names)

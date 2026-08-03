@@ -35,8 +35,14 @@ class TestCreateModelFromSpec:
         instance = Model(name="test")
         assert instance.name == "test"
 
-    def test_required_fields_enforced(self) -> None:
-        """Required fields must be provided."""
+    def test_required_fields_do_not_block_construction(self) -> None:
+        """A required field records what validation should report, not a gate.
+
+        Metadata is gathered incrementally: refusing to build an entity because
+        one field is not known yet loses the fields that *are* known. Missing
+        required values are reported by ``RequiredFieldsRule`` at validation
+        time instead.
+        """
         spec = EntitySpec(
             name="WithRequired",
             version="1.0",
@@ -53,9 +59,9 @@ class TestCreateModelFromSpec:
 
         Model = create_model_from_spec(spec)
 
-        with pytest.raises(ValidationError) as exc_info:
-            Model()
-        assert "required_field" in str(exc_info.value)
+        instance = Model()
+        assert instance.required_field is None
+        assert "required_field" in Model.spec_required_fields()
 
     def test_optional_fields_default_none(self) -> None:
         """Optional fields default to None."""
@@ -189,8 +195,8 @@ class TestCreateModelFromSpec:
         with pytest.raises(ValidationError):
             Model(items=["a", "b", "c"])
 
-    def test_required_list_field_enforced(self) -> None:
-        """A required list field rejects a missing value."""
+    def test_required_list_field_defaults_to_empty(self) -> None:
+        """A required list is still a list when nothing has been recorded yet."""
         spec = EntitySpec(
             name="WithRequiredList",
             version="1.0",
@@ -209,8 +215,8 @@ class TestCreateModelFromSpec:
         Model = create_model_from_spec(spec)
 
         assert Model(items=["a"]).items == ["a"]
-        with pytest.raises(ValidationError):
-            Model()
+        assert Model().items == []
+        assert "items" in Model.spec_required_fields()
 
     def test_optional_list_field_defaults_to_empty(self) -> None:
         """An optional list field still defaults to an empty list when omitted."""

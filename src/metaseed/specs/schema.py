@@ -128,7 +128,12 @@ class FieldSpec(BaseModel):
         name: Field identifier (snake_case).
         codename: BrAPI-compatible camelCase identifier (optional).
         type: Data type of the field.
-        required: Whether the field is mandatory.
+        required: Whether a valid entity must carry this field. It is not
+            enforced when the entity is built: metadata arrives a piece at a
+            time, and refusing the whole entity would discard the values that
+            are known. ``RequiredFieldsRule`` reports the missing ones at
+            validation time, and the published JSON Schema still declares them
+            so a consumer can decide for itself what to enforce.
         description: Human-readable description.
         ontology_term: Reference to ontology term (e.g., MIAPPE:DM-1).
         ontologies: List of OLS IDs to search for ontology_term type fields.
@@ -249,7 +254,10 @@ class EntitySpec(BaseModel):
         return self
 
     def get_required_fields(self: Self) -> list[FieldSpec]:
-        """Return list of required fields.
+        """Return the fields a valid entity must carry.
+
+        These are reported by validation when absent rather than enforced when
+        the entity is built; see ``FieldSpec.required``.
 
         Returns:
             List of FieldSpec objects where required is True.
