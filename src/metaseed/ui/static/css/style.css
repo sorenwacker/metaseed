@@ -467,6 +467,15 @@ body::before {
     margin-bottom: var(--space-xl);
 }
 
+/* Markers sit on one row and wrap, so the boxes line up instead of each label
+   starting at a different offset. */
+.form-checkbox-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm) var(--space-lg);
+    align-items: center;
+}
+
 .form-section-title {
     font-family: var(--font-display);
     font-size: 1.0625rem;
@@ -4117,8 +4126,11 @@ details.sidebar-section summary:hover {
     width: 100%;
 }
 
+/* Checkbox and radio keep their own size from .form-checkbox input. This rule
+   has the same specificity and comes later, so a bare `input` here would win
+   and stretch a checkbox across the panel, stranding its label to the right. */
 .field-edit-form .form-input,
-.field-edit-form input,
+.field-edit-form input:not([type="checkbox"]):not([type="radio"]),
 .field-edit-form select,
 .field-edit-form textarea {
     width: 100%;

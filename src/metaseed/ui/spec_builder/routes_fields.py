@@ -164,6 +164,7 @@ def register_field_routes(  # noqa: C901
         unit: str = Form(""),
         example: str = Form(""),
         options: str = Form(""),
+        dcat: str = Form(""),
     ) -> HTMLResponse:
         """Update a field."""
         builder = _require_spec()
@@ -209,6 +210,7 @@ def register_field_routes(  # noqa: C901
             unit=unit,
             example=example,
             options=options,
+            dcat=dcat,
         ).apply_to(entity.fields[idx])
 
         builder.editing_field_idx = None

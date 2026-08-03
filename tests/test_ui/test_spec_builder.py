@@ -3,6 +3,8 @@
 Tests helpers and routes for creating/editing ProfileSpec specifications.
 """
 
+import re
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -975,3 +977,126 @@ class TestSpecBuilderMarkers:
         preview = client.get("/spec-builder/preview").text
         assert "owns: false" not in preview
         assert "is_identifier: false" not in preview
+
+
+class TestFieldFormReuse:
+    """The field form is reusable by a consumer that mounts it elsewhere.
+
+    metaseed-hub needs this template per draft under a ``/hub`` prefix. It
+    forked the file instead, and the fork silently lost all 31 guidance
+    tooltips. Keeping the template free of one app's URL scheme is what lets a
+    consumer render it instead of copying it.
+    """
+
+    @staticmethod
+    def _field_form(client) -> str:
+        """Render the field editor for a plain string field."""
+        client.get("/spec-builder/new")
+        client.post("/spec-builder/entity", data={"name": "Sample"})
+        client.post(
+            "/spec-builder/entity/Sample/field",
+            data={"name": "title", "field_type": "string"},
+        )
+        return client.get("/spec-builder/entity/Sample/field/0").text
+
+    def test_cancel_falls_back_to_the_builtin_entity_url(self, client):
+        """With no entity_url supplied the library UI is unchanged."""
+        assert 'hx-get="/spec-builder/entity/Sample"' in self._field_form(client)
+
+    def test_the_template_names_no_other_absolute_url(self, client):
+        """Every other action routes through the JS config.url, not a literal.
+
+        A second hardcoded path would have to be patched by each consumer, which
+        is how the fork started.
+        """
+        html = self._field_form(client)
+        literals = re.findall(r'hx-(?:get|post|put|delete)="(/[^"]*)"', html)
+        assert literals == ["/spec-builder/entity/Sample"], literals
+
+    def test_a_consumer_can_supply_its_own_entity_url(self):
+        """The cancel target is whatever the caller passes."""
+        from fastapi.templating import Jinja2Templates
+
+        from metaseed.ui.app import TEMPLATES_DIR
+
+        templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+        field = FieldSpec(name="title", type=FieldType.STRING)
+        html = templates.get_template("spec_builder/partials/field_form.html").render(
+            spec=ProfileSpec(
+                version="1.0",
+                name="p",
+                display_name="P",
+                description="d",
+                ontology="T",
+                root_entity="Sample",
+                entities={"Sample": EntityDefSpec(description="d", fields=[field])},
+            ),
+            entity_name="Sample",
+            field=field,
+            field_idx=0,
+            field_types=[t.value for t in FieldType],
+            entity_url="/hub/spec-builder/abc123/entity/Sample",
+        )
+        assert 'hx-get="/hub/spec-builder/abc123/entity/Sample"' in html
+        assert "/spec-builder/entity/Sample" not in html.replace(
+            "/hub/spec-builder/abc123/entity/Sample", ""
+        )
+
+    def test_every_constraint_control_carries_guidance(self, client):
+        """The tooltips are the reason a consumer should reuse rather than copy.
+
+        The hub's fork dropped all of them, leaving users to guess what Pattern,
+        Unique Within or Tier mean.
+        """
+        html = self._field_form(client)
+        assert html.count('title="') >= 31, html.count('title="')
+
+
+class TestSpecBuilderDcat:
+    """The DCAT property is editable in the builder.
+
+    ``FieldSpec.dcat`` has existed since the dcat support landed, but no builder
+    control ever set it, so the only way to reach it was to hand-edit YAML or use
+    a consumer that forked the field form to add its own input.
+    """
+
+    def test_the_dcat_property_persists_through_the_field_form(self, client):
+        client.get("/spec-builder/new")
+        client.post("/spec-builder/entity", data={"name": "Sample"})
+        client.post(
+            "/spec-builder/entity/Sample/field",
+            data={"name": "title", "field_type": "string"},
+        )
+
+        resp = client.put(
+            "/spec-builder/entity/Sample/field/0",
+            data={"name": "title", "field_type": "string", "dcat": "dct:title"},
+        )
+        assert resp.status_code == 200
+
+        assert "dcat: dct:title" in client.get("/spec-builder/preview").text
+
+    def test_an_empty_dcat_does_not_serialize(self, client):
+        """A blank box must clear the property, not write an empty string."""
+        client.get("/spec-builder/new")
+        client.post("/spec-builder/entity", data={"name": "Sample"})
+        client.post(
+            "/spec-builder/entity/Sample/field",
+            data={"name": "title", "field_type": "string"},
+        )
+        client.put(
+            "/spec-builder/entity/Sample/field/0",
+            data={"name": "title", "field_type": "string", "dcat": ""},
+        )
+        assert "dcat:" not in client.get("/spec-builder/preview").text
+
+    def test_the_field_form_offers_a_dcat_control(self, client):
+        """Without the input the property is unreachable from the UI."""
+        client.get("/spec-builder/new")
+        client.post("/spec-builder/entity", data={"name": "Sample"})
+        client.post(
+            "/spec-builder/entity/Sample/field",
+            data={"name": "title", "field_type": "string"},
+        )
+        html = client.get("/spec-builder/entity/Sample/field/0").text
+        assert 'name="dcat"' in html
