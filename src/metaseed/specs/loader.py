@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING, ClassVar, Self
 
 import yaml
 from pydantic import ValidationError
@@ -302,6 +302,19 @@ class SpecLoader:
                 raise SpecLoadError(f"Invalid specification at {loc}: {msg}") from e
             raise SpecLoadError(f"Invalid specification: {e}") from e
 
+    #: Profile names that have been renamed, mapped to what they are called now.
+    #: A dataset records the profile it was built against, so dropping the old
+    #: name would stop it opening -- it would resolve nothing and the dataset
+    #: would refuse to load. Keeping the mapping costs a lookup and means a
+    #: rename is a rename rather than a data migration everyone has to perform.
+    RENAMED_PROFILES: ClassVar[dict[str, str]] = {"jerm": "seek"}
+
+    def _resolve_renamed(self: Self, profile: str | None) -> str | None:
+        """Return the current name of ``profile``, following a rename."""
+        if profile is None:
+            return None
+        return self.RENAMED_PROFILES.get(profile.lower(), profile)
+
     def load_profile(
         self: Self,
         version: str = "1.2",
@@ -329,6 +342,10 @@ class SpecLoader:
             version = ctx.version
         profile_name = profile or self._default_profile
         loaded = self._load_profile(version, profile)
+        if loaded is None:
+            renamed = self._resolve_renamed(profile)
+            if renamed is not None and renamed != profile:
+                loaded = self._load_profile(version, renamed)
         if loaded is None:
             raise SpecLoadError(f"Profile not found: {profile_name} version {version}")
         return loaded
