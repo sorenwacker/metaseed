@@ -1042,6 +1042,17 @@ class TestFieldFormReuse:
             "/hub/spec-builder/abc123/entity/Sample", ""
         )
 
+    def test_only_a_label_with_help_offers_the_help_cursor(self, client):
+        """The form's style is injected page-wide, so it must not overreach.
+
+        An unscoped `.form-label { cursor: help }` reached every label in the
+        builder once a field editor had been opened once, including labels with
+        no tooltip: the cursor promised an explanation that never arrived.
+        """
+        html = self._field_form(client)
+        assert ".form-label[title] {" in html
+        assert "\n.form-label {\n    cursor: help;" not in html
+
     def test_every_constraint_control_carries_guidance(self, client):
         """The tooltips are the reason a consumer should reuse rather than copy.
 

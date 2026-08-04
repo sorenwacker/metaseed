@@ -360,7 +360,10 @@ function setPattern(pattern) {
 .form-section-content {
     padding: 12px 14px;
 }
-.form-label {
+/* Only a label that actually carries help offers the help cursor. This style is
+   injected into the whole page when the field form loads, so an unscoped rule
+   promised a tooltip on every label in the builder, including ones with none. */
+.form-label[title] {
     cursor: help;
 }
 .form-label[title]:hover {
