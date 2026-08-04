@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+import pytest
+
 from metaseed.seek.provision import (
     build_provisioning_plan,
     execute_provisioning_plan,
@@ -239,3 +241,84 @@ def test_execute_reuses_existing_and_posts_nothing():
         "CV: testprofile Sample.organism",
         "Sample Type: testprofile Sample",
     }
+
+
+class TestPropertyUriEscaping:
+    """A field name that is not URI-safe still yields a usable property URI.
+
+    SEEK validates an attribute's ``pid`` and rejects the whole Sample Type with
+    ``sample_attributes.pid: not a valid URI`` when it is not one -- naming no
+    attribute, so a single field with a space in its name failed the entire
+    provisioning run with nothing to go on.
+    """
+
+    def test_a_name_with_a_space_is_encoded(self) -> None:
+        from metaseed.seek.naming import property_uri
+
+        assert property_uri("Source Name") == "http://schema.org/Source%20Name"
+
+    def test_an_ordinary_name_is_left_alone(self) -> None:
+        """Encoding must not move URIs already provisioned in a SEEK instance."""
+        from metaseed.seek.naming import property_uri
+
+        assert property_uri("growth_medium") == "http://schema.org/growth_medium"
+
+    def test_every_provisioned_pid_is_a_valid_uri(self) -> None:
+        """The plan is what gets posted, so the check belongs on the plan."""
+        from urllib.parse import urlparse
+
+        from metaseed.specs.schema import (
+            EntityDefSpec,
+            FieldSpec,
+            FieldType,
+            ProfileSpec,
+        )
+
+        spec = ProfileSpec(
+            version="1.0",
+            name="spaced",
+            display_name="Spaced",
+            description="d",
+            ontology="T",
+            root_entity="Source",
+            entities={
+                "Source": EntityDefSpec(
+                    description="d",
+                    fields=[
+                        FieldSpec(name="Source Name", type=FieldType.STRING),
+                        FieldSpec(name="growth_medium", type=FieldType.STRING),
+                    ],
+                )
+            },
+        )
+
+        plan = build_provisioning_plan(spec)
+        pids = [
+            attribute.pid
+            for sample_type in plan.sample_types
+            for attribute in sample_type.attributes
+            if attribute.pid is not None
+        ]
+        assert pids, "the profile should produce attributes carrying a pid"
+        for pid in pids:
+            parsed = urlparse(pid)
+            assert parsed.scheme and parsed.netloc, pid
+            assert " " not in pid, pid
+
+    def test_the_data_rdf_uses_the_same_uri(self) -> None:
+        """Provisioning and the data RDF must agree or an import matches nothing."""
+        pytest.importorskip("rdflib")
+        from rdflib import Graph, URIRef
+
+        from metaseed.seek.fairds import _emit_property_definition
+        from metaseed.seek.naming import property_uri
+        from metaseed.specs.schema import FieldSpec, FieldType
+
+        graph = Graph()
+        _emit_property_definition(
+            graph, "Source Name", FieldSpec(name="Source Name", type=FieldType.STRING)
+        )
+
+        emitted = {str(s) for s in graph.subjects()}
+        assert property_uri("Source Name") in emitted
+        assert URIRef("http://schema.org/Source Name") not in set(graph.subjects())

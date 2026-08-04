@@ -24,6 +24,7 @@ from dataclasses import field as dc_field
 from typing import TYPE_CHECKING
 
 from metaseed.seek import payloads
+from metaseed.seek.naming import property_uri
 from metaseed.seek.roles import sample_role_entities
 from metaseed.specs.schema import FieldType
 
@@ -50,11 +51,6 @@ _ATTR_TYPE_TITLE: dict[FieldType, str] = {
 _CV_TYPE_TITLE = "Controlled Vocabulary"
 _CV_LIST_TYPE_TITLE = "Controlled Vocabulary List"
 _LIST_FALLBACK_TITLE = "Text"  # a list of primitives with no enum -> free text
-
-# Base of the property URI SEEK matches an FDS-imported sample to a Sample Type
-# attribute by; must equal the ``schema:`` namespace the data RDF emits
-# (:mod:`metaseed.seek.fairds`).
-_PID_BASE = "http://schema.org/"
 
 # Fields SEEK handles as a sample's core Title/Description rather than as a
 # PID-matched attribute of their own: the identifier maps to the ``is_title``
@@ -237,7 +233,7 @@ def build_provisioning_plan(
                     required=field.required,
                     is_title=False,
                     pos=pos,
-                    pid=f"{_PID_BASE}{field.name}",
+                    pid=property_uri(field.name),
                     cv_title=cv_title,
                 )
             )
