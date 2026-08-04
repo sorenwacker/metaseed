@@ -777,16 +777,29 @@ class TestParentIdFillsReference:
         )
         assert "investigation_id: INV-1" in yaml.safe_dump(client.serialize())
 
-    def test_no_parent_still_requires_the_reference(self) -> None:
+    def test_a_study_without_a_parent_is_saved_and_reported(self) -> None:
+        """Placing a child under its parent is what links them, not the back-reference.
+
+        A study created on its own has nowhere to point yet. Whether it must
+        carry a reference back to its investigation is the profile's decision,
+        reported by validation, rather than something creation refuses.
+        """
         from metaseed import MetaseedClient
-        from metaseed.api.errors import ValidationError
+        from metaseed.validators.api import validate_entity
 
         client = MetaseedClient("miappe", "1.2")
-        try:
-            client.create_entity("Study", {"unique_id": "STU-1", "title": "S"})
-            raise AssertionError("expected ValidationError without a parent")
-        except ValidationError:
-            pass
+        study = client.create_entity("Study", {"unique_id": "STU-1", "title": "S"})
+
+        assert study.data.get("unique_id") == "STU-1"
+        assert any(
+            issue.field == "investigation_id"
+            for issue in validate_entity(
+                {"unique_id": "STU-1", "title": "S"},
+                "Study",
+                profile="miappe",
+                version="1.2",
+            )
+        )
 
     def test_caller_supplied_reference_is_not_overridden(self) -> None:
         import yaml

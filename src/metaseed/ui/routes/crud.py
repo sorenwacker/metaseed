@@ -18,7 +18,9 @@ from ..helpers import (
     collect_form_values,
     extract_nested_items,
     field_errors_from_validation,
+    format_missing_required,
     format_validation_errors,
+    missing_required_fields,
     process_reference_linked_children,
     rebuild_nested_items_with_failures,
 )
@@ -84,8 +86,13 @@ def register_entity_crud_routes(
         # required children afterwards.
         try:
             instance = helper.create(**values)
-            warning = None
-            field_errors: dict[str, str] = {}
+            # Building no longer fails on a missing required field, so the
+            # guidance has to be looked for rather than caught.
+            missing = missing_required_fields(instance, values)
+            warning = format_missing_required(missing) or None
+            field_errors: dict[str, str] = dict.fromkeys(
+                missing, "This field is required"
+            )
         except ValidationError as e:
             instance = helper.create(skip_validation=True, **values)
             warning = format_validation_errors(e)
@@ -160,8 +167,13 @@ def register_entity_crud_routes(
         # a non-blocking warning alongside any child reference-linking failures.
         try:
             instance = helper.create(**values)
-            parent_warning = None
-            field_errors: dict[str, str] = {}
+            # As on create: a missing required field no longer raises, so the
+            # warning has to be looked for rather than caught.
+            missing = missing_required_fields(instance, values)
+            parent_warning = format_missing_required(missing) or None
+            field_errors: dict[str, str] = dict.fromkeys(
+                missing, "This field is required"
+            )
         except ValidationError as e:
             instance = helper.create(skip_validation=True, **values)
             parent_warning = format_validation_errors(e)

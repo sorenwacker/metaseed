@@ -206,9 +206,12 @@ def _coerce_string_to_entity(
 
     for field_name in simple_primary_fields:
         if field_name in model_fields:
-            # Check if this is the only required field (simple entity)
+            # Ask the spec: the model no longer marks anything Pydantic-required,
+            # so is_required() would report none and coerce far more than intended.
             required_fields = [
-                name for name, info in model_fields.items() if info.is_required()
+                name
+                for name in getattr(model_class, "__spec_required__", ())
+                if name in model_fields
             ]
             if len(required_fields) <= 1:
                 try:
@@ -234,6 +237,51 @@ class EntityBaseModel(BaseModel):
         validate_assignment=True,
         extra="forbid",
     )
+
+    @classmethod
+    def spec_required_fields(cls) -> tuple[str, ...]:
+        """Return the field names this entity's profile marks required.
+
+        A required field is not enforced when the entity is built -- metadata
+        arrives a piece at a time, and refusing the whole entity would discard
+        the values that are known. ``RequiredFieldsRule`` reports the missing
+        ones at validation time, and this is where that list comes from.
+
+        Returns:
+            The required field names, empty when the profile declares none.
+        """
+        return getattr(cls, "__spec_required__", ())
+
+    @classmethod
+    def model_json_schema(cls, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        """Return the JSON Schema, still declaring the profile's required fields.
+
+        Construction does not enforce required, so Pydantic would describe every
+        field as nullable with no required list -- a description that contradicts
+        the profile. Consumers decide for themselves what to do about a required
+        field; they cannot do that if we stop telling them which ones there are.
+        """
+        schema: dict[str, Any] = super().model_json_schema(*args, **kwargs)
+        properties = schema.get("properties", {})
+        required = [name for name in cls.spec_required_fields() if name in properties]
+        if not required:
+            return schema
+
+        for name in required:
+            prop = properties[name]
+            # Undo the "or null" the permissive field carries, so the type reads
+            # as the profile declares it rather than as the storage allows.
+            branches = [b for b in prop.get("anyOf", []) if b.get("type") != "null"]
+            if len(branches) == 1:
+                title = prop.get("title")
+                properties[name] = {
+                    **branches[0],
+                    **({"title": title} if title else {}),
+                }
+            properties[name].pop("default", None)
+
+        schema["required"] = required
+        return schema
 
     @model_validator(mode="before")
     @classmethod
@@ -398,8 +446,6 @@ def _create_field_definition(field: FieldSpec) -> tuple[Any, Any]:
             # The element is a dynamically built Literal special form, which
             # cannot be expressed as a static type subscript.
             python_type = list[_build_enum_type(enum_values)]  # type: ignore[misc]
-        if field.required:
-            return (python_type, Field(**constraints))
         constraints["default_factory"] = list
         return (python_type, Field(**constraints))
 
@@ -410,18 +456,12 @@ def _create_field_definition(field: FieldSpec) -> tuple[Any, Any]:
         annotated_type = (
             Annotated[python_type, Field(**constraints)] if constraints else python_type
         )
-        if field.required:
-            return (annotated_type, ...)
         return (annotated_type | None, None)
 
     annotated_type = (
         Annotated[python_type, Field(**constraints)] if constraints else python_type
     )
 
-    if field.required:
-        if constraints:
-            return (annotated_type, ...)
-        return (python_type, ...)
     return (annotated_type | None, None)
 
 
@@ -461,6 +501,13 @@ def create_model_from_spec(spec: EntitySpec) -> type:
     )
 
     model.__entity_fields__ = entity_fields  # type: ignore[attr-defined]
+    # The spec's required list, kept because the model no longer expresses it:
+    # required drives validation reporting, not construction. Anything that
+    # needs to know which fields a profile calls required must read this rather
+    # than ask Pydantic, which now answers "none".
+    model.__spec_required__ = tuple(  # type: ignore[attr-defined]
+        field.name for field in spec.fields if field.required
+    )
 
     register_model(spec.name, model)
 

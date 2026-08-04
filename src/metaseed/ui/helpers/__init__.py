@@ -22,9 +22,11 @@ from metaseed.forms import (
     collect_form_values,
     field_errors_from_validation,
     filter_fields,
+    format_missing_required,
     format_validation_errors,
     get_field_data,
     is_nested_field,
+    missing_required_fields,
 )
 
 # Re-export from entity_helpers
@@ -75,6 +77,7 @@ __all__ = [
     "extract_nested_items",
     "field_errors_from_validation",
     "filter_fields",
+    "format_missing_required",
     "format_table_rows",
     "format_validation_errors",
     "get_field_data",
@@ -87,6 +90,7 @@ __all__ = [
     "get_table_columns",
     "infer_entity_type_from_field",
     "is_nested_field",
+    "missing_required_fields",
     "process_reference_linked_children",
     "rebuild_nested_items_with_failures",
     "to_dict",

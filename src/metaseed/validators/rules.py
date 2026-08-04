@@ -156,7 +156,11 @@ class DateRangeRule(ValidationRule):
 
 
 class RequiredFieldsRule(ValidationRule):
-    """Validates that required fields are present and non-empty.
+    """Reports required fields that are absent or empty.
+
+    Building an entity does not enforce requiredness, so this rule is the only
+    thing that tells anyone a required value is missing. Removing it would not
+    loosen validation; it would make the gap invisible.
 
     Attributes:
         fields: List of required field names.
