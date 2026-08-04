@@ -5613,3 +5613,56 @@ details.sidebar-section summary:hover {
     border-radius: 6px; font: inherit; width: 100%; box-sizing: border-box;
 }
 .dcat-meta-hint { color: #888; font-weight: normal; }
+
+/* Help markers -------------------------------------------------------------
+   A native `title` renders nothing on some machines and never on touch, so the
+   guidance a specification carries is drawn here instead. See
+   static/js/help-markers.js, which converts `title` into these. */
+.help-marker {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    margin-left: 4px;
+    border-radius: 50%;
+    border: 1px solid var(--clr-parchment, #c9c9c9);
+    background: var(--clr-paper, #fafafa);
+    color: var(--clr-ink-light, #666);
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: help;
+    vertical-align: middle;
+    flex: none;
+}
+
+.help-marker:hover,
+.help-marker:focus {
+    border-color: var(--clr-moss, #6b8e5a);
+    color: var(--clr-moss, #6b8e5a);
+    outline: none;
+}
+
+/* On <body>: every panel in the builder clips its overflow, which cut the
+   bubble off at the edge of the section its marker belonged to. */
+.help-bubble {
+    position: fixed;
+    z-index: 2000;
+    max-width: 280px;
+    padding: 6px 8px;
+    border-radius: 4px;
+    background: #2b2b2b;
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 400;
+    line-height: 1.35;
+    text-align: left;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 80ms ease;
+}
+
+.help-bubble.visible {
+    opacity: 1;
+}
