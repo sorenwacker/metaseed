@@ -77,7 +77,7 @@ nav:
       - DiSSCo: profiles/dissco.md
       - ENA: profiles/ena.md
       - ISA: profiles/isa.md
-      - JERM: profiles/jerm.md
+      - SEEK: profiles/seek.md
       - MIAPPE: profiles/miappe.md
       - MIAPPE-HTP: profiles/miappe-htp.md
       - MetaboLights: profiles/metabolights.md

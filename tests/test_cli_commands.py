@@ -407,7 +407,7 @@ class TestCompareCommand:
 
     def test_compare_multiple_profiles(self):
         """Compare supports more than two profiles."""
-        result = runner.invoke(app, ["compare", "miappe/1.1", "isa/1.0", "jerm/1.0"])
+        result = runner.invoke(app, ["compare", "miappe/1.1", "isa/1.0", "seek/1.0"])
         assert result.exit_code == 0
         assert "Profile Comparison Report" in result.output
 

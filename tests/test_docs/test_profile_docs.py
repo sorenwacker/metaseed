@@ -34,7 +34,7 @@ PROFILE_DOCS: dict[str, tuple[str, str]] = {
     "dissco.md": ("dissco", "0.4"),
     "ena.md": ("ena", "1.0"),
     "isa.md": ("isa", "1.0"),
-    "jerm.md": ("jerm", "1.0"),
+    "seek.md": ("seek", "1.0"),
     "metabolights.md": ("metabolights", "1.0"),
     "miappe.md": ("miappe", "1.2"),  # library default; page targets 1.2
     "miappe-htp.md": ("miappe-htp", "1.0"),

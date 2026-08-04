@@ -36,7 +36,7 @@ def _bundled_examples() -> list[tuple[str, str]]:
 
 _EXAMPLE_CASES = _bundled_examples()
 # Profiles known to ship no example — the picker must NOT offer a link for them.
-_NO_EXAMPLE_PROFILES = ("metabolights", "jerm", "miappe-htp")
+_NO_EXAMPLE_PROFILES = ("metabolights", "seek", "miappe-htp")
 
 
 @pytest.mark.parametrize(("profile", "version"), _EXAMPLE_CASES)

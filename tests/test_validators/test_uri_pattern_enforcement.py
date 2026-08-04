@@ -12,8 +12,8 @@ from metaseed.validators.engine import create_engine_for_entity
 
 
 def test_uri_pattern_rule_is_enforced() -> None:
-    # jerm's seek_id_format (uri field, pattern ^https?://.*$) applies to all.
-    engine = create_engine_for_entity("Project", version="1.0", profile="jerm")
+    # the SEEK profile's seek_id_format (uri field, pattern ^https?://.*$) applies to all.
+    engine = create_engine_for_entity("Project", version="1.0", profile="seek")
     assert any("seek_id" in str(e) for e in engine.validate({"seek_id": "not-a-url"}))
     assert not any(
         "seek_id" in str(e)
@@ -24,7 +24,7 @@ def test_uri_pattern_rule_is_enforced() -> None:
 def test_absent_uri_value_passes_for_authoring() -> None:
     # Accessions/ids are assigned later; an entity being authored (no value) must
     # not trip the pattern.
-    engine = create_engine_for_entity("Project", version="1.0", profile="jerm")
+    engine = create_engine_for_entity("Project", version="1.0", profile="seek")
     assert not any("seek_id" in str(e) for e in engine.validate({}))
 
 

@@ -30,17 +30,24 @@ The practical consequence is that `required` maps almost exactly onto an OWL exi
 
 **Existential constraints**, as `required: true` on a field, or `min_items: 1` on a nesting list. See the open issues below on where list cardinality is actually enforced.
 
-**Subsumption inside vocabularies.** An `ontology_term` field names a branch root, and a value is legal if it sits at or beneath that root. Validation is therefore by subsumption rather than enumeration, and subclasses added to the source ontology after the profile was written become valid values without editing the profile.
+**The vocabulary**, in one of three ways, and the choice matters:
+
+- `constraints.enum` — the allowed values written into the spec. Self-contained and enforced offline, but frozen at one ontology version.
+- `options` — the same list, driving dropdowns and pre-import checks. Falls back to `constraints.enum` when unset.
+- `type: ontology_term`, optionally with `ontologies` — a live OLS4 lookup, scoped to whole ontologies by their OLS id. Stays current as the ontology evolves, but requires the ontology to be published in OLS.
+
+A field's own `ontology_term` is a fourth thing and easy to confuse with the third: it records **what the column means**, and places no constraint on its values.
 
 ```yaml
 Assay:
   fields:
     - name: technology_type
       type: ontology_term
-      ontology_term: EFO:0000269    # branch root; any term beneath it is legal
+      ontologies: [efo]         # search scope: whole ontologies, not a subtree
+      ontology_term: EFO:0000269 # what this column means; not a value constraint
 ```
 
-This is usually the largest preserved part of a translation, because most classes in a domain ontology are vocabulary rather than record types. Using `enum` instead freezes those terms at one ontology version and closes the world completely.
+Note the limitation: scoping is per ontology, not per branch. There is no way to say "any term beneath *this* class", so a profile cannot restrict a column to one subtree of a large ontology. Where the source ontology is not in OLS at all, the lookup resolves nothing and the column is effectively unconstrained unless its terms are inlined with `options`.
 
 **Domains and ranges**, implicitly: a property's domain becomes the entity the field sits on, and its range becomes the `items` or `reference` target.
 
