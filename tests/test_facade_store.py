@@ -228,7 +228,7 @@ def test_hierarchy_survives_reload_without_a_unique_id_parent() -> None:
 
     ``_parent_unique_id`` is derived from the parent's identifier *value*, so it
     was derived from a hardcoded unique_id/alias lookup, so it was empty for the
-    seven profiles keyed on anything else (pride/isa/jerm/dissco/metabolights/
+    seven profiles keyed on anything else (pride/isa/seek/dissco/metabolights/
     darwin-core/miappe-htp) and their whole hierarchy flattened on reload --
     every child came back as a root. The parent's declared identifier field is
     consulted instead.

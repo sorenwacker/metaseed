@@ -94,7 +94,7 @@ List available profiles and their versions:
 metaseed profiles
 ```
 
-Output shows all installed profiles (miappe, isa, jerm, darwin-core, dissco, ena, etc.) with their available versions.
+Output shows all installed profiles (miappe, isa, seek, darwin-core, dissco, ena, etc.) with their available versions.
 
 ### compare
 
@@ -112,7 +112,7 @@ metaseed compare miappe/1.1 isa/1.0 -f csv -o comparison.csv
 metaseed compare miappe/1.1 isa/1.0 -f html -o comparison.html
 
 # Compare multiple profiles
-metaseed compare miappe/1.1 isa/1.0 jerm/1.0
+metaseed compare miappe/1.1 isa/1.0 seek/1.0
 ```
 
 Options:
@@ -137,7 +137,7 @@ Merge multiple profile specifications into a single combined profile:
 metaseed merge miappe/1.1 isa/1.0 -o combined.yaml
 
 # Merge with specific strategy
-metaseed merge miappe/1.1 jerm/1.0 -s most_restrictive -o strict.yaml
+metaseed merge miappe/1.1 seek/1.0 -s most_restrictive -o strict.yaml
 
 # Custom name and version
 metaseed merge miappe/1.1 isa/1.0 -n my-profile -v 2.0 -o my-profile.yaml

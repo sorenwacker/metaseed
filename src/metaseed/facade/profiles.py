@@ -16,7 +16,6 @@ __all__ = [
     "dissco",
     "ena",
     "isa",
-    "jerm",
     "metabolights",
     "miappe",
     "miappe_htp",
@@ -60,24 +59,6 @@ def miappe_htp(version: str | None = None) -> ProfileFacade:
     from metaseed.facade.core import ProfileFacade
 
     return ProfileFacade("miappe-htp", version)
-
-
-def jerm(version: str | None = None) -> ProfileFacade:
-    """Get JERM profile facade.
-
-    Args:
-        version: JERM version. If None, uses the latest available version.
-
-    Returns:
-        ProfileFacade for JERM (Just Enough Results Model).
-
-    Example:
-        >>> from metaseed import jerm
-        >>> j = jerm()
-    """
-    from metaseed.facade.core import ProfileFacade
-
-    return ProfileFacade("jerm", version)
 
 
 def isa(version: str | None = None) -> ProfileFacade:

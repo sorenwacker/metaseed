@@ -32,7 +32,7 @@ print(metaseed.__all__)
 | `JsonStorage`, `YamlStorage` | classes | Default storage adapters. |
 | `MetaseedError`, `EntityNotFoundError`, `EntityTypeNotFoundError`, `ProfileNotFoundError` | exceptions | The exception hierarchy; all library errors derive from `MetaseedError`. |
 | `list_profiles` | function | Discover installed profile names. |
-| `miappe`, `miappe_htp`, `isa`, `darwin_core`, `dissco`, `ena`, `jerm`, `pride`, `metabolights` | functions | Convenience constructors for a profile facade. |
+| `miappe`, `miappe_htp`, `isa`, `darwin_core`, `dissco`, `ena`, `pride`, `metabolights` | functions | Convenience constructors for a profile facade. The SEEK profile has none: `metaseed.seek` is the adapter that talks to a SEEK instance, so a facade named `seek` would shadow it. Use `ProfileFacade("seek")`. |
 | `__version__` | attribute | The installed version string. |
 
 Every symbol above resolves from the top-level package:

@@ -1,8 +1,8 @@
-# JERM v1.0
+# SEEK v1.0
 
-The Just Enough Results Model (JERM) is a metadata framework used by FAIRDOM-SEEK for managing systems biology data. It extends the ISA (Investigation-Study-Assay) structure with additional asset types for computational models, workflows, and collaborative project management.
+The data model [FAIRDOM-SEEK](https://fair-dom.org/platform/seek/) stores research in. Choose it to describe metadata you intend to publish to a SEEK instance; the [SEEK export](../architecture/seek-export.md) provisions a SEEK instance from it and syncs datasets into it.
 
-JERM is designed to capture the minimum metadata required to make experimental data discoverable and interpretable. It provides a bridge between laboratory data management and FAIR (Findable, Accessible, Interoperable, Reusable) data sharing.
+It is built on the Just Enough Results Model (JERM), the ontology SEEK types its resources with, and extends the ISA (Investigation-Study-Assay) structure with asset types for computational models, workflows, and collaborative project management. The profile is named for the platform rather than the ontology, because it is the platform you are describing data for; `jerm:` remains the ontology namespace the export emits.
 
 ## Overview
 
@@ -172,13 +172,13 @@ JERM is the underlying model for FAIRDOM-SEEK. Key integration points:
 from metaseed.specs.loader import SpecLoader
 
 loader = SpecLoader()
-jerm = loader.load_profile(version="1.0", profile="jerm")
+seek = loader.load_profile(version="1.0", profile="seek")
 
 # List all entities
-print(jerm.list_entities())
+print(seek.list_entities())
 
 # Get specific entity
-project = jerm.get_entity("Project")
+project = seek.get_entity("Project")
 for field in project.fields:
     print(f"{field.name}: {field.type.value}")
 ```

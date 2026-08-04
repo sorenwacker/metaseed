@@ -72,7 +72,7 @@ from metaseed.specs.merge import compare
 # Compare ISA with JERM (ISA is the base)
 result = compare([
     ("isa", "1.0"),
-    ("jerm", "1.0"),
+    ("seek", "1.0"),
 ])
 
 # Access statistics
@@ -94,7 +94,7 @@ for entity_diff in result.entity_diffs:
 ```python
 from metaseed.specs.merge import compare, MarkdownReportGenerator
 
-result = compare([("isa", "1.0"), ("jerm", "1.0")])
+result = compare([("isa", "1.0"), ("seek", "1.0")])
 
 # Generate Markdown report
 report = MarkdownReportGenerator(result).generate()
@@ -114,7 +114,7 @@ Generate vis.js compatible graph data:
 ```python
 from metaseed.specs.merge import compare, DiffVisualizer
 
-result = compare([("isa", "1.0"), ("jerm", "1.0")])
+result = compare([("isa", "1.0"), ("seek", "1.0")])
 
 visualizer = DiffVisualizer()
 graph_data = visualizer.build_diff_graph(result)
@@ -133,7 +133,7 @@ graph_data = visualizer.build_diff_graph(result)
 | `isa/1.0` | Investigation-Study-Assay framework |
 | `miappe/1.1`, `miappe/1.2` | Plant phenotyping metadata |
 | `miappe-htp/1.0` | High-throughput plant phenotyping |
-| `jerm/1.0` | Just Enough Results Model (FAIRDOM-SEEK) |
+| `seek/1.0` | The model FAIRDOM-SEEK stores research in, built on JERM |
 | `darwin-core/1.0` | Biodiversity data standard |
 | `dissco/0.4` | Digital Specimen standard |
 | `ena/1.0` | European Nucleotide Archive submissions |
@@ -205,7 +205,7 @@ Metaseed also supports merging multiple profiles into a single combined profile.
 metaseed merge miappe/1.1 isa/1.0 -o combined.yaml
 
 # Merge with most restrictive strategy
-metaseed merge miappe/1.1 jerm/1.0 -s most_restrictive -o strict.yaml
+metaseed merge miappe/1.1 seek/1.0 -s most_restrictive -o strict.yaml
 
 # Merge with custom name and version
 metaseed merge miappe/1.1 isa/1.0 -n miappe-extended -v 2.0 -o extended.yaml

@@ -34,41 +34,41 @@ class TestDocumentedCompareAPI:
     """
 
     def test_compare_accepts_list_of_tuples(self) -> None:
-        """Documented: compare([("isa", "1.0"), ("jerm", "1.0")])."""
-        result = compare([("isa", "1.0"), ("jerm", "1.0")])
+        """Documented: compare([("isa", "1.0"), ("seek", "1.0")])."""
+        result = compare([("isa", "1.0"), ("seek", "1.0")])
         assert isinstance(result, ComparisonResult)
 
     def test_result_has_statistics_total_entities(self) -> None:
         """Documented: result.statistics.total_entities."""
-        result = compare([("isa", "1.0"), ("jerm", "1.0")])
+        result = compare([("isa", "1.0"), ("seek", "1.0")])
         assert hasattr(result.statistics, "total_entities")
         assert isinstance(result.statistics.total_entities, int)
         assert result.statistics.total_entities >= 0
 
     def test_result_has_statistics_common_entities(self) -> None:
         """Documented: result.statistics.common_entities."""
-        result = compare([("isa", "1.0"), ("jerm", "1.0")])
+        result = compare([("isa", "1.0"), ("seek", "1.0")])
         assert hasattr(result.statistics, "common_entities")
         assert isinstance(result.statistics.common_entities, int)
         assert result.statistics.common_entities >= 0
 
     def test_result_has_statistics_conflicting_fields(self) -> None:
         """Documented: result.statistics.conflicting_fields."""
-        result = compare([("isa", "1.0"), ("jerm", "1.0")])
+        result = compare([("isa", "1.0"), ("seek", "1.0")])
         assert hasattr(result.statistics, "conflicting_fields")
         assert isinstance(result.statistics.conflicting_fields, int)
         assert result.statistics.conflicting_fields >= 0
 
     def test_result_has_entity_diffs(self) -> None:
         """Documented: result.entity_diffs is iterable."""
-        result = compare([("isa", "1.0"), ("jerm", "1.0")])
+        result = compare([("isa", "1.0"), ("seek", "1.0")])
         assert hasattr(result, "entity_diffs")
         for entity_diff in result.entity_diffs:
             assert isinstance(entity_diff, EntityDiff)
 
     def test_entity_diff_has_name_and_diff_type(self) -> None:
         """Documented: entity_diff.entity_name, entity_diff.diff_type.value."""
-        result = compare([("isa", "1.0"), ("jerm", "1.0")])
+        result = compare([("isa", "1.0"), ("seek", "1.0")])
         for entity_diff in result.entity_diffs:
             assert hasattr(entity_diff, "entity_name")
             assert hasattr(entity_diff, "diff_type")
@@ -76,7 +76,7 @@ class TestDocumentedCompareAPI:
 
     def test_entity_diff_has_field_diffs(self) -> None:
         """Documented: entity_diff.field_diffs is iterable."""
-        result = compare([("isa", "1.0"), ("jerm", "1.0")])
+        result = compare([("isa", "1.0"), ("seek", "1.0")])
         for entity_diff in result.entity_diffs:
             assert hasattr(entity_diff, "field_diffs")
             for field_diff in entity_diff.field_diffs:
@@ -84,7 +84,7 @@ class TestDocumentedCompareAPI:
 
     def test_field_diff_has_name_and_diff_type(self) -> None:
         """Documented: field_diff.field_name, field_diff.diff_type.value."""
-        result = compare([("isa", "1.0"), ("jerm", "1.0")])
+        result = compare([("isa", "1.0"), ("seek", "1.0")])
         for entity_diff in result.entity_diffs:
             for field_diff in entity_diff.field_diffs:
                 assert hasattr(field_diff, "field_name")
@@ -127,30 +127,30 @@ class TestDocumentedComparisonResult:
 
     def test_has_profiles_attribute(self) -> None:
         """Documented: profiles - List of profile identifiers compared."""
-        result = compare([("isa", "1.0"), ("jerm", "1.0")])
+        result = compare([("isa", "1.0"), ("seek", "1.0")])
         assert hasattr(result, "profiles")
         assert isinstance(result.profiles, list)
 
     def test_has_entity_diffs_attribute(self) -> None:
         """Documented: entity_diffs - List of EntityDiff objects."""
-        result = compare([("isa", "1.0"), ("jerm", "1.0")])
+        result = compare([("isa", "1.0"), ("seek", "1.0")])
         assert hasattr(result, "entity_diffs")
         assert isinstance(result.entity_diffs, list)
 
     def test_has_statistics_attribute(self) -> None:
         """Documented: statistics - ComparisonStatistics with counts."""
-        result = compare([("isa", "1.0"), ("jerm", "1.0")])
+        result = compare([("isa", "1.0"), ("seek", "1.0")])
         assert hasattr(result, "statistics")
         assert isinstance(result.statistics, ComparisonStatistics)
 
     def test_has_metadata_diffs_attribute(self) -> None:
         """Documented: metadata_diffs - Differences in profile metadata."""
-        result = compare([("isa", "1.0"), ("jerm", "1.0")])
+        result = compare([("isa", "1.0"), ("seek", "1.0")])
         assert hasattr(result, "metadata_diffs")
 
     def test_has_validation_rule_diffs_attribute(self) -> None:
         """Documented: validation_rule_diffs - Differences in validation rules."""
-        result = compare([("isa", "1.0"), ("jerm", "1.0")])
+        result = compare([("isa", "1.0"), ("seek", "1.0")])
         assert hasattr(result, "validation_rule_diffs")
 
 
@@ -163,7 +163,7 @@ class TestDocumentedEntityDiff:
     @pytest.fixture
     def entity_diff(self) -> EntityDiff:
         """Get an EntityDiff from a comparison."""
-        result = compare([("isa", "1.0"), ("jerm", "1.0")])
+        result = compare([("isa", "1.0"), ("seek", "1.0")])
         return result.entity_diffs[0]
 
     def test_has_entity_name(self, entity_diff: EntityDiff) -> None:
@@ -201,7 +201,7 @@ class TestDocumentedFieldDiff:
     @pytest.fixture
     def field_diff(self) -> FieldDiff:
         """Get a FieldDiff from a comparison."""
-        result = compare([("isa", "1.0"), ("jerm", "1.0")])
+        result = compare([("isa", "1.0"), ("seek", "1.0")])
         for ed in result.entity_diffs:
             if ed.field_diffs:
                 return ed.field_diffs[0]
@@ -242,7 +242,7 @@ class TestDocumentedComparisonStatistics:
     @pytest.fixture
     def stats(self) -> ComparisonStatistics:
         """Get statistics from a comparison."""
-        result = compare([("isa", "1.0"), ("jerm", "1.0")])
+        result = compare([("isa", "1.0"), ("seek", "1.0")])
         return result.statistics
 
     def test_has_total_entities(self, stats: ComparisonStatistics) -> None:
@@ -297,7 +297,7 @@ class TestDocumentedReportGenerators:
     @pytest.fixture
     def comparison(self) -> ComparisonResult:
         """Get a comparison result."""
-        return compare([("isa", "1.0"), ("jerm", "1.0")])
+        return compare([("isa", "1.0"), ("seek", "1.0")])
 
     def test_markdown_generator_has_generate(
         self, comparison: ComparisonResult
@@ -331,35 +331,35 @@ class TestDocumentedDiffVisualizer:
 
     def test_build_diff_graph_returns_dict(self) -> None:
         """Documented: visualizer.build_diff_graph(result) returns graph data."""
-        result = compare([("isa", "1.0"), ("jerm", "1.0")])
+        result = compare([("isa", "1.0"), ("seek", "1.0")])
         visualizer = DiffVisualizer()
         graph_data = visualizer.build_diff_graph(result)
         assert isinstance(graph_data, dict)
 
     def test_graph_data_has_nodes(self) -> None:
         """Documented: graph_data contains 'nodes'."""
-        result = compare([("isa", "1.0"), ("jerm", "1.0")])
+        result = compare([("isa", "1.0"), ("seek", "1.0")])
         visualizer = DiffVisualizer()
         graph_data = visualizer.build_diff_graph(result)
         assert "nodes" in graph_data
 
     def test_graph_data_has_edges(self) -> None:
         """Documented: graph_data contains 'edges'."""
-        result = compare([("isa", "1.0"), ("jerm", "1.0")])
+        result = compare([("isa", "1.0"), ("seek", "1.0")])
         visualizer = DiffVisualizer()
         graph_data = visualizer.build_diff_graph(result)
         assert "edges" in graph_data
 
     def test_graph_data_has_legend(self) -> None:
         """Documented: graph_data contains 'legend'."""
-        result = compare([("isa", "1.0"), ("jerm", "1.0")])
+        result = compare([("isa", "1.0"), ("seek", "1.0")])
         visualizer = DiffVisualizer()
         graph_data = visualizer.build_diff_graph(result)
         assert "legend" in graph_data
 
     def test_graph_data_has_statistics(self) -> None:
         """Documented: graph_data contains 'statistics'."""
-        result = compare([("isa", "1.0"), ("jerm", "1.0")])
+        result = compare([("isa", "1.0"), ("seek", "1.0")])
         visualizer = DiffVisualizer()
         graph_data = visualizer.build_diff_graph(result)
         assert "statistics" in graph_data
