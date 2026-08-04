@@ -595,3 +595,34 @@ validation_rules:
         # Second rule has no explicit type (inferred)
         assert profile.validation_rules[1].type is None
         assert profile.validation_rules[1].condition == "email OR phone"
+
+
+class TestRenamedProfiles:
+    """A profile that was renamed still loads under the name datasets recorded.
+
+    A dataset stores the profile it was built against, so dropping the previous
+    name would stop it opening: the lookup would find nothing and the dataset
+    would refuse to load rather than simply being labelled differently. The
+    rename of ``jerm`` to ``seek`` is a rename, not a migration every owner has
+    to perform.
+    """
+
+    def test_the_previous_name_resolves_to_the_current_profile(self) -> None:
+        loader = SpecLoader()
+
+        under_old_name = loader.load_profile(version="1.0", profile="jerm")
+
+        assert under_old_name.name == "seek"
+        assert under_old_name.display_name == "SEEK"
+
+    def test_the_current_name_is_unaffected(self) -> None:
+        loader = SpecLoader()
+
+        assert loader.load_profile(version="1.0", profile="seek").name == "seek"
+
+    def test_an_unknown_profile_still_raises(self) -> None:
+        """The mapping must not turn a typo into a silent fallback."""
+        loader = SpecLoader()
+
+        with pytest.raises(SpecLoadError):
+            loader.load_profile(version="1.0", profile="not-a-profile")
