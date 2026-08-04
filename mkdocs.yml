@@ -85,6 +85,7 @@ nav:
   - Discussion:
       - ISA vs MIAPPE: discussion/comparison.md
       - Entity Relationships: discussion/entity-relationships.md
+      - Ontology to Profile: discussion/ontology-to-profile.md
       - Profile Design: discussion/profile-design-approaches.md
       - MetaboLights Design: discussion/metabolights-design.md
   - Architecture:

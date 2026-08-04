@@ -148,10 +148,11 @@ const SpecBuilderGraph = (function() {
 
             const entityNames = Object.keys(getEntities());
             if (entityNames.length === 0) {
-                container.innerHTML = '<div class="empty-canvas-message">Double-click to add an entity</div>';
+                showEmptyCanvas(container);
                 return;
             }
 
+            container.ondblclick = null;
             const { nodeData, edgeData } = buildGraphData(entityNames);
             createNetwork(container, nodeData, edgeData);
             attachNetworkEventHandlers();
@@ -464,6 +465,15 @@ const SpecBuilderGraph = (function() {
             return false;
         }
 
+        // The empty canvas has no vis network to carry a doubleClick, so the
+        // invitation it prints is wired to the container itself. Cleared again
+        // once a network exists, or a double-click on a node would open the
+        // modal as well.
+        function showEmptyCanvas(container) {
+            container.innerHTML = '<div class="empty-canvas-message">Double-click to add an entity</div>';
+            container.ondblclick = function() { showAddEntityModal(); };
+        }
+
         function rebuildGraph() {
             const container = document.getElementById('erd-canvas');
             if (!container) return;
@@ -475,10 +485,11 @@ const SpecBuilderGraph = (function() {
                     network.destroy();
                     network = null;
                 }
-                container.innerHTML = '<div class="empty-canvas-message">Double-click to add an entity</div>';
+                showEmptyCanvas(container);
                 return;
             }
 
+            container.ondblclick = null;
             const emptyMsg = container.querySelector('.empty-canvas-message');
             if (emptyMsg) {
                 emptyMsg.remove();

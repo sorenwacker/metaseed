@@ -642,6 +642,32 @@ class TestFieldEditorLayout:
             )
 
 
+class TestEmptyCanvas:
+    """The empty canvas invites a double-click, so it has to accept one."""
+
+    def test_double_clicking_the_empty_canvas_opens_the_add_entity_modal(self, driver):
+        """An empty spec is exactly when the canvas offers this, and when it failed.
+
+        The double-click handler lived on the vis network, but with no entities
+        the network is never created and the container is replaced with a plain
+        message, so nothing was listening. The instruction could not be followed
+        at the one moment it was shown.
+        """
+        reset_spec_builder(driver)
+
+        message = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, ".empty-canvas-message"))
+        )
+        assert "Double-click" in message.text
+
+        webdriver.ActionChains(driver).double_click(message).perform()
+
+        modal = WebDriverWait(driver, 10).until(
+            EC.visibility_of_element_located((By.ID, "add-entity-modal"))
+        )
+        assert modal.is_displayed()
+
+
 class TestCloneTemplate:
     """Test cloning templates."""
 
