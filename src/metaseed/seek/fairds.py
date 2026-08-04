@@ -40,6 +40,7 @@ except (
         "Install with: pip install 'metaseed[seek]'"
     ) from exc
 
+from metaseed.seek.naming import property_uri
 from metaseed.seek.roles import JERM_CLASSES as _JERM
 from metaseed.specs.loader import SpecLoader
 
@@ -71,7 +72,9 @@ def _slug(value: str) -> str:
 
 def _emit_property_definition(graph: Graph, name: str, spec: FieldSpec) -> None:
     """Emit one ``rdf:Property`` definition SEEK turns into an EMT attribute."""
-    prop = SCHEMA[name]
+    # Percent-encoded, so a name with a space yields a URI rdflib can serialize
+    # and SEEK accepts -- and the same one provisioning registered.
+    prop = URIRef(property_uri(name))
     graph.add((prop, RDF.type, RDF.Property))
     graph.add((prop, RDFS.label, Literal(name)))
     if spec.description:

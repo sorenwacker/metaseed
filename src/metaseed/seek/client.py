@@ -58,6 +58,54 @@ def client_from_settings(
     return SeekClient(url, token=token, timeout=timeout, http_client=http_client)
 
 
+class SeekApiError(RuntimeError):
+    """A SEEK request was rejected, carrying what SEEK said was wrong.
+
+    SEEK answers a rejected write with a JSON:API ``errors`` array naming the
+    offending attribute. Without it the caller only sees the status code, which
+    says a request failed but not which field SEEK refused or why -- leaving no
+    way to act on it.
+    """
+
+    def __init__(self, response: httpx.Response) -> None:
+        self.status_code = response.status_code
+        self.detail = _error_detail(response)
+        super().__init__(
+            f"SEEK rejected {response.request.method} {response.request.url.path} "
+            f"({response.status_code}): {self.detail}"
+        )
+
+
+def _error_detail(response: httpx.Response) -> str:
+    """Summarise SEEK's error body, falling back to the raw text.
+
+    Args:
+        response: The rejected response.
+
+    Returns:
+        A single line naming each reported problem, or the body when it is not
+        the JSON:API shape.
+    """
+    try:
+        body = response.json()
+    except ValueError:
+        return (response.text or "no response body").strip()[:500]
+
+    errors = body.get("errors") if isinstance(body, dict) else None
+    if not errors:
+        return str(body)[:500]
+
+    parts = []
+    for err in errors:
+        if not isinstance(err, dict):
+            parts.append(str(err))
+            continue
+        where = (err.get("source") or {}).get("pointer") or err.get("title") or ""
+        what = err.get("detail") or err.get("title") or ""
+        parts.append(f"{where}: {what}".strip(": ") if where else str(what))
+    return "; ".join(p for p in parts if p)[:500]
+
+
 class SeekClient:
     """Minimal read/write client for the SEEK JSON:API."""
 
@@ -112,7 +160,11 @@ class SeekClient:
                 response = client.request(
                     method, url, headers=headers, json=json, auth=self._auth
                 )
-        response.raise_for_status()
+        if response.is_error:
+            # SEEK answers a rejected write with a JSON:API ``errors`` array
+            # naming the offending attribute. Raising the bare status turned
+            # every failure into an unactionable "422 Unprocessable Content".
+            raise SeekApiError(response) from None
         return response.json() if response.content else {}
 
     def get(self, path: str) -> Any:
