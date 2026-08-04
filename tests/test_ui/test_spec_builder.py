@@ -4,6 +4,7 @@ Tests helpers and routes for creating/editing ProfileSpec specifications.
 """
 
 import re
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -1042,16 +1043,25 @@ class TestFieldFormReuse:
             "/hub/spec-builder/abc123/entity/Sample", ""
         )
 
-    def test_only_a_label_with_help_offers_the_help_cursor(self, client):
-        """The form's style is injected page-wide, so it must not overreach.
+    def test_guidance_is_delivered_by_a_visible_marker(self) -> None:
+        """A native tooltip is not a reliable way to reach the user.
 
-        An unscoped `.form-label { cursor: help }` reached every label in the
-        builder once a field editor had been opened once, including labels with
-        no tooltip: the cursor promised an explanation that never arrived.
+        It stays invisible until hovered for about a second, never appears on
+        touch, and on some machines does not render at all -- so help written
+        into a profile simply never arrived. The builder converts every ``title``
+        into a focusable "?" beside the label, with the bubble on ``body`` so the
+        panels, which all clip their overflow, cannot cut it off.
         """
-        html = self._field_form(client)
-        assert ".form-label[title] {" in html
-        assert "\n.form-label {\n    cursor: help;" not in html
+        from metaseed.ui.app import STATIC_DIR
+
+        script = (Path(STATIC_DIR) / "js" / "help-markers.js").read_text()
+        assert "removeAttribute('title')" in script, "a second, native copy would show"
+        assert "document.body.appendChild" in script, "the bubble must escape clipping"
+        assert "htmx:afterSwap" in script, "a partial loaded later must be covered too"
+
+        css = (Path(STATIC_DIR) / "css" / "style.css").read_text()
+        assert ".help-marker" in css
+        assert ".help-bubble" in css
 
     def test_every_constraint_control_carries_guidance(self, client):
         """The tooltips are the reason a consumer should reuse rather than copy.

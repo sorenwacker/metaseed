@@ -3,7 +3,7 @@
 
         <!-- Basic Info -->
         <fieldset class="form-section">
-            <legend>Basic</legend>
+            <legend title="What this field is called and how it is presented: its name, type, and the caption, unit and example shown to whoever fills it in.">Basic</legend>
             <div class="field-form-row">
                 <div class="form-group">
                     <label class="form-label" title="Snake_case identifier for this field">Name</label>
@@ -81,7 +81,7 @@
              the validation rules above. `owns` applies to list/entity fields
              only, so it keeps the type-setting class that shows and hides it. -->
         <fieldset class="form-section">
-            <legend>Markers</legend>
+            <legend title="The role this field plays for its entity, as opposed to the rules its value must satisfy: which field identifies the entity, which labels it, and which owns its nested children.">Markers</legend>
             <div class="form-checkbox-group">
                 <label class="form-checkbox" title="This field uniquely identifies the entity (used for node ids and references)">
                     <input type="checkbox" name="is_identifier" value="true"
@@ -104,7 +104,7 @@
 
         <!-- Type-specific settings -->
         <fieldset class="form-section" id="type-settings">
-            <legend>Type Settings</legend>
+            <legend title="Settings that exist only for the type selected above: the target entity of a list or reference, and the ontologies an ontology_term field may be looked up in.">Type Settings</legend>
 
             <!-- Entity/List target -->
             <div class="form-group type-setting" data-field-types="list,entity">
@@ -140,7 +140,7 @@
 
         <!-- Constraints -->
         <fieldset class="form-section" id="constraints-section">
-            <legend>Constraints</legend>
+            <legend title="Rules a value must satisfy to be valid: pattern, length, numeric bounds, item counts, and the allowed values. A value breaking one of these is refused; a missing value is reported instead.">Constraints</legend>
 
             <!-- String/URI constraints -->
             <div class="constraint-group" data-field-types="string,uri">
@@ -226,7 +226,7 @@
 
         <!-- Advanced (collapsible) -->
         <details class="form-section-collapsible">
-            <summary>Advanced</summary>
+            <summary title="Rarely needed settings: the code-generation name, the ontology term describing the field, uniqueness scope, cross-entity references, and the DCAT property this field fills on the dataset's catalogue record.">Advanced</summary>
             <div class="form-section-content">
                 <div class="field-form-row">
                     <div class="form-group">
@@ -301,6 +301,7 @@
     </form>
 </div>
 
+
 <script>
 function updateConstraintVisibility(fieldType) {
     document.querySelectorAll('.constraint-group, .type-setting').forEach(function(el) {
@@ -363,7 +364,9 @@ function setPattern(pattern) {
 /* Only a label that actually carries help offers the help cursor. This style is
    injected into the whole page when the field form loads, so an unscoped rule
    promised a tooltip on every label in the builder, including ones with none. */
-.form-label[title] {
+.form-label[title],
+legend[title],
+summary[title] {
     cursor: help;
 }
 .form-label[title]:hover {
@@ -402,4 +405,5 @@ function setPattern(pattern) {
 .constraint-group:last-child {
     margin-bottom: 0;
 }
+
 </style>

@@ -11,7 +11,7 @@
         <h4 class="panel-section-title">Details</h4>
         <form id="entity-details-form" onsubmit="return updateEntity(event, '{{ entity_name }}')" class="panel-form">
             <div class="form-group">
-                <label class="form-label">Name</label>
+                <label class="form-label" title="The entity type's name, such as Investigation or Sample. It is the type datasets record against and the heading shown on forms, so renaming it changes both.">Name</label>
                 <input type="text"
                        name="name"
                        class="form-input"
@@ -22,14 +22,14 @@
                 <span class="form-help">PascalCase (e.g., BiologicalMaterial)</span>
             </div>
             <div class="form-group">
-                <label class="form-label">Description</label>
+                <label class="form-label" title="What this entity represents, shown to whoever fills it in. This is the main place a profile explains itself to its users.">Description</label>
                 <textarea name="description"
                           class="form-input"
                           rows="2"
                           placeholder="What this entity represents...">{{ entity.description or '' }}</textarea>
             </div>
             <div class="form-group">
-                <label class="form-label">Ontology Term</label>
+                <label class="form-label" title="The ontology term identifying what this entity type is (for example MIAPPE:Study). Distinct from the term on an individual field, which identifies what that field means.">Ontology Term</label>
                 <input type="text"
                        name="ontology_term"
                        class="form-input"
@@ -37,7 +37,7 @@
                        placeholder="PPEO:entity">
             </div>
             <div class="form-group">
-                <label class="form-label">SEEK role</label>
+                <label class="form-label" title="The ISA/JERM object this entity maps to when exported to SEEK, overriding the default name-based mapping. It sets the emitted rdf:type only; it does not move the entity in the hierarchy, which SEEK reads from the tree.">SEEK role</label>
                 <select name="seek_role" class="form-input" data-testid="entity-seek-role">
                     {% set current = entity.seek.role if entity.seek else '' %}
                     <option value=""{% if not current %} selected{% endif %}>— none —</option>
