@@ -268,6 +268,37 @@ class TestISAProfile:
         assert "isa" in profiles
         assert "miappe" in profiles
 
+    def test_a_profile_is_listed_once_whatever_the_directory_case(
+        self, tmp_path, monkeypatch
+    ) -> None:
+        """A user directory differing only in case is the same profile.
+
+        Loading lowercases the profile name, and versions from the user and
+        built-in directories are merged, so ``JERM`` beside a built-in ``jerm``
+        is one profile with two versions. Listing the raw directory names showed
+        it twice in the builder, and classified it differently depending on
+        whether the filesystem happened to be case-sensitive.
+        """
+        import metaseed.specs.loader as loader_module
+
+        user = tmp_path / "user"
+        builtin = tmp_path / "builtin"
+        for base, name, version in (
+            (user, "JERM", "2.0"),
+            (builtin, "jerm", "1.0"),
+        ):
+            spec_dir = base / name / version
+            spec_dir.mkdir(parents=True)
+            (spec_dir / "profile.yaml").write_text("name: jerm\n")
+
+        monkeypatch.setattr(loader_module, "get_user_specs_dir", lambda: user)
+        monkeypatch.setattr(loader_module, "get_builtin_specs_dir", lambda: builtin)
+
+        profiles = SpecLoader().list_profiles()
+
+        assert profiles.count("jerm") == 1, profiles
+        assert "JERM" not in profiles
+
     def test_load_isa_version(self, isa_loader: SpecLoader) -> None:
         """Load ISA profile v1.0."""
         versions = isa_loader.list_versions()

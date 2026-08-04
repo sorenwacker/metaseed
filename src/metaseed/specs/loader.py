@@ -455,7 +455,11 @@ class SpecLoader:
                             version_dir.is_dir()
                             and (version_dir / "profile.yaml").exists()
                         ):
-                            profiles.add(item.name)
+                            # Lowercased, because that is the name every other
+                            # method resolves by: a user directory "JERM" beside
+                            # a built-in "jerm" is one profile whose versions are
+                            # merged, not two profiles that happen to look alike.
+                            profiles.add(item.name.lower())
                             break
 
         return sorted(profiles)
