@@ -322,3 +322,54 @@ class TestPropertyUriEscaping:
         emitted = {str(s) for s in graph.subjects()}
         assert property_uri("Source Name") in emitted
         assert URIRef("http://schema.org/Source Name") not in set(graph.subjects())
+
+    def test_a_dataset_with_a_spaced_field_name_exports(self) -> None:
+        """Exporting is where the unencoded URI actually bit.
+
+        Provisioning was fixed first, and its tests passed, but the data RDF
+        built property URIs at a second site that still concatenated the field
+        name. rdflib refuses to serialize ``http://schema.org/Source Name`` at
+        all, so exporting any dataset on such a profile raised rather than
+        producing a graph SEEK could read.
+        """
+        pytest.importorskip("rdflib")
+        from metaseed import MetaseedClient
+        from metaseed.seek.fairds import to_fair_data_station_rdf
+        from metaseed.seek.naming import property_uri
+        from metaseed.specs.schema import (
+            EntityDefSpec,
+            FieldSpec,
+            FieldType,
+            ProfileSpec,
+        )
+
+        spec = ProfileSpec(
+            version="1.0",
+            name="spaced-export",
+            display_name="Spaced export",
+            description="d",
+            ontology="T",
+            root_entity="Investigation",
+            entities={
+                "Investigation": EntityDefSpec(
+                    description="d",
+                    fields=[
+                        FieldSpec(name="title", type=FieldType.STRING),
+                        FieldSpec(name="Source Name", type=FieldType.STRING),
+                    ],
+                )
+            },
+        )
+
+        client = MetaseedClient.from_spec(spec.model_dump(mode="json"))
+        client.create_entity(
+            "Investigation",
+            {"title": "t", "Source Name": "S-1"},
+            skip_validation=True,
+        )
+
+        rdf = to_fair_data_station_rdf(client)
+        text = rdf.decode() if isinstance(rdf, bytes) else rdf
+
+        assert "schema.org/Source Name" not in text, "an unserializable URI"
+        assert property_uri("Source Name").rsplit("/", 1)[-1] in text

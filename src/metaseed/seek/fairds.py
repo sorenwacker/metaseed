@@ -253,7 +253,11 @@ def to_fair_data_station_rdf(client: MetaseedClient) -> str:  # noqa: C901
             if key == "description":
                 graph.add((uri, SCHEMA.description, Literal(value)))
             else:
-                graph.add((uri, SCHEMA[key], Literal(value)))
+                # Percent-encoded through the same helper provisioning uses: a
+                # field named with a space is what SEEK matches an imported
+                # sample to its attribute by, and rdflib refuses to serialize
+                # the unencoded form at all.
+                graph.add((uri, URIRef(property_uri(key)), Literal(value)))
                 if key in entity_fields:
                     used[key] = entity_fields[key]
 
