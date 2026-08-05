@@ -1,6 +1,6 @@
-# SEEK-ready (ISA) v1.0
+# SEEK-ready template (ISA) v1.0
 
-A minimal, ISA-shaped starting point for a profile whose datasets upload cleanly
+A minimal, ISA-shaped template for a profile whose datasets upload cleanly
 to [FAIRDOM-SEEK](https://seek4science.org/). Every entity maps to a SEEK/ISA
 role, so a dataset built on it syncs to SEEK with nothing left behind.
 
@@ -33,7 +33,7 @@ genuinely needs it.
 ```python
 from metaseed.specs.loader import SpecLoader
 
-spec = SpecLoader().load_profile(version="1.0", profile="seek-ready")
+spec = SpecLoader().load_profile(version="1.0", profile="seek-ready-template")
 print(spec.root_entity)                 # Investigation
 print(sorted(spec.entities))            # Assay, Investigation, Sample, Study
 

@@ -1,6 +1,6 @@
 """The browsable model preview shown on the SEEK page before an upload.
 
-Projects the built-in ``seek-ready`` profile and asserts the Sample Types (with
+Projects the built-in ``seek-ready-template`` profile and asserts the Sample Types (with
 columns) and Extended Metadata records match what provisioning would create.
 """
 
@@ -11,14 +11,14 @@ from metaseed.specs.loader import SpecLoader
 
 
 def _preview():
-    spec = SpecLoader().load_profile(version="1.0", profile="seek-ready")
+    spec = SpecLoader().load_profile(version="1.0", profile="seek-ready-template")
     return build_model_preview(spec)
 
 
 def test_sample_types_list_the_sample_role_entity_with_its_columns():
     preview = _preview()
     by_entity = {st.entity_type: st for st in preview.sample_types}
-    # seek-ready's only Sample-role entity is Sample.
+    # seek-ready-template.s only Sample-role entity is Sample.
     assert "Sample" in by_entity
     assert "Study" not in by_entity  # Study is an ISA record, not a Sample Type
     cols = {a.name: a for a in by_entity["Sample"].attributes}

@@ -80,7 +80,7 @@ nav:
       - ENA: profiles/ena.md
       - ISA: profiles/isa.md
       - SEEK: profiles/seek.md
-      - SEEK-ready (ISA): profiles/seek-ready.md
+      - SEEK-ready template (ISA): profiles/seek-ready-template.md
       - MIAPPE: profiles/miappe.md
       - MIAPPE-HTP: profiles/miappe-htp.md
       - MetaboLights: profiles/metabolights.md

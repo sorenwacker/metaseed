@@ -1,8 +1,8 @@
 spec_version: '0.6'
 version: '1.0'
-name: seek-ready
-display_name: SEEK-ready (ISA)
-description: A minimal ISA-shaped starting point for a profile whose datasets upload cleanly to FAIRDOM-SEEK. Every entity
+name: seek-ready-template
+display_name: SEEK-ready template (ISA)
+description: A minimal ISA-shaped template for a profile whose datasets upload cleanly to FAIRDOM-SEEK. Every entity
   maps to a SEEK/ISA role (Investigation, Study, Assay, Sample) and nothing sits outside that hierarchy. Clone it and add
   your own fields; keep the shape. There is no ObservationUnit level -- add one only if your data genuinely needs it.
 ontology: OBI

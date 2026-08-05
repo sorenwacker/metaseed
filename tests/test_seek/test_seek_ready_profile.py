@@ -1,4 +1,4 @@
-"""The seek-ready profile exists so a dataset built on it uploads to SEEK whole.
+"""The seek-ready-template profile exists so a dataset built on it uploads to SEEK whole.
 
 That promise is only worth making if it is enforced: a future edit that gives an
 entity no role, or nests something SEEK cannot place, must fail here rather than
@@ -15,7 +15,7 @@ SYNCABLE = {"Investigation", "Study", "Assay", "Sample"}
 
 
 def _spec():
-    return SpecLoader().load_profile("1.0", "seek-ready")
+    return SpecLoader().load_profile("1.0", "seek-ready-template")
 
 
 def test_every_entity_maps_to_a_role_sync_can_place() -> None:
@@ -27,7 +27,7 @@ def test_every_entity_maps_to_a_role_sync_can_place() -> None:
         if jerm not in SYNCABLE:
             unmapped.append(f"{name} (role={role!r} -> {jerm!r})")
     assert not unmapped, (
-        "seek-ready must leave nothing behind on sync; these entities do not map "
+        "seek-ready-template must leave nothing behind on sync; these entities do not map "
         f"to a syncable SEEK role: {unmapped}"
     )
 

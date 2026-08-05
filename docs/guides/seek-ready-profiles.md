@@ -6,7 +6,7 @@ strays from the shape produces datasets that upload *partially*: the entities
 that map go in, the rest are silently left behind. These are the rules for a
 profile whose datasets upload **completely**.
 
-Start from the built-in **`seek-ready`** profile (Investigation → Study → Assay
+Start from the built-in **`seek-ready-template`** profile (Investigation → Study → Assay
 → Sample). Clone it, add your own fields, and keep the shape. A dataset built on
 it syncs to SEEK with nothing skipped — verified in the test suite against a live
 instance.

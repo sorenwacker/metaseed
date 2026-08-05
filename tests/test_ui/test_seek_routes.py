@@ -308,7 +308,7 @@ def test_seek_preview_endpoint_lists_sample_types_and_extended_metadata(make_cli
     # their columns, and the Extended Metadata records with their fields.
     client, _settings, _state = make_client()
     response = client.get(
-        "/seek/preview", params={"profile": "seek-ready", "version": "1.0"}
+        "/seek/preview", params={"profile": "seek-ready-template", "version": "1.0"}
     )
     assert response.status_code == 200
     body = response.text
