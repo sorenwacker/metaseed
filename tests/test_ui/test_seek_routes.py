@@ -191,3 +191,28 @@ def test_the_page_avoids_the_worst_jargon(make_client):
     assert "Idempotent" not in html and "idempotent" not in html
     assert "sample-bearing" not in html
     assert "closed value lists" not in html
+
+
+def test_the_page_lets_you_choose_a_version(make_client):
+    """Provisioning always used a profile's latest version, so a profile with
+    several -- miappe 1.1/1.2 -- could not be set up at an older one, even when a
+    dataset was built on it. The setup step now offers a version selector."""
+    client, _settings, _state = make_client()
+    html = client.get("/seek").text
+
+    assert 'data-testid="seek-model-version"' in html
+    assert 'name="version"' in html
+
+
+def test_the_model_download_honours_the_requested_version(make_client):
+    """A version that is not the latest must actually load that version, not be
+    silently replaced by the newest."""
+    client, _settings, _state = make_client()
+
+    v11 = client.get("/seek/model-ttl", params={"profile": "miappe", "version": "1.1"})
+    v12 = client.get("/seek/model-ttl", params={"profile": "miappe", "version": "1.2"})
+
+    assert v11.status_code == 200 and v12.status_code == 200
+    # The two versions differ, so honouring the request produces different output;
+    # ignoring it and loading the latest for both would make them identical.
+    assert v11.content != v12.content

@@ -63,9 +63,17 @@
               style="display:flex; gap:0.6rem; align-items:flex-end; flex-wrap:wrap;">
             <label style="font-size:0.85rem;">Profile
                 <select name="profile" id="seek-profile" class="form-input" data-testid="seek-model-profile"
-                        onchange="var h=document.getElementById('seek-emt-profile'); if (h) h.value=this.value;">
+                        onchange="seekOnProfileChange(this.value)">
                     {% for p in profiles %}
                     <option value="{{ p }}"{% if p == profile %} selected{% endif %}>{{ p }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label style="font-size:0.85rem;">Version
+                <select name="version" id="seek-version" class="form-input" data-testid="seek-model-version"
+                        onchange="var h=document.getElementById('seek-emt-version'); if (h) h.value=this.value;">
+                    {% for v in profile_versions.get(profile, []) %}
+                    <option value="{{ v }}"{% if v == version %} selected{% endif %}>{{ v }}</option>
                     {% endfor %}
                 </select>
             </label>
@@ -74,17 +82,41 @@
                     {% if not api_key_configured or not projects %}disabled{% endif %}>Set up Sample Types →</button>
         </form>
 
+        {# Repopulate the version list, and keep the Extended Metadata form's
+           hidden profile/version in step, when the profile choice changes. #}
+        <script>
+            var seekProfileVersions = {{ profile_versions|tojson }};
+            function seekOnProfileChange(profile) {
+                var sel = document.getElementById('seek-version');
+                var versions = seekProfileVersions[profile] || [];
+                sel.innerHTML = '';
+                versions.forEach(function (v) {
+                    var o = document.createElement('option');
+                    o.value = v; o.textContent = v;
+                    sel.appendChild(o);
+                });
+                var latest = versions.length ? versions[versions.length - 1] : '';
+                sel.value = latest;
+                var hp = document.getElementById('seek-emt-profile');
+                var hv = document.getElementById('seek-emt-version');
+                if (hp) hp.value = profile;
+                if (hv) hv.value = latest;
+            }
+        </script>
+
         <div style="margin-top:0.9rem; padding-top:0.8rem; border-top:1px dashed var(--border, #ddd);">
             <div style="font-size:0.9rem;"><strong>Extended Metadata</strong> — the custom fields on
                 Investigation, Study and Assay. SEEK only lets an <strong>administrator</strong> add
                 these, and not over the API, so download them as a file and pass it to your admin.</div>
             <form action="{{ base_url }}/seek/model-ttl" method="get"
                   style="display:flex; gap:0.6rem; align-items:flex-end; flex-wrap:wrap; margin-top:0.5rem;">
-                {# Mirrors the profile chosen above, so this cannot disagree with it. #}
+                {# Mirrors the profile and version chosen above, so this cannot
+                   disagree with what gets provisioned. #}
                 <input type="hidden" name="profile" id="seek-emt-profile" value="{{ profile }}">
+                <input type="hidden" name="version" id="seek-emt-version" value="{{ version }}">
                 <button type="submit" class="btn btn-secondary" data-testid="seek-model-ttl">
                     Download Extended Metadata (.ttl) →</button>
-                <span class="muted" style="font-size:0.8rem;">for the profile selected above</span>
+                <span class="muted" style="font-size:0.8rem;">for the profile and version selected above</span>
             </form>
             <p class="muted" style="font-size:0.8rem; margin-top:0.4rem;">
                 Then, as a SEEK admin: <em>Server administration → Extended Metadata Types → New</em>,

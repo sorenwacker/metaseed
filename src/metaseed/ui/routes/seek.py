@@ -79,18 +79,25 @@ def register_seek_routes(  # noqa: C901
         facade = state.get_or_create_facade()
         return SpecLoader().load_profile(facade.version, facade.profile)
 
-    def _load_profile_named(name: str) -> Any:
-        """Load a profile by name (latest version); blank name = the active one."""
+    def _load_profile_named(name: str, version: str = "") -> Any:
+        """Load a profile by name and version.
+
+        A blank name is the active dataset's profile. A blank version is the
+        latest available, preserving the previous behaviour for callers that do
+        not care; a given version is loaded as asked, so a profile with several
+        versions can be provisioned at the one a dataset was built on rather than
+        only its newest.
+        """
         from metaseed.profiles import ProfileFactory
         from metaseed.specs.loader import SpecLoader
 
         name = (name or "").strip()
         if not name:
             return _load_profile(get_state())
-        version = ProfileFactory().get_latest_version(name)
-        if version is None:
+        resolved = (version or "").strip() or ProfileFactory().get_latest_version(name)
+        if resolved is None:
             raise ValueError(f"Unknown profile: {name}")
-        return SpecLoader(profile=name).load_profile(version, name)
+        return SpecLoader(profile=name).load_profile(resolved, name)
 
     def _context(request: Request, **extra: Any) -> dict[str, Any]:
         """Shared template context: export preview + SEEK config + projects."""
@@ -128,11 +135,16 @@ def register_seek_routes(  # noqa: C901
         from metaseed.profiles import ProfileFactory
         from metaseed.ui.datasets import get_current_dataset_name
 
+        factory = ProfileFactory()
+        profiles = factory.list_profiles()
+        profile_versions = {p: factory.list_versions(p) for p in profiles}
+
         context: dict[str, Any] = {
             "base_url": base_url,
             "profile": facade.profile,
             "version": facade.version,
-            "profiles": ProfileFactory().list_profiles(),
+            "profiles": profiles,
+            "profile_versions": profile_versions,
             "dataset_name": get_current_dataset_name(state),
             "entity_count": len(state.nodes_by_id),
             "exportable_count": sum(n for _, n in emit_counts),
@@ -161,7 +173,10 @@ def register_seek_routes(  # noqa: C901
 
     @app.post("/seek/provision", response_class=HTMLResponse)
     async def seek_provision(
-        request: Request, project_id: str = Form(""), profile: str = Form("")
+        request: Request,
+        project_id: str = Form(""),
+        profile: str = Form(""),
+        version: str = Form(""),
     ) -> HTMLResponse:
         """Provision Controlled Vocabularies + Sample Types from a chosen profile."""
         if not _enabled(request):
@@ -178,7 +193,7 @@ def register_seek_routes(  # noqa: C901
             )
 
             pid = project_id or client.default_project_id()
-            plan = build_provisioning_plan(_load_profile_named(profile))
+            plan = build_provisioning_plan(_load_profile_named(profile, version))
             return execute_provisioning_plan(client, plan, project_id=pid)
 
         try:
@@ -255,7 +270,9 @@ def register_seek_routes(  # noqa: C901
         )
 
     @app.get("/seek/model-ttl")
-    async def seek_model_ttl(request: Request, profile: str = "") -> Response:
+    async def seek_model_ttl(
+        request: Request, profile: str = "", version: str = ""
+    ) -> Response:
         """Download a profile's model-only TTL (for the admin Extended Metadata flow)."""
         if not _enabled(request):
             return HTMLResponse("SEEK plugin is disabled", status_code=404)
@@ -268,7 +285,7 @@ def register_seek_routes(  # noqa: C901
                 status_code=503,
             )
         try:
-            spec = _load_profile_named(profile)
+            spec = _load_profile_named(profile, version)
         except ValueError:
             # Do NOT echo the (attacker-controllable) profile value into HTML.
             return HTMLResponse("Unknown profile requested.", status_code=400)
