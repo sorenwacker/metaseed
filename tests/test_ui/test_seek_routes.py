@@ -158,3 +158,36 @@ def test_download_filename_is_sanitized(make_client):
     filename = disposition.split("filename=", 1)[1].strip('"')
     assert '"' not in filename and "\n" not in filename  # no header injection
     assert filename == "ev-il-name-seek.ttl"
+
+
+def test_the_page_offers_one_profile_choice_not_two(make_client):
+    """Two "Model (profile)" dropdowns could disagree -- provisioning one profile
+    while handing an admin the Extended Metadata of another. There is now a single
+    selector, and the Extended Metadata form mirrors it via a hidden field."""
+    client, _settings, _state = make_client()
+    html = client.get("/seek").text
+
+    assert html.count('id="seek-profile"') == 1
+    assert html.count('id="seek-emt-profile"') == 1
+    assert "Model (profile)" not in html  # the old, duplicated label is gone
+
+
+def test_the_page_does_not_pass_a_default_profile_off_as_a_loaded_dataset(make_client):
+    """The page reported "loaded now: <profile>", which was the app's default
+    profile whether or not any dataset was open. The sync step now speaks to the
+    actual dataset, and says plainly when none is loaded."""
+    client, _settings, _state = make_client()
+    html = client.get("/seek").text
+
+    assert "loaded now" not in html
+    assert 'data-testid="seek-sync-empty"' in html
+    assert "No dataset is loaded" in html
+
+
+def test_the_page_avoids_the_worst_jargon(make_client):
+    client, _settings, _state = make_client()
+    html = client.get("/seek").text
+
+    assert "Idempotent" not in html and "idempotent" not in html
+    assert "sample-bearing" not in html
+    assert "closed value lists" not in html
