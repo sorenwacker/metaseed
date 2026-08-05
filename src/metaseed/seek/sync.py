@@ -197,7 +197,12 @@ def sync_dataset_to_seek(
                     )
             else:
                 result.skipped.append(
-                    (node.id, f"entity type {node.entity_type} is not ISA-mapped")
+                    (
+                        node.id,
+                        f"{node.entity_type} has no SEEK role, so it maps to no "
+                        "ISA level — set one in the Spec Builder (Sample, Assay, "
+                        "Study or Investigation) to include it",
+                    )
                 )
         except Exception as exc:  # one bad node must not abort the batch
             result.errors.append((node.id, str(exc)))

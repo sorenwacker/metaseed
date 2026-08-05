@@ -34,10 +34,16 @@
             {{ sync_result.studies|length }} study(ies),
             {{ sync_result.assays|length }} assay(s),
             {{ sync_result.samples|length }} sample(s).</div>
+        {# Many nodes of one entity type give the same reason; show each reason
+           once with a count, rather than repeating it per node. #}
         {% if sync_result.skipped %}<div class="muted" style="font-size:0.85rem;">Skipped:
-            {% for node_id, reason in sync_result.skipped %}{{ reason }}{% if not loop.last %}; {% endif %}{% endfor %}</div>{% endif %}
+            {% set counts = {} %}
+            {% for node_id, reason in sync_result.skipped %}{% set _ = counts.update({reason: counts.get(reason, 0) + 1}) %}{% endfor %}
+            {% for reason, n in counts.items() %}{{ reason }}{% if n > 1 %} (×{{ n }}){% endif %}{% if not loop.last %}; {% endif %}{% endfor %}</div>{% endif %}
         {% if sync_result.errors %}<div style="font-size:0.85rem; color:#b00;">Errors:
-            {% for node_id, reason in sync_result.errors %}{{ reason }}{% if not loop.last %}; {% endif %}{% endfor %}</div>{% endif %}
+            {% set ecounts = {} %}
+            {% for node_id, reason in sync_result.errors %}{% set _ = ecounts.update({reason: ecounts.get(reason, 0) + 1}) %}{% endfor %}
+            {% for reason, n in ecounts.items() %}{{ reason }}{% if n > 1 %} (×{{ n }}){% endif %}{% if not loop.last %}; {% endif %}{% endfor %}</div>{% endif %}
     </div>
     {% endif %}
 
