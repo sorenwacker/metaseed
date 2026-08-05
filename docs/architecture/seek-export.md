@@ -1,5 +1,9 @@
 # SEEK Export
 
+For the task-oriented walkthrough — enabling the plugin, provisioning, syncing,
+and the file import — see [Publishing to FAIRDOM-SEEK](../guides/seek-export.md).
+This page is the format and API reference behind it.
+
 Export a metaseed ISA dataset to [FAIRDOM-SEEK](https://seek4science.org/). SEEK
 ingests the output with its **own built-in** "Import from FAIR Data Station"
 feature — metaseed generates the RDF directly; **no external FAIR Data Station
