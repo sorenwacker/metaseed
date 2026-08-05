@@ -1,7 +1,7 @@
 version: '1.0'
 name: seek
 display_name: SEEK
-description: The data model FAIRDOM-SEEK stores research in. Built on JERM (Just Enough Results Model), it extends ISA with models, SOPs and further asset types. Choose this to describe metadata you intend to publish to a SEEK instance.
+description: The full data model FAIRDOM-SEEK can represent, built on JERM (Just Enough Results Model) — it extends ISA with Projects, computational models, workflows, SOPs and further asset types. Use it to explore and visualize what a SEEK instance can store. It is a reference model, not an upload target — only its ISA core (Investigation, Study, Assay, Sample) syncs and its Project root does not, so a dataset built on it would upload only in part. To build metadata you will publish to a SEEK instance, start from the seek-ready-template profile instead.
 root_entity: Project
 ontology: jerm
 validation_rules:

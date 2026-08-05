@@ -1,6 +1,6 @@
 # SEEK v1.0
 
-The data model [FAIRDOM-SEEK](https://fair-dom.org/platform/seek/) stores research in. Choose it to describe metadata you intend to publish to a SEEK instance; the [SEEK export](../architecture/seek-export.md) provisions a SEEK instance from it and syncs datasets into it.
+The full data model [FAIRDOM-SEEK](https://fair-dom.org/platform/seek/) can represent. Use it to **explore and visualize** what a SEEK instance can store — it is a reference model, not a profile to build uploadable datasets on. Only its ISA core (Investigation, Study, Assay, Sample) syncs through the [SEEK export](../architecture/seek-export.md), and its `Project` root does not, so a dataset built on it would upload only in part. To build metadata you will publish to a SEEK instance, start from the [`seek-ready-template`](seek-ready-template.md) profile, which is shaped so every entity uploads.
 
 It is built on the Just Enough Results Model (JERM), the ontology SEEK types its resources with, and extends the ISA (Investigation-Study-Assay) structure with asset types for computational models, workflows, and collaborative project management. The profile is named for the platform rather than the ontology, because it is the platform you are describing data for; `jerm:` remains the ontology namespace the export emits.
 
