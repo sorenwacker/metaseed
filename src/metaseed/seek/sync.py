@@ -182,10 +182,18 @@ def sync_dataset_to_seek(
                         (node.id, f"no provisioned Sample Type for {node.entity_type}")
                     )
                 else:
+                    data = _sample_data(values)
+                    # SEEK derives a Sample's title from its Title attribute and
+                    # rejects the create when it is blank. A profile that
+                    # identifies a Sample-role entity by a field the core mapping
+                    # does not know (cropxr's Source uses "Source Name") leaves
+                    # Title unset, so fall back to the same non-blank title the
+                    # ISA levels use -- the node's label, or failing that its id.
+                    data.setdefault("Title", title)
                     result.samples[node.id] = client.create_sample(
                         sample_type_id=sample_type_id,
                         project_id=project_id,
-                        data=_sample_data(values),
+                        data=data,
                     )
             else:
                 result.skipped.append(

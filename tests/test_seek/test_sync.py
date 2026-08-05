@@ -183,3 +183,40 @@ def test_sync_skips_sample_without_provisioned_type():
     assert len(result.skipped) == 1
     _node_id, reason = result.skipped[0]
     assert "Sample Type" in reason
+
+
+def test_a_sample_whose_label_field_is_not_a_core_name_still_gets_a_title():
+    """SEEK requires a Sample's Title; without it the POST is a 422.
+
+    ``_sample_data`` derives Title only from ``identifier``/``unique_id``/
+    ``name``/``title``. A profile whose Sample-role entity identifies itself by
+    another field -- cropxr's ``Source`` uses ``Source Name`` -- produced a
+    Sample with a blank Title, and every such sample was rejected. The Title now
+    falls back to the node's label, which is never blank.
+    """
+    from metaseed.seek.sync import sync_dataset_to_seek
+
+    client = MetaseedClient("isa", "1.0")
+    inv = client.create_entity(
+        "Investigation", {"identifier": "INV1", "title": "I"}, skip_validation=True
+    )
+    study = client.create_entity(
+        "Study",
+        {"identifier": "STU1", "title": "S"},
+        parent_id=inv.id,
+        skip_validation=True,
+    )
+    # A sample carrying only a field SEEK's core mapping does not recognise.
+    client.create_entity(
+        "Sample", {"source_name": "S-1"}, parent_id=study.id, skip_validation=True
+    )
+
+    seek = _FakeSeek()
+    result = sync_dataset_to_seek(
+        seek, client, project_id="1", sample_type_ids={"Sample": "st1"}
+    )
+
+    assert not result.errors, result.errors
+    sample_calls = [c for kind, c in seek.calls if kind == "sample"]
+    assert sample_calls, "the sample was not created"
+    assert sample_calls[0]["data"].get("Title"), "Title must not be blank"
