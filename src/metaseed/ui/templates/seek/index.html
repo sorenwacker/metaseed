@@ -4,10 +4,10 @@
 <div class="seek-page" style="padding: 1.5rem; max-width: 780px;">
     <h2>FAIRDOM-SEEK</h2>
     <p class="muted">
-        Two steps: <strong>configure</strong> a SEEK instance's data model from this profile
-        (Controlled Vocabularies + Sample Types), then <strong>sync</strong> the loaded dataset
-        into it — both over SEEK's API using the URL + key set on the
-        <a href="{{ base_url }}/settings">Plugins</a> page.
+        Publish to a SEEK instance in two stages: <strong>set up its data model</strong> from a
+        profile, then <strong>push a dataset</strong> into that model. Both talk to SEEK over its
+        API, using the URL and key from the <a href="{{ base_url }}/settings">Plugins</a> page.
+        You can also export a file and import it through SEEK yourself.
     </p>
 
     {% if action_error %}
@@ -16,7 +16,7 @@
     {% endif %}
     {% if provision_result %}
     <div class="notification notification-success" data-testid="seek-provision-result" style="{{ box }}">
-        <strong>Model provisioned{% if provisioned_profile %} ({{ provisioned_profile }}){% endif %}.</strong>
+        <strong>Model set up{% if provisioned_profile %} ({{ provisioned_profile }}){% endif %}.</strong>
         Created {{ provision_result.created|length }}, reused {{ provision_result.reused|length }}.
         {% if provision_result.created %}<div class="muted" style="font-size:0.85rem;">Created:
             {{ provision_result.created|join(", ") }}</div>{% endif %}
@@ -43,25 +43,27 @@
 
     {% if not api_key_configured %}
     <div class="notification" data-testid="seek-needs-key" style="{{ box }}">
-        Set your SEEK <strong>URL + API key</strong> on the
-        <a href="{{ base_url }}/settings">Plugins</a> page to provision or sync over the API.
+        Set your SEEK <strong>URL and API key</strong> on the
+        <a href="{{ base_url }}/settings">Plugins</a> page. The buttons below stay disabled until
+        you do, because provisioning and syncing both write to SEEK.
     </div>
     {% endif %}
 
-    {# ---- Phase 1: provision the model ---- #}
+    {# ---- 1: set up the model. One profile choice drives both actions here. ---- #}
     <div style="{{ box }}">
-        <h3 style="margin-top:0;">1 · Configure the model in SEEK</h3>
+        <h3 style="margin-top:0;">1 · Set up the model in SEEK</h3>
         <p class="muted" style="font-size:0.9rem;">
-            Pick the model (profile) to export, then <strong>Provision</strong> to create its
-            Controlled Vocabularies (from closed value lists) + Sample Types (from sample-bearing
-            entities) in SEEK over the API. Idempotent — re-running reuses what already exists.
-            To then sync a dataset, provision the profile it was built on
-            (loaded now: <strong>{{ profile }}</strong>).
+            Choose a profile. <strong>Set up Sample Types</strong> creates it in SEEK as Sample
+            Types, with a Controlled Vocabulary for each field that has a fixed list of allowed
+            values. Safe to run again — it reuses whatever already exists. To sync a dataset later,
+            set up the profile it was built on.
         </p>
+
         <form action="{{ base_url }}/seek/provision" method="post" data-testid="seek-provision-form"
               style="display:flex; gap:0.6rem; align-items:flex-end; flex-wrap:wrap;">
-            <label style="font-size:0.85rem;">Model (profile)
-                <select name="profile" class="form-input" data-testid="seek-model-profile">
+            <label style="font-size:0.85rem;">Profile
+                <select name="profile" id="seek-profile" class="form-input" data-testid="seek-model-profile"
+                        onchange="var h=document.getElementById('seek-emt-profile'); if (h) h.value=this.value;">
                     {% for p in profiles %}
                     <option value="{{ p }}"{% if p == profile %} selected{% endif %}>{{ p }}</option>
                     {% endfor %}
@@ -69,40 +71,37 @@
             </label>
             {% include "seek/_project_select.html" %}
             <button type="submit" class="btn btn-primary" data-testid="seek-provision-submit"
-                    {% if not api_key_configured or not projects %}disabled{% endif %}>Provision model →</button>
+                    {% if not api_key_configured or not projects %}disabled{% endif %}>Set up Sample Types →</button>
         </form>
 
         <div style="margin-top:0.9rem; padding-top:0.8rem; border-top:1px dashed var(--border, #ddd);">
-            <div style="font-size:0.9rem;"><strong>Extended Metadata</strong> (custom fields on
-                Investigation/Study/Assay) — SEEK only lets an <strong>admin</strong> create these,
-                so download the definitions and hand them over.</div>
+            <div style="font-size:0.9rem;"><strong>Extended Metadata</strong> — the custom fields on
+                Investigation, Study and Assay. SEEK only lets an <strong>administrator</strong> add
+                these, and not over the API, so download them as a file and pass it to your admin.</div>
             <form action="{{ base_url }}/seek/model-ttl" method="get"
                   style="display:flex; gap:0.6rem; align-items:flex-end; flex-wrap:wrap; margin-top:0.5rem;">
-                <label style="font-size:0.85rem;">Model (profile)
-                    <select name="profile" class="form-input">
-                        {% for p in profiles %}
-                        <option value="{{ p }}"{% if p == profile %} selected{% endif %}>{{ p }}</option>
-                        {% endfor %}
-                    </select>
-                </label>
+                {# Mirrors the profile chosen above, so this cannot disagree with it. #}
+                <input type="hidden" name="profile" id="seek-emt-profile" value="{{ profile }}">
                 <button type="submit" class="btn btn-secondary" data-testid="seek-model-ttl">
                     Download Extended Metadata (.ttl) →</button>
+                <span class="muted" style="font-size:0.8rem;">for the profile selected above</span>
             </form>
             <p class="muted" style="font-size:0.8rem; margin-top:0.4rem;">
-                Then, as a SEEK admin: <em>Server administration → Extended Metadata Types →
-                create from FAIR Data Station TTL</em> → upload the file.
+                Then, as a SEEK admin: <em>Server administration → Extended Metadata Types → New</em>,
+                pick the <strong>FAIR DS TTL</strong> tab, upload the file, and confirm on the preview.
             </p>
         </div>
     </div>
 
-    {# ---- Phase 2: sync the data ---- #}
+    {# ---- 2: sync the data ---- #}
     <div style="{{ box }}">
-        <h3 style="margin-top:0;">2 · Sync the dataset to SEEK</h3>
+        <h3 style="margin-top:0;">2 · Push a dataset into SEEK</h3>
         {% if exportable_count %}
-        <p class="muted" style="font-size:0.9rem;">Pushes profile <strong>{{ profile }}</strong>
-            · dataset <strong>{{ dataset_name or "(unsaved)" }}</strong> —
+        <p class="muted" style="font-size:0.9rem;">Sends the dataset
+            <strong>{{ dataset_name or "(unsaved)" }}</strong> (built on <strong>{{ profile }}</strong>) —
             {% for etype, n in entity_counts %}{{ etype }} ×{{ n }}{% if not loop.last %}, {% endif %}{% endfor %}
-            — as Investigations/Studies/Assays and Samples (into the provisioned Sample Types).</p>
+            — into SEEK as Investigations, Studies, Assays and Samples, matched to the Sample Types
+            set up in step 1.</p>
         <form action="{{ base_url }}/seek/sync" method="post" data-testid="seek-sync-form"
               style="display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap;">
             {% include "seek/_project_select.html" %}
@@ -110,16 +109,18 @@
                     {% if not api_key_configured or not projects %}disabled{% endif %}>Sync to SEEK →</button>
         </form>
         {% else %}
-        <p class="muted" data-testid="seek-sync-empty">No exportable dataset loaded — build or load one first.</p>
+        <p class="muted" data-testid="seek-sync-empty">No dataset is loaded. Step 1 needs only a
+            profile, but this step acts on an open dataset — load or build one first.</p>
         {% endif %}
     </div>
 
-    {# ---- Alternative: file export ---- #}
+    {# ---- 3: file export ---- #}
     <div style="{{ box }}">
-        <h3 style="margin-top:0;">Or export a file</h3>
+        <h3 style="margin-top:0;">3 · Or export a file to import yourself</h3>
         <p class="muted" style="font-size:0.9rem;">
-            Download FAIR Data Station RDF and import it via SEEK's own
-            <em>Import from FAIR Data Station</em> (handles the full ISA + Extended Metadata).
+            Download the dataset as FAIR Data Station RDF and import it through SEEK's own
+            <em>Import from FAIR Data Station</em>, which handles the full ISA structure and
+            Extended Metadata in one step. No API key needed.
         </p>
         {% if exportable_count %}
         <a href="{{ base_url }}/seek/isa-rdf" class="btn btn-secondary"
@@ -134,8 +135,9 @@
     </div>
 
     <p class="muted" style="font-size:0.85rem;">
-        Note: SEEK reads ISA levels positionally, so with the ISA profile (no ObservationUnit
-        level) entities below Study import one level high; Investigation and Study round-trip cleanly.
+        Note: SEEK places entities by where they sit in the ISA hierarchy, not by their name. With
+        the ISA profile (which has no ObservationUnit level) entities below Study import one level
+        high; Investigation and Study round-trip cleanly.
     </p>
 </div>
 {% endblock %}

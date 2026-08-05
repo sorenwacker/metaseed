@@ -1,5 +1,5 @@
 {% if projects %}
-<label style="font-size:0.85rem;">Project
+<label style="font-size:0.85rem;" title="A project on your SEEK server. Every SEEK resource must belong to one; this list comes from the instance.">Project on your SEEK server
     <select name="project_id" class="form-input" data-testid="seek-project-select">
         {% for pid, ptitle in projects %}
         <option value="{{ pid }}">{{ ptitle }}</option>
@@ -8,6 +8,6 @@
 </label>
 {% else %}
 <span class="muted" data-testid="seek-no-projects" style="font-size:0.85rem;">
-    No SEEK projects available — check the URL/key and that the instance is reachable.
+    No projects found on your SEEK server — check the URL and key on the Plugins page, and that the instance is reachable.
 </span>
 {% endif %}
