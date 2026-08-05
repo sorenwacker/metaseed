@@ -71,6 +71,7 @@ nav:
       - Spec Builder: guides/spec-builder.md
       - Ontology Lookup: guides/ontology-lookup.md
       - Profile Comparison: guides/spec-merge.md
+      - Publishing to SEEK: guides/seek-export.md
       - Logging: guides/logging.md
   - Profiles:
       - Darwin Core: profiles/darwin-core.md
