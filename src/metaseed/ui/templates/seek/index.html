@@ -27,13 +27,17 @@
     </div>
     {% endif %}
     {% if sync_result %}
-    <div class="notification notification-success" data-testid="seek-sync-result" style="{{ box }}">
-        <strong>Synced {{ sync_result.created_count }} resource{{ "" if sync_result.created_count == 1 else "s" }} to SEEK.</strong>
+    {% set not_uploaded = sync_result.skipped|length + sync_result.errors|length %}
+    <div class="notification {{ 'notification-warning' if not_uploaded else 'notification-success' }}"
+         data-testid="seek-sync-result" style="{{ box }}{% if not_uploaded %} border-color:#c60;{% endif %}">
+        <strong>Synced {{ sync_result.created_count }} resource{{ "" if sync_result.created_count == 1 else "s" }} to SEEK{% if not_uploaded %}, but {{ not_uploaded }} entit{{ "y was" if not_uploaded == 1 else "ies were" }} not uploaded{% endif %}.</strong>
         <div class="muted" style="font-size:0.85rem;">
             {{ sync_result.investigations|length }} investigation(s),
             {{ sync_result.studies|length }} study(ies),
             {{ sync_result.assays|length }} assay(s),
             {{ sync_result.samples|length }} sample(s).</div>
+        {% if not_uploaded %}<div style="font-size:0.85rem; color:#c60; margin-top:0.3rem;">
+            <strong>{{ not_uploaded }} of your entit{{ "y" if not_uploaded == 1 else "ies" }} did not reach SEEK</strong> — see below. Your SEEK copy is incomplete.</div>{% endif %}
         {# Many nodes of one entity type give the same reason; show each reason
            once with a count, rather than repeating it per node. #}
         {% if sync_result.skipped %}<div class="muted" style="font-size:0.85rem;">Skipped:

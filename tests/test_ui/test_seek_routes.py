@@ -216,3 +216,78 @@ def test_the_model_download_honours_the_requested_version(make_client):
     # The two versions differ, so honouring the request produces different output;
     # ignoring it and loading the latest for both would make them identical.
     assert v11.content != v12.content
+
+
+def _sync_result(created=8, skipped=0, errored=0):
+    from metaseed.seek.sync import SyncResult
+
+    r = SyncResult()
+    r.investigations = {f"i{n}": str(n) for n in range(min(created, 1))}
+    r.samples = {f"s{n}": str(n) for n in range(max(created - 1, 0))}
+    r.skipped = [(f"k{n}", "no SEEK role") for n in range(skipped)]
+    r.errors = [(f"e{n}", "boom") for n in range(errored)]
+    return r
+
+
+def test_a_partial_sync_warns_rather_than_reporting_success(make_client):
+    """Syncing 8 of 49 entities used to show a green 'Synced 8 resources' with
+    the 41 that failed greyed out below -- reading as full success. A sync that
+    left anything behind must say so, and how much."""
+    from jinja2 import Environment, FileSystemLoader
+
+    # Render the template directly with a partial result.
+    import metaseed.ui.app as appmod
+
+    env = Environment(
+        loader=FileSystemLoader(str(appmod.TEMPLATES_DIR)), autoescape=True
+    )
+    html = env.get_template("seek/index.html").render(
+        base_url="",
+        profile="p",
+        version="1.0",
+        profiles=["p"],
+        profile_versions={"p": ["1.0"]},
+        dataset_name="d",
+        exportable_count=0,
+        entity_counts=[],
+        api_key_configured=True,
+        projects=[("1", "P")],
+        seek_url="http://x",
+        provision_result=None,
+        action_error=None,
+        sync_result=_sync_result(created=8, skipped=28, errored=9),
+    )
+    assert "not uploaded" in html
+    assert "notification-warning" in html
+    assert "notification-success" not in html.split("seek-sync-result")[1][:400]
+    assert "37" in html  # 28 skipped + 9 errored
+
+
+def test_a_complete_sync_still_reads_as_success(make_client):
+    from jinja2 import Environment, FileSystemLoader
+
+    import metaseed.ui.app as appmod
+
+    env = Environment(
+        loader=FileSystemLoader(str(appmod.TEMPLATES_DIR)), autoescape=True
+    )
+    html = env.get_template("seek/index.html").render(
+        base_url="",
+        profile="p",
+        version="1.0",
+        profiles=["p"],
+        profile_versions={"p": ["1.0"]},
+        dataset_name="d",
+        exportable_count=0,
+        entity_counts=[],
+        api_key_configured=True,
+        projects=[("1", "P")],
+        seek_url="http://x",
+        provision_result=None,
+        action_error=None,
+        sync_result=_sync_result(created=8, skipped=0, errored=0),
+    )
+    # The success banner, not the warning one.
+    assert "notification-success" in html
+    assert "notification-warning" not in html
+    assert "not uploaded" not in html
