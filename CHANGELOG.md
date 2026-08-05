@@ -2,7 +2,35 @@
 
 ## Unreleased
 
+## v0.29.0 (2026-08-05)
+
+### Added
+- The SEEK page shows what a profile becomes **before** uploading: a browsable
+  panel of the Sample Types (each expandable to its columns) that provisioning
+  will create, and the Extended Metadata the Investigation, Study and Assay
+  records carry. It refreshes live with the profile/version dropdowns and writes
+  nothing to SEEK. Backed by `metaseed.seek.preview.build_model_preview`, read
+  from the same plan `Provision` executes so it cannot drift.
+- `seek-ready-template`, a minimal ISA-shaped built-in profile
+  (Investigation → Study → Assay → Sample) whose datasets upload to SEEK with
+  nothing left behind, plus a guide on authoring SEEK-ready profiles.
+- A study's data files sync to SEEK as one remote data file linking to their
+  common base URL, so externally hosted files (e.g. an S3 bucket) are recorded
+  by filename without uploading bytes. `DataFile` is a valid SEEK role.
+- The SEEK page can provision a chosen profile **version**, not only the latest.
+- A dataset can be imported into SEEK through its FAIR Data Station importer,
+  driven from the UI.
+
 ### Changed
+- The SEEK page describes provision, sync and export in the user's terms, and
+  explains that "Project" is a project on the SEEK server.
+- A sync that leaves entities behind now warns instead of reporting plain
+  success, and says once, actionably, why each entity was skipped.
+- A plain `list` field is sent as the single string SEEK's Text attribute
+  expects, and every synced sample is given a title SEEK will accept.
+- The property URI is percent-encoded wherever a dataset is exported, not only
+  where it is provisioned; a gate keeps provisioning and export naming a field
+  identically, so a sample is never rejected for a URI the two sides disagree on.
 - Validating an extracted record now runs the profile's cross-field validation
   rules, not only the record's own field constraints. `validate_extracted`
   previously ignored `validation_rules` entirely, so a profile rule could not
