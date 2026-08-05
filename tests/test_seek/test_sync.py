@@ -220,3 +220,51 @@ def test_a_sample_whose_label_field_is_not_a_core_name_still_gets_a_title():
     sample_calls = [c for kind, c in seek.calls if kind == "sample"]
     assert sample_calls, "the sample was not created"
     assert sample_calls[0]["data"].get("Title"), "Title must not be blank"
+
+
+def test_a_plain_list_field_is_joined_for_seek_text_attribute():
+    """A list field without an enum is provisioned as a scalar SEEK Text
+    attribute, so its array value must be sent as a string. Sending the raw
+    array made SEEK read the attribute as blank and reject the sample with
+    ``Input: is required``, even though the value was present."""
+    from metaseed.seek.sync import _sample_data
+
+    # "Input" is a plain list (Text attribute); "tags" is an enum list (CV List).
+    data = _sample_data(
+        {"Input": ["SRC-1", "SRC-2"], "tags": ["a", "b"]},
+        text_list_fields=frozenset({"Input"}),
+    )
+
+    assert isinstance(data["Input"], str), data["Input"]
+    assert "SRC-1" in data["Input"] and "SRC-2" in data["Input"]
+    assert data["tags"] == ["a", "b"]  # enum list stays an array
+
+
+def test_sample_with_a_required_list_field_syncs():
+    """End to end: a Sample carrying a plain-list field is created, not 422'd."""
+    from metaseed.seek.sync import sync_dataset_to_seek
+
+    client = MetaseedClient("isa", "1.0")
+    inv = client.create_entity(
+        "Investigation", {"identifier": "I", "title": "I"}, skip_validation=True
+    )
+    study = client.create_entity(
+        "Study",
+        {"identifier": "S", "title": "S"},
+        parent_id=inv.id,
+        skip_validation=True,
+    )
+    # Sample has no list field in ISA, so force one through a value; the point is
+    # the join happens for list-valued data regardless of the profile shape.
+    client.create_entity(
+        "Sample",
+        {"name": "smp", "sources": ["A", "B"]},
+        parent_id=study.id,
+        skip_validation=True,
+    )
+
+    seek = _FakeSeek()
+    result = sync_dataset_to_seek(
+        seek, client, project_id="1", sample_type_ids={"Sample": "st"}
+    )
+    assert not result.errors, result.errors

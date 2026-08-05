@@ -61,7 +61,9 @@ _CORE_TO_ATTRIBUTE = {
 _CORE_PRIORITY = {"unique_id": 0, "identifier": 1, "name": 2, "title": 3}
 
 
-def _sample_data(values: Mapping[str, Any]) -> dict[str, Any]:
+def _sample_data(
+    values: Mapping[str, Any], text_list_fields: frozenset[str] = frozenset()
+) -> dict[str, Any]:
     """The postable attribute map for a Sample: drop metadata keys and empties.
 
     Core identity/description fields are routed onto the Sample Type's ``Title`` /
@@ -73,12 +75,23 @@ def _sample_data(values: Mapping[str, Any]) -> dict[str, Any]:
     Several core fields can map onto one attribute (e.g. ``identifier`` and
     ``title`` both onto ``Title``); the winner is picked deterministically by
     :data:`_CORE_PRIORITY`, not by dict order.
+
+    A list field without an enum is provisioned as a scalar SEEK ``Text``
+    attribute (see :data:`metaseed.seek.provision._LIST_FALLBACK_TITLE`), which
+    cannot hold an array; ``text_list_fields`` names those fields so their value
+    is joined into a string. A list field *with* an enum is a Controlled
+    Vocabulary List and keeps its array.
     """
     data: dict[str, Any] = {}
     core_winner: dict[str, int] = {}  # attribute -> priority of the value it holds
     for key, value in values.items():
         if key.startswith("_") or value in (None, "", [], {}):
             continue
+        if key in text_list_fields and isinstance(value, list):
+            # A scalar Text attribute in SEEK, so collapse the list to a string.
+            value = ", ".join(str(v) for v in value if v not in (None, ""))
+            if not value:
+                continue
         if not (
             isinstance(value, (str, int, float, bool))
             or (
@@ -132,6 +145,18 @@ def sync_dataset_to_seek(
         for name, entity in profile.entities.items()
         if entity.seek and entity.seek.role
     }
+    # A list field with no enum is provisioned as a scalar SEEK Text attribute,
+    # so its value must be a string, not an array. Mirrors provision's rule.
+    from metaseed.specs.schema import FieldType
+
+    text_list_fields_by_entity = {
+        name: frozenset(
+            f.name
+            for f in entity.fields
+            if f.type == FieldType.LIST and not (f.constraints and f.constraints.enum)
+        )
+        for name, entity in profile.entities.items()
+    }
     values_by_node = {
         e.get("_node_id"): e for e in metaseed_client.serialize().get("entities", [])
     }
@@ -182,7 +207,10 @@ def sync_dataset_to_seek(
                         (node.id, f"no provisioned Sample Type for {node.entity_type}")
                     )
                 else:
-                    data = _sample_data(values)
+                    data = _sample_data(
+                        values,
+                        text_list_fields_by_entity.get(node.entity_type, frozenset()),
+                    )
                     # SEEK derives a Sample's title from its Title attribute and
                     # rejects the create when it is blank. A profile that
                     # identifies a Sample-role entity by a field the core mapping
