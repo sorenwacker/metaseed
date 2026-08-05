@@ -72,6 +72,7 @@ nav:
       - Ontology Lookup: guides/ontology-lookup.md
       - Profile Comparison: guides/spec-merge.md
       - Publishing to SEEK: guides/seek-export.md
+      - Authoring a SEEK-ready profile: guides/seek-ready-profiles.md
       - Logging: guides/logging.md
   - Profiles:
       - Darwin Core: profiles/darwin-core.md
@@ -79,6 +80,7 @@ nav:
       - ENA: profiles/ena.md
       - ISA: profiles/isa.md
       - SEEK: profiles/seek.md
+      - SEEK-ready (ISA): profiles/seek-ready.md
       - MIAPPE: profiles/miappe.md
       - MIAPPE-HTP: profiles/miappe-htp.md
       - MetaboLights: profiles/metabolights.md
