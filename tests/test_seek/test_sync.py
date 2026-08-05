@@ -44,6 +44,19 @@ class _FakeSeek:
         self.calls.append(("sample", {"sample_type_id": sample_type_id, "data": data}))
         return self._next()
 
+    def create_data_file(
+        self,
+        *,
+        title,
+        project_id,
+        url,
+        original_filename,
+        description=None,
+        assay_ids=None,
+    ) -> str:
+        self.calls.append(("data_file", {"url": url, "description": description}))
+        return self._next()
+
 
 def _dataset() -> MetaseedClient:
     client = MetaseedClient("isa", "1.0")
@@ -268,3 +281,90 @@ def test_sample_with_a_required_list_field_syncs():
         seek, client, project_id="1", sample_type_ids={"Sample": "st"}
     )
     assert not result.errors, result.errors
+
+
+def test_data_files_under_a_study_become_one_remote_data_file():
+    """A study's file entities collapse to a single SEEK DataFile linking to the
+    common base URL, with the filenames listed -- the files stay in external
+    storage, SEEK holds the reference."""
+    from metaseed import MetaseedClient
+    from metaseed.seek.sync import sync_dataset_to_seek
+    from metaseed.specs.schema import (
+        EntityDefSpec as E,
+    )
+    from metaseed.specs.schema import (
+        FieldSpec as F,
+    )
+    from metaseed.specs.schema import (
+        FieldType as T,
+    )
+    from metaseed.specs.schema import (
+        ProfileSpec,
+        SeekEntityConfig,
+    )
+
+    spec = ProfileSpec(
+        spec_version="0.6",
+        version="1.0",
+        name="df",
+        display_name="DF",
+        description="d",
+        ontology="T",
+        root_entity="Investigation",
+        entities={
+            "Investigation": E(
+                description="d",
+                seek=SeekEntityConfig(role="Investigation"),
+                fields=[
+                    F(name="identifier", type=T.STRING, is_identifier=True),
+                    F(name="title", type=T.STRING, is_label=True),
+                    F(name="studies", type=T.LIST, items="Study"),
+                ],
+            ),
+            "Study": E(
+                description="d",
+                seek=SeekEntityConfig(role="Study"),
+                fields=[
+                    F(name="identifier", type=T.STRING, is_identifier=True),
+                    F(name="title", type=T.STRING, is_label=True),
+                    F(name="files", type=T.LIST, items="DataFile"),
+                ],
+            ),
+            "DataFile": E(
+                description="d",
+                seek=SeekEntityConfig(role="DataFile"),
+                fields=[
+                    F(name="file_name", type=T.STRING, is_label=True),
+                    F(name="file_location", type=T.URI),
+                ],
+            ),
+        },
+    )
+    c = MetaseedClient.from_spec(spec.model_dump(mode="json"))
+    inv = c.create_entity(
+        "Investigation", {"identifier": "I", "title": "t"}, skip_validation=True
+    )
+    st = c.create_entity(
+        "Study",
+        {"identifier": "S", "title": "s"},
+        parent_id=inv.id,
+        skip_validation=True,
+    )
+    for n in ("a.raw", "b.raw"):
+        c.create_entity(
+            "DataFile",
+            {"file_name": n, "file_location": f"s3://bucket/S/{n}"},
+            parent_id=st.id,
+            skip_validation=True,
+        )
+
+    seek = _FakeSeek()
+    res = sync_dataset_to_seek(seek, c, project_id="1", sample_type_ids={})
+
+    assert len(res.data_files) == 1, res.data_files
+    assert not res.errors, res.errors
+    df_calls = [c for kind, c in seek.calls if kind == "data_file"]
+    assert df_calls[0]["url"] == "s3://bucket/S/"
+    assert (
+        "a.raw" in df_calls[0]["description"] and "b.raw" in df_calls[0]["description"]
+    )

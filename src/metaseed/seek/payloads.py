@@ -205,3 +205,42 @@ def controlled_vocab_payload(
     if ols_root_term_uris is not None:
         attributes["ols_root_term_uris"] = ols_root_term_uris
     return _document("sample_controlled_vocabs", attributes)
+
+
+def data_file_payload(
+    *,
+    title: str,
+    project_id: str | int,
+    url: str,
+    original_filename: str,
+    description: str | None = None,
+    assay_ids: list[str | int] | None = None,
+) -> dict[str, Any]:
+    """Build a POST body for ``/data_files`` as a **remote** content blob.
+
+    The file itself stays in external storage (an S3 bucket); SEEK registers a
+    reference to it -- a ``url`` plus the ``original_filename`` -- rather than
+    holding the bytes. This is SEEK's remote ContentBlob, the shape its API doc
+    describes for "URI to the content's location". No upload follows.
+
+    Args:
+        title: Human-readable title for the data file.
+        project_id: SEEK project it belongs to.
+        url: The content's location (e.g. the study's S3 base URL).
+        original_filename: The filename SEEK shows for it.
+        description: Optional description (used to carry the file list).
+        assay_ids: SEEK assay ids to associate the file with, if any.
+
+    Returns:
+        A JSON:API request document.
+    """
+    attributes: dict[str, Any] = {
+        "title": title,
+        "content_blobs": [{"url": url, "original_filename": original_filename}],
+    }
+    if description is not None:
+        attributes["description"] = description
+    relationships: dict[str, Any] = {"projects": _to_many("projects", [project_id])}
+    if assay_ids:
+        relationships["assays"] = _to_many("assays", assay_ids)
+    return _document("data_files", attributes, relationships)

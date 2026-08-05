@@ -85,6 +85,7 @@ SEEK_ROLES: tuple[str, ...] = (
     "ObservationUnit",
     "Sample",
     "Assay",
+    "DataFile",
 )
 """The ISA/JERM object types a metaseed entity may declare as its SEEK ``role``.
 

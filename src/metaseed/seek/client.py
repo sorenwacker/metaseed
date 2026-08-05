@@ -267,6 +267,29 @@ class SeekClient:
             ),
         )
 
+    def create_data_file(
+        self,
+        *,
+        title: str,
+        project_id: str,
+        url: str,
+        original_filename: str,
+        description: str | None = None,
+        assay_ids: list[str | int] | None = None,
+    ) -> str:
+        """Register a remote Data File (external content by URL); return its id."""
+        return self._create(
+            "/data_files",
+            payloads.data_file_payload(
+                title=title,
+                project_id=project_id,
+                url=url,
+                original_filename=original_filename,
+                description=description,
+                assay_ids=assay_ids,
+            ),
+        )
+
     def create_controlled_vocab(
         self,
         *,

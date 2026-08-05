@@ -31,6 +31,7 @@ class SyncResult:
     studies: dict[str, str] = dc_field(default_factory=dict)
     assays: dict[str, str] = dc_field(default_factory=dict)
     samples: dict[str, str] = dc_field(default_factory=dict)
+    data_files: dict[str, str] = dc_field(default_factory=dict)
     skipped: list[tuple[str, str]] = dc_field(default_factory=list)
     errors: list[tuple[str, str]] = dc_field(default_factory=list)
 
@@ -39,7 +40,13 @@ class SyncResult:
         """Total SEEK resources created."""
         return sum(
             len(d)
-            for d in (self.investigations, self.studies, self.assays, self.samples)
+            for d in (
+                self.investigations,
+                self.studies,
+                self.assays,
+                self.samples,
+                self.data_files,
+            )
         )
 
 
@@ -112,6 +119,169 @@ def _sample_data(
     return data
 
 
+def _file_fields(entity: Any) -> tuple[str | None, str | None]:
+    """(filename field, url field) for a DataFile-role entity."""
+    from metaseed.specs.schema import FieldType
+
+    name_field = next(
+        (f.name for f in entity.fields if f.name in ("file_name", "filename")),
+        next((f.name for f in entity.fields if f.is_label), None),
+    )
+    url_field = next(
+        (f.name for f in entity.fields if f.type == FieldType.URI),
+        next(
+            (
+                f.name
+                for f in entity.fields
+                if f.name in ("file_location", "url", "location")
+            ),
+            None,
+        ),
+    )
+    return name_field, url_field
+
+
+def _base_url(locations: list[str]) -> str:
+    """The common directory URL of a set of file locations (trailing slash)."""
+
+    from os.path import commonprefix
+
+    head, _, _ = commonprefix(locations).rpartition("/")
+    return head + "/" if head else ""
+
+
+@dataclass
+class _SyncContext:
+    """The shared state a node placement needs, so the walk stays a thin recursion."""
+
+    client: SeekClient
+    project_id: str
+    sample_type_ids: Mapping[str, str]
+    roles: dict[str, str]
+    values_by_node: dict[str, Any]
+    text_list_fields_by_entity: dict[str, frozenset[str]]
+    file_fields_by_entity: dict[str, tuple[str | None, str | None]]
+    files_by_study: dict[str, list[tuple[str, str]]]
+    result: SyncResult
+
+
+def _title_of(node: Any, values: Mapping[str, Any]) -> str:
+    return str(values.get("title") or node.label or node.id)
+
+
+def _place_node(
+    ctx: _SyncContext,
+    node: Any,
+    investigation_id: str | None,
+    study_id: str | None,
+) -> tuple[str | None, str | None]:
+    """Create the SEEK resource for one node; return the ids to thread to children."""
+    r = ctx.result
+    values = ctx.values_by_node.get(node.id, {})
+    jerm_class = entity_jerm_class(node.entity_type, ctx.roles.get(node.entity_type))
+    title = _title_of(node, values)
+    description = values.get("description")
+    next_investigation, next_study = investigation_id, study_id
+
+    try:
+        if jerm_class == "Investigation":
+            next_investigation = r.investigations[node.id] = (
+                ctx.client.create_investigation(
+                    title=title, project_id=ctx.project_id, description=description
+                )
+            )
+        elif jerm_class == "Study":
+            if investigation_id is None:
+                r.skipped.append((node.id, "study has no investigation parent"))
+            else:
+                next_study = r.studies[node.id] = ctx.client.create_study(
+                    title=title,
+                    investigation_id=investigation_id,
+                    description=description,
+                )
+        elif jerm_class == "Assay":
+            if study_id is None:
+                r.skipped.append((node.id, "assay has no study parent"))
+            else:
+                r.assays[node.id] = ctx.client.create_assay(
+                    title=title, study_id=study_id
+                )
+        elif jerm_class == "Sample":
+            _place_sample(ctx, node, values, title)
+        elif jerm_class == "DataFile":
+            _collect_file(ctx, node, values, study_id)
+        else:
+            r.skipped.append(
+                (
+                    node.id,
+                    f"{node.entity_type} has no SEEK role, so it maps to no ISA "
+                    "level — set one in the Spec Builder (Sample, Assay, Study or "
+                    "Investigation) to include it",
+                )
+            )
+    except Exception as exc:  # one bad node must not abort the batch
+        r.errors.append((node.id, str(exc)))
+    return next_investigation, next_study
+
+
+def _place_sample(
+    ctx: _SyncContext, node: Any, values: Mapping[str, Any], title: str
+) -> None:
+    sample_type_id = ctx.sample_type_ids.get(node.entity_type)
+    if sample_type_id is None:
+        ctx.result.skipped.append(
+            (node.id, f"no provisioned Sample Type for {node.entity_type}")
+        )
+        return
+    data = _sample_data(
+        values, ctx.text_list_fields_by_entity.get(node.entity_type, frozenset())
+    )
+    # SEEK derives a Sample's title from its Title attribute and rejects a blank
+    # one; fall back to the same non-blank title the ISA levels use.
+    data.setdefault("Title", title)
+    ctx.result.samples[node.id] = ctx.client.create_sample(
+        sample_type_id=sample_type_id, project_id=ctx.project_id, data=data
+    )
+
+
+def _collect_file(
+    ctx: _SyncContext, node: Any, values: Mapping[str, Any], study_id: str | None
+) -> None:
+    if study_id is None:
+        ctx.result.skipped.append((node.id, "data file has no study parent"))
+        return
+    name_f, url_f = ctx.file_fields_by_entity.get(node.entity_type, (None, None))
+    filename = str((name_f and values.get(name_f)) or node.label or node.id)
+    location = str((url_f and values.get(url_f)) or "")
+    ctx.files_by_study.setdefault(study_id, []).append((filename, location))
+
+
+def _create_study_data_file(
+    client: SeekClient,
+    project_id: str,
+    node_id: str,
+    files: list[tuple[str, str]],
+    result: SyncResult,
+) -> None:
+    """Register a study's external files as one remote SEEK data file."""
+    base_url = _base_url([loc for _, loc in files if loc])
+    if not base_url:
+        result.skipped.append(
+            (node_id, f"{len(files)} data file(s) have no location URL to link to")
+        )
+        return
+    try:
+        result.data_files[node_id] = client.create_data_file(
+            title=f"Data files ({len(files)})",
+            project_id=project_id,
+            url=base_url,
+            original_filename=f"{len(files)} files in external storage",
+            description="Files: " + ", ".join(fn for fn, _ in files),
+        )
+    except Exception as exc:  # one study's files must not abort the sync
+        result.errors.append((node_id, str(exc)))
+
+
 def sync_dataset_to_seek(
     client: SeekClient,
     metaseed_client: MetaseedClient,
@@ -157,88 +327,45 @@ def sync_dataset_to_seek(
         )
         for name, entity in profile.entities.items()
     }
+
+    file_fields_by_entity = {
+        name: _file_fields(entity) for name, entity in profile.entities.items()
+    }
+    # study_id -> list of (filename, location) gathered from its DataFile nodes.
+    files_by_study: dict[str, list[tuple[str, str]]] = {}
+
     values_by_node = {
         e.get("_node_id"): e for e in metaseed_client.serialize().get("entities", [])
     }
     result = SyncResult()
 
-    def title_of(node: Any, values: Mapping[str, Any]) -> str:
-        raw = values.get("title") or node.label or node.id
-        return str(raw)
+    ctx = _SyncContext(
+        client=client,
+        project_id=project_id,
+        sample_type_ids=sample_type_ids,
+        roles=roles,
+        values_by_node=values_by_node,
+        text_list_fields_by_entity=text_list_fields_by_entity,
+        file_fields_by_entity=file_fields_by_entity,
+        files_by_study=files_by_study,
+        result=result,
+    )
 
     def walk(node: Any, investigation_id: str | None, study_id: str | None) -> None:
-        values = values_by_node.get(node.id, {})
-        jerm_class = entity_jerm_class(node.entity_type, roles.get(node.entity_type))
-        title = title_of(node, values)
-        description = values.get("description")
-        next_investigation, next_study = investigation_id, study_id
-
-        try:
-            if jerm_class == "Investigation":
-                new_id = client.create_investigation(
-                    title=title, project_id=project_id, description=description
-                )
-                result.investigations[node.id] = new_id
-                next_investigation = new_id
-            elif jerm_class == "Study":
-                if investigation_id is None:
-                    result.skipped.append(
-                        (node.id, "study has no investigation parent")
-                    )
-                else:
-                    new_id = client.create_study(
-                        title=title,
-                        investigation_id=investigation_id,
-                        description=description,
-                    )
-                    result.studies[node.id] = new_id
-                    next_study = new_id
-            elif jerm_class == "Assay":
-                if study_id is None:
-                    result.skipped.append((node.id, "assay has no study parent"))
-                else:
-                    result.assays[node.id] = client.create_assay(
-                        title=title, study_id=study_id
-                    )
-            elif jerm_class == "Sample":
-                sample_type_id = sample_type_ids.get(node.entity_type)
-                if sample_type_id is None:
-                    result.skipped.append(
-                        (node.id, f"no provisioned Sample Type for {node.entity_type}")
-                    )
-                else:
-                    data = _sample_data(
-                        values,
-                        text_list_fields_by_entity.get(node.entity_type, frozenset()),
-                    )
-                    # SEEK derives a Sample's title from its Title attribute and
-                    # rejects the create when it is blank. A profile that
-                    # identifies a Sample-role entity by a field the core mapping
-                    # does not know (cropxr's Source uses "Source Name") leaves
-                    # Title unset, so fall back to the same non-blank title the
-                    # ISA levels use -- the node's label, or failing that its id.
-                    data.setdefault("Title", title)
-                    result.samples[node.id] = client.create_sample(
-                        sample_type_id=sample_type_id,
-                        project_id=project_id,
-                        data=data,
-                    )
-            else:
-                result.skipped.append(
-                    (
-                        node.id,
-                        f"{node.entity_type} has no SEEK role, so it maps to no "
-                        "ISA level — set one in the Spec Builder (Sample, Assay, "
-                        "Study or Investigation) to include it",
-                    )
-                )
-        except Exception as exc:  # one bad node must not abort the batch
-            result.errors.append((node.id, str(exc)))
-
+        next_investigation, next_study = _place_node(
+            ctx, node, investigation_id, study_id
+        )
         for child in node.children:
             walk(child, next_investigation, next_study)
 
     for root in metaseed_client.get_tree():
         walk(root, None, None)
+
+    # One remote DataFile per study, pointing at the study's external storage.
+    study_id_to_node = {sid: nid for nid, sid in result.studies.items()}
+    for study_id, files in files_by_study.items():
+        _create_study_data_file(
+            client, project_id, study_id_to_node.get(study_id, study_id), files, result
+        )
 
     return result
