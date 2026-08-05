@@ -99,6 +99,19 @@ def register_seek_routes(  # noqa: C901
             raise ValueError(f"Unknown profile: {name}")
         return SpecLoader(profile=name).load_profile(resolved, name)
 
+    def _model_preview(name: str, version: str = "") -> Any:
+        """The browsable Sample-Type/Extended-Metadata projection, or None.
+
+        Degrades to None (the panel simply hides) if the profile cannot be
+        loaded or projected, so a preview failure never breaks the page.
+        """
+        try:
+            from metaseed.seek.preview import build_model_preview
+
+            return build_model_preview(_load_profile_named(name, version))
+        except Exception:
+            return None
+
     def _context(request: Request, **extra: Any) -> dict[str, Any]:
         """Shared template context: export preview + SEEK config + projects."""
         state = get_state()
@@ -145,6 +158,7 @@ def register_seek_routes(  # noqa: C901
             "version": facade.version,
             "profiles": profiles,
             "profile_versions": profile_versions,
+            "preview": _model_preview(facade.profile, facade.version),
             "dataset_name": get_current_dataset_name(state),
             "entity_count": len(state.nodes_by_id),
             "exportable_count": sum(n for _, n in emit_counts),
@@ -170,6 +184,24 @@ def register_seek_routes(  # noqa: C901
         if not _enabled(request):
             return HTMLResponse("SEEK plugin is disabled", status_code=404)
         return await _render(request)
+
+    @app.get("/seek/preview", response_class=HTMLResponse)
+    async def seek_preview(
+        request: Request, profile: str = "", version: str = ""
+    ) -> HTMLResponse:
+        """Render just the model-preview panel for a profile/version (HTMX).
+
+        Lets the profile/version dropdowns refresh the browsable Sample Types and
+        Extended Metadata without a full page load or any write to SEEK.
+        """
+        if not _enabled(request):
+            return HTMLResponse("SEEK plugin is disabled", status_code=404)
+        preview = await run_in_threadpool(_model_preview, profile, version)
+        return templates.TemplateResponse(
+            request,
+            "seek/_preview.html",
+            {"preview": preview, "profile": profile, "version": version},
+        )
 
     @app.post("/seek/provision", response_class=HTMLResponse)
     async def seek_provision(

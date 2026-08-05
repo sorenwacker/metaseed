@@ -1,0 +1,61 @@
+{# Browsable projection of what the selected profile becomes in SEEK: the
+   Sample Types (with columns) provisioning will create, and the Extended
+   Metadata the Investigation/Study/Assay records carry. Read-only — nothing
+   here writes to SEEK. Rendered on page load and re-fetched by the profile /
+   version dropdowns via HTMX. #}
+{% if preview %}
+<div data-testid="seek-preview">
+    {% set cols = "width:100%; border-collapse:collapse; font-size:0.82rem;" %}
+    {% set th = "text-align:left; padding:0.2rem 0.5rem; border-bottom:1px solid var(--border,#ddd); color:#666; font-weight:600;" %}
+    {% set td = "padding:0.2rem 0.5rem; border-bottom:1px solid var(--border,#eee);" %}
+
+    <details data-testid="seek-preview-sample-types" open>
+        <summary style="cursor:pointer; font-weight:600;">Sample Types
+            <span class="muted">({{ preview.sample_types|length }})</span></summary>
+        {% for st in preview.sample_types %}
+        <details style="margin:0.3rem 0 0.3rem 0.8rem;">
+            <summary style="cursor:pointer;">{{ st.entity_type }}
+                <span class="muted" style="font-size:0.82rem;">({{ st.attributes|length }} column{{ "" if st.attributes|length == 1 else "s" }})</span></summary>
+            <table style="{{ cols }} margin:0.3rem 0 0.6rem 0;">
+                <tr><th style="{{ th }}">column</th><th style="{{ th }}">type</th><th style="{{ th }}">required</th></tr>
+                {% for a in st.attributes %}
+                <tr><td style="{{ td }}">{{ a.name }}</td>
+                    <td style="{{ td }}">{{ a.type }}{% if a.controlled_vocabulary %} <span class="muted">(controlled vocabulary)</span>{% endif %}</td>
+                    <td style="{{ td }}">{{ "yes" if a.required else "" }}</td></tr>
+                {% endfor %}
+            </table>
+        </details>
+        {% else %}
+        <p class="muted" style="margin-left:0.8rem; font-size:0.85rem;">This profile creates no Sample Types.</p>
+        {% endfor %}
+    </details>
+
+    <details data-testid="seek-preview-extended-metadata" style="margin-top:0.5rem;">
+        <summary style="cursor:pointer; font-weight:600;">Extended Metadata
+            <span class="muted">({{ preview.extended_metadata|length }})</span></summary>
+        <p class="muted" style="font-size:0.8rem; margin:0.3rem 0 0.3rem 0.8rem;">
+            Custom fields on the Investigation, Study and Assay records — added by a SEEK admin from the .ttl below.</p>
+        {% for em in preview.extended_metadata %}
+        <details style="margin:0.3rem 0 0.3rem 0.8rem;">
+            <summary style="cursor:pointer;">{{ em.entity_type }}
+                <span class="muted" style="font-size:0.82rem;">({{ em.role }}, {{ em.attributes|length }} field{{ "" if em.attributes|length == 1 else "s" }})</span></summary>
+            {% if em.attributes %}
+            <table style="{{ cols }} margin:0.3rem 0 0.6rem 0;">
+                <tr><th style="{{ th }}">field</th><th style="{{ th }}">type</th><th style="{{ th }}">required</th></tr>
+                {% for a in em.attributes %}
+                <tr><td style="{{ td }}">{{ a.name }}</td>
+                    <td style="{{ td }}">{{ a.type }}{% if a.controlled_vocabulary %} <span class="muted">(controlled vocabulary)</span>{% endif %}</td>
+                    <td style="{{ td }}">{{ "yes" if a.required else "" }}</td></tr>
+                {% endfor %}
+            </table>
+            {% else %}
+            <p class="muted" style="margin-left:0.8rem; font-size:0.82rem;">Only SEEK's own record fields — no Extended Metadata.</p>
+            {% endif %}
+        </details>
+        {% endfor %}
+    </details>
+</div>
+{% else %}
+<p class="muted" data-testid="seek-preview-empty" style="font-size:0.85rem;">
+    No model preview available for this profile.</p>
+{% endif %}

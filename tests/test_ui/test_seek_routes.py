@@ -291,3 +291,35 @@ def test_a_complete_sync_still_reads_as_success(make_client):
     assert "notification-success" in html
     assert "notification-warning" not in html
     assert "not uploaded" not in html
+
+
+def test_seek_page_shows_model_preview_panel(make_client):
+    # The page carries the browsable "what will be created" panel on load.
+    client, _settings, _state = make_client()  # default profile isa/1.0
+    response = client.get("/seek")
+    assert response.status_code == 200
+    assert 'data-testid="seek-preview"' in response.text
+    assert "Sample Types" in response.text
+    assert "Extended Metadata" in response.text
+
+
+def test_seek_preview_endpoint_lists_sample_types_and_extended_metadata(make_client):
+    # The HTMX partial projects a chosen profile/version: Sample Types with
+    # their columns, and the Extended Metadata records with their fields.
+    client, _settings, _state = make_client()
+    response = client.get(
+        "/seek/preview", params={"profile": "seek-ready", "version": "1.0"}
+    )
+    assert response.status_code == 200
+    body = response.text
+    assert "Sample" in body  # the Sample-role sample type
+    assert "organism" in body  # one of its columns
+    assert "Study" in body  # an ISA record under Extended Metadata
+    assert "study_design_type" in body  # a Study Extended-Metadata field
+
+
+def test_seek_preview_endpoint_degrades_on_unknown_profile(make_client):
+    client, _settings, _state = make_client()
+    response = client.get("/seek/preview", params={"profile": "no-such-profile"})
+    assert response.status_code == 200  # never 500 — the panel just hides
+    assert 'data-testid="seek-preview-empty"' in response.text

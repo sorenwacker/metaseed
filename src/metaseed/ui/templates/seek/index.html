@@ -73,7 +73,9 @@
               style="display:flex; gap:0.6rem; align-items:flex-end; flex-wrap:wrap;">
             <label style="font-size:0.85rem;">Profile
                 <select name="profile" id="seek-profile" class="form-input" data-testid="seek-model-profile"
-                        onchange="seekOnProfileChange(this.value)">
+                        onchange="seekOnProfileChange(this.value)"
+                        hx-get="{{ base_url }}/seek/preview" hx-target="#seek-preview" hx-swap="innerHTML"
+                        hx-trigger="change" hx-include="#seek-profile,#seek-version">
                     {% for p in profiles %}
                     <option value="{{ p }}"{% if p == profile %} selected{% endif %}>{{ p }}</option>
                     {% endfor %}
@@ -81,7 +83,9 @@
             </label>
             <label style="font-size:0.85rem;">Version
                 <select name="version" id="seek-version" class="form-input" data-testid="seek-model-version"
-                        onchange="var h=document.getElementById('seek-emt-version'); if (h) h.value=this.value;">
+                        onchange="var h=document.getElementById('seek-emt-version'); if (h) h.value=this.value;"
+                        hx-get="{{ base_url }}/seek/preview" hx-target="#seek-preview" hx-swap="innerHTML"
+                        hx-trigger="change" hx-include="#seek-profile,#seek-version">
                     {% for v in profile_versions.get(profile, []) %}
                     <option value="{{ v }}"{% if v == version %} selected{% endif %}>{{ v }}</option>
                     {% endfor %}
@@ -113,6 +117,16 @@
                 if (hv) hv.value = latest;
             }
         </script>
+
+        {# Browsable projection of the selected profile: what Sample Types and
+           Extended Metadata provisioning will create, before any upload. #}
+        <div style="margin-top:0.9rem; padding-top:0.8rem; border-top:1px dashed var(--border, #ddd);">
+            <div style="font-size:0.9rem; margin-bottom:0.4rem;"><strong>What this will create in SEEK</strong>
+                <span class="muted">— browse before uploading</span></div>
+            <div id="seek-preview">
+                {% include "seek/_preview.html" %}
+            </div>
+        </div>
 
         <div style="margin-top:0.9rem; padding-top:0.8rem; border-top:1px dashed var(--border, #ddd);">
             <div style="font-size:0.9rem;"><strong>Extended Metadata</strong> — the custom fields on

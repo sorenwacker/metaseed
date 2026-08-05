@@ -46,6 +46,23 @@ reuses what already exists rather than duplicating it.
 This step needs no loaded dataset — it describes a *profile*, so you can
 provision before you have built anything.
 
+#### Browse what will be created first
+
+Below the profile chooser, **What this will create in SEEK** shows the model the
+selected profile and version project onto, before anything is written:
+
+- **Sample Types** — each entity that becomes a SEEK Sample Type, expandable to
+  its columns (name, type, and whether it is a controlled vocabulary). This is
+  read from the same plan *Provision* executes, so it cannot drift from what is
+  created.
+- **Extended Metadata** — the custom fields the Investigation, Study and Assay
+  records carry. SEEK's own record fields (identifier, title, description) and
+  the nested structure are not listed, because they are not Extended Metadata.
+
+The panel refreshes when you change the profile or version, and never writes to
+SEEK — it is there to check a profile maps the way you expect before you
+provision or sync.
+
 ### 2 · Sync the dataset to SEEK
 
 With a dataset loaded, click **Sync to SEEK →**. It pushes the dataset's
