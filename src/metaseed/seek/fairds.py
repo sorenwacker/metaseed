@@ -15,12 +15,15 @@ The emitted graph has two parts, mirroring SEEK's reader
   ``schema:valuePattern`` (from the field's regex/constraint) and
   ``schema:valueRequired`` — SEEK turns these into Extended Metadata attributes.
 
-Known limitations (SEEK reads the ISA hierarchy *positionally* — Investigation →
-Study → ObservationUnit → Sample → Assay — not by ``rdf:type``): the metaseed ISA
-profile has no ObservationUnit level, so entities below Study land one level too
-high on import (a Study's Samples are read as ObservationUnits). Investigation and
-Study round-trip cleanly today; a follow-up must insert the ObservationUnit layer
-for full sample/assay fidelity. Also, a property definition uses one global
+SEEK reads the ISA hierarchy *positionally* — Investigation → Study →
+ObservationUnit → Sample → Assay — not by ``rdf:type``, so a Study's children are
+read as ObservationUnits whatever they claim to be. Profiles do not model that
+level, treating the observation unit as carried by the sample, so this exporter
+synthesises one ``ppeo:observation_unit`` per Sample beneath a Study. Without it a
+Sample is read as an empty ObservationUnit and neither it nor its Assays arrive,
+since SEEK reaches Assays through ``observation_units -> samples -> assays``.
+
+Known limitation: a property definition uses one global
 ``schema:<field>`` URI, so a field name reused across entities with different
 constraints resolves to a single (last-written) definition.
 """
@@ -53,6 +56,9 @@ if TYPE_CHECKING:
 _CORE_FIELDS = frozenset({"identifier", "unique_id", "title", "name", "description"})
 
 JERM = Namespace("http://jermontology.org/ontology/JERMOntology#")
+# MIAPPE's ontology. SEEK types the ObservationUnit level from PPEO while the
+# rest of the ISA hierarchy is JERM.
+PPEO = Namespace("http://purl.org/ppeo/PPEO.owl#")
 SCHEMA = Namespace("http://schema.org/")
 FAIR = Namespace("http://fairbydesign.nl/ontology/")
 _BASE = "http://fairbydesign.nl/ontology/"
@@ -202,6 +208,13 @@ def to_fair_data_station_rdf(client: MetaseedClient) -> str:  # noqa: C901
         it would collide sample siblings onto one URI. Use the real id field.
         """
         data = values_by_node.get(node.id, {})
+        # The spec says which field identifies the entity; prefer it. Guessing at
+        # conventional names alone falls through to the internal node id for a
+        # profile that keys its Sample on e.g. ``sample_name``, which then leaks
+        # an opaque, run-specific string into the exported URIs and titles.
+        for name, spec in fields.get(node.entity_type, {}).items():
+            if getattr(spec, "is_identifier", False) and data.get(name):
+                return str(data[name])
         return str(
             data.get("identifier")
             or data.get("unique_id")
@@ -263,8 +276,31 @@ def to_fair_data_station_rdf(client: MetaseedClient) -> str:  # noqa: C901
 
         for child in node.children:
             child_seg = segment(child)
-            if child_seg is not None:
-                graph.add((uri, JERM.hasPart, URIRef(f"{_BASE}{path}/{child_seg}")))
+            if child_seg is None:
+                walk(child, path)
+                continue
+            child_mapping = resolve(child.entity_type)
+            if jerm_class == "Study" and child_mapping and child_mapping[0] == "Sample":
+                # SEEK reads the ISA hierarchy positionally, so a Study's children
+                # are ObservationUnits whatever their rdf:type says. A Sample
+                # placed directly under a Study is therefore read as an empty
+                # ObservationUnit and never arrives. Profiles do not model that
+                # level -- the observation unit is carried by the sample -- so
+                # synthesise one per sample here, keeping specs free of it.
+                ou_path = f"{path}/obs_{_slug(node_identity(child))}"
+                ou_uri = URIRef(_BASE + ou_path)
+                identity = node_identity(child)
+                graph.add((ou_uri, RDF.type, PPEO.observation_unit))
+                graph.add((ou_uri, SCHEMA.identifier, Literal(identity)))
+                graph.add((ou_uri, SCHEMA.title, Literal(identity)))
+                graph.add((ou_uri, SCHEMA.name, Literal(identity)))
+                graph.add((uri, JERM.hasPart, ou_uri))
+                graph.add(
+                    (ou_uri, JERM.hasPart, URIRef(f"{_BASE}{ou_path}/{child_seg}"))
+                )
+                walk(child, ou_path)
+                continue
+            graph.add((uri, JERM.hasPart, URIRef(f"{_BASE}{path}/{child_seg}")))
             walk(child, path)
 
     for root in client.get_tree():
