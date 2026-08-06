@@ -683,3 +683,148 @@ Full codebase review with 24 confirmed fixes.
 ## v0.3.8 and earlier
 
 See git history for previous changes.
+## v0.3.7 (2026-05-26)
+
+### Changed
+- Fix Selenium test to use correct btn-new-dataset testid
+- Refactor facade and UI components for better separation of concerns
+- Add files field to ENA Run entity
+- Refactor entity storage to use ProfileFacade as source of truth
+- Fix loading to link children via parent's nested arrays
+- Auto-fill reference fields when single parent exists
+- Add study_ref field to ENA Sample for parent auto-detection
+- Add lenient loading to handle schema evolution
+- Add edge case tests for MCP data integrity
+- Fix MCP parent linking duplication and add schema validation tests
+
+## v0.3.6 (2026-05-21)
+
+### Changed
+- Remove embedded files from Run, use File.run_ref reference instead
+
+## v0.3.5 (2026-05-21)
+
+### Changed
+- Add run_ref field to ENA File entity for parent reference
+
+## v0.3.4 (2026-05-21)
+
+### Changed
+- Add version to footer and fix spec builder navigation
+
+## v0.3.3 (2026-05-21)
+
+### Changed
+- Use first field convention for entity labels
+- Revert is_identifier explicit marking in favor of convention
+- Add is_identifier to spec builder and documentation
+- Use field-level is_identifier instead of entity-level attributes
+- Add spec-defined identifier_field and label_field support
+- Style reference edges with distinct orange color
+- Support string reference fields in graph (ENA sample_ref pattern)
+- Use get_identifier helper instead of hardcoded field names
+- Fix graph identifier mapping to check multiple fields
+- Handle list and single reference fields in graph edge building
+- Normalize reference fields to store IDs instead of embedded objects
+- Disable graph polling since UI and MCP share state
+- …and 20 further changes; see git history.
+
+## v0.3.2 (2026-05-20)
+
+### Changed
+- Update dataset repository docs with async interface examples
+- Add AsyncDatasetRepository and AsyncDatasetManager for database backends
+- Add dataset repository architecture documentation
+
+## v0.3.1 (2026-05-20)
+
+### Changed
+- Add tests for dataset DI refactoring
+- Export DatasetRepository classes from repositories module
+- Update MCP dataset tools to use DatasetManager
+- Update API routes to use DatasetManager directly
+- Refactor datasets.py to use DatasetManager
+- Add DatasetManager with dependency injection support
+- Add DatasetRepository ABC and FilesystemDatasetRepository
+
+## v0.3.0 (2026-05-20)
+
+### Changed
+- Add MCP tools, JS modules, migration CLI, and refactor code
+- Fix get_field_spec: check hasattr before accessing example
+- Extract nested items from tree children for MCP-created entities
+- Add validate_entity to validators module for shared validation
+- Fix run_server to accept transport parameters from CLI
+- Remove in-process MCP mounting, keep button-only approach
+- Fix MCP API routes to use MCPServerManager for port 8001
+- Fix MCP server mounting - actually mount SSE app at /mcp
+- Remove trivial and redundant tests
+- Reorganize UI helpers into subpackage
+- Update architecture overview with MCP server and agent layer
+- Consolidate label derivation logic to single implementation
+- …and 20 further changes; see git history.
+
+## v0.2.4 (2026-05-12)
+
+### Changed
+- Fix merger to include REMOVED fields from source profiles
+- Remove orphaned isa-miappe-combined tests (profile was removed in 21e4d0e)
+- Configure pre-commit to lint entire codebase
+- Fix ruff linting error in test_examples.py
+- Change spec builder default version to 0.1, remove fallbacks
+- Fix get_root_entity_types to use facade's injected spec
+- Add dependency injection to ProfileFacade for custom spec loading
+
+## v0.2.3 (2026-05-08)
+
+### Changed
+- Remove isatools dependency (no longer used)
+
+## v0.2.2 (2026-05-08)
+
+### Changed
+- Document REST API endpoints and Facade API
+- Remove ISA importer feature
+- Complete documentation for recent changes and missing profiles
+- Refactor codebase based on code review
+- Refactor test_examples.py for improved code quality
+
+## v0.2.1 (2026-05-07)
+
+### Changed
+- Complete all examples with full entity list population
+- Remove cropxr and isa-miappe-combined specs from built-in specs
+
+## v0.2.0 (2026-05-07)
+
+### Changed
+- Add comprehensive example validation tests and fix field type mismatches
+- Fix linting configuration for pre-commit consistency
+- Fix API route to allow single profile for explore mode
+- Add configurable base_url to templates for reusability
+- Rename /merge/ routes to /explore/ and add get_templates_dir
+- Export SpecPersistence and SpecProvider from metaseed.ui
+- Extract reusable UI components with abstract interfaces
+- Prevent saving specs with built-in spec names
+- Restructure header: Logo | Nav | Breadcrumb
+- Rename Explore to Explorer in nav
+- Add explore mode to compare page
+- Refactor CLI and add user feedback improvements
+- …and 88 further changes; see git history.
+
+## v0.1.0 (2026-04-24)
+
+### Changed
+- Add automatic versioning from git tags
+- Improve code architecture with shared utilities and type hints
+- Refactor routes.py into domain modules and encapsulate model context
+- Complete DiSSCo spec with TombstoneMetadata entity
+- Fix DiSSCo spec: mark modified field as required
+- Add DiSSCo spec and improve ISA example and export
+- Improve spec builder UI and field validation options
+- Add interactive spec builder with ERD visualization
+- Update validators, routes, and examples
+- Add codename field to FieldSpec schema
+- Add MIAPPE 1.2 specification and example
+- Fix hierarchical graph levels with explicit level tracking
+- …and 151 further changes; see git history.
