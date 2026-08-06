@@ -26,7 +26,7 @@ except (
 from metaseed.seek import payloads
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Mapping, Sequence
 
 JSONAPI_MEDIA_TYPE = "application/vnd.api+json"
 USER_AGENT = "metaseed (+https://github.com/sorenwacker/metaseed)"
@@ -171,6 +171,15 @@ class SeekClient:
         """GET ``path`` and return the parsed JSON body."""
         return self._request("GET", path)
 
+    def delete(self, path: str) -> None:
+        """DELETE ``path``.
+
+        Every other method here writes or reads; without this, a caller that
+        creates resources has no supported way to remove them again, which is
+        what a test fixture tearing down its own records needs.
+        """
+        self._request("DELETE", path)
+
     def _create(self, path: str, document: Mapping[str, Any]) -> str:
         """POST a JSON:API document and return the created resource id."""
         body = self._request("POST", path, json=document)
@@ -257,13 +266,27 @@ class SeekClient:
         )
 
     def create_sample(
-        self, *, sample_type_id: str, project_id: str, data: dict[str, Any]
+        self,
+        *,
+        sample_type_id: str,
+        project_id: str,
+        data: dict[str, Any],
+        assay_ids: Sequence[str] | None = None,
+        study_id: str | None = None,
     ) -> str:
-        """Create a Sample of ``sample_type_id``; return its id."""
+        """Create a Sample of ``sample_type_id``; return its id.
+
+        ``assay_ids`` links the Sample into the ISA tree. Omitting it leaves the
+        Sample reachable only through the project's sample list.
+        """
         return self._create(
             "/samples",
             payloads.sample_payload(
-                sample_type_id=sample_type_id, project_id=project_id, data=data
+                sample_type_id=sample_type_id,
+                project_id=project_id,
+                data=data,
+                assay_ids=assay_ids,
+                study_id=study_id,
             ),
         )
 
