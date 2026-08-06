@@ -39,16 +39,36 @@ uv sync --extra dev
 
 ## Supported Profiles
 
-| Profile | Version | Entities | Fields | Domain |
-|---------|---------|----------|--------|--------|
-| MIAPPE | 1.2 | 14 | 163 | Plant phenotyping |
+Counts are for the latest version of each profile.
+
+| Profile | Versions | Entities | Fields | Domain |
+|---------|----------|----------|--------|--------|
+| MIAPPE | 1.1, 1.2 | 14 | 163 | Plant phenotyping |
+| MIAPPE-HTP | 1.0 | 28 | 137 | High-throughput plant phenotyping |
 | ISA | 1.0 | 22 | 139 | Life science |
 | Darwin Core | 1.0 | 10 | 189 | Biodiversity |
 | DiSSCo | 0.4 | 16 | 261 | Digital specimens |
 | ENA | 1.0 | 11 | 109 | Nucleotide archive |
-| JERM | 1.0 | 24 | 229 | Systems biology |
+| MetaboLights | 1.0 | 13 | 71 | Metabolomics |
+| PRIDE | 1.0 | 9 | 61 | Proteomics |
+| SEEK | 1.0 | 24 | 229 | Systems biology (the FAIRDOM-SEEK data model) |
+| SEEK-ready template | 1.0, 2.0 | 4 | 26 | Minimal ISA shape for SEEK upload |
 
 User-defined profiles supported in `~/.local/share/metaseed/specs/`
+
+## Integrations
+
+Adapters connect a dataset to an external service or format. They are separate from profiles: a profile is a metadata
+standard, an adapter is a route in or out.
+
+| Adapter | Direction | What it does |
+|---------|-----------|--------------|
+| FAIRDOM-SEEK | export | Push ISA content over the JSON:API, or export SEEK-importable ISA RDF ([guide](docs/guides/seek-export.md)) |
+| DCAT | export | Export a dataset's catalogue record as DCAT (JSON-LD / Turtle) |
+| ENA | import | Import public metadata for a European Nucleotide Archive accession |
+| PRIDE | both | Import a PRIDE Archive proteomics project; export `submission.px` + SDRF |
+| MetaboLights | import | Import a MetaboLights metabolomics study document |
+| BrAPI | import | Import a BrAPI v2 plant-breeding server's studies into the `miappe` profile |
 
 ## Modi Operandi
 
