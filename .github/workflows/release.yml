@@ -16,6 +16,22 @@ jobs:
         with:
           fetch-depth: 0  # Need full history for hatch-vcs
 
+      - name: Require a changelog entry for this version
+        # Sixteen releases once shipped with no changelog entry because the rule
+        # existed only as prose. This is its mechanism. Placed before the suite so
+        # a missing entry fails in seconds rather than after the full gate, and
+        # accepts either heading style ("## v1.2.3" or "## [1.2.3]").
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          if ! grep -qE "^## (v${version}|\[${version}\])([^0-9]|$)" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no section for ${version}."
+            echo "Add '## v${version} (YYYY-MM-DD)' describing what this release changes."
+            echo "--- current headings ---"
+            grep -E '^## ' CHANGELOG.md | head -5
+            exit 1
+          fi
+          echo "Changelog entry found for ${version}."
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
