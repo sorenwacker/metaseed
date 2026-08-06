@@ -1,0 +1,151 @@
+spec_version: '0.6'
+version: '2.0'
+name: seek-ready-template
+display_name: SEEK-ready template (ISA)
+description: A minimal ISA-shaped template for a profile whose datasets upload cleanly to FAIRDOM-SEEK. Every entity maps
+  to a SEEK/ISA role (Investigation, Study, Assay, Sample) and nothing sits outside that hierarchy. Clone it and add your
+  own fields; keep the shape. There is no ObservationUnit level -- the SEEK export synthesises one per sample, because SEEK
+  reads that level positionally; do not add one here. Samples nest under the Assay that measured them, not under the Study
+  (see below). Breaking change from 1.0, where Samples sat under Study and were uploaded attached to nothing.
+ontology: OBI
+root_entity: Investigation
+validation_rules: []
+entities:
+  Investigation:
+    description: The overarching project or investigation.
+    fields:
+    - name: identifier
+      type: string
+      required: true
+      description: Unique investigation id.
+      is_identifier: true
+    - name: title
+      type: string
+      required: true
+      description: Human-readable title.
+      is_label: true
+    - name: description
+      type: string
+      required: false
+      description: What the investigation is about.
+    - name: submission_date
+      type: date
+      required: false
+      description: When the metadata was submitted.
+    - name: public_release_date
+      type: date
+      required: false
+      description: When it may be released publicly.
+    - name: studies
+      type: list
+      required: false
+      description: Studies in this investigation.
+      items: Study
+    seek:
+      role: Investigation
+  Study:
+    description: A study within the investigation.
+    fields:
+    - name: identifier
+      type: string
+      required: true
+      description: Unique study id.
+      is_identifier: true
+    - name: title
+      type: string
+      required: true
+      description: Study title.
+      is_label: true
+    - name: description
+      type: string
+      required: false
+      description: Study description.
+    - name: study_design_type
+      type: string
+      required: false
+      description: e.g. case-control, time series.
+    - name: start_date
+      type: date
+      required: false
+      description: ''
+    - name: end_date
+      type: date
+      required: false
+      description: ''
+    - name: experimental_site
+      type: string
+      required: false
+      description: Where the study took place (folded context, not a separate entity).
+    - name: country
+      type: string
+      required: false
+      description: Country of the experimental site.
+    - name: assays
+      type: list
+      required: false
+      description: Assays performed in this study.
+      items: Assay
+    seek:
+      role: Study
+  Assay:
+    description: A measurement performed on samples.
+    fields:
+    - name: identifier
+      type: string
+      required: true
+      description: Unique assay id.
+      is_identifier: true
+    - name: title
+      type: string
+      required: false
+      description: Assay title.
+      is_label: true
+    - name: measurement_type
+      type: string
+      required: false
+      description: What is measured (e.g. metabolite profiling).
+    - name: technology_type
+      type: string
+      required: false
+      description: Technology used (e.g. mass spectrometry).
+    - name: technology_platform
+      type: string
+      required: false
+      description: Instrument or platform.
+    - name: samples
+      type: list
+      required: false
+      description: Samples this assay measured. Samples nest here rather than under Study because SEEK associates a Sample
+        with an Assay and derives its Study and Investigation from that link -- it ignores a Study association on a Sample.
+        A Sample with no Assay above it uploads attached to nothing, reachable only by listing the project's samples, and is
+        dropped on re-import. Nesting also states which Sample an Assay measured, which sibling lists under Study could not.
+      items: Sample
+    seek:
+      role: Assay
+  Sample:
+    description: A biological or material sample.
+    fields:
+    - name: sample_name
+      type: string
+      required: true
+      description: Unique sample name.
+      is_identifier: true
+      is_label: true
+    - name: organism
+      type: string
+      required: false
+      description: Source organism (e.g. an NCBI taxon name).
+    - name: organism_part
+      type: string
+      required: false
+      description: Tissue or part sampled.
+    - name: source_material
+      type: string
+      required: false
+      description: What the sample was derived from.
+    - name: collection_date
+      type: date
+      required: false
+      description: ''
+    seek:
+      role: Sample
