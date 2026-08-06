@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Added
+- A release gate that refuses a tag with no matching `CHANGELOG.md` section.
+  Sixteen releases once shipped without an entry because the rule existed only
+  as prose; it runs before the test suite, so a missing entry fails in seconds.
+
+### Changed
+- The built-in `seek` profile is described as what it is: the full model SEEK
+  can represent, for exploring and visualizing an instance. Only its ISA core
+  syncs and its `Project` root does not, so it is a reference model rather than
+  an upload target — `seek-ready-template` is the profile to build on.
+
 ## v0.29.0 (2026-08-05)
 
 ### Added
@@ -31,12 +42,41 @@
 - The property URI is percent-encoded wherever a dataset is exported, not only
   where it is provisioned; a gate keeps provisioning and export naming a field
   identically, so a sample is never rejected for a URI the two sides disagree on.
-- Validating an extracted record now runs the profile's cross-field validation
-  rules, not only the record's own field constraints. `validate_extracted`
-  previously ignored `validation_rules` entirely, so a profile rule could not
-  reject a record on that path. Rules needing sibling records (`uniqueness`) or
-  a child collection (`cardinality` over children) still cannot be evaluated on
-  a single record and are skipped rather than reported as passing.
+
+## v0.28.0 (2026-08-04)
+
+### Changed
+- The built-in profile is named for the platform it describes rather than its
+  ontology: `jerm` became `seek`.
+- A dataset keeps loading under the profile name it recorded, so renaming a
+  built-in profile does not orphan datasets authored against the old name.
+
+## v0.27.0 (2026-08-04)
+
+### Fixed
+- A property URI is built so a field name cannot break it (a name containing a
+  space produced an invalid URI and SEEK rejected the sample type); the refusal
+  reason SEEK returns is now reported instead of a bare failure.
+- A profile is listed once whatever case its directory carries.
+
+### Changed
+- A specification's help text is shown rather than hidden in a `title`
+  attribute, and the help cursor is offered only where there is help.
+
+## v0.26.0 (2026-08-04)
+
+### Added
+- `tests/test_public_api.py` gates the public surface: the stable-surface table
+  in `docs/specification/api-contract.md` is compared against `metaseed.__all__`
+  in both directions, every promised name must resolve, and the documented
+  import example must run.
+
+### Changed
+- An incomplete entity can be saved, and the editor reports what it still needs
+  instead of refusing the save. Required fields drive validation reporting, not
+  whether a record can be stored.
+- The empty canvas accepts the double-click it invites, and the field form is
+  reusable with its checkbox layout fixed.
 - The core no longer imports the web application. Importing
   `metaseed.cli.migrate` used to construct the FastAPI app; `get_datasets_dir`
   moved to `metaseed.paths`, `metaseed.ui` resolves the app lazily, and the MCP
@@ -65,12 +105,6 @@
   patched it afterwards still ran the real one and wrote to the user's datasets
   directory.
 
-### Added
-- `tests/test_public_api.py` gates the public surface: the stable-surface table
-  in `docs/specification/api-contract.md` is compared against `metaseed.__all__`
-  in both directions, every promised name must resolve, and the documented
-  import example must run.
-
 ## v0.25.0 (2026-08-02)
 
 ### Added
@@ -82,6 +116,12 @@
 - Coverage is measured once per release instead of on every pull request, where
   it trebled the gate for a number nobody reads mid-review. The threshold still
   blocks a publish.
+- Validating an extracted record now runs the profile's cross-field validation
+  rules, not only the record's own field constraints. `validate_extracted`
+  previously ignored `validation_rules` entirely, so a profile rule could not
+  reject a record on that path. Rules needing sibling records (`uniqueness`) or
+  a child collection (`cardinality` over children) still cannot be evaluated on
+  a single record and are skipped rather than reported as passing.
 
 ### Removed
 - `tests/fixtures/isa_examples/`, referenced by nothing and carrying real
@@ -163,6 +203,137 @@
 
 Entries for v0.13.0 through v0.21.1 were not written at the time and are not
 reconstructed here; `git log` between the tags is the record for those versions.
+
+## v0.21.1 (2026-07-30)
+
+### Fixed
+- `mcp` is bounded below 2.x. Version 2 removed `mcp.server.fastmcp`, which the
+  MCP server imports directly, so an unbounded requirement let a fresh
+  resolution install a version that breaks on import. Lockfile-based suites
+  stayed green while fresh installs failed.
+
+## v0.21.0 (2026-07-30)
+
+### Changed
+- The spec-builder graph core was extracted into a reusable factory so the hub
+  can consume it instead of maintaining a fork.
+
+## v0.20.1 (2026-07-30)
+
+### Fixed
+- Reference edges name both connected fields; entity-only edges hid the join
+  columns.
+
+## v0.20.0 (2026-07-30)
+
+### Added
+- MCP agents can link spec entities into a tree. A flat spec validates but is
+  unusable, so the tools now express parent-child nesting.
+
+### Fixed
+- BrAPI transport failures are translated into the mistake they usually are,
+  rather than surfacing as a bare connection error.
+- A selenium test waited for presence rather than visibility, so the hidden
+  seek-role select made it flaky.
+
+### Changed
+- Documented that validation feedback is spec-derived and must not be
+  re-implemented, and corrected the `ValidationResult` truthiness claim.
+
+## v0.19.0 (2026-07-27)
+
+### Fixed
+- Every PRIDE record is imported as its own entity, and `doi`, licence and
+  experiment types are no longer dropped.
+
+## v0.18.0 (2026-07-27)
+
+### Added
+- The DCAT record is offered as an export for every profile, and PRIDE and
+  MetaboLights datasets describe themselves in DCAT. A publishing platform can
+  bind a card to where it serves the dataset; a repository accession is recorded
+  as provenance rather than as the card's identity.
+
+### Changed
+- MCP tools serve the caller's session rather than the process default. A host
+  passes the resolver that identifies its caller, and the MCP context has a
+  scope a host can bind without a shared singleton.
+
+## v0.17.0 (2026-07-27)
+
+### Added
+- `MetaseedClient.from_facade`, wrapping an existing facade.
+- A normative Specification section in the docs, and a package front door that
+  describes metaseed as multi-standard rather than MIAPPE-only.
+
+### Fixed
+- `ValidationIssue.field` is the bare field name, and the issue carries
+  `entity_id`.
+- The shared dataset factory is reused instead of a fresh one being created.
+
+## v0.16.1 (2026-07-26)
+
+### Added
+- `AsyncSpecDraftStore` port with an in-memory default adapter.
+
+### Fixed
+- An entity's `is_identifier` field is respected when auto-creating
+  back-references, and a child's parent reference is auto-filled from
+  `parent_id`.
+- PRIDE datasets held as child nodes export, not only inline-authored ones.
+- Sample characteristics are emitted in the ISA-Tab study table.
+
+### Removed
+- Real personal data from examples and fixtures; tests are no longer packaged.
+
+## v0.16.0 (2026-07-25)
+
+### Fixed
+- `AsyncDatasetRepository`, the async half of the storage contract, was restored.
+
+## v0.15.0 (2026-07-24)
+
+### Fixed
+- The open dataset stays selected when reloading for a poll.
+
+## v0.14.0 (2026-07-24)
+
+### Added
+- A declarative plugin capability model (`Action` plus UI surfaces).
+- Import of Samples, Metabolites and DataFiles from ISA-Tab.
+- Spec field markers for owning parent, declared identity and field metadata.
+
+### Changed
+- Adapter exports are offered on the dataset page, not only after a save.
+- Publishing to PyPI happens on a version tag via trusted publishing.
+
+## v0.13.0 (2026-07-23)
+
+The release that introduced the SEEK integration.
+
+### Added
+- `metaseed[seek]`: a JSON:API client, Controlled Vocabulary and idempotency
+  lookups, two-phase provisioning (create the model, then sync data), a SEEK
+  export page, per-adapter plugin configuration, and FAIR Data Station Turtle
+  RDF for SEEK's native import. Entity **role** became a SEEK-specific model
+  constraint in the Spec Builder.
+- A plugin registry with a feature switch and a Plugins UI page.
+- PRIDE SDRF-Proteomics sample-to-data export, the MetaboLights Metabolite
+  Assignment File (MAF), and CV-term compliance validation for both.
+
+### Fixed
+- Security: Excel formula injection in the UI export, a ReDoS on the MCP
+  validate path, and path traversal via spec name/version and dataset names.
+- Validation enforced rather than silently dropped: Pydantic constraints on
+  every validation path, rule-level enum/pattern/range constraints, declared
+  uniqueness across records, unknown rule types rejected, a required field set
+  to `None` treated as missing, and files declaring an unknown entity `_type`
+  rejected instead of failing open.
+- List-cardinality rules are satisfied from created children.
+
+### Removed
+- Unbuilt async dataset infrastructure (no implementations, no callers) and
+  dead symbols.
 
 ## v0.12.0 (2026-06-29)
 
