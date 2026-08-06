@@ -34,6 +34,10 @@ class SyncResult:
     data_files: dict[str, str] = dc_field(default_factory=dict)
     skipped: list[tuple[str, str]] = dc_field(default_factory=list)
     errors: list[tuple[str, str]] = dc_field(default_factory=list)
+    # Created in SEEK but attached to no ISA level, so unreachable from the
+    # Investigation and dropped on re-import. Counted in ``created_count``
+    # because the resource does exist -- listed here because it is not findable.
+    unlinked: list[tuple[str, str]] = dc_field(default_factory=list)
 
     @property
     def created_count(self) -> int:
@@ -174,14 +178,15 @@ def _place_node(
     node: Any,
     investigation_id: str | None,
     study_id: str | None,
-) -> tuple[str | None, str | None]:
+    assay_id: str | None = None,
+) -> tuple[str | None, str | None, str | None]:
     """Create the SEEK resource for one node; return the ids to thread to children."""
     r = ctx.result
     values = ctx.values_by_node.get(node.id, {})
     jerm_class = entity_jerm_class(node.entity_type, ctx.roles.get(node.entity_type))
     title = _title_of(node, values)
     description = values.get("description")
-    next_investigation, next_study = investigation_id, study_id
+    next_investigation, next_study, next_assay = investigation_id, study_id, assay_id
 
     try:
         if jerm_class == "Investigation":
@@ -203,11 +208,11 @@ def _place_node(
             if study_id is None:
                 r.skipped.append((node.id, "assay has no study parent"))
             else:
-                r.assays[node.id] = ctx.client.create_assay(
+                next_assay = r.assays[node.id] = ctx.client.create_assay(
                     title=title, study_id=study_id
                 )
         elif jerm_class == "Sample":
-            _place_sample(ctx, node, values, title)
+            _place_sample(ctx, node, values, title, assay_id, study_id)
         elif jerm_class == "DataFile":
             _collect_file(ctx, node, values, study_id)
         else:
@@ -221,11 +226,16 @@ def _place_node(
             )
     except Exception as exc:  # one bad node must not abort the batch
         r.errors.append((node.id, str(exc)))
-    return next_investigation, next_study
+    return next_investigation, next_study, next_assay
 
 
 def _place_sample(
-    ctx: _SyncContext, node: Any, values: Mapping[str, Any], title: str
+    ctx: _SyncContext,
+    node: Any,
+    values: Mapping[str, Any],
+    title: str,
+    assay_id: str | None = None,
+    study_id: str | None = None,
 ) -> None:
     sample_type_id = ctx.sample_type_ids.get(node.entity_type)
     if sample_type_id is None:
@@ -240,8 +250,25 @@ def _place_sample(
     # one; fall back to the same non-blank title the ISA levels use.
     data.setdefault("Title", title)
     ctx.result.samples[node.id] = ctx.client.create_sample(
-        sample_type_id=sample_type_id, project_id=ctx.project_id, data=data
+        sample_type_id=sample_type_id,
+        project_id=ctx.project_id,
+        data=data,
+        assay_ids=[assay_id] if assay_id else None,
+        study_id=study_id,
     )
+    if assay_id is None:
+        # SEEK hangs Samples off Assays and ignores a `studies` relationship, so
+        # a Sample with no Assay ancestor cannot be linked into the ISA tree at
+        # all. Say so rather than report a clean push: it exists in SEEK but
+        # nothing walking down from the Investigation will find it.
+        ctx.result.unlinked.append(
+            (
+                node.id,
+                f"{node.entity_type} has no Assay ancestor, so it is reachable "
+                "only through the project's sample list — nest it under an "
+                "Assay-role entity to link it into the ISA tree",
+            )
+        )
 
 
 def _collect_file(
@@ -351,15 +378,20 @@ def sync_dataset_to_seek(
         result=result,
     )
 
-    def walk(node: Any, investigation_id: str | None, study_id: str | None) -> None:
-        next_investigation, next_study = _place_node(
-            ctx, node, investigation_id, study_id
+    def walk(
+        node: Any,
+        investigation_id: str | None,
+        study_id: str | None,
+        assay_id: str | None,
+    ) -> None:
+        next_investigation, next_study, next_assay = _place_node(
+            ctx, node, investigation_id, study_id, assay_id
         )
         for child in node.children:
-            walk(child, next_investigation, next_study)
+            walk(child, next_investigation, next_study, next_assay)
 
     for root in metaseed_client.get_tree():
-        walk(root, None, None)
+        walk(root, None, None, None)
 
     # One remote DataFile per study, pointing at the study's external storage.
     study_id_to_node = {sid: nid for nid, sid in result.studies.items()}

@@ -13,6 +13,7 @@ id becomes the Assay's ``study`` relationship, and so on.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 
 # A JERM assay type that always resolves on a stock SEEK; callers may override.
@@ -164,19 +165,33 @@ def sample_payload(
     sample_type_id: str | int,
     project_id: str | int,
     data: dict[str, Any],
+    assay_ids: Sequence[str | int] | None = None,
+    study_id: str | int | None = None,
 ) -> dict[str, Any]:
     """Build a POST body for ``/samples`` (an instance of a sample type).
 
     ``data`` maps each of the sample type's attribute titles to a value.
+
+    ``assay_ids`` associates the Sample with those Assays, and ``study_id``
+    accompanies them as SEEK requires. Without it the Sample
+    is reachable only by listing the project's samples: it is attached to its
+    Sample Type and Project and to no ISA level, so nothing walking down from an
+    Investigation finds it and a re-import drops it. SEEK derives the Sample's
+    Study and Investigation from the Assay, and ignores a ``studies``
+    relationship supplied here, so the Assay is the association to set.
     """
-    return _document(
-        "samples",
-        {"data": data},
-        {
-            "sample_type": _to_one("sample_types", sample_type_id),
-            "projects": _to_many("projects", [project_id]),
-        },
-    )
+    attributes: dict[str, Any] = {"data": data}
+    if study_id is not None:
+        # SEEK rejects a Sample carrying an ``assays`` link unless ``study_id``
+        # is also given as an attribute, and ignores it when there is no link.
+        attributes["study_id"] = study_id
+    relationships: dict[str, Any] = {
+        "sample_type": _to_one("sample_types", sample_type_id),
+        "projects": _to_many("projects", [project_id]),
+    }
+    if assay_ids:
+        relationships["assays"] = _to_many("assays", list(assay_ids))
+    return _document("samples", attributes, relationships)
 
 
 def controlled_vocab_payload(

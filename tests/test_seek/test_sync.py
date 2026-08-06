@@ -39,9 +39,24 @@ class _FakeSeek:
         return self._next()
 
     def create_sample(
-        self, *, sample_type_id: str, project_id: str, data: dict[str, Any]
+        self,
+        *,
+        sample_type_id: str,
+        project_id: str,
+        data: dict[str, Any],
+        assay_ids: list[str] | None = None,
+        study_id: str | None = None,
     ) -> str:
-        self.calls.append(("sample", {"sample_type_id": sample_type_id, "data": data}))
+        self.calls.append(
+            (
+                "sample",
+                {
+                    "sample_type_id": sample_type_id,
+                    "data": data,
+                    "assay_ids": assay_ids,
+                },
+            )
+        )
         return self._next()
 
     def create_data_file(
