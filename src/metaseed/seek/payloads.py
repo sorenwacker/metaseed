@@ -13,7 +13,7 @@ id becomes the Assay's ``study`` relationship, and so on.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 # A JERM assay type that always resolves on a stock SEEK; callers may override.
@@ -273,3 +273,129 @@ def data_file_payload(
     if assay_ids:
         relationships["assays"] = _to_many("assays", assay_ids)
     return _document("data_files", attributes, relationships)
+
+
+def isa_sample_attribute(
+    *,
+    title: str,
+    attribute_type_id: str | int,
+    isa_tag_id: str | int,
+    required: bool = False,
+    is_title: bool = False,
+    pos: int | None = None,
+    linked_sample_type_id: str | int | None = None,
+) -> dict[str, Any]:
+    """One Sample Type attribute for an ISA form body.
+
+    Every attribute of an ISA-JSON compliant Sample Type carries an ``isa_tag_id``,
+    so it is required here rather than optional. ``linked_sample_type_id`` is
+    omitted unless given: SEEK rejects a link on an attribute whose type is not a
+    registered-sample type.
+    """
+    attribute: dict[str, Any] = {
+        "title": title,
+        "required": required,
+        "is_title": is_title,
+        "isa_tag_id": isa_tag_id,
+        "attribute_type_id": attribute_type_id,
+    }
+    if pos is not None:
+        attribute["pos"] = pos
+    if linked_sample_type_id is not None:
+        attribute["linked_sample_type_id"] = linked_sample_type_id
+    return attribute
+
+
+def _attribute_pairs(
+    prefix: str, attributes: Sequence[Mapping[str, Any]]
+) -> list[tuple[str, str]]:
+    """Form pairs for ``attributes`` under ``prefix``, using ``[]`` repetition.
+
+    Rails builds an Array from repeated ``[]`` keys, starting a new element each
+    time a key it has already seen reappears — so ``title`` must come first in
+    every attribute. Numeric indices would instead build a Hash, which the
+    controller iterates as an Array and dies on with a ``TypeError``.
+    """
+    pairs: list[tuple[str, str]] = []
+    for attribute in attributes:
+        for key, value in attribute.items():
+            # SEEK takes the attribute type as a nested object, not a flat id.
+            suffix = (
+                "[sample_attribute_type][id]"
+                if key == "attribute_type_id"
+                else f"[{key}]"
+            )
+            rendered = str(value).lower() if isinstance(value, bool) else str(value)
+            pairs.append((f"{prefix}[]{suffix}", rendered))
+    return pairs
+
+
+def isa_study_form(
+    *,
+    title: str,
+    investigation_id: str | int,
+    source_title: str,
+    source_attributes: Sequence[Mapping[str, Any]],
+    collection_title: str,
+    collection_attributes: Sequence[Mapping[str, Any]],
+) -> list[tuple[str, str]]:
+    """Form body for ``POST /isa_studies`` — a Study with its two Sample Types.
+
+    A compliant Study owns a Source type and a Sample Collection type, in that
+    order, the second linking back to the first. ``ISAStudy#save`` assigns that
+    link itself, but validation runs first, so the caller must give the input
+    attribute a ``linked_sample_type_id`` that already exists; ``save`` overwrites
+    it with the Source type it just created.
+    """
+    pairs: list[tuple[str, str]] = [
+        ("isa_study[study][title]", title),
+        ("isa_study[study][investigation_id]", str(investigation_id)),
+        ("isa_study[source_sample_type][title]", source_title),
+    ]
+    pairs += _attribute_pairs(
+        "isa_study[source_sample_type][sample_attributes]", source_attributes
+    )
+    pairs.append(("isa_study[sample_collection_sample_type][title]", collection_title))
+    pairs += _attribute_pairs(
+        "isa_study[sample_collection_sample_type][sample_attributes]",
+        collection_attributes,
+    )
+    return pairs
+
+
+def isa_assay_form(
+    *,
+    title: str,
+    study_id: str | int,
+    assay_class_id: str | int,
+    assay_type_uri: str = DEFAULT_ASSAY_TYPE_URI,
+    position: int = 0,
+    assay_stream_id: str | int | None = None,
+    input_sample_type_id: str | int | None = None,
+    sample_type_title: str | None = None,
+    sample_type_attributes: Sequence[Mapping[str, Any]] | None = None,
+) -> list[tuple[str, str]]:
+    """Form body for ``POST /isa_assays`` — an assay stream, or an assay in one.
+
+    An assay stream owns no Sample Type, so ``sample_type_*`` and
+    ``assay_stream_id`` are all omitted for it. A child assay carries the stream
+    it belongs to, the Sample Type its inputs come from, and its own Sample Type.
+    """
+    pairs: list[tuple[str, str]] = [
+        ("isa_assay[assay][title]", title),
+        ("isa_assay[assay][study_id]", str(study_id)),
+        ("isa_assay[assay][assay_class_id]", str(assay_class_id)),
+        ("isa_assay[assay][assay_type_uri]", assay_type_uri),
+        ("isa_assay[assay][position]", str(position)),
+    ]
+    if assay_stream_id is not None:
+        pairs.append(("isa_assay[assay][assay_stream_id]", str(assay_stream_id)))
+    if input_sample_type_id is not None:
+        pairs.append(("isa_assay[input_sample_type_id]", str(input_sample_type_id)))
+    if sample_type_title is not None:
+        pairs.append(("isa_assay[sample_type][title]", sample_type_title))
+    if sample_type_attributes:
+        pairs += _attribute_pairs(
+            "isa_assay[sample_type][sample_attributes]", sample_type_attributes
+        )
+    return pairs
