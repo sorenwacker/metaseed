@@ -45,10 +45,21 @@ def _document(
 
 
 def investigation_payload(
-    *, title: str, project_id: str | int, description: str | None = None
+    *,
+    title: str,
+    project_id: str | int,
+    description: str | None = None,
+    isa_json_compliant: bool = False,
 ) -> dict[str, Any]:
-    """Build a POST body for ``/investigations`` (belongs to a project)."""
+    """Build a POST body for ``/investigations`` (belongs to a project).
+
+    ``isa_json_compliant`` marks the Investigation as ISA-JSON compliant. Without
+    it SEEK refuses to export the Investigation as ISA-JSON at all, whatever its
+    Studies and Assays look like.
+    """
     attributes: dict[str, Any] = {"title": title}
+    if isa_json_compliant:
+        attributes["is_isa_json_compliant"] = True
     if description is not None:
         attributes["description"] = description
     return _document(
