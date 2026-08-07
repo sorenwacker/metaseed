@@ -43,6 +43,46 @@ class TestSeekEntityConfig:
         assert EntityDefSpec.model_validate(dumped).seek.role == "Sample"
 
 
+class TestFieldIsaTag:
+    """Tests for the ISA tag a field carries into a SEEK Sample Type."""
+
+    def test_accepts_a_known_tag(self) -> None:
+        assert (
+            FieldSpec(
+                name="protocol", type=FieldType.STRING, isa_tag="protocol"
+            ).isa_tag
+            == "protocol"
+        )
+
+    def test_accepts_every_tag_in_isa_tags(self) -> None:
+        # ISA_TAGS is the single source of truth, mirroring SEEK's seeded tag
+        # titles: adding one there must change what a field accepts without a
+        # second list to keep in sync.
+        from metaseed.specs.schema import ISA_TAGS
+
+        for tag in ISA_TAGS:
+            assert (
+                FieldSpec(name="f", type=FieldType.STRING, isa_tag=tag).isa_tag == tag
+            )
+
+    def test_rejects_an_unknown_tag(self) -> None:
+        # SEEK looks tags up by title; an unknown one would provision a Sample
+        # Type that fails ISA-JSON validation only once it reaches the server.
+        with pytest.raises(ValidationError):
+            FieldSpec(name="f", type=FieldType.STRING, isa_tag="protokol")
+
+    def test_defaults_to_none_so_existing_profiles_are_unchanged(self) -> None:
+        assert FieldSpec(name="f", type=FieldType.STRING).isa_tag is None
+
+    def test_tag_round_trips_through_field_yaml(self) -> None:
+        field = FieldSpec(
+            name="f", type=FieldType.STRING, isa_tag="sample_characteristic"
+        )
+        dumped = field.model_dump(exclude_none=True)
+        assert dumped["isa_tag"] == "sample_characteristic"
+        assert FieldSpec.model_validate(dumped).isa_tag == "sample_characteristic"
+
+
 class TestConstraints:
     """Tests for Constraints model."""
 

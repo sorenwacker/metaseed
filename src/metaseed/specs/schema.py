@@ -95,6 +95,31 @@ rejected at load rather than silently exporting a nonexistent ``jerm:`` class.
 """
 
 
+ISA_TAGS: tuple[str, ...] = (
+    "source",
+    "source_characteristic",
+    "sample",
+    "sample_characteristic",
+    "protocol",
+    "parameter_value",
+    "other_material",
+    "other_material_characteristic",
+    "data_file",
+    "data_file_comment",
+)
+"""The ISA tags a field may carry into a SEEK Sample Type attribute.
+
+Mirrors the tag titles SEEK seeds (looked up by title, since the numeric ids are
+per-instance). An ISA-JSON compliant Sample Type requires a tag on *every*
+attribute, so a profile without these cannot describe which of its fields is the
+protocol, which the data file, and which are characteristics.
+
+``input`` is deliberately absent: the input attribute links one Sample Type to
+the previous one in an assay stream and is synthesised during the sync, not
+declared by a profile field.
+"""
+
+
 class SeekEntityConfig(BaseModel):
     """SEEK-specific routing for an entity (used by the ``metaseed[seek]`` export).
 
@@ -164,6 +189,9 @@ class FieldSpec(BaseModel):
         label: A human-readable field label distinct from the machine ``name`` (#98).
         tier: Advisory completeness tier ("required" / "recommended" / "optional").
             Advisory only — ``required`` remains the validation source of truth (#98).
+        isa_tag: The ISA tag this field carries into a SEEK Sample Type attribute —
+            one of :data:`ISA_TAGS`. Required on every attribute of an ISA-JSON
+            compliant Sample Type; see ``docs/architecture/seek-isa-compliance.md``.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -189,6 +217,20 @@ class FieldSpec(BaseModel):
     unit: str | None = None
     label: str | None = None
     tier: Literal["required", "recommended", "optional"] | None = None
+    isa_tag: str | None = None
+
+    @field_validator("isa_tag")
+    @classmethod
+    def _isa_tag_must_be_known(cls, value: str | None) -> str | None:
+        """Reject a tag that is not one of :data:`ISA_TAGS`.
+
+        SEEK resolves tags by title, so an unknown one is only rejected once the
+        Sample Type reaches the server — and then as an ISA-JSON validation
+        failure that names the missing tag rather than the typo that caused it.
+        """
+        if value is not None and value not in ISA_TAGS:
+            raise ValueError(f"isa_tag must be one of {ISA_TAGS}, got {value!r}")
+        return value
 
     def is_nested(self: Self) -> bool:
         """Check if this field represents a nested entity.
