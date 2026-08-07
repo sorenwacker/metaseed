@@ -5,7 +5,7 @@ SEEK adapter a read direction so metaseed can round-trip content in and out of a
 live instance (e.g. pull from FAIRDOMHub, edit, push to a local instance).
 
 :func:`import_from_seek` walks a SEEK Investigation over the JSON:API
-(Investigation -> Study -> ObservationUnit -> Sample), reads each Sample's
+(Investigation -> Study -> ObservationUnit/Assay -> Sample), reads each Sample's
 ``attribute_map`` and the ISA core fields, and reconstructs a metaseed dataset.
 Because SEEK's Sample Types are user-defined, the profile is **derived from the
 instance** rather than assumed: one entity per ISA level, with Sample fields (and
@@ -49,26 +49,36 @@ _SEEK_TYPE_TO_METASEED: dict[str, str] = {
 _SEEK_LIST_TYPES = {"Controlled Vocabulary List", "Registered Sample List"}
 
 
-def _core_fields(with_children: str | None) -> list[dict[str, Any]]:
+def _core_fields(*with_children: str | None) -> list[dict[str, Any]]:
     """The identifier/title/description fields every imported entity carries.
 
-    ``with_children`` is the child entity type an entity nests as a ``list`` field
-    (``None`` for a leaf), so the derived profile expresses the ISA hierarchy.
+    Each name in ``with_children`` becomes a nested ``list`` field, so the derived
+    profile expresses the ISA hierarchy. A Study takes two: samples reach SEEK
+    either through an ObservationUnit (the FAIR Data Station import) or through an
+    Assay (the API sync), and an imported Study may hold both.
     """
     fields: list[dict[str, Any]] = [
         {"name": "identifier", "type": "string", "required": True},
         {"name": "title", "type": "string"},
         {"name": "description", "type": "string"},
     ]
-    if with_children is not None:
-        fields.append(
-            {
-                "name": with_children.lower() + "s",
-                "type": "list",
-                "items": with_children,
-            }
-        )
+    for child in with_children:
+        if child is not None:
+            fields.append({"name": child.lower() + "s", "type": "list", "items": child})
     return fields
+
+
+def _assays(client: SeekClient, study_id: str) -> list[dict[str, Any]]:
+    """A study's Assay refs, or ``[]`` when the instance does not serve them."""
+    import httpx
+
+    try:
+        data = client.get(f"/studies/{study_id}/assays").get("data", [])
+    except httpx.HTTPStatusError as exc:
+        if 400 <= exc.response.status_code < 500:
+            return []
+        raise
+    return data if isinstance(data, list) else []
 
 
 def _observation_units(client: SeekClient, study_id: str) -> list[dict[str, Any]]:
@@ -168,6 +178,26 @@ def import_from_seek(
             ou["_samples"] = samples
             ous.append(ou)
         study["_ous"] = ous
+
+        # The API sync attaches Samples to an Assay, not to an ObservationUnit, so
+        # a dataset pushed that way is invisible to the walk above. Read the
+        # Assays too, and the Samples hanging off each, or nothing below Study
+        # survives a round trip.
+        assays: list[dict[str, Any]] = []
+        for assay_ref in _assays(client, study_ref["id"]):
+            assay = client.get(f"/assays/{assay_ref['id']}")["data"]
+            a_samples: list[dict[str, Any]] = []
+            for sample_ref in (assay.get("relationships") or {}).get("samples", {}).get(
+                "data"
+            ) or []:
+                sample = client.get(f"/samples/{sample_ref['id']}")["data"]
+                st_id = sample["relationships"]["sample_type"]["data"]["id"]
+                for field in _sample_type_fields(client, st_id, st_cache):
+                    sample_fields.setdefault(field["name"], field)
+                a_samples.append(sample)
+            assay["_samples"] = a_samples
+            assays.append(assay)
+        study["_assays"] = assays
         studies.append(study)
 
     # -- derive the profile from what the instance actually holds ---------------
@@ -178,9 +208,10 @@ def import_from_seek(
         "root_entity": "Investigation",
         "entities": {
             "Investigation": {"fields": _core_fields("Study")},
-            "Study": {"fields": _core_fields("ObservationUnit")},
+            "Study": {"fields": _core_fields("ObservationUnit", "Assay")},
             "ObservationUnit": {"fields": _core_fields("Sample")},
-            "Sample": {"fields": _core_fields(None) + sample_type_fields},
+            "Assay": {"fields": _core_fields("Sample")},
+            "Sample": {"fields": _core_fields() + sample_type_fields},
         },
     }
     dataset = MetaseedClient.from_spec(spec)
@@ -215,6 +246,17 @@ def import_from_seek(
                     "Sample",
                     _sample_data(sample),
                     parent_id=ou_entity.id,
+                    skip_validation=True,
+                )
+        for assay in study["_assays"]:
+            assay_entity = dataset.create_entity(
+                "Assay", core(assay), parent_id=study_entity.id, skip_validation=True
+            )
+            for sample in assay["_samples"]:
+                dataset.create_entity(
+                    "Sample",
+                    _sample_data(sample),
+                    parent_id=assay_entity.id,
                     skip_validation=True,
                 )
     return dataset

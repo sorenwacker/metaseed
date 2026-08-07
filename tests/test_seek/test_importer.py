@@ -31,6 +31,9 @@ _RESPONSES: dict[str, Any] = {
         }
     },
     "/studies/10/observation_units": {"data": [{"id": "2"}]},
+    # A study serves its assays too; the API sync hangs Samples off an Assay
+    # rather than an ObservationUnit, so the importer reads both routes.
+    "/studies/10/assays": {"data": []},
     "/observation_units/2": {
         "data": {
             "id": "2",
