@@ -239,10 +239,10 @@ with a 4xx; the import degrades gracefully to the Investigation/Study skeleton
 **Import scope (current).** The importer captures every Sample field with its
 type, but the Investigation/Study/ObservationUnit levels keep only their
 `identifier`/`title`/`description` — other core attributes on those levels are not
-yet read. Assays are not imported (the derived profile has no Assay level), so an
-ISA dataset pushed via the JSON:API sync and pulled back loses its Assays.
-Reconstructing custom Extended-Metadata attribute types on the non-Sample levels,
-and importing Assays, are follow-ups.
+yet read. Samples are read by both routes they can reach SEEK by: ObservationUnit
+(the FAIR-Data-Station import) and Assay (the JSON:API sync), so a dataset pushed
+by the sync comes back with its Assays. Reconstructing custom Extended-Metadata
+attribute types on the non-Sample levels is a follow-up.
 
 ## Status of the JSON:API sync path
 
