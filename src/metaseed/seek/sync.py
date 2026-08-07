@@ -38,6 +38,10 @@ class SyncResult:
     # Investigation and dropped on re-import. Counted in ``created_count``
     # because the resource does exist -- listed here because it is not findable.
     unlinked: list[tuple[str, str]] = dc_field(default_factory=list)
+    # Sample Type id -> the Assays it was associated with, so an Assay created
+    # here can actually hold Samples. Without the link SEEK accepts a Sample of
+    # that type but the Assay never shows it.
+    sample_type_assays: dict[str, list[str]] = dc_field(default_factory=dict)
 
     @property
     def created_count(self) -> int:
@@ -166,6 +170,10 @@ class _SyncContext:
     text_list_fields_by_entity: dict[str, frozenset[str]]
     file_fields_by_entity: dict[str, tuple[str | None, str | None]]
     files_by_study: dict[str, list[tuple[str, str]]]
+    # Sample Type id -> Assay ids that need it, gathered during the walk and
+    # applied once afterwards: SEEK replaces the association on each write, so
+    # patching per sample would leave only the last one.
+    sample_type_assays: dict[str, set[str]]
     result: SyncResult
 
 
@@ -249,6 +257,8 @@ def _place_sample(
     # SEEK derives a Sample's title from its Title attribute and rejects a blank
     # one; fall back to the same non-blank title the ISA levels use.
     data.setdefault("Title", title)
+    if assay_id:
+        ctx.sample_type_assays.setdefault(sample_type_id, set()).add(assay_id)
     ctx.result.samples[node.id] = ctx.client.create_sample(
         sample_type_id=sample_type_id,
         project_id=ctx.project_id,
@@ -375,6 +385,7 @@ def sync_dataset_to_seek(
         text_list_fields_by_entity=text_list_fields_by_entity,
         file_fields_by_entity=file_fields_by_entity,
         files_by_study=files_by_study,
+        sample_type_assays={},
         result=result,
     )
 
@@ -392,6 +403,19 @@ def sync_dataset_to_seek(
 
     for root in metaseed_client.get_tree():
         walk(root, None, None, None)
+
+    # Associate each Sample Type with the Assays that use it. This is the only
+    # supported direction: sending ``sample_types`` on an Assay is answered 200
+    # and discarded, so without this an Assay created here holds no Samples.
+    for sample_type_id, assay_ids in ctx.sample_type_assays.items():
+        try:
+            result.sample_type_assays[sample_type_id] = (
+                client.add_assays_to_sample_type(
+                    sample_type_id=sample_type_id, assay_ids=sorted(assay_ids)
+                )
+            )
+        except Exception as exc:  # one failed link must not abort the batch
+            result.errors.append((f"sample_type:{sample_type_id}", str(exc)))
 
     # One remote DataFile per study, pointing at the study's external storage.
     study_id_to_node = {sid: nid for nid, sid in result.studies.items()}
