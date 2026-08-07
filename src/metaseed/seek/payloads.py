@@ -354,6 +354,8 @@ def isa_study_form(
     source_attributes: Sequence[Mapping[str, Any]],
     collection_title: str,
     collection_attributes: Sequence[Mapping[str, Any]],
+    source_template_id: str | int | None = None,
+    collection_template_id: str | int | None = None,
 ) -> list[tuple[str, str]]:
     """Form body for ``POST /isa_studies`` — a Study with its two Sample Types.
 
@@ -368,10 +370,21 @@ def isa_study_form(
         ("isa_study[study][investigation_id]", str(investigation_id)),
         ("isa_study[source_sample_type][title]", source_title),
     ]
+    if source_template_id is not None:
+        pairs.append(
+            ("isa_study[source_sample_type][template_id]", str(source_template_id))
+        )
     pairs += _attribute_pairs(
         "isa_study[source_sample_type][sample_attributes]", source_attributes
     )
     pairs.append(("isa_study[sample_collection_sample_type][title]", collection_title))
+    if collection_template_id is not None:
+        pairs.append(
+            (
+                "isa_study[sample_collection_sample_type][template_id]",
+                str(collection_template_id),
+            )
+        )
     pairs += _attribute_pairs(
         "isa_study[sample_collection_sample_type][sample_attributes]",
         collection_attributes,
@@ -390,6 +403,7 @@ def isa_assay_form(
     input_sample_type_id: str | int | None = None,
     sample_type_title: str | None = None,
     sample_type_attributes: Sequence[Mapping[str, Any]] | None = None,
+    sample_type_template_id: str | int | None = None,
 ) -> list[tuple[str, str]]:
     """Form body for ``POST /isa_assays`` — an assay stream, or an assay in one.
 
@@ -410,6 +424,10 @@ def isa_assay_form(
         pairs.append(("isa_assay[input_sample_type_id]", str(input_sample_type_id)))
     if sample_type_title is not None:
         pairs.append(("isa_assay[sample_type][title]", sample_type_title))
+    if sample_type_template_id is not None:
+        pairs.append(
+            ("isa_assay[sample_type][template_id]", str(sample_type_template_id))
+        )
     if sample_type_attributes:
         pairs += _attribute_pairs(
             "isa_assay[sample_type][sample_attributes]", sample_type_attributes

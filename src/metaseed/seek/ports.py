@@ -34,6 +34,10 @@ class IsaWriter(Protocol):
         isa_json_compliant: bool = False,
     ) -> str: ...
 
+    def template_ids_by_title(self) -> dict[str, str]:
+        """ISA Template title -> id on this instance."""
+        ...
+
     def create_isa_study(
         self,
         *,
@@ -43,6 +47,8 @@ class IsaWriter(Protocol):
         source_attributes: Sequence[Mapping[str, Any]],
         collection_title: str,
         collection_attributes: Sequence[Mapping[str, Any]],
+        source_template_id: str | None = None,
+        collection_template_id: str | None = None,
     ) -> str: ...
 
     def create_isa_assay(
@@ -55,6 +61,7 @@ class IsaWriter(Protocol):
         input_sample_type_id: str | None = None,
         sample_type_title: str | None = None,
         sample_type_attributes: Sequence[Mapping[str, Any]] | None = None,
+        sample_type_template_id: str | None = None,
     ) -> str: ...
 
     def study_sample_type_ids(self, study_id: str) -> dict[str, str]: ...

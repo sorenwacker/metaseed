@@ -222,6 +222,19 @@ class SeekClient:
             for row in self.get("/isa_tags").get("data", [])
         }
 
+    def template_ids_by_title(self) -> dict[str, str]:
+        """ISA Template title -> id, for attaching a Template to a Sample Type.
+
+        SEEK's ISA-JSON exporter reads a Sample Type's Template to tell an assay
+        data file from an assay material, so a Sample Type without one cannot be
+        exported however correct its attributes are.
+        """
+        return {
+            row["attributes"]["title"]: str(row["id"])
+            for row in self.get("/templates").get("data", [])
+            if (row.get("attributes") or {}).get("title")
+        }
+
     def create_isa_study(
         self,
         *,
@@ -231,6 +244,8 @@ class SeekClient:
         source_attributes: Sequence[Mapping[str, Any]],
         collection_title: str,
         collection_attributes: Sequence[Mapping[str, Any]],
+        source_template_id: str | None = None,
+        collection_template_id: str | None = None,
     ) -> str:
         """Create a Study with its Source and Sample Collection types; return its id.
 
@@ -248,6 +263,8 @@ class SeekClient:
                 source_attributes=source_attributes,
                 collection_title=collection_title,
                 collection_attributes=collection_attributes,
+                source_template_id=source_template_id,
+                collection_template_id=collection_template_id,
             ),
         )
 
@@ -286,6 +303,7 @@ class SeekClient:
         input_sample_type_id: str | None = None,
         sample_type_title: str | None = None,
         sample_type_attributes: Sequence[Mapping[str, Any]] | None = None,
+        sample_type_template_id: str | None = None,
     ) -> str:
         """Create an assay stream, or an assay within one; return its id.
 
@@ -303,6 +321,7 @@ class SeekClient:
                 input_sample_type_id=input_sample_type_id,
                 sample_type_title=sample_type_title,
                 sample_type_attributes=sample_type_attributes,
+                sample_type_template_id=sample_type_template_id,
             ),
         )
 
