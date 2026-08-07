@@ -278,8 +278,9 @@ def data_file_payload(
 def isa_sample_attribute(
     *,
     title: str,
-    attribute_type_id: str | int,
     isa_tag_id: str | int,
+    attribute_type_id: str | int | None = None,
+    attribute_type_title: str | None = None,
     required: bool = False,
     is_title: bool = False,
     pos: int | None = None,
@@ -291,14 +292,25 @@ def isa_sample_attribute(
     so it is required here rather than optional. ``linked_sample_type_id`` is
     omitted unless given: SEEK rejects a link on an attribute whose type is not a
     registered-sample type.
+
+    The attribute type is given either by id or by title — SEEK resolves both
+    (``sample_attribute_type[id]`` or ``[title]``). Title is what the profile
+    projection already speaks, and unlike the ids it is stable across instances.
     """
+    if (attribute_type_id is None) == (attribute_type_title is None):
+        raise ValueError(
+            "pass exactly one of attribute_type_id or attribute_type_title"
+        )
     attribute: dict[str, Any] = {
         "title": title,
         "required": required,
         "is_title": is_title,
         "isa_tag_id": isa_tag_id,
-        "attribute_type_id": attribute_type_id,
     }
+    if attribute_type_id is not None:
+        attribute["attribute_type_id"] = attribute_type_id
+    else:
+        attribute["attribute_type_title"] = attribute_type_title
     if pos is not None:
         attribute["pos"] = pos
     if linked_sample_type_id is not None:
@@ -320,11 +332,11 @@ def _attribute_pairs(
     for attribute in attributes:
         for key, value in attribute.items():
             # SEEK takes the attribute type as a nested object, not a flat id.
-            suffix = (
-                "[sample_attribute_type][id]"
-                if key == "attribute_type_id"
-                else f"[{key}]"
-            )
+            nested = {
+                "attribute_type_id": "[sample_attribute_type][id]",
+                "attribute_type_title": "[sample_attribute_type][title]",
+            }
+            suffix = nested.get(key, f"[{key}]")
             rendered = str(value).lower() if isinstance(value, bool) else str(value)
             pairs.append((f"{prefix}[]{suffix}", rendered))
     return pairs
