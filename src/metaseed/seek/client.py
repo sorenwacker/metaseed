@@ -171,6 +171,136 @@ class SeekClient:
         """GET ``path`` and return the parsed JSON body."""
         return self._request("GET", path)
 
+    def _form_request(self, path: str, pairs: Sequence[tuple[str, str]]) -> str:
+        """POST form-encoded ``pairs`` to an ISA endpoint; return the new record id.
+
+        ``/isa_studies`` and ``/isa_assays`` back SEEK's web forms. Their JSON
+        branch is unreachable -- ``check_json_id_type`` demands a JSON:API
+        ``data`` member and ``convert_json_params`` then drops the ``isa_*`` key
+        -- so the body must be form-encoded and the request must not ask for
+        JSON. Success is a 302 whose ``Location`` carries ``item_id``; a
+        rejection renders the form again as HTML, which is raised rather than
+        returned so a caller cannot attach samples to an assay that was never
+        created.
+        """
+        url = f"{self._base_url}{path}"
+        headers = {
+            "Accept": "text/html",
+            "Content-Type": "application/x-www-form-urlencoded",
+            "User-Agent": USER_AGENT,
+        }
+        if self._token:
+            headers["Authorization"] = f"Bearer {self._token}"
+        body = "&".join(str(httpx.QueryParams({key: value})) for key, value in pairs)
+        if self._http_client is not None:
+            response = self._http_client.request(
+                "POST",
+                url,
+                headers=headers,
+                content=body,
+                auth=self._auth,
+                follow_redirects=False,
+            )
+        else:
+            with httpx.Client(timeout=self._timeout) as client:
+                response = client.request(
+                    "POST",
+                    url,
+                    headers=headers,
+                    content=body,
+                    auth=self._auth,
+                    follow_redirects=False,
+                )
+        if response.status_code not in (301, 302, 303):
+            raise SeekApiError(response) from None
+        item_id = httpx.URL(response.headers.get("Location", "")).params.get("item_id")
+        if not item_id:
+            raise ValueError(f"SEEK accepted POST {path} but returned no item_id")
+        return str(item_id)
+
+    def isa_tag_ids(self) -> dict[str, str]:
+        """ISA tag title -> id, as an ISA-compliant Sample Type attribute needs.
+
+        Attributes take ``isa_tag_id``, but the numeric ids are per-instance, so
+        they are resolved by title against the instance being written to.
+        """
+        return {
+            row["attributes"]["title"]: str(row["id"])
+            for row in self.get("/isa_tags").get("data", [])
+        }
+
+    def create_isa_study(
+        self,
+        *,
+        title: str,
+        investigation_id: str,
+        source_title: str,
+        source_attributes: Sequence[Mapping[str, Any]],
+        collection_title: str,
+        collection_attributes: Sequence[Mapping[str, Any]],
+    ) -> str:
+        """Create a Study with its Source and Sample Collection types; return its id.
+
+        A Study is ISA-JSON compliant only once it owns these two Sample Types,
+        so they are created with it rather than attached afterwards -- the
+        JSON:API cannot attach them at all, since ``study_ids`` is not permitted
+        on ``POST /sample_types``.
+        """
+        return self._form_request(
+            "/isa_studies",
+            payloads.isa_study_form(
+                title=title,
+                investigation_id=investigation_id,
+                source_title=source_title,
+                source_attributes=source_attributes,
+                collection_title=collection_title,
+                collection_attributes=collection_attributes,
+            ),
+        )
+
+    def study_sample_type_ids(self, study_id: str) -> dict[str, str]:
+        """A Study's Sample Types as title -> id.
+
+        Keyed by title rather than position: ``GET /studies/{id}/sample_types``
+        does not preserve ``study.sample_types`` order, so the Source type cannot
+        be told from the Sample Collection type by where it appears. The caller
+        created both and knows the titles it used.
+        """
+        return {
+            row["attributes"]["title"]: str(row["id"])
+            for row in self.get(f"/studies/{study_id}/sample_types").get("data", [])
+        }
+
+    def create_isa_assay(
+        self,
+        *,
+        title: str,
+        study_id: str,
+        assay_class_id: int,
+        assay_stream_id: str | None = None,
+        input_sample_type_id: str | None = None,
+        sample_type_title: str | None = None,
+        sample_type_attributes: Sequence[Mapping[str, Any]] | None = None,
+    ) -> str:
+        """Create an assay stream, or an assay within one; return its id.
+
+        ``POST /assays`` cannot do this: ``assay_stream_id`` is absent from its
+        permitted params and from the ``assayPost`` schema, so it answers 200 and
+        discards the link, leaving an assay that belongs to no stream.
+        """
+        return self._form_request(
+            "/isa_assays",
+            payloads.isa_assay_form(
+                title=title,
+                study_id=study_id,
+                assay_class_id=assay_class_id,
+                assay_stream_id=assay_stream_id,
+                input_sample_type_id=input_sample_type_id,
+                sample_type_title=sample_type_title,
+                sample_type_attributes=sample_type_attributes,
+            ),
+        )
+
     def delete(self, path: str) -> None:
         """DELETE ``path``.
 
