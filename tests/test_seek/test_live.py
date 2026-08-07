@@ -384,13 +384,13 @@ def _walk(client, node):
 @pytest.mark.xfail(
     strict=True,
     reason=(
-        "The structure is compliant and the samples upload, but ISAExporter walks "
-        "a material chain -- Source sample -> Sample Collection sample -> assay "
-        "sample, each naming its predecessor in its Input attribute -- and "
-        "seek-ready-template 2.0 has a single Sample level, so there is nothing "
-        "for an assay sample's Input to point at. Fails at isa_exporter.rb:726, "
-        "`undefined method map for nil`. Needs a profile carrying the material "
-        "levels; see docs/architecture/seek-isa-compliance.md."
+        "ISAExporter reads sample.sample_type.isa_template.level "
+        "(isa_exporter.rb:750), so every Sample Type must be built from an ISA "
+        "Template. Templates cannot be created over the API -- POST /templates "
+        "drops nested attributes -- so a Sample Type this sync builds has no "
+        "template and the export raises NoMethodError. The structure itself is "
+        "correct: the material chain links and every Sample uploads without "
+        "error. See docs/architecture/seek-isa-compliance.md."
     ),
 )
 def test_a_pushed_dataset_is_exportable_as_isa_json(created_in_seek):

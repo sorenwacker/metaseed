@@ -178,9 +178,13 @@ def test_the_fake_satisfies_the_port_the_sync_depends_on() -> None:
     assert writer is not None
 
 
-def _dataset(*, assays: int = 1, samples_per_assay: int = 1) -> MetaseedClient:
-    """A seek-ready-template dataset: Investigation -> Study -> Assay -> Sample."""
-    client = MetaseedClient("seek-ready-template", "2.0")
+def _dataset(*, assays: int = 1, materials_per_assay: int = 1) -> MetaseedClient:
+    """A seek-ready-template 3.0 dataset carrying the ISA material chain.
+
+    Investigation -> Study -> Source -> Sample -> AssayMaterial, with the Assays
+    hanging off the Study and each material naming the Assay that measured it.
+    """
+    client = MetaseedClient("seek-ready-template", "3.0")
     inv = client.create_entity(
         "Investigation",
         {"identifier": "INV1", "title": "My Investigation"},
@@ -193,17 +197,30 @@ def _dataset(*, assays: int = 1, samples_per_assay: int = 1) -> MetaseedClient:
         skip_validation=True,
     )
     for a in range(assays):
-        assay = client.create_entity(
+        client.create_entity(
             "Assay",
             {"identifier": f"ASSAY{a}", "title": f"Assay {a}"},
             parent_id=study.id,
             skip_validation=True,
         )
-        for s in range(samples_per_assay):
+    source = client.create_entity(
+        "Source",
+        {"source_name": "source-1", "organism": "Arabidopsis thaliana"},
+        parent_id=study.id,
+        skip_validation=True,
+    )
+    sample = client.create_entity(
+        "Sample",
+        {"sample_name": "sample-1"},
+        parent_id=source.id,
+        skip_validation=True,
+    )
+    for a in range(assays):
+        for m in range(materials_per_assay):
             client.create_entity(
-                "Sample",
-                {"sample_name": f"sample-{a}-{s}"},
-                parent_id=assay.id,
+                "AssayMaterial",
+                {"material_name": f"material-{a}-{m}", "assay": f"ASSAY{a}"},
+                parent_id=sample.id,
                 skip_validation=True,
             )
     return client
@@ -263,39 +280,58 @@ class TestCompliantStructure:
 
 
 class TestSamplePlacement:
-    def test_a_sample_lands_in_its_own_assays_sample_type(self) -> None:
+    def test_a_material_lands_in_the_sample_type_of_the_assay_it_names(self) -> None:
         seek = _FakeSeek()
         sync_dataset_to_seek(seek, _dataset(assays=2), project_id="1")
-        used = {s["sample_type_id"] for s in _of_kind(seek, "sample")}
         owned = {next(iter(t.values())) for t in seek.assay_types.values()}
-        assert used == owned
+        # The Source and the Sample go in the Study's two types; the materials
+        # go in the Assay-owned ones.
+        used = {s["sample_type_id"] for s in _of_kind(seek, "sample")}
+        assert owned <= used
+        assert len(owned) == 2
 
-    def test_a_sample_is_linked_to_the_assay_that_measured_it(self) -> None:
+    def test_a_material_is_linked_to_the_assay_that_measured_it(self) -> None:
         seek = _FakeSeek()
         sync_dataset_to_seek(seek, _dataset(), project_id="1")
-        assert _of_kind(seek, "sample")[0]["assay_ids"]
+        linked = [s for s in _of_kind(seek, "sample") if s["assay_ids"]]
+        assert len(linked) == 1, "exactly the assay material names an Assay"
+
+    def test_each_level_names_the_one_above_it_as_its_input(self) -> None:
+        # The exporter walks Source -> Sample -> material by these links and
+        # fails with "undefined method map for nil" when one is missing.
+        seek = _FakeSeek()
+        sync_dataset_to_seek(seek, _dataset(), project_id="1")
+        samples = _of_kind(seek, "sample")
+        assert "Input (Title)" not in samples[0]["data"], "a Source heads the chain"
+        assert all("Input (Title)" in s["data"] for s in samples[1:])
 
     def test_a_core_identity_field_becomes_the_title_attribute(self) -> None:
         seek = _FakeSeek()
         sync_dataset_to_seek(seek, _dataset(), project_id="1")
-        assert _of_kind(seek, "sample")[0]["data"]["Title"] == "sample-0-0"
+        assert _of_kind(seek, "sample")[0]["data"]["Title"] == "source-1"
 
-    def test_a_sample_with_no_assay_ancestor_is_reported_not_silently_orphaned(
+    def test_a_material_naming_no_assay_is_reported_not_silently_orphaned(
         self,
     ) -> None:
-        # SEEK hangs Samples off Assays, so one with no Assay ancestor exists but
-        # is unreachable from the Investigation.
-        client = MetaseedClient("seek-ready-template", "2.0")
+        # A material whose Assay reference matches nothing has no Sample Type to
+        # go in, so it is reported rather than pushed somewhere unreachable.
+        client = MetaseedClient("seek-ready-template", "3.0")
         inv = client.create_entity(
             "Investigation", {"identifier": "INV1"}, skip_validation=True
         )
         study = client.create_entity(
             "Study", {"identifier": "STU1"}, parent_id=inv.id, skip_validation=True
         )
+        source = client.create_entity(
+            "Source", {"source_name": "src"}, parent_id=study.id, skip_validation=True
+        )
+        sample = client.create_entity(
+            "Sample", {"sample_name": "smp"}, parent_id=source.id, skip_validation=True
+        )
         client.create_entity(
-            "Sample",
-            {"sample_name": "loose"},
-            parent_id=study.id,
+            "AssayMaterial",
+            {"material_name": "orphan", "assay": "NO-SUCH-ASSAY"},
+            parent_id=sample.id,
             skip_validation=True,
         )
         seek = _FakeSeek()
@@ -392,4 +428,5 @@ class TestProtocolValue:
         # structurally compliant push still fails to export without this.
         seek = _FakeSeek()
         sync_dataset_to_seek(seek, _dataset(), project_id="1")
-        assert _of_kind(seek, "sample")[0]["data"]["Protocol"] == "Assay 0"
+        material = _of_kind(seek, "sample")[-1]
+        assert material["data"]["Protocol"] == "Assay 0"
