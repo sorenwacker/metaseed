@@ -15,8 +15,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from metaseed.seek.attribute_types import attribute_type_title, is_cv_field
 from metaseed.seek.payloads import isa_sample_attribute
-from metaseed.seek.provision import _attribute_type_title
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -45,6 +45,7 @@ def sample_type_attributes(
     *,
     level: str,
     isa_tag_ids: Mapping[str, str],
+    cv_ids: Mapping[str, str] | None = None,
     linked_sample_type_id: str | None = None,
 ) -> list[dict[str, Any]]:
     """Attributes for the Sample Type ``entity`` becomes at ``level``.
@@ -53,6 +54,9 @@ def sample_type_attributes(
         entity: The profile entity whose scalar fields become attributes.
         level: One of ``source``, ``sample_collection`` or ``assay``.
         isa_tag_ids: ISA tag title -> id, read from the target instance.
+        cv_ids: Field name -> Controlled Vocabulary id, for the entity's enum
+            fields. Provisioned separately (see
+            :func:`metaseed.seek.provision.execute_provisioning_plan`).
         linked_sample_type_id: The Sample Type this one takes its inputs from.
             Required for every level except ``source``.
 
@@ -64,7 +68,9 @@ def sample_type_attributes(
         ValueError: If ``level`` is unknown, or a level that chains was given no
             ``linked_sample_type_id`` — the resulting type would break the chain
             and SEEK would reject it only once the request reached the server.
-        KeyError: If a tag is not present on the instance.
+        KeyError: If a tag is not present on the instance, or an enum field
+            has no provisioned Controlled Vocabulary -- SEEK would reject the
+            attribute, by which point the field name is no longer in hand.
     """
     if level not in _LEVEL_TAGS:
         raise ValueError(f"level must be one of {sorted(_LEVEL_TAGS)}, got {level!r}")
@@ -79,6 +85,8 @@ def sample_type_attributes(
                 f"the SEEK instance has no ISA tag {name!r}; "
                 f"it offers {sorted(isa_tag_ids)}"
             ) from None
+
+    vocabularies = cv_ids or {}
 
     title_tag, default_tag = _LEVEL_TAGS[level]
     attributes: list[dict[str, Any]] = []
@@ -128,13 +136,23 @@ def sample_type_attributes(
     for field in entity.fields:
         if field.is_nested():
             continue
+        vocabulary_id: str | None = None
+        if is_cv_field(field):
+            try:
+                vocabulary_id = vocabularies[field.name]
+            except KeyError:
+                raise KeyError(
+                    f"field {field.name!r} declares an enum but has no provisioned "
+                    "Controlled Vocabulary; run the provisioning step first"
+                ) from None
         attributes.append(
             isa_sample_attribute(
                 title=field.name,
-                attribute_type_title=_attribute_type_title(field),
+                attribute_type_title=attribute_type_title(field),
                 isa_tag_id=tag(field.isa_tag or default_tag),
                 required=field.required,
                 pos=position,
+                sample_controlled_vocab_id=vocabulary_id,
             )
         )
         position += 1
