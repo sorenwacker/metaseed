@@ -348,3 +348,15 @@ class TestIsaFormEndpoints:
             "Coll": "101",
             "Src": "100",
         }
+
+
+def test_seek_client_satisfies_the_isa_writer_port():
+    """The port is only worth having if the real client actually implements it.
+
+    Without this the protocol could drift from ``SeekClient`` unnoticed, and the
+    sync would type-check against an interface nothing provides.
+    """
+    from metaseed.seek.ports import IsaWriter
+
+    writer: IsaWriter = SeekClient("http://seek.test", token="t")  # noqa: S106
+    assert writer is not None

@@ -145,21 +145,31 @@ class SeekClient:
             headers["Authorization"] = f"Bearer {self._token}"
         return headers
 
+    def _send(
+        self, method: str, path: str, *, headers: Mapping[str, str], **kwargs: Any
+    ) -> httpx.Response:
+        """Issue one HTTP request, using the injected client or a short-lived one.
+
+        The two encodings this client speaks -- JSON:API and the form bodies the
+        ISA endpoints require -- differ only in headers and body, so the auth and
+        client-lifetime handling lives here rather than being duplicated per
+        encoding.
+        """
+        url = f"{self._base_url}{path}"
+        if self._http_client is not None:
+            return self._http_client.request(
+                method, url, headers=headers, auth=self._auth, **kwargs
+            )
+        with httpx.Client(timeout=self._timeout) as client:
+            return client.request(
+                method, url, headers=headers, auth=self._auth, **kwargs
+            )
+
     def _request(
         self, method: str, path: str, *, json: Mapping[str, Any] | None = None
     ) -> Any:
         """Issue a request and return the parsed JSON body (``{}`` if empty)."""
-        url = f"{self._base_url}{path}"
-        headers = self._headers()
-        if self._http_client is not None:
-            response = self._http_client.request(
-                method, url, headers=headers, json=json, auth=self._auth
-            )
-        else:
-            with httpx.Client(timeout=self._timeout) as client:
-                response = client.request(
-                    method, url, headers=headers, json=json, auth=self._auth
-                )
+        response = self._send(method, path, headers=self._headers(), json=json)
         if response.is_error:
             # SEEK answers a rejected write with a JSON:API ``errors`` array
             # naming the offending attribute. Raising the bare status turned
@@ -183,7 +193,6 @@ class SeekClient:
         returned so a caller cannot attach samples to an assay that was never
         created.
         """
-        url = f"{self._base_url}{path}"
         headers = {
             "Accept": "text/html",
             "Content-Type": "application/x-www-form-urlencoded",
@@ -192,25 +201,9 @@ class SeekClient:
         if self._token:
             headers["Authorization"] = f"Bearer {self._token}"
         body = "&".join(str(httpx.QueryParams({key: value})) for key, value in pairs)
-        if self._http_client is not None:
-            response = self._http_client.request(
-                "POST",
-                url,
-                headers=headers,
-                content=body,
-                auth=self._auth,
-                follow_redirects=False,
-            )
-        else:
-            with httpx.Client(timeout=self._timeout) as client:
-                response = client.request(
-                    "POST",
-                    url,
-                    headers=headers,
-                    content=body,
-                    auth=self._auth,
-                    follow_redirects=False,
-                )
+        response = self._send(
+            "POST", path, headers=headers, content=body, follow_redirects=False
+        )
         if response.status_code not in (301, 302, 303):
             raise SeekApiError(response) from None
         item_id = httpx.URL(response.headers.get("Location", "")).params.get("item_id")
@@ -269,6 +262,18 @@ class SeekClient:
         return {
             row["attributes"]["title"]: str(row["id"])
             for row in self.get(f"/studies/{study_id}/sample_types").get("data", [])
+        }
+
+    def assay_sample_type_ids(self, assay_id: str) -> dict[str, str]:
+        """An Assay's Sample Types as title -> id.
+
+        Read from the sub-route because the assay resource omits ``sample_types``
+        from its ``relationships`` block, which makes the association look absent
+        when it is not.
+        """
+        return {
+            row["attributes"]["title"]: str(row["id"])
+            for row in self.get(f"/assays/{assay_id}/sample_types").get("data", [])
         }
 
     def create_isa_assay(
@@ -342,13 +347,21 @@ class SeekClient:
         raise ValueError(f"no sample attribute type titled {title!r}")
 
     def create_investigation(
-        self, *, title: str, project_id: str, description: str | None = None
+        self,
+        *,
+        title: str,
+        project_id: str,
+        description: str | None = None,
+        isa_json_compliant: bool = False,
     ) -> str:
         """Create an Investigation under ``project_id``; return its id."""
         return self._create(
             "/investigations",
             payloads.investigation_payload(
-                title=title, project_id=project_id, description=description
+                title=title,
+                project_id=project_id,
+                description=description,
+                isa_json_compliant=isa_json_compliant,
             ),
         )
 
