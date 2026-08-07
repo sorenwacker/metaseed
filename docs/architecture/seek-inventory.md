@@ -47,6 +47,49 @@ Two ways to supply one, both verified as reachable:
 
 Four templates are needed, one per ISA level: `study source`, `study sample`, and `assay - material` or `assay - data file` depending on the assay level's terminal attribute.
 
+### The template file format
+
+`template_json_file` carries a list of templates, each with a `metadata` block and its attributes. Taken from the CropXR definitions the instance's installed templates were built from (`cropxr/metadata/seek-metadata-definitions/sample_templates/`):
+
+```json
+{
+  "data": [
+    {
+      "metadata": {
+        "name": "CropXR combined sample",
+        "group": "CropXR combined",
+        "group_order": 1,
+        "temporary_name": "2_cropxr_sample_or_observation_unit",
+        "version": "1.0.4",
+        "organism": "any",
+        "level": "study sample"
+      },
+      "data": [
+        {
+          "name": "Input",
+          "description": "Existing study sources that are the input.",
+          "dataType": "Registered Sample List",
+          "required": true,
+          "isaTag": "input"
+        },
+        {
+          "name": "subject_id",
+          "description": "...",
+          "dataType": "String",
+          "title": true,
+          "required": true,
+          "isaTag": "sample"
+        }
+      ]
+    }
+  ]
+}
+```
+
+Note the naming differs from the API: `dataType` (an attribute-type *title*), `isaTag` (a tag *title*), and `title` rather than `is_title`. A closed vocabulary is given inline as `CVList`, so a profile's `enum` fields need no separately provisioned Controlled Vocabulary on this route.
+
+metaseed already projects each ISA level's attributes in `metaseed.seek.isa_types.sample_type_attributes`; the generator is that projection rendered in this shape rather than as form parameters.
+
 ## Why the requirements surfaced one at a time
 
 Each gate is invisible until the one before it passes, which is worth knowing before estimating similar work:
