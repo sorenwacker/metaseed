@@ -1,4 +1,10 @@
-"""Tests for the SEEK data pusher (dataset -> Investigations/Studies/Samples)."""
+"""Tests for the SEEK data pusher (dataset -> ISA-JSON compliant SEEK content).
+
+The sync builds the structure SEEK can export as ISA-JSON: a compliant
+Investigation, a Study owning a Source and a Sample Collection Sample Type, one
+assay stream per Study, and one Sample Type per Assay chained to the preceding
+one. See ``docs/architecture/seek-isa-compliance.md``.
+"""
 
 from __future__ import annotations
 
@@ -6,37 +12,117 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from metaseed import MetaseedClient
+from metaseed.seek.ports import IsaWriter
 from metaseed.seek.sync import sync_dataset_to_seek
 
 
 @dataclass
 class _FakeSeek:
-    """Records ISA/sample creates, handing out incrementing ids per kind."""
+    """Records the ISA creates, handing out incrementing ids.
+
+    Typed as :class:`IsaWriter` below, so a method added to the real client and
+    not here fails type checking rather than surfacing mid-walk.
+    """
 
     calls: list[tuple[str, dict[str, Any]]] = field(default_factory=list)
+    study_types: dict[str, dict[str, str]] = field(default_factory=dict)
+    assay_types: dict[str, dict[str, str]] = field(default_factory=dict)
     _n: int = 0
 
     def _next(self) -> str:
         self._n += 1
         return str(self._n)
 
-    def create_investigation(
-        self, *, title: str, project_id: str, description: str | None = None
-    ) -> str:
-        self.calls.append(("investigation", {"title": title}))
-        return self._next()
+    def isa_tag_ids(self) -> dict[str, str]:
+        tags = (
+            "source",
+            "source_characteristic",
+            "sample",
+            "sample_characteristic",
+            "protocol",
+            "parameter_value",
+            "other_material",
+            "other_material_characteristic",
+            "data_file",
+            "data_file_comment",
+            "input",
+        )
+        return {tag: str(i) for i, tag in enumerate(tags, start=1)}
 
-    def create_study(
-        self, *, title: str, investigation_id: str, description: str | None = None
+    def create_investigation(
+        self,
+        *,
+        title: str,
+        project_id: str,
+        description: str | None = None,
+        isa_json_compliant: bool = False,
     ) -> str:
         self.calls.append(
-            ("study", {"title": title, "investigation_id": investigation_id})
+            ("investigation", {"title": title, "compliant": isa_json_compliant})
         )
         return self._next()
 
-    def create_assay(self, *, title: str, study_id: str) -> str:
-        self.calls.append(("assay", {"title": title, "study_id": study_id}))
-        return self._next()
+    def create_isa_study(
+        self,
+        *,
+        title: str,
+        investigation_id: str,
+        source_title: str,
+        source_attributes: Any,
+        collection_title: str,
+        collection_attributes: Any,
+    ) -> str:
+        study_id = self._next()
+        self.calls.append(
+            (
+                "study",
+                {
+                    "title": title,
+                    "investigation_id": investigation_id,
+                    "source_attributes": list(source_attributes),
+                    "collection_attributes": list(collection_attributes),
+                },
+            )
+        )
+        self.study_types[study_id] = {
+            source_title: self._next(),
+            collection_title: self._next(),
+        }
+        return study_id
+
+    def create_isa_assay(
+        self,
+        *,
+        title: str,
+        study_id: str,
+        assay_class_id: int,
+        assay_stream_id: str | None = None,
+        input_sample_type_id: str | None = None,
+        sample_type_title: str | None = None,
+        sample_type_attributes: Any = None,
+    ) -> str:
+        assay_id = self._next()
+        self.calls.append(
+            (
+                "stream" if sample_type_title is None else "assay",
+                {
+                    "title": title,
+                    "study_id": study_id,
+                    "assay_class_id": assay_class_id,
+                    "assay_stream_id": assay_stream_id,
+                    "input_sample_type_id": input_sample_type_id,
+                },
+            )
+        )
+        if sample_type_title is not None:
+            self.assay_types[assay_id] = {sample_type_title: self._next()}
+        return assay_id
+
+    def study_sample_type_ids(self, study_id: str) -> dict[str, str]:
+        return self.study_types.get(study_id, {})
+
+    def assay_sample_type_ids(self, assay_id: str) -> dict[str, str]:
+        return self.assay_types.get(assay_id, {})
 
     def create_sample(
         self,
@@ -44,7 +130,7 @@ class _FakeSeek:
         sample_type_id: str,
         project_id: str,
         data: dict[str, Any],
-        assay_ids: list[str] | None = None,
+        assay_ids: Any = None,
         study_id: str | None = None,
     ) -> str:
         self.calls.append(
@@ -53,28 +139,48 @@ class _FakeSeek:
                 {
                     "sample_type_id": sample_type_id,
                     "data": data,
-                    "assay_ids": assay_ids,
+                    "assay_ids": list(assay_ids) if assay_ids else None,
                 },
             )
         )
         return self._next()
 
+    def create_sample_type(
+        self, *, title: str, project_id: str, attributes: list[dict[str, Any]]
+    ) -> str:
+        self.calls.append(("sample_type", {"title": title}))
+        return self._next()
+
+    def find_sample_type_id_by_title(
+        self, title: str, *, project_id: str | None = None
+    ) -> str | None:
+        return None
+
+    def sample_attribute_type_id(self, title: str) -> str:
+        return "8"
+
     def create_data_file(
         self,
         *,
-        title,
-        project_id,
-        url,
-        original_filename,
-        description=None,
-        assay_ids=None,
+        title: str,
+        project_id: str,
+        url: str,
+        original_filename: str,
+        description: str | None = None,
+        assay_ids: Any = None,
     ) -> str:
-        self.calls.append(("data_file", {"url": url, "description": description}))
+        self.calls.append(("data_file", {"url": url}))
         return self._next()
 
 
-def _dataset() -> MetaseedClient:
-    client = MetaseedClient("isa", "1.0")
+def test_the_fake_satisfies_the_port_the_sync_depends_on() -> None:
+    writer: IsaWriter = _FakeSeek()
+    assert writer is not None
+
+
+def _dataset(*, assays: int = 1, samples_per_assay: int = 1) -> MetaseedClient:
+    """A seek-ready-template dataset: Investigation -> Study -> Assay -> Sample."""
+    client = MetaseedClient("seek-ready-template", "2.0")
     inv = client.create_entity(
         "Investigation",
         {"identifier": "INV1", "title": "My Investigation"},
@@ -86,63 +192,151 @@ def _dataset() -> MetaseedClient:
         parent_id=inv.id,
         skip_validation=True,
     )
-    client.create_entity(
-        "Sample", {"name": "sample-a"}, parent_id=study.id, skip_validation=True
-    )
+    for a in range(assays):
+        assay = client.create_entity(
+            "Assay",
+            {"identifier": f"ASSAY{a}", "title": f"Assay {a}"},
+            parent_id=study.id,
+            skip_validation=True,
+        )
+        for s in range(samples_per_assay):
+            client.create_entity(
+                "Sample",
+                {"sample_name": f"sample-{a}-{s}"},
+                parent_id=assay.id,
+                skip_validation=True,
+            )
     return client
 
 
-def test_sync_creates_isa_hierarchy_and_threads_ids():
-    seek = _FakeSeek()
-    result = sync_dataset_to_seek(
-        seek,  # type: ignore[arg-type]
-        _dataset(),
-        project_id="1",
-        sample_type_ids={"Sample": "st-9"},
-    )
-
-    kinds = [c[0] for c in seek.calls]
-    assert kinds == ["investigation", "study", "sample"]
-    assert not result.errors and not result.skipped
-    assert len(result.investigations) == 1
-    assert len(result.studies) == 1
-    assert len(result.samples) == 1
-    assert result.created_count == 3
-
-    # study links the created investigation; sample uses the mapped sample type.
-    inv_id = next(iter(result.investigations.values()))
-    study_call = next(c for k, c in seek.calls if k == "study")
-    assert study_call["investigation_id"] == inv_id
-    sample_call = next(c for k, c in seek.calls if k == "sample")
-    assert sample_call["sample_type_id"] == "st-9"
-    # a core identity field (name) is routed onto the Sample Type's Title attribute
-    assert sample_call["data"]["Title"] == "sample-a"
+def _of_kind(seek: _FakeSeek, kind: str) -> list[dict[str, Any]]:
+    return [payload for k, payload in seek.calls if k == kind]
 
 
-def test_sample_data_routes_core_fields_and_keeps_scalar_lists():
-    from metaseed.seek.sync import _sample_data
+class TestCompliantStructure:
+    def test_the_investigation_is_marked_isa_json_compliant(self) -> None:
+        # Without the flag SEEK refuses to export the Investigation as ISA-JSON
+        # at all, whatever its Studies and Assays look like.
+        seek = _FakeSeek()
+        sync_dataset_to_seek(seek, _dataset(), project_id="1")
+        assert _of_kind(seek, "investigation")[0]["compliant"] is True
 
-    data = _sample_data(
-        {
-            "_node_id": "x",  # metadata key dropped
-            "unique_id": "s1",  # core identity -> Title
-            "description": "d",  # core -> Description
-            "empty": "",  # empty dropped
-            "organism": "human",  # non-core field kept under its own name
-            "tags": ["a", "b"],  # scalar list kept (CV list)
-            "nested": {"k": "v"},  # non-scalar dropped
-            "mixed": ["a", {"k": 1}],  # list with a dict dropped
+    def test_each_study_owns_a_source_and_a_sample_collection_type(self) -> None:
+        # A Study is compliant only once it owns these two; the export fails on
+        # the Study otherwise.
+        seek = _FakeSeek()
+        sync_dataset_to_seek(seek, _dataset(), project_id="1")
+        study = _of_kind(seek, "study")[0]
+        assert study["source_attributes"] and study["collection_attributes"]
+
+    def test_each_study_gets_exactly_one_assay_stream(self) -> None:
+        seek = _FakeSeek()
+        sync_dataset_to_seek(seek, _dataset(assays=2), project_id="1")
+        assert len(_of_kind(seek, "stream")) == 1
+
+    def test_every_assay_hangs_off_that_stream(self) -> None:
+        seek = _FakeSeek()
+        sync_dataset_to_seek(seek, _dataset(assays=2), project_id="1")
+        assays = _of_kind(seek, "assay")
+        assert len(assays) == 2
+        # All under one stream, and none left dangling as a bare EXP assay --
+        # an assay outside a stream does not render in SEEK's ISA study view.
+        assert all(a["assay_stream_id"] is not None for a in assays)
+        assert len({a["assay_stream_id"] for a in assays}) == 1
+
+    def test_each_assay_owns_its_own_sample_type(self) -> None:
+        # A stream chains its types together, so two assays of the same profile
+        # entity need two Sample Types with different links -- sharing one
+        # cannot express the chain.
+        seek = _FakeSeek()
+        sync_dataset_to_seek(seek, _dataset(assays=2), project_id="1")
+        assert len(seek.assay_types) == 2
+        owned = [next(iter(t.values())) for t in seek.assay_types.values()]
+        assert len(set(owned)) == 2
+
+    def test_an_assay_takes_its_input_from_the_studys_collection_type(self) -> None:
+        seek = _FakeSeek()
+        sync_dataset_to_seek(seek, _dataset(), project_id="1")
+        study_id = next(iter(seek.study_types))
+        collection_id = list(seek.study_types[study_id].values())[1]
+        assert _of_kind(seek, "assay")[0]["input_sample_type_id"] == collection_id
+
+
+class TestSamplePlacement:
+    def test_a_sample_lands_in_its_own_assays_sample_type(self) -> None:
+        seek = _FakeSeek()
+        sync_dataset_to_seek(seek, _dataset(assays=2), project_id="1")
+        used = {s["sample_type_id"] for s in _of_kind(seek, "sample")}
+        owned = {next(iter(t.values())) for t in seek.assay_types.values()}
+        assert used == owned
+
+    def test_a_sample_is_linked_to_the_assay_that_measured_it(self) -> None:
+        seek = _FakeSeek()
+        sync_dataset_to_seek(seek, _dataset(), project_id="1")
+        assert _of_kind(seek, "sample")[0]["assay_ids"]
+
+    def test_a_core_identity_field_becomes_the_title_attribute(self) -> None:
+        seek = _FakeSeek()
+        sync_dataset_to_seek(seek, _dataset(), project_id="1")
+        assert _of_kind(seek, "sample")[0]["data"]["Title"] == "sample-0-0"
+
+    def test_a_sample_with_no_assay_ancestor_is_reported_not_silently_orphaned(
+        self,
+    ) -> None:
+        # SEEK hangs Samples off Assays, so one with no Assay ancestor exists but
+        # is unreachable from the Investigation.
+        client = MetaseedClient("seek-ready-template", "2.0")
+        inv = client.create_entity(
+            "Investigation", {"identifier": "INV1"}, skip_validation=True
+        )
+        study = client.create_entity(
+            "Study", {"identifier": "STU1"}, parent_id=inv.id, skip_validation=True
+        )
+        client.create_entity(
+            "Sample",
+            {"sample_name": "loose"},
+            parent_id=study.id,
+            skip_validation=True,
+        )
+        seek = _FakeSeek()
+        result = sync_dataset_to_seek(seek, client, project_id="1")
+        assert result.unlinked
+
+
+class TestSampleData:
+    def test_core_fields_route_and_scalar_lists_survive(self) -> None:
+        from metaseed.seek.sync import _sample_data
+
+        data = _sample_data(
+            {
+                "_node_id": "x",  # metadata key dropped
+                "unique_id": "s1",  # core identity -> Title
+                "description": "d",  # core -> Description
+                "empty": "",  # empty dropped
+                "organism": "human",  # non-core field kept under its own name
+                "tags": ["a", "b"],  # scalar list kept (CV list)
+                "nested": {"k": "v"},  # non-scalar dropped
+                "mixed": ["a", {"k": 1}],  # list with a dict dropped
+            }
+        )
+        assert data == {
+            "Title": "s1",
+            "Description": "d",
+            "organism": "human",
+            "tags": ["a", "b"],
         }
-    )
-    assert data == {
-        "Title": "s1",
-        "Description": "d",
-        "organism": "human",
-        "tags": ["a", "b"],
-    }
+
+    def test_core_collapse_is_priority_ordered_not_dict_ordered(self) -> None:
+        from metaseed.seek.sync import _sample_data
+
+        assert _sample_data({"title": "label", "identifier": "ID-1"})["Title"] == "ID-1"
+        assert _sample_data({"identifier": "ID-1", "title": "label"})["Title"] == "ID-1"
+        assert (
+            _sample_data({"identifier": "ID-1", "unique_id": "U-1"})["Title"] == "U-1"
+        )
 
 
-def test_sync_consumes_an_in_memory_spec_dataset():
+def test_sync_consumes_an_in_memory_spec_dataset() -> None:
     # A dataset built via ``from_spec`` (e.g. one produced by the SEEK importer)
     # has no installed profile file. sync must read its in-memory ProfileSpec
     # rather than calling SpecLoader unconditionally, which would raise
@@ -161,8 +355,15 @@ def test_sync_consumes_an_in_memory_spec_dataset():
                 "seek": {"role": "Investigation"},
             },
             "Study": {
-                "fields": [{"name": "identifier", "type": "string", "required": True}],
+                "fields": [
+                    {"name": "identifier", "type": "string", "required": True},
+                    {"name": "samples", "type": "list", "items": "Sample"},
+                ],
                 "seek": {"role": "Study"},
+            },
+            "Sample": {
+                "fields": [{"name": "identifier", "type": "string"}],
+                "seek": {"role": "Sample"},
             },
         },
     }
@@ -177,209 +378,18 @@ def test_sync_consumes_an_in_memory_spec_dataset():
     )
 
     seek = _FakeSeek()
-    result = sync_dataset_to_seek(
-        seek,  # type: ignore[arg-type]
-        dataset,
-        project_id="1",
-        sample_type_ids={},
-    )
-    assert [c[0] for c in seek.calls] == ["investigation", "study"]
+    result = sync_dataset_to_seek(seek, dataset, project_id="1")
+    isa_kinds = [k for k, _ in seek.calls if k in ("investigation", "study")]
+    assert isa_kinds == ["investigation", "study"]
     assert not result.errors
 
 
-def test_sample_data_core_collapse_is_priority_ordered_not_dict_ordered():
-    from metaseed.seek.sync import _sample_data
-
-    # ``title`` appears first in dict order but ``identifier`` outranks it, so
-    # Title takes the identifier value regardless of insertion order.
-    assert _sample_data({"title": "label", "identifier": "ID-1"})["Title"] == "ID-1"
-    assert _sample_data({"identifier": "ID-1", "title": "label"})["Title"] == "ID-1"
-    # unique_id outranks identifier.
-    assert _sample_data({"identifier": "ID-1", "unique_id": "U-1"})["Title"] == "U-1"
-
-
-def test_sync_skips_sample_without_provisioned_type():
-    seek = _FakeSeek()
-    result = sync_dataset_to_seek(
-        seek,  # type: ignore[arg-type]
-        _dataset(),
-        project_id="1",
-        sample_type_ids={},  # no Sample Type provisioned
-    )
-
-    assert [c[0] for c in seek.calls] == ["investigation", "study"]  # no sample
-    assert len(result.skipped) == 1
-    _node_id, reason = result.skipped[0]
-    assert "Sample Type" in reason
-
-
-def test_a_sample_whose_label_field_is_not_a_core_name_still_gets_a_title():
-    """SEEK requires a Sample's Title; without it the POST is a 422.
-
-    ``_sample_data`` derives Title only from ``identifier``/``unique_id``/
-    ``name``/``title``. A profile whose Sample-role entity identifies itself by
-    another field -- cropxr's ``Source`` uses ``Source Name`` -- produced a
-    Sample with a blank Title, and every such sample was rejected. The Title now
-    falls back to the node's label, which is never blank.
-    """
-    from metaseed.seek.sync import sync_dataset_to_seek
-
-    client = MetaseedClient("isa", "1.0")
-    inv = client.create_entity(
-        "Investigation", {"identifier": "INV1", "title": "I"}, skip_validation=True
-    )
-    study = client.create_entity(
-        "Study",
-        {"identifier": "STU1", "title": "S"},
-        parent_id=inv.id,
-        skip_validation=True,
-    )
-    # A sample carrying only a field SEEK's core mapping does not recognise.
-    client.create_entity(
-        "Sample", {"source_name": "S-1"}, parent_id=study.id, skip_validation=True
-    )
-
-    seek = _FakeSeek()
-    result = sync_dataset_to_seek(
-        seek, client, project_id="1", sample_type_ids={"Sample": "st1"}
-    )
-
-    assert not result.errors, result.errors
-    sample_calls = [c for kind, c in seek.calls if kind == "sample"]
-    assert sample_calls, "the sample was not created"
-    assert sample_calls[0]["data"].get("Title"), "Title must not be blank"
-
-
-def test_a_plain_list_field_is_joined_for_seek_text_attribute():
-    """A list field without an enum is provisioned as a scalar SEEK Text
-    attribute, so its array value must be sent as a string. Sending the raw
-    array made SEEK read the attribute as blank and reject the sample with
-    ``Input: is required``, even though the value was present."""
-    from metaseed.seek.sync import _sample_data
-
-    # "Input" is a plain list (Text attribute); "tags" is an enum list (CV List).
-    data = _sample_data(
-        {"Input": ["SRC-1", "SRC-2"], "tags": ["a", "b"]},
-        text_list_fields=frozenset({"Input"}),
-    )
-
-    assert isinstance(data["Input"], str), data["Input"]
-    assert "SRC-1" in data["Input"] and "SRC-2" in data["Input"]
-    assert data["tags"] == ["a", "b"]  # enum list stays an array
-
-
-def test_sample_with_a_required_list_field_syncs():
-    """End to end: a Sample carrying a plain-list field is created, not 422'd."""
-    from metaseed.seek.sync import sync_dataset_to_seek
-
-    client = MetaseedClient("isa", "1.0")
-    inv = client.create_entity(
-        "Investigation", {"identifier": "I", "title": "I"}, skip_validation=True
-    )
-    study = client.create_entity(
-        "Study",
-        {"identifier": "S", "title": "S"},
-        parent_id=inv.id,
-        skip_validation=True,
-    )
-    # Sample has no list field in ISA, so force one through a value; the point is
-    # the join happens for list-valued data regardless of the profile shape.
-    client.create_entity(
-        "Sample",
-        {"name": "smp", "sources": ["A", "B"]},
-        parent_id=study.id,
-        skip_validation=True,
-    )
-
-    seek = _FakeSeek()
-    result = sync_dataset_to_seek(
-        seek, client, project_id="1", sample_type_ids={"Sample": "st"}
-    )
-    assert not result.errors, result.errors
-
-
-def test_data_files_under_a_study_become_one_remote_data_file():
-    """A study's file entities collapse to a single SEEK DataFile linking to the
-    common base URL, with the filenames listed -- the files stay in external
-    storage, SEEK holds the reference."""
-    from metaseed import MetaseedClient
-    from metaseed.seek.sync import sync_dataset_to_seek
-    from metaseed.specs.schema import (
-        EntityDefSpec as E,
-    )
-    from metaseed.specs.schema import (
-        FieldSpec as F,
-    )
-    from metaseed.specs.schema import (
-        FieldType as T,
-    )
-    from metaseed.specs.schema import (
-        ProfileSpec,
-        SeekEntityConfig,
-    )
-
-    spec = ProfileSpec(
-        spec_version="0.6",
-        version="1.0",
-        name="df",
-        display_name="DF",
-        description="d",
-        ontology="T",
-        root_entity="Investigation",
-        entities={
-            "Investigation": E(
-                description="d",
-                seek=SeekEntityConfig(role="Investigation"),
-                fields=[
-                    F(name="identifier", type=T.STRING, is_identifier=True),
-                    F(name="title", type=T.STRING, is_label=True),
-                    F(name="studies", type=T.LIST, items="Study"),
-                ],
-            ),
-            "Study": E(
-                description="d",
-                seek=SeekEntityConfig(role="Study"),
-                fields=[
-                    F(name="identifier", type=T.STRING, is_identifier=True),
-                    F(name="title", type=T.STRING, is_label=True),
-                    F(name="files", type=T.LIST, items="DataFile"),
-                ],
-            ),
-            "DataFile": E(
-                description="d",
-                seek=SeekEntityConfig(role="DataFile"),
-                fields=[
-                    F(name="file_name", type=T.STRING, is_label=True),
-                    F(name="file_location", type=T.URI),
-                ],
-            ),
-        },
-    )
-    c = MetaseedClient.from_spec(spec.model_dump(mode="json"))
-    inv = c.create_entity(
-        "Investigation", {"identifier": "I", "title": "t"}, skip_validation=True
-    )
-    st = c.create_entity(
-        "Study",
-        {"identifier": "S", "title": "s"},
-        parent_id=inv.id,
-        skip_validation=True,
-    )
-    for n in ("a.raw", "b.raw"):
-        c.create_entity(
-            "DataFile",
-            {"file_name": n, "file_location": f"s3://bucket/S/{n}"},
-            parent_id=st.id,
-            skip_validation=True,
-        )
-
-    seek = _FakeSeek()
-    res = sync_dataset_to_seek(seek, c, project_id="1", sample_type_ids={})
-
-    assert len(res.data_files) == 1, res.data_files
-    assert not res.errors, res.errors
-    df_calls = [c for kind, c in seek.calls if kind == "data_file"]
-    assert df_calls[0]["url"] == "s3://bucket/S/"
-    assert (
-        "a.raw" in df_calls[0]["description"] and "b.raw" in df_calls[0]["description"]
-    )
+class TestProtocolValue:
+    def test_every_sample_records_the_assay_that_produced_it_as_its_protocol(
+        self,
+    ) -> None:
+        # ISAExporter refuses a Sample with no protocol ("has no protocol"), so a
+        # structurally compliant push still fails to export without this.
+        seek = _FakeSeek()
+        sync_dataset_to_seek(seek, _dataset(), project_id="1")
+        assert _of_kind(seek, "sample")[0]["data"]["Protocol"] == "Assay 0"

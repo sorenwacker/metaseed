@@ -171,20 +171,6 @@ def sample_type_payload(
     )
 
 
-def sample_type_assays_payload(
-    *, sample_type_id: str | int, assay_ids: Sequence[str | int]
-) -> dict[str, Any]:
-    """Build a PATCH body associating a Sample Type with ``assay_ids``.
-
-    ``assay_ids`` replaces the association, so callers pass the full list.
-    """
-    document = _document(
-        "sample_types", {}, {"assays": _to_many("assays", list(assay_ids))}
-    )
-    document["data"]["id"] = str(sample_type_id)
-    return document
-
-
 def sample_payload(
     *,
     sample_type_id: str | int,

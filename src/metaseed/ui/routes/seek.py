@@ -250,17 +250,18 @@ def register_seek_routes(  # noqa: C901
             return await _render(request, action_error=error)
 
         def work() -> Any:
-            from metaseed.seek.provision import resolve_sample_type_ids
+            from metaseed.seek.provision import resolve_cv_ids
             from metaseed.seek.sync import sync_dataset_to_seek
 
             pid = project_id or client.default_project_id()
             profile = _load_profile(state)
-            sample_type_ids = resolve_sample_type_ids(client, profile, project_id=pid)
+            # Sample Types are created per Assay during the walk (a stream chains
+            # them), so only the Controlled Vocabularies come from provisioning.
             return sync_dataset_to_seek(
                 client,
                 _facade_client(state),
                 project_id=pid,
-                sample_type_ids=sample_type_ids,
+                cv_ids=resolve_cv_ids(client, profile),
             )
 
         try:

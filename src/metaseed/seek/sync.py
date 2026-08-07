@@ -1,10 +1,20 @@
-"""Push a loaded metaseed dataset into SEEK over the JSON:API (Phase 2).
+"""Push a loaded metaseed dataset into SEEK as ISA-JSON compliant content.
 
-Walks the dataset's ISA tree and creates the matching SEEK resources —
-Investigation → Study → Assay and Samples (into Sample Types provisioned in
-Phase 1, see :mod:`metaseed.seek.provision`) — threading the ids SEEK returns so
-the hierarchy links up. Per-node failures are collected rather than aborting the
-whole sync, so one bad sample doesn't lose the rest.
+Walks the dataset's ISA tree and creates the matching SEEK resources, threading
+the ids SEEK returns so the hierarchy links up. Per-node failures are collected
+rather than aborting the whole sync, so one bad sample doesn't lose the rest.
+
+The structure built is the one SEEK can export as ISA-JSON: a compliant
+Investigation, a Study owning a Source and a Sample Collection Sample Type, one
+assay stream per Study, and one Sample Type per Assay chained to the Study's
+Sample Collection type. Sample Types are therefore created *here*, per dataset
+node, not in :mod:`metaseed.seek.provision` — a stream chains its types
+together, so two assays of the same profile entity need two types with different
+links, which a profile-time projection cannot express. Provisioning still builds
+its own Sample Types for the FAIR-Data-Station file route, which matches samples
+by attribute PID.
+
+See ``docs/architecture/seek-isa-compliance.md``.
 """
 
 from __future__ import annotations
@@ -13,14 +23,18 @@ from dataclasses import dataclass
 from dataclasses import field as dc_field
 from typing import TYPE_CHECKING, Any
 
-from metaseed.seek.roles import entity_jerm_class
+from metaseed.seek.isa_types import PROTOCOL_ATTRIBUTE as _PROTOCOL_ATTRIBUTE
+from metaseed.seek.isa_types import sample_type_attributes
+from metaseed.seek.payloads import ASSAY_CLASS_IDS, sample_attribute
+from metaseed.seek.roles import entity_jerm_class, sample_role_entities
 from metaseed.specs.loader import SpecLoader
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
     from metaseed.api.client import MetaseedClient
-    from metaseed.seek.client import SeekClient
+    from metaseed.seek.ports import IsaWriter
+    from metaseed.specs.schema import EntityDefSpec, ProfileSpec
 
 
 @dataclass
@@ -34,14 +48,12 @@ class SyncResult:
     data_files: dict[str, str] = dc_field(default_factory=dict)
     skipped: list[tuple[str, str]] = dc_field(default_factory=list)
     errors: list[tuple[str, str]] = dc_field(default_factory=list)
-    # Created in SEEK but attached to no ISA level, so unreachable from the
-    # Investigation and dropped on re-import. Counted in ``created_count``
-    # because the resource does exist -- listed here because it is not findable.
+    # Not created: a Sample with no Assay ancestor has no Sample Type to go in,
+    # since under ISA-JSON compliance an Assay owns the type its Samples use.
     unlinked: list[tuple[str, str]] = dc_field(default_factory=list)
-    # Sample Type id -> the Assays it was associated with, so an Assay created
-    # here can actually hold Samples. Without the link SEEK accepts a Sample of
-    # that type but the Assay never shows it.
-    sample_type_assays: dict[str, list[str]] = dc_field(default_factory=dict)
+    # Study id -> the assay stream created for it. Every Assay hangs off one:
+    # an assay outside a stream does not render in SEEK's ISA study view.
+    assay_streams: dict[str, str] = dc_field(default_factory=dict)
 
     @property
     def created_count(self) -> int:
@@ -162,18 +174,31 @@ def _base_url(locations: list[str]) -> str:
 class _SyncContext:
     """The shared state a node placement needs, so the walk stays a thin recursion."""
 
-    client: SeekClient
+    client: IsaWriter
     project_id: str
-    sample_type_ids: Mapping[str, str]
+    profile: ProfileSpec
+    sample_entity: str | None
+    isa_tag_ids: Mapping[str, str]
+    cv_ids: Mapping[str, str]
     roles: dict[str, str]
     values_by_node: dict[str, Any]
     text_list_fields_by_entity: dict[str, frozenset[str]]
     file_fields_by_entity: dict[str, tuple[str | None, str | None]]
     files_by_study: dict[str, list[tuple[str, str]]]
-    # Sample Type id -> Assay ids that need it, gathered during the walk and
-    # applied once afterwards: SEEK replaces the association on each write, so
-    # patching per sample would leave only the last one.
-    sample_type_assays: dict[str, set[str]]
+    # SEEK study id -> the Sample Collection Sample Type it owns. Each Assay
+    # under that Study chains its own type to this one.
+    study_collection_type: dict[str, str]
+    # SEEK study id -> its assay stream, which every Assay hangs off.
+    study_stream: dict[str, str]
+    # SEEK assay id -> the Sample Type that Assay owns, where its Samples go.
+    assay_sample_type: dict[str, str]
+    # SEEK assay id -> the protocol name its Samples record. The ISA-JSON
+    # exporter refuses a Sample with no protocol ("has no protocol"), so every
+    # Sample carries the name of the Assay that produced it.
+    assay_protocol: dict[str, str]
+    # A Sample Type that exists only to satisfy validation while creating a
+    # Study; see ``_placeholder_sample_type_id``.
+    placeholder_type_id: str
     result: SyncResult
 
 
@@ -200,25 +225,26 @@ def _place_node(
         if jerm_class == "Investigation":
             next_investigation = r.investigations[node.id] = (
                 ctx.client.create_investigation(
-                    title=title, project_id=ctx.project_id, description=description
+                    title=title,
+                    project_id=ctx.project_id,
+                    description=description,
+                    # Without this SEEK refuses to export the Investigation as
+                    # ISA-JSON, whatever its Studies and Assays look like.
+                    isa_json_compliant=True,
                 )
             )
         elif jerm_class == "Study":
             if investigation_id is None:
                 r.skipped.append((node.id, "study has no investigation parent"))
             else:
-                next_study = r.studies[node.id] = ctx.client.create_study(
-                    title=title,
-                    investigation_id=investigation_id,
-                    description=description,
+                next_study = r.studies[node.id] = _place_study(
+                    ctx, title, investigation_id
                 )
         elif jerm_class == "Assay":
             if study_id is None:
                 r.skipped.append((node.id, "assay has no study parent"))
             else:
-                next_assay = r.assays[node.id] = ctx.client.create_assay(
-                    title=title, study_id=study_id
-                )
+                next_assay = r.assays[node.id] = _place_assay(ctx, title, study_id)
         elif jerm_class == "Sample":
             _place_sample(ctx, node, values, title, assay_id, study_id)
         elif jerm_class == "DataFile":
@@ -237,6 +263,111 @@ def _place_node(
     return next_investigation, next_study, next_assay
 
 
+def _placeholder_sample_type_id(
+    client: IsaWriter, profile_name: str, project_id: str
+) -> str:
+    """A Sample Type that exists only to get a new Study past validation.
+
+    ``ISAStudy`` validates the Sample Collection type's input attribute *before*
+    ``save`` assigns it the real Source type, and the check requires a link to a
+    Sample Type that already exists. For a new Study the Source type does not
+    exist yet, so any existing id serves; ``save`` then overwrites it. Reused by
+    title so a re-sync does not accumulate copies.
+    """
+    title = f"{profile_name} ISA placeholder"
+    existing = client.find_sample_type_id_by_title(title, project_id=project_id)
+    if existing is not None:
+        return existing
+    return client.create_sample_type(
+        title=title,
+        project_id=project_id,
+        attributes=[
+            sample_attribute(
+                title="Title",
+                attribute_type_id=client.sample_attribute_type_id("String"),
+                required=True,
+                is_title=True,
+                pos=1,
+            )
+        ],
+    )
+
+
+def _sample_entity_def(ctx: _SyncContext) -> EntityDefSpec | None:
+    """The profile entity whose fields describe a Sample, if the profile has one."""
+    if ctx.sample_entity is None:
+        return None
+    return ctx.profile.entities.get(ctx.sample_entity)
+
+
+def _place_study(ctx: _SyncContext, title: str, investigation_id: str) -> str:
+    """Create a compliant Study plus the assay stream its Assays hang off.
+
+    A Study is ISA-JSON compliant only once it owns a Source and a Sample
+    Collection Sample Type, in that order, the second linking back to the first.
+    They are structural: the Assays' types chain to the Sample Collection type
+    whether or not any Sample is stored in it.
+    """
+    entity = _sample_entity_def(ctx)
+    source_title = f"{title} - Source"
+    collection_title = f"{title} - Sample Collection"
+    study_id = ctx.client.create_isa_study(
+        title=title,
+        investigation_id=investigation_id,
+        source_title=source_title,
+        source_attributes=sample_type_attributes(
+            entity, level="source", isa_tag_ids=ctx.isa_tag_ids, cv_ids=ctx.cv_ids
+        ),
+        collection_title=collection_title,
+        collection_attributes=sample_type_attributes(
+            entity,
+            level="sample_collection",
+            isa_tag_ids=ctx.isa_tag_ids,
+            cv_ids=ctx.cv_ids,
+            linked_sample_type_id=ctx.placeholder_type_id,
+        ),
+    )
+    types = ctx.client.study_sample_type_ids(study_id)
+    collection_id = types.get(collection_title)
+    if collection_id is not None:
+        ctx.study_collection_type[study_id] = collection_id
+    stream_id = ctx.client.create_isa_assay(
+        title=f"{title} - stream",
+        study_id=study_id,
+        assay_class_id=ASSAY_CLASS_IDS["STREAM"],
+    )
+    ctx.study_stream[study_id] = stream_id
+    ctx.result.assay_streams[study_id] = stream_id
+    return study_id
+
+
+def _place_assay(ctx: _SyncContext, title: str, study_id: str) -> str:
+    """Create an Assay inside its Study's stream, owning its own Sample Type."""
+    entity = _sample_entity_def(ctx)
+    collection_id = ctx.study_collection_type.get(study_id)
+    sample_type_title = f"{title} - Sample Type"
+    assay_id = ctx.client.create_isa_assay(
+        title=title,
+        study_id=study_id,
+        assay_class_id=ASSAY_CLASS_IDS["EXP"],
+        assay_stream_id=ctx.study_stream.get(study_id),
+        input_sample_type_id=collection_id,
+        sample_type_title=sample_type_title,
+        sample_type_attributes=sample_type_attributes(
+            entity,
+            level="assay",
+            isa_tag_ids=ctx.isa_tag_ids,
+            cv_ids=ctx.cv_ids,
+            linked_sample_type_id=collection_id,
+        ),
+    )
+    owned = ctx.client.assay_sample_type_ids(assay_id).get(sample_type_title)
+    if owned is not None:
+        ctx.assay_sample_type[assay_id] = owned
+    ctx.assay_protocol[assay_id] = title
+    return assay_id
+
+
 def _place_sample(
     ctx: _SyncContext,
     node: Any,
@@ -245,10 +376,19 @@ def _place_sample(
     assay_id: str | None = None,
     study_id: str | None = None,
 ) -> None:
-    sample_type_id = ctx.sample_type_ids.get(node.entity_type)
+    sample_type_id = ctx.assay_sample_type.get(assay_id) if assay_id else None
     if sample_type_id is None:
-        ctx.result.skipped.append(
-            (node.id, f"no provisioned Sample Type for {node.entity_type}")
+        # SEEK hangs Samples off Assays, and under ISA-JSON compliance a Sample's
+        # type is the one its Assay owns. With no Assay ancestor there is no type
+        # to create it in, so it is reported rather than pushed somewhere it
+        # would be unreachable from the Investigation.
+        ctx.result.unlinked.append(
+            (
+                node.id,
+                f"{node.entity_type} has no Assay ancestor, so there is no Sample "
+                "Type to place it in — nest it under an Assay-role entity to "
+                "link it into the ISA tree",
+            )
         )
         return
     data = _sample_data(
@@ -257,8 +397,12 @@ def _place_sample(
     # SEEK derives a Sample's title from its Title attribute and rejects a blank
     # one; fall back to the same non-blank title the ISA levels use.
     data.setdefault("Title", title)
-    if assay_id:
-        ctx.sample_type_assays.setdefault(sample_type_id, set()).add(assay_id)
+    # The exporter rejects a Sample with no protocol. The attribute stays
+    # optional on the Sample Type -- a Sample created by other means must not be
+    # refused -- but every Sample this sync creates names its Assay as the step
+    # that produced it.
+    if assay_id is not None:
+        data.setdefault(_PROTOCOL_ATTRIBUTE, ctx.assay_protocol.get(assay_id, title))
     ctx.result.samples[node.id] = ctx.client.create_sample(
         sample_type_id=sample_type_id,
         project_id=ctx.project_id,
@@ -266,19 +410,6 @@ def _place_sample(
         assay_ids=[assay_id] if assay_id else None,
         study_id=study_id,
     )
-    if assay_id is None:
-        # SEEK hangs Samples off Assays and ignores a `studies` relationship, so
-        # a Sample with no Assay ancestor cannot be linked into the ISA tree at
-        # all. Say so rather than report a clean push: it exists in SEEK but
-        # nothing walking down from the Investigation will find it.
-        ctx.result.unlinked.append(
-            (
-                node.id,
-                f"{node.entity_type} has no Assay ancestor, so it is reachable "
-                "only through the project's sample list — nest it under an "
-                "Assay-role entity to link it into the ISA tree",
-            )
-        )
 
 
 def _collect_file(
@@ -294,7 +425,7 @@ def _collect_file(
 
 
 def _create_study_data_file(
-    client: SeekClient,
+    client: IsaWriter,
     project_id: str,
     node_id: str,
     files: list[tuple[str, str]],
@@ -320,24 +451,26 @@ def _create_study_data_file(
 
 
 def sync_dataset_to_seek(
-    client: SeekClient,
+    client: IsaWriter,
     metaseed_client: MetaseedClient,
     *,
     project_id: str,
-    sample_type_ids: Mapping[str, str],
+    cv_ids: Mapping[str, str] | None = None,
 ) -> SyncResult:
-    """Create Investigations/Studies/Assays/Samples in SEEK from a dataset.
+    """Create ISA-JSON compliant SEEK content from a loaded dataset.
 
     Args:
-        client: An authenticated SEEK client.
+        client: Anything satisfying :class:`~metaseed.seek.ports.IsaWriter` — in
+            production a :class:`~metaseed.seek.client.SeekClient`.
         metaseed_client: The metaseed client holding the loaded dataset.
         project_id: SEEK project to attach the created content to.
-        sample_type_ids: ``entity_type -> SEEK Sample Type id`` (from a Phase-1
-            provisioning run) used to place Samples.
+        cv_ids: ``field name -> Controlled Vocabulary id`` for the dataset's enum
+            fields, from a provisioning run. An enum field with no entry here is
+            an error: SEEK rejects a CV attribute with no vocabulary.
 
     Returns:
         A :class:`SyncResult` mapping each source node to its created SEEK id,
-        plus any skipped/errored nodes.
+        plus any skipped/errored/unlinked nodes.
     """
     # A dataset built from a derived spec (e.g. imported via
     # ``metaseed.seek.importer``) carries its ProfileSpec in memory and has no
@@ -376,16 +509,28 @@ def sync_dataset_to_seek(
     }
     result = SyncResult()
 
+    # The entity whose fields describe a Sample. Its projection becomes the
+    # Study's Source and Sample Collection types and each Assay's own type.
+    sample_entities = sorted(sample_role_entities(profile))
     ctx = _SyncContext(
         client=client,
         project_id=project_id,
-        sample_type_ids=sample_type_ids,
+        profile=profile,
+        sample_entity=sample_entities[0] if sample_entities else None,
+        isa_tag_ids=client.isa_tag_ids(),
+        cv_ids=cv_ids or {},
         roles=roles,
         values_by_node=values_by_node,
         text_list_fields_by_entity=text_list_fields_by_entity,
         file_fields_by_entity=file_fields_by_entity,
         files_by_study=files_by_study,
-        sample_type_assays={},
+        study_collection_type={},
+        study_stream={},
+        assay_sample_type={},
+        assay_protocol={},
+        placeholder_type_id=_placeholder_sample_type_id(
+            client, profile.name, project_id
+        ),
         result=result,
     )
 
@@ -403,19 +548,6 @@ def sync_dataset_to_seek(
 
     for root in metaseed_client.get_tree():
         walk(root, None, None, None)
-
-    # Associate each Sample Type with the Assays that use it. This is the only
-    # supported direction: sending ``sample_types`` on an Assay is answered 200
-    # and discarded, so without this an Assay created here holds no Samples.
-    for sample_type_id, assay_ids in ctx.sample_type_assays.items():
-        try:
-            result.sample_type_assays[sample_type_id] = (
-                client.add_assays_to_sample_type(
-                    sample_type_id=sample_type_id, assay_ids=sorted(assay_ids)
-                )
-            )
-        except Exception as exc:  # one failed link must not abort the batch
-            result.errors.append((f"sample_type:{sample_type_id}", str(exc)))
 
     # One remote DataFile per study, pointing at the study's external storage.
     study_id_to_node = {sid: nid for nid, sid in result.studies.items()}
