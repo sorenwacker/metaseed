@@ -263,3 +263,115 @@ def test_a_sample_with_no_assay_ancestor_is_reported_not_silently_orphaned(
         "these Samples were created in SEEK with no ISA link and were not reported "
         f"in SyncResult.unlinked: {sorted(set(unreachable) - reported)}"
     )
+
+
+def _seek_ready_dataset():
+    """A dataset on the profile that exists to upload cleanly: Samples under Assay."""
+    from metaseed import MetaseedClient
+
+    client = MetaseedClient("seek-ready-template", "2.0")
+    inv = client.create_entity(
+        "Investigation",
+        {"identifier": "INV-rt", "title": "round-trip inv", "description": "d"},
+        skip_validation=True,
+    )
+    study = client.create_entity(
+        "Study",
+        {"identifier": "STU-rt", "title": "round-trip study", "description": "d"},
+        parent_id=inv.id,
+        skip_validation=True,
+    )
+    assay = client.create_entity(
+        "Assay",
+        {"identifier": "ASY-rt", "title": "round-trip assay"},
+        parent_id=study.id,
+        skip_validation=True,
+    )
+    for name, part in (("SMP-rt1", "leaf"), ("SMP-rt2", "root")):
+        client.create_entity(
+            "Sample",
+            {
+                "sample_name": name,
+                "organism": "Arabidopsis thaliana",
+                "organism_part": part,
+            },
+            parent_id=assay.id,
+            skip_validation=True,
+        )
+    return client
+
+
+def _counts(client) -> dict:
+    out: dict[str, int] = {}
+    for root in client.get_tree():
+        stack = [root]
+        while stack:
+            node = stack.pop()
+            entity = client.get_entity(node.id)
+            out[entity.entity_type] = out.get(entity.entity_type, 0) + 1
+            stack += client.get_children(node.id)
+    return out
+
+
+def test_a_dataset_survives_a_round_trip_through_seek(created_in_seek):
+    """Push a dataset to SEEK and read it back with nothing missing.
+
+    This is the end-to-end claim, and it needs four things to hold at once, each
+    of which was broken independently: the Sample linked to its Assay, the Sample
+    Type associated with that Assay, the profile nesting Samples under Assay, and
+    the importer reading the Assay level. Any one of them regressing loses the
+    samples silently -- the push still reports success and the import still
+    returns an Investigation.
+    """
+    from metaseed.seek.importer import import_from_seek
+
+    seek = _seek_client()
+    source = _seek_ready_dataset()
+    result = _provision_and_sync(seek, source, created_in_seek)
+    assert not result.unlinked, (
+        f"samples uploaded attached to nothing: {result.unlinked}"
+    )
+
+    # Sample Types are linked from their own side; sending sample_types on an
+    # Assay is answered 200 and discarded, so an unlinked type means an Assay
+    # that cannot hold Samples.
+    assert result.sample_type_assays, "no Sample Type was associated with an Assay"
+    for assay_id in result.assays.values():
+        linked = seek.get(f"/assays/{assay_id}/sample_types").get("data", [])
+        assert linked, (
+            f"assay {assay_id} holds no Sample Type, so it can hold no Samples"
+        )
+
+    imported = import_from_seek(seek, str(next(iter(result.investigations.values()))))
+
+    before, after = _counts(source), _counts(imported)
+    for level in ("Investigation", "Study", "Assay", "Sample"):
+        assert after.get(level, 0) == before.get(level, 0), (
+            f"{level}: pushed {before.get(level, 0)}, got {after.get(level, 0)} back "
+            f"(pushed {before}, back {after})"
+        )
+
+    def sample_names(client):
+        return sorted(
+            client.get_entity(n).data.get("sample_name") or ""
+            for n in [
+                node.id
+                for root in client.get_tree()
+                for node in _walk(client, root)
+                if client.get_entity(node.id).entity_type == "Sample"
+            ]
+        )
+
+    assert sample_names(imported) == sample_names(source), (
+        "sample field values did not survive the round trip: "
+        f"{sample_names(source)} -> {sample_names(imported)}"
+    )
+
+
+def _walk(client, node):
+    stack, out = [node], []
+    while stack:
+        current = stack.pop()
+        out.append(current)
+        stack += client.get_children(current.id)
+    return out
