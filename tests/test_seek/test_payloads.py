@@ -124,3 +124,136 @@ def test_controlled_vocab_payload_omits_optional_fields():
     doc = payloads.controlled_vocab_payload(title="Plain", terms=[])
     attrs = doc["data"]["attributes"]
     assert attrs == {"title": "Plain", "sample_controlled_vocab_terms_attributes": []}
+
+
+class TestIsaFormPayloads:
+    """The ISA endpoints take form-encoded bodies, not JSON:API documents.
+
+    ``/isa_studies`` and ``/isa_assays`` back SEEK's web forms; their JSON
+    branches are unreachable (``check_json_id_type`` demands a JSON:API ``data``
+    member, then ``convert_json_params`` drops the ``isa_*`` key). See
+    ``docs/architecture/seek-isa-compliance.md``.
+    """
+
+    def test_repeated_attribute_keys_use_empty_brackets_not_indices(self):
+        # Numeric indices parse as a Hash, which the controller iterates as an
+        # Array and dies with a TypeError 500. This is the whole reason the
+        # builder returns ordered pairs rather than a dict.
+        pairs = payloads.isa_study_form(
+            title="S",
+            investigation_id=1,
+            source_title="Src",
+            source_attributes=[
+                payloads.isa_sample_attribute(
+                    title="Source Name",
+                    attribute_type_id=8,
+                    isa_tag_id=1,
+                    is_title=True,
+                )
+            ],
+            collection_title="Coll",
+            collection_attributes=[
+                payloads.isa_sample_attribute(
+                    title="Sample Name",
+                    attribute_type_id=8,
+                    isa_tag_id=3,
+                    is_title=True,
+                )
+            ],
+        )
+        keys = [k for k, _ in pairs]
+        assert any(k.endswith("[sample_attributes][][title]") for k in keys)
+        assert not any("[sample_attributes][0]" in k for k in keys)
+
+    def test_study_form_carries_both_sample_types_in_order(self):
+        pairs = payloads.isa_study_form(
+            title="S",
+            investigation_id=7,
+            source_title="Src",
+            source_attributes=[
+                payloads.isa_sample_attribute(
+                    title="Source Name",
+                    attribute_type_id=8,
+                    isa_tag_id=1,
+                    is_title=True,
+                )
+            ],
+            collection_title="Coll",
+            collection_attributes=[
+                payloads.isa_sample_attribute(
+                    title="Sample Name",
+                    attribute_type_id=8,
+                    isa_tag_id=3,
+                    is_title=True,
+                )
+            ],
+        )
+        as_dict = dict(pairs)
+        assert as_dict["isa_study[study][title]"] == "S"
+        assert as_dict["isa_study[study][investigation_id]"] == "7"
+        assert as_dict["isa_study[source_sample_type][title]"] == "Src"
+        assert as_dict["isa_study[sample_collection_sample_type][title]"] == "Coll"
+
+    def test_an_attribute_omits_keys_it_has_no_value_for(self):
+        # A blank linked_sample_type_id on a non-link attribute is rejected by
+        # SEEK's consistency check, so absent must mean absent.
+        attr = payloads.isa_sample_attribute(
+            title="Protocol", attribute_type_id=8, isa_tag_id=5
+        )
+        assert "linked_sample_type_id" not in attr
+        assert attr["is_title"] is False
+
+    def test_assay_stream_form_carries_no_sample_type(self):
+        # An assay stream owns no Sample Type; ISAAssay only builds one for a
+        # non-stream assay, and sending one would be discarded at best.
+        pairs = payloads.isa_assay_form(title="Stream", study_id=3, assay_class_id=3)
+        keys = [k for k, _ in pairs]
+        assert dict(pairs)["isa_assay[assay][assay_class_id]"] == "3"
+        assert not any("sample_type" in k for k in keys)
+        assert not any("assay_stream_id" in k for k in keys)
+
+    def test_child_assay_form_carries_stream_link_and_input_type(self):
+        pairs = payloads.isa_assay_form(
+            title="Child",
+            study_id=3,
+            assay_class_id=1,
+            assay_stream_id=81,
+            input_sample_type_id=89,
+            sample_type_title="Child type",
+            sample_type_attributes=[
+                payloads.isa_sample_attribute(
+                    title="Input",
+                    attribute_type_id=19,
+                    isa_tag_id=11,
+                    linked_sample_type_id=89,
+                ),
+                payloads.isa_sample_attribute(
+                    title="Data File", attribute_type_id=8, isa_tag_id=8, is_title=True
+                ),
+            ],
+        )
+        as_dict = dict(pairs)
+        assert as_dict["isa_assay[assay][assay_stream_id]"] == "81"
+        assert as_dict["isa_assay[input_sample_type_id]"] == "89"
+        assert as_dict["isa_assay[sample_type][title]"] == "Child type"
+
+    def test_attribute_type_is_rendered_as_a_nested_object(self):
+        # SEEK's sample_type_params reads sample_attribute_type[id]; a flat
+        # attribute_type_id is silently ignored and the attribute gets no type.
+        pairs = payloads.isa_assay_form(
+            title="A",
+            study_id=1,
+            assay_class_id=1,
+            sample_type_title="T",
+            sample_type_attributes=[
+                payloads.isa_sample_attribute(
+                    title="Data File", attribute_type_id=8, isa_tag_id=8, is_title=True
+                )
+            ],
+        )
+        keys = [k for k, _ in pairs]
+        assert (
+            "isa_assay[sample_type][sample_attributes][][sample_attribute_type][id]"
+            in keys
+        )
+        assert not any(k.endswith("[][attribute_type_id]") for k in keys)
