@@ -13,7 +13,7 @@ from typing import Any
 import httpx
 import pytest
 
-from metaseed.seek.client import SeekClient
+from metaseed.seek.client import SeekApiError, SeekClient
 
 
 class _RecordingSeek:
@@ -226,3 +226,125 @@ def test_client_from_settings_requires_url():
 
     with pytest.raises(ValueError, match="SEEK URL"):
         client_from_settings({"api_key": "tok"})
+
+
+class _RecordingIsaForms:
+    """A mock SEEK for the form-encoded ISA endpoints.
+
+    They answer a successful create with a 302 whose Location carries the new
+    record's id, and a rejected one with a 422 of HTML — neither is JSON:API.
+    """
+
+    def __init__(self, status: int = 302, item_id: str = "42") -> None:
+        self.requests: list[dict[str, Any]] = []
+        self._status = status
+        self._item_id = item_id
+
+    def handler(self, request: httpx.Request) -> httpx.Response:
+        self.requests.append(
+            {
+                "path": request.url.path,
+                "content_type": request.headers.get("Content-Type"),
+                "accept": request.headers.get("Accept"),
+                "body": request.content.decode(),
+            }
+        )
+        if request.url.path == "/isa_tags":
+            return httpx.Response(
+                200,
+                json={
+                    "data": [
+                        {"id": "5", "attributes": {"title": "protocol"}},
+                        {"id": "11", "attributes": {"title": "input"}},
+                    ]
+                },
+            )
+        if self._status == 302:
+            return httpx.Response(
+                302,
+                headers={
+                    "Location": (
+                        f"http://seek.test/single_pages/4?item_id={self._item_id}"
+                        "&item_type=assay"
+                    )
+                },
+            )
+        return httpx.Response(self._status, text="<html>rejected</html>")
+
+
+def _form_client(seek: _RecordingIsaForms) -> SeekClient:
+    return SeekClient(
+        "http://seek.test",
+        token="t",  # noqa: S106
+        http_client=httpx.Client(transport=httpx.MockTransport(seek.handler)),
+    )
+
+
+class TestIsaFormEndpoints:
+    def test_isa_tag_ids_resolves_titles_to_ids(self):
+        seek = _RecordingIsaForms()
+        assert _form_client(seek).isa_tag_ids() == {"protocol": "5", "input": "11"}
+
+    def test_a_form_post_is_not_sent_as_jsonapi(self):
+        # The JSON branch of these controllers is unreachable: check_json_id_type
+        # demands a JSON:API `data` member, then convert_json_params drops the
+        # isa_* key. Sending JSON gets a 422/500 whatever the body.
+        seek = _RecordingIsaForms()
+        _form_client(seek).create_isa_assay(title="A", study_id="3", assay_class_id=3)
+        sent = seek.requests[-1]
+        assert sent["content_type"] == "application/x-www-form-urlencoded"
+        assert "application/json" not in (sent["accept"] or "")
+        assert "isa_assay%5Bassay%5D%5Btitle%5D=A" in sent["body"]
+
+    def test_the_created_id_comes_from_the_redirect(self):
+        seek = _RecordingIsaForms(item_id="89")
+        assert (
+            _form_client(seek).create_isa_assay(
+                title="A", study_id="3", assay_class_id=3
+            )
+            == "89"
+        )
+
+    def test_a_rejected_form_post_raises_rather_than_returning_none(self):
+        # A 422 renders the form again as HTML. Returning None would let the sync
+        # carry on and attach samples to an assay that was never created.
+        seek = _RecordingIsaForms(status=422)
+        with pytest.raises(SeekApiError):
+            _form_client(seek).create_isa_assay(
+                title="A", study_id="3", assay_class_id=3
+            )
+
+    def test_isa_study_posts_both_sample_types(self):
+        seek = _RecordingIsaForms()
+        _form_client(seek).create_isa_study(
+            title="S",
+            investigation_id="1",
+            source_title="Src",
+            source_attributes=[],
+            collection_title="Coll",
+            collection_attributes=[],
+        )
+        sent = seek.requests[-1]
+        assert sent["path"] == "/isa_studies"
+        assert "source_sample_type" in sent["body"]
+        assert "sample_collection_sample_type" in sent["body"]
+
+    def test_study_sample_types_are_keyed_by_title_not_position(self):
+        # GET /studies/{id}/sample_types does not preserve study.sample_types
+        # order, so Source cannot be identified as "the first one".
+        class _Types(_RecordingIsaForms):
+            def handler(self, request: httpx.Request) -> httpx.Response:
+                return httpx.Response(
+                    200,
+                    json={
+                        "data": [
+                            {"id": "101", "attributes": {"title": "Coll"}},
+                            {"id": "100", "attributes": {"title": "Src"}},
+                        ]
+                    },
+                )
+
+        assert _form_client(_Types()).study_sample_type_ids("7") == {
+            "Coll": "101",
+            "Src": "100",
+        }

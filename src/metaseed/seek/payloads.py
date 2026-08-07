@@ -399,3 +399,14 @@ def isa_assay_form(
             "isa_assay[sample_type][sample_attributes]", sample_type_attributes
         )
     return pairs
+
+
+ASSAY_CLASS_IDS: dict[str, int] = {"EXP": 1, "MODEL": 2, "STREAM": 3}
+"""SEEK's seeded Assay class ids, keyed by their ``key``.
+
+``/isa_assays`` takes ``assay_class_id`` and SEEK exposes no endpoint for these
+(``GET /assay_classes`` is a 404, and the ``assay_class`` on an assay resource
+carries only ``title``/``key``). The ids are fixed in SEEK's own fixture,
+``config/default_data/assay_classes.yml``, which pins them explicitly, so
+reading them from there is as stable as the seed itself.
+"""
