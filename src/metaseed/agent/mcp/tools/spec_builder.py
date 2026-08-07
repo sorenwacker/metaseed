@@ -155,6 +155,7 @@ def _markers(
     unit: str | None,
     label: str | None,
     tier: str | None,
+    isa_tag: str | None,
 ) -> dict[str, Any]:
     """Collect the field markers both field tools accept.
 
@@ -181,6 +182,7 @@ def _markers(
             "unit": unit,
             "label": label,
             "tier": tier,
+            "isa_tag": isa_tag,
         }
     )
 
@@ -429,6 +431,7 @@ def register_spec_builder_tools(  # noqa: C901
         unit: str | None = None,
         label: str | None = None,
         tier: str | None = None,
+        isa_tag: str | None = None,
     ) -> str:
         """Add a field. Nested fields auto-create the parent id and back-reference.
 
@@ -437,7 +440,8 @@ def register_spec_builder_tools(  # noqa: C901
         labels the entity (overriding the positional convention), `owns` marks a
         containment relationship, and `codename`, `ontologies`, `unique_within`,
         `dcat`, `example`, `options`, `unit`, `label` and `tier` carry field
-        metadata. `tier` is one of required/recommended/optional.
+        metadata. `tier` is one of required/recommended/optional. `isa_tag`
+        names the ISA tag the field carries into a SEEK Sample Type attribute.
         """
         markers = _markers(
             codename=codename,
@@ -452,6 +456,7 @@ def register_spec_builder_tools(  # noqa: C901
             unit=unit,
             label=label,
             tier=tier,
+            isa_tag=isa_tag,
         )
         marker_error = validate_marker_values(markers)
         if marker_error:
@@ -522,6 +527,7 @@ def register_spec_builder_tools(  # noqa: C901
         unit: str | None = None,
         label: str | None = None,
         tier: str | None = None,
+        isa_tag: str | None = None,
         clear: list[str] | None = None,
     ) -> str:
         """Update a field in place. Unset arguments keep their current value.
@@ -564,6 +570,7 @@ def register_spec_builder_tools(  # noqa: C901
             unit=unit,
             label=label,
             tier=tier,
+            isa_tag=isa_tag,
         )
         # Checked before the first mutation: the attribute update and the
         # constraint merge are two calls, so a bad `clear` name caught by the
