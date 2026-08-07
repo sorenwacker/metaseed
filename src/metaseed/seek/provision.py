@@ -24,33 +24,15 @@ from dataclasses import field as dc_field
 from typing import TYPE_CHECKING
 
 from metaseed.seek import payloads
+from metaseed.seek.attribute_types import attribute_type_title, is_cv_field
 from metaseed.seek.naming import property_uri
 from metaseed.seek.roles import sample_role_entities
-from metaseed.specs.schema import FieldType
 
 if TYPE_CHECKING:
     from metaseed.seek.client import SeekClient
     from metaseed.services.ontology import OntologyService
     from metaseed.specs.schema import FieldSpec, ProfileSpec
 
-# metaseed scalar FieldType -> SEEK base sample-attribute-type title. Titles are
-# resolved to instance ids at execution via ``client.sample_attribute_type_id``.
-_ATTR_TYPE_TITLE: dict[FieldType, str] = {
-    FieldType.STRING: "String",
-    FieldType.INTEGER: "Integer",
-    FieldType.FLOAT: "Real number",
-    FieldType.BOOLEAN: "Boolean",
-    FieldType.DATE: "Date",
-    FieldType.DATETIME: "Date time",
-    FieldType.URI: "Web link",
-    # ontology_term is an open OLS lookup, not a closed set -> a plain string
-    # attribute (a Controlled Vocabulary needs a fixed term list, which only an
-    # ``enum`` field provides).
-    FieldType.ONTOLOGY_TERM: "String",
-}
-_CV_TYPE_TITLE = "Controlled Vocabulary"
-_CV_LIST_TYPE_TITLE = "Controlled Vocabulary List"
-_LIST_FALLBACK_TITLE = "Text"  # a list of primitives with no enum -> free text
 
 # Fields SEEK handles as a sample's core Title/Description rather than as a
 # PID-matched attribute of their own: the identifier maps to the ``is_title``
@@ -119,20 +101,6 @@ class ProvisionResult:
     created: list[str] = dc_field(default_factory=list)
     reused: list[str] = dc_field(default_factory=list)
     errors: list[str] = dc_field(default_factory=list)
-
-
-def _is_cv_field(field: FieldSpec) -> bool:
-    """A field becomes a Controlled Vocabulary iff it declares a closed enum."""
-    return bool(field.constraints and field.constraints.enum)
-
-
-def _attribute_type_title(field: FieldSpec) -> str:
-    """SEEK base attribute-type title for a (non-nested) field."""
-    if _is_cv_field(field):
-        return _CV_LIST_TYPE_TITLE if field.type == FieldType.LIST else _CV_TYPE_TITLE
-    if field.type == FieldType.LIST:
-        return _LIST_FALLBACK_TITLE
-    return _ATTR_TYPE_TITLE.get(field.type, "String")
 
 
 def _cv_title(profile: ProfileSpec, entity: str, field: FieldSpec) -> str:
@@ -216,7 +184,7 @@ def build_provisioning_plan(
         for pos, i in enumerate(field_idx, start=len(attributes) + 1):
             field = entity.fields[i]
             cv_title: str | None = None
-            if _is_cv_field(field):
+            if is_cv_field(field):
                 cv_title = _cv_title(profile, entity_name, field)
                 if cv_title not in cvs:
                     cvs[cv_title] = CvPlan(
@@ -229,7 +197,7 @@ def build_provisioning_plan(
             attributes.append(
                 AttributePlan(
                     title=field.name,
-                    attribute_type_title=_attribute_type_title(field),
+                    attribute_type_title=attribute_type_title(field),
                     required=field.required,
                     is_title=False,
                     pos=pos,

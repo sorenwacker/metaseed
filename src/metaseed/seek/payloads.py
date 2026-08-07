@@ -285,6 +285,8 @@ def isa_sample_attribute(
     is_title: bool = False,
     pos: int | None = None,
     linked_sample_type_id: str | int | None = None,
+    sample_controlled_vocab_id: str | int | None = None,
+    allow_cv_free_text: bool = False,
 ) -> dict[str, Any]:
     """One Sample Type attribute for an ISA form body.
 
@@ -315,6 +317,11 @@ def isa_sample_attribute(
         attribute["pos"] = pos
     if linked_sample_type_id is not None:
         attribute["linked_sample_type_id"] = linked_sample_type_id
+    if sample_controlled_vocab_id is not None:
+        # SEEK's resolve_inconsistencies nulls a vocab id on a non-CV attribute,
+        # so callers pass one only alongside a CV attribute type.
+        attribute["sample_controlled_vocab_id"] = sample_controlled_vocab_id
+        attribute["allow_cv_free_text"] = allow_cv_free_text
     return attribute
 
 

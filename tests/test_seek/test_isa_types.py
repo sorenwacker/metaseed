@@ -9,7 +9,7 @@ from __future__ import annotations
 import pytest
 
 from metaseed.seek.isa_types import sample_type_attributes
-from metaseed.specs.schema import EntityDefSpec, FieldSpec, FieldType
+from metaseed.specs.schema import Constraints, EntityDefSpec, FieldSpec, FieldType
 
 TAGS = {
     "source": "1",
@@ -153,4 +153,51 @@ class TestFieldDeclaredTags:
         with pytest.raises(KeyError):
             sample_type_attributes(
                 entity, level="assay", isa_tag_ids=TAGS, linked_sample_type_id="7"
+            )
+
+
+class TestControlledVocabularyFields:
+    """An enum field becomes a CV attribute, which SEEK rejects without a vocab id."""
+
+    def _entity(self) -> EntityDefSpec:
+        return EntityDefSpec(
+            fields=[
+                FieldSpec(name="sample_name", type=FieldType.STRING),
+                FieldSpec(
+                    name="organism_part",
+                    type=FieldType.STRING,
+                    constraints=Constraints(enum=["leaf", "root"]),
+                ),
+            ]
+        )
+
+    def test_an_enum_field_carries_its_controlled_vocab_id(self):
+        attrs = sample_type_attributes(
+            self._entity(),
+            level="source",
+            isa_tag_ids=TAGS,
+            cv_ids={"organism_part": "77"},
+        )
+        cv = next(a for a in attrs if a["title"] == "organism_part")
+        assert cv["sample_controlled_vocab_id"] == "77"
+
+    def test_a_non_enum_field_carries_no_vocab_id(self):
+        # SEEK's resolve_inconsistencies nulls a vocab id on a non-CV attribute,
+        # so sending one is at best noise and at worst a rejected write.
+        attrs = sample_type_attributes(
+            self._entity(),
+            level="source",
+            isa_tag_ids=TAGS,
+            cv_ids={"organism_part": "77"},
+        )
+        plain = next(a for a in attrs if a["title"] == "sample_name")
+        assert "sample_controlled_vocab_id" not in plain
+
+    def test_an_enum_field_with_no_provisioned_vocab_is_reported(self):
+        # Sending a CV attribute with no vocab id is rejected by SEEK with
+        # "Controlled vocabulary must be set if attribute type is CV" -- fail
+        # here instead, where the field name is still in hand.
+        with pytest.raises(KeyError, match="organism_part"):
+            sample_type_attributes(
+                self._entity(), level="source", isa_tag_ids=TAGS, cv_ids={}
             )
