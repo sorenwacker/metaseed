@@ -1,0 +1,202 @@
+spec_version: '0.6'
+version: '3.0'
+name: seek-ready-template
+display_name: SEEK-ready template (ISA)
+description: 'An ISA-shaped template whose datasets upload to FAIRDOM-SEEK as ISA-JSON compliant content.
+  Every entity maps to a SEEK/ISA role and nothing sits outside that hierarchy. There is no ObservationUnit
+  level -- the SEEK export synthesises one per sample. Breaking change from 2.0: the material chain SEEK''s
+  ISA-JSON exporter walks is now explicit. A Source yields Samples, a Sample yields the AssayMaterials
+  measured from it, and each level''s input is its parent. 2.0 had a single Sample level under Assay,
+  so an assay material had no predecessor to name and the export failed. An AssayMaterial names the Assay
+  that measured it by reference, because an Assay measures materials from many Samples and containment
+  cannot express that.'
+ontology: OBI
+root_entity: Investigation
+validation_rules: []
+entities:
+  Investigation:
+    description: The overarching project or investigation.
+    fields:
+    - name: identifier
+      type: string
+      required: true
+      description: Unique investigation id.
+      is_identifier: true
+    - name: title
+      type: string
+      required: true
+      description: Human-readable title.
+      is_label: true
+    - name: description
+      type: string
+      required: false
+      description: What the investigation is about.
+    - name: submission_date
+      type: date
+      required: false
+      description: When the metadata was submitted.
+    - name: public_release_date
+      type: date
+      required: false
+      description: When it may be released publicly.
+    - name: studies
+      type: list
+      required: false
+      description: Studies in this investigation.
+      items: Study
+    seek:
+      role: Investigation
+  Study:
+    description: A study within the investigation.
+    fields:
+    - name: identifier
+      type: string
+      required: true
+      description: Unique study id.
+      is_identifier: true
+    - name: title
+      type: string
+      required: true
+      description: Study title.
+      is_label: true
+    - name: description
+      type: string
+      required: false
+      description: Study description.
+    - name: study_design_type
+      type: string
+      required: false
+      description: e.g. case-control, time series.
+    - name: start_date
+      type: date
+      required: false
+      description: ''
+    - name: end_date
+      type: date
+      required: false
+      description: ''
+    - name: experimental_site
+      type: string
+      required: false
+      description: Where the study took place (folded context, not a separate entity).
+    - name: country
+      type: string
+      required: false
+      description: Country of the experimental site.
+    - name: sources
+      type: list
+      required: false
+      description: Source materials the study started from. Each becomes a Sample of the study's Source
+        Sample Type, the head of the ISA material chain.
+      items: Source
+    - name: assays
+      type: list
+      required: false
+      description: Assays performed in this study.
+      items: Assay
+    seek:
+      role: Study
+  Assay:
+    description: A measurement performed on materials. The materials it measured name it by reference
+      (AssayMaterial.assay) rather than nesting under it, because they descend from the Samples they were
+      derived from.
+    fields:
+    - name: identifier
+      type: string
+      required: true
+      description: Unique assay id.
+      is_identifier: true
+    - name: title
+      type: string
+      required: false
+      description: Assay title.
+      is_label: true
+    - name: measurement_type
+      type: string
+      required: false
+      description: What is measured (e.g. metabolite profiling).
+    - name: technology_type
+      type: string
+      required: false
+      description: Technology used (e.g. mass spectrometry).
+    - name: technology_platform
+      type: string
+      required: false
+      description: Instrument or platform.
+    seek:
+      role: Assay
+  Sample:
+    description: A sample collected from a Source. Nests under the Source it was derived from, which is
+      what SEEK's ISA-JSON exporter reads as the sample's input.
+    fields:
+    - name: sample_name
+      type: string
+      required: true
+      description: Unique sample name.
+      is_identifier: true
+      is_label: true
+    - name: organism
+      type: string
+      required: false
+      description: Source organism (e.g. an NCBI taxon name).
+    - name: organism_part
+      type: string
+      required: false
+      description: Tissue or part sampled.
+    - name: collection_date
+      type: date
+      required: false
+      description: ''
+    - name: assay_materials
+      type: list
+      required: false
+      description: Materials measured from this sample. Each names this Sample as its input.
+      items: AssayMaterial
+    seek:
+      role: Sample
+  Source:
+    description: A source material the study started from -- the head of the ISA material chain.
+    fields:
+    - name: source_name
+      type: string
+      required: true
+      description: Unique source name.
+      is_identifier: true
+      is_label: true
+    - name: organism
+      type: string
+      required: false
+      description: Source organism (e.g. an NCBI taxon name).
+    - name: provider
+      type: string
+      required: false
+      description: Who or what supplied the source material.
+    - name: samples
+      type: list
+      required: false
+      description: Samples collected from this source. Each names this Source as its input.
+      items: Sample
+    seek:
+      role: Sample
+  AssayMaterial:
+    description: A material or data file produced by measuring a Sample -- the tail of the ISA material
+      chain. Names the Assay that measured it by reference.
+    fields:
+    - name: material_name
+      type: string
+      required: true
+      description: Unique material or data file name.
+      is_identifier: true
+      is_label: true
+    - name: assay
+      type: string
+      required: true
+      description: The Assay that measured this material, by its identifier.
+      reference: Assay.identifier
+    - name: measurement_value
+      type: string
+      required: false
+      description: The value or file produced.
+      isa_tag: data_file_comment
+    seek:
+      role: Sample

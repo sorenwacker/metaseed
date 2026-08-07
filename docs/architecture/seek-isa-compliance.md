@@ -128,7 +128,23 @@ An Investigation with compliant Studies and **no** Samples exports cleanly, whic
 Two consequences:
 
 - Every Sample the sync creates records the Assay that produced it as its protocol. The Protocol attribute stays optional on the Sample Type, so a Sample created by other means is not refused.
-- The material chain needs a profile with the levels to carry it. `seek-ready-template` 2.0 has a single Sample level, nested under Assay, so an assay sample has no predecessor to point at. A profile with Source and Sample-Collection levels is required before a populated dataset exports.
+- The material chain needs a profile with the levels to carry it. `seek-ready-template` 2.0 has a single Sample level, nested under Assay, so an assay sample has no predecessor to point at. **3.0** carries the chain: `Study -> Source -> Sample -> AssayMaterial`, each level naming its parent as its input. An `AssayMaterial` names the Assay that measured it by `reference`, because an Assay measures materials derived from many Samples and containment cannot express that.
+- Each level's Sample Type is built from its *own* profile entity. Deriving all three from one entity makes every type demand the others' required attributes, and SEEK rejects each Sample for the fields belonging to a different level.
+
+### The export needs Sample Types built from ISA Templates
+
+Even with the chain complete, the export fails:
+
+```
+isa_exporter.rb:750   sample.sample_type.isa_template.level
+                      undefined method `level' for nil
+```
+
+`process_sequence_output` reads each Sample Type's ISA Template to decide whether the material is a `data_file` or an `other_material`. A Sample Type built attribute-by-attribute — which is the only thing the API allows — has no template, so the export raises regardless of how correct the structure is.
+
+Sample Types can be created from a template (`template_id` is permitted on `POST /sample_types`), but **Templates themselves cannot be created over the API**: `POST /templates` drops the nested attributes, and the ISA Template API is admin-UI-only. So the export path is gated on a template being installed by an administrator first, and on the profile's fields matching it.
+
+This is the deepest of the upstream gates found, and unlike the others it has no workaround from the client side.
 
 ## Current status
 

@@ -177,7 +177,11 @@ class _SyncContext:
     client: IsaWriter
     project_id: str
     profile: ProfileSpec
-    sample_entity: str | None
+    # The Sample-role entities down the material chain, in order: the Source
+    # level, the Sample Collection level, then the assay level. Each Sample Type
+    # is built from its own entity -- they carry different fields, and using one
+    # for all three makes every type demand the others' required attributes.
+    chain_entities: list[str]
     isa_tag_ids: Mapping[str, str]
     cv_ids: Mapping[str, str]
     roles: dict[str, str]
@@ -185,6 +189,8 @@ class _SyncContext:
     text_list_fields_by_entity: dict[str, frozenset[str]]
     file_fields_by_entity: dict[str, tuple[str | None, str | None]]
     files_by_study: dict[str, list[tuple[str, str]]]
+    # SEEK study id -> the Source Sample Type it owns, the head of the chain.
+    study_source_type: dict[str, str]
     # SEEK study id -> the Sample Collection Sample Type it owns. Each Assay
     # under that Study chains its own type to this one.
     study_collection_type: dict[str, str]
@@ -192,6 +198,9 @@ class _SyncContext:
     study_stream: dict[str, str]
     # SEEK assay id -> the Sample Type that Assay owns, where its Samples go.
     assay_sample_type: dict[str, str]
+    # Assay identifier (as written in the dataset) -> its SEEK id, so an
+    # AssayMaterial can name the Assay that measured it by reference.
+    assay_id_by_identifier: dict[str, str]
     # SEEK assay id -> the protocol name its Samples record. The ISA-JSON
     # exporter refuses a Sample with no protocol ("has no protocol"), so every
     # Sample carries the name of the Assay that produced it.
@@ -212,14 +221,22 @@ def _place_node(
     investigation_id: str | None,
     study_id: str | None,
     assay_id: str | None = None,
-) -> tuple[str | None, str | None, str | None]:
-    """Create the SEEK resource for one node; return the ids to thread to children."""
+    parent_sample_id: str | None = None,
+    depth: int = 0,
+) -> tuple[str | None, str | None, str | None, str | None, int]:
+    """Create the SEEK resource for one node; return the ids to thread to children.
+
+    ``parent_sample_id`` and ``depth`` carry the ISA material chain down the
+    walk: each Sample-role node names the one above it as its input, and its
+    depth decides which Sample Type it belongs to.
+    """
     r = ctx.result
     values = ctx.values_by_node.get(node.id, {})
     jerm_class = entity_jerm_class(node.entity_type, ctx.roles.get(node.entity_type))
     title = _title_of(node, values)
     description = values.get("description")
     next_investigation, next_study, next_assay = investigation_id, study_id, assay_id
+    next_sample, next_depth = parent_sample_id, depth
 
     try:
         if jerm_class == "Investigation":
@@ -244,9 +261,16 @@ def _place_node(
             if study_id is None:
                 r.skipped.append((node.id, "assay has no study parent"))
             else:
-                next_assay = r.assays[node.id] = _place_assay(ctx, title, study_id)
+                next_assay = r.assays[node.id] = _place_assay(
+                    ctx, title, study_id, values
+                )
         elif jerm_class == "Sample":
-            _place_sample(ctx, node, values, title, assay_id, study_id)
+            # An assay material names the Assay that measured it rather than
+            # descending from it, so ancestry plays no part here.
+            next_sample = _place_sample(
+                ctx, node, values, title, study_id, parent_sample_id, depth
+            )
+            next_depth = depth + 1
         elif jerm_class == "DataFile":
             _collect_file(ctx, node, values, study_id)
         else:
@@ -260,7 +284,7 @@ def _place_node(
             )
     except Exception as exc:  # one bad node must not abort the batch
         r.errors.append((node.id, str(exc)))
-    return next_investigation, next_study, next_assay
+    return next_investigation, next_study, next_assay, next_sample, next_depth
 
 
 def _placeholder_sample_type_id(
@@ -293,11 +317,46 @@ def _placeholder_sample_type_id(
     )
 
 
-def _sample_entity_def(ctx: _SyncContext) -> EntityDefSpec | None:
-    """The profile entity whose fields describe a Sample, if the profile has one."""
-    if ctx.sample_entity is None:
+def _chain_entity(ctx: _SyncContext, level: int) -> EntityDefSpec | None:
+    """The profile entity describing the material chain at ``level`` (0 = Source)."""
+    if level >= len(ctx.chain_entities):
         return None
-    return ctx.profile.entities.get(ctx.sample_entity)
+    return ctx.profile.entities.get(ctx.chain_entities[level])
+
+
+def _sample_chain_entities(profile: ProfileSpec) -> list[str]:
+    """Sample-role entity names down the material chain, Source level first.
+
+    Followed through the profile's own nesting rather than guessed, because the
+    chain is what SEEK's ISA-JSON exporter walks: a Source yields Samples, a
+    Sample yields the materials measured from it.
+    """
+    roles = {
+        name: entity.seek.role
+        for name, entity in profile.entities.items()
+        if entity.seek and entity.seek.role
+    }
+    sample_roles = sample_role_entities(profile)
+
+    def first_sample_child(entity_name: str) -> str | None:
+        entity = profile.entities.get(entity_name)
+        if entity is None:
+            return None
+        for f in entity.fields:
+            if f.items in sample_roles:
+                return f.items
+        return None
+
+    start = next(
+        (name for name, role in roles.items() if role == "Study"),
+        profile.root_entity,
+    )
+    chain: list[str] = []
+    current = first_sample_child(start)
+    while current is not None and current not in chain:
+        chain.append(current)
+        current = first_sample_child(current)
+    return chain
 
 
 def _place_study(ctx: _SyncContext, title: str, investigation_id: str) -> str:
@@ -308,7 +367,8 @@ def _place_study(ctx: _SyncContext, title: str, investigation_id: str) -> str:
     They are structural: the Assays' types chain to the Sample Collection type
     whether or not any Sample is stored in it.
     """
-    entity = _sample_entity_def(ctx)
+    source_entity = _chain_entity(ctx, 0)
+    collection_entity = _chain_entity(ctx, 1)
     source_title = f"{title} - Source"
     collection_title = f"{title} - Sample Collection"
     study_id = ctx.client.create_isa_study(
@@ -316,11 +376,14 @@ def _place_study(ctx: _SyncContext, title: str, investigation_id: str) -> str:
         investigation_id=investigation_id,
         source_title=source_title,
         source_attributes=sample_type_attributes(
-            entity, level="source", isa_tag_ids=ctx.isa_tag_ids, cv_ids=ctx.cv_ids
+            source_entity,
+            level="source",
+            isa_tag_ids=ctx.isa_tag_ids,
+            cv_ids=ctx.cv_ids,
         ),
         collection_title=collection_title,
         collection_attributes=sample_type_attributes(
-            entity,
+            collection_entity,
             level="sample_collection",
             isa_tag_ids=ctx.isa_tag_ids,
             cv_ids=ctx.cv_ids,
@@ -328,6 +391,9 @@ def _place_study(ctx: _SyncContext, title: str, investigation_id: str) -> str:
         ),
     )
     types = ctx.client.study_sample_type_ids(study_id)
+    source_id = types.get(source_title)
+    if source_id is not None:
+        ctx.study_source_type[study_id] = source_id
     collection_id = types.get(collection_title)
     if collection_id is not None:
         ctx.study_collection_type[study_id] = collection_id
@@ -341,9 +407,11 @@ def _place_study(ctx: _SyncContext, title: str, investigation_id: str) -> str:
     return study_id
 
 
-def _place_assay(ctx: _SyncContext, title: str, study_id: str) -> str:
+def _place_assay(
+    ctx: _SyncContext, title: str, study_id: str, values: Mapping[str, Any]
+) -> str:
     """Create an Assay inside its Study's stream, owning its own Sample Type."""
-    entity = _sample_entity_def(ctx)
+    entity = _chain_entity(ctx, 2)
     collection_id = ctx.study_collection_type.get(study_id)
     sample_type_title = f"{title} - Sample Type"
     assay_id = ctx.client.create_isa_assay(
@@ -365,7 +433,18 @@ def _place_assay(ctx: _SyncContext, title: str, study_id: str) -> str:
     if owned is not None:
         ctx.assay_sample_type[assay_id] = owned
     ctx.assay_protocol[assay_id] = title
+    # An AssayMaterial names its Assay by identifier, not by nesting under it.
+    for key in ("identifier", "unique_id", "name", "title"):
+        marker = values.get(key)
+        if marker:
+            ctx.assay_id_by_identifier.setdefault(str(marker), assay_id)
     return assay_id
+
+
+# SEEK renames a Sample Type's input attribute to ``Input (<predecessor title
+# attribute>)`` on save. Every type this module builds names its title attribute
+# ``Title``, so the key a Sample writes its input under is fixed.
+_INPUT_ATTRIBUTE = "Input (Title)"
 
 
 def _place_sample(
@@ -373,43 +452,89 @@ def _place_sample(
     node: Any,
     values: Mapping[str, Any],
     title: str,
-    assay_id: str | None = None,
     study_id: str | None = None,
-) -> None:
-    sample_type_id = ctx.assay_sample_type.get(assay_id) if assay_id else None
+    parent_sample_id: str | None = None,
+    depth: int = 0,
+) -> str | None:
+    """Create one Sample at its place in the ISA material chain.
+
+    The chain SEEK's ISA-JSON exporter walks is Source -> Sample -> assay
+    material, each naming its predecessor. Which Sample Type a node belongs to
+    follows from how deep it sits in that chain, the same way SEEK reads the ISA
+    hierarchy positionally:
+
+    - depth 0 (directly under a Study) -> the Study's Source type
+    - depth 1 (under a Source) -> the Study's Sample Collection type
+    - depth 2+ (under a Sample) -> the Sample Type owned by the Assay it names
+
+    Returns the created SEEK sample id, so the next level down can name it.
+    """
+    r = ctx.result
+    referenced_assay = _referenced_assay_id(ctx, values)
+    if depth >= 2:
+        sample_type_id = (
+            ctx.assay_sample_type.get(referenced_assay) if referenced_assay else None
+        )
+        assay_ids = [referenced_assay] if referenced_assay else None
+    elif depth == 1:
+        sample_type_id = ctx.study_collection_type.get(study_id) if study_id else None
+        assay_ids = None
+    else:
+        sample_type_id = ctx.study_source_type.get(study_id) if study_id else None
+        assay_ids = None
+
     if sample_type_id is None:
-        # SEEK hangs Samples off Assays, and under ISA-JSON compliance a Sample's
-        # type is the one its Assay owns. With no Assay ancestor there is no type
-        # to create it in, so it is reported rather than pushed somewhere it
-        # would be unreachable from the Investigation.
-        ctx.result.unlinked.append(
+        r.unlinked.append(
             (
                 node.id,
-                f"{node.entity_type} has no Assay ancestor, so there is no Sample "
-                "Type to place it in — nest it under an Assay-role entity to "
-                "link it into the ISA tree",
+                f"{node.entity_type} has no Sample Type to go in — an assay "
+                "material must name an Assay that exists, and a Source or Sample "
+                "must sit under a Study",
             )
         )
-        return
+        return None
+
     data = _sample_data(
         values, ctx.text_list_fields_by_entity.get(node.entity_type, frozenset())
     )
     # SEEK derives a Sample's title from its Title attribute and rejects a blank
     # one; fall back to the same non-blank title the ISA levels use.
     data.setdefault("Title", title)
-    # The exporter rejects a Sample with no protocol. The attribute stays
-    # optional on the Sample Type -- a Sample created by other means must not be
-    # refused -- but every Sample this sync creates names its Assay as the step
-    # that produced it.
-    if assay_id is not None:
-        data.setdefault(_PROTOCOL_ATTRIBUTE, ctx.assay_protocol.get(assay_id, title))
-    ctx.result.samples[node.id] = ctx.client.create_sample(
+    if parent_sample_id is not None:
+        # The exporter reads this as the sample's input and fails without it.
+        data.setdefault(_INPUT_ATTRIBUTE, [parent_sample_id])
+    if depth >= 1:
+        # The exporter rejects a Sample with no protocol. The attribute stays
+        # optional on the Sample Type -- a Sample created by other means must not
+        # be refused -- but every Sample this sync creates names its step.
+        protocol = (
+            ctx.assay_protocol.get(referenced_assay, title)
+            if referenced_assay
+            else title
+        )
+        data.setdefault(_PROTOCOL_ATTRIBUTE, protocol)
+
+    sample_id = r.samples[node.id] = ctx.client.create_sample(
         sample_type_id=sample_type_id,
         project_id=ctx.project_id,
         data=data,
-        assay_ids=[assay_id] if assay_id else None,
+        assay_ids=assay_ids,
         study_id=study_id,
     )
+    return sample_id
+
+
+def _referenced_assay_id(ctx: _SyncContext, values: Mapping[str, Any]) -> str | None:
+    """The SEEK Assay id a material names, if any.
+
+    An Assay measures materials derived from many Samples, so a material names
+    its Assay by reference rather than nesting under it — containment cannot
+    express that shape.
+    """
+    for value in values.values():
+        if isinstance(value, str) and value in ctx.assay_id_by_identifier:
+            return ctx.assay_id_by_identifier[value]
+    return None
 
 
 def _collect_file(
@@ -509,14 +634,11 @@ def sync_dataset_to_seek(
     }
     result = SyncResult()
 
-    # The entity whose fields describe a Sample. Its projection becomes the
-    # Study's Source and Sample Collection types and each Assay's own type.
-    sample_entities = sorted(sample_role_entities(profile))
     ctx = _SyncContext(
         client=client,
         project_id=project_id,
         profile=profile,
-        sample_entity=sample_entities[0] if sample_entities else None,
+        chain_entities=_sample_chain_entities(profile),
         isa_tag_ids=client.isa_tag_ids(),
         cv_ids=cv_ids or {},
         roles=roles,
@@ -524,10 +646,12 @@ def sync_dataset_to_seek(
         text_list_fields_by_entity=text_list_fields_by_entity,
         file_fields_by_entity=file_fields_by_entity,
         files_by_study=files_by_study,
+        study_source_type={},
         study_collection_type={},
         study_stream={},
         assay_sample_type={},
         assay_protocol={},
+        assay_id_by_identifier={},
         placeholder_type_id=_placeholder_sample_type_id(
             client, profile.name, project_id
         ),
@@ -539,12 +663,33 @@ def sync_dataset_to_seek(
         investigation_id: str | None,
         study_id: str | None,
         assay_id: str | None,
+        parent_sample_id: str | None = None,
+        depth: int = 0,
     ) -> None:
-        next_investigation, next_study, next_assay = _place_node(
-            ctx, node, investigation_id, study_id, assay_id
+        placed = _place_node(
+            ctx, node, investigation_id, study_id, assay_id, parent_sample_id, depth
         )
-        for child in node.children:
-            walk(child, next_investigation, next_study, next_assay)
+        next_investigation, next_study, next_assay, next_sample, next_depth = placed
+        # Assays first: a material names the Assay that measured it, so every
+        # Assay under this node must exist before any material is placed.
+        assay_children = [
+            child
+            for child in node.children
+            if entity_jerm_class(child.entity_type, ctx.roles.get(child.entity_type))
+            == "Assay"
+        ]
+        for child in [
+            *assay_children,
+            *(c for c in node.children if c not in assay_children),
+        ]:
+            walk(
+                child,
+                next_investigation,
+                next_study,
+                next_assay,
+                next_sample,
+                next_depth,
+            )
 
     for root in metaseed_client.get_tree():
         walk(root, None, None, None)
