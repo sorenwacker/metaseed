@@ -122,9 +122,11 @@ flow for custom Investigation/Study/Assay metadata.
 
 ## Why this path (and not the config APIs)
 
-SEEK's Extended Metadata Type and ISA Template APIs are **admin-UI-only**
-(`POST /extended_metadata_types` redirects to the admin form; `POST /templates`
-drops nested attributes). SEEK's FAIR-Data-Station RDF import is the one native,
+SEEK's Extended Metadata Type API is **admin-UI-only**
+(`POST /extended_metadata_types` redirects to the admin form). `POST /templates`
+is admin-UI-only over the JSON:API, but *does* accept nested
+`template_attributes_attributes` when the body is form-encoded — see
+[SEEK Object Inventory](seek-inventory.md). SEEK's FAIR-Data-Station RDF import is the one native,
 scriptable path that creates the ISA structure **and** the Extended Metadata from
 a single file. Controlled vocabularies (including ontology-backed ones via
 `source_ontology` + `ols_root_term_uris`) remain available over the JSON:API.
