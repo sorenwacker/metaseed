@@ -24,9 +24,15 @@ from dataclasses import field as dc_field
 from typing import TYPE_CHECKING, Any
 
 from metaseed.seek.isa_types import PROTOCOL_ATTRIBUTE as _PROTOCOL_ATTRIBUTE
-from metaseed.seek.isa_types import sample_type_attributes
+from metaseed.seek.isa_types import sample_type_attribute_plans, sample_type_attributes
 from metaseed.seek.payloads import ASSAY_CLASS_IDS, sample_attribute
-from metaseed.seek.roles import entity_jerm_class, sample_role_entities
+from metaseed.seek.roles import entity_jerm_class
+from metaseed.seek.templates import (
+    CHAIN_LEVELS,
+    sample_chain_entities,
+    seek_level_for,
+    template_title,
+)
 from metaseed.specs.loader import SpecLoader
 
 if TYPE_CHECKING:
@@ -198,6 +204,10 @@ class _SyncContext:
     study_stream: dict[str, str]
     # SEEK assay id -> the Sample Type that Assay owns, where its Samples go.
     assay_sample_type: dict[str, str]
+    # ISA Template title -> id on the target instance. A Sample Type without a
+    # Template cannot be exported as ISA-JSON, so a missing one is an error
+    # rather than something to push past.
+    template_ids: Mapping[str, str]
     # Assay identifier (as written in the dataset) -> its SEEK id, so an
     # AssayMaterial can name the Assay that measured it by reference.
     assay_id_by_identifier: dict[str, str]
@@ -324,39 +334,26 @@ def _chain_entity(ctx: _SyncContext, level: int) -> EntityDefSpec | None:
     return ctx.profile.entities.get(ctx.chain_entities[level])
 
 
-def _sample_chain_entities(profile: ProfileSpec) -> list[str]:
-    """Sample-role entity names down the material chain, Source level first.
+def _template_id_for(ctx: _SyncContext, level: str) -> str | None:
+    """The Template id for one level of the chain, or ``None`` with an error.
 
-    Followed through the profile's own nesting rather than guessed, because the
-    chain is what SEEK's ISA-JSON exporter walks: a Source yields Samples, a
-    Sample yields the materials measured from it.
+    Reported rather than skipped: without a Template the push still succeeds and
+    the export then fails inside SEEK, naming nothing useful.
     """
-    roles = {
-        name: entity.seek.role
-        for name, entity in profile.entities.items()
-        if entity.seek and entity.seek.role
-    }
-    sample_roles = sample_role_entities(profile)
-
-    def first_sample_child(entity_name: str) -> str | None:
-        entity = profile.entities.get(entity_name)
-        if entity is None:
-            return None
-        for f in entity.fields:
-            if f.items in sample_roles:
-                return f.items
-        return None
-
-    start = next(
-        (name for name, role in roles.items() if role == "Study"),
-        profile.root_entity,
-    )
-    chain: list[str] = []
-    current = first_sample_child(start)
-    while current is not None and current not in chain:
-        chain.append(current)
-        current = first_sample_child(current)
-    return chain
+    entity = _chain_entity(ctx, CHAIN_LEVELS.index(level))
+    plans = sample_type_attribute_plans(entity, level=level, linked=level != "source")
+    title = template_title(ctx.profile, seek_level_for(level, plans))
+    template_id = ctx.template_ids.get(title)
+    if template_id is None:
+        ctx.result.errors.append(
+            (
+                f"template:{level}",
+                f"no ISA Template titled {title!r} on this SEEK — download the "
+                "profile's templates from the SEEK page and have an "
+                "administrator upload them under Templates, then re-run",
+            )
+        )
+    return template_id
 
 
 def _place_study(ctx: _SyncContext, title: str, investigation_id: str) -> str:
@@ -381,6 +378,8 @@ def _place_study(ctx: _SyncContext, title: str, investigation_id: str) -> str:
             isa_tag_ids=ctx.isa_tag_ids,
             cv_ids=ctx.cv_ids,
         ),
+        source_template_id=_template_id_for(ctx, "source"),
+        collection_template_id=_template_id_for(ctx, "sample_collection"),
         collection_title=collection_title,
         collection_attributes=sample_type_attributes(
             collection_entity,
@@ -421,6 +420,7 @@ def _place_assay(
         assay_stream_id=ctx.study_stream.get(study_id),
         input_sample_type_id=collection_id,
         sample_type_title=sample_type_title,
+        sample_type_template_id=_template_id_for(ctx, "assay"),
         sample_type_attributes=sample_type_attributes(
             entity,
             level="assay",
@@ -638,7 +638,7 @@ def sync_dataset_to_seek(
         client=client,
         project_id=project_id,
         profile=profile,
-        chain_entities=_sample_chain_entities(profile),
+        chain_entities=sample_chain_entities(profile),
         isa_tag_ids=client.isa_tag_ids(),
         cv_ids=cv_ids or {},
         roles=roles,
@@ -652,6 +652,7 @@ def sync_dataset_to_seek(
         assay_sample_type={},
         assay_protocol={},
         assay_id_by_identifier={},
+        template_ids=client.template_ids_by_title(),
         placeholder_type_id=_placeholder_sample_type_id(
             client, profile.name, project_id
         ),

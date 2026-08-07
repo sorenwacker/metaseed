@@ -16,6 +16,13 @@ from metaseed.seek.ports import IsaWriter
 from metaseed.seek.sync import sync_dataset_to_seek
 
 
+class _AnyTemplate(dict):
+    """A template map that has whatever title is asked for."""
+
+    def get(self, key, default=None):  # type: ignore[override]
+        return f"template-for-{key}"
+
+
 @dataclass
 class _FakeSeek:
     """Records the ISA creates, handing out incrementing ids.
@@ -27,6 +34,7 @@ class _FakeSeek:
     calls: list[tuple[str, dict[str, Any]]] = field(default_factory=list)
     study_types: dict[str, dict[str, str]] = field(default_factory=dict)
     assay_types: dict[str, dict[str, str]] = field(default_factory=dict)
+    templates_installed: bool = True
     _n: int = 0
 
     def _next(self) -> str:
@@ -48,6 +56,14 @@ class _FakeSeek:
             "input",
         )
         return {tag: str(i) for i, tag in enumerate(tags, start=1)}
+
+    def template_ids_by_title(self) -> dict[str, str]:
+        """Every ISA Template installed, or none.
+
+        Answers any title when ``templates_installed`` -- the sync looks them up
+        by a name it derives from the profile, which a double cannot predict.
+        """
+        return _AnyTemplate() if self.templates_installed else {}
 
     def create_investigation(
         self,
@@ -71,6 +87,8 @@ class _FakeSeek:
         source_attributes: Any,
         collection_title: str,
         collection_attributes: Any,
+        source_template_id: str | None = None,
+        collection_template_id: str | None = None,
     ) -> str:
         study_id = self._next()
         self.calls.append(
@@ -81,6 +99,8 @@ class _FakeSeek:
                     "investigation_id": investigation_id,
                     "source_attributes": list(source_attributes),
                     "collection_attributes": list(collection_attributes),
+                    "source_template_id": source_template_id,
+                    "collection_template_id": collection_template_id,
                 },
             )
         )
@@ -100,6 +120,7 @@ class _FakeSeek:
         input_sample_type_id: str | None = None,
         sample_type_title: str | None = None,
         sample_type_attributes: Any = None,
+        sample_type_template_id: str | None = None,
     ) -> str:
         assay_id = self._next()
         self.calls.append(
@@ -111,6 +132,7 @@ class _FakeSeek:
                     "assay_class_id": assay_class_id,
                     "assay_stream_id": assay_stream_id,
                     "input_sample_type_id": input_sample_type_id,
+                    "template_id": sample_type_template_id,
                 },
             )
         )
@@ -430,3 +452,24 @@ class TestProtocolValue:
         sync_dataset_to_seek(seek, _dataset(), project_id="1")
         material = _of_kind(seek, "sample")[-1]
         assert material["data"]["Protocol"] == "Assay 0"
+
+
+class TestTemplates:
+    def test_every_sample_type_is_created_with_its_isa_template(self) -> None:
+        # ISAExporter reads sample_type.isa_template.level, so a Sample Type
+        # without one cannot be exported however correct its attributes are.
+        seek = _FakeSeek()
+        sync_dataset_to_seek(seek, _dataset(), project_id="1")
+        study = _of_kind(seek, "study")[0]
+        assert study["source_template_id"]
+        assert study["collection_template_id"]
+        assert _of_kind(seek, "assay")[0]["template_id"]
+
+    def test_a_missing_template_is_reported_with_what_to_do(self) -> None:
+        # Pushing past it succeeds and the export then fails inside SEEK,
+        # naming nothing the user can act on.
+        seek = _FakeSeek(templates_installed=False)
+        result = sync_dataset_to_seek(seek, _dataset(), project_id="1")
+        assert result.errors
+        message = result.errors[0][1]
+        assert "administrator" in message and "Templates" in message

@@ -18,6 +18,7 @@ key configured on the Plugins page.
 from __future__ import annotations
 
 import functools
+import json
 import re
 from collections import Counter
 from collections.abc import Callable
@@ -300,6 +301,40 @@ def register_seek_routes(  # noqa: C901
             turtle,
             media_type="text/turtle",
             headers={"Content-Disposition": f'attachment; filename="{stem}-seek.ttl"'},
+        )
+
+    @app.get("/seek/isa-templates")
+    async def seek_isa_templates(
+        request: Request, profile: str = "", version: str = ""
+    ) -> Response:
+        """Download a profile's ISA Templates (for the admin template upload).
+
+        SEEK's ISA-JSON exporter reads each Sample Type's Template to tell an
+        assay data file from an assay material, so a dataset cannot be exported
+        until an administrator has installed these under *Templates -> populate*.
+        """
+        if not _enabled(request):
+            return HTMLResponse("SEEK plugin is disabled", status_code=404)
+
+        from metaseed.seek.templates import to_isa_template_json
+
+        try:
+            spec = _load_profile_named(profile, version)
+        except ValueError:
+            # Do NOT echo the (attacker-controllable) profile value into HTML.
+            return HTMLResponse("Unknown profile requested.", status_code=400)
+        try:
+            document = to_isa_template_json(spec)
+        except Exception:
+            return HTMLResponse("Could not build the ISA templates.", status_code=500)
+
+        stem = _safe_filename(profile or get_state().get_or_create_facade().profile)
+        return Response(
+            json.dumps(document, indent=2),
+            media_type="application/json",
+            headers={
+                "Content-Disposition": f'attachment; filename="{stem}-isa-templates.json"'
+            },
         )
 
     @app.get("/seek/model-ttl")

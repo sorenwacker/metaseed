@@ -20,6 +20,7 @@ TAGS = {
     "other_material": "6",
     "other_material_characteristic": "7",
     "data_file": "8",
+    "data_file_comment": "9",
     "input": "11",
 }
 

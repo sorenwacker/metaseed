@@ -384,23 +384,28 @@ def _walk(client, node):
 @pytest.mark.xfail(
     strict=True,
     reason=(
-        "ISAExporter reads sample.sample_type.isa_template.level "
-        "(isa_exporter.rb:750), so every Sample Type must be built from an ISA "
-        "Template. Templates cannot be created over the API -- POST /templates "
-        "drops nested attributes -- so a Sample Type this sync builds has no "
-        "template and the export raises NoMethodError. The structure itself is "
-        "correct: the material chain links and every Sample uploads without "
-        "error. See docs/architecture/seek-isa-compliance.md."
+        "The structure exports: ISAExporter returns assays=1, sources=1, "
+        "samples=1 for a pushed 3.0 dataset, verified directly. What fails is "
+        "the HTTP route -- GET /investigations/{id}/export_isa authorizes as "
+        ":download, and the sync creates content under SEEK's default private "
+        "policy, so the token's own user is refused: 'You may not download "
+        "investigation:N'. Needs a decision on the sharing policy the sync "
+        "applies, which is a data-affecting choice rather than a defect."
     ),
 )
 def test_a_pushed_dataset_is_exportable_as_isa_json(created_in_seek):
     """SEEK must accept the pushed structure as ISA-JSON, not merely store it.
 
     This is the check whose absence let every Investigation we created sit at
-    ``is_isa_json_compliant = nil`` while the suite stayed green: the round-trip
-    test above passes on a structure SEEK refuses to export. Compliance is
-    structural -- the flag alone does not satisfy it, because the export then
-    fails on a Study that owns no Sample Types.
+    ``is_isa_json_compliant = nil`` while the suite stayed green: a round trip
+    passes on a structure SEEK refuses to export. Four things must hold at once,
+    each of which failed independently: the Investigation flagged compliant, the
+    Study owning its two Sample Types, the material chain linking Source ->
+    Sample -> assay material with a protocol on each, and every Sample Type
+    carrying the ISA Template the exporter reads its level from.
+
+    Needs the profile's ISA Templates installed on the instance -- download them
+    from the SEEK page and upload them as an administrator.
     """
     seek = _seek_client()
     result = _provision_and_sync(seek, _seek_ready_dataset(), created_in_seek)
