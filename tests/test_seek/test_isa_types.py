@@ -201,3 +201,19 @@ class TestControlledVocabularyFields:
             sample_type_attributes(
                 self._entity(), level="source", isa_tag_ids=TAGS, cv_ids={}
             )
+
+
+class TestStructuralAttributesAreOptional:
+    """The chain is structural, so it must not demand a value on every Sample."""
+
+    def test_the_input_and_protocol_attributes_are_not_required(self):
+        # Marking them required makes SEEK reject every Sample that does not
+        # supply them: "/data/attributes/Input (Title): is required".
+        attrs = sample_type_attributes(
+            _entity(), level="assay", isa_tag_ids=TAGS, linked_sample_type_id="7"
+        )
+        structural = [
+            a for a in attrs if a["isa_tag_id"] in (TAGS["input"], TAGS["protocol"])
+        ]
+        assert len(structural) == 2
+        assert not any(a["required"] for a in structural)

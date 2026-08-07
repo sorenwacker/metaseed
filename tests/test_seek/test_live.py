@@ -117,6 +117,7 @@ def test_provision_then_sync_round_trips(created_in_seek):
         execute_provisioning_plan,
         sync_dataset_to_seek,
     )
+    from metaseed.seek.provision import resolve_cv_ids
     from metaseed.specs.loader import SpecLoader
 
     seek = _seek_client()
@@ -134,7 +135,7 @@ def test_provision_then_sync_round_trips(created_in_seek):
         seek,
         ms_client,
         project_id=project_id,
-        sample_type_ids=provisioned.sample_type_ids,
+        cv_ids=resolve_cv_ids(seek, profile),
     )
     created_in_seek.track(seek, result)
     assert not result.errors, result.errors
@@ -186,17 +187,20 @@ def _provision_and_sync(seek, ms_client, created_in_seek):
         execute_provisioning_plan,
         sync_dataset_to_seek,
     )
+    from metaseed.seek.provision import resolve_cv_ids
     from metaseed.specs.loader import SpecLoader
 
     project_id = seek.default_project_id()
     profile = SpecLoader().load_profile(ms_client.version, ms_client.profile)
     plan = build_provisioning_plan(profile)
-    provisioned = execute_provisioning_plan(seek, plan, project_id=project_id)
+    # Provisioning supplies the Controlled Vocabularies; the Sample Types the
+    # sync needs are created per Assay during the walk.
+    execute_provisioning_plan(seek, plan, project_id=project_id)
     result = sync_dataset_to_seek(
         seek,
         ms_client,
         project_id=project_id,
-        sample_type_ids=provisioned.sample_type_ids,
+        cv_ids=resolve_cv_ids(seek, profile),
     )
     created_in_seek.track(seek, result)
     assert not result.errors, result.errors
@@ -332,10 +336,10 @@ def test_a_dataset_survives_a_round_trip_through_seek(created_in_seek):
         f"samples uploaded attached to nothing: {result.unlinked}"
     )
 
-    # Sample Types are linked from their own side; sending sample_types on an
-    # Assay is answered 200 and discarded, so an unlinked type means an Assay
-    # that cannot hold Samples.
-    assert result.sample_type_assays, "no Sample Type was associated with an Assay"
+    # Every Assay hangs off a stream and owns its own Sample Type; an assay
+    # outside a stream does not render in SEEK's ISA study view, and one with no
+    # type can hold no Samples.
+    assert result.assay_streams, "no assay stream was created for the study"
     for assay_id in result.assays.values():
         linked = seek.get(f"/assays/{assay_id}/sample_types").get("data", [])
         assert linked, (
@@ -375,3 +379,43 @@ def _walk(client, node):
         out.append(current)
         stack += client.get_children(current.id)
     return out
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "The structure is compliant and the samples upload, but ISAExporter walks "
+        "a material chain -- Source sample -> Sample Collection sample -> assay "
+        "sample, each naming its predecessor in its Input attribute -- and "
+        "seek-ready-template 2.0 has a single Sample level, so there is nothing "
+        "for an assay sample's Input to point at. Fails at isa_exporter.rb:726, "
+        "`undefined method map for nil`. Needs a profile carrying the material "
+        "levels; see docs/architecture/seek-isa-compliance.md."
+    ),
+)
+def test_a_pushed_dataset_is_exportable_as_isa_json(created_in_seek):
+    """SEEK must accept the pushed structure as ISA-JSON, not merely store it.
+
+    This is the check whose absence let every Investigation we created sit at
+    ``is_isa_json_compliant = nil`` while the suite stayed green: the round-trip
+    test above passes on a structure SEEK refuses to export. Compliance is
+    structural -- the flag alone does not satisfy it, because the export then
+    fails on a Study that owns no Sample Types.
+    """
+    seek = _seek_client()
+    result = _provision_and_sync(seek, _seek_ready_dataset(), created_in_seek)
+    investigation_id = next(iter(result.investigations.values()))
+
+    response = seek._send(
+        "GET",
+        f"/investigations/{investigation_id}/export_isa",
+        headers={"Accept": "application/json"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 200, (
+        "SEEK refused to export the pushed Investigation as ISA-JSON: "
+        f"{response.status_code} {response.text[:200]}"
+    )
+    isa = response.json()
+    assert isa.get("studies"), "the exported ISA-JSON carries no studies"
+    assert isa["studies"][0].get("assays"), "the exported study carries no assays"

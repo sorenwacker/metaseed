@@ -222,22 +222,23 @@ def sample_type_title(profile: ProfileSpec, entity_type: str) -> str:
     return f"{profile.name} {entity_type}"
 
 
-def resolve_sample_type_ids(
-    client: SeekClient, profile: ProfileSpec, *, project_id: str
-) -> dict[str, str]:
-    """Look up already-provisioned Sample Type ids by entity type (for a sync).
+def resolve_cv_ids(client: SeekClient, profile: ProfileSpec) -> dict[str, str]:
+    """Look up already-provisioned Controlled Vocabulary ids by field name.
 
-    Only entities whose Sample Type currently exists in ``project_id`` are
-    returned; a caller can compare against :func:`sample_role_entities` to see
-    what still needs provisioning.
+    The compliant sync builds its Sample Types per Assay, but the vocabularies
+    their enum attributes bind to are instance-global and provisioned once, so
+    they are resolved here rather than recreated per dataset.
     """
     ids: dict[str, str] = {}
-    for entity_type in sample_role_entities(profile):
-        existing = client.find_sample_type_id_by_title(
-            sample_type_title(profile, entity_type), project_id=project_id
-        )
-        if existing is not None:
-            ids[entity_type] = existing
+    for entity_name in sample_role_entities(profile):
+        for field in profile.entities[entity_name].fields:
+            if not is_cv_field(field):
+                continue
+            existing = client.find_controlled_vocab_id_by_title(
+                _cv_title(profile, entity_name, field)
+            )
+            if existing is not None:
+                ids[field.name] = existing
     return ids
 
 

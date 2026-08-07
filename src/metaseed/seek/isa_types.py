@@ -36,12 +36,13 @@ _LEVEL_TAGS: dict[str, tuple[str, str]] = {
 _LEVELS_NEEDING_A_LINK = frozenset({"sample_collection", "assay"})
 
 _SEEK_SAMPLE_MULTI_TITLE = "Registered Sample List"
-_PROTOCOL_TITLE = "Protocol"
+PROTOCOL_ATTRIBUTE = "Protocol"
+_PROTOCOL_TITLE = PROTOCOL_ATTRIBUTE
 _INPUT_TITLE = "Input"
 
 
 def sample_type_attributes(
-    entity: EntityDefSpec,
+    entity: EntityDefSpec | None,
     *,
     level: str,
     isa_tag_ids: Mapping[str, str],
@@ -51,7 +52,9 @@ def sample_type_attributes(
     """Attributes for the Sample Type ``entity`` becomes at ``level``.
 
     Args:
-        entity: The profile entity whose scalar fields become attributes.
+        entity: The profile entity whose scalar fields become attributes, or
+            ``None`` for a profile with no Sample-role entity — the
+            structural attributes every level needs are still emitted.
         level: One of ``source``, ``sample_collection`` or ``assay``.
         isa_tag_ids: ISA tag title -> id, read from the target instance.
         cv_ids: Field name -> Controlled Vocabulary id, for the entity's enum
@@ -101,19 +104,25 @@ def sample_type_attributes(
                 title=_INPUT_TITLE,
                 attribute_type_title=_SEEK_SAMPLE_MULTI_TITLE,
                 isa_tag_id=tag("input"),
-                required=True,
+                # Not required: the chain is structural (the attribute links the
+                # Sample Types), so demanding a value per Sample would reject
+                # every Sample that does not name its predecessor. SEEK renames
+                # this to "Input (<title>)" on save.
+                required=False,
                 linked_sample_type_id=linked_sample_type_id,
                 pos=position,
             )
         )
         position += 1
         # Only a chained type describes a step, so only it carries a protocol.
+        # Optional for the same reason as the input attribute: compliance needs
+        # exactly one protocol-tagged attribute, not a value on every Sample.
         attributes.append(
             isa_sample_attribute(
                 title=_PROTOCOL_TITLE,
                 attribute_type_title="String",
                 isa_tag_id=tag("protocol"),
-                required=True,
+                required=False,
                 pos=position,
             )
         )
@@ -133,7 +142,7 @@ def sample_type_attributes(
     )
     position += 1
 
-    for field in entity.fields:
+    for field in entity.fields if entity is not None else ():
         if field.is_nested():
             continue
         vocabulary_id: str | None = None

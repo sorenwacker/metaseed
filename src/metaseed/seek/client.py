@@ -408,37 +408,6 @@ class SeekClient:
             ),
         )
 
-    def add_assays_to_sample_type(
-        self, *, sample_type_id: str, assay_ids: Sequence[str]
-    ) -> list[str]:
-        """Associate ``assay_ids`` with a Sample Type; return its full assay list.
-
-        The link is owned by the Sample Type side. Sending ``sample_types`` on an
-        Assay -- whether creating it or patching it -- is answered ``200 OK`` and
-        silently discarded, so an Assay written that way can never hold Samples.
-
-        SEEK replaces the association rather than appending to it, so the current
-        assays are read and merged first; patching with only the new ids would
-        drop every link made earlier in the same run.
-        """
-        existing = self.get(f"/sample_types/{sample_type_id}")["data"]
-        current = [
-            row["id"]
-            for row in ((existing.get("relationships") or {}).get("assays") or {}).get(
-                "data"
-            )
-            or []
-        ]
-        merged = list(dict.fromkeys([*current, *(str(a) for a in assay_ids)]))
-        self._request(
-            "PATCH",
-            f"/sample_types/{sample_type_id}",
-            json=payloads.sample_type_assays_payload(
-                sample_type_id=sample_type_id, assay_ids=merged
-            ),
-        )
-        return merged
-
     def create_sample(
         self,
         *,
