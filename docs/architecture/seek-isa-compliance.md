@@ -112,6 +112,30 @@ Reported separately; none has a workaround inside SEEK's settings.
 | `isa_exporter.rb:42` interpolates bare `investigation` instead of `@investigation` | the "studies should be ISA-JSON compliant" error raises `NameError`, masking the real cause |
 | `ISAStudy` validates the input attribute's link before `save` assigns it | a placeholder `linked_sample_type_id` is required to create a Study |
 
+## Compliance is not sufficient for export
+
+A compliant structure is what SEEK's *validation* requires. Its *exporter* requires more, and the difference only appears once the Study holds Samples.
+
+`ISAExporter` walks a material chain: a Source sample, the Sample Collection sample produced from it, and the assay sample produced from that — each naming its predecessor in its input attribute. It also refuses a Sample with no protocol value:
+
+```
+Sample {2594: expsample} has no protocol
+isa_exporter.rb:726  inputs.map  ->  undefined method `map' for nil
+```
+
+An Investigation with compliant Studies and **no** Samples exports cleanly, which is misleading: it is the empty case, not the working one.
+
+Two consequences:
+
+- Every Sample the sync creates records the Assay that produced it as its protocol. The Protocol attribute stays optional on the Sample Type, so a Sample created by other means is not refused.
+- The material chain needs a profile with the levels to carry it. `seek-ready-template` 2.0 has a single Sample level, nested under Assay, so an assay sample has no predecessor to point at. A profile with Source and Sample-Collection levels is required before a populated dataset exports.
+
 ## Current status
 
-Not implemented. metaseed writes non-compliant Investigations, Studies without Sample Types, and flat `EXP` Assays sharing one profile-derived Sample Type per entity. That structure round-trips through metaseed's own importer and is covered by tests; it cannot be exported as ISA-JSON, and its Assays do not render in SEEK's ISA study view.
+The sync builds compliant content: Investigations carry `is_isa_json_compliant`, each Study owns a Source and a Sample Collection Sample Type, each Study gets one assay stream, every Assay hangs off it owning its own Sample Type chained to the Study's Sample Collection type, and Samples are created into their Assay's type. Sample Types are therefore created per dataset node rather than per profile entity; provisioning still builds its own for the FAIR-Data-Station file route, which matches samples by attribute PID.
+
+Not yet exportable with Samples present, for the reason above. `tests/test_seek/test_live.py::test_a_pushed_dataset_is_exportable_as_isa_json` is a strict `xfail` recording exactly that gap, so it will fail — and demand attention — the moment it starts passing.
+
+A Sample with no Assay ancestor is reported in `SyncResult.unlinked` rather than pushed: under compliance a Sample's type is the one its Assay owns, so with no Assay there is no type to create it in.
+
+Creating a Study needs a placeholder `linked_sample_type_id` (see the `ISAStudy` defect above). The sync creates one Sample Type per project named `<profile> ISA placeholder`, reused by title; it is an artifact of that defect, not part of the ISA structure.
