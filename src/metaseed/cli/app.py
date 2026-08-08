@@ -37,7 +37,7 @@ def _configure_logging_callback(verbose: bool) -> None:
 
 app = typer.Typer(
     name="metaseed",
-    help="Tools for creating, editing, and validating experimental metadata following MIAPPE standards.",
+    help="Create, edit and validate research metadata against a chosen standard (MIAPPE, ISA, Darwin Core, DiSSCo, ENA, MetaboLights, PRIDE and others).",
     no_args_is_help=True,
 )
 

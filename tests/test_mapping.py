@@ -1,8 +1,8 @@
-"""Tests for the shared mapper helpers (metaseed._mapping)."""
+"""Tests for the shared mapper helpers (metaseed.mapping)."""
 
 from __future__ import annotations
 
-from metaseed._mapping import clean, clean_all
+from metaseed.mapping import clean, clean_all
 
 
 class TestClean:
