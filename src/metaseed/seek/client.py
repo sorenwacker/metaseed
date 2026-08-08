@@ -246,6 +246,7 @@ class SeekClient:
         collection_attributes: Sequence[Mapping[str, Any]],
         source_template_id: str | None = None,
         collection_template_id: str | None = None,
+        sharing: str | None = None,
     ) -> str:
         """Create a Study with its Source and Sample Collection types; return its id.
 
@@ -265,6 +266,7 @@ class SeekClient:
                 collection_attributes=collection_attributes,
                 source_template_id=source_template_id,
                 collection_template_id=collection_template_id,
+                sharing=sharing,
             ),
         )
 
@@ -304,6 +306,7 @@ class SeekClient:
         sample_type_title: str | None = None,
         sample_type_attributes: Sequence[Mapping[str, Any]] | None = None,
         sample_type_template_id: str | None = None,
+        sharing: str | None = None,
     ) -> str:
         """Create an assay stream, or an assay within one; return its id.
 
@@ -322,6 +325,7 @@ class SeekClient:
                 sample_type_title=sample_type_title,
                 sample_type_attributes=sample_type_attributes,
                 sample_type_template_id=sample_type_template_id,
+                sharing=sharing,
             ),
         )
 
@@ -372,6 +376,7 @@ class SeekClient:
         project_id: str,
         description: str | None = None,
         isa_json_compliant: bool = False,
+        sharing: str | None = None,
     ) -> str:
         """Create an Investigation under ``project_id``; return its id."""
         return self._create(
@@ -381,6 +386,7 @@ class SeekClient:
                 project_id=project_id,
                 description=description,
                 isa_json_compliant=isa_json_compliant,
+                sharing=sharing,
             ),
         )
 

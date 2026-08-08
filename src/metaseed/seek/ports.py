@@ -32,6 +32,7 @@ class IsaWriter(Protocol):
         project_id: str,
         description: str | None = None,
         isa_json_compliant: bool = False,
+        sharing: str | None = None,
     ) -> str: ...
 
     def template_ids_by_title(self) -> dict[str, str]:
@@ -49,6 +50,7 @@ class IsaWriter(Protocol):
         collection_attributes: Sequence[Mapping[str, Any]],
         source_template_id: str | None = None,
         collection_template_id: str | None = None,
+        sharing: str | None = None,
     ) -> str: ...
 
     def create_isa_assay(
@@ -62,6 +64,7 @@ class IsaWriter(Protocol):
         sample_type_title: str | None = None,
         sample_type_attributes: Sequence[Mapping[str, Any]] | None = None,
         sample_type_template_id: str | None = None,
+        sharing: str | None = None,
     ) -> str: ...
 
     def study_sample_type_ids(self, study_id: str) -> dict[str, str]: ...

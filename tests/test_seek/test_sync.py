@@ -11,6 +11,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+import pytest
+
 from metaseed import MetaseedClient
 from metaseed.seek.ports import IsaWriter
 from metaseed.seek.sync import sync_dataset_to_seek
@@ -72,9 +74,17 @@ class _FakeSeek:
         project_id: str,
         description: str | None = None,
         isa_json_compliant: bool = False,
+        sharing: str | None = None,
     ) -> str:
         self.calls.append(
-            ("investigation", {"title": title, "compliant": isa_json_compliant})
+            (
+                "investigation",
+                {
+                    "title": title,
+                    "compliant": isa_json_compliant,
+                    "sharing": sharing,
+                },
+            )
         )
         return self._next()
 
@@ -89,6 +99,7 @@ class _FakeSeek:
         collection_attributes: Any,
         source_template_id: str | None = None,
         collection_template_id: str | None = None,
+        sharing: str | None = None,
     ) -> str:
         study_id = self._next()
         self.calls.append(
@@ -101,6 +112,7 @@ class _FakeSeek:
                     "collection_attributes": list(collection_attributes),
                     "source_template_id": source_template_id,
                     "collection_template_id": collection_template_id,
+                    "sharing": sharing,
                 },
             )
         )
@@ -121,6 +133,7 @@ class _FakeSeek:
         sample_type_title: str | None = None,
         sample_type_attributes: Any = None,
         sample_type_template_id: str | None = None,
+        sharing: str | None = None,
     ) -> str:
         assay_id = self._next()
         self.calls.append(
@@ -133,6 +146,7 @@ class _FakeSeek:
                     "assay_stream_id": assay_stream_id,
                     "input_sample_type_id": input_sample_type_id,
                     "template_id": sample_type_template_id,
+                    "sharing": sharing,
                 },
             )
         )
@@ -473,3 +487,28 @@ class TestTemplates:
         assert result.errors
         message = result.errors[0][1]
         assert "administrator" in message and "Templates" in message
+
+
+class TestSharing:
+    def test_nothing_is_shared_unless_asked(self) -> None:
+        # SEEK's own default is private to the contributor, and widening that is
+        # a decision about who can see every record metaseed pushes.
+        seek = _FakeSeek()
+        sync_dataset_to_seek(seek, _dataset(), project_id="1")
+        assert _of_kind(seek, "investigation")[0]["sharing"] is None
+
+    def test_the_chosen_level_reaches_every_isa_level(self) -> None:
+        # ISA-JSON export needs at least "download": export_isa authorizes as
+        # :download, so a private Investigation is refused even to its own
+        # contributor over HTTP.
+        seek = _FakeSeek()
+        sync_dataset_to_seek(seek, _dataset(), project_id="1", sharing="download")
+        assert _of_kind(seek, "investigation")[0]["sharing"] == "download"
+        assert _of_kind(seek, "study")[0]["sharing"] == "download"
+        assert _of_kind(seek, "assay")[0]["sharing"] == "download"
+
+    def test_an_unknown_level_is_rejected_before_anything_is_created(self) -> None:
+        from metaseed.seek.payloads import isa_assay_form
+
+        with pytest.raises(ValueError, match="sharing must be one of"):
+            isa_assay_form(title="A", study_id="1", assay_class_id=1, sharing="public")
