@@ -17,6 +17,13 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 # A JERM assay type that always resolves on a stock SEEK; callers may override.
+# SEEK's sharing levels, as the JSON:API names them (``PolicyHelper``).
+# ``no_access`` is SEEK's own default: the contributor keeps the record, nobody
+# else sees it. ``download`` is the level SEEK's ISA-JSON export requires, since
+# ``export_isa`` authorizes as :download.
+SHARING_LEVELS: tuple[str, ...] = ("no_access", "view", "download", "edit", "manage")
+DEFAULT_SHARING = "no_access"
+
 DEFAULT_ASSAY_TYPE_URI = (
     "http://jermontology.org/ontology/JERMOntology#Experimental_assay_type"
 )
@@ -50,6 +57,7 @@ def investigation_payload(
     project_id: str | int,
     description: str | None = None,
     isa_json_compliant: bool = False,
+    sharing: str | None = None,
 ) -> dict[str, Any]:
     """Build a POST body for ``/investigations`` (belongs to a project).
 
@@ -60,6 +68,8 @@ def investigation_payload(
     attributes: dict[str, Any] = {"title": title}
     if isa_json_compliant:
         attributes["is_isa_json_compliant"] = True
+    if sharing is not None:
+        attributes["policy"] = {"access": sharing}
     if description is not None:
         attributes["description"] = description
     return _document(
@@ -346,6 +356,19 @@ def _attribute_pairs(
     return pairs
 
 
+def _sharing_pairs(sharing: str | None) -> list[tuple[str, str]]:
+    """Form pairs setting the sharing level, empty when none is asked for.
+
+    ``update_sharing_policies`` reads ``policy_attributes`` from the *top* level
+    of the params, not from inside the ``isa_*`` key.
+    """
+    if sharing is None:
+        return []
+    if sharing not in SHARING_LEVELS:
+        raise ValueError(f"sharing must be one of {SHARING_LEVELS}, got {sharing!r}")
+    return [("policy_attributes[access_type]", str(SHARING_LEVELS.index(sharing)))]
+
+
 def isa_study_form(
     *,
     title: str,
@@ -356,6 +379,7 @@ def isa_study_form(
     collection_attributes: Sequence[Mapping[str, Any]],
     source_template_id: str | int | None = None,
     collection_template_id: str | int | None = None,
+    sharing: str | None = None,
 ) -> list[tuple[str, str]]:
     """Form body for ``POST /isa_studies`` — a Study with its two Sample Types.
 
@@ -389,6 +413,7 @@ def isa_study_form(
         "isa_study[sample_collection_sample_type][sample_attributes]",
         collection_attributes,
     )
+    pairs += _sharing_pairs(sharing)
     return pairs
 
 
@@ -404,6 +429,7 @@ def isa_assay_form(
     sample_type_title: str | None = None,
     sample_type_attributes: Sequence[Mapping[str, Any]] | None = None,
     sample_type_template_id: str | int | None = None,
+    sharing: str | None = None,
 ) -> list[tuple[str, str]]:
     """Form body for ``POST /isa_assays`` — an assay stream, or an assay in one.
 
@@ -432,6 +458,7 @@ def isa_assay_form(
         pairs += _attribute_pairs(
             "isa_assay[sample_type][sample_attributes]", sample_type_attributes
         )
+    pairs += _sharing_pairs(sharing)
     return pairs
 
 

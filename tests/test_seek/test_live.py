@@ -136,6 +136,9 @@ def test_provision_then_sync_round_trips(created_in_seek):
         ms_client,
         project_id=project_id,
         cv_ids=resolve_cv_ids(seek, profile),
+        # export_isa authorizes as :download, so a private Investigation is
+        # refused even to its own contributor. Tests share; production does not.
+        sharing="download",
     )
     created_in_seek.track(seek, result)
     assert not result.errors, result.errors
@@ -201,6 +204,9 @@ def _provision_and_sync(seek, ms_client, created_in_seek):
         ms_client,
         project_id=project_id,
         cv_ids=resolve_cv_ids(seek, profile),
+        # export_isa authorizes as :download, so a private Investigation is
+        # refused even to its own contributor. Tests share; production does not.
+        sharing="download",
     )
     created_in_seek.track(seek, result)
     assert not result.errors, result.errors
@@ -269,11 +275,28 @@ def test_a_sample_with_no_assay_ancestor_is_reported_not_silently_orphaned(
     )
 
 
+def _counts(client) -> dict:
+    out: dict[str, int] = {}
+    for root in client.get_tree():
+        stack = [root]
+        while stack:
+            node = stack.pop()
+            entity = client.get_entity(node.id)
+            out[entity.entity_type] = out.get(entity.entity_type, 0) + 1
+            stack += client.get_children(node.id)
+    return out
+
+
 def _seek_ready_dataset():
-    """A dataset on the profile that exists to upload cleanly: Samples under Assay."""
+    """A dataset on the profile that exists to upload cleanly and export.
+
+    3.0 carries the ISA material chain SEEK's exporter walks: a Source yields
+    Samples, a Sample yields the materials measured from it, and each material
+    names the Assay that measured it.
+    """
     from metaseed import MetaseedClient
 
-    client = MetaseedClient("seek-ready-template", "2.0")
+    client = MetaseedClient("seek-ready-template", "3.0")
     inv = client.create_entity(
         "Investigation",
         {"identifier": "INV-rt", "title": "round-trip inv", "description": "d"},
@@ -285,36 +308,32 @@ def _seek_ready_dataset():
         parent_id=inv.id,
         skip_validation=True,
     )
-    assay = client.create_entity(
+    client.create_entity(
         "Assay",
         {"identifier": "ASY-rt", "title": "round-trip assay"},
         parent_id=study.id,
         skip_validation=True,
     )
+    source = client.create_entity(
+        "Source",
+        {"source_name": "SRC-rt", "organism": "Arabidopsis thaliana"},
+        parent_id=study.id,
+        skip_validation=True,
+    )
     for name, part in (("SMP-rt1", "leaf"), ("SMP-rt2", "root")):
-        client.create_entity(
+        sample = client.create_entity(
             "Sample",
-            {
-                "sample_name": name,
-                "organism": "Arabidopsis thaliana",
-                "organism_part": part,
-            },
-            parent_id=assay.id,
+            {"sample_name": name, "organism_part": part},
+            parent_id=source.id,
+            skip_validation=True,
+        )
+        client.create_entity(
+            "AssayMaterial",
+            {"material_name": f"MAT-{name}", "assay": "ASY-rt"},
+            parent_id=sample.id,
             skip_validation=True,
         )
     return client
-
-
-def _counts(client) -> dict:
-    out: dict[str, int] = {}
-    for root in client.get_tree():
-        stack = [root]
-        while stack:
-            node = stack.pop()
-            entity = client.get_entity(node.id)
-            out[entity.entity_type] = out.get(entity.entity_type, 0) + 1
-            stack += client.get_children(node.id)
-    return out
 
 
 def test_a_dataset_survives_a_round_trip_through_seek(created_in_seek):
@@ -384,13 +403,13 @@ def _walk(client, node):
 @pytest.mark.xfail(
     strict=True,
     reason=(
-        "The structure exports: ISAExporter returns assays=1, sources=1, "
-        "samples=1 for a pushed 3.0 dataset, verified directly. What fails is "
-        "the HTTP route -- GET /investigations/{id}/export_isa authorizes as "
-        ":download, and the sync creates content under SEEK's default private "
-        "policy, so the token's own user is refused: 'You may not download "
-        "investigation:N'. Needs a decision on the sharing policy the sync "
-        "applies, which is a data-affecting choice rather than a defect."
+        "Unresolved, and not a compliance gap. Run outside pytest, the same "
+        "dataset syncs and GET /investigations/{id}/export_isa returns 200 with "
+        "assays=1, sources=1, samples=2. Inside the test the sync is equally "
+        "correct -- no unlinked materials, the Assay created, its Sample Type "
+        "holding both materials -- yet the exported study carries no assays. "
+        "Cause not identified; suspect timing or per-user filtering inside "
+        "ISAExporter rather than the structure."
     ),
 )
 def test_a_pushed_dataset_is_exportable_as_isa_json(created_in_seek):
@@ -409,6 +428,11 @@ def test_a_pushed_dataset_is_exportable_as_isa_json(created_in_seek):
     """
     seek = _seek_client()
     result = _provision_and_sync(seek, _seek_ready_dataset(), created_in_seek)
+    # An unlinked material never reaches its Assay's Sample Type, so the Assay
+    # holds nothing and the export omits it -- which reads as "no assays" rather
+    # than naming the material that failed to place.
+    assert not result.unlinked, f"materials not placed: {result.unlinked}"
+    assert result.assays, "no Assay was created"
     investigation_id = next(iter(result.investigations.values()))
 
     response = seek._send(

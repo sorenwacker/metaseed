@@ -208,6 +208,9 @@ class _SyncContext:
     # Template cannot be exported as ISA-JSON, so a missing one is an error
     # rather than something to push past.
     template_ids: Mapping[str, str]
+    # The SEEK sharing level applied to everything created, or None for SEEK's
+    # own default (private to the contributor).
+    sharing: str | None
     # Assay identifier (as written in the dataset) -> its SEEK id, so an
     # AssayMaterial can name the Assay that measured it by reference.
     assay_id_by_identifier: dict[str, str]
@@ -258,6 +261,7 @@ def _place_node(
                     # Without this SEEK refuses to export the Investigation as
                     # ISA-JSON, whatever its Studies and Assays look like.
                     isa_json_compliant=True,
+                    sharing=ctx.sharing,
                 )
             )
         elif jerm_class == "Study":
@@ -378,6 +382,7 @@ def _place_study(ctx: _SyncContext, title: str, investigation_id: str) -> str:
             isa_tag_ids=ctx.isa_tag_ids,
             cv_ids=ctx.cv_ids,
         ),
+        sharing=ctx.sharing,
         source_template_id=_template_id_for(ctx, "source"),
         collection_template_id=_template_id_for(ctx, "sample_collection"),
         collection_title=collection_title,
@@ -420,6 +425,7 @@ def _place_assay(
         assay_stream_id=ctx.study_stream.get(study_id),
         input_sample_type_id=collection_id,
         sample_type_title=sample_type_title,
+        sharing=ctx.sharing,
         sample_type_template_id=_template_id_for(ctx, "assay"),
         sample_type_attributes=sample_type_attributes(
             entity,
@@ -581,6 +587,7 @@ def sync_dataset_to_seek(
     *,
     project_id: str,
     cv_ids: Mapping[str, str] | None = None,
+    sharing: str | None = None,
 ) -> SyncResult:
     """Create ISA-JSON compliant SEEK content from a loaded dataset.
 
@@ -592,6 +599,11 @@ def sync_dataset_to_seek(
         cv_ids: ``field name -> Controlled Vocabulary id`` for the dataset's enum
             fields, from a provisioning run. An enum field with no entry here is
             an error: SEEK rejects a CV attribute with no vocabulary.
+        sharing: The SEEK sharing level to apply -- one of
+            :data:`~metaseed.seek.payloads.SHARING_LEVELS`. ``None`` leaves
+            SEEK's own default, which is private to the contributor. Note that
+            ISA-JSON export needs at least ``download``, because ``export_isa``
+            authorizes as :download.
 
     Returns:
         A :class:`SyncResult` mapping each source node to its created SEEK id,
@@ -653,6 +665,7 @@ def sync_dataset_to_seek(
         assay_protocol={},
         assay_id_by_identifier={},
         template_ids=client.template_ids_by_title(),
+        sharing=sharing,
         placeholder_type_id=_placeholder_sample_type_id(
             client, profile.name, project_id
         ),
