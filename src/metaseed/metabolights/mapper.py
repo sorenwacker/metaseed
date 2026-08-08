@@ -22,8 +22,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from metaseed._mapping import clean as _clean
 from metaseed.isatab import read_data_files, read_metabolites, read_samples
+from metaseed.mapping import clean as _clean
 
 if TYPE_CHECKING:
     from metaseed.api.client import MetaseedClient

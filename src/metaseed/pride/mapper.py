@@ -16,8 +16,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from metaseed._mapping import clean as _clean
-from metaseed._mapping import clean_all as _clean_all
+from metaseed.mapping import clean as _clean
+from metaseed.mapping import clean_all as _clean_all
 
 if TYPE_CHECKING:
     from metaseed.api.client import MetaseedClient

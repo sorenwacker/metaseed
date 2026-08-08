@@ -1,5 +1,9 @@
 """Shared helpers for the repository integration mappers/exporters.
 
+Public because four adapters depend on it. A private module shared across
+sibling packages hides a real dependency: nothing signals that changing it
+affects ena, pride, brapi and metabolights at once.
+
 The ena/pride/brapi/metabolights adapters each build plain dicts from an external
 API and drop empty values so that a field the source omitted is *absent* rather
 than present-but-blank. This is the one piece of that logic they genuinely share.

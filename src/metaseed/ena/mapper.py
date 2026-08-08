@@ -17,7 +17,7 @@ from __future__ import annotations
 from itertools import zip_longest
 from typing import TYPE_CHECKING, Any
 
-from metaseed._mapping import clean as _clean
+from metaseed.mapping import clean as _clean
 
 if TYPE_CHECKING:
     from metaseed.api.client import MetaseedClient
