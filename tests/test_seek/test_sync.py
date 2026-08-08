@@ -205,7 +205,9 @@ class _FakeSeek:
         description: str | None = None,
         assay_ids: Any = None,
     ) -> str:
-        self.calls.append(("data_file", {"url": url}))
+        self.calls.append(
+            ("data_file", {"url": url, "description": description, "title": title})
+        )
         return self._next()
 
 
@@ -377,7 +379,7 @@ class TestSamplePlacement:
 
 class TestSampleData:
     def test_core_fields_route_and_scalar_lists_survive(self) -> None:
-        from metaseed.seek.sync import _sample_data
+        from metaseed.seek.values import sample_data as _sample_data
 
         data = _sample_data(
             {
@@ -399,7 +401,7 @@ class TestSampleData:
         }
 
     def test_core_collapse_is_priority_ordered_not_dict_ordered(self) -> None:
-        from metaseed.seek.sync import _sample_data
+        from metaseed.seek.values import sample_data as _sample_data
 
         assert _sample_data({"title": "label", "identifier": "ID-1"})["Title"] == "ID-1"
         assert _sample_data({"identifier": "ID-1", "title": "label"})["Title"] == "ID-1"
@@ -512,3 +514,90 @@ class TestSharing:
 
         with pytest.raises(ValueError, match="sharing must be one of"):
             isa_assay_form(title="A", study_id="1", assay_class_id=1, sharing="public")
+
+
+def test_data_files_under_a_study_become_one_remote_data_file():
+    """A study's file entities collapse to a single SEEK DataFile linking to the
+    common base URL, with the filenames listed -- the files stay in external
+    storage, SEEK holds the reference."""
+    from metaseed import MetaseedClient
+    from metaseed.seek.sync import sync_dataset_to_seek
+    from metaseed.specs.schema import (
+        EntityDefSpec as E,
+    )
+    from metaseed.specs.schema import (
+        FieldSpec as F,
+    )
+    from metaseed.specs.schema import (
+        FieldType as T,
+    )
+    from metaseed.specs.schema import (
+        ProfileSpec,
+        SeekEntityConfig,
+    )
+
+    spec = ProfileSpec(
+        spec_version="0.6",
+        version="1.0",
+        name="df",
+        display_name="DF",
+        description="d",
+        ontology="T",
+        root_entity="Investigation",
+        entities={
+            "Investigation": E(
+                description="d",
+                seek=SeekEntityConfig(role="Investigation"),
+                fields=[
+                    F(name="identifier", type=T.STRING, is_identifier=True),
+                    F(name="title", type=T.STRING, is_label=True),
+                    F(name="studies", type=T.LIST, items="Study"),
+                ],
+            ),
+            "Study": E(
+                description="d",
+                seek=SeekEntityConfig(role="Study"),
+                fields=[
+                    F(name="identifier", type=T.STRING, is_identifier=True),
+                    F(name="title", type=T.STRING, is_label=True),
+                    F(name="files", type=T.LIST, items="DataFile"),
+                ],
+            ),
+            "DataFile": E(
+                description="d",
+                seek=SeekEntityConfig(role="DataFile"),
+                fields=[
+                    F(name="file_name", type=T.STRING, is_label=True),
+                    F(name="file_location", type=T.URI),
+                ],
+            ),
+        },
+    )
+    c = MetaseedClient.from_spec(spec.model_dump(mode="json"))
+    inv = c.create_entity(
+        "Investigation", {"identifier": "I", "title": "t"}, skip_validation=True
+    )
+    st = c.create_entity(
+        "Study",
+        {"identifier": "S", "title": "s"},
+        parent_id=inv.id,
+        skip_validation=True,
+    )
+    for n in ("a.raw", "b.raw"):
+        c.create_entity(
+            "DataFile",
+            {"file_name": n, "file_location": f"s3://bucket/S/{n}"},
+            parent_id=st.id,
+            skip_validation=True,
+        )
+
+    seek = _FakeSeek()
+    res = sync_dataset_to_seek(seek, c, project_id="1")
+
+    assert len(res.data_files) == 1, res.data_files
+    assert not res.errors, res.errors
+    df_calls = [c for kind, c in seek.calls if kind == "data_file"]
+    assert df_calls[0]["url"] == "s3://bucket/S/"
+    assert (
+        "a.raw" in df_calls[0]["description"] and "b.raw" in df_calls[0]["description"]
+    )
