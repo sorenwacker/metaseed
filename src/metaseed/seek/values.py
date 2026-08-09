@@ -12,11 +12,17 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
+    from metaseed.api.client import MetaseedClient
+    from metaseed.specs.schema import ProfileSpec
 
+
+# The one definition of SEEK's core fields: which metaseed field names map
+# onto a Sample Type's built-in Title/Description attributes. Everything
+# else derives from this mapping -- CORE_FIELDS below, the provisioning
+# skip-list, the FDS export -- so the five names exist exactly once.
 # Core identity/description fields map onto the provisioned Sample Type's
 # built-in Title/Description attributes (see :mod:`metaseed.seek.provision`);
-# every other scalar field keeps its own name. Kept in sync with
-# ``provision._CORE_FIELDS``.
+# every other scalar field keeps its own name.
 _CORE_TO_ATTRIBUTE = {
     "identifier": "Title",
     "unique_id": "Title",
@@ -29,6 +35,11 @@ _CORE_TO_ATTRIBUTE = {
 # (Title/Description), the winner is chosen by this priority rather than by dict
 # insertion order — the most identity-bearing field wins deterministically.
 _CORE_PRIORITY = {"unique_id": 0, "identifier": 1, "name": 2, "title": 3}
+
+#: Field names SEEK handles as a sample's core Title/Description rather than as
+#: attributes of their own. Derived, not restated: the mapping above is the one
+#: place the names live.
+CORE_FIELDS = frozenset(_CORE_TO_ATTRIBUTE)
 
 
 def sample_data(
@@ -115,3 +126,17 @@ def base_url(locations: list[str]) -> str:
 
 def title_of(node: Any, values: Mapping[str, Any]) -> str:
     return str(values.get("title") or node.label or node.id)
+
+
+def profile_of(client: MetaseedClient) -> ProfileSpec:
+    """The ProfileSpec behind a metaseed client, wherever it lives.
+
+    A dataset built from a derived spec (e.g. imported via
+    :mod:`metaseed.seek.importer`) carries its ProfileSpec in memory and has no
+    installed profile file to load; anything else loads by name. Both the SEEK
+    sync and the FDS export need this fallback, so it lives once, here.
+    """
+    from metaseed.specs.loader import SpecLoader
+
+    in_memory = getattr(client._facade, "_spec", None)
+    return in_memory or SpecLoader().load_profile(client.version, client.profile)

@@ -45,7 +45,6 @@ except (
 
 from metaseed.seek.naming import property_uri
 from metaseed.seek.roles import JERM_CLASSES as _JERM
-from metaseed.specs.loader import SpecLoader
 
 if TYPE_CHECKING:
     from metaseed.api.client import MetaseedClient
@@ -53,7 +52,8 @@ if TYPE_CHECKING:
 
 # Core fields emitted as native schema.org triples (or the identifier), so they
 # do not get a property definition of their own.
-_CORE_FIELDS = frozenset({"identifier", "unique_id", "title", "name", "description"})
+from metaseed.seek.values import CORE_FIELDS as _CORE_FIELDS
+from metaseed.seek.values import profile_of
 
 JERM = Namespace("http://jermontology.org/ontology/JERMOntology#")
 # MIAPPE's ontology. SEEK types the ObservationUnit level from PPEO while the
@@ -140,11 +140,7 @@ def _profile_index(
     module docstring), so declaring ``role=ObservationUnit`` re-types but does not
     itself insert an ObservationUnit level.
     """
-    # A dataset built from a derived spec (e.g. imported via
-    # ``metaseed.seek.importer``) carries its ProfileSpec in memory and has no
-    # file to load; fall back to loading by name for installed profiles.
-    in_memory = getattr(client._facade, "_spec", None)
-    profile = in_memory or SpecLoader().load_profile(client.version, client.profile)
+    profile = profile_of(client)
     fields = {
         name: {f.name: f for f in entity.fields}
         for name, entity in profile.entities.items()
