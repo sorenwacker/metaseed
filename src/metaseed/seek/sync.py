@@ -126,11 +126,28 @@ def sync_dataset_to_seek(
     }
     result = SyncResult()
 
+    # Fields whose declared ``reference`` names an Assay-role entity are the
+    # only way a material links to its Assay.
+    assay_role_entities = {name for name, role in roles.items() if role == "Assay"} | {
+        name
+        for name in profile.entities
+        if entity_jerm_class(name, roles.get(name)) == "Assay"
+    }
+    assay_reference_fields = {
+        name: [
+            f.name
+            for f in entity.fields
+            if f.reference and f.reference.split(".")[0] in assay_role_entities
+        ]
+        for name, entity in profile.entities.items()
+    }
+
     ctx = SyncContext(
         client=client,
         project_id=project_id,
         profile=profile,
         chain_entities=sample_chain_entities(profile),
+        assay_reference_fields=assay_reference_fields,
         isa_tag_ids=client.isa_tag_ids(),
         cv_ids=cv_ids or {},
         roles=roles,

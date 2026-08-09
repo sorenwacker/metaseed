@@ -85,6 +85,10 @@ class SyncContext:
     # The SEEK sharing level applied to everything created, or None for SEEK's
     # own default (private to the contributor).
     sharing: str | None
+    # entity type -> the fields whose profile ``reference`` names an
+    # Assay-role entity. Only these fields may link a material to an Assay;
+    # any other value matching an assay identifier is a coincidence.
+    assay_reference_fields: dict[str, list[str]]
     # Assay identifier (as written in the dataset) -> its SEEK id, so an
     # AssayMaterial can name the Assay that measured it by reference.
     assay_id_by_identifier: dict[str, str]
