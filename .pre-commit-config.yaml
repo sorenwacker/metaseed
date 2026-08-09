@@ -50,6 +50,13 @@ repos:
 
   - repo: local
     hooks:
+      - id: duplicate-code
+        name: duplicate code (single source of truth)
+        entry: uv run pylint --disable=all --enable=duplicate-code --min-similarity-lines=8 -j 4 src/metaseed
+        language: system
+        stages: [pre-push]
+        pass_filenames: false
+        always_run: true
       - id: pytest
         name: run tests before push
         entry: uv run python -m pytest -x -q --tb=short -n auto -m "not network and not selenium"
