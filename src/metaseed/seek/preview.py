@@ -15,8 +15,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from metaseed.seek.provision import _CORE_FIELDS, build_provisioning_plan
+from metaseed.seek.provision import build_provisioning_plan
 from metaseed.seek.roles import entity_jerm_class
+from metaseed.seek.values import CORE_FIELDS as _CORE_FIELDS
 from metaseed.specs.schema import FieldSpec, ProfileSpec
 
 # ISA-native records that carry Extended Metadata rather than becoming Sample

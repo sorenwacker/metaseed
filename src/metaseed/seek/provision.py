@@ -34,11 +34,7 @@ if TYPE_CHECKING:
     from metaseed.specs.schema import FieldSpec, ProfileSpec
 
 
-# Fields SEEK handles as a sample's core Title/Description rather than as a
-# PID-matched attribute of their own: the identifier maps to the ``is_title``
-# ``Title`` attribute, the description to ``Description``. Kept in sync with
-# ``fairds._CORE_FIELDS``.
-_CORE_FIELDS = frozenset({"identifier", "unique_id", "title", "name", "description"})
+from metaseed.seek.values import CORE_FIELDS as _CORE_FIELDS
 
 
 @dataclass(frozen=True)

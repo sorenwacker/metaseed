@@ -25,8 +25,7 @@ from metaseed.seek.context import SyncContext, SyncResult
 from metaseed.seek.placement import place_node, placeholder_sample_type_id
 from metaseed.seek.roles import entity_jerm_class
 from metaseed.seek.templates import sample_chain_entities
-from metaseed.seek.values import base_url, file_fields
-from metaseed.specs.loader import SpecLoader
+from metaseed.seek.values import base_url, file_fields, profile_of
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -89,14 +88,7 @@ def sync_dataset_to_seek(
         A :class:`SyncResult` mapping each source node to its created SEEK id,
         plus any skipped/errored/unlinked nodes.
     """
-    # A dataset built from a derived spec (e.g. imported via
-    # ``metaseed.seek.importer``) carries its ProfileSpec in memory and has no
-    # installed profile file to load; fall back to loading by name otherwise.
-    # Kept in sync with ``fairds._profile_index``.
-    in_memory = getattr(metaseed_client._facade, "_spec", None)
-    profile = in_memory or SpecLoader().load_profile(
-        metaseed_client.version, metaseed_client.profile
-    )
+    profile = profile_of(metaseed_client)
     roles = {
         name: entity.seek.role
         for name, entity in profile.entities.items()
