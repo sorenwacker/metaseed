@@ -601,3 +601,89 @@ def test_data_files_under_a_study_become_one_remote_data_file():
     assert (
         "a.raw" in df_calls[0]["description"] and "b.raw" in df_calls[0]["description"]
     )
+
+
+class TestAssayReferenceIsDeclaredNotGuessed:
+    def test_a_field_value_that_happens_to_match_an_assay_id_does_not_link(
+        self,
+    ) -> None:
+        # The material names its Assay in the field the profile declares as a
+        # reference. Scanning every value would link this sample to ASSAY0
+        # because its description mentions it.
+        seek = _FakeSeek()
+        client = MetaseedClient("seek-ready-template", "3.0")
+        inv = client.create_entity(
+            "Investigation", {"identifier": "INV1"}, skip_validation=True
+        )
+        study = client.create_entity(
+            "Study", {"identifier": "STU1"}, parent_id=inv.id, skip_validation=True
+        )
+        client.create_entity(
+            "Assay",
+            {"identifier": "ASSAY0", "title": "Assay 0"},
+            parent_id=study.id,
+            skip_validation=True,
+        )
+        source = client.create_entity(
+            "Source", {"source_name": "src"}, parent_id=study.id, skip_validation=True
+        )
+        client.create_entity(
+            "Sample",
+            # organism_part happens to equal an assay identifier; that must not
+            # turn this study-level Sample into an assay material.
+            {"sample_name": "smp", "organism_part": "ASSAY0"},
+            parent_id=source.id,
+            skip_validation=True,
+        )
+        sync_dataset_to_seek(seek, client, project_id="1")
+        study_level = [
+            s for s in _of_kind(seek, "sample") if s["data"].get("Title") == "smp"
+        ]
+        assert study_level, "the sample was not created"
+        assert study_level[0]["assay_ids"] is None, (
+            "a coincidental value match linked a study-level Sample to an Assay"
+        )
+
+    def test_the_declared_reference_wins_over_a_coincidental_match(self) -> None:
+        # The material's own name equals ASSAY1's identifier, but its declared
+        # ``assay`` reference names ASSAY0. Scanning values in order would meet
+        # material_name first and file the material under the wrong Assay.
+        seek = _FakeSeek()
+        client = MetaseedClient("seek-ready-template", "3.0")
+        inv = client.create_entity(
+            "Investigation", {"identifier": "INV1"}, skip_validation=True
+        )
+        study = client.create_entity(
+            "Study", {"identifier": "STU1"}, parent_id=inv.id, skip_validation=True
+        )
+        for i in range(2):
+            client.create_entity(
+                "Assay",
+                {"identifier": f"ASSAY{i}", "title": f"Assay {i}"},
+                parent_id=study.id,
+                skip_validation=True,
+            )
+        source = client.create_entity(
+            "Source", {"source_name": "src"}, parent_id=study.id, skip_validation=True
+        )
+        sample = client.create_entity(
+            "Sample", {"sample_name": "smp"}, parent_id=source.id, skip_validation=True
+        )
+        client.create_entity(
+            "AssayMaterial",
+            {"material_name": "ASSAY1", "assay": "ASSAY0"},
+            parent_id=sample.id,
+            skip_validation=True,
+        )
+        sync_dataset_to_seek(seek, client, project_id="1")
+        material = next(
+            s for s in _of_kind(seek, "sample") if s["data"].get("Title") == "ASSAY1"
+        )
+        # ASSAY0 was created first, so its own sample type id is lower; what
+        # matters is that the material's assay is the declared one.
+        declared = seek.assay_types  # assay id -> {title: sample type id}
+        assay0_type = next(iter(declared[min(declared)].values()))
+        assert material["sample_type_id"] == assay0_type, (
+            "the material was filed under the coincidentally-matching Assay, "
+            "not the one its reference names"
+        )

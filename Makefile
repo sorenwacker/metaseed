@@ -64,7 +64,9 @@ ui:
 	uv run metaseed ui
 
 dev:
-	uv run python -m uvicorn metaseed.ui.app:app --host 127.0.0.1 --port 8765 --reload
+	# --reload-dir scopes the watcher to the source. Without it uvicorn
+	# watches the whole working tree, which here is 664 MB.
+	uv run python -m uvicorn metaseed.ui.app:app --host 127.0.0.1 --port 8765 --reload --reload-dir src
 
 clean:
 	rm -rf .pytest_cache .coverage htmlcov site build dist *.egg-info

@@ -245,6 +245,13 @@ def place_assay(
     return assay_id
 
 
+# A Sample-role node's depth under its Study decides its place in the material
+# chain, mirroring CHAIN_LEVELS: 0 = source, 1 = sample collection, 2+ = assay
+# material. Named from the one list so the two cannot drift apart.
+_SOURCE_DEPTH = CHAIN_LEVELS.index("source")
+_COLLECTION_DEPTH = CHAIN_LEVELS.index("sample_collection")
+_ASSAY_DEPTH = CHAIN_LEVELS.index("assay")
+
 # SEEK renames a Sample Type's input attribute to ``Input (<predecessor title
 # attribute>)`` on save. Every type this module builds names its title attribute
 # ``Title``, so the key a Sample writes its input under is fixed.
@@ -274,13 +281,13 @@ def place_sample(
     Returns the created SEEK sample id, so the next level down can name it.
     """
     r = ctx.result
-    referenced_assay = referenced_assay_id(ctx, values)
-    if depth >= 2:
+    referenced_assay = referenced_assay_id(ctx, node.entity_type, values)
+    if depth >= _ASSAY_DEPTH:
         sample_type_id = (
             ctx.assay_sample_type.get(referenced_assay) if referenced_assay else None
         )
         assay_ids = [referenced_assay] if referenced_assay else None
-    elif depth == 1:
+    elif depth == _COLLECTION_DEPTH:
         sample_type_id = ctx.study_collection_type.get(study_id) if study_id else None
         assay_ids = None
     else:
@@ -307,7 +314,7 @@ def place_sample(
     if parent_sample_id is not None:
         # The exporter reads this as the sample's input and fails without it.
         data.setdefault(_INPUT_ATTRIBUTE, [parent_sample_id])
-    if depth >= 1:
+    if depth >= _COLLECTION_DEPTH:
         # The exporter rejects a Sample with no protocol. The attribute stays
         # optional on the Sample Type -- a Sample created by other means must not
         # be refused -- but every Sample this sync creates names its step.
@@ -328,14 +335,21 @@ def place_sample(
     return sample_id
 
 
-def referenced_assay_id(ctx: SyncContext, values: Mapping[str, Any]) -> str | None:
+def referenced_assay_id(
+    ctx: SyncContext, entity_type: str, values: Mapping[str, Any]
+) -> str | None:
     """The SEEK Assay id a material names, if any.
 
     An Assay measures materials derived from many Samples, so a material names
     its Assay by reference rather than nesting under it — containment cannot
     express that shape.
+
+    Only fields the profile declares as references to an Assay-role entity are
+    read. Scanning every value would link a material whose *name* happens to
+    equal some assay's identifier — silently, and to the wrong Assay.
     """
-    for value in values.values():
+    for field_name in ctx.assay_reference_fields.get(entity_type, ()):
+        value = values.get(field_name)
         if isinstance(value, str) and value in ctx.assay_id_by_identifier:
             return ctx.assay_id_by_identifier[value]
     return None
