@@ -15,12 +15,17 @@ from fastapi.templating import Jinja2Templates
 from metaseed.specs.builder import SpecBuilder
 from metaseed.specs.field_form import FieldForm
 from metaseed.specs.schema import EntityDefSpec, FieldSpec, FieldType
+from metaseed.ui.spec_builder.access import (
+    entity_editor_response,
+    require_entity,
+    require_spec,
+)
 
 if TYPE_CHECKING:
     from .state import SpecBuilderState
 
 
-def register_field_routes(  # noqa: C901
+def register_field_routes(
     router: APIRouter,
     templates: Jinja2Templates,
     get_builder_state: Callable[[], SpecBuilderState],
@@ -36,18 +41,9 @@ def register_field_routes(  # noqa: C901
     """
 
     def _require_spec() -> SpecBuilderState:
-        """Get builder state, raising HTTPException if no spec in progress."""
-        builder = get_builder_state()
-        if builder.spec is None:
-            raise HTTPException(status_code=400, detail="No spec in progress")
-        return builder
+        return require_spec(get_builder_state)
 
-    def _require_entity(builder: SpecBuilderState, name: str) -> EntityDefSpec:
-        """Get entity by name, raising HTTPException if not found."""
-        assert builder.spec is not None  # caller resolves via _require_spec
-        if name not in builder.spec.entities:
-            raise HTTPException(status_code=404, detail=f"Entity '{name}' not found")
-        return builder.spec.entities[name]
+    _require_entity = require_entity
 
     def _require_field(entity: EntityDefSpec, idx: int) -> FieldSpec:
         """Get field by index, raising HTTPException if not found."""
@@ -62,20 +58,8 @@ def register_field_routes(  # noqa: C901
         error: str | None = None,
         success: bool = False,
     ) -> HTMLResponse:
-        """Helper to return entity editor template response."""
-        assert builder.spec is not None  # caller resolves via _require_spec
-        return templates.TemplateResponse(
-            request,
-            "spec_builder/partials/entity_editor.html",
-            {
-                "spec": builder.spec,
-                "entity_name": entity_name,
-                "entity": builder.spec.entities[entity_name],
-                "editing_field_idx": builder.editing_field_idx,
-                "field_types": [t.value for t in FieldType],
-                "error": error,
-                "success": success,
-            },
+        return entity_editor_response(
+            templates, request, builder, entity_name, error, success
         )
 
     @router.post("/entity/{entity_name}/field", response_class=HTMLResponse)

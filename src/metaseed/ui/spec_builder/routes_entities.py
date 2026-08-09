@@ -8,12 +8,17 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
-from fastapi import APIRouter, Form, HTTPException, Request
+from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from metaseed.specs.builder import SpecBuilder
-from metaseed.specs.schema import SEEK_ROLES, EntityDefSpec, FieldType
+from metaseed.specs.schema import SEEK_ROLES
+from metaseed.ui.spec_builder.access import (
+    entity_editor_response,
+    require_entity,
+    require_spec,
+)
 
 if TYPE_CHECKING:
     from .state import SpecBuilderState
@@ -36,18 +41,9 @@ def register_entity_routes(  # noqa: C901
     """
 
     def _require_spec() -> SpecBuilderState:
-        """Get builder state, raising HTTPException if no spec in progress."""
-        builder = get_builder_state()
-        if builder.spec is None:
-            raise HTTPException(status_code=400, detail="No spec in progress")
-        return builder
+        return require_spec(get_builder_state)
 
-    def _require_entity(builder: SpecBuilderState, name: str) -> EntityDefSpec:
-        """Get entity by name, raising HTTPException if not found."""
-        assert builder.spec is not None  # guaranteed by _require_spec
-        if name not in builder.spec.entities:
-            raise HTTPException(status_code=404, detail=f"Entity '{name}' not found")
-        return builder.spec.entities[name]
+    _require_entity = require_entity
 
     def _entity_list_response(
         request: Request, builder: SpecBuilderState, error: str | None = None
@@ -72,21 +68,8 @@ def register_entity_routes(  # noqa: C901
         error: str | None = None,
         success: bool = False,
     ) -> HTMLResponse:
-        """Helper to return entity editor template response."""
-        assert builder.spec is not None  # guaranteed by _require_spec
-        return templates.TemplateResponse(
-            request,
-            "spec_builder/partials/entity_editor.html",
-            {
-                "spec": builder.spec,
-                "entity_name": entity_name,
-                "entity": builder.spec.entities[entity_name],
-                "editing_field_idx": builder.editing_field_idx,
-                "field_types": [t.value for t in FieldType],
-                "seek_roles": SEEK_ROLES,
-                "error": error,
-                "success": success,
-            },
+        return entity_editor_response(
+            templates, request, builder, entity_name, error, success
         )
 
     @router.get("/entities", response_class=HTMLResponse)
@@ -139,7 +122,7 @@ def register_entity_routes(  # noqa: C901
         seek_role: str | None = Form(None),
     ) -> HTMLResponse:
         """Update entity metadata, including rename."""
-        from metaseed.specs.schema import SEEK_ROLES, SeekEntityConfig
+        from metaseed.specs.schema import SeekEntityConfig
 
         builder = _require_spec()
         assert builder.spec is not None  # guaranteed by _require_spec
