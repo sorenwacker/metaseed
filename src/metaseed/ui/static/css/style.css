@@ -5704,3 +5704,12 @@ details.sidebar-section summary:hover {
 .help-bubble.visible {
     opacity: 1;
 }
+
+/* The optional-fields filter takes a full grid row above the fields, so it
+   reads as a control over the list rather than as one more field. */
+.collapsible-content .optional-filter {
+    grid-column: 1 / -1;
+    justify-self: start;
+    width: 20rem;
+    max-width: 100%;
+}
