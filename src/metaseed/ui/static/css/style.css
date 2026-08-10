@@ -4781,6 +4781,41 @@ details.sidebar-section summary:hover {
    PROFILE SELECT
    ============================================ */
 
+.profile-option-header p.profile-description {
+    /* A description is a sentence in the picker, however long the spec's is:
+       clamp to three lines so one wordy profile cannot stretch every card. */
+    display: -webkit-box;
+    -webkit-line-clamp: 5;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* The full description, instantly, only while the title is hovered, directly
+   beneath it. A styled tooltip rather than the title attribute: native
+   tooltips appear after a delay, unstyled, and give no hint there is more. */
+.profile-option-header h3 {
+    position: relative;
+    cursor: help;
+}
+
+.profile-option-header h3:hover::after {
+    content: attr(data-description);
+    position: absolute;
+    left: 0;
+    top: 100%;
+    width: max(100%, 18rem);
+    z-index: 30;
+    padding: 0.75rem 0.875rem;
+    background: var(--clr-ink, #1f2d27);
+    color: #fff;
+    font-size: 0.85rem;
+    font-family: var(--font-body, sans-serif);
+    font-weight: 400;
+    line-height: 1.5;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
 .profile-option-container {
     border: 1px solid var(--clr-parchment);
     border-radius: var(--radius-md);
@@ -4814,6 +4849,9 @@ details.sidebar-section summary:hover {
     display: flex;
     gap: var(--space-sm);
     align-items: center;
+    /* Version on the left, its example on the right: the version chips stay a
+       tidy column and the examples line up with each other. */
+    justify-content: space-between;
 }
 
 /* ============================================

@@ -12,8 +12,8 @@
         {% for profile in profiles %}
         <div class="profile-option-container">
             <div class="profile-option-header">
-                <h3>{{ profile.display_name }}</h3>
-                <p>{{ profile.description }}</p>
+                <h3 data-description="{{ profile.description }}">{{ profile.display_name }}</h3>
+                <p class="profile-description">{{ profile.description }}</p>
             </div>
             <div class="profile-versions">
                 {% for version in profile.versions %}
