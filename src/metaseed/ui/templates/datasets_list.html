@@ -13,9 +13,9 @@
                 + New Dataset
             </button>
             <label class="btn btn-secondary btn-file">
-                Import JSON
+                Import
                 <input type="file"
-                       accept=".json"
+                       accept=".json,.xlsx"
                        hx-post="{{ base_url }}/import"
                        hx-trigger="change"
                        hx-target="#notification-container"

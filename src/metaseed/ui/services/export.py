@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 # Characters that make Excel/LibreOffice interpret a cell as a formula. A string
 # value beginning with one of these (e.g. a collaborator-supplied field like
 # ``=HYPERLINK(...)``) would otherwise round-trip into a live formula on export.
-_FORMULA_TRIGGERS = ("=", "+", "-", "@", "\t", "\r")
+FORMULA_TRIGGERS = ("=", "+", "-", "@", "\t", "\r")
 
 
 def _escape_formula(value: object) -> object:
@@ -29,7 +29,7 @@ def _escape_formula(value: object) -> object:
     formula (also stops openpyxl from emitting a leading-``=`` string as a
     formula). Non-strings can't be formulas and are returned unchanged.
     """
-    if isinstance(value, str) and value.startswith(_FORMULA_TRIGGERS):
+    if isinstance(value, str) and value.startswith(FORMULA_TRIGGERS):
         return "'" + value
     return value
 
@@ -53,7 +53,9 @@ def _format_cell_value(value: object, is_nested_field: bool) -> object:
     if isinstance(value, list):
         if value and not isinstance(value[0], dict):
             return ", ".join(str(v) for v in value)
-        return len(value)
+        # An empty scalar list must export as an empty cell: "0" would fail
+        # list validation on reimport and silently drop the whole entity.
+        return len(value) if value else ""
     if isinstance(value, dict):
         return "[object]"
     if not isinstance(value, str | int | float | bool | type(None)):
@@ -77,6 +79,16 @@ def build_workbook(state: AppState) -> Workbook:
 
     entities_by_type: dict[str, list[dict[str, Any]]] = {}
 
+    # The tree, as business keys: node id -> the parent's identifier. Without
+    # this column the export cannot be reimported -- no profile declares
+    # parent_ref fields, so the linkage must ride along explicitly.
+    from metaseed import MetaseedClient
+
+    parent_by_node = {
+        e.get("_node_id"): e.get("_parent_unique_id")
+        for e in MetaseedClient.from_facade(facade).serialize().get("entities", [])
+    }
+
     # Collect all entities including nested ones
     for node in state.nodes_by_id.values():
         entity_type = node.entity_type
@@ -84,6 +96,8 @@ def build_workbook(state: AppState) -> Workbook:
             entities_by_type[entity_type] = []
 
         data = to_dict(node.instance) or {}
+        if parent_by_node.get(node.id):
+            data["_parent"] = parent_by_node[node.id]
         entities_by_type[entity_type].append(data)
 
         # Walk nested entities using shared helper
@@ -100,7 +114,7 @@ def build_workbook(state: AppState) -> Workbook:
 
         ws = wb.create_sheet(entity_type)
         nested_fields = set(helper.nested_fields.keys())
-        columns = helper.all_fields
+        columns = [*helper.all_fields, "_parent"]
 
         ws.append(columns)
 
