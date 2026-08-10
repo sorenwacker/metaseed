@@ -13,6 +13,28 @@
   syncs and its `Project` root does not, so it is a reference model rather than
   an upload target — `seek-ready-template` is the profile to build on.
 
+## v0.30.0 (2026-08-10)
+
+### Added
+- Excel import: the Import button also takes a workbook exported by metaseed,
+  sniffed by content. The export writes a `_parent` column carrying the tree
+  (no profile declares `parent_ref`, so the linkage must ride along), and the
+  import feeds the same loader JSON uses. A workbook from a different profile
+  is refused instead of importing nothing silently.
+- Long optional-field sections in entity forms get a filter box (more than
+  eight fields); a 43-field section becomes type-what-you-want.
+
+### Changed
+- Excel export writes every cell as text, so gene names stay names and
+  identifiers keep their leading zeros. An empty scalar list exports as an
+  empty cell — it exported as "0", which failed validation on reimport and
+  silently dropped the whole entity.
+- Profile descriptions in the new-dataset picker clamp at five lines with the
+  full text in a tooltip under the title; Load Example aligns right.
+- The seek sync links a material to its assay through the field the profile
+  declares as a reference, not by scanning values for anything that matches.
+- `_mapping` is public as `metaseed.mapping`; four adapters share it.
+
 ## v0.29.0 (2026-08-05)
 
 ### Added
