@@ -16,6 +16,13 @@
         <span>Optional Fields{% if optional_fields|length %} ({{ optional_fields|length }}){% endif %}</span>
     </div>
     <div class="collapsible-content">
+        {% if optional_fields|length > 8 %}
+        {# A wall of dozens of fields is unfindable by eye; filter by name or
+           description. Shown only when the list is long enough to need it. #}
+        <input type="text" class="form-input optional-filter" placeholder="Filter fields&hellip;"
+               data-testid="optional-filter"
+               oninput="const q=this.value.toLowerCase(); this.closest('.collapsible-content').querySelectorAll('.form-group').forEach(g=>{g.style.display = g.textContent.toLowerCase().includes(q) ? '' : 'none';});">
+        {% endif %}
         {% for field in optional_fields %}
         {% include "partials/field.html" %}
         {% endfor %}

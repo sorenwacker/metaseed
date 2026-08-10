@@ -167,3 +167,13 @@ def test_profile_descriptions_carry_their_full_text_as_a_tooltip() -> None:
     # seek-ready-template's description is several sentences; the first is
     # enough to prove the attribute carries it.
     assert 'data-description="An ISA-shaped template' in html
+
+
+def test_a_long_optional_section_gets_a_filter_and_a_short_one_does_not() -> None:
+    """43 optional fields are unfindable by eye, four are not. The filter only
+    appears where it earns its place."""
+    client = TestClient(create_app(AppState()))
+    long_form = client.get("/form/Location?profile=darwin-core&version=1.0").text
+    assert 'data-testid="optional-filter"' in long_form
+    short_form = client.get("/form/Investigation?profile=isa&version=1.0").text
+    assert 'data-testid="optional-filter"' not in short_form
