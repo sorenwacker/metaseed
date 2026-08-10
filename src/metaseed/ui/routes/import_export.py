@@ -173,12 +173,28 @@ def register_import_routes(
     """
 
     @app.post("/import")
-    async def import_json(request: Request, file: UploadFile) -> HTMLResponse:
-        """Import an uploaded JSON dataset file into the current state."""
+    async def import_file(request: Request, file: UploadFile) -> HTMLResponse:
+        """Import an uploaded dataset file — JSON, or an exported Excel workbook.
+
+        Sniffed by content, not filename: an ``.xlsx`` is a zip and starts with
+        ``PK``, which no JSON document can.
+        """
         state = get_state()
         raw = await file.read()
         try:
-            info = import_dataset(state, raw)
+            if raw[:2] == b"PK":
+                from metaseed.ui.datasets import import_payload
+                from metaseed.ui.services.import_excel import workbook_to_payload
+
+                payload = workbook_to_payload(
+                    raw,
+                    profile=state.profile,
+                    version=state.version or state.get_or_create_facade().version,
+                    facade=state.get_or_create_facade(),
+                )
+                info = import_payload(state, payload)
+            else:
+                info = import_dataset(state, raw)
         except ValueError as exc:
             return templates.TemplateResponse(
                 request,

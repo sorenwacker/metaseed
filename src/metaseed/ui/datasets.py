@@ -172,6 +172,15 @@ def import_dataset(state: AppState, raw: bytes | str) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise ValueError("Dataset JSON must be an object")  # noqa: TRY004
 
+    return import_payload(state, payload)
+
+
+def import_payload(state: AppState, payload: dict[str, Any]) -> dict[str, Any]:
+    """Install an already-parsed dataset payload into ``state``.
+
+    The dict-level half of :func:`import_dataset`, shared with the Excel
+    importer so both formats load through one code path.
+    """
     profile = payload.get("profile")
     entities = payload.get("entities")
     if not profile or entities is None:
