@@ -155,3 +155,15 @@ def test_isa_example_is_a_single_tree_without_value_object_orphans() -> None:
     assert "Comment" not in types
     # Real structural entities are still materialized.
     assert {"Study", "Assay", "Sample", "Protocol"} <= types
+
+
+def test_profile_descriptions_carry_their_full_text_as_a_tooltip() -> None:
+    """The picker clamps descriptions (CSS), so the full text must survive
+    somewhere reachable -- the data attribute the title's hover tooltip renders from.
+    Without it, a wordy profile's description is cut off with no way to read
+    the rest."""
+    client = TestClient(create_app(AppState()))
+    html = client.get("/new-dataset").text
+    # seek-ready-template's description is several sentences; the first is
+    # enough to prove the attribute carries it.
+    assert 'data-description="An ISA-shaped template' in html
