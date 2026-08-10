@@ -105,14 +105,21 @@ def build_workbook(state: AppState) -> Workbook:
         ws.append(columns)
 
         entities = entities_by_type.get(entity_type, [])
-        for entity_data in entities:
-            row = []
-            for col in columns:
+        for row_offset, entity_data in enumerate(entities, start=2):
+            for col_offset, col in enumerate(columns, start=1):
                 value = entity_data.get(col, "")
                 value = _format_cell_value(value, col in nested_fields)
                 value = _escape_formula(value)
-                row.append(value)
-            ws.append(row)
+                cell = ws.cell(
+                    row=row_offset,
+                    column=col_offset,
+                    value=str(value) if value != "" else "",
+                )
+                # Every data cell is text. Excel otherwise reinterprets what it
+                # recognises -- gene names become dates, identifiers lose their
+                # leading zeros -- and a metadata value must survive the round
+                # trip byte for byte.
+                cell.number_format = "@"
 
     return wb
 

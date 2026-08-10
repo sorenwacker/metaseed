@@ -70,3 +70,44 @@ class TestBuildWorkbookInjection:
         cell = self._cell_matching(wb["Investigation"], "Drought")
         assert cell is not None
         assert cell.value == "Drought tolerance study"  # untouched
+
+
+class TestEveryCellIsText:
+    """Excel reinterprets what it recognises: gene names become dates,
+    identifiers lose leading zeros, "1e3" becomes a thousand. A metadata value
+    must survive the round trip byte for byte, so every data cell is text."""
+
+    def test_data_cells_carry_the_text_number_format(self):
+        state = AppState(profile="miappe", version="1.2")
+        facade = state.get_or_create_facade()
+        inv = facade.Investigation.create(
+            unique_id="0001",  # the classic leading-zero casualty
+            title="SEPT1",  # the classic gene-name-becomes-a-date casualty
+            description="a valid long description " * 3,
+            skip_validation=True,
+        )
+        state.add_node("Investigation", inv)
+
+        wb = build_workbook(state)
+        ws = wb["Investigation"]
+        data_cells = [c for row in ws.iter_rows(min_row=2) for c in row]
+        assert data_cells, "no data rows were written"
+        assert all(c.number_format == "@" for c in data_cells)
+
+    def test_values_are_written_as_strings_not_numbers(self):
+        state = AppState(profile="miappe", version="1.2")
+        facade = state.get_or_create_facade()
+        inv = facade.Investigation.create(
+            unique_id="0042",
+            title="numbers survive",
+            description="a valid long description " * 3,
+            skip_validation=True,
+        )
+        state.add_node("Investigation", inv)
+
+        wb = build_workbook(state)
+        ws = wb["Investigation"]
+        for row in ws.iter_rows(min_row=2):
+            for cell in row:
+                if cell.value not in (None, ""):
+                    assert isinstance(cell.value, str), (cell.coordinate, cell.value)
