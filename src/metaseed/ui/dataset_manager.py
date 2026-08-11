@@ -18,7 +18,7 @@ for loading and saving operations.
 from __future__ import annotations
 
 import re
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Self
 from weakref import WeakValueDictionary
 
@@ -98,7 +98,7 @@ class DatasetManager:
             profile=self._state.profile,
             version=self._state.version or facade.version,
             entities=facade.to_dict(),
-            modified=datetime.now().isoformat(),
+            modified=datetime.now(UTC).isoformat(),
             catalog_metadata=self._state.catalog_metadata,
         )
 

@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import asdict
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Self
 
@@ -137,7 +137,7 @@ class FilesystemDatasetRepository(DatasetRepository):
         self._ensure_dir()
         path = self._get_path(name)
 
-        modified = data.modified or datetime.now().isoformat()
+        modified = data.modified or datetime.now(UTC).isoformat()
 
         file_data: dict[str, Any] = {
             "name": name,

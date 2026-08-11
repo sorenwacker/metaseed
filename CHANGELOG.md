@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Fixed
+- Timestamps written by the library were the machine's local time with no
+  offset: a dataset's `modified` field, the same field in the file and
+  filesystem repositories, and the date stamped into export filenames. A naive
+  timestamp cannot be ordered against a UTC one, so "which copy is newer" was
+  guesswork across a DST change or a differently configured machine. All clock
+  reads are UTC, and a test fails on a naive one.
+
 ### Added
 - A release gate that refuses a tag with no matching `CHANGELOG.md` section.
   Sixteen releases once shipped without an entry because the rule existed only
