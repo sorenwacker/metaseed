@@ -5,7 +5,7 @@ Builds Excel workbook from AppState entity tree.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from io import BytesIO
 from typing import TYPE_CHECKING, Any
 
@@ -165,7 +165,7 @@ def generate_filename(state: AppState) -> str:
     """
     facade = state.get_or_create_facade()
 
-    date_str = datetime.now().strftime("%y%m%d")
+    date_str = datetime.now(UTC).strftime("%y%m%d")
     version_str = facade.version.replace(".", "-")
 
     entity_id = "export"

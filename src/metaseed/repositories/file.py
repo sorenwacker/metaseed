@@ -10,7 +10,7 @@ import copy
 import json
 import logging
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Self
 
@@ -240,7 +240,7 @@ class FileEntityRepository(EntityRepository):
         data = {
             "profile": self._profile,
             "version": self._version or self._get_facade().version,
-            "modified": datetime.now().isoformat(),
+            "modified": datetime.now(UTC).isoformat(),
             "entities": entities_data,
         }
 
