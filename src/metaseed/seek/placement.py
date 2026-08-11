@@ -51,6 +51,28 @@ def place_node(
 
     try:
         if jerm_class == "Investigation":
+            # A second push of the same dataset used to create a second copy of
+            # everything under it. What a previous push made is found by title
+            # within the project and reused, the same rule the Sample Type
+            # lookup already followed.
+            #
+            # By title, because SEEK's ids stay in SEEK: nothing here records
+            # them. The cost is that renaming a record in the dataset makes the
+            # next push create a new one and leave the old behind, which is a
+            # rename to do in both places rather than state to keep in step.
+            existing = ctx.client.find_investigation_id_by_title(
+                title, project_id=ctx.project_id
+            )
+            if existing is not None:
+                r.reused[node.id] = existing
+                next_investigation = r.investigations[node.id] = existing
+                return (
+                    next_investigation,
+                    next_study,
+                    next_assay,
+                    next_sample,
+                    next_depth,
+                )
             next_investigation = r.investigations[node.id] = (
                 ctx.client.create_investigation(
                     title=title,
@@ -159,13 +181,34 @@ def template_id_for(ctx: SyncContext, level: str) -> str | None:
 
 
 def place_study(ctx: SyncContext, title: str, investigation_id: str) -> str:
-    """Create a compliant Study plus the assay stream its Assays hang off.
+    """Reuse or create a compliant Study plus the assay stream its Assays hang off.
 
     A Study is ISA-JSON compliant only once it owns a Source and a Sample
     Collection Sample Type, in that order, the second linking back to the first.
     They are structural: the Assays' types chain to the Sample Collection type
     whether or not any Sample is stored in it.
     """
+    existing = ctx.client.find_study_id_by_title(
+        title, investigation_id=investigation_id
+    )
+    if existing is not None:
+        # Its Sample Types and stream already exist too; remember them so the
+        # Assays and Samples below attach to what is there.
+        types = ctx.client.study_sample_type_ids(existing)
+        source_id = types.get(f"{title} - Source")
+        if source_id is not None:
+            ctx.study_source_type[existing] = source_id
+        collection_id = types.get(f"{title} - Sample Collection")
+        if collection_id is not None:
+            ctx.study_collection_type[existing] = collection_id
+        stream_id = ctx.client.find_assay_id_by_title(
+            f"{title} - stream", study_id=existing
+        )
+        if stream_id is not None:
+            ctx.study_stream[existing] = stream_id
+            ctx.result.assay_streams[existing] = stream_id
+        return existing
+
     source_entity = chain_entity(ctx, 0)
     collection_entity = chain_entity(ctx, 1)
     source_title = f"{title} - Source"
@@ -212,7 +255,14 @@ def place_study(ctx: SyncContext, title: str, investigation_id: str) -> str:
 def place_assay(
     ctx: SyncContext, title: str, study_id: str, values: Mapping[str, Any]
 ) -> str:
-    """Create an Assay inside its Study's stream, owning its own Sample Type."""
+    """Reuse or create an Assay inside its Study's stream, with its Sample Type."""
+    existing = ctx.client.find_assay_id_by_title(title, study_id=study_id)
+    if existing is not None:
+        owned = ctx.client.assay_sample_type_ids(existing).get(f"{title} - Sample Type")
+        if owned is not None:
+            ctx.assay_sample_type[existing] = owned
+        return existing
+
     entity = chain_entity(ctx, 2)
     collection_id = ctx.study_collection_type.get(study_id)
     sample_type_title = f"{title} - Sample Type"
@@ -324,6 +374,14 @@ def place_sample(
             else title
         )
         data.setdefault(PROTOCOL_ATTRIBUTE, protocol)
+
+    # Reused when a previous push already created it, for the same reason the
+    # containers above are: pushing twice made a second copy of every sample.
+    existing = ctx.client.find_sample_id_by_title(title, sample_type_id=sample_type_id)
+    if existing is not None:
+        r.reused[node.id] = existing
+        r.samples[node.id] = existing
+        return existing
 
     sample_id = r.samples[node.id] = ctx.client.create_sample(
         sample_type_id=sample_type_id,

@@ -192,6 +192,30 @@ class _FakeSeek:
     ) -> str | None:
         return None
 
+    # What a previous push left behind. Empty by default, so the first push of a
+    # dataset creates everything; a test that pushes twice fills these from the
+    # first run's calls.
+    existing_investigations: dict[str, str] = field(default_factory=dict)
+    existing_studies: dict[tuple[str, str], str] = field(default_factory=dict)
+    existing_assays: dict[tuple[str, str], str] = field(default_factory=dict)
+    existing_samples: dict[tuple[str, str], str] = field(default_factory=dict)
+
+    def find_investigation_id_by_title(
+        self, title: str, *, project_id: str
+    ) -> str | None:
+        return self.existing_investigations.get(title)
+
+    def find_study_id_by_title(
+        self, title: str, *, investigation_id: str
+    ) -> str | None:
+        return self.existing_studies.get((title, investigation_id))
+
+    def find_assay_id_by_title(self, title: str, *, study_id: str) -> str | None:
+        return self.existing_assays.get((title, study_id))
+
+    def find_sample_id_by_title(self, title: str, *, sample_type_id: str) -> str | None:
+        return self.existing_samples.get((title, sample_type_id))
+
     def sample_attribute_type_id(self, title: str) -> str:
         return "8"
 
@@ -687,3 +711,47 @@ class TestAssayReferenceIsDeclaredNotGuessed:
             "the material was filed under the coincidentally-matching Assay, "
             "not the one its reference names"
         )
+
+
+class TestPushingTwiceDoesNotDuplicate:
+    """Pushing the same dataset again used to create a second copy of
+    everything: nothing looked for what the previous push had made, so an
+    Investigation, its Study, its Assays and every Sample were created afresh.
+    """
+
+    @staticmethod
+    def _remember(seek: _FakeSeek, result) -> _FakeSeek:
+        """A SEEK that already holds what ``result`` created."""
+        second = _FakeSeek(_n=seek._n)
+        second.existing_investigations = {"My Investigation": "1"}
+        second.existing_studies = {("Study one", "1"): "2"}
+        second.existing_assays = {
+            (title, "2"): str(index)
+            for index, title in enumerate(("Study one - stream", "Assay 1"), start=3)
+        }
+        return second
+
+    def test_the_second_push_creates_nothing_new(self) -> None:
+        first = _FakeSeek()
+        result = sync_dataset_to_seek(first, _dataset(), project_id="1")
+        assert result.investigations, "the first push must create the investigation"
+
+        second = self._remember(first, result)
+        again = sync_dataset_to_seek(second, _dataset(), project_id="1")
+
+        assert not _of_kind(second, "investigation"), (
+            "a second push created another investigation"
+        )
+        assert not _of_kind(second, "study"), "a second push created another study"
+        assert again.reused, "the reused records are not reported"
+
+    def test_the_reused_investigation_is_still_reported(self) -> None:
+        """A reused record must still map its node, or the caller cannot tell
+        where the dataset ended up."""
+        first = _FakeSeek()
+        result = sync_dataset_to_seek(first, _dataset(), project_id="1")
+
+        second = self._remember(first, result)
+        again = sync_dataset_to_seek(second, _dataset(), project_id="1")
+
+        assert set(again.investigations.values()) == {"1"}

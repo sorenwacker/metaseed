@@ -89,6 +89,26 @@ class IsaWriter(Protocol):
         attributes: list[dict[str, Any]],
     ) -> str: ...
 
+    def find_investigation_id_by_title(
+        self, title: str, *, project_id: str
+    ) -> str | None:
+        """An existing Investigation with this title in the project, if any."""
+        ...
+
+    def find_study_id_by_title(
+        self, title: str, *, investigation_id: str
+    ) -> str | None:
+        """An existing Study with this title under the investigation, if any."""
+        ...
+
+    def find_assay_id_by_title(self, title: str, *, study_id: str) -> str | None:
+        """An existing Assay with this title under the study, if any."""
+        ...
+
+    def find_sample_id_by_title(self, title: str, *, sample_type_id: str) -> str | None:
+        """An existing Sample with this title of the sample type, if any."""
+        ...
+
     def find_sample_type_id_by_title(
         self, title: str, *, project_id: str | None = None
     ) -> str | None: ...
