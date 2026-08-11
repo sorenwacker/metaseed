@@ -34,6 +34,10 @@ class SyncResult:
     # Study id -> the assay stream created for it. Every Assay hangs off one:
     # an assay outside a stream does not render in SEEK's ISA study view.
     assay_streams: dict[str, str] = dc_field(default_factory=dict)
+    # Node id -> the SEEK id a previous push had already created. Pushing twice
+    # used to make a second copy of everything; these were found and reused
+    # instead, and are counted apart from what this push created.
+    reused: dict[str, str] = dc_field(default_factory=dict)
 
     @property
     def created_count(self) -> int:

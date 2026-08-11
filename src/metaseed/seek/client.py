@@ -504,6 +504,67 @@ class SeekClient:
 
     # -- idempotency lookups ----------------------------------------------
 
+    def find_investigation_id_by_title(
+        self, title: str, *, project_id: str
+    ) -> str | None:
+        """An existing Investigation with ``title`` in ``project_id``, if any.
+
+        Pushing the same dataset twice created a second copy of everything,
+        because nothing looked for what the first push had made. Titles are how
+        SEEK's own interface distinguishes these records, and the same rule the
+        Sample Type lookup already used.
+        """
+        for row in self.get("/investigations").get("data", []):
+            if row["attributes"].get("title") == title and _relates_to_project(
+                row, project_id
+            ):
+                return str(row["id"])
+        return None
+
+    def find_study_id_by_title(
+        self, title: str, *, investigation_id: str
+    ) -> str | None:
+        """An existing Study with ``title`` under ``investigation_id``, if any."""
+        return self._find_child("/studies", title, "investigation", investigation_id)
+
+    def find_assay_id_by_title(self, title: str, *, study_id: str) -> str | None:
+        """An existing Assay with ``title`` under ``study_id``, if any."""
+        return self._find_child("/assays", title, "study", study_id)
+
+    def _find_child(
+        self, path: str, title: str, relation: str, parent_id: str
+    ) -> str | None:
+        """The id of a record at ``path`` titled ``title`` under ``parent_id``.
+
+        The list view carries the parent relationship for studies and assays; a
+        row whose relationship is absent is confirmed against its detail rather
+        than assumed to match, so a same-titled record in another investigation
+        is never reused.
+        """
+        for row in self.get(path).get("data", []):
+            if row["attributes"].get("title") != title:
+                continue
+            related = ((row.get("relationships") or {}).get(relation) or {}).get("data")
+            if related is None:
+                detail = self.get(f"{path}/{row['id']}").get("data", {})
+                related = ((detail.get("relationships") or {}).get(relation) or {}).get(
+                    "data"
+                )
+            if related and str(related.get("id")) == str(parent_id):
+                return str(row["id"])
+        return None
+
+    def find_sample_id_by_title(self, title: str, *, sample_type_id: str) -> str | None:
+        """An existing Sample with ``title`` of ``sample_type_id``, if any."""
+        for row in self.get(f"/sample_types/{sample_type_id}/samples").get("data", []):
+            attributes = row.get("attributes") or {}
+            if attributes.get("title") == title:
+                return str(row["id"])
+            values = attributes.get("attribute_map") or {}
+            if values.get("Title") == title:
+                return str(row["id"])
+        return None
+
     def find_sample_type_id_by_title(
         self, title: str, *, project_id: str | None = None
     ) -> str | None:

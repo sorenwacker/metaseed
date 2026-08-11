@@ -13,6 +13,20 @@
   syncs and its `Project` root does not, so it is a reference model rather than
   an upload target — `seek-ready-template` is the profile to build on.
 
+## v0.31.0 (260811)
+
+### Fixed
+- Pushing a dataset to SEEK twice created a second copy of everything. Nothing
+  looked for what the previous push had made: only Sample Types were ever
+  reused. Investigations, Studies, Assays and Samples are now found before they
+  are created, and what was reused is reported separately from what was
+  created.
+
+  Matching is by title within the parent, because SEEK's ids stay in SEEK:
+  nothing here records them. The cost is that renaming a record in the dataset
+  makes the next push create a new one and leave the old behind — a rename to
+  do in both places, rather than a copy of SEEK's ids to keep in step.
+
 ## v0.30.0 (2026-08-10)
 
 ### Added
