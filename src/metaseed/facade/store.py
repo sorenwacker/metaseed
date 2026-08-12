@@ -467,6 +467,17 @@ class EntityStore:
         self._link_by_nested_arrays(id_to_node)
         self._link_by_reference_fields(id_to_node)
 
+        if entities and not self._instances:
+            # Every entity was skipped. Returning 0 quietly is how a whole
+            # dataset went missing unnoticed: this format needs a ``_type`` on
+            # each entity, and a document written by hand has none (#246).
+            logger.warning(
+                "Loaded 0 of %d entities: none carried a '_type'. A dataset "
+                "written as a nested document loads with load_yaml or "
+                "load_nested, not with load_from_dict.",
+                len(entities),
+            )
+
         return len(self._instances)
 
     def _create_node_from_dict(

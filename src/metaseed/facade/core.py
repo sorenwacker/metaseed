@@ -24,6 +24,16 @@ from metaseed.specs.schema import ProfileSpec
 __all__ = ["ProfileFacade"]
 
 
+def _is_serialized(entities: list[Any]) -> bool:
+    """Whether this is the store's own serialization rather than a document.
+
+    The serialized form carries a ``_type`` on every entity; a document written
+    by a person carries none. Deciding by what is present beats deciding by
+    shape: a single entity is a mapping either way.
+    """
+    return any(isinstance(e, dict) and "_type" in e for e in entities)
+
+
 class ProfileFacade:
     """Interactive facade for a profile (MIAPPE, ISA, etc.).
 
@@ -344,6 +354,80 @@ class ProfileFacade:
         """
         return self._store.load_from_dict(entities)
 
+    def load_nested(
+        self: Self, document: dict[str, Any], entity_type: str | None = None
+    ) -> int:
+        """Load one entity and the entities nested inside it.
+
+        A dataset as a person writes it: a root object whose child entities are
+        embedded in its own fields, recursively. This is the format of every
+        shipped example, and of the YAML the exporter and the UI produce.
+
+        Where the profile declares containment with ``owns`` markers, only the
+        owned fields are walked, so an embedded value-object — an
+        ``OntologyAnnotation`` in ``Assay.measurement_type``, a ``Comment`` —
+        stays inline instead of becoming a separate node that nothing links to.
+        Profiles without markers treat every nested field as containment.
+
+        Args:
+            document: The root entity's data, with children embedded.
+            entity_type: What the root is. Defaults to the profile's root
+                entity.
+
+        Returns:
+            Number of entities loaded, the root included.
+        """
+        root_type = entity_type or self._root_entity()
+        if root_type is None:
+            return 0
+        node = self._store.add_entity(root_type, document, skip_validation=True)
+        return 1 + self._load_children(document, root_type, node.id)
+
+    def _load_children(
+        self: Self, parent_data: dict[str, Any], parent_type: str, parent_id: str
+    ) -> int:
+        """Add every entity embedded in ``parent_data``, recursively."""
+        helper = self._entities.get(parent_type)
+        if helper is None:
+            return 0
+
+        child_fields = (
+            helper.owned_child_fields if self.uses_ownership() else helper.nested_fields
+        )
+
+        loaded = 0
+        for field_name, child_type in child_fields.items():
+            items = parent_data.get(field_name)
+            if isinstance(items, dict):
+                items = [items]
+            if not isinstance(items, list):
+                continue
+            if child_type not in self._entities:
+                continue
+            for item in items:
+                if not isinstance(item, dict):
+                    continue  # a plain string is a reference, not a child
+                child = self._store.add_entity(
+                    child_type, item, parent_id=parent_id, skip_validation=True
+                )
+                loaded += 1 + self._load_children(item, child_type, child.id)
+        return loaded
+
+    def _root_entity(self: Self) -> str | None:
+        """The profile's root entity, or the only entity nothing nests."""
+        if self._spec is not None and self._spec.root_entity:
+            return str(self._spec.root_entity)
+
+        from metaseed.specs.loader import SpecLoader, SpecLoadError
+
+        try:
+            spec = SpecLoader(profile=self.profile).load_profile(
+                self.version, self.profile
+            )
+        except (SpecLoadError, OSError):
+            return None
+        return str(spec.root_entity) if spec.root_entity else None
+
     def load_yaml(self: Self, path: str | Path) -> int:
         """Load entities from a YAML dataset file.
 
@@ -363,16 +447,22 @@ class ProfileFacade:
         with path.open() as f:
             data = yaml.safe_load(f)
 
-        # Support both flat list and wrapped format
+        # A list, or a mapping with "entities", is the store's serialization.
         if isinstance(data, list):
-            entities = data
-        elif isinstance(data, dict) and "entities" in data:
-            entities = data["entities"]
-        else:
-            # Assume it's a single root entity (like Investigation with nested studies)
-            entities = [data]
+            return self.load_from_dict(data)
+        if isinstance(data, dict) and "entities" in data:
+            return self.load_from_dict(data["entities"])
+        if not isinstance(data, dict):
+            return 0
+        if _is_serialized([data]):
+            return self.load_from_dict([data])
 
-        return self.load_from_dict(entities)
+        # Anything else is a natural nested document: an Investigation with its
+        # studies inside it, which is how every shipped example and every
+        # hand-written dataset is written. Carrying no ``_type`` keys, it was
+        # handed to load_from_dict, which skipped every entity and returned zero
+        # without saying anything (#246).
+        return self.load_nested(data)
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> ProfileFacade:

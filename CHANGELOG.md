@@ -23,6 +23,17 @@
   which file supplied it.
 
 ### Fixed
+- A dataset written as a nested document loads through the client API. Every
+  shipped example returned **0** entities from `load_yaml` — silently — because
+  the loader read only the store's own serialization, where each entity carries
+  a `_type`, and a document written by a person carries none. The examples are
+  the natural source of realistic data for anyone building on metaseed, and
+  none of them could be loaded by a consumer (#246). `ProfileFacade.load_nested`
+  loads a document directly, honouring `owns` containment and treating a plain
+  string in a child field as the reference it is.
+- A load that drops every entity now says so. Returning zero quietly is how a
+  whole dataset went missing unnoticed; the warning names the method that does
+  work.
 - A range of quantities is checked as quantities. Any `A >= B` condition became
   a date-range rule whatever it compared, so Darwin Core's
   `maximumDepthInMeters >= minimumDepthInMeters` reported two floats as "not a

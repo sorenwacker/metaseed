@@ -193,6 +193,29 @@ client.load(data)
 client.load_yaml("dataset.yaml")
 ```
 
+`load_yaml` reads both shapes a dataset comes in. A list, or a mapping with an
+`entities:` key, is the serialization `serialize()` writes, where each entity
+carries its `_type`. Anything else is a nested document — a root object with its
+children embedded in its own fields, which is how the shipped examples and
+hand-written datasets are written:
+
+```yaml
+unique_id: INV-2024-WHEAT-001
+title: Impact of drought stress on wheat yield
+studies:
+  - unique_id: STU-2024-001
+    title: Field trial 2024
+```
+
+```python
+client = MetaseedClient(profile="miappe", version="1.1")
+client.load_yaml("wheat-drought-study.yaml")   # root and every nested entity
+```
+
+Where a profile declares containment with `owns` markers, only owned fields
+become entities of their own; an embedded value-object stays inline. A plain
+string in a child field is a reference, not a child, and is left alone.
+
 A tree node without an `id` is loaded under a generated one, and its children are attached to that generated id — a stored id is not required to keep a subtree together.
 
 ### Permissive loading
