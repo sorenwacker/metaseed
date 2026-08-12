@@ -12,6 +12,13 @@ from typing import TYPE_CHECKING, Any
 from openpyxl import Workbook
 
 from metaseed.ui.helpers import to_dict, walk_nested_entities
+from metaseed.ui.services.controlled_terms import (
+    apply_reference_validations,
+    apply_uniqueness_validations,
+    apply_validations,
+    flag_invalid_cells,
+)
+from metaseed.ui.services.sheet_style import style_sheet
 
 if TYPE_CHECKING:
     from metaseed.ui.state import AppState
@@ -106,6 +113,11 @@ def build_workbook(state: AppState) -> Workbook:
                 entities_by_type[nested_type] = []
             entities_by_type[nested_type].append(nested_data)
 
+    # Kept so the controlled columns can be restricted once every sheet exists.
+    sheets: dict[str, Any] = {}
+    columns_by_entity: dict[str, list[str]] = {}
+    fields_by_entity: dict[str, dict[str, Any]] = {}
+
     # Create sheets for each entity type
     for entity_type in facade.entities:
         helper = getattr(facade, entity_type, None)
@@ -113,8 +125,11 @@ def build_workbook(state: AppState) -> Workbook:
             continue
 
         ws = wb.create_sheet(entity_type)
+        sheets[entity_type] = ws
         nested_fields = set(helper.nested_fields.keys())
         columns = [*helper.all_fields, "_parent"]
+        columns_by_entity[entity_type] = columns
+        fields_by_entity[entity_type] = _field_specs(facade, entity_type)
 
         ws.append(columns)
 
@@ -135,7 +150,38 @@ def build_workbook(state: AppState) -> Workbook:
                 # trip byte for byte.
                 cell.number_format = "@"
 
+        style_sheet(ws, columns, fields_by_entity[entity_type], len(entities))
+
+    # A column the specification controls becomes a dropdown, and the terms are
+    # written into a hidden sheet with what they came from. See
+    # metaseed.ui.services.controlled_terms.
+    term_ranges: dict[tuple[str, str], str] = {}
+    apply_validations(wb, sheets, columns_by_entity, fields_by_entity, term_ranges)
+    apply_reference_validations(facade, sheets, columns_by_entity)
+    apply_uniqueness_validations(facade, sheets, columns_by_entity, fields_by_entity)
+    # Validation stops at the keyboard; pasted values need a check that keeps
+    # looking.
+    flag_invalid_cells(facade, sheets, columns_by_entity, fields_by_entity, term_ranges)
+
     return wb
+
+
+def _field_specs(facade: Any, entity_type: str) -> dict[str, Any]:
+    """Field name -> its :class:`FieldSpec` for one entity, or empty if unknown.
+
+    The facade is built from a profile but does not expose it uniformly; a
+    workbook must still export when the specification cannot be reached, just
+    without dropdowns.
+    """
+    from metaseed.specs.loader import SpecLoader
+
+    try:
+        spec = SpecLoader().load_profile(facade.version, facade.profile)
+    except Exception:
+        return {}
+    entity = spec.entities.get(entity_type)
+    fields = getattr(entity, "fields", None)
+    return {field.name: field for field in fields} if fields else {}
 
 
 def export_to_bytes(state: AppState) -> BytesIO:
