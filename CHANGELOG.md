@@ -80,6 +80,12 @@
   none and keeps it.
 
 ### Changed
+- The example route asks the facade to load a document instead of walking it
+  itself. Its private copy of that walk was what made the previous entry's bug
+  possible: the application could load a nested dataset and a library consumer
+  could not, because only the application had the code.
+  `tests/test_ui_does_not_reimplement_the_library.py` fails if a UI module
+  grows its own entity-tree walk again.
 - OLS is now one term source among several rather than the only one. Term
   lookup goes through a router (`metaseed.services.terms.get_term_source`)
   holding whichever adapters are configured, asked in order, with the rule that

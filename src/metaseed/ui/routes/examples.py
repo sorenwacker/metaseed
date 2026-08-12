@@ -23,63 +23,10 @@ if TYPE_CHECKING:
 
     from fastapi import FastAPI
 
-    from metaseed.facade import ProfileFacade
-
     from ..state import AppState
 
 UI_DIR = Path(__file__).parent.parent
 EXAMPLES_DIR = UI_DIR.parent / "examples"
-
-
-def _materialize_children(
-    state: AppState,
-    facade: ProfileFacade,
-    parent_node_id: str,
-    parent_type: str,
-    parent_data: dict[str, object],
-) -> None:
-    """Recursively add an example's nested entities as tree nodes.
-
-    Walks each nested relationship of ``parent_type`` and creates a child node
-    for every embedded object, so a loaded example lists its whole entity tree
-    rather than just the root. Plain string references (not embedded objects) are
-    skipped — they are links, not owned children.
-    """
-    helper = getattr(facade, parent_type, None)
-    if helper is None:
-        return
-    # When the profile declares containment (owns markers), materialize only the
-    # owned children -- so embedded value-objects (e.g. an OntologyAnnotation in
-    # Assay.measurement_type, or a Comment) stay inline instead of being pulled
-    # out as separate, un-linkable tree nodes that orphan on reload. Profiles
-    # without markers fall back to every nested field, unchanged.
-    child_fields = (
-        helper.owned_child_fields if facade.uses_ownership() else helper.nested_fields
-    )
-    for field_name, child_type in child_fields.items():
-        items = parent_data.get(field_name)
-        if isinstance(items, dict):
-            items = [items]
-        if not isinstance(items, list):
-            continue
-        child_helper = getattr(facade, child_type, None)
-        if child_helper is None:
-            continue
-        for item in items:
-            if not isinstance(item, dict):
-                continue  # a string reference, not an embedded child
-            child_instance = child_helper.create(skip_validation=True, **item)
-            # add_node re-creates the instance through the facade; without
-            # skip_validation that second pass re-validates (including the
-            # network-backed ontology check), so a large example would issue one
-            # OLS request per entity.
-            child_node = state.add_node(
-                child_type,
-                child_instance,
-                parent_id=parent_node_id,
-                skip_validation=True,
-            )
-            _materialize_children(state, facade, child_node.id, child_type, item)
 
 
 def register_example_routes(
@@ -137,12 +84,12 @@ def register_example_routes(
         spec = loader.load_profile(version, profile_name)
         root_entity = spec.root_entity or "Investigation"
 
-        # Keep a pristine copy for materialization: building a model coerces the
-        # nested dicts in ``example_data`` into model instances *in place*, and
-        # _materialize_children only descends into dicts. Walking the mutated
-        # dict would therefore stop at depth 1 and silently drop every
-        # grandchild (e.g. a Study's ObservationUnits).
-        tree_data = copy.deepcopy(example_data)
+        # Keep a pristine copy: building a model to validate coerces the nested
+        # dicts in ``example_data`` into model instances *in place*, and the
+        # loader only descends into dicts. Loading the mutated dict would stop
+        # at depth 1 and silently drop every grandchild (e.g. a Study's
+        # ObservationUnits).
+        document = copy.deepcopy(example_data)
 
         # Validate the example up front so a malformed file fails loudly rather
         # than loading a broken tree.
@@ -154,15 +101,13 @@ def register_example_routes(
                 status_code=500, detail=f"Error creating entity from example: {e}"
             ) from e
 
-        helper = getattr(facade, root_entity)
-        root_instance = helper.create(skip_validation=True, **example_data)
-        node = state.add_node(root_entity, root_instance, skip_validation=True)
-        state.editing_node_id = node.id
-
-        # Materialize every nested entity as its own tree node (recursively), so
-        # the whole dataset is listed, not just the root. Children carried inline
-        # in the parent's scalar fields would otherwise be invisible in the tree.
-        _materialize_children(state, facade, node.id, root_entity, tree_data)
+        # The library loads the document — root and every nested entity, owned
+        # children only where the profile declares containment. This route used
+        # to walk it itself, which is why a consumer of the library could not
+        # load an example the application could (#246).
+        facade.load_nested(document, root_entity)
+        roots = facade.get_roots()
+        state.editing_node_id = roots[0].id if roots else None
 
         # Persist the loaded example as a named dataset and open its edit view.
         # The datasets overview at "/" does not render in-memory state, so a bare
