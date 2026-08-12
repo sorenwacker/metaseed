@@ -20,7 +20,13 @@ logger = logging.getLogger(__name__)
 
 
 def validate_ontology_term(term_id: str) -> tuple[bool, str | None]:
-    """Validate an ontology term exists in OLS4.
+    """Validate an ontology term exists in OLS4, in any ontology.
+
+    Kept for callers that hold a term and no field: the exported public API and
+    the MCP tools. Where a :class:`~metaseed.specs.schema.FieldSpec` is at hand,
+    :func:`metaseed.services.term_check.check_term` is the better question — it
+    reads the ontologies the field names, and distinguishes "wrong" from "could
+    not be checked".
 
     Uses the centralized OntologyService with caching and rate limiting.
     Network failures are treated as valid (fail-open) to avoid blocking work.
@@ -396,9 +402,14 @@ class EntityHelper:
     ) -> list[str]:
         """Validate ontology term fields in entity data.
 
-        Checks that ontology term values exist in OLS4. Uses caching to
-        avoid repeated network calls. Network failures are treated as
-        valid (fail-open) to avoid blocking work.
+        Checks each value against the ontologies its field names, not merely
+        that the term exists somewhere: a field declaring ``ontologies: ["to"]``
+        does not accept a phenotype term (issue #215).
+
+        A value that could not be checked — an OLS outage, or a label rather
+        than an identifier — is not reported. It is not a fault in the data,
+        and someone else's downtime must not fill a researcher's screen with
+        errors.
 
         Args:
             data: Entity data as dict or Pydantic model.
@@ -414,21 +425,15 @@ class EntityHelper:
         elif not isinstance(data, dict):
             return warnings
 
-        # Find ontology_term fields
-        for fld in self._spec.fields:
-            if fld.type != FieldType.ONTOLOGY_TERM:
-                continue
+        from metaseed.services.term_check import check_entity_terms
 
-            value = data.get(fld.name)
-            if not value:
+        for field_name, verdict in check_entity_terms(self._spec.fields, data).items():
+            if not verdict.is_problem or not verdict.message:
                 continue
-
-            is_valid, warning = validate_ontology_term(value)
-            if not is_valid and warning:
-                full_warning = f"{self._name}.{fld.name}: {warning}"
-                warnings.append(full_warning)
-                if warn:
-                    logger.warning(full_warning)
+            full_warning = f"{self._name}.{field_name}: {verdict.message}"
+            warnings.append(full_warning)
+            if warn:
+                logger.warning(full_warning)
 
         return warnings
 

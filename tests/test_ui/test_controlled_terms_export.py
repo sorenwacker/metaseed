@@ -49,7 +49,9 @@ class TestWhichFieldsGetADropdown:
         assert terms is not None
         assert not terms.embedded
         assert "ncbitaxon" in terms.source
-        assert "checked" in terms.note
+        # What the note may not do is promise a check that does not exist: no
+        # validator compares a value against an ontology yet (issue #215).
+        assert "nothing" in terms.note and "#215" in terms.note
 
     def test_a_list_past_the_cap_stays_free_text(self) -> None:
         field = FieldSpec(

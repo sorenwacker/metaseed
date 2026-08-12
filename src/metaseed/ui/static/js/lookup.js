@@ -157,9 +157,16 @@ function scrollIntoViewIfNeeded(element) {
     }
 }
 
+// Where to ask for suggestions. The standalone application answers at
+// /api/lookup/; an application that embeds these tables serves its own — the
+// hub's is scoped to a dataset — and says so with data-lookup-url on the input.
+function lookupBase(input) {
+    return input.dataset.lookupUrl || '/api/lookup/';
+}
+
 // Fetch suggestions from API
 function fetchLookupSuggestions(input, entityType, query) {
-    fetch('/api/lookup/' + encodeURIComponent(entityType) + '?q=' + encodeURIComponent(query))
+    fetch(lookupBase(input) + encodeURIComponent(entityType) + '?q=' + encodeURIComponent(query))
         .then(function(response) {
             return response.json();
         })
@@ -250,6 +257,7 @@ function escapeHtml(text) {
 
 var lookupModalInput = null;
 var lookupModalEntityType = null;
+var lookupModalBase = '/api/lookup/';
 var lookupModalSelectedValues = new Set();
 
 // Open lookup modal
@@ -259,6 +267,7 @@ function openLookupModal(entityType, inputId) {
 
     lookupModalInput = input;
     lookupModalEntityType = entityType;
+    lookupModalBase = lookupBase(input);
     lookupModalSelectedValues.clear();
 
     var modal = document.getElementById('lookup-modal');
@@ -374,7 +383,7 @@ function removeSelectedValue(value) {
 function loadModalResults(entityType, query) {
     var resultsDiv = document.getElementById('lookup-modal-results');
 
-    fetch('/api/lookup/' + encodeURIComponent(entityType) + '?q=' + encodeURIComponent(query))
+    fetch(lookupModalBase + encodeURIComponent(entityType) + '?q=' + encodeURIComponent(query))
         .then(function(response) {
             return response.json();
         })

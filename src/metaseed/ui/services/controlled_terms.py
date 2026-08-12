@@ -23,8 +23,10 @@ What is *not* attempted: embedding an ontology. A field that names NCBI
 Taxonomy cannot carry its two million names into a spreadsheet, and a dropdown
 of even a few hundred is worse than useless — the paper's own observation about
 shallow hierarchies, arrived at from the other direction. Such a field keeps a
-free-text column, is checked on import instead, and the hidden sheet records
-which ontology the value must come from so the requirement is not lost.
+free-text column and the hidden sheet records which ontology the value must
+come from, so the requirement is not lost — though nothing validates it yet
+(metaseed issue #215): saying otherwise in the sheet would be a promise the
+code does not keep.
 """
 
 from __future__ import annotations
@@ -125,7 +127,8 @@ def allowed_values(field: FieldSpec) -> TermList | None:
             embedded=False,
             note=(
                 "Free text in the sheet: this vocabulary is too large to embed. "
-                "Values are checked against the ontology on import."
+                "The value should come from the ontology named here; nothing "
+                "checks that automatically yet (metaseed issue #215)."
             ),
         )
 
@@ -144,7 +147,8 @@ def _term_list(field_name: str, values: list[str], source: str) -> TermList:
             embedded=False,
             note=(
                 f"{len(values)} values: too many for a dropdown, so the column "
-                "is free text and the values are checked on import."
+                "is free text. The values are listed here, and a wrong one is "
+                "caught when the sheet is imported."
             ),
         )
     return TermList("", field_name, values, [""] * len(values), source)

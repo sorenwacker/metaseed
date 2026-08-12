@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- A value in an ontology-term field is checked against the ontologies its field
+  names, not merely against OLS at large: a field declaring
+  `ontologies: ["to"]` no longer accepts a phenotype term (#215). The pointer
+  had been decoration since it shipped.
+
+  Three outcomes rather than two, because a boolean cannot carry the one that
+  matters: a value is right, wrong, or **not checked** — and an OLS outage
+  produces the third. Someone else's downtime must not mark a researcher's data
+  invalid, and a check that silently reports "fine" when it learned nothing is
+  worse than none.
+
+### Changed
+- The entity lookup asks the endpoint the page names (`data-lookup-url`),
+  defaulting to the standalone application's `/api/lookup/`. An application
+  embedding these tables serves its own — the hub's is scoped to a dataset —
+  and could not before, so its reference columns had no lookup at all.
+
 ## v0.32.1 (260812)
 
 ### Fixed
