@@ -430,3 +430,60 @@ class TestNormalizeReferenceFields:
         result = normalize_reference_fields(data, helper, facade)
 
         assert result.get("derives_from") is None
+
+
+class TestEveryOptionIsOfferedOnce:
+    """A reference dropdown must not list the same row twice.
+
+    Every entity exists in two places at once: as a stored node, and as the
+    dict still embedded in its parent's data. The collector walked both, so the
+    picker offered each option twice over — 96 Samples where the dataset has
+    48, every ObservationUnit doubled. The export hit the same thing and fixed
+    it (f9efabc); the picker was left behind.
+
+    Deduplicating is safe *here* in a way it was not for the export: two
+    options with the same value are indistinguishable to the person choosing,
+    since picking either writes the same identifier. The export had to keep
+    both, because two rows with one identifier can still be two records.
+    """
+
+    def _options(self):
+        from pathlib import Path
+
+        import yaml
+
+        from metaseed.ui.helpers import collect_entities_by_type
+        from metaseed.ui.state import AppState
+
+        state = AppState(profile="miappe", version="1.1")
+        facade = state.get_or_create_facade()
+        example = Path("src/metaseed/examples/miappe/1.1/wheat-drought-study.yaml")
+        document = yaml.safe_load(example.read_text())
+        facade.load_nested(document, "Investigation")
+        return collect_entities_by_type(state, facade)
+
+    def test_no_type_offers_a_duplicate_value(self) -> None:
+        doubled = {}
+        for entity_type, items in self._options().items():
+            values = [i["value"] for i in items if i["value"]]
+            repeated = sorted({v for v in values if values.count(v) > 1})
+            if repeated:
+                doubled[entity_type] = repeated[:3]
+
+        assert not doubled, f"the picker offers the same row twice: {doubled}"
+
+    def test_every_row_is_still_offered(self) -> None:
+        """Deduplicating must not delete options, only the repeats.
+
+        The counts are the dataset's own: 24 Samples and 18 ObservationUnits
+        are stored, and each carries a distinct identifier. Pinned as exact
+        numbers because the danger here is over-deleting — dropping rows that
+        merely look alike — which is how the same fix went wrong for the export
+        the first time.
+        """
+        options = self._options()
+
+        assert len(options["Sample"]) == 24
+        assert len(options["ObservationUnit"]) == 18
+        assert len(options["FactorValue"]) == 20
+        assert len(options["Person"]) == 4

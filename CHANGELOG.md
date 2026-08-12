@@ -23,6 +23,13 @@
   which file supplied it.
 
 ### Fixed
+- A reference dropdown offers each row once. Every entity is present twice —
+  as a stored node, and as the dict still embedded in its parent — and the
+  picker walked both, so it listed 96 Samples for a dataset holding 24 and
+  doubled every other type. The export was fixed for this; the picker was left
+  behind. Measured against the MIAPPE example: option counts now equal the
+  stored entities exactly, type by type, so nothing was dropped along with the
+  repeats.
 - The ontology-term check runs where a researcher can see it. It existed, and
   was reachable from the library API, the MCP tools and the CV validators, but
   not from `DatasetValidator` — which is what the application validates

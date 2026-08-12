@@ -236,6 +236,13 @@ def collect_entities_by_type(  # noqa: C901
         }
     """
     entities_by_type: dict[str, list[dict[str, Any]]] = {}
+    # Every entity is present twice over: as a stored node, and as the dict
+    # still embedded in its parent's data. Offered both ways, the dropdown
+    # listed each row twice. Two options with one value are indistinguishable
+    # to whoever is choosing — picking either writes the same identifier — so
+    # the second is dropped. (The export could not do this: two rows sharing an
+    # identifier can still be two records. See f9efabc.)
+    seen: set[tuple[str, str]] = set()
 
     def _extract_label(data: dict[str, Any]) -> tuple[str, str]:
         """Extract identifier and label from entity data."""
@@ -255,11 +262,15 @@ def collect_entities_by_type(  # noqa: C901
         return identifier, label or identifier
 
     def add_entity(entity_type: str, data: dict[str, Any]) -> None:
-        """Add an entity to the collection."""
+        """Add an entity to the collection, once."""
+        identifier, label = _extract_label(data)
+        if identifier:
+            if (entity_type, identifier) in seen:
+                return
+            seen.add((entity_type, identifier))
+
         if entity_type not in entities_by_type:
             entities_by_type[entity_type] = []
-
-        identifier, label = _extract_label(data)
         entities_by_type[entity_type].append(
             {"value": identifier, "label": label, "data": data}
         )
