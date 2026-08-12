@@ -696,6 +696,46 @@ class OntologyService:
 
         return False, f"Ontology term '{term_id}' not found in OLS4"
 
+    def has_ontology_sync(self: Self, ontology_id: str) -> bool | None:
+        """Whether this service hosts ``ontology_id``.
+
+        Three answers, because the third matters: yes, no, and unknown when the
+        service will not say. A profile may name a vocabulary this service does
+        not carry — OLS4 hosts ``to`` but not ``co_321``, which MIAPPE names
+        alongside it — and calling a valid Crop Ontology term "not found"
+        because the lookup cannot see that ontology is worse than not checking.
+
+        Args:
+            ontology_id: OLS id of the ontology (e.g. ``to``).
+
+        Returns:
+            ``True`` if hosted, ``False`` if the service says it is not,
+            ``None`` if the service could not be asked.
+        """
+        cache_key = f"ontology:{ontology_id.lower()}"
+        cached = self._get_cached(cache_key)
+        if cached is not _MISSING:
+            return bool(cached) if cached is not None else None
+
+        try:
+            self._rate_limiter.acquire_sync()
+            response = httpx.get(
+                f"{self.base_url}/ontologies/{ontology_id.lower()}",
+                timeout=DEFAULT_TIMEOUT,
+                headers={"User-Agent": USER_AGENT},
+            )
+        except Exception:
+            return None
+
+        if response.status_code == 404:
+            self._set_cached(cache_key, False)
+            return False
+        if response.status_code >= 400:
+            return None
+
+        self._set_cached(cache_key, True)
+        return True
+
     def _parse_ontology_from_term_id(self: Self, term_id: str) -> str | None:
         """Extract ontology prefix from a term ID.
 

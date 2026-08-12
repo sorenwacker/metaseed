@@ -105,3 +105,34 @@ class TestCheckingAnEntity:
 
         assert set(verdicts) == {"trait"}
         assert verdicts["trait"].outcome is Outcome.OK
+
+
+class TestAnOntologyTheSourceDoesNotCarry:
+    """OLS4 hosts `to` but not `co_321`, and MIAPPE names them together. A
+    valid Crop Ontology term must not be called missing because the lookup
+    cannot see that vocabulary."""
+
+    class _PartialSource:
+        def __init__(self, carries: set[str]) -> None:
+            self.carries = carries
+
+        def get_term_sync(self, term_id: str) -> object | None:
+            return None
+
+        def has_ontology_sync(self, ontology_id: str) -> bool | None:
+            return ontology_id in self.carries
+
+    def test_a_term_from_an_unavailable_ontology_is_not_checked(self) -> None:
+        verdict = check_term(
+            "CO_321:0000123", ["to", "co_321"], self._PartialSource({"to"})
+        )
+
+        assert verdict.outcome is Outcome.NOT_CHECKED
+        assert not verdict.is_problem
+        assert "does not carry" in verdict.message
+
+    def test_a_missing_term_from_a_carried_ontology_is_still_reported(self) -> None:
+        verdict = check_term("TO:9999999", ["to"], self._PartialSource({"to"}))
+
+        assert verdict.outcome is Outcome.NOT_FOUND
+        assert verdict.is_problem
