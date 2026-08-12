@@ -7,7 +7,12 @@ import re
 from typing import Any, Self
 
 from metaseed.specs.loader import SpecLoader, SpecLoadError
-from metaseed.specs.schema import FieldType, ProfileSpec, ValidationRuleSpec
+from metaseed.specs.schema import (
+    FieldSpec,
+    FieldType,
+    ProfileSpec,
+    ValidationRuleSpec,
+)
 from metaseed.validators.base import ValidationCheck, ValidationError, ValidationRule
 from metaseed.validators.rules import (
     ConditionalRule,
@@ -492,6 +497,59 @@ def create_engine_for_extracted_record(
     return engine
 
 
+def _declared_pattern(
+    field_name: str, entity: str, profile_spec: ProfileSpec | None
+) -> ValidationRuleSpec | None:
+    """The profile's own pattern rule for a field, if it declares one."""
+    if profile_spec is None:
+        return None
+    for rule_spec in profile_spec.validation_rules:
+        if (
+            rule_spec.pattern
+            and rule_spec.field == field_name
+            and _applies_to_entity(rule_spec, entity)
+        ):
+            return rule_spec
+    return None
+
+
+def _identifier_rule(
+    field: FieldSpec, entity: str, profile_spec: ProfileSpec | None
+) -> ValidationRule | None:
+    """How this profile's identifier field is checked.
+
+    The default — alphanumerics, underscores and hyphens — is MIAPPE's, and was
+    applied to every field named ``identifier`` or ``unique_id`` in every
+    profile, chosen by name. A DiSSCo specimen is identified by a DOI, which
+    contains ``:`` and ``/``, so the profile's own pattern and the imposed one
+    could not both be satisfied and no valid specimen could be created (#246).
+
+    Where the profile or the field states what its identifier looks like, that
+    statement is enforced instead. Where nothing is stated, the default stands:
+    an identifier with a space in it breaks every reference that names it.
+
+    Returns:
+        The rule to add, or ``None`` when the declared pattern is already
+        enforced elsewhere and adding it here would report it twice.
+    """
+    declared = _declared_pattern(field.name, entity, profile_spec)
+    if declared is not None:
+        if field.type in _ENGINE_PATTERN_TYPES:
+            # Already added by _profile_rules_for_entity.
+            return None
+        return PatternRule(
+            field=field.name,
+            pattern=declared.pattern or "",
+            message=declared.message or declared.description or None,
+        )
+
+    own = getattr(field.constraints, "pattern", None) if field.constraints else None
+    if own:
+        return PatternRule(field=field.name, pattern=own)
+
+    return UniqueIdPatternRule(field=field.name)
+
+
 def create_engine_for_entity(
     entity: str,
     version: str = "1.2",
@@ -514,6 +572,19 @@ def create_engine_for_entity(
     engine = ValidationEngine()
     entity_found = False
 
+    # Load the profile first: what it declares about a field decides whether
+    # the identifier default below applies at all.
+    profile_spec = None
+    try:
+        profile_spec = loader.load_profile(version, profile)
+        entity_lower = entity.lower()
+        profile_entities = [e.lower() for e in profile_spec.entities]
+        if entity_lower in profile_entities:
+            entity_found = True
+    except SpecLoadError:
+        # If profile not found, continue with basic rules only
+        pass
+
     # Load entity spec for required fields
     try:
         spec = loader.load_entity(entity, version, profile)
@@ -524,29 +595,19 @@ def create_engine_for_entity(
         if required_fields:
             engine.add_rule(RequiredFieldsRule(fields=required_fields))
 
-        # Add ID pattern rule for identifier/unique_id fields
         for field in spec.fields:
             if field.name in ("unique_id", "identifier"):
-                engine.add_rule(UniqueIdPatternRule(field=field.name))
+                rule = _identifier_rule(field, entity, profile_spec)
+                if rule is not None:
+                    engine.add_rule(rule)
                 break
     except SpecLoadError:
         # Entity spec not found, check if profile has this entity
         pass
 
-    # Load profile validation rules
-    try:
-        profile_spec = loader.load_profile(version, profile)
-        # Check if entity exists in profile
-        entity_lower = entity.lower()
-        profile_entities = [e.lower() for e in profile_spec.entities]
-        if entity_lower in profile_entities:
-            entity_found = True
-
+    if profile_spec is not None:
         for rule in _profile_rules_for_entity(entity, profile_spec):
             engine.add_rule(rule)
-    except SpecLoadError:
-        # If profile not found, continue with basic rules only
-        pass
 
     # Raise error if entity was not found in either spec or profile
     if not entity_found:

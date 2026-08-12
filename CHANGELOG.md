@@ -22,6 +22,19 @@
   vocabulary someone else maintains without forking it; each term remembers
   which file supplied it.
 
+### Fixed
+- A profile's own identifier pattern is enforced instead of MIAPPE's. Any field
+  named `identifier` or `unique_id`, in any profile, was given MIAPPE's shape —
+  alphanumerics, underscores and hyphens — chosen by the field's name. DiSSCo
+  identifies a specimen by a DOI, which contains `:` and `/`, so the profile's
+  own pattern and the imposed one could not both be satisfied and no valid
+  DiSSCo specimen could be created while identifier validation was on (#246).
+
+  Measured against every shipped profile: only DiSSCo changes. The identifier
+  patterns declared by isa, metabolights, miappe, pride and seek are identical
+  to the default that was being imposed, and `seek-ready-template` declares
+  none and keeps it.
+
 ### Changed
 - OLS is now one term source among several rather than the only one. Term
   lookup goes through a router (`metaseed.services.terms.get_term_source`)

@@ -9,6 +9,7 @@ from metaseed.validators import validate
 from metaseed.validators.engine import (
     ValidationEngine,
     _create_rule_from_spec,
+    create_engine_for_entity,
 )
 from metaseed.validators.rules import (
     ConditionalRule,
@@ -459,3 +460,51 @@ class TestInferredRuleTypes:
         )
         rule = _create_rule_from_spec(spec)
         assert rule is None
+
+
+class TestADeclaredPatternWins:
+    """MIAPPE's identifier shape must not be imposed on other profiles.
+
+    ``create_engine_for_entity`` added a rule allowing only ``[A-Za-z0-9_-]`` to
+    any field named ``identifier`` or ``unique_id``, in any profile, chosen by
+    the field's *name*. DiSSCo declares its own pattern for that field — a DOI,
+    which contains ``:`` and ``/`` — so the two rules could not both be
+    satisfied and no valid DiSSCo specimen could be created while identifier
+    validation was on (#246).
+
+    Where a profile states what its identifier looks like, that statement is the
+    answer. The default applies only where nothing was stated.
+    """
+
+    def test_a_doi_identifier_is_accepted_where_the_profile_declares_it(self) -> None:
+        engine = create_engine_for_entity(
+            "DigitalSpecimen", version="0.4", profile="dissco"
+        )
+
+        errors = engine.validate({"identifier": "https://doi.org/10.22/AB"})
+
+        assert not [e for e in errors if e.field == "identifier"], (
+            "the profile's own identifier pattern was overruled by MIAPPE's"
+        )
+
+    def test_the_profiles_own_pattern_still_rejects_a_wrong_identifier(self) -> None:
+        """Dropping the default must not leave the field unchecked."""
+        engine = create_engine_for_entity(
+            "DigitalSpecimen", version="0.4", profile="dissco"
+        )
+
+        errors = engine.validate({"identifier": "not-a-doi"})
+
+        assert [e for e in errors if e.field == "identifier"], (
+            "an identifier that is not a DOI passed a profile that requires one"
+        )
+
+    def test_miappe_keeps_its_identifier_rule(self) -> None:
+        """The default is still the answer where a profile states nothing."""
+        engine = create_engine_for_entity(
+            "Investigation", version="1.1", profile="miappe"
+        )
+
+        errors = engine.validate({"unique_id": "has spaces"})
+
+        assert [e for e in errors if e.field == "unique_id"]

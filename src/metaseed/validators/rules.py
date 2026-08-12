@@ -204,8 +204,11 @@ class RequiredFieldsRule(ValidationRule):
 class UniqueIdPatternRule(ValidationRule):
     """Validates that unique IDs match the expected pattern.
 
-    MIAPPE IDs should contain only alphanumeric characters, underscores,
-    and hyphens.
+    The default shape — alphanumerics, underscores and hyphens — is MIAPPE's,
+    and applies only where a profile states nothing about its own identifiers.
+    A profile that declares a pattern for the field has that pattern enforced
+    instead; see ``engine._identifier_rule``. An identifier is not universally
+    shaped: a DiSSCo specimen is identified by a DOI.
 
     Attributes:
         field: Name of the ID field to validate.
