@@ -871,9 +871,12 @@ entities:
       required: false
       description: Trait ontology accession.
       ontology_term: PPEO:hasExternalIdentifier
+      # MIAPPE v1.1: "(Crop Ontology, Trait Ontology)", illustrated with
+      # "CO_322:0000030; TO:0000366".
       ontologies:
         - to
         - co_321
+        - co_322
     - name: trait_description
       type: string
       required: false
@@ -889,8 +892,11 @@ entities:
       required: false
       description: Method ontology accession.
       ontology_term: PPEO:hasExternalIdentifier
+      # MIAPPE v1.1: "(Crop Ontology, Trait Ontology)", as for the trait.
       ontologies:
         - co_321
+        - co_322
+        - to
     - name: method_description
       type: string
       required: false
@@ -906,8 +912,14 @@ entities:
       required: false
       description: Scale ontology accession.
       ontology_term: PPEO:hasExternalIdentifier
+      # MIAPPE v1.1: "Accession number of the scale in a suitable controlled
+      # vocabulary (Crop Ontology)", illustrated with CO_322:0000510. The
+      # Units Ontology declared here before is not named by the standard for
+      # this field, and made every Crop Ontology scale in the shipped example
+      # report as wrong (#248).
       ontologies:
-        - uo
+        - co_321
+        - co_322
     - name: scale_description
       type: string
       required: false
@@ -1072,8 +1084,11 @@ entities:
       required: false
       description: Event type ontology accession.
       ontology_term: PPEO:hasExternalIdentifier
+      # MIAPPE v1.1: "Crop Ontology term (subclass of CO_715:0000006)". The
+      # standard scopes this to a branch, which `within` expresses (#229).
       ontologies:
         - co_715
+      within: CO_715:0000006
   Environment:
     ontology_term: PPEO:environment
     description: Environmental conditions recorded during a study.

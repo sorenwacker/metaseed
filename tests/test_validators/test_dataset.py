@@ -458,7 +458,7 @@ class TestAnOntologyTermIsCheckedWhereTheUserCanSeeIt:
     def test_a_term_from_the_wrong_ontology_is_reported(self, tmp_path) -> None:
         validator = DatasetValidator("miappe", "1.1")
 
-        # scale_accession_number declares `ontologies: [uo]`.
+        # scale_accession_number takes a Crop Ontology term.
         result = validator.validate_file(self._dataset(tmp_path, "PATO:0000001"))
 
         assert [e for e in result.errors if e.rule == "ontology_term"], (
@@ -466,9 +466,11 @@ class TestAnOntologyTermIsCheckedWhereTheUserCanSeeIt:
         )
 
     def test_a_term_from_the_declared_ontology_is_not_reported(self, tmp_path) -> None:
+        """A Crop Ontology scale, which is what MIAPPE specifies for this
+        field — the profile used to declare the Units Ontology instead (#248)."""
         validator = DatasetValidator("miappe", "1.1")
 
-        result = validator.validate_file(self._dataset(tmp_path, "UO:0000015"))
+        result = validator.validate_file(self._dataset(tmp_path, "CO_321:0000928"))
 
         assert not [e for e in result.errors if e.rule == "ontology_term"]
 

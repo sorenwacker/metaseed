@@ -1107,7 +1107,9 @@ entities:
     - name: scale_accession_number
       codename: scaleDbId
       type: ontology_term
-      ontologies: ["uo"]
+      # MIAPPE names the Crop Ontology for a scale accession, not the Units
+      # Ontology; see the same field in 1.1 (#248).
+      ontologies: ["co_321", "co_322"]
       required: false
       description: Scale ontology accession (Unit Ontology).
       ontology_term: PPEO:hasExternalIdentifier

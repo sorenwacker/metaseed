@@ -23,6 +23,22 @@
   which file supplied it.
 
 ### Fixed
+- MIAPPE's own specification decides what its accession fields take, replacing
+  declarations that contradicted it (#248). The checklist says a scale
+  accession comes from the **Crop Ontology** (illustrated with
+  `CO_322:0000510`); the profiles declared the Units Ontology, which made every
+  Crop Ontology scale in the shipped example report as wrong — the declaration
+  was at fault, not the data. Method accessions now allow the Trait Ontology,
+  as the standard states. The event accession keeps `co_715` and gains
+  `within: CO_715:0000006`, because the standard scopes it to that branch.
+
+  The example's event accessions are removed rather than replaced: they named
+  real AGRO terms meaning the wrong things — `AGRO:00000007` is *desuckering*,
+  not sowing; `AGRO:00000006` is *irrigation process*, not fertilization — and
+  `AGRO:00000012` does not exist at all. MIAPPE requires a CO_715 term, CO_715
+  is not in OLS and AgroPortal needs a key, so no real accession could be
+  verified. An absent optional field is honest; a wrong one teaches a wrong
+  identifier.
 - Validating a dataset no longer crashes when a reference field holds several
   identifiers or an embedded child. Both went straight into a set lookup, so
   three of the seven shipped examples — isa 1.0, miappe 1.1 and miappe 1.2 —
