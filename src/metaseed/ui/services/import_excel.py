@@ -78,6 +78,8 @@ def workbook_to_payload(
     spec = SpecLoader().load_profile(version, profile)
 
     entities: list[dict[str, Any]] = []
+    # The export's own sheets are not entities; matching by entity name already
+    # skips them, and naming the fact keeps it true if that changes.
     for entity_type in facade.entities:
         if entity_type not in workbook.sheetnames:
             continue

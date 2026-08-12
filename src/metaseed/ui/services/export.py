@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any
 
 from openpyxl import Workbook
 
-from metaseed.ui.helpers import to_dict, walk_nested_entities
+from metaseed.ui.helpers import to_dict
 from metaseed.ui.services.controlled_terms import (
     apply_reference_validations,
     apply_uniqueness_validations,
@@ -70,55 +70,63 @@ def _format_cell_value(value: object, is_nested_field: bool) -> object:
     return value
 
 
-def build_workbook(state: AppState) -> Workbook:
-    """Build Excel workbook from entity tree.
+def collect_entities_by_type(facade: Any) -> dict[str, list[dict[str, Any]]]:
+    """Group every entity in ``facade`` by its type, nested ones included.
 
-    Args:
-        state: The current AppState containing the entity tree.
-
-    Returns:
-        Openpyxl Workbook with sheets for each entity type.
+    Serialised through the client (one payload per stored entity), then
+    recursed into nested fields so entities embedded inside a parent are
+    collected under their own type as well.
     """
-    facade = state.get_or_create_facade()
+    from metaseed import MetaseedClient
+
+    by_type: dict[str, list[dict[str, Any]]] = {}
+
+    def collect(entity_type: str, data: dict[str, Any]) -> None:
+        by_type.setdefault(entity_type, []).append(data)
+        helper = getattr(facade, entity_type, None)
+        if helper is None:
+            return
+        for field_name, nested_type in helper.nested_fields.items():
+            items = data.get(field_name)
+            if not isinstance(items, list):
+                continue
+            for item in items:
+                if isinstance(item, dict):
+                    collect(nested_type, item)
+
+    payload = MetaseedClient.from_facade(facade).serialize()
+    for entity in payload.get("entities", []):
+        entity_type = entity.get("_type")
+        if not entity_type:
+            continue
+        data = {k: v for k, v in entity.items() if not k.startswith("_")}
+        if entity.get("_parent_unique_id"):
+            # The tree, as a business key. No profile declares parent_ref
+            # fields, so without this column the export cannot be reimported
+            # with its structure intact.
+            data["_parent"] = entity["_parent_unique_id"]
+        collect(entity_type, data)
+    return by_type
+
+
+def build_workbook_from_facade(facade: Any) -> Workbook:
+    """Build the workbook for a dataset, from the facade holding it.
+
+    Takes the facade rather than an application's own state object, because
+    that is the one thing every caller has: the hub kept a copy of this
+    function for exactly that reason, and the copy did not gain the dropdowns,
+    the tables or the descriptions this one has.
+    """
+    entities_by_type = collect_entities_by_type(facade)
 
     wb = Workbook()
     wb.remove(wb.active)
-
-    entities_by_type: dict[str, list[dict[str, Any]]] = {}
-
-    # The tree, as business keys: node id -> the parent's identifier. Without
-    # this column the export cannot be reimported -- no profile declares
-    # parent_ref fields, so the linkage must ride along explicitly.
-    from metaseed import MetaseedClient
-
-    parent_by_node = {
-        e.get("_node_id"): e.get("_parent_unique_id")
-        for e in MetaseedClient.from_facade(facade).serialize().get("entities", [])
-    }
-
-    # Collect all entities including nested ones
-    for node in state.nodes_by_id.values():
-        entity_type = node.entity_type
-        if entity_type not in entities_by_type:
-            entities_by_type[entity_type] = []
-
-        data = to_dict(node.instance) or {}
-        if parent_by_node.get(node.id):
-            data["_parent"] = parent_by_node[node.id]
-        entities_by_type[entity_type].append(data)
-
-        # Walk nested entities using shared helper
-        for nested_type, nested_data in walk_nested_entities(data, entity_type, facade):
-            if nested_type not in entities_by_type:
-                entities_by_type[nested_type] = []
-            entities_by_type[nested_type].append(nested_data)
 
     # Kept so the controlled columns can be restricted once every sheet exists.
     sheets: dict[str, Any] = {}
     columns_by_entity: dict[str, list[str]] = {}
     fields_by_entity: dict[str, dict[str, Any]] = {}
 
-    # Create sheets for each entity type
     for entity_type in facade.entities:
         helper = getattr(facade, entity_type, None)
         if not helper:
@@ -136,8 +144,9 @@ def build_workbook(state: AppState) -> Workbook:
         entities = entities_by_type.get(entity_type, [])
         for row_offset, entity_data in enumerate(entities, start=2):
             for col_offset, col in enumerate(columns, start=1):
-                value = entity_data.get(col, "")
-                value = _format_cell_value(value, col in nested_fields)
+                value = _format_cell_value(
+                    entity_data.get(col, ""), col in nested_fields
+                )
                 value = _escape_formula(value)
                 cell = ws.cell(
                     row=row_offset,
@@ -166,12 +175,16 @@ def build_workbook(state: AppState) -> Workbook:
     return wb
 
 
+def build_workbook(state: AppState) -> Workbook:
+    """Build the workbook for the dataset in ``state``."""
+    return build_workbook_from_facade(state.get_or_create_facade())
+
+
 def _field_specs(facade: Any, entity_type: str) -> dict[str, Any]:
     """Field name -> its :class:`FieldSpec` for one entity, or empty if unknown.
 
-    The facade is built from a profile but does not expose it uniformly; a
-    workbook must still export when the specification cannot be reached, just
-    without dropdowns.
+    A workbook must still export when the specification cannot be loaded, just
+    without the dropdowns and descriptions that come from it.
     """
     from metaseed.specs.loader import SpecLoader
 
