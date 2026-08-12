@@ -23,6 +23,17 @@
   which file supplied it.
 
 ### Fixed
+- A range of quantities is checked as quantities. Any `A >= B` condition became
+  a date-range rule whatever it compared, so Darwin Core's
+  `maximumDepthInMeters >= minimumDepthInMeters` reported two floats as "not a
+  valid date" and those two fields could never both be populated (#246).
+  Comparisons are now routed by the declared type of their operands, and
+  `NumericRangeRule` checks the numeric ones.
+
+  Measured across every shipped profile: two rules change, both Darwin Core's
+  (depth and elevation). MIAPPE's four date comparisons are still date ranges.
+  A comparison whose operand types cannot be resolved keeps the date reading it
+  had.
 - A profile's own identifier pattern is enforced instead of MIAPPE's. Any field
   named `identifier` or `unique_id`, in any profile, was given MIAPPE's shape —
   alphanumerics, underscores and hyphens — chosen by the field's name. DiSSCo

@@ -19,6 +19,7 @@ from metaseed.validators.rules import (
     CoordinatePairRule,
     DateRangeRule,
     ListCardinalityRule,
+    NumericRangeRule,
     PatternRule,
     RequiredFieldsRule,
     UniqueIdPatternRule,
@@ -29,6 +30,9 @@ from metaseed.validators.rules import (
 # PatternRule; string patterns are already merged onto the field (see
 # ``loader._merge_rule_constraints_into_fields``).
 _ENGINE_PATTERN_TYPES = frozenset({FieldType.URI, FieldType.ONTOLOGY_TERM})
+
+# Field types a `>=`/`<=` condition compares as quantities rather than dates.
+_NUMERIC_RANGE_TYPES = frozenset({FieldType.INTEGER, FieldType.FLOAT})
 
 
 class ValidationEngine:
@@ -234,13 +238,33 @@ def _create_rule_by_type(
     return None
 
 
+def _compares_numbers(
+    lower: str, upper: str, field_types: dict[str, FieldType] | None
+) -> bool:
+    """Whether both operands are declared as numbers.
+
+    Both, not either: a comparison between a number and something else is not a
+    numeric range, and guessing at it would be worse than the date reading it
+    replaces. Unknown types keep the date reading, which is what every rule
+    predating this got.
+    """
+    if not field_types:
+        return False
+    return all(field_types.get(name) in _NUMERIC_RANGE_TYPES for name in (lower, upper))
+
+
 def _infer_rule_type(
     rule_spec: ValidationRuleSpec,
+    field_types: dict[str, FieldType] | None = None,
 ) -> ValidationRule | None:
     """Infer rule type from fields (backward compatibility).
 
     Args:
         rule_spec: The rule specification.
+        field_types: Field name -> declared type for the entity the rule is
+            being built for. Used to route a comparison by what it compares;
+            without it a comparison is read as a date range, which is what the
+            engine did for every profile before #246.
 
     Returns:
         A ValidationRule instance, or None if type cannot be inferred or is
@@ -297,19 +321,26 @@ def _infer_rule_type(
                 message=rule_spec.message,
             )
 
-        # Handle date comparison conditions
+        # Handle range comparisons, routed by what they compare. Darwin Core
+        # declares `maximumDepthInMeters >= minimumDepthInMeters`; read as a
+        # date range it reported two floats as "not a valid date" and made both
+        # fields unfillable (#246).
         if ">=" in rule_spec.condition or "<=" in rule_spec.condition:
             parts = rule_spec.condition.replace(">=", " ").replace("<=", " ").split()
             if len(parts) == 2:
                 if ">=" in rule_spec.condition:
-                    return DateRangeRule(
-                        start_field=parts[1],
-                        end_field=parts[0],
+                    lower, upper = parts[1], parts[0]
+                else:
+                    lower, upper = parts[0], parts[1]
+                if _compares_numbers(lower, upper, field_types):
+                    return NumericRangeRule(
+                        lower_field=lower,
+                        upper_field=upper,
                         message=rule_spec.message,
                     )
                 return DateRangeRule(
-                    start_field=parts[0],
-                    end_field=parts[1],
+                    start_field=lower,
+                    end_field=upper,
                     message=rule_spec.message,
                 )
 
@@ -325,11 +356,15 @@ def _infer_rule_type(
 
 def _create_rule_from_spec(
     rule_spec: ValidationRuleSpec,
+    field_types: dict[str, FieldType] | None = None,
 ) -> ValidationRule | None:
     """Create a ValidationRule instance from a ValidationRuleSpec.
 
     Args:
         rule_spec: The rule specification from the YAML.
+        field_types: Field name -> declared type for the entity this rule is
+            for, so a comparison is routed by what it compares. Optional: a
+            caller that does not know the entity gets the previous reading.
 
     Returns:
         A ValidationRule instance, or None if the rule is enforced somewhere
@@ -359,7 +394,7 @@ def _create_rule_from_spec(
         return _create_rule_by_type(rule_spec)
 
     # Legacy: infer from fields (backward compatibility)
-    return _infer_rule_type(rule_spec)
+    return _infer_rule_type(rule_spec, field_types)
 
 
 def _applies_to_entity(rule_spec: ValidationRuleSpec, entity: str) -> bool:
@@ -424,7 +459,7 @@ def _profile_rules_for_entity(
                 )
             )
             continue
-        rule = _create_rule_from_spec(rule_spec)
+        rule = _create_rule_from_spec(rule_spec, field_types)
         if rule:
             rules.append(rule)
     return rules

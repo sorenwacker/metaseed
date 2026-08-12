@@ -9,6 +9,7 @@ from metaseed.validators.rules import (
     ConditionalRule,
     CoordinatePairRule,
     DateRangeRule,
+    NumericRangeRule,
     PatternRule,
     RequiredFieldsRule,
     UniqueIdPatternRule,
@@ -461,3 +462,66 @@ class TestValidationError:
         s = str(error)
         assert "name" in s
         assert "required" in s.lower()
+
+
+class TestNumericRangeRule:
+    """A range of quantities, checked as quantities."""
+
+    def _rule(self):
+        return NumericRangeRule(
+            lower_field="minimumDepthInMeters", upper_field="maximumDepthInMeters"
+        )
+
+    def test_an_ordered_range_passes(self) -> None:
+        assert (
+            self._rule().validate(
+                {"minimumDepthInMeters": 1.0, "maximumDepthInMeters": 5.0}
+            )
+            == []
+        )
+
+    def test_equal_bounds_pass(self) -> None:
+        """A range of zero width is a measurement at one depth, not an error."""
+        assert (
+            self._rule().validate(
+                {"minimumDepthInMeters": 3, "maximumDepthInMeters": 3}
+            )
+            == []
+        )
+
+    def test_an_inverted_range_is_reported_on_the_upper_bound(self) -> None:
+        errors = self._rule().validate(
+            {"minimumDepthInMeters": 9, "maximumDepthInMeters": 2}
+        )
+
+        assert len(errors) == 1
+        assert errors[0].field == "maximumDepthInMeters"
+        assert errors[0].rule == "numeric_range"
+
+    def test_a_missing_bound_is_not_this_rule_s_business(self) -> None:
+        """Whether a bound is required is requiredness, with its own rule."""
+        assert self._rule().validate({"minimumDepthInMeters": 1.0}) == []
+
+    def test_numeric_strings_are_read_as_numbers(self) -> None:
+        """The engine runs against raw YAML, where a number may be a string."""
+        assert (
+            self._rule().validate(
+                {"minimumDepthInMeters": "1.5", "maximumDepthInMeters": "2.5"}
+            )
+            == []
+        )
+
+    def test_something_that_is_not_a_number_is_reported_not_raised(self) -> None:
+        errors = self._rule().validate(
+            {"minimumDepthInMeters": "shallow", "maximumDepthInMeters": 2}
+        )
+
+        assert [e.field for e in errors] == ["minimumDepthInMeters"]
+        assert "not a number" in errors[0].message
+
+    def test_a_boolean_is_not_a_measurement(self) -> None:
+        errors = self._rule().validate(
+            {"minimumDepthInMeters": True, "maximumDepthInMeters": 2}
+        )
+
+        assert errors and errors[0].field == "minimumDepthInMeters"

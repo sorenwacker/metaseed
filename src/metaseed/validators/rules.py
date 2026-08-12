@@ -155,6 +155,109 @@ class DateRangeRule(ValidationRule):
         return None
 
 
+class NumericRangeRule(ValidationRule):
+    """Validates that the upper end of a numeric range is not below the lower.
+
+    The sibling of :class:`DateRangeRule` for quantities: a depth, an
+    elevation, a temperature span. Darwin Core declares
+    ``maximumDepthInMeters >= minimumDepthInMeters``, which was checked by the
+    date validator and reported two floats as "not a valid date", so both
+    fields could never be populated at once (#246).
+
+    Attributes:
+        lower_field: Name of the field holding the lower bound.
+        upper_field: Name of the field holding the upper bound.
+        custom_message: Optional custom error message.
+    """
+
+    def __init__(
+        self: Self,
+        lower_field: str,
+        upper_field: str,
+        message: str | None = None,
+    ) -> None:
+        """Initialize the rule.
+
+        Args:
+            lower_field: Name of the lower-bound field.
+            upper_field: Name of the upper-bound field.
+            message: Optional custom error message.
+        """
+        self.lower_field = lower_field
+        self.upper_field = upper_field
+        self.custom_message = message
+
+    @property
+    def name(self: Self) -> str:
+        """Return the rule name."""
+        return "numeric_range"
+
+    def validate(self: Self, data: dict[str, Any]) -> list[ValidationError]:
+        """Validate that the upper bound is not below the lower bound.
+
+        Args:
+            data: Dictionary with both bound fields.
+
+        Returns:
+            One error if the range is inverted, or if a value is not a number.
+            Empty when either bound is absent: whether a bound is required is a
+            different question, with its own rule.
+        """
+        lower_raw = data.get(self.lower_field)
+        upper_raw = data.get(self.upper_field)
+
+        if lower_raw is None or upper_raw is None:
+            return []
+        if lower_raw == "" or upper_raw == "":
+            return []
+
+        errors: list[ValidationError] = []
+        lower = self._parse_number(lower_raw, self.lower_field, errors)
+        upper = self._parse_number(upper_raw, self.upper_field, errors)
+        if errors or lower is None or upper is None:
+            return errors
+
+        if upper < lower:
+            msg = self.custom_message or (
+                f"{self.upper_field} ({upper}) must not be below "
+                f"{self.lower_field} ({lower})"
+            )
+            return [
+                ValidationError(field=self.upper_field, message=msg, rule=self.name)
+            ]
+        return []
+
+    def _parse_number(
+        self: Self, value: Any, field: str, errors: list[ValidationError]
+    ) -> float | None:
+        """Read a number, recording an error rather than raising.
+
+        The engine runs against raw, un-coerced data, so a value that is not a
+        number is a validation error here rather than a crash mid-run.
+        """
+        if isinstance(value, bool):
+            # A bool is an int in Python and never a measurement.
+            errors.append(
+                ValidationError(
+                    field=field,
+                    message=f"Field '{field}' is not a number: {value}",
+                    rule=self.name,
+                )
+            )
+            return None
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            errors.append(
+                ValidationError(
+                    field=field,
+                    message=f"Field '{field}' is not a number: {value}",
+                    rule=self.name,
+                )
+            )
+            return None
+
+
 class RequiredFieldsRule(ValidationRule):
     """Reports required fields that are absent or empty.
 
@@ -587,6 +690,7 @@ __all__ = [
     "CoordinatePairRule",
     "DateRangeRule",
     "ListCardinalityRule",
+    "NumericRangeRule",
     "PatternRule",
     "RequiredFieldsRule",
     "UniqueIdPatternRule",

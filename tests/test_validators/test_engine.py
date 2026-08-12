@@ -508,3 +508,48 @@ class TestADeclaredPatternWins:
         errors = engine.validate({"unique_id": "has spaces"})
 
         assert [e for e in errors if e.field == "unique_id"]
+
+
+class TestARangeIsComparedByItsOperands:
+    """A numeric range must not be checked by the date validator.
+
+    ``A >= B`` was turned into a ``DateRangeRule`` whatever A and B were, so
+    Darwin Core's ``maximumDepthInMeters >= minimumDepthInMeters`` reported
+    "not a valid date" for two floats — and those two fields could never both be
+    populated (#246). Rules were routed by the shape of the condition; they are
+    now routed by what the operands are.
+    """
+
+    def test_a_depth_range_accepts_numbers(self) -> None:
+        engine = create_engine_for_entity(
+            "Location", version="1.0", profile="darwin-core"
+        )
+
+        errors = engine.validate(
+            {"minimumDepthInMeters": 1.0, "maximumDepthInMeters": 5.0}
+        )
+
+        assert not [e for e in errors if "Depth" in (e.field or "")], (
+            "a numeric depth range was checked as if it were a date"
+        )
+
+    def test_an_inverted_depth_range_is_still_reported(self) -> None:
+        """Routing it correctly must not mean not checking it."""
+        engine = create_engine_for_entity(
+            "Location", version="1.0", profile="darwin-core"
+        )
+
+        errors = engine.validate(
+            {"minimumDepthInMeters": 9.0, "maximumDepthInMeters": 2.0}
+        )
+
+        assert [e for e in errors if "Depth" in (e.field or "")], (
+            "a maximum below its minimum passed unreported"
+        )
+
+    def test_a_date_range_is_still_a_date_range(self) -> None:
+        engine = create_engine_for_entity("Study", version="1.1", profile="miappe")
+
+        assert any(r.name == "date_range" for r in engine.rules), (
+            "date ranges must keep being checked as dates"
+        )
