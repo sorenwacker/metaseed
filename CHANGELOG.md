@@ -38,7 +38,8 @@
   `AGRO:00000012` does not exist at all. MIAPPE requires a CO_715 term, CO_715
   is not in OLS and AgroPortal needs a key, so no real accession could be
   verified. An absent optional field is honest; a wrong one teaches a wrong
-  identifier.
+  identifier. The ISA example's five unresolvable EFO and NCBITaxon accessions
+  and miappe 1.2's Units Ontology scales were removed on the same grounds.
 - Validating a dataset no longer crashes when a reference field holds several
   identifiers or an embedded child. Both went straight into a set lookup, so
   three of the seven shipped examples — isa 1.0, miappe 1.1 and miappe 1.2 —

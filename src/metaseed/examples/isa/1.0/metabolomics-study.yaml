@@ -53,7 +53,6 @@ publications:
         comments:
           - name: Source note
             value: Status ontology
-      term_accession: "EFO_0001796"
       comments:
         - name: Status note
           value: Peer reviewed
@@ -89,7 +88,6 @@ studies:
           comments:
             - name: Source note
               value: Design ontology
-        term_accession: "EFO_0001779"
         comments:
           - name: Design note
             value: Multiple time points
@@ -109,7 +107,6 @@ studies:
             comments:
               - name: Source note
                 value: Status ontology
-          term_accession: "EFO_0001795"
           comments:
             - name: Status note
               value: Under review
@@ -157,7 +154,6 @@ studies:
             comments:
               - name: Source note
                 value: Protocol ontology
-          term_accession: "EFO_0003789"
           comments:
             - name: Type note
               value: Standard growth
@@ -175,7 +171,6 @@ studies:
                 comments:
                   - name: Source note
                     value: Parameter ontology
-              term_accession: "EFO_0000721"
               comments:
                 - name: Parameter note
                   value: Growth temperature
@@ -192,7 +187,6 @@ studies:
               comments:
                 - name: Source note
                   value: Equipment ontology
-            term_accession: "EFO_0000968"
             comments:
               - name: Component note
                 value: Climate-controlled
@@ -212,7 +206,6 @@ studies:
             comments:
               - name: Source note
                 value: Protocol ontology
-          term_accession: "EFO_0002944"
           comments:
             - name: Type note
               value: Metabolite extraction
@@ -247,7 +240,6 @@ studies:
               comments:
                 - name: Source note
                   value: Equipment ontology
-            term_accession: "EFO_0000548"
             comments:
               - name: Component note
                 value: High-speed centrifuge
@@ -267,7 +259,6 @@ studies:
             comments:
               - name: Source note
                 value: Protocol ontology
-          term_accession: "EFO_0002692"
           comments:
             - name: Type note
               value: LC-MS/MS analysis
@@ -320,7 +311,6 @@ studies:
           comments:
             - name: Source note
               value: Taxonomy ontology
-        term_accession: "NCBITAXON_1"
         comments:
           - name: Category note
             value: Species identifier
@@ -353,7 +343,6 @@ studies:
             comments:
               - name: Source note
                 value: Factor ontology
-          term_accession: "EFO_0000470"
           comments:
             - name: Factor note
               value: Temperature treatment
@@ -375,7 +364,6 @@ studies:
                 comments:
                   - name: Source note
                     value: Taxonomy ontology
-              term_accession: "NCBITAXON_3702"
               comments:
                 - name: Category note
                   value: Plant species
@@ -404,7 +392,6 @@ studies:
                     comments:
                       - name: Source note
                         value: Taxonomy ontology
-                  term_accession: "NCBITAXON_3702"
                   comments:
                     - name: Category note
                       value: Plant species
@@ -426,7 +413,6 @@ studies:
                 comments:
                   - name: Source note
                     value: Treatment ontology
-              term_accession: "EFO_0000727"
               comments:
                 - name: Category note
                   value: Treatment condition
@@ -448,7 +434,6 @@ studies:
                   comments:
                     - name: Source note
                       value: Factor ontology
-                term_accession: "EFO_0000470"
                 comments:
                   - name: Factor note
                     value: Env factor
@@ -496,7 +481,6 @@ studies:
                         comments:
                           - name: Source note
                             value: Taxonomy ontology
-                      term_accession: "NCBITAXON_3702"
                       comments:
                         - name: Category note
                           value: Plant species
@@ -518,7 +502,6 @@ studies:
                     comments:
                       - name: Source note
                         value: Treatment ontology
-                  term_accession: "EFO_0000727"
                   comments:
                     - name: Category note
                       value: Treatment
@@ -540,7 +523,6 @@ studies:
                       comments:
                         - name: Source note
                           value: Factor ontology
-                    term_accession: "EFO_0000470"
                     comments:
                       - name: Factor note
                         value: Env factor
@@ -579,7 +561,6 @@ studies:
                 comments:
                   - name: Source note
                     value: Extraction ontology
-              term_accession: "EFO_0002944"
               comments:
                 - name: Category note
                   value: Extraction technique
@@ -620,7 +601,6 @@ studies:
                   comments:
                     - name: Source note
                       value: Parameter ontology
-                term_accession: "EFO_0000721"
                 comments:
                   - name: Category note
                     value: Growth temperature
@@ -698,7 +678,6 @@ studies:
                     comments:
                       - name: Source note
                         value: Extraction ontology
-                  term_accession: "EFO_0002944"
                   comments:
                     - name: Category note
                       value: Extraction technique
@@ -725,7 +704,6 @@ studies:
                     comments:
                       - name: Source note
                         value: Label ontology
-                  term_accession: "EFO_0000563"
                   comments:
                     - name: Category note
                       value: Sample label
@@ -760,7 +738,6 @@ studies:
                             comments:
                               - name: Source note
                                 value: Taxonomy ontology
-                          term_accession: "NCBITAXON_3702"
                           comments:
                             - name: Category note
                               value: Plant species
@@ -782,7 +759,6 @@ studies:
                         comments:
                           - name: Source note
                             value: Treatment ontology
-                      term_accession: "EFO_0000727"
                       comments:
                         - name: Category note
                           value: Treatment
@@ -804,7 +780,6 @@ studies:
                           comments:
                             - name: Source note
                               value: Factor ontology
-                        term_accession: "EFO_0000470"
                         comments:
                           - name: Factor note
                             value: Env factor
@@ -846,7 +821,6 @@ studies:
               comments:
                 - name: Source note
                   value: Extraction ontology
-            term_accession: "EFO_0002944"
             comments:
               - name: Category note
                 value: Extraction technique

@@ -207,7 +207,6 @@ studies:
         # New in MIAPPE 1.2: Method reference
         method_reference: https://cropontology.org/term/CO_321:0000859
         scale: cm
-        scale_accession_number: UO:0000015
         scale_description: Centimeters, range 0-200
         time_scale: At BBCH 92 (grain hard)
 
@@ -226,7 +225,6 @@ studies:
         method_description: Plot combine harvest, cleaned and weighed
         method_reference: https://cropontology.org/term/CO_321:0000725
         scale: kg/ha
-        scale_accession_number: UO:0010053
         scale_description: Kilograms per hectare
         time_scale: At harvest maturity
 
@@ -245,7 +243,6 @@ studies:
         method_description: Counted 1000 seeds using automatic counter, weighed on precision balance
         method_reference: https://cropontology.org/term/CO_321:0000726
         scale: g
-        scale_accession_number: UO:0000021
         scale_description: Grams
 
       - unique_id: VAR-PROTEIN
@@ -263,7 +260,6 @@ studies:
         method_description: Near-infrared reflectance spectroscopy on whole grain
         method_reference: https://cropontology.org/term/CO_321:0000727
         scale: "%"
-        scale_accession_number: UO:0000187
         scale_description: Percentage dry matter basis
 
       - unique_id: VAR-CHLOROPHYLL
