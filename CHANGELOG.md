@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.33.0 (260812)
 
 ### Added
 - A value in an ontology-term field is checked against the ontologies its field
