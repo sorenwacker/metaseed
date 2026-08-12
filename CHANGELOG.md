@@ -80,6 +80,12 @@
   none and keeps it.
 
 ### Changed
+- Reading a document is its own module (`metaseed.facade.documents`) rather
+  than four methods on a facade that had grown to thirty-eight. It depends on
+  three questions — store this entity, what may nest in this type, does the
+  profile declare containment — stated as a protocol, so it can be exercised
+  without a profile, a spec loader or a store. `ProfileFacade.load_nested` and
+  `load_yaml` are unchanged for callers.
 - The example route asks the facade to load a document instead of walking it
   itself. Its private copy of that walk was what made the previous entry's bug
   possible: the application could load a nested dataset and a library consumer
