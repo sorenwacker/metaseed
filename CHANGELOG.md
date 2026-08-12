@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.32.0 (260812)
 
 ### Added
 - Exported spreadsheets carry the standard, not just its column names, after
