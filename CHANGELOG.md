@@ -14,7 +14,28 @@
   invalid, and a check that silently reports "fine" when it learned nothing is
   worse than none.
 
+- Vocabularies can be held locally, as JSON files kept apart from the
+  specifications that use them (`METASEED_VOCABULARIES`). A spec names an
+  ontology and says nothing about where its terms come from, so one vocabulary
+  serves many specs and is versioned on its own. Several files may declare the
+  same ontology and layer in filename order, which is how a project extends a
+  vocabulary someone else maintains without forking it; each term remembers
+  which file supplied it.
+
 ### Changed
+- OLS is now one term source among several rather than the only one. Term
+  lookup goes through a router (`metaseed.services.terms.get_term_source`)
+  holding whichever adapters are configured, asked in order, with the rule that
+  the first source claiming an ontology answers for it alone — otherwise a list
+  someone narrowed on purpose would be silently widened again by a public
+  service. `TermSource` is a Protocol, so an adapter for a service metaseed has
+  never heard of conforms by having the methods, without importing metaseed.
+
+  This reaches the interfaces, not just the library: the term picker in the UI
+  and the MCP search and lookup tools built OLS4 HTTP queries themselves, so a
+  vocabulary held locally could not appear in a dropdown no matter what was
+  configured. `tests/test_term_sources_are_adapters.py` fails when a module
+  reaches for OLS directly again.
 - The entity lookup asks the endpoint the page names (`data-lookup-url`),
   defaulting to the standalone application's `/api/lookup/`. An application
   embedding these tables serves its own — the hub's is scoped to a dataset —

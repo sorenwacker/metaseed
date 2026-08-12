@@ -28,8 +28,10 @@ def validate_ontology_term(term_id: str) -> tuple[bool, str | None]:
     reads the ontologies the field names, and distinguishes "wrong" from "could
     not be checked".
 
-    Uses the centralized OntologyService with caching and rate limiting.
-    Network failures are treated as valid (fail-open) to avoid blocking work.
+    Asks the configured term sources — local vocabularies first, then OLS —
+    rather than OLS alone. Anything that could not be established, a network
+    failure or an ontology no source carries, is treated as valid rather than
+    blocking work on an answer nobody could give.
 
     Args:
         term_id: Ontology term ID (e.g., "PATO:0000001", "GO:0008150").
@@ -37,10 +39,10 @@ def validate_ontology_term(term_id: str) -> tuple[bool, str | None]:
     Returns:
         Tuple of (is_valid, warning_message). Warning is None if valid.
     """
-    from metaseed.services.ontology import get_ontology_service
+    from metaseed.services.term_check import check_term
 
-    service = get_ontology_service()
-    return service.validate_term_sync(term_id)
+    verdict = check_term(term_id, None)
+    return (not verdict.is_problem, verdict.message if verdict.is_problem else None)
 
 
 class EntityHelper:

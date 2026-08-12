@@ -14,7 +14,7 @@ from metaseed.validators.cv import validate_cv_terms
 
 if TYPE_CHECKING:
     from metaseed.api.client import MetaseedClient
-    from metaseed.services.ontology import OntologyService
+    from metaseed.services.term_check import TermSource
     from metaseed.validators.base import ValidationError
 
 
@@ -58,7 +58,7 @@ def _cv_terms(
 def validate_cv(
     client: MetaseedClient,
     *,
-    service: OntologyService | None = None,
+    service: TermSource | None = None,
 ) -> list[ValidationError]:
     """Report ``metabolights`` CV-term accessions that do not resolve against OLS4.
 

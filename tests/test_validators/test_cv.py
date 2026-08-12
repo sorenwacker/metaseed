@@ -1,8 +1,11 @@
 """Tests for the shared CV-term compliance helper.
 
-Two tiers: the dev/CI tests below stub the ontology service (fast, hermetic, no
-OLS4 rate limits); the ``@pytest.mark.network`` test at the end resolves against
-live OLS4 and is meant to run before releases.
+Two tiers: the dev/CI tests below stub a term source (fast, hermetic, no OLS4
+rate limits); the ``@pytest.mark.network`` test at the end resolves against live
+OLS4 and is meant to run before releases.
+
+The stub implements the ``TermSource`` port rather than OLS's own API, which is
+the point of the port: this validator works against any adapter, and OLS is one.
 """
 
 from __future__ import annotations
@@ -13,27 +16,30 @@ from metaseed.validators.cv import validate_cv_terms
 
 
 class _FakeService:
-    """Stub ontology service: KNOWN accessions resolve, others 404.
+    """Stub term source: KNOWN accessions resolve, others do not exist.
 
-    Mirrors OntologyService.validate_term_sync's contract, including skipping
-    values that are not accession-shaped and failing open on outages.
+    Answers the two questions the port asks. During an outage it says it cannot
+    tell — neither that the term is there nor that it is missing — which is what
+    must keep an unreachable service from flagging a dataset.
     """
 
     KNOWN = {"MS:1000031", "CHEBI:17234"}
+    CARRIES = {"ms", "chebi"}
 
     def __init__(self, *, outage: bool = False) -> None:
         self.outage = outage
         self.calls: list[str] = []
 
-    def validate_term_sync(self, term_id: str) -> tuple[bool, str | None]:
+    def get_term_sync(self, term_id: str) -> object | None:
         self.calls.append(term_id)
         if self.outage:
-            return True, None  # fail-open
-        if ":" not in term_id and "_" not in term_id:
-            return True, None  # not accession-shaped
-        if term_id in self.KNOWN:
-            return True, None
-        return False, f"Ontology term '{term_id}' not found in OLS4"
+            raise ConnectionError("the ontology service is not answering")
+        return term_id if term_id in self.KNOWN else None
+
+    def has_ontology_sync(self, ontology_id: str) -> bool | None:
+        if self.outage:
+            return None
+        return ontology_id in self.CARRIES
 
 
 def test_unresolved_terms_are_reported():
@@ -53,11 +59,12 @@ def test_empty_and_none_accessions_are_skipped():
         [("a", None), ("b", ""), ("c", "MS:1000031")], service=svc
     )
     assert errors == []
-    assert svc.calls == ["MS:1000031"]  # None/empty never reach the service
+    assert svc.calls == ["MS:1000031"]  # None/empty never reach the source
 
 
 def test_free_text_is_not_flagged():
-    # The service skips non-accession-shaped values; free text must not error.
+    # A label is not an identifier and cannot be traced to an ontology without
+    # asking a different question; free text must not error.
     errors = validate_cv_terms([("a", "liver")], service=_FakeService())
     assert errors == []
 

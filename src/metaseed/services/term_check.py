@@ -19,6 +19,7 @@ check silently reported "fine" when it had learned nothing.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import TYPE_CHECKING, Protocol
@@ -65,11 +66,31 @@ class TermSource(Protocol):
     """The part of an ontology service this needs.
 
     A protocol rather than the service itself: the check is pure logic about
-    what an answer means, and testing it must not depend on EBI being up.
+    what an answer means, testing it must not depend on EBI being up, and a
+    source that is not OLS — AgroPortal carries the Crop Ontology that OLS does
+    not, and a consortium's own list is nowhere public — should be able to
+    answer without this module knowing anything about it. OLS is one adapter;
+    :mod:`metaseed.services.terms` holds the rest and the order they are asked
+    in.
     """
 
     def get_term_sync(self, term_id: str) -> object | None:
         """The term, or ``None`` when the ontology does not have it."""
+        ...
+
+    def has_ontology_sync(self, ontology_id: str) -> bool | None:
+        """Whether this source hosts the ontology; ``None`` if it cannot say."""
+        ...
+
+    def search_sync(
+        self, query: str, ontology: str | None = None, limit: int = 20
+    ) -> Sequence[object]:
+        """Terms matching ``query``, for a picker.
+
+        Optional: a source that can confirm a term is useful even if it cannot
+        be browsed, and :class:`~metaseed.services.terms.TermRouter` skips the
+        ones that do not offer this.
+        """
         ...
 
 
@@ -98,7 +119,8 @@ def check_term(
         value: The value as written in the dataset.
         ontologies: OLS ids the field allows, or ``None`` for any.
         source: Where to ask whether a term exists. ``None`` asks the
-            application's shared service.
+            application's router, which holds whichever adapters are
+            configured — local vocabularies, OLS, or both.
 
     Returns:
         A :class:`TermVerdict`. Anything that cannot be established — a value
@@ -134,9 +156,9 @@ def check_term(
         )
 
     if source is None:
-        from metaseed.services.ontology import get_ontology_service
+        from metaseed.services.terms import get_term_source
 
-        source = get_ontology_service()
+        source = get_term_source()
 
     try:
         term = source.get_term_sync(value)
@@ -149,6 +171,19 @@ def check_term(
         )
 
     if term is None:
+        # Before calling a value wrong, ask whether this source can see the
+        # ontology at all. OLS4 hosts `to` but not `co_321`, which MIAPPE names
+        # beside it, so every Crop Ontology term would be reported as missing
+        # from a vocabulary the service simply does not carry.
+        hosts = getattr(source, "has_ontology_sync", None)
+        available = hosts(prefix) if callable(hosts) else True
+        if available is not True:
+            return TermVerdict(
+                Outcome.NOT_CHECKED,
+                f"'{value}' could not be checked: the term service does not "
+                f"carry {prefix}.",
+                allowed,
+            )
         return TermVerdict(
             Outcome.NOT_FOUND, f"'{value}' is not a term in {prefix}.", allowed
         )

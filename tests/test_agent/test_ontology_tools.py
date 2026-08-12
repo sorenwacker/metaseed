@@ -1,4 +1,10 @@
-"""Tests for ontology lookup MCP tools."""
+"""Tests for the ontology lookup MCP tools.
+
+The search and suggestion tools ask whichever term sources are configured, so
+they are tested against the port. The detail and catalogue tools still speak to
+OLS for the parts only OLS has — obsolescence, annotations, the list of hosted
+ontologies — and are still tested at that boundary.
+"""
 
 import json
 from unittest.mock import patch
@@ -6,12 +12,49 @@ from unittest.mock import patch
 import pytest
 
 from metaseed.agent.mcp.server import create_server
+from metaseed.services.local_terms import LocalTerm, LocalVocabulary
+from metaseed.services.terms import TermRouter
 
 from .helpers import get_tool
 
 
+class _FakeSource:
+    """A term source holding two PATO terms, or failing outright."""
+
+    TERMS = {"PATO:0000015": "temperature", "PATO:0000146": "cold"}
+
+    def __init__(self, *, down: bool = False) -> None:
+        self.down = down
+
+    def has_ontology_sync(self, ontology_id: str) -> bool | None:
+        return None if self.down else ontology_id == "pato"
+
+    def get_term_sync(self, term_id: str):
+        if self.down:
+            raise ConnectionError("the source is not answering")
+        label = self.TERMS.get(term_id)
+        return LocalTerm(term_id, label) if label else None
+
+    def search_sync(self, query: str, ontology: str | None = None, limit: int = 20):
+        if self.down:
+            raise ConnectionError("the source is not answering")
+        return [
+            _PatoHit(term_id, label) for term_id, label in sorted(self.TERMS.items())
+        ][:limit]
+
+
+class _PatoHit:
+    """A result carrying the ontology, the way OLS's results do."""
+
+    def __init__(self, term_id: str, label: str) -> None:
+        self.term_id = term_id
+        self.label = label
+        self.ontology = "PATO"
+        self.description = None
+
+
 class TestOntologyTools:
-    """Tests for OLS4 ontology lookup tools."""
+    """Tests for the ontology lookup tools."""
 
     @pytest.fixture
     def server(self):
@@ -39,33 +82,17 @@ class TestOntologyTools:
         assert suggest_fn is not None
 
     def test_search_ontology_returns_results(self, server) -> None:
-        """Search ontology returns structured results."""
+        """Search returns structured results from whichever source answered.
+
+        Patched at the router, not at OLS's HTTP layer: the tool asks the
+        configured sources, and a test that mocked an OLS response would be
+        testing an adapter this tool no longer talks to.
+        """
         search_fn = get_tool(server, "search_ontology")
 
-        mock_response = {
-            "response": {
-                "numFound": 2,
-                "docs": [
-                    {
-                        "obo_id": "PATO:0000015",
-                        "label": "temperature",
-                        "ontology_prefix": "PATO",
-                        "iri": "http://purl.obolibrary.org/obo/PATO_0000015",
-                        "description": ["A quality of thermal energy"],
-                    },
-                    {
-                        "obo_id": "PATO:0000146",
-                        "label": "cold",
-                        "ontology_prefix": "PATO",
-                        "iri": "http://purl.obolibrary.org/obo/PATO_0000146",
-                    },
-                ],
-            }
-        }
-
         with patch(
-            "metaseed.agent.mcp.tools.ontology._make_request",
-            return_value=mock_response,
+            "metaseed.services.terms.get_term_source",
+            return_value=TermRouter([_FakeSource()]),
         ):
             result = search_fn(query="temperature", ontology="pato")
             data = json.loads(result)
@@ -78,17 +105,39 @@ class TestOntologyTools:
             assert data["results"][0]["label"] == "temperature"
             assert data["results"][0]["ontology"] == "PATO"
 
-    def test_search_ontology_handles_error(self, server) -> None:
-        """Search ontology handles API errors."""
+    def test_search_ontology_reports_a_source_that_could_not_answer(
+        self, server
+    ) -> None:
+        """A source that fails yields no results rather than an exception."""
         search_fn = get_tool(server, "search_ontology")
 
         with patch(
-            "metaseed.agent.mcp.tools.ontology._make_request", return_value=None
+            "metaseed.services.terms.get_term_source",
+            return_value=TermRouter([_FakeSource(down=True)]),
         ):
             result = search_fn(query="test")
             data = json.loads(result)
 
-            assert "error" in data
+            assert data["results"] == []
+            assert data["total_found"] == 0
+
+    def test_a_local_vocabulary_is_searchable_through_the_tool(self, server) -> None:
+        """The reason the tool routes: OLS cannot offer a project's own terms."""
+        search_fn = get_tool(server, "search_ontology")
+        local = LocalVocabulary(
+            ontology_id="co_321",
+            terms={"CO_321:0000123": "plant height"},
+            source="co_321.json",
+        )
+
+        with patch(
+            "metaseed.services.terms.get_term_source",
+            return_value=TermRouter([local]),
+        ):
+            data = json.loads(search_fn(query="plant"))
+
+            assert data["results"][0]["id"] == "CO_321:0000123"
+            assert data["results"][0]["source"] == "co_321.json"
 
     def test_get_ontology_term_curie_format(self, server) -> None:
         """Get ontology term accepts CURIE format."""
@@ -215,29 +264,12 @@ class TestOntologyTools:
             assert "error" in data
 
     def test_suggest_ontology_term_returns_suggestions(self, server) -> None:
-        """Suggest ontology term returns suggestions."""
+        """Suggestions come from the configured sources."""
         suggest_fn = get_tool(server, "suggest_ontology_term")
 
-        mock_response = {
-            "response": {
-                "docs": [
-                    {
-                        "obo_id": "PATO:0000015",
-                        "label": "temperature",
-                        "ontology_prefix": "PATO",
-                    },
-                    {
-                        "obo_id": "PATO:0000016",
-                        "label": "temperature tolerance",
-                        "ontology_prefix": "PATO",
-                    },
-                ]
-            }
-        }
-
         with patch(
-            "metaseed.agent.mcp.tools.ontology._make_request",
-            return_value=mock_response,
+            "metaseed.services.terms.get_term_source",
+            return_value=TermRouter([_FakeSource()]),
         ):
             result = suggest_fn(query="temp", ontology="pato")
             data = json.loads(result)
@@ -321,20 +353,28 @@ class TestOntologyTools:
         assert result["suggestions"] == []
 
     def test_search_limits_rows(self, server) -> None:
-        """Search ontology limits rows to max 100."""
+        """A caller asking for 200 results gets the cap, not 200 requests."""
         search_fn = get_tool(server, "search_ontology")
+        recorded: list[int] = []
+
+        class _RecordsLimit:
+            def has_ontology_sync(self, ontology_id: str) -> bool | None:
+                return None
+
+            def get_term_sync(self, term_id: str):
+                return None
+
+            def search_sync(self, query, ontology=None, limit=20):
+                recorded.append(limit)
+                return []
 
         with patch(
-            "metaseed.agent.mcp.tools.ontology._make_request",
-            return_value={"response": {"numFound": 0, "docs": []}},
-        ) as mock:
+            "metaseed.services.terms.get_term_source",
+            return_value=TermRouter([_RecordsLimit()]),
+        ):
             search_fn(query="test", rows=200)
 
-            # Check that rows was capped at 100
-            call_args = mock.call_args
-            # Args format: call('/search', {'q': ..., 'rows': 100, ...})
-            params = call_args[0][1]  # Second positional argument
-            assert params["rows"] == 100
+        assert recorded == [100]
 
 
 class TestOntologyToolsIntegration:

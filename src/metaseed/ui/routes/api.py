@@ -566,7 +566,11 @@ def register_api_routes(  # noqa: C901
             description="Ontology ID(s) to filter, comma-separated (e.g., 'po,pato')",
         ),
     ) -> JSONResponse:
-        """Search OLS4 for ontology terms.
+        """Search the configured term sources for matching terms.
+
+        Local vocabularies are asked before OLS, so a term that exists only in
+        a project's own list is offered in the picker rather than being
+        unfindable — which was the case while this route spoke to OLS4 alone.
 
         Args:
             q: Search query to find matching ontology terms.
@@ -574,54 +578,13 @@ def register_api_routes(  # noqa: C901
                 Supports comma-separated values (e.g., "po,pato").
 
         Returns:
-            JSON with results list containing value, label, description, and ontology.
+            JSON with results list containing value, label, description,
+            ontology and the source that answered.
         """
-        from metaseed.agent.mcp.tools.ontology import _make_request
+        from metaseed.services.terms import get_term_source
 
         if not q.strip():
             return JSONResponse(content={"results": []})
 
-        params = {
-            "q": q,
-            "rows": 20,
-            "fieldList": "iri,label,short_form,obo_id,ontology_name,ontology_prefix,description",
-        }
-
-        if ontology:
-            # OLS4 supports comma-separated ontology IDs
-            params["ontology"] = ontology.lower()
-
-        data = _make_request("/search", params)
-        if data is None:
-            return JSONResponse(
-                status_code=502,
-                content={"error": "Failed to search OLS4"},
-            )
-
-        response = data.get("response", {})
-        docs = response.get("docs", [])
-
-        results = []
-        seen = set()
-        for doc in docs:
-            term_id = doc.get("obo_id") or doc.get("short_form")
-            if not term_id or term_id in seen:
-                continue
-            seen.add(term_id)
-
-            result = {
-                "value": term_id,
-                "label": doc.get("label", term_id),
-                "ontology": doc.get("ontology_prefix") or doc.get("ontology_name"),
-            }
-
-            if doc.get("description"):
-                descriptions = doc["description"]
-                if isinstance(descriptions, list) and descriptions:
-                    result["description"] = descriptions[0]
-                elif isinstance(descriptions, str):
-                    result["description"] = descriptions
-
-            results.append(result)
-
-        return JSONResponse(content={"results": results})
+        hits = await get_term_source().search(q, ontology, 20)
+        return JSONResponse(content={"results": [hit.to_dict() for hit in hits]})

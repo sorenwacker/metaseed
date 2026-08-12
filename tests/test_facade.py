@@ -16,6 +16,7 @@ from metaseed.services.ontology import (
     get_ontology_service,
     reset_ontology_service,
 )
+from metaseed.services.terms import reset_term_sources
 from metaseed.specs.loader import SpecLoader
 from metaseed.specs.schema import (
     EntityDefSpec,
@@ -635,12 +636,14 @@ class TestOntologyValidation:
     """Tests for ontology term validation using OntologyService."""
 
     def setup_method(self) -> None:
-        """Reset ontology service before each test."""
+        """Reset the ontology service and the router that holds it."""
         reset_ontology_service()
+        reset_term_sources()
 
     def teardown_method(self) -> None:
         """Clean up after each test."""
         reset_ontology_service()
+        reset_term_sources()
 
     def test_ontology_service_singleton(self) -> None:
         """get_ontology_service returns the same instance."""
@@ -751,12 +754,19 @@ class TestOntologyValidation:
         model = create_model_from_spec(spec)
         helper = EntityHelper("TestEntity", spec, model, "test", "1.0")
 
-        # Pre-populate service cache with invalid term (None = not found)
+        # Pre-populate the service cache: the ontology is hosted, and this
+        # term is not in it. Both halves are needed — a term missing from an
+        # ontology nothing carries is reported as not checked, not as wrong.
         service = get_ontology_service()
         service._cache["term:INVALID:9999"] = CacheEntry(
             value=None,
             expires_at=time.time() + 3600,
         )
+        service._cache["ontology:invalid"] = CacheEntry(
+            value=True,
+            expires_at=time.time() + 3600,
+        )
+        reset_term_sources()
 
         warnings = helper.validate_ontology_terms(
             {"identifier": "TEST-001", "organism": "INVALID:9999"}, warn=False

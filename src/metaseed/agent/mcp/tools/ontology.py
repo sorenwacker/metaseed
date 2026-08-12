@@ -76,61 +76,45 @@ def register_ontology_tools(  # noqa: C901
 
     @mcp.tool()
     def search_ontology(query: str, ontology: str | None = None, rows: int = 10) -> str:
-        """Search OLS4 for ontology terms matching a query.
+        """Search the configured ontology sources for terms matching a query.
 
-        Searches across term labels, synonyms, and descriptions.
-        Use this to find ontology terms when you know what concept
-        you're looking for but not the exact term ID.
+        Searches across term labels and, where the source offers it, synonyms
+        and descriptions. Use this to find ontology terms when you know what
+        concept you are looking for but not the exact term ID.
+
+        OLS4 is one source. Vocabularies configured locally are searched first,
+        so a project's own terms are findable here too.
 
         Args:
             query: Search query (e.g., "drought", "plant growth").
             ontology: Optional ontology ID to restrict search (e.g., "pato", "go", "obi").
-                If not provided, searches across all ontologies.
+                If not provided, searches across all configured sources.
             rows: Maximum number of results to return (default: 10, max: 100).
 
         Returns:
-            JSON with search results including term IDs, labels, and ontology info.
+            JSON with search results including term IDs, labels, and which
+            source answered.
         """
+        from metaseed.services.terms import get_term_source
+
         rows = min(max(1, rows), 100)
-
-        params = {
-            "q": query,
-            "rows": rows,
-            "fieldList": "iri,label,short_form,obo_id,ontology_name,ontology_prefix,description",
-        }
-
-        if ontology:
-            params["ontology"] = ontology.lower()
-
-        data = _make_request("/search", params)
-        if data is None:
-            return json.dumps({"error": "Failed to search OLS4"})
-
-        response = data.get("response", {})
-        docs = response.get("docs", [])
-
-        results = []
-        for doc in docs:
-            result = {
-                "id": doc.get("obo_id") or doc.get("short_form"),
-                "label": doc.get("label"),
-                "ontology": doc.get("ontology_prefix") or doc.get("ontology_name"),
-                "iri": doc.get("iri"),
-            }
-            if doc.get("description"):
-                descriptions = doc["description"]
-                if isinstance(descriptions, list) and descriptions:
-                    result["description"] = descriptions[0]
-                elif isinstance(descriptions, str):
-                    result["description"] = descriptions
-            results.append(result)
+        hits = get_term_source().search_sync(query, ontology, rows)
 
         return json.dumps(
             {
                 "query": query,
                 "ontology": ontology,
-                "total_found": response.get("numFound", 0),
-                "results": results,
+                "total_found": len(hits),
+                "results": [
+                    {
+                        "id": hit.id,
+                        "label": hit.label,
+                        "ontology": hit.ontology,
+                        "description": hit.description,
+                        "source": hit.source,
+                    }
+                    for hit in hits
+                ],
             },
             indent=2,
         )
@@ -149,6 +133,24 @@ def register_ontology_tools(  # noqa: C901
         Returns:
             JSON with term details including label, description, and synonyms.
         """
+        from metaseed.services.ontology import OntologyTerm
+        from metaseed.services.terms import get_term_source
+
+        # Ask the configured sources first. A term held in a local vocabulary
+        # is answered from there; only OLS terms continue to the detail request
+        # below, which asks for the parts — obsolescence, annotations — that
+        # only OLS has.
+        found = get_term_source().get_term_sync(term_id)
+        if found is not None and not isinstance(found, OntologyTerm):
+            return json.dumps(
+                {
+                    "id": getattr(found, "id", term_id),
+                    "label": getattr(found, "label", ""),
+                    "source": type(found).__name__,
+                },
+                indent=2,
+            )
+
         # Determine if it's a CURIE or IRI
         if term_id.startswith("http://") or term_id.startswith("https://"):
             iri = term_id
@@ -257,7 +259,8 @@ def register_ontology_tools(  # noqa: C901
         """Get autocomplete suggestions for ontology terms.
 
         Provides fast suggestions as you type, useful for building
-        autocomplete functionality or quickly finding term matches.
+        autocomplete functionality or quickly finding term matches. Asks the
+        configured sources, so a project's own vocabulary is suggested too.
 
         Args:
             query: Partial term to get suggestions for (e.g., "drou" for drought).
@@ -266,34 +269,23 @@ def register_ontology_tools(  # noqa: C901
         Returns:
             JSON with suggested terms including IDs and labels.
         """
-        params = {
-            "q": query,
-        }
+        from metaseed.services.terms import get_term_source
 
-        if ontology:
-            params["ontology"] = ontology.lower()
-
-        data = _make_request("/select", params)
-        if data is None:
-            return json.dumps({"error": "Failed to get suggestions"})
-
-        response = data.get("response", {})
-        docs = response.get("docs", [])
-
-        suggestions = []
-        for doc in docs:
-            suggestion = {
-                "id": doc.get("obo_id") or doc.get("short_form"),
-                "label": doc.get("label"),
-                "ontology": doc.get("ontology_prefix") or doc.get("ontology_name"),
-            }
-            suggestions.append(suggestion)
+        hits = get_term_source().search_sync(query, ontology, 10)
 
         return json.dumps(
             {
                 "query": query,
                 "ontology": ontology,
-                "suggestions": suggestions,
+                "suggestions": [
+                    {
+                        "id": hit.id,
+                        "label": hit.label,
+                        "ontology": hit.ontology,
+                        "source": hit.source,
+                    }
+                    for hit in hits
+                ],
             },
             indent=2,
         )
