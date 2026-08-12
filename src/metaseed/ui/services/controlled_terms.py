@@ -293,18 +293,14 @@ def flag_invalid_cells(
             continue
 
         fields = fields_by_entity.get(entity, {})
-        identifier = getattr(helper, "identifier_field", None)
+        keys = key_columns(facade, entity, fields)
 
         for column in columns:
             letter = get_column_letter(columns.index(column) + 1)
             cells = f"{letter}2:{letter}{VALIDATED_ROWS}"
             field = fields.get(column)
 
-            unique = column == identifier or bool(
-                getattr(field, "unique_within", None)
-                or getattr(field, "is_identifier", False)
-            )
-            if unique:
+            if column in keys:
                 ws.conditional_formatting.add(
                     cells,
                     FormulaRule(
@@ -343,6 +339,37 @@ def flag_invalid_cells(
                         fill=MISSING_FILL,
                     ),
                 )
+
+
+def key_columns(facade: Any, entity: str, fields: dict[str, Any]) -> set[str]:
+    """Columns of ``entity`` that genuinely have to be unique.
+
+    Three things can make a column a key, and the facade's ``identifier_field``
+    is not one of them on its own: it falls back to the first field when a
+    profile declares nothing, which is how ``File.filename`` and attribute-style
+    ``tag`` columns came to be treated as identifiers and flagged on every row
+    that legitimately repeated.
+
+    A column is a key when the specification says so — ``unique_within`` or the
+    identifier marker — or when something points at it, because a reference
+    that resolves to two rows resolves to neither.
+    """
+    keys = {
+        name
+        for name, field in fields.items()
+        if getattr(field, "unique_within", None)
+        or getattr(field, "is_identifier", False)
+    }
+
+    for other in getattr(facade, "entities", []) or []:
+        helper = getattr(facade, other, None)
+        for target_entity, target_field in (
+            getattr(helper, "reference_fields", {}) or {}
+        ).values():
+            if target_entity == entity:
+                keys.add(target_field)
+
+    return keys
 
 
 def apply_uniqueness_validations(

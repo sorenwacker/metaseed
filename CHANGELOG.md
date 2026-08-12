@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.32.1 (260812)
+
+### Fixed
+- An entity was exported twice: once as its own row, once as the dict still
+  embedded in its parent's data. Every child appeared in the sheet twice, and
+  the copy carried no parent, since only a stored row knows what it hangs from.
+  The ENA example exported 12 samples where it has 6, 27 files where it has 15,
+  and an analysis that appeared to belong to nothing. A copy is recognised by
+  being contained in a stored row under the same parent — not by identifier,
+  because entities repeat one legitimately and deduplicating on that deletes
+  real rows (16 sample attributes, in the attempt before this one).
+- The uniqueness rule treated an entity's first field as its identifier, which
+  is what the facade falls back to when a profile declares no key. ENA's
+  `File.filename` and every attribute `tag` column were flagged on every row
+  that repeated by design. A column counts as a key when the specification says
+  so, or when another entity references it.
+
 ## v0.32.0 (260812)
 
 ### Added
