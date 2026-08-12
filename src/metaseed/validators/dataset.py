@@ -15,6 +15,7 @@ from typing import Any, NamedTuple, Self, cast
 import yaml
 
 from metaseed.profiles import ProfileFactory
+from metaseed.services.term_check import check_entity_terms
 from metaseed.specs.loader import SpecLoader, SpecLoadError
 from metaseed.utils import to_snake_case
 from metaseed.validators.api import _pydantic_constraint_errors
@@ -460,6 +461,25 @@ class DatasetValidator:
                 errors.append(
                     ValidationError(
                         field=field_path, message=error.message, rule=error.rule
+                    )
+                )
+
+            # A value in an ontology-term field, checked against the ontologies
+            # its field names (#215). Reported here because this is the path the
+            # application validates through: a check reachable only from the
+            # library is one no researcher ever sees.
+            for field_name, verdict in check_entity_terms(spec.fields, d).items():
+                if not verdict.is_problem or not verdict.message:
+                    # NOT_CHECKED is not a fault in the data. An outage, or an
+                    # ontology no configured source carries, must not fill a
+                    # dataset with errors it cannot justify.
+                    continue
+                field_path = f"{p}.{field_name}" if p else field_name
+                errors.append(
+                    ValidationError(
+                        field=field_path,
+                        message=verdict.message,
+                        rule="ontology_term",
                     )
                 )
 

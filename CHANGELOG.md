@@ -23,6 +23,20 @@
   which file supplied it.
 
 ### Fixed
+- The ontology-term check runs where a researcher can see it. It existed, and
+  was reachable from the library API, the MCP tools and the CV validators, but
+  not from `DatasetValidator` — which is what the application validates
+  through — so nobody editing a dataset was ever told that a value came from
+  the wrong ontology (#215). Reported as rule `ontology_term`; a value that
+  could not be checked is still not reported.
+
+  Measured against every shipped example: only miappe/1.1 changes, where it
+  surfaces 11 pre-existing contradictions between the profile and the example —
+  `scale_accession_number` declares `uo` while the example carries CO_321 scale
+  terms, and `event_accession_number` declares `co_715` while the example
+  carries AGRO terms. Both are real inconsistencies in shipped content, not
+  false positives, and neither the profile nor the example has been changed to
+  hide them.
 - A dataset written as a nested document loads through the client API. Every
   shipped example returned **0** entities from `load_yaml` — silently — because
   the loader read only the store's own serialization, where each entity carries

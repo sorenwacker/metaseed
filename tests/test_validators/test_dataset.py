@@ -410,3 +410,73 @@ studies:
 
         uniq_errors = [e for e in result.errors if e.rule == "uniqueness"]
         assert uniq_errors == []
+
+
+class TestAnOntologyTermIsCheckedWhereTheUserCanSeeIt:
+    """The check from #215 must run on the path the application validates.
+
+    ``check_term`` existed, and was reachable from the library API, the MCP
+    tools and the CV validators — but not from ``DatasetValidator``, which is
+    what the web application validates through. A researcher editing a dataset
+    therefore never saw that a value came from the wrong ontology, which is the
+    whole of what #215 asked for.
+
+    Hermetic: a value whose prefix names a different ontology than the field
+    declares is wrong on the face of it, and is reported without asking any
+    service.
+    """
+
+    def _dataset(self, tmp_path, accession: str):
+        import yaml
+
+        path = tmp_path / "dataset.yaml"
+        path.write_text(
+            yaml.safe_dump(
+                {
+                    "unique_id": "INV-1",
+                    "title": "T",
+                    "studies": [
+                        {
+                            "unique_id": "STU-1",
+                            "investigation_id": "INV-1",
+                            "title": "S",
+                            "observed_variables": [
+                                {
+                                    "unique_id": "VAR-1",
+                                    "study_id": "STU-1",
+                                    "name": "plant height",
+                                    "scale_accession_number": accession,
+                                }
+                            ],
+                        }
+                    ],
+                }
+            )
+        )
+        return path
+
+    def test_a_term_from_the_wrong_ontology_is_reported(self, tmp_path) -> None:
+        validator = DatasetValidator("miappe", "1.1")
+
+        # scale_accession_number declares `ontologies: [uo]`.
+        result = validator.validate_file(self._dataset(tmp_path, "PATO:0000001"))
+
+        assert [e for e in result.errors if e.rule == "ontology_term"], (
+            "a phenotype term passed a field that takes a unit"
+        )
+
+    def test_a_term_from_the_declared_ontology_is_not_reported(self, tmp_path) -> None:
+        validator = DatasetValidator("miappe", "1.1")
+
+        result = validator.validate_file(self._dataset(tmp_path, "UO:0000015"))
+
+        assert not [e for e in result.errors if e.rule == "ontology_term"]
+
+    def test_a_label_is_not_called_wrong(self, tmp_path) -> None:
+        """A label cannot be traced to an ontology without asking a different
+        question, and flagging one would flag most free text people write."""
+        validator = DatasetValidator("miappe", "1.1")
+
+        result = validator.validate_file(self._dataset(tmp_path, "centimetre"))
+
+        assert not [e for e in result.errors if e.rule == "ontology_term"]
