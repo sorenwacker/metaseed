@@ -48,7 +48,15 @@
 - A load that drops every entity now says so. Returning zero quietly is how a
   whole dataset went missing unnoticed; the warning names the method that does
   work.
-- A range of quantities is checked as quantities. Any `A >= B` condition became
+- A range of quantities is checked as quantities, however the rule is written.
+  Routing by operand type first reached only the path that *infers* a rule's
+  type; the same parsing existed a second time for rules declaring
+  `type: date_range`, so writing that one line of YAML over two numeric fields
+  still produced "not a valid date". Both paths now share one parser and one
+  builder. Where a declared type contradicts its operands the data wins — a
+  numeric field cannot hold a date — and the contradiction is logged rather
+  than quietly reinterpreted. No shipped profile declares the type explicitly,
+  so no shipped rule changes. Any `A >= B` condition became
   a date-range rule whatever it compared, so Darwin Core's
   `maximumDepthInMeters >= minimumDepthInMeters` reported two floats as "not a
   valid date" and those two fields could never both be populated (#246).

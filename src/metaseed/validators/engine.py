@@ -6,6 +6,7 @@ This module provides the validation engine that coordinates rule execution.
 import re
 from typing import Any, Self
 
+from metaseed.logging import get_logger
 from metaseed.specs.loader import SpecLoader, SpecLoadError
 from metaseed.specs.schema import (
     FieldSpec,
@@ -24,6 +25,8 @@ from metaseed.validators.rules import (
     RequiredFieldsRule,
     UniqueIdPatternRule,
 )
+
+logger = get_logger(__name__)
 
 # Field types whose rule-level ``pattern`` the model factory cannot enforce via a
 # Pydantic pattern (uri -> AnyUrl; ontology_term). For these the engine adds a
@@ -160,11 +163,14 @@ _VALID_RULE_TYPES = frozenset(
 
 def _create_rule_by_type(
     rule_spec: ValidationRuleSpec,
+    field_types: dict[str, FieldType] | None = None,
 ) -> ValidationRule | None:
     """Create a rule based on explicit type field.
 
     Args:
         rule_spec: The rule specification.
+        field_types: Declared field types for the entity, so a comparison is
+            routed by what it compares.
 
     Returns:
         A ValidationRule instance, or None for a declared type that this engine
@@ -182,30 +188,24 @@ def _create_rule_by_type(
         )
 
     if rule_type == "date_range":
-        # Use explicit fields if provided, else parse from condition
+        # Named fields if the rule gives them, else the condition's operands.
         start_field = rule_spec.start_field
         end_field = rule_spec.end_field
         if not start_field or not end_field:
-            # Try to parse from condition
-            if rule_spec.condition and (
-                ">=" in rule_spec.condition or "<=" in rule_spec.condition
-            ):
-                parts = (
-                    rule_spec.condition.replace(">=", " ").replace("<=", " ").split()
-                )
-                if len(parts) == 2:
-                    if ">=" in rule_spec.condition:
-                        start_field = parts[1]
-                        end_field = parts[0]
-                    else:
-                        start_field = parts[0]
-                        end_field = parts[1]
+            operands = _parse_comparison(rule_spec.condition)
+            if operands:
+                start_field, end_field = operands
         if not start_field or not end_field:
             return None
-        return DateRangeRule(
-            start_field=start_field,
-            end_field=end_field,
-            message=rule_spec.message,
+        # Routed by what it compares, exactly as an inferred rule is: declaring
+        # the type must not be a way back to the bug the other path lost.
+        return _range_rule(
+            start_field,
+            end_field,
+            rule_spec.message,
+            field_types,
+            declared_type="date_range",
+            rule_name=rule_spec.name,
         )
 
     if rule_type == "coordinate_pair":
@@ -236,6 +236,67 @@ def _create_rule_by_type(
     # references), which reads the rule spec directly. Building an engine rule
     # here would produce one that can never fire.
     return None
+
+
+def _parse_comparison(condition: str | None) -> tuple[str, str] | None:
+    """The two operands of a ``>=``/``<=`` condition, lower bound first.
+
+    ``end_date >= start_date`` reads "end is at or after start", so the operand
+    on the right is the lower bound. Written once: this parsing existed twice,
+    and the copies drifted the moment one of them learned to route by type.
+    """
+    if not condition:
+        return None
+    if ">=" not in condition and "<=" not in condition:
+        return None
+    parts = condition.replace(">=", " ").replace("<=", " ").split()
+    if len(parts) != 2:
+        return None
+    return (parts[1], parts[0]) if ">=" in condition else (parts[0], parts[1])
+
+
+def _range_rule(
+    lower: str,
+    upper: str,
+    message: str | None,
+    field_types: dict[str, FieldType] | None,
+    *,
+    declared_type: str | None = None,
+    rule_name: str = "",
+) -> ValidationRule:
+    """A range rule of the kind its operands call for.
+
+    Args:
+        lower: Field holding the lower bound.
+        upper: Field holding the upper bound.
+        message: The rule's own message, if it has one.
+        field_types: Declared types for the entity, or ``None`` when the caller
+            does not know them — in which case the dates reading stands, as it
+            did for every rule before this.
+        declared_type: What the rule said it was, when it said anything. Used
+            only to report a contradiction.
+        rule_name: For that report.
+
+    Returns:
+        A :class:`NumericRangeRule` when both operands are declared numbers,
+        otherwise a :class:`DateRangeRule`.
+    """
+    if not _compares_numbers(lower, upper, field_types):
+        return DateRangeRule(start_field=lower, end_field=upper, message=message)
+
+    if declared_type == "date_range":
+        # The data decides: a float field cannot hold a date, so the rule as
+        # declared could never pass. Said out loud rather than quietly
+        # reinterpreted, because the profile is wrong and its author should
+        # learn that from something other than absent errors.
+        logger.warning(
+            "Validation rule '%s' declares type 'date_range' but compares "
+            "numeric fields %s and %s; checking it as a numeric range.",
+            rule_name,
+            lower,
+            upper,
+        )
+    return NumericRangeRule(lower_field=lower, upper_field=upper, message=message)
 
 
 def _compares_numbers(
@@ -325,24 +386,9 @@ def _infer_rule_type(
         # declares `maximumDepthInMeters >= minimumDepthInMeters`; read as a
         # date range it reported two floats as "not a valid date" and made both
         # fields unfillable (#246).
-        if ">=" in rule_spec.condition or "<=" in rule_spec.condition:
-            parts = rule_spec.condition.replace(">=", " ").replace("<=", " ").split()
-            if len(parts) == 2:
-                if ">=" in rule_spec.condition:
-                    lower, upper = parts[1], parts[0]
-                else:
-                    lower, upper = parts[0], parts[1]
-                if _compares_numbers(lower, upper, field_types):
-                    return NumericRangeRule(
-                        lower_field=lower,
-                        upper_field=upper,
-                        message=rule_spec.message,
-                    )
-                return DateRangeRule(
-                    start_field=lower,
-                    end_field=upper,
-                    message=rule_spec.message,
-                )
+        operands = _parse_comparison(rule_spec.condition)
+        if operands:
+            return _range_rule(*operands, rule_spec.message, field_types)
 
         # General conditional rule
         return ConditionalRule(
@@ -391,7 +437,7 @@ def _create_rule_from_spec(
                 f"Validation rule '{rule_spec.name}' has unknown type "
                 f"'{rule_spec.type}'. Valid types are: {valid}."
             )
-        return _create_rule_by_type(rule_spec)
+        return _create_rule_by_type(rule_spec, field_types)
 
     # Legacy: infer from fields (backward compatibility)
     return _infer_rule_type(rule_spec, field_types)

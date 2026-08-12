@@ -4,7 +4,7 @@ import datetime
 
 import pytest
 
-from metaseed.specs.schema import ValidationRuleSpec
+from metaseed.specs.schema import FieldType, ValidationRuleSpec
 from metaseed.validators import validate
 from metaseed.validators.engine import (
     ValidationEngine,
@@ -16,6 +16,7 @@ from metaseed.validators.rules import (
     CoordinatePairRule,
     DateRangeRule,
     ListCardinalityRule,
+    NumericRangeRule,
     RequiredFieldsRule,
 )
 
@@ -553,3 +554,91 @@ class TestARangeIsComparedByItsOperands:
         assert any(r.name == "date_range" for r in engine.rules), (
             "date ranges must keep being checked as dates"
         )
+
+
+class TestAnExplicitTypeIsRoutedByItsOperandsToo:
+    """The declared-type path must not keep the bug the inferred path lost.
+
+    Routing by operand type was added where the rule type is inferred, and the
+    same parsing exists a second time for rules that state ``type: date_range``.
+    A profile declaring that type over two numeric fields therefore still got
+    the date validator and still reported "not a valid date" — the identical
+    failure #246 reported, reachable by writing one extra line of YAML.
+
+    A declared type says what the author meant; the operand types say what the
+    data is. Where they contradict, the data wins and the contradiction is
+    logged, because a numeric field cannot hold a date and the rule as declared
+    could never pass.
+    """
+
+    def _numeric(self) -> dict[str, FieldType]:
+        return {
+            "minimumDepthInMeters": FieldType.FLOAT,
+            "maximumDepthInMeters": FieldType.FLOAT,
+        }
+
+    def test_a_declared_date_range_over_numbers_checks_numbers(self) -> None:
+        spec = ValidationRuleSpec(
+            name="depth_range",
+            type="date_range",
+            condition="maximumDepthInMeters >= minimumDepthInMeters",
+        )
+
+        rule = _create_rule_from_spec(spec, self._numeric())
+
+        assert isinstance(rule, NumericRangeRule)
+        assert (
+            rule.validate({"minimumDepthInMeters": 1.0, "maximumDepthInMeters": 5.0})
+            == []
+        )
+
+    def test_explicit_start_and_end_fields_are_routed_the_same_way(self) -> None:
+        """Naming the fields rather than writing a condition changes nothing."""
+        spec = ValidationRuleSpec(
+            name="depth_range",
+            type="date_range",
+            start_field="minimumDepthInMeters",
+            end_field="maximumDepthInMeters",
+        )
+
+        rule = _create_rule_from_spec(spec, self._numeric())
+
+        assert isinstance(rule, NumericRangeRule)
+
+    def test_the_contradiction_is_logged(self, caplog) -> None:
+        spec = ValidationRuleSpec(
+            name="depth_range",
+            type="date_range",
+            condition="maximumDepthInMeters >= minimumDepthInMeters",
+        )
+
+        with caplog.at_level("WARNING"):
+            _create_rule_from_spec(spec, self._numeric())
+
+        assert "depth_range" in caplog.text
+        assert "date_range" in caplog.text
+
+    def test_a_real_date_range_is_untouched(self) -> None:
+        spec = ValidationRuleSpec(
+            name="study_dates",
+            type="date_range",
+            condition="end_date >= start_date",
+        )
+
+        rule = _create_rule_from_spec(
+            spec, {"start_date": FieldType.DATE, "end_date": FieldType.DATE}
+        )
+
+        assert isinstance(rule, DateRangeRule)
+        assert rule.start_field == "start_date"
+        assert rule.end_field == "end_date"
+
+    def test_unknown_operand_types_keep_the_declared_reading(self) -> None:
+        """Without field types nothing is known, and a declaration stands."""
+        spec = ValidationRuleSpec(
+            name="study_dates",
+            type="date_range",
+            condition="end_date >= start_date",
+        )
+
+        assert isinstance(_create_rule_from_spec(spec), DateRangeRule)
