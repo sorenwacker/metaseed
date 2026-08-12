@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+### Added
+- Exported spreadsheets carry the standard, not just its column names, after
+  RightField (Wolstencroft et al., 2011): a column with a declared vocabulary
+  becomes a dropdown, a column that names another sheet picks from the rows
+  that exist, and an identifier column objects when it repeats. The terms and
+  where they came from travel in a hidden sheet, so nothing semantic is lost to
+  a label.
+
+  An ontology is documented, never embedded — NCBI Taxonomy cannot go in a
+  spreadsheet and a dropdown of thousands is worse than typing — so those
+  columns stay free text and are checked on import instead.
+
+  The rules warn rather than block: a vocabulary is rarely complete, and
+  someone who knows their value is right should not be locked out of their own
+  spreadsheet. Whatever they accept stays coloured by conditional formatting,
+  which also catches pasted values — validation dialogs never fire on a paste.
+
+- Exported sheets are readable by the person filling them in: real Excel tables
+  (so a row typed underneath inherits the banding and the dropdowns), the
+  heading row and identifier column frozen, each heading carrying its
+  description from the specification as a comment, columns sized to their
+  content, and wrapped text.
+
 ### Fixed
 - Timestamps written by the library were the machine's local time with no
   offset: a dataset's `modified` field, the same field in the file and
