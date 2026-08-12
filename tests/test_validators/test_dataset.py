@@ -480,3 +480,49 @@ class TestAnOntologyTermIsCheckedWhereTheUserCanSeeIt:
         result = validator.validate_file(self._dataset(tmp_path, "centimetre"))
 
         assert not [e for e in result.errors if e.rule == "ontology_term"]
+
+
+class TestAReferenceFieldNeedNotHoldOneString:
+    """Validating the shipped ISA and MIAPPE examples used to raise TypeError.
+
+    A reference field can hold several identifiers, or the child itself
+    embedded — which is how every nested document is written. Both went
+    straight into a set lookup, so ``unhashable type: 'dict'`` aborted the
+    whole validation and no dataset shaped like those examples could be
+    validated at all.
+    """
+
+    def test_a_list_of_references_is_checked_item_by_item(self) -> None:
+        from metaseed.validators.dataset import _referenced_ids
+
+        assert _referenced_ids(["STU-1", "STU-2"]) == ["STU-1", "STU-2"]
+
+    def test_an_embedded_child_is_not_a_dangling_reference(self) -> None:
+        """The entity is right there, and is checked when the walk reaches it."""
+        from metaseed.validators.dataset import _referenced_ids
+
+        assert _referenced_ids({"unique_id": "STU-1"}) == []
+
+    def test_a_mixed_list_keeps_only_the_names(self) -> None:
+        from metaseed.validators.dataset import _referenced_ids
+
+        assert _referenced_ids(["STU-1", {"unique_id": "STU-2"}]) == ["STU-1"]
+
+    def test_every_shipped_example_validates_without_crashing(self) -> None:
+        from pathlib import Path
+
+        from metaseed.validators.dataset import DatasetValidator
+
+        class _NoService:
+            def get_term_sync(self, term_id: str) -> object | None:
+                return None
+
+            def has_ontology_sync(self, ontology_id: str) -> bool | None:
+                return False
+
+        examples = sorted(Path("src/metaseed/examples").glob("*/*/*.yaml"))
+        assert len(examples) >= 7
+
+        for path in examples:
+            profile, version = path.parent.parent.name, path.parent.name
+            DatasetValidator(profile, version, _NoService()).validate_file(path)

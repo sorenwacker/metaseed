@@ -9,7 +9,7 @@ from typing import Any, Self
 
 import regex
 
-from metaseed.validators.base import ValidationError, ValidationRule, has_value
+from metaseed.validators.base import Kind, ValidationError, ValidationRule, has_value
 
 # Ceiling on evaluating a single user-supplied pattern against one value. Patterns
 # come from user-authored specs and are matched against user data, so a
@@ -299,6 +299,10 @@ class RequiredFieldsRule(ValidationRule):
                         field=field,
                         message=f"Field '{field}' is required",
                         rule=self.name,
+                        # Absence, not a wrong value: true of every dataset the
+                        # moment it is created, and no value the person types
+                        # while filling in the rest can clear it.
+                        kind=Kind.COMPLETENESS,
                     )
                 )
         return errors
@@ -602,6 +606,10 @@ class ListCardinalityRule(ValidationRule):
                     field=self.field,
                     message=msg,
                     rule=self.name,
+                    # "Not enough yet" — a Study whose profile wants three
+                    # design descriptors cannot be saved for the first time if
+                    # this blocks (#246).
+                    kind=Kind.COMPLETENESS,
                 )
             )
 

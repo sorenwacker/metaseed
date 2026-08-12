@@ -51,8 +51,36 @@ class DatasetValidationResult:
 
     @property
     def is_valid(self: Self) -> bool:
-        """Return True if no errors were found."""
+        """Return True if no errors were found.
+
+        Counts both kinds. Deliberately unchanged: making it ignore
+        completeness errors would turn every dataset with an unfilled required
+        field from invalid into valid, which is a policy decision for whoever
+        owns the data, not a side effect of classifying rules.
+        """
         return len(self.errors) == 0
+
+    @property
+    def wrong_values(self: Self) -> list[ValidationError]:
+        """The errors saying something supplied is wrong.
+
+        True now and still true tomorrow: a term from the wrong ontology, an
+        inverted range, an identifier that does not match its profile's
+        pattern. A consumer enforcing a specification on every write blocks on
+        these.
+        """
+        return [e for e in self.errors if e.blocks]
+
+    @property
+    def unfinished(self: Self) -> list[ValidationError]:
+        """The errors saying something is absent or insufficient.
+
+        A required field not filled in, a list short of its minimum. True of
+        every dataset at the moment it is created, so a consumer that blocks on
+        these cannot create anything (#246); report them, and let the person
+        keep working.
+        """
+        return [e for e in self.errors if not e.blocks]
 
     def merge(self: Self, other: DatasetValidationResult) -> None:
         """Merge another result into this one.
@@ -112,6 +140,29 @@ class IdRegistry:
         return entity_id in self._ids.get(entity_type, set())
 
 
+def _referenced_ids(value: Any) -> list[str]:
+    """The identifiers a reference field names, if any.
+
+    A reference field does not always hold one string. It can hold several — a
+    study naming its contacts — and it can hold the child itself, embedded,
+    which is how every nested document is written. Both were passed straight to
+    a set lookup, so validating the shipped ISA and MIAPPE examples raised
+    ``TypeError: unhashable type`` and no dataset shaped like them could be
+    validated at all.
+
+    An embedded object is not a dangling reference: the entity is right there.
+    It is checked in its own right when the walk reaches it, so nothing is lost
+    by skipping it here.
+    """
+    if value is None:
+        return []
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, list):
+        return [item for item in value if isinstance(item, str)]
+    return []
+
+
 class DatasetValidator:
     """Validates datasets with reference integrity checking.
 
@@ -131,13 +182,19 @@ class DatasetValidator:
         self: Self,
         profile: str | None = None,
         version: str | None = None,
+        term_source: Any = None,
     ) -> None:
         """Initialize the dataset validator.
 
         Args:
             profile: Profile name. If None, uses default profile.
             version: Profile version. If None, uses latest version.
+            term_source: Where to check ontology terms. ``None`` asks the
+                application's configured sources, which for OLS means a network
+                request per term — so a caller that must not do I/O, or that
+                wants a particular vocabulary, supplies its own.
         """
+        self._term_source = term_source
         factory = ProfileFactory()
 
         if profile is None:
@@ -338,12 +395,11 @@ class DatasetValidator:
         def check_refs(d: dict[str, Any], etype: str, p: str) -> None:
             if etype in self._reference_fields:
                 for field_name, ref_type in self._reference_fields[etype]:
-                    ref_value = d.get(field_name)
-                    if ref_value is not None:
-                        # ``ref_type`` is an "Entity.field" string (e.g.
-                        # "Study.unique_id"); the registered entity type is the
-                        # snake_case form of the entity part only.
-                        ref_entity = to_snake_case(ref_type.split(".")[0])
+                    # ``ref_type`` is an "Entity.field" string (e.g.
+                    # "Study.unique_id"); the registered entity type is the
+                    # snake_case form of the entity part only.
+                    ref_entity = to_snake_case(ref_type.split(".")[0])
+                    for ref_value in _referenced_ids(d.get(field_name)):
                         if not self._registry.exists(ref_entity, ref_value):
                             field_path = f"{p}.{field_name}" if p else field_name
                             errors.append(
@@ -445,6 +501,11 @@ class DatasetValidator:
                             field=field_path,
                             message=error.message,
                             rule=error.rule,
+                            # Carried, not re-derived: rebuilding the error to
+                            # prefix its path silently dropped what the rule
+                            # claimed, so every missing field arrived here as a
+                            # wrong value.
+                            kind=error.kind,
                         )
                     )
             except SpecLoadError:
@@ -460,7 +521,10 @@ class DatasetValidator:
                 field_path = f"{p}.{error.field}" if p else error.field
                 errors.append(
                     ValidationError(
-                        field=field_path, message=error.message, rule=error.rule
+                        field=field_path,
+                        message=error.message,
+                        rule=error.rule,
+                        kind=error.kind,
                     )
                 )
 
@@ -468,7 +532,9 @@ class DatasetValidator:
             # its field names (#215). Reported here because this is the path the
             # application validates through: a check reachable only from the
             # library is one no researcher ever sees.
-            for field_name, verdict in check_entity_terms(spec.fields, d).items():
+            for field_name, verdict in check_entity_terms(
+                spec.fields, d, self._term_source
+            ).items():
                 if not verdict.is_problem or not verdict.message:
                     # NOT_CHECKED is not a fault in the data. An outage, or an
                     # ontology no configured source carries, must not fill a

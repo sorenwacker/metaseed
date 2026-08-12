@@ -23,6 +23,12 @@
   which file supplied it.
 
 ### Fixed
+- Validating a dataset no longer crashes when a reference field holds several
+  identifiers or an embedded child. Both went straight into a set lookup, so
+  three of the seven shipped examples — isa 1.0, miappe 1.1 and miappe 1.2 —
+  aborted with `TypeError: unhashable type`, and no dataset shaped like them
+  could be validated at all. An embedded object is not a dangling reference:
+  the entity is present and is checked when the walk reaches it.
 - A reference dropdown offers each row once. Every entity is present twice —
   as a stored node, and as the dict still embedded in its parent — and the
   picker walked both, so it listed 96 Samples for a dataset holding 24 and
