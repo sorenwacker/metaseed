@@ -565,6 +565,10 @@ def register_api_routes(  # noqa: C901
             default=None,
             description="Ontology ID(s) to filter, comma-separated (e.g., 'po,pato')",
         ),
+        within: str | None = Query(
+            default=None,
+            description="Restrict to terms beneath this one (e.g. 'JERM:00025')",
+        ),
     ) -> JSONResponse:
         """Search the configured term sources for matching terms.
 
@@ -576,6 +580,9 @@ def register_api_routes(  # noqa: C901
             q: Search query to find matching ontology terms.
             ontology: Optional ontology ID(s) to restrict search.
                 Supports comma-separated values (e.g., "po,pato").
+            within: Optional ontology term whose descendants are the valid
+                values, so a column takes one branch rather than a whole
+                ontology (#229).
 
         Returns:
             JSON with results list containing value, label, description,
@@ -586,5 +593,5 @@ def register_api_routes(  # noqa: C901
         if not q.strip():
             return JSONResponse(content={"results": []})
 
-        hits = await get_term_source().search(q, ontology, 20)
+        hits = await get_term_source().search(q, ontology, 20, within)
         return JSONResponse(content={"results": [hit.to_dict() for hit in hits]})

@@ -80,6 +80,7 @@
                value="{{ value }}"
                data-lookup-type="ontology"
                {% if field.ontologies %}data-ontologies="{{ field.ontologies|join(',') }}"{% endif %}
+               {% if field.within %}data-within="{{ field.within }}"{% endif %}
                autocomplete="off"
                placeholder="Search ontology terms..."
                {% if field.required %}required{% endif %}
@@ -88,6 +89,7 @@
                 class="ontology-lookup-btn"
                 data-input="input-{{ field.name|replace('_', '-') }}"
                 {% if field.ontologies %}data-ontologies="{{ field.ontologies|join(',') }}"{% endif %}
+               {% if field.within %}data-within="{{ field.within }}"{% endif %}
                 title="Browse ontology">
             &#128269;
         </button>

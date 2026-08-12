@@ -163,13 +163,27 @@ class TermRouter:
         return False if self.sources else None
 
     def search_sync(
-        self, query: str, ontology: str | None = None, limit: int = 20
+        self,
+        query: str,
+        ontology: str | None = None,
+        limit: int = 20,
+        within: str | None = None,
     ) -> list[TermHit]:
         """Search every source that can search, nearest first.
 
         Local results come first because they are the ones a public service
         cannot offer at all. Duplicates are dropped by term id, keeping the
         earlier — and therefore more local — answer.
+
+        Args:
+            query: What the person typed.
+            ontology: Restrict to this ontology.
+            limit: Most results to return.
+            within: Restrict to terms beneath this one. A source that cannot
+                honour a subtree is **skipped** rather than allowed to answer
+                unrestricted: offering the whole ontology to a column that asked
+                for one branch of it is the thing the restriction exists to
+                prevent.
         """
         hits: list[TermHit] = []
         seen: set[str] = set()
@@ -178,7 +192,18 @@ class TermRouter:
             if not callable(searches):
                 continue
             try:
-                results = searches(query, ontology, limit)
+                if within:
+                    results = self._search_within(
+                        searches, query, ontology, limit, within
+                    )
+                    if results is None:
+                        logger.debug(
+                            "term source %s cannot restrict to a branch; skipped",
+                            type(source).__name__,
+                        )
+                        continue
+                else:
+                    results = searches(query, ontology, limit)
             except Exception:
                 logger.warning(
                     "term source %s failed searching %r",
@@ -197,6 +222,21 @@ class TermRouter:
                     return hits
         return hits
 
+    @staticmethod
+    def _search_within(
+        searches: Any, query: str, ontology: str | None, limit: int, within: str
+    ) -> list[Any] | None:
+        """Search with a subtree restriction, or ``None`` if unsupported.
+
+        Duck-typed rather than declared on the protocol: an adapter written
+        before branches existed keeps working, and simply does not answer
+        branch-scoped queries.
+        """
+        try:
+            return list(searches(query, ontology, limit, within=within))
+        except TypeError:
+            return None
+
     async def get_term(self, term_id: str) -> object | None:
         """:meth:`get_term_sync` off the event loop.
 
@@ -209,7 +249,11 @@ class TermRouter:
         return await anyio.to_thread.run_sync(self.get_term_sync, term_id)
 
     async def search(
-        self, query: str, ontology: str | None = None, limit: int = 20
+        self,
+        query: str,
+        ontology: str | None = None,
+        limit: int = 20,
+        within: str | None = None,
     ) -> list[TermHit]:
         """:meth:`search_sync` off the event loop."""
         from functools import partial
@@ -217,7 +261,7 @@ class TermRouter:
         import anyio.to_thread
 
         return await anyio.to_thread.run_sync(
-            partial(self.search_sync, query, ontology, limit)
+            partial(self.search_sync, query, ontology, limit, within)
         )
 
 

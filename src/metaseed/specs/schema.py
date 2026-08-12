@@ -189,6 +189,13 @@ class FieldSpec(BaseModel):
         label: A human-readable field label distinct from the machine ``name`` (#98).
         tier: Advisory completeness tier ("required" / "recommended" / "optional").
             Advisory only — ``required`` remains the validation source of truth (#98).
+        within: An ontology term whose descendants are the values this field
+            takes, e.g. ``JERM:00025`` for a technology-type column. Distinct
+            from ``ontology_term``, which says what the column *means* rather
+            than what may go in it: scoping by whole ontology cannot tell a
+            technology type from a file format when both come from the same
+            ontology (#229). Narrows the picker; it does not yet constrain
+            validation.
         isa_tag: The ISA tag this field carries into a SEEK Sample Type attribute —
             one of :data:`ISA_TAGS`. Required on every attribute of an ISA-JSON
             compliant Sample Type; see ``docs/architecture/seek-isa-compliance.md``.
@@ -203,6 +210,7 @@ class FieldSpec(BaseModel):
     description: str = ""
     ontology_term: str | None = None
     ontologies: list[str] | None = None
+    within: str | None = None
     constraints: Constraints | None = None
     items: str | None = None
     parent_ref: str | None = None

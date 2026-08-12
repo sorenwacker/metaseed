@@ -305,6 +305,7 @@ class OntologyService:
         ontology: str | None = None,
         rows: int = 10,
         exact: bool = False,
+        within: str | None = None,
     ) -> list[OntologySearchResult]:
         """Search OLS4 for ontology terms.
 
@@ -313,6 +314,7 @@ class OntologyService:
             ontology: Optional ontology ID to filter (e.g., "pato", "go").
             rows: Maximum number of results (default: 10).
             exact: If True, only return exact matches.
+            within: Restrict to terms beneath this one, e.g. ``JERM:00025``.
 
         Returns:
             List of OntologySearchResult objects.
@@ -320,7 +322,11 @@ class OntologyService:
         if not query or not query.strip():
             return []
 
+        # The branch joins the key only when there is one, so an unscoped
+        # search keeps the key it has always had and its cached entries.
         cache_key = f"search:{query}:{ontology}:{rows}:{exact}"
+        if within:
+            cache_key += f":{within}"
 
         # Check cache
         cached = self._get_cached(cache_key)
@@ -342,6 +348,10 @@ class OntologyService:
             params["ontology"] = ontology.lower()
         if exact:
             params["exact"] = "true"
+        if within:
+            iri = self._construct_iri(within)
+            if iri:
+                params["childrenOf"] = iri
 
         try:
             async with httpx.AsyncClient(
@@ -391,6 +401,7 @@ class OntologyService:
         ontology: str | None = None,
         rows: int = 10,
         exact: bool = False,
+        within: str | None = None,
     ) -> list[OntologySearchResult]:
         """Synchronous version of search for non-async contexts.
 
@@ -399,6 +410,9 @@ class OntologyService:
             ontology: Optional ontology ID to filter.
             rows: Maximum number of results.
             exact: If True, only return exact matches.
+            within: Restrict to terms beneath this one, e.g. ``JERM:00025``.
+                Scoping by whole ontology cannot tell a technology type from a
+                file format when both come from the same ontology (#229).
 
         Returns:
             List of OntologySearchResult objects.
@@ -406,7 +420,11 @@ class OntologyService:
         if not query or not query.strip():
             return []
 
+        # The branch joins the key only when there is one, so an unscoped
+        # search keeps the key it has always had and its cached entries.
         cache_key = f"search:{query}:{ontology}:{rows}:{exact}"
+        if within:
+            cache_key += f":{within}"
 
         # Check cache
         cached = self._get_cached(cache_key)
@@ -428,6 +446,11 @@ class OntologyService:
             params["ontology"] = ontology.lower()
         if exact:
             params["exact"] = "true"
+        if within:
+            # OLS restricts to a subtree by the ancestor's IRI, not its CURIE.
+            iri = self._construct_iri(within)
+            if iri:
+                params["childrenOf"] = iri
 
         try:
             with httpx.Client(

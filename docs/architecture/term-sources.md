@@ -50,6 +50,35 @@ source = get_term_source()
 
 Registration is context-scoped, like the ontology service it composes, so a test or a request can install its own sources without touching global state.
 
+## Scoping to a branch
+
+`ontologies:` says which ontologies a field takes. It cannot say *which part* of
+one, so a column meant for a technology type accepts any term in the ontology —
+and a profile built from a single domain ontology cannot distinguish its columns
+at all (#229).
+
+`within` names the term whose descendants are the valid values:
+
+```yaml
+- name: technology_type
+  type: ontology_term
+  ontologies: [jerm]
+  within: JERM:00025        # only terms beneath Technology type
+  ontology_term: JERM:00025 # unchanged: what the column means
+```
+
+The two keys are different questions. `ontology_term` says what the column
+*means*; `within` says what may go in it.
+
+A source that cannot restrict to a subtree is **skipped** for that query rather
+than allowed to answer unrestricted — handing a whole ontology to a column that
+asked for one branch is precisely what the restriction exists to prevent. A flat
+local vocabulary has no hierarchy, so it does not serve branch-scoped queries.
+
+`within` narrows the picker. It does not currently constrain validation: a
+dataset already holding a term from outside the branch keeps validating, because
+turning that check on is a data-affecting change that needs its own measurement.
+
 ## Local vocabularies
 
 A vocabulary is a JSON file, kept apart from the specifications that use it:

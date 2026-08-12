@@ -93,7 +93,7 @@ function handleLookupKeydown(e) {
         }
         if (lookupType === 'ontology') {
             var ontologies = input.dataset.ontologies || null;
-            openOntologyModal(inputId, ontologies);
+            openOntologyModal(inputId, ontologies, input.dataset.within || null);
         } else {
             openLookupModal(entityType, inputId);
         }
@@ -439,7 +439,7 @@ document.addEventListener('click', function(e) {
         e.stopPropagation();
         var inputId = ontologyBtn.dataset.input;
         var ontologies = ontologyBtn.dataset.ontologies || null;
-        openOntologyModal(inputId, ontologies);
+        openOntologyModal(inputId, ontologies, ontologyBtn.dataset.within || null);
     }
 });
 
@@ -463,15 +463,19 @@ document.addEventListener('keydown', function(e) {
 
 var ontologyModalInput = null;
 var ontologyModalOntologies = null;
+// The branch a column is scoped to, when its field declares one (#229): a
+// technology-type column takes one subtree, not a whole ontology.
+var ontologyModalWithin = null;
 var ontologyModalSelectedValues = new Map(); // Map of value -> label
 
 // Open ontology modal
-function openOntologyModal(inputId, ontologies) {
+function openOntologyModal(inputId, ontologies, within) {
     var input = document.querySelector('[data-testid="' + inputId + '"]');
     if (!input) return;
 
     ontologyModalInput = input;
     ontologyModalOntologies = ontologies;
+    ontologyModalWithin = within || input.dataset.within || null;
     ontologyModalSelectedValues = new Map();
 
     var modal = document.getElementById('ontology-modal');
@@ -559,6 +563,7 @@ function closeOntologyModal() {
     }
     ontologyModalInput = null;
     ontologyModalOntologies = null;
+    ontologyModalWithin = null;
 }
 
 // Render selected ontology items
@@ -663,6 +668,9 @@ function loadOntologyModalResults(query) {
     var url = '/api/ontology/search?q=' + encodeURIComponent(query);
     if (ontologyModalOntologies) {
         url += '&ontology=' + encodeURIComponent(ontologyModalOntologies);
+    }
+    if (ontologyModalWithin) {
+        url += '&within=' + encodeURIComponent(ontologyModalWithin);
     }
 
     resultsDiv.innerHTML = '<div class="lookup-modal-loading">Searching OLS4...</div>';
