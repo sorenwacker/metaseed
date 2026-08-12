@@ -385,3 +385,67 @@ class TestExcelActuallyEnforcesTheRules:
             f"{len(blocking)} rules would refuse outright: "
             f"{[v.errorTitle for v in blocking]}"
         )
+
+
+class TestAnEntityAppearsOnce:
+    """A child can be present twice: as a stored node, and as the dict still
+    embedded in its parent's data. Exporting both put every child in the sheet
+    twice — the copy carrying no parent, since only a node knows what it hangs
+    from — which showed up as a column of duplicate identifiers and a row that
+    belonged to nothing."""
+
+    def _collected(self):
+        from metaseed import MetaseedClient
+        from metaseed.ui.services.export import collect_entities_by_type
+
+        client = MetaseedClient("ena", "1.0")
+        study = client.create_entity(
+            "Study",
+            {
+                "alias": "STUDY1",
+                "title": "T",
+                "study_type": "Other",
+                "samples": [{"alias": "SAMP1", "title": "S"}],
+            },
+            skip_validation=True,
+        )
+        client.create_entity(
+            "Sample",
+            {"alias": "SAMP1", "title": "S"},
+            parent_id=study.id,
+            skip_validation=True,
+        )
+        return collect_entities_by_type(client.facade)
+
+    def test_the_embedded_copy_is_not_a_second_row(self) -> None:
+        samples = self._collected()["Sample"]
+        assert [s["alias"] for s in samples] == ["SAMP1"]
+
+    def test_the_row_that_survives_is_the_one_that_knows_its_parent(self) -> None:
+        samples = self._collected()["Sample"]
+        assert samples[0].get("_parent") == "STUDY1"
+
+
+class TestOnlyRealKeysMustBeUnique:
+    """The facade's identifier_field falls back to an entity's first field when
+    the profile declares nothing. Treating that as a key flagged every row of
+    ENA's File.filename and of attribute-style tag columns, which repeat by
+    design."""
+
+    def _keys(self, entity: str) -> set[str]:
+        from metaseed.facade import ProfileFacade
+        from metaseed.specs.loader import SpecLoader
+        from metaseed.ui.services.controlled_terms import key_columns
+
+        facade = ProfileFacade("ena", "1.0")
+        spec = SpecLoader().load_profile("1.0", "ena")
+        fields = {f.name: f for f in spec.entities[entity].fields}
+        return key_columns(facade, entity, fields)
+
+    def test_a_column_other_rows_point_at_is_a_key(self) -> None:
+        assert "alias" in self._keys("Study")
+
+    def test_a_first_field_nobody_references_is_not(self) -> None:
+        assert self._keys("File") == set(), (
+            "File.filename is the first field, not a key: files repeat names"
+        )

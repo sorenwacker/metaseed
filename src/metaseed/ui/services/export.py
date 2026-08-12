@@ -70,30 +70,42 @@ def _format_cell_value(value: object, is_nested_field: bool) -> object:
     return value
 
 
-def collect_entities_by_type(facade: Any) -> dict[str, list[dict[str, Any]]]:
-    """Group every entity in ``facade`` by its type, nested ones included.
+def _stated_values(data: dict[str, Any]) -> dict[str, str]:
+    """The scalar values a row actually states, as strings.
 
-    Serialised through the client (one payload per stored entity), then
-    recursed into nested fields so entities embedded inside a parent are
-    collected under their own type as well.
+    Nested lists and blanks are left out: a stored row carries every field the
+    model declares, most of them empty, while an embedded copy carries only
+    what was written.
     """
+    return {
+        key: str(value)
+        for key, value in data.items()
+        if key != "_parent"
+        and not isinstance(value, list | dict)
+        and value not in (None, "")
+    }
+
+
+def _is_contained_in(candidate: dict[str, Any], rows: list[dict[str, Any]]) -> bool:
+    """Whether ``candidate`` states nothing that some row does not already say.
+
+    Containment rather than equality, because the stored row is the fuller of
+    the two. Identifiers cannot decide this: entities repeat one legitimately —
+    every sample carries an attribute tagged ``collection date`` — and matching
+    on that deletes real rows.
+    """
+    stated = _stated_values(candidate)
+    return any(
+        all(_stated_values(row).get(key) == value for key, value in stated.items())
+        for row in rows
+    )
+
+
+def _stored_rows(facade: Any) -> list[tuple[str, dict[str, Any]]]:
+    """Every stored entity as ``(type, data)``, carrying its parent."""
     from metaseed import MetaseedClient
 
-    by_type: dict[str, list[dict[str, Any]]] = {}
-
-    def collect(entity_type: str, data: dict[str, Any]) -> None:
-        by_type.setdefault(entity_type, []).append(data)
-        helper = getattr(facade, entity_type, None)
-        if helper is None:
-            return
-        for field_name, nested_type in helper.nested_fields.items():
-            items = data.get(field_name)
-            if not isinstance(items, list):
-                continue
-            for item in items:
-                if isinstance(item, dict):
-                    collect(nested_type, item)
-
+    rows: list[tuple[str, dict[str, Any]]] = []
     payload = MetaseedClient.from_facade(facade).serialize()
     for entity in payload.get("entities", []):
         entity_type = entity.get("_type")
@@ -105,7 +117,55 @@ def collect_entities_by_type(facade: Any) -> dict[str, list[dict[str, Any]]]:
             # fields, so without this column the export cannot be reimported
             # with its structure intact.
             data["_parent"] = entity["_parent_unique_id"]
-        collect(entity_type, data)
+        rows.append((entity_type, data))
+    return rows
+
+
+def _identifier_of(facade: Any, entity_type: str, data: dict[str, Any]) -> str:
+    helper = getattr(facade, entity_type, None)
+    field = getattr(helper, "identifier_field", None) if helper else None
+    return str(data.get(field, "")) if field else ""
+
+
+def collect_entities_by_type(facade: Any) -> dict[str, list[dict[str, Any]]]:
+    """Group every entity in ``facade`` by its type, each appearing once.
+
+    An entity can be present twice over: as a stored row of its own, and as the
+    dict still embedded in its parent's data. Emitting both put every child in
+    the sheet twice — with the copy carrying no ``_parent``, since only a
+    stored row knows what it hangs from — which read as a column of duplicate
+    identifiers and a row belonging to nothing.
+
+    Stored rows are taken first and an embedded dict is emitted only when no
+    stored row under the same parent already contains it, which is what happens
+    for a child that was never materialised.
+    """
+    by_type: dict[str, list[dict[str, Any]]] = {}
+    emitted: dict[tuple[str, str], list[dict[str, Any]]] = {}
+
+    def emit(entity_type: str, parent: str, data: dict[str, Any]) -> None:
+        by_type.setdefault(entity_type, []).append(data)
+        emitted.setdefault((entity_type, parent), []).append(data)
+
+    def walk_embedded(entity_type: str, data: dict[str, Any]) -> None:
+        helper = getattr(facade, entity_type, None)
+        if helper is None:
+            return
+        parent = _identifier_of(facade, entity_type, data)
+        for field_name, nested_type in helper.nested_fields.items():
+            for item in data.get(field_name) or []:
+                if not isinstance(item, dict):
+                    continue
+                if not _is_contained_in(item, emitted.get((nested_type, parent), [])):
+                    emit(nested_type, parent, item)
+                walk_embedded(nested_type, item)
+
+    rows = _stored_rows(facade)
+    for entity_type, data in rows:
+        emit(entity_type, str(data.get("_parent", "")), data)
+    for entity_type, data in rows:
+        walk_embedded(entity_type, data)
+
     return by_type
 
 
