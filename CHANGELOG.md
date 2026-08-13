@@ -3,6 +3,24 @@
 ## Unreleased
 
 ### Added
+- A term source declares whether it can serve interactive lookup, and how
+  expensive it is to materialise (#247, sections 1 and 4). A picker is a person
+  waiting at a keyboard: plan07 measured OLS answering PO in 51 seconds and PATO
+  in 32 against 20-55 ms from a local store, which is not slow but unusable —
+  while looking fully implemented, because nothing could tell the difference.
+  `search_sync(..., interactive=True)` now leaves out a source that says it
+  cannot serve a picker, and the term-search route names what it left out as
+  `not_asked` so the dialog can say so: a shorter list of results is otherwise
+  indistinguishable from there being less to find. Validation still asks
+  everything — a slow source is the right thing to ask whether a term exists.
+  An adapter that declares nothing is read as interactive, so nothing that works
+  today stops working.
+
+  Cost (`none` / `cheap` / `large` / `unknown`) is declared but not acted on
+  here: metaseed materialises nothing, so it skips nothing, and the declaration
+  exists so a consumer that does import ontologies reads one interface instead
+  of inventing its own. `TermRouter.capabilities()` reports the worst case it
+  holds.
 - `within` constrains validation, not only the picker (#229). A field scoped to
   a branch of an ontology accepted any term in that ontology when a dataset was
   validated, so the restriction held only where values were *offered* — and a

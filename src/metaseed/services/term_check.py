@@ -67,6 +67,60 @@ class TermVerdict:
         )
 
 
+class Materialisation(StrEnum):
+    """How expensive it is to hold a source's data locally.
+
+    A statement for a consumer that materialises sources -- imports an ontology
+    into its own store -- to act on before it starts, rather than discover
+    mid-import: GAZ is around 180 MB, ChEBI and NCBITaxon the same class (#247).
+    metaseed itself materialises nothing, so it skips nothing on this basis; it
+    carries the declaration so a consumer reads one interface instead of
+    inventing its own.
+    """
+
+    NONE = "none"
+    """Nothing to hold: a remote service answered over the network."""
+
+    CHEAP = "cheap"
+    """Small enough that holding it needs no decision."""
+
+    LARGE = "large"
+    """Big enough that a consumer should decide deliberately."""
+
+    UNKNOWN = "unknown"
+    """The source did not say."""
+
+
+_MATERIALISATION_ORDER = (
+    Materialisation.NONE,
+    Materialisation.CHEAP,
+    Materialisation.UNKNOWN,
+    Materialisation.LARGE,
+)
+"""Least to most demanding, for reporting the worst case a router holds."""
+
+
+@dataclass(frozen=True)
+class SourceCapabilities:
+    """What a source says about itself before anyone asks it a question.
+
+    Attributes:
+        name: How to name this source when reporting what was asked or skipped.
+        interactive: Whether it can answer inside a typeahead's budget. A
+            picker debounces at 300 ms; a source measured at 51 seconds is not
+            slow, it is unusable there, while remaining exactly the right thing
+            to validate against (#247). Defaults to ``True``: an adapter that
+            declares nothing behaves as it always has.
+        materialisation: How expensive the source is to hold locally.
+        note: Why, in a few words, for whoever reads the report.
+    """
+
+    name: str = ""
+    interactive: bool = True
+    materialisation: Materialisation = Materialisation.UNKNOWN
+    note: str = ""
+
+
 class TermSource(Protocol):
     """The part of an ontology service this needs.
 
@@ -97,6 +151,15 @@ class TermSource(Protocol):
 
         A term is within itself. "Within this branch" reads inclusively, and
         rejecting the branch root would be a surprising way to fail.
+        """
+        ...
+
+    def capabilities(self) -> SourceCapabilities:
+        """What this source can do, declared rather than discovered.
+
+        Optional. A source that does not implement it is read as the defaults:
+        usable interactively, cost unstated. Silence must not make an adapter
+        written before this existed unusable.
         """
         ...
 

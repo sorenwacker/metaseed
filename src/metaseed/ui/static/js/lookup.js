@@ -680,12 +680,21 @@ function loadOntologyModalResults(query) {
             return response.json();
         })
         .then(function(data) {
+            // A source left out for being too slow to type against is said out
+            // loud: fewer results otherwise looks like there being less to find.
+            var notAsked = (data.not_asked || []).length
+                ? '<div class="lookup-modal-note ontology-not-asked">Not searched: ' +
+                  escapeHtml(data.not_asked.join(', ')) +
+                  ' (too slow to answer while you type)</div>'
+                : '';
+
             if (!data.results || data.results.length === 0) {
-                resultsDiv.innerHTML = '<div class="lookup-modal-empty">No terms found</div>';
+                resultsDiv.innerHTML = notAsked +
+                    '<div class="lookup-modal-empty">No terms found</div>';
                 return;
             }
 
-            resultsDiv.innerHTML = '';
+            resultsDiv.innerHTML = notAsked;
             data.results.forEach(function(result) {
                 var item = document.createElement('div');
                 item.className = 'lookup-modal-item ontology-modal-item';

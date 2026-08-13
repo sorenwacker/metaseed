@@ -34,6 +34,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from metaseed.services.term_check import Materialisation, SourceCapabilities
+
 if TYPE_CHECKING:
     from metaseed.services.term_check import TermSource
     from metaseed.services.terms import TermRouter
@@ -69,6 +71,19 @@ class LocalVocabulary:
     ontology_id: str
     terms: dict[str, str] = field(default_factory=dict)
     source: str = ""
+
+    def capabilities(self) -> SourceCapabilities:
+        """A dictionary in memory: fast to ask, small to hold.
+
+        Declared rather than assumed, because the point of the declaration is
+        that a consumer can tell this apart from a remote service that may take
+        51 seconds to answer the same question (#247).
+        """
+        return SourceCapabilities(
+            name=self.source or f"local:{self.ontology_id}",
+            interactive=True,
+            materialisation=Materialisation.CHEAP,
+        )
 
     @classmethod
     def from_file(cls, path: str | Path) -> LocalVocabulary:
@@ -184,6 +199,14 @@ class VocabularyStore:
     #: Term id -> the file that supplied the label in force, so an extension
     #: can be traced back to whoever added it.
     provenance: dict[str, str] = field(default_factory=dict)
+
+    def capabilities(self) -> SourceCapabilities:
+        """As cheap and as fast as the files it loaded."""
+        return SourceCapabilities(
+            name="local vocabularies",
+            interactive=True,
+            materialisation=Materialisation.CHEAP,
+        )
 
     @classmethod
     def from_directory(cls, directory: str | Path) -> VocabularyStore:

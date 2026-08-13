@@ -586,12 +586,25 @@ def register_api_routes(  # noqa: C901
 
         Returns:
             JSON with results list containing value, label, description,
-            ontology and the source that answered.
+            ontology and the source that answered, plus ``not_asked`` naming
+            any source left out for being too slow to type against.
         """
         from metaseed.services.terms import get_term_source
 
         if not q.strip():
-            return JSONResponse(content={"results": []})
+            return JSONResponse(content={"results": [], "not_asked": []})
 
-        hits = await get_term_source().search(q, ontology, 20, within)
-        return JSONResponse(content={"results": [hit.to_dict() for hit in hits]})
+        source = get_term_source()
+        # A person is waiting at a keyboard for this: it backs the term picker.
+        # A source that has declared it cannot answer at that speed is left out
+        # rather than allowed to stall the dialog — plan07 measured OLS taking
+        # 51 seconds for PO — and is named in the response, because a shorter
+        # list of results is indistinguishable from there being less to find
+        # (#247).
+        hits = await source.search(q, ontology, 20, within, interactive=True)
+        return JSONResponse(
+            content={
+                "results": [hit.to_dict() for hit in hits],
+                "not_asked": source.not_interactive(),
+            }
+        )

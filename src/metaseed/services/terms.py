@@ -23,6 +23,12 @@ from contextvars import ContextVar
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from metaseed.services.term_check import (
+    _MATERIALISATION_ORDER,
+    Materialisation,
+    SourceCapabilities,
+)
+
 if TYPE_CHECKING:
     from metaseed.services.term_check import TermSource
 
@@ -61,6 +67,33 @@ class TermHit:
             "description": self.description,
             "source": self.source,
         }
+
+
+def _capabilities_of(source: object) -> SourceCapabilities:
+    """What a source declares, or the defaults when it declares nothing."""
+    asks = getattr(source, "capabilities", None)
+    if callable(asks):
+        try:
+            declared = asks()
+        except Exception:
+            logger.warning(
+                "term source %s failed to describe itself",
+                type(source).__name__,
+                exc_info=True,
+            )
+            declared = None
+        if isinstance(declared, SourceCapabilities):
+            return (
+                declared
+                if declared.name
+                else SourceCapabilities(
+                    name=type(source).__name__,
+                    interactive=declared.interactive,
+                    materialisation=declared.materialisation,
+                    note=declared.note,
+                )
+            )
+    return SourceCapabilities(name=type(source).__name__)
 
 
 def _owns(source: object, ontology_id: str | None) -> bool:
@@ -138,6 +171,45 @@ class TermRouter:
                 return term
         return None
 
+    def describe(self) -> list[SourceCapabilities]:
+        """What each source says about itself, in the order they are asked.
+
+        A source that declares nothing is reported as the defaults rather than
+        omitted: a consumer choosing where to send a typeahead needs the whole
+        list, and an adapter written before capabilities existed is still one
+        of the sources answering.
+        """
+        return [_capabilities_of(source) for source in self.sources]
+
+    def not_interactive(self) -> list[str]:
+        """The sources a typeahead leaves out, by name.
+
+        For reporting: a shorter list of results is indistinguishable from
+        there being less to find, so a consumer that skipped a source has to be
+        able to say which (#247).
+        """
+        return [c.name for c in self.describe() if not c.interactive]
+
+    def capabilities(self) -> SourceCapabilities:
+        """What the router as a whole can do.
+
+        Interactive when any source is -- a picker can still be served. The
+        cost is the worst case it holds, because a consumer deciding whether to
+        materialise needs that rather than an average.
+        """
+        declared = self.describe()
+        worst = Materialisation.NONE
+        for capability in declared:
+            if _MATERIALISATION_ORDER.index(
+                capability.materialisation
+            ) > _MATERIALISATION_ORDER.index(worst):
+                worst = capability.materialisation
+        return SourceCapabilities(
+            name="router",
+            interactive=any(c.interactive for c in declared),
+            materialisation=worst if declared else Materialisation.UNKNOWN,
+        )
+
     def is_within_sync(self, term_id: str, ancestor: str) -> bool | None:
         """Whether a source that can see the hierarchy places the term beneath it.
 
@@ -201,6 +273,7 @@ class TermRouter:
         ontology: str | None = None,
         limit: int = 20,
         within: str | None = None,
+        interactive: bool = False,
     ) -> list[TermHit]:
         """Search every source that can search, nearest first.
 
@@ -217,12 +290,25 @@ class TermRouter:
                 unrestricted: offering the whole ontology to a column that asked
                 for one branch of it is the thing the restriction exists to
                 prevent.
+            interactive: Whether the answer is wanted inside a typeahead's
+                budget. A source that declares it cannot serve one is left out
+                — 51 seconds is not slow for a picker, it is unusable — and
+                :meth:`not_interactive` names what was left out, because a
+                shorter list looks exactly like there being less to find
+                (#247). Validation asks with this off: a slow source is still
+                the right source to ask whether a term exists.
         """
         hits: list[TermHit] = []
         seen: set[str] = set()
         for source in self.sources:
             searches = getattr(source, "search_sync", None)
             if not callable(searches):
+                continue
+            if interactive and not _capabilities_of(source).interactive:
+                logger.debug(
+                    "term source %s does not serve interactive lookup; skipped",
+                    type(source).__name__,
+                )
                 continue
             try:
                 if within:
@@ -287,6 +373,7 @@ class TermRouter:
         ontology: str | None = None,
         limit: int = 20,
         within: str | None = None,
+        interactive: bool = False,
     ) -> list[TermHit]:
         """:meth:`search_sync` off the event loop."""
         from functools import partial
@@ -294,7 +381,7 @@ class TermRouter:
         import anyio.to_thread
 
         return await anyio.to_thread.run_sync(
-            partial(self.search_sync, query, ontology, limit, within)
+            partial(self.search_sync, query, ontology, limit, within, interactive)
         )
 
 

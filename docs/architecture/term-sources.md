@@ -18,6 +18,8 @@ So OLS is one adapter. A term source is anything that can answer the same questi
 | `get_term_sync(term_id)` | The term, or `None` when this source does not have it |
 | `has_ontology_sync(ontology_id)` | Whether this source carries that ontology; `None` when it cannot say |
 | `search_sync(query, ontology, limit)` | Matching terms, for a picker. Optional |
+| `is_within_sync(term_id, ancestor)` | Whether the term sits beneath that one. Optional |
+| `capabilities()` | What the source says about itself, before it is asked. Optional |
 
 `has_ontology_sync` is what makes a missing term interpretable. Without it, "not found" and "not carried" are the same answer, and every Crop Ontology term reads as invalid.
 
@@ -107,6 +109,18 @@ populates either. When one is populated with a Crop Ontology term, the answer is
 *not checked* rather than a pass, because OLS does not carry CO_715 and no local
 vocabulary for it ships. That is the honest report, and it is what a local
 `co_715` vocabulary would change.
+
+## What a source says about itself
+
+`capabilities()` returns a `SourceCapabilities`: a name, whether the source can serve *interactive* lookup, how expensive it is to materialise, and a note.
+
+**Latency is a correctness property here, not a quality of service.** A picker is a person waiting at a keyboard; plan07 measured OLS answering PO in 51 seconds and PATO in 32, against 20-55 ms from a local store. At that speed the feature is not slow, it is unusable — while looking fully implemented, because nothing in the system could tell the difference. So a source declares it, and `search_sync(..., interactive=True)` leaves out the ones that cannot serve a picker. Validation asks with it off: a slow source is still exactly the right thing to ask whether a term exists.
+
+**Silence means "as good as it has always been".** An adapter that implements nothing here is read as interactive with its cost unstated. A default that disabled the picker for every existing installation would be a worse answer than the problem.
+
+**A skip is reported.** `TermRouter.not_interactive()` names the sources a picker left out, and `/api/ontology/search` returns them as `not_asked` for the dialog to show. A shorter list of results is otherwise indistinguishable from there being less to find, which is the same silent-degradation failure the router's three-outcome checking exists to prevent.
+
+**Cost is declared, not acted on here.** `Materialisation` is `none` (a remote service holds nothing), `cheap`, `large`, or `unknown`. metaseed materialises nothing, so it skips nothing on this basis and no code here branches on it; the declaration exists so a consumer that *does* import ontologies — GAZ is around 180 MB, ChEBI and NCBITaxon the same class — reads one interface instead of inventing its own. `TermRouter.capabilities()` reports the worst case it holds, because a consumer deciding whether to materialise needs that rather than an average.
 
 ## Local vocabularies
 

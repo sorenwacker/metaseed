@@ -175,8 +175,9 @@ class TestAdaptersConformStructurally:
             assert callable(getattr(OntologyService, name, None))
 
     def test_the_protocol_asks_only_what_an_adapter_can_answer(self) -> None:
-        """Two required questions, plus search and branch membership, which a
-        source may decline to answer without ceasing to be a source."""
+        """Two required questions, plus three a source may decline to answer
+        without ceasing to be a source: search, branch membership, and what it
+        says about itself."""
         declared = {
             name
             for name, value in vars(TermSource).items()
@@ -188,6 +189,7 @@ class TestAdaptersConformStructurally:
             "has_ontology_sync",
             "search_sync",
             "is_within_sync",
+            "capabilities",
         }
 
     def test_search_is_optional(self) -> None:

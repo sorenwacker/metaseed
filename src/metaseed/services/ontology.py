@@ -34,6 +34,8 @@ from urllib.parse import quote
 
 import httpx
 
+from metaseed.services.term_check import Materialisation, SourceCapabilities
+
 logger = logging.getLogger(__name__)
 
 try:
@@ -661,6 +663,25 @@ class OntologyService:
         logger.debug("Cached term: %s", term_id)
 
         return term
+
+    def capabilities(self: Self) -> SourceCapabilities:
+        """What OLS4 is, as this adapter sees it.
+
+        Interactive by default because that is what it has always been used
+        for here, and a default that disabled typeahead for every existing
+        installation would be a worse answer than the problem. A deployment
+        that has measured otherwise -- plan07 saw 51 seconds for PO against
+        20-55 ms from a local store -- registers its own fast source ahead of
+        this one and marks this one non-interactive by wrapping it (#247).
+
+        Nothing is materialised: the terms stay on EBI's servers.
+        """
+        return SourceCapabilities(
+            name="OLS4",
+            interactive=True,
+            materialisation=Materialisation.NONE,
+            note=f"remote service at {self.base_url}",
+        )
 
     def is_within_sync(self: Self, term_id: str, ancestor: str) -> bool | None:
         """Whether ``term_id`` sits beneath ``ancestor`` in its own ontology.
