@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.35.0 (260813)
 
 ### Fixed
 - `ValidationError.kind` survives every boundary that rebuilds errors: the
