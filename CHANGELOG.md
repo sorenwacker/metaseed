@@ -3,6 +3,16 @@
 ## Unreleased
 
 ### Fixed
+- miappe 1.2 types its method and event accessions as ontology terms, as 1.1
+  and the MIAPPE checklist do; they were plain strings, so their values were
+  checked by nothing. The event field also carries the branch the standard
+  names (`within: CO_715:0000006`). Both stay optional and sit beside required
+  free-text names — MIAPPE's own answer to a method or event with no term yet
+  is to fill in the name and leave the accession empty, and an `ontology_term`
+  field accepts free text and omission regardless. The 1.2 example carried the
+  same wrong AGRO accessions as 1.1 (`AGRO:00000007` is *desuckering*,
+  `AGRO:00000006` is *irrigation process*); removed on the same grounds. Both
+  MIAPPE examples now validate clean.
 - A child entity held singly is validated as an entity. Only list-valued
   children were descended into, so an entity nested one-to-one — Darwin Core
   nests both its Event and its Organism this way — was never visited: its own

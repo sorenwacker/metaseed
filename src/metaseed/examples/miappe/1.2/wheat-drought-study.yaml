@@ -451,14 +451,12 @@ studies:
         event_type: Sowing
         date: "2023-10-15T09:00:00"
         description: Sowing with plot drill at 350 seeds/m2
-        event_accession_number: AGRO:00000007
 
       - unique_id: EVT-FERT-1
         study_id: STU-2024-WHEAT-FT01
         event_type: Fertilization
         date: "2024-03-01T08:00:00"
         description: First N application, 60 kg N/ha as calcium ammonium nitrate
-        event_accession_number: AGRO:00000006
 
       - unique_id: EVT-DROUGHT-START
         study_id: STU-2024-WHEAT-FT01
@@ -486,7 +484,6 @@ studies:
         date: "2024-07-18T08:00:00"
         end_date: "2024-07-20T18:00:00"
         description: Plot combine harvest at grain maturity
-        event_accession_number: AGRO:00000008
 
     environments:
       - unique_id: ENV-TEMP-JUN

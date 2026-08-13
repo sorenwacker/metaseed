@@ -1082,10 +1082,17 @@ entities:
       ontology_term: PPEO:hasMethod
     - name: method_accession_number
       codename: methodDbId
-      type: string
+      type: ontology_term
       required: false
       description: Method ontology accession.
       ontology_term: PPEO:hasExternalIdentifier
+      # MIAPPE: "Term from Plant Trait Ontology, Crop Ontology, or XML
+      # Environment Ontology". Optional, and paired with the required free-text
+      # `method` name — which is where a method with no term is recorded.
+      ontologies:
+        - to
+        - co_321
+        - co_322
     - name: method_description
       codename: methodDescription
       type: string
@@ -1294,10 +1301,15 @@ entities:
       reference: ObservationUnit.unique_id
     - name: event_accession_number
       codename: eventTypeDbId
-      type: string
+      type: ontology_term
       required: false
       description: Event type ontology accession.
       ontology_term: PPEO:hasExternalIdentifier
+      # MIAPPE: "Crop Ontology term (subclass of CO_715:0000006)". Optional,
+      # beside the required free-text `event_type`.
+      ontologies:
+        - co_715
+      within: CO_715:0000006
   Environment:
     ontology_term: PPEO:environment
     description: Environmental conditions recorded during a study.
