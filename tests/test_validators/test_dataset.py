@@ -2,8 +2,6 @@
 
 from pathlib import Path
 
-import pytest
-
 from metaseed.validators.dataset import (
     DatasetValidationResult,
     DatasetValidator,
@@ -583,18 +581,6 @@ class TestReferenceIntegrityWithoutUniqueId:
 
         assert not [e for e in result.errors if e.rule == "reference_integrity"]
 
-    @pytest.mark.xfail(
-        reason=(
-            "A singular `entity`-typed child is not traversed as an entity: "
-            "Occurrence nests one Event under `event` (not a list), and the "
-            "child's fields are validated against the parent instead, "
-            "reporting 'Extra inputs are not permitted' for eventID. Its "
-            "reference is therefore never checked. Registration is correct — "
-            "the registry holds the occurrence — so this is the traversal, not "
-            "this fix."
-        ),
-        strict=True,
-    )
     def test_a_dangling_darwin_core_reference_is_reported(self, tmp_path) -> None:
         import yaml
 

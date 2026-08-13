@@ -341,20 +341,36 @@ class DatasetValidator:
             return
 
         for f in spec.fields:
-            if f.type.value == "list" and f.items:
+            if not f.items:
+                continue
+
+            child_entity = to_snake_case(f.items)
+
+            if f.type.value == "list":
                 items = data.get(f.name, [])
                 if not isinstance(items, list):
                     continue
 
-                item_entity = to_snake_case(f.items)
                 for i, item in enumerate(items):
                     if isinstance(item, dict):
                         item_path = (
                             f"{path}.{f.name}[{i}]" if path else f"{f.name}[{i}]"
                         )
                         self._traverse_entity_tree(
-                            item, item_entity, visitor, item_path
+                            item, child_entity, visitor, item_path
                         )
+
+            elif f.type.value == "entity":
+                # A child held singly rather than in a list. Only lists were
+                # descended, so an entity nested this way was never visited: its
+                # own fields were checked against its *parent's* spec — every one
+                # reported as "Extra inputs are not permitted" — and its
+                # references were never checked at all. Darwin Core nests both
+                # its Event and its Organism this way.
+                child = data.get(f.name)
+                if isinstance(child, dict):
+                    child_path = f"{path}.{f.name}" if path else f.name
+                    self._traverse_entity_tree(child, child_entity, visitor, child_path)
 
     def _collect_ids(
         self: Self,

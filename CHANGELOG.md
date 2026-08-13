@@ -3,6 +3,12 @@
 ## Unreleased
 
 ### Fixed
+- A child entity held singly is validated as an entity. Only list-valued
+  children were descended into, so an entity nested one-to-one — Darwin Core
+  nests both its Event and its Organism this way — was never visited: its own
+  fields were checked against its *parent's* spec, reporting every one of them
+  as "Extra inputs are not permitted", and its references were never checked at
+  all.
 - Reference integrity works for a profile that does not use MIAPPE's
   `unique_id`. Only entities carrying a field literally named `unique_id` were
   ever registered, so for Darwin Core (`occurrenceID`), DiSSCo (`identifier`)
