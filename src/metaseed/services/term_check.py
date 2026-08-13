@@ -33,6 +33,7 @@ class Outcome(StrEnum):
 
     OK = "ok"
     NOT_IN_ONTOLOGY = "not_in_ontology"
+    NOT_IN_BRANCH = "not_in_branch"
     NOT_FOUND = "not_found"
     NOT_CHECKED = "not_checked"
 
@@ -59,7 +60,11 @@ class TermVerdict:
         know — and reporting it as one turns an OLS outage into hundreds of
         false errors across a dataset.
         """
-        return self.outcome in (Outcome.NOT_IN_ONTOLOGY, Outcome.NOT_FOUND)
+        return self.outcome in (
+            Outcome.NOT_IN_ONTOLOGY,
+            Outcome.NOT_IN_BRANCH,
+            Outcome.NOT_FOUND,
+        )
 
 
 class TermSource(Protocol):
@@ -80,6 +85,19 @@ class TermSource(Protocol):
 
     def has_ontology_sync(self, ontology_id: str) -> bool | None:
         """Whether this source hosts the ontology; ``None`` if it cannot say."""
+        ...
+
+    def is_within_sync(self, term_id: str, ancestor: str) -> bool | None:
+        """Whether ``term_id`` sits beneath ``ancestor``; ``None`` if unknown.
+
+        Optional, and ``None`` is a real answer rather than a failure: a flat
+        vocabulary file has no parents to walk, and a service that did not
+        respond has not said no. Both mean *not checked*; only a source that
+        can see the hierarchy and looked may answer ``False``.
+
+        A term is within itself. "Within this branch" reads inclusively, and
+        rejecting the branch root would be a surprising way to fail.
+        """
         ...
 
     def search_sync(
@@ -112,6 +130,7 @@ def check_term(
     value: str,
     ontologies: list[str] | None,
     source: TermSource | None = None,
+    within: str | None = None,
 ) -> TermVerdict:
     """Check ``value`` against the ontologies a field names.
 
@@ -124,6 +143,9 @@ def check_term(
         source: Where to ask whether a term exists. ``None`` asks the
             application's router, which holds whichever adapters are
             configured — local vocabularies, OLS, or both.
+        within: The branch the field restricts values to, if it declares one.
+            Checked only once the term is known to exist: where a value sits is
+            not a question worth asking about a value that is not a term.
 
     Returns:
         A :class:`TermVerdict`. Anything that cannot be established — a value
@@ -191,7 +213,60 @@ def check_term(
             Outcome.NOT_FOUND, f"'{value}' is not a term in {prefix}.", allowed
         )
 
+    if within:
+        return _branch_verdict(value, within, source, allowed)
+
     return TermVerdict(Outcome.OK, None, allowed)
+
+
+def _branch_verdict(
+    value: str,
+    within: str,
+    source: TermSource,
+    allowed: tuple[str, ...],
+) -> TermVerdict:
+    """Whether a term that exists also sits where the field says it must.
+
+    Three outcomes again, for the same reason: a source with no hierarchy and a
+    source that would not answer have both failed to establish anything, and
+    reporting that as "outside the branch" would turn a gap in what we know into
+    a fault in someone's data.
+    """
+    if value.strip().lower() == within.strip().lower():
+        # A term is within itself; see the port's docstring.
+        return TermVerdict(Outcome.OK, None, allowed)
+
+    asks = getattr(source, "is_within_sync", None)
+    if not callable(asks):
+        return TermVerdict(
+            Outcome.NOT_CHECKED,
+            f"'{value}' could not be checked against {within}: the term source "
+            f"has no hierarchy to walk.",
+            allowed,
+        )
+    try:
+        answer = asks(value, within)
+    except Exception:
+        return TermVerdict(
+            Outcome.NOT_CHECKED,
+            f"'{value}' could not be checked against {within}: the ontology "
+            f"service did not answer.",
+            allowed,
+        )
+    if answer is True:
+        return TermVerdict(Outcome.OK, None, allowed)
+    if answer is None:
+        return TermVerdict(
+            Outcome.NOT_CHECKED,
+            f"'{value}' could not be checked against {within}: the term source "
+            f"could not say where it sits.",
+            allowed,
+        )
+    return TermVerdict(
+        Outcome.NOT_IN_BRANCH,
+        f"'{value}' is not beneath {within}, which is what this field takes.",
+        allowed,
+    )
 
 
 def check_entity_terms(
@@ -215,5 +290,7 @@ def check_entity_terms(
         value = data.get(field.name)
         if not value:
             continue
-        verdicts[field.name] = check_term(str(value), field.ontologies, source)
+        verdicts[field.name] = check_term(
+            str(value), field.ontologies, source, within=field.within
+        )
     return verdicts

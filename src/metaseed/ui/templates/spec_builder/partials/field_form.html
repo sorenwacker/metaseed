@@ -132,6 +132,17 @@
                        placeholder="po, chebi, pato">
             </div>
 
+            <!-- Branch within one ontology -->
+            <div class="form-group type-setting" data-field-types="ontology_term">
+                <label class="form-label" title="Restrict values to one branch of an ontology, by the identifier of the term they must sit beneath. Scoping by whole ontology cannot tell a technology type from a file format when both come from the same ontology. Constrains both the picker and validation; where the branch cannot be established the value is reported as not checked, never as invalid.">Within Branch</label>
+                <input type="text"
+                       name="within"
+                       class="form-input"
+                       data-testid="field-within"
+                       value="{{ field.within or '' }}"
+                       placeholder="CO_715:0000006">
+            </div>
+
             <!-- No settings message -->
             <div class="type-setting type-setting-none" data-field-types="string,integer,float,boolean,date,datetime,uri">
                 <p class="text-muted">No type-specific settings needed.</p>

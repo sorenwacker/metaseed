@@ -138,6 +138,39 @@ class TermRouter:
                 return term
         return None
 
+    def is_within_sync(self, term_id: str, ancestor: str) -> bool | None:
+        """Whether a source that can see the hierarchy places the term beneath it.
+
+        The same rule as :meth:`get_term_sync`: a source claiming the term's
+        ontology answers alone, because a vocabulary someone narrowed on
+        purpose must not be widened by a public service that happens to know
+        the same identifier. A source with no hierarchy is skipped rather than
+        allowed to answer ``False`` -- it has not looked -- and when nobody can
+        say the answer is ``None``, reported as *not checked*.
+        """
+        from metaseed.services.term_check import ontology_of
+
+        prefix = ontology_of(term_id)
+        owner = next((s for s in self.sources if _owns(s, prefix)), None)
+        for source in [owner] if owner is not None else self.sources:
+            asks = getattr(source, "is_within_sync", None)
+            if not callable(asks):
+                continue
+            try:
+                answer: bool | None = asks(term_id, ancestor)
+            except Exception:
+                logger.warning(
+                    "term source %s failed placing %s under %s",
+                    type(source).__name__,
+                    term_id,
+                    ancestor,
+                    exc_info=True,
+                )
+                continue
+            if answer is not None:
+                return answer
+        return None
+
     def has_ontology_sync(self, ontology_id: str) -> bool | None:
         """Whether any source carries the ontology.
 

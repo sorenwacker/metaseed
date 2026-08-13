@@ -37,6 +37,7 @@ class FieldForm:
     description: str = ""
     ontology_term: str = ""
     ontologies: str = ""  # comma/newline-separated
+    within: str = ""
     codename: str = ""
     items: str = ""
     parent_ref: str = ""
@@ -105,6 +106,7 @@ class FieldForm:
             for o in self.ontologies.replace("\n", ",").split(",")
             if o.strip()
         ] or None
+        field.within = self.within.strip() or None
         field.codename = self.codename.strip() or None
         field.items = self.items.strip() or None
         field.parent_ref = self.parent_ref.strip() or None

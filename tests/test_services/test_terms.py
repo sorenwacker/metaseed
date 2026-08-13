@@ -166,18 +166,29 @@ class TestAdaptersConformStructurally:
     def test_the_ols_service_answers_it_too(self) -> None:
         from metaseed.services.ontology import OntologyService
 
-        for name in ("get_term_sync", "has_ontology_sync", "search_sync"):
+        for name in (
+            "get_term_sync",
+            "has_ontology_sync",
+            "search_sync",
+            "is_within_sync",
+        ):
             assert callable(getattr(OntologyService, name, None))
 
     def test_the_protocol_asks_only_what_an_adapter_can_answer(self) -> None:
-        """Its methods are the two questions plus optional search, no more."""
+        """Two required questions, plus search and branch membership, which a
+        source may decline to answer without ceasing to be a source."""
         declared = {
             name
             for name, value in vars(TermSource).items()
             if callable(value) and not name.startswith("_")
         }
 
-        assert declared == {"get_term_sync", "has_ontology_sync", "search_sync"}
+        assert declared == {
+            "get_term_sync",
+            "has_ontology_sync",
+            "search_sync",
+            "is_within_sync",
+        }
 
     def test_search_is_optional(self) -> None:
         """A source that cannot be browsed is still a source."""

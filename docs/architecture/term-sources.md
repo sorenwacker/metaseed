@@ -75,9 +75,38 @@ than allowed to answer unrestricted — handing a whole ontology to a column tha
 asked for one branch is precisely what the restriction exists to prevent. A flat
 local vocabulary has no hierarchy, so it does not serve branch-scoped queries.
 
-`within` narrows the picker. It does not currently constrain validation: a
-dataset already holding a term from outside the branch keeps validating, because
-turning that check on is a data-affecting change that needs its own measurement.
+`within` constrains validation as well as the picker. A rule that narrows what a
+column may hold, enforced only where values are *offered*, is a rule anyone can
+walk around by typing or importing — so the check asks the same question the
+picker does:
+
+| Method | Answers |
+| --- | --- |
+| `is_within_sync(term_id, ancestor)` | Whether the term sits beneath that one; `None` when this source cannot say |
+
+The third answer is what keeps this honest. A flat vocabulary has no parents to
+walk and a service that did not respond has not said no; both report **not
+checked**, and only a source that can see the hierarchy and looked may call a
+value wrong. A term is within itself: "within this branch" reads inclusively.
+
+`OntologyService` answers from OLS4's `hierarchicalAncestors` endpoint — the
+same relation `childrenOf` scopes the picker by, so the two cannot disagree
+about what the branch contains. Two readings of an OLS answer matter:
+
+- **200 with no ancestors is not proof of anything.** OLS returns exactly that
+  both for a term it does not carry — every `CO_715` value, since it does not
+  host that ontology — and for one genuinely at the top of its tree. The two are
+  indistinguishable from here, so neither is called wrong.
+- **A truncated page is not an answer either.** If the ancestor list runs past
+  one page and the branch root was not on it, the result is *not checked*, not
+  "not beneath".
+
+The measured effect on shipped data was nothing: two fields declare `within` —
+`Event.event_accession_number` in miappe 1.1 and 1.2 — and no shipped example
+populates either. When one is populated with a Crop Ontology term, the answer is
+*not checked* rather than a pass, because OLS does not carry CO_715 and no local
+vocabulary for it ships. That is the honest report, and it is what a local
+`co_715` vocabulary would change.
 
 ## Local vocabularies
 

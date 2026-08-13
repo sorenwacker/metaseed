@@ -47,6 +47,11 @@ DEFAULT_RATE_LIMIT = 60  # requests per minute
 DEFAULT_BASE_URL = "https://www.ebi.ac.uk/ols4/api"
 DEFAULT_TIMEOUT = 30.0
 
+# How many ancestors to ask for in one page. Deep OBO hierarchies run to a few
+# dozen; a page that does not cover them is reported as "could not say" rather
+# than as "not an ancestor".
+_ANCESTOR_PAGE_SIZE = 500
+
 # Identify the client to EMBL-EBI. EMBL-EBI's fair-use terms ask that traffic not
 # degrade service for others; sending a descriptive User-Agent lets them contact
 # us about load rather than block an anonymous client.
@@ -657,6 +662,90 @@ class OntologyService:
 
         return term
 
+    def is_within_sync(self: Self, term_id: str, ancestor: str) -> bool | None:
+        """Whether ``term_id`` sits beneath ``ancestor`` in its own ontology.
+
+        Asked of OLS4's ``hierarchicalAncestors`` endpoint, which is the same
+        relation ``childrenOf`` scopes a search by -- so a picker and the check
+        that follows it agree about what the branch contains.
+
+        Args:
+            term_id: The term to place, e.g. ``CO_715:0000129``.
+            ancestor: The branch root the field declares, e.g. ``CO_715:0000006``.
+
+        Returns:
+            ``True`` or ``False`` when OLS answered, and ``None`` when it could
+            not be asked at all -- a term or ontology it does not carry, an
+            unusable identifier, or a service that did not respond. ``None`` is
+            reported as *not checked*; only a real answer may call a value
+            wrong.
+        """
+        if not term_id or not ancestor:
+            return None
+
+        ontology = self._parse_ontology_from_term_id(term_id)
+        iri = self._construct_iri(term_id)
+        ancestor_iri = self._construct_iri(ancestor)
+        if not ontology or not iri or not ancestor_iri:
+            return None
+
+        if term_id.strip().lower() == ancestor.strip().lower():
+            # A term is within itself; "within this branch" reads inclusively.
+            return True
+
+        cache_key = f"within:{term_id}:{ancestor}"
+        cached = self._get_cached(cache_key)
+        if cached is not _MISSING:
+            return cast("bool | None", cached)
+
+        self._rate_limiter.acquire_sync()
+        encoded_iri = quote(quote(iri, safe=""), safe="")
+        url = (
+            f"{self.base_url}/ontologies/{ontology}/terms/{encoded_iri}"
+            f"/hierarchicalAncestors"
+        )
+        try:
+            with httpx.Client(
+                timeout=DEFAULT_TIMEOUT, headers=DEFAULT_HEADERS
+            ) as client:
+                response = client.get(url, params={"size": _ANCESTOR_PAGE_SIZE})
+                response.raise_for_status()
+                data = response.json()
+        except httpx.HTTPStatusError as e:
+            # A 404 here means OLS does not carry this term or its ontology --
+            # not that the term has no ancestors, which it answers with an
+            # empty list and a 200. Reading it as "not beneath" would call
+            # every Crop Ontology value wrong, which is the whole failure this
+            # check is built to avoid.
+            if e.response.status_code != 404:
+                logger.warning("OLS4 ancestor lookup error: %s", e)
+            return None
+        except httpx.RequestError as e:
+            logger.warning("OLS4 ancestor request failed: %s", e)
+            return None
+
+        terms = data.get("_embedded", {}).get("terms", [])
+        if not terms:
+            # OLS answers 200 with no ancestors both for a term it does not
+            # carry -- every CO_715 value, since OLS does not host that
+            # ontology -- and for one that genuinely sits at the top. The two
+            # are indistinguishable from here, so neither may be called wrong.
+            return None
+
+        wanted = {ancestor.lower(), ancestor_iri.lower()}
+        found = any(
+            str(t.get("obo_id") or "").lower() in wanted
+            or str(t.get("iri") or "").lower() in wanted
+            for t in terms
+        )
+        if not found and _is_truncated(data):
+            # A deeper hierarchy than one page: "not on this page" is not the
+            # same as "not an ancestor", and guessing would be the false
+            # negative this whole check exists to avoid.
+            return None
+        self._set_cached(cache_key, found)
+        return found
+
     async def validate_term(self: Self, term_id: str) -> tuple[bool, str | None]:
         """Validate that an ontology term exists.
 
@@ -796,6 +885,15 @@ class OntologyService:
 _service_var: ContextVar[OntologyService | None] = ContextVar(
     "ontology_service", default=None
 )
+
+
+def _is_truncated(payload: dict[str, Any]) -> bool:
+    """Whether an OLS4 page reports more elements than it returned."""
+    page = payload.get("page") or {}
+    try:
+        return int(page.get("totalPages", 1)) > 1
+    except (TypeError, ValueError):
+        return False
 
 
 def get_ontology_service() -> OntologyService:

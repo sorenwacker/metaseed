@@ -1169,3 +1169,58 @@ class TestReferenceScopeInTheFieldEditor:
         self._save(client, reference_scope="")
 
         assert "reference_scope" not in client.get("/spec-builder/preview").text
+
+
+class TestBranchScopeInTheFieldEditor:
+    """`within` restricts a column to one branch, and now constrains validation
+    as well as the picker (#229) — so it has to be authorable here, not only
+    over MCP."""
+
+    def _field(self, client) -> None:
+        client.get("/spec-builder/new")
+        client.post("/spec-builder/entity", data={"name": "Event"})
+        client.post(
+            "/spec-builder/entity/Event/field",
+            data={"name": "event_accession_number", "field_type": "ontology_term"},
+        )
+
+    def test_the_editor_offers_it(self, client) -> None:
+        self._field(client)
+
+        form = client.get("/spec-builder/entity/Event/field/0").text
+
+        assert 'data-testid="field-within"' in form
+
+    def test_it_is_saved(self, client) -> None:
+        self._field(client)
+
+        client.put(
+            "/spec-builder/entity/Event/field/0",
+            data={
+                "name": "event_accession_number",
+                "field_type": "ontology_term",
+                "ontologies": "co_715",
+                "within": "CO_715:0000006",
+            },
+        )
+
+        preview = client.get("/spec-builder/preview").text
+        assert "within: CO_715:0000006" in preview
+
+    def test_clearing_it_removes_it(self, client) -> None:
+        self._field(client)
+        client.put(
+            "/spec-builder/entity/Event/field/0",
+            data={
+                "name": "event_accession_number",
+                "field_type": "ontology_term",
+                "within": "CO_715:0000006",
+            },
+        )
+
+        client.put(
+            "/spec-builder/entity/Event/field/0",
+            data={"name": "event_accession_number", "field_type": "ontology_term"},
+        )
+
+        assert "within:" not in client.get("/spec-builder/preview").text

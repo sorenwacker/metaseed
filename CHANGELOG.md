@@ -3,6 +3,33 @@
 ## Unreleased
 
 ### Added
+- `within` constrains validation, not only the picker (#229). A field scoped to
+  a branch of an ontology accepted any term in that ontology when a dataset was
+  validated, so the restriction held only where values were *offered* — and a
+  rule enforced only in the picker is one that typing or importing walks around.
+  The term port gained `is_within_sync(term_id, ancestor)`, answered from OLS4's
+  `hierarchicalAncestors` endpoint, which is the same relation `childrenOf`
+  scopes the picker by.
+
+  Three outcomes, as everywhere else in this check: beneath the branch passes,
+  demonstrably outside it is reported (`NOT_IN_BRANCH`), and anything that
+  cannot be established is *not checked*. That covers a flat local vocabulary
+  with no hierarchy to walk, a service that did not answer, an OLS page that
+  truncated, and — the case that matters for MIAPPE — a 200 carrying no
+  ancestors, which OLS returns both for a term it does not host and for one
+  genuinely at the top of its tree. Reading either as "not beneath" would report
+  every Crop Ontology value as wrong.
+
+  `within` is also settable from the field editor. It reached `FieldSpec` and
+  the MCP tools when the picker learned about branches, but never the web spec
+  builder, so a profile author working there could not declare the restriction
+  the validator now enforces.
+
+  Blast radius measured before shipping: two shipped fields declare `within`
+  (`Event.event_accession_number` in miappe 1.1 and 1.2) and no shipped example
+  populates either, so no shipped data changes verdict. A populated one reports
+  *not checked*, since OLS carries no CO_715 and no local vocabulary for it
+  ships.
 - A reference may declare that its target resolves outside the dataset
   (`reference_scope: external`, spec_version 0.8). A reference has meant one
   thing — the target is a record in this file — but many identifiers are minted

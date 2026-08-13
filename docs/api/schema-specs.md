@@ -452,6 +452,20 @@ Fields with `type: ontology_term` enable OLS4 (Ontology Lookup Service) integrat
 
 The `ontologies` field accepts a list of OLS IDs (e.g., `po`, `pato`, `ncbitaxon`). When omitted, searches across all available ontologies.
 
+`within` narrows further, to one branch of an ontology rather than the whole of it:
+
+```yaml
+- name: event_accession_number
+  type: ontology_term
+  ontologies: ["co_715"]
+  within: CO_715:0000006     # only terms beneath this one
+  ontology_term: MIAPPE:DM-70 # unchanged: what the column *means*
+```
+
+The two annotation keys answer different questions: `ontology_term` says what the column means, `within` says what may go in it. Scoping by whole ontology cannot tell a technology type from a file format when both come from the same ontology, and a profile built from a single domain ontology cannot distinguish its columns at all (#229).
+
+`within` constrains the picker *and* validation — a rule enforced only where values are offered is one that typing or importing walks straight around. A value beneath the branch passes; one demonstrably outside it is reported; and where nobody can place it — a flat local vocabulary has no hierarchy, a service may not answer, and OLS carries no CO_715 at all — the result is *not checked*, never invalid. See [Term sources](../architecture/term-sources.md#scoping-to-a-branch).
+
 See [Ontology Lookup Guide](../guides/ontology-lookup.md) for details on autocomplete, modal search, and configuration.
 
 ### DCAT Mapping
