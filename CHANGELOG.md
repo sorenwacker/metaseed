@@ -3,6 +3,21 @@
 ## Unreleased
 
 ### Fixed
+- An entity annotated with the JERM class it represents is exported as it
+  (#234). The SEEK role map read the entity's *name* against nine strings and
+  never its `ontology_term`, so a profile derived faithfully from JERM exported
+  almost nothing: an entity called `Experiment` annotated as an Assay was
+  skipped, while one merely named `Assay` and annotated with nothing was
+  exported. The annotations were decorative on this path.
+
+  Only the class an annotation *names* is read — `JERM:Assay`,
+  `…JERM.owl#Assay` — never a numeric accession. JERM is carried by no source
+  we can reach, so `JERM:00021` cannot be resolved to a class here, and a
+  hardcoded table of accession numbers would be inventing identifiers rather
+  than reading them; such an entity stays unmapped and is reported.
+- An entity that maps to no JERM class is named in a warning rather than
+  silently omitted. The complaint in #234 was not that the export fails, but
+  that it succeeds while producing less than its author expects.
 - miappe 1.2 types its method and event accessions as ontology terms, as 1.1
   and the MIAPPE checklist do; they were plain strings, so their values were
   checked by nothing. The event field also carries the branch the standard

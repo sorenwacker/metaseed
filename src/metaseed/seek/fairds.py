@@ -43,8 +43,10 @@ except (
         "Install with: pip install 'metaseed[seek]'"
     ) from exc
 
+from metaseed.logging import get_logger
 from metaseed.seek.naming import property_uri
 from metaseed.seek.roles import JERM_CLASSES as _JERM
+from metaseed.seek.roles import jerm_class_from_annotation, unmapped_entities
 
 if TYPE_CHECKING:
     from metaseed.api.client import MetaseedClient
@@ -54,6 +56,8 @@ if TYPE_CHECKING:
 # do not get a property definition of their own.
 from metaseed.seek.values import CORE_FIELDS as _CORE_FIELDS
 from metaseed.seek.values import profile_of
+
+logger = get_logger(__name__)
 
 JERM = Namespace("http://jermontology.org/ontology/JERMOntology#")
 # MIAPPE's ontology. SEEK types the ObservationUnit level from PPEO while the
@@ -145,11 +149,29 @@ def _profile_index(
         name: {f.name: f for f in entity.fields}
         for name, entity in profile.entities.items()
     }
-    roles: dict[str, str] = {
-        name: entity.seek.role
-        for name, entity in profile.entities.items()
-        if entity.seek and entity.seek.role
-    }
+    # An explicit seek.role wins; failing that, the class the entity's own
+    # annotation names. Resolved once here rather than at each call site, so
+    # everything reading ``roles`` sees the annotation too — the map held only
+    # hand-set roles, which is why a profile faithfully derived from JERM
+    # exported almost nothing (#234).
+    roles: dict[str, str] = {}
+    for name, entity in profile.entities.items():
+        role = entity.seek.role if entity.seek else None
+        resolved = role or jerm_class_from_annotation(entity.ontology_term)
+        if resolved:
+            roles[name] = resolved
+
+    skipped = unmapped_entities(profile)
+    if skipped:
+        # Said out loud: the export does not fail for these, it simply produces
+        # less than its author expects, which is the whole complaint in #234.
+        logger.warning(
+            "SEEK export maps no JERM class for %s; %s will not be exported. "
+            "Give each a seek.role, or annotate it with the class it represents.",
+            ", ".join(skipped),
+            "they" if len(skipped) > 1 else "it",
+        )
+
     return fields, roles
 
 

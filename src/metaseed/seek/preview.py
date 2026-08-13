@@ -79,7 +79,7 @@ def _extended_metadata(profile: ProfileSpec) -> list[PreviewExtendedMetadata]:
     for name in sorted(profile.entities):
         entity = profile.entities[name]
         role = entity.seek.role if entity.seek else None
-        jerm = entity_jerm_class(name, role)
+        jerm = entity_jerm_class(name, role, entity.ontology_term)
         if jerm not in _EXTENDED_METADATA_ROLES:
             continue
         # Core identity fields are SEEK's own record fields; nested fields are
