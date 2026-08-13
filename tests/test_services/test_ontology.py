@@ -208,46 +208,6 @@ class TestOntologyService:
         iri = service._construct_iri("GO_0008150")
         assert iri == "http://purl.obolibrary.org/obo/GO_0008150"
 
-    def test_validate_term_empty(self) -> None:
-        """Empty term is considered valid."""
-        service = OntologyService()
-
-        is_valid, warning = service.validate_term_sync("")
-        assert is_valid is True
-        assert warning is None
-
-    def test_validate_term_no_prefix(self) -> None:
-        """Term without prefix is assumed valid."""
-        service = OntologyService()
-
-        is_valid, warning = service.validate_term_sync("nocolon")
-        assert is_valid is True
-        assert warning is None
-
-    def test_validate_term_cached_valid(self) -> None:
-        """Cached valid term returns True."""
-        service = OntologyService()
-        service._cache["term:CACHED:0001"] = CacheEntry(
-            value=OntologyTerm(term_id="CACHED:0001", label="Test"),
-            expires_at=time.time() + 3600,
-        )
-
-        is_valid, warning = service.validate_term_sync("CACHED:0001")
-        assert is_valid is True
-        assert warning is None
-
-    def test_validate_term_cached_invalid(self) -> None:
-        """Cached invalid term returns False with warning."""
-        service = OntologyService()
-        service._cache["term:INVALID:9999"] = CacheEntry(
-            value=None,
-            expires_at=time.time() + 3600,
-        )
-
-        is_valid, warning = service.validate_term_sync("INVALID:9999")
-        assert is_valid is False
-        assert "not found" in warning
-
     def test_get_cached_distinguishes_miss_from_cached_none(self) -> None:
         """A cached None negative result is distinct from an absent key."""
         service = OntologyService()
@@ -325,30 +285,6 @@ class TestOntologyService:
         with pytest.raises(OntologyServiceError):
             service.get_term_sync("PATO:0000001")
 
-    def test_validate_term_sync_fails_open_on_network_error(self, monkeypatch) -> None:
-        """Network failures are treated as valid (fail-open), not 'not found'."""
-        service = OntologyService()
-
-        class _FailingClient:
-            def __init__(self, *args, **kwargs) -> None:
-                pass
-
-            def __enter__(self):
-                return self
-
-            def __exit__(self, *args) -> None:
-                return None
-
-            def get(self, url: str):
-                raise httpx.ConnectError("boom")
-
-        monkeypatch.setattr(ontology_module.httpx, "Client", _FailingClient)
-
-        is_valid, warning = service.validate_term_sync("PATO:0000001")
-        assert is_valid is True
-        assert warning is None
-
-    @pytest.mark.asyncio
     async def test_search_empty_query(self) -> None:
         """Empty search query returns empty list."""
         service = OntologyService()

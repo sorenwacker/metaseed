@@ -56,6 +56,7 @@ class TermHit:
     label: str = ""
     ontology: str | None = None
     description: str | None = None
+    iri: str | None = None
     source: str = ""
 
     def to_dict(self) -> dict[str, Any]:
@@ -122,6 +123,7 @@ def _as_hit(result: object, source_name: str) -> TermHit:
         label=str(getattr(result, "label", "") or ""),
         ontology=getattr(result, "ontology", None),
         description=getattr(result, "description", None),
+        iri=getattr(result, "iri", None),
         # A result that names its own origin — the file a local term came from —
         # says more than the adapter's class name, so it wins.
         source=str(getattr(result, "source", "") or source_name),

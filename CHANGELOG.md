@@ -37,6 +37,42 @@
   left the draft half-edited (and the field route 500'd on top). Both build a
   copy and swap it in on success; the rule form's error path now keeps the
   typed `when` rows as well as the `where` rows.
+- SEEK provisioning enriches CV terms through the application's term-source
+  router instead of a never-passed `OntologyService` parameter: the route now
+  supplies the composed source, so a locally configured vocabulary enriches
+  too, and a term gets an IRI only when a hit's label matches the enum value
+  exactly.
+
+### Removed
+- Code superseded by mechanisms that shipped earlier, verified unused by the
+  hub before deletion: the `metaseed.core` package (exception hierarchy,
+  execution context, serialization helpers — no production callers),
+  `validate_term`/`validate_term_sync` (replaced by three-outcome
+  `check_term`), `ChainedTermSource` and `VocabularyStore.as_source`
+  (replaced by `TermRouter`), `BrAPIClient.observations()` (never called),
+  the pre-split 1775-line `ui/static/js/app.js` (its pages load the split
+  modules), the unused `ctx` parameters on `SpecLoader` methods, and the
+  facade-era `to_json_dict` serialization tests.
+
+### Fixed
+- The spawned MCP server can no longer deadlock on its own logging. It was
+  started with piped stdout/stderr that nothing drained, so once uvicorn's
+  access log filled the ~64KB OS pipe buffer the child's next write blocked
+  and the server froze mid-request. Output goes to `mcp-server.log` under the
+  user data directory; a server that dies on startup reports the log tail.
+- `validate_ontology_terms` (MCP) asks the configured term sources instead of
+  speaking OLS4's HTTP API directly, and answers with three outcomes: a
+  vocabulary configured on the server is now visible to it, and an OLS outage
+  reads as `checked: false`, never as invalid data. The adapter gate has been
+  widened to list the tool, and its exemption for this module is now stated to
+  cover the OLS catalogue alone — this is the tool that slipped through it.
+- The SEEK importer's 4xx degradation fires. It caught `httpx.HTTPStatusError`,
+  which `SeekClient` never lets escape (it raises `SeekApiError`), so an
+  instance without ISA-JSON observation units aborted the whole import instead
+  of importing the study without samples.
+- Loading a dataset keeps its catalog metadata. The load set the catalog card
+  and then called `reset()`, which clears it — so opening a dataset wiped the
+  card it was opening, and the next save persisted the wipe.
 
 ## v0.34.0 (260813)
 

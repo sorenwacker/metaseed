@@ -7,7 +7,7 @@ Two steps, deliberately split:
   JSON:API actually lets a project member create: **Controlled Vocabularies**
   (from closed ``enum`` fields) and **Sample Types** (from the profile's
   sample-bearing entities). Optionally enriches CV terms with ontology IRIs via
-  an injected :class:`~metaseed.services.ontology.OntologyService`.
+  an injected term source (the application's router, or any adapter).
 - :func:`execute_provisioning_plan` — runs the plan against a
   :class:`~metaseed.seek.client.SeekClient`, **idempotently** (reuse a same-named
   CV/Sample Type instead of duplicating it).
@@ -30,7 +30,7 @@ from metaseed.seek.roles import sample_role_entities
 
 if TYPE_CHECKING:
     from metaseed.seek.client import SeekClient
-    from metaseed.services.ontology import OntologyService
+    from metaseed.services.term_check import TermSource
     from metaseed.specs.schema import FieldSpec, ProfileSpec
 
 
@@ -106,9 +106,16 @@ def _cv_title(profile: ProfileSpec, entity: str, field: FieldSpec) -> str:
 
 
 def _cv_terms(
-    field: FieldSpec, ontology: OntologyService | None
+    field: FieldSpec, term_source: TermSource | None
 ) -> tuple[CvTermPlan, ...]:
-    """Build CV terms from a field's enum, optionally resolving IRIs via OLS."""
+    """Build CV terms from a field's enum, optionally resolving IRIs.
+
+    Asked of the term-source port rather than OLS directly, so a local
+    vocabulary configured on the server enriches too, and a deployment with
+    no network still provisions (label-only). A term is enriched only when a
+    hit's label matches the enum value exactly — a fuzzy first hit would stamp
+    the wrong IRI onto a CV term, which is worse than no IRI.
+    """
     enum = (
         list(field.constraints.enum)
         if field.constraints and field.constraints.enum
@@ -118,16 +125,18 @@ def _cv_terms(
     terms: list[CvTermPlan] = []
     for value in enum:
         iri: str | None = None
-        if ontology is not None and ols_id:
-            hits = ontology.search_sync(value, ontology=ols_id, rows=1, exact=True)
-            if hits:
-                iri = hits[0].iri
+        if term_source is not None and ols_id:
+            hits = term_source.search_sync(value, ontology=ols_id, limit=5)
+            for hit in hits:
+                if str(getattr(hit, "label", "")).lower() == value.lower():
+                    iri = getattr(hit, "iri", None)
+                    break
         terms.append(CvTermPlan(label=value, iri=iri))
     return tuple(terms)
 
 
 def build_provisioning_plan(
-    profile: ProfileSpec, *, ontology: OntologyService | None = None
+    profile: ProfileSpec, *, term_source: TermSource | None = None
 ) -> ProvisioningPlan:
     """Project ``profile`` onto SEEK CVs + Sample Types (pure, deterministic).
 
@@ -140,8 +149,9 @@ def build_provisioning_plan(
 
     Args:
         profile: The metaseed profile to provision.
-        ontology: Optional OLS service; when given, CV terms from enum fields that
-            also declare ``ontologies`` are enriched with their ontology IRIs.
+        term_source: Optional term source (the application's router, or any
+            adapter); when given, CV terms from enum fields that also declare
+            ``ontologies`` are enriched with their ontology IRIs.
 
     Returns:
         A :class:`ProvisioningPlan` (CVs are ordered before the Sample Types that
@@ -185,7 +195,7 @@ def build_provisioning_plan(
                 if cv_title not in cvs:
                     cvs[cv_title] = CvPlan(
                         title=cv_title,
-                        terms=_cv_terms(field, ontology),
+                        terms=_cv_terms(field, term_source),
                         source_ontology=(
                             field.ontologies[0] if field.ontologies else None
                         ),

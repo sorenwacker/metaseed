@@ -767,68 +767,6 @@ class OntologyService:
         self._set_cached(cache_key, found)
         return found
 
-    async def validate_term(self: Self, term_id: str) -> tuple[bool, str | None]:
-        """Validate that an ontology term exists.
-
-        Network or service errors are treated as valid (fail-open) so a
-        transient OLS4 outage does not flag every term as invalid. Only a
-        genuine 404 (term absent) yields ``(False, ...)``.
-
-        Args:
-            term_id: Ontology term ID to validate.
-
-        Returns:
-            Tuple of (is_valid, warning_message). Warning is None if valid.
-        """
-        if not term_id or not isinstance(term_id, str):
-            return True, None
-
-        # Check if we can parse the term ID
-        if ":" not in term_id and "_" not in term_id:
-            # Can't determine ontology, skip validation
-            return True, None
-
-        try:
-            term = await self.get_term(term_id)
-        except OntologyServiceError:
-            # Service unreachable: fail open, cannot prove the term is absent.
-            return True, None
-
-        if term is not None:
-            return True, None
-
-        return False, f"Ontology term '{term_id}' not found in OLS4"
-
-    def validate_term_sync(self: Self, term_id: str) -> tuple[bool, str | None]:
-        """Synchronous version of validate_term.
-
-        Network or service errors are treated as valid (fail-open) so a
-        transient OLS4 outage does not flag every term as invalid. Only a
-        genuine 404 (term absent) yields ``(False, ...)``.
-
-        Args:
-            term_id: Ontology term ID to validate.
-
-        Returns:
-            Tuple of (is_valid, warning_message).
-        """
-        if not term_id or not isinstance(term_id, str):
-            return True, None
-
-        if ":" not in term_id and "_" not in term_id:
-            return True, None
-
-        try:
-            term = self.get_term_sync(term_id)
-        except OntologyServiceError:
-            # Service unreachable: fail open, cannot prove the term is absent.
-            return True, None
-
-        if term is not None:
-            return True, None
-
-        return False, f"Ontology term '{term_id}' not found in OLS4"
-
     def has_ontology_sync(self: Self, ontology_id: str) -> bool | None:
         """Whether this service hosts ``ontology_id``.
 

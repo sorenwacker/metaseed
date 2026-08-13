@@ -317,7 +317,7 @@ class TestStaticFiles:
 
     def test_js_served(self, client):
         """JS file is served."""
-        response = client.get("/static/js/app.js")
+        response = client.get("/static/js/core.js")
         assert response.status_code == 200
         assert "javascript" in response.headers["content-type"]
 

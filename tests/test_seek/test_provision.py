@@ -55,16 +55,15 @@ def _profile() -> ProfileSpec:
 
 
 class _StubOntology:
-    """Returns a fixed IRI for any exact term search."""
+    """A term source whose every search finds the queried label exactly."""
 
     def search_sync(
         self,
         query: str,
         ontology: str | None = None,
-        rows: int = 10,
-        exact: bool = False,
+        limit: int = 20,
     ) -> list[Any]:
-        return [type("R", (), {"iri": f"http://x/{query}"})()]
+        return [type("R", (), {"label": query, "iri": f"http://x/{query}"})()]
 
 
 # -- planning ---------------------------------------------------------------
@@ -125,7 +124,7 @@ def test_plan_builds_cv_from_enum():
 
 
 def test_plan_enriches_cv_terms_with_ontology_iris():
-    plan = build_provisioning_plan(_profile(), ontology=_StubOntology())
+    plan = build_provisioning_plan(_profile(), term_source=_StubOntology())
     cv = plan.cvs[0]
     assert [t.iri for t in cv.terms] == ["http://x/human", "http://x/mouse"]
 

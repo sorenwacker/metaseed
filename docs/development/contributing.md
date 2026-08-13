@@ -96,11 +96,4 @@ metaseed/
 
 ## Exception Handling
 
-Metaseed uses two exception hierarchies. Use the correct one based on where your code lives.
-
-| Layer | Base Class | Module | When to Use |
-|-------|------------|--------|-------------|
-| Internal | `MiappeError` | `core/exceptions.py` | Code in `core/`, `models/`, `specs/`, `storage/` |
-| Public API | `MetaseedError` | `api/errors.py` | Code in `api/`, user-facing errors |
-
-Internal exceptions are caught at the API boundary and translated to public exceptions. See [Exception Architecture](../architecture/exceptions.md) for details.
+Exceptions API consumers must catch inherit from `MetaseedError` in `api/errors.py`; modules below the API define their own exceptions locally, and the API layer translates them at its boundary. See [Exceptions](../architecture/exceptions.md) for details.

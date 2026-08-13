@@ -29,16 +29,10 @@ when it cannot.
 from __future__ import annotations
 
 import json
-from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from metaseed.services.term_check import Materialisation, SourceCapabilities
-
-if TYPE_CHECKING:
-    from metaseed.services.term_check import TermSource
-    from metaseed.services.terms import TermRouter
 
 
 @dataclass(frozen=True)
@@ -142,45 +136,6 @@ class LocalVocabulary:
 
 
 @dataclass
-class ChainedTermSource:
-    """Ask the local vocabularies first, then the remote service.
-
-    Order matters and is not an optimisation: a local vocabulary is the answer
-    for terms the remote service cannot see at all, and asking it first means a
-    dataset built on a consortium's own list validates on a laptop with no
-    network.
-
-    ``None`` from every source means nobody could say — which the check reports
-    as *not checked*, never as invalid.
-    """
-
-    local: list[LocalVocabulary] = field(default_factory=list)
-    remote: TermSource | None = None
-
-    def get_term_sync(self, term_id: str) -> object | None:
-        return self._router().get_term_sync(term_id)
-
-    def has_ontology_sync(self, ontology_id: str) -> bool | None:
-        return self._router().has_ontology_sync(ontology_id)
-
-    def search_sync(
-        self, query: str, ontology: str | None = None, limit: int = 20
-    ) -> Sequence[object]:
-        return self._router().search_sync(query, ontology, limit)
-
-    def _router(self) -> TermRouter:
-        """These sources as a router.
-
-        The ordering rule — a source that claims an ontology answers for it
-        alone — is the router's, stated once. This class is the shorthand for
-        the common arrangement of it: files in front, a service behind.
-        """
-        from metaseed.services.terms import TermRouter
-
-        remote = [self.remote] if self.remote is not None else []
-        return TermRouter(sources=[*self.local, *remote])
-
-
 @dataclass
 class VocabularyStore:
     """The vocabularies available to an installation, by ontology id.
@@ -274,7 +229,3 @@ class VocabularyStore:
                 if len(hits) >= limit:
                     return hits
         return hits
-
-    def as_source(self, remote: TermSource | None = None) -> ChainedTermSource:
-        """These vocabularies, asked before ``remote``."""
-        return ChainedTermSource(local=list(self.vocabularies.values()), remote=remote)

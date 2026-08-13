@@ -38,9 +38,6 @@ if TYPE_CHECKING:
 _STRING_TYPES = frozenset({FieldType.STRING})
 _NUMERIC_TYPES = frozenset({FieldType.INTEGER, FieldType.FLOAT})
 
-if TYPE_CHECKING:
-    from metaseed.core.context import ProfileContext
-
 logger = logging.getLogger(__name__)
 
 
@@ -332,27 +329,18 @@ class SpecLoader:
         self: Self,
         version: str = "1.2",
         profile: str | None = None,
-        *,
-        ctx: ProfileContext | None = None,
     ) -> ProfileSpec:
         """Load a unified profile spec.
 
         Args:
-            version: Profile version (e.g., "1.1"). Ignored if ctx is provided.
+            version: Profile version (e.g., "1.1").
             profile: Profile name (e.g., "miappe", "isa"). Uses default if None.
-                Ignored if ctx is provided.
-            ctx: Optional ProfileContext containing profile and version.
-                If provided, takes precedence over version and profile args.
-
         Returns:
             ProfileSpec object.
 
         Raises:
             SpecLoadError: If profile not found.
         """
-        if ctx is not None:
-            profile = ctx.profile
-            version = ctx.version
         profile_name = profile or self._default_profile
         loaded = self._load_profile(version, profile)
         if loaded is None:
@@ -368,18 +356,13 @@ class SpecLoader:
         entity: str,
         version: str = "1.2",
         profile: str | None = None,
-        *,
-        ctx: ProfileContext | None = None,
     ) -> EntitySpec:
         """Load an entity spec by name and version.
 
         Args:
             entity: Entity name (e.g., "investigation" or "Investigation").
-            version: Version string (e.g., "1.1"). Ignored if ctx is provided.
+            version: Version string (e.g., "1.1").
             profile: Profile name (e.g., "miappe", "isa"). Uses default if None.
-                Ignored if ctx is provided.
-            ctx: Optional ProfileContext containing profile and version.
-                If provided, takes precedence over version and profile args.
 
         Returns:
             Parsed EntitySpec object.
@@ -387,9 +370,6 @@ class SpecLoader:
         Raises:
             SpecLoadError: If the entity or version is not found.
         """
-        if ctx is not None:
-            profile = ctx.profile
-            version = ctx.version
         profile_name = profile or self._default_profile
 
         loaded_profile = self._load_profile(version, profile)
@@ -407,8 +387,6 @@ class SpecLoader:
         self: Self,
         version: str = "1.2",
         profile: str | None = None,
-        *,
-        ctx: ProfileContext | None = None,
     ) -> list[str]:
         """List available entities for a version.
 
@@ -416,11 +394,8 @@ class SpecLoader:
         typically hierarchical (Investigation -> Study -> nested entities).
 
         Args:
-            version: Version string (e.g., "1.1"). Ignored if ctx is provided.
+            version: Version string (e.g., "1.1").
             profile: Profile name (e.g., "miappe", "isa"). Uses default if None.
-                Ignored if ctx is provided.
-            ctx: Optional ProfileContext containing profile and version.
-                If provided, takes precedence over version and profile args.
 
         Returns:
             List of entity names in definition order.
@@ -428,9 +403,6 @@ class SpecLoader:
         Raises:
             SpecLoadError: If the version is not found.
         """
-        if ctx is not None:
-            profile = ctx.profile
-            version = ctx.version
         profile_name = profile or self._default_profile
 
         loaded_profile = self._load_profile(version, profile)

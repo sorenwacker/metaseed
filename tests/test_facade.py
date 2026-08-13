@@ -669,14 +669,10 @@ class TestOntologyValidation:
             expires_at=time.time() + 3600,
         )
 
-        # Validate using cache
-        is_valid, warning = service.validate_term_sync("CACHED:0001")
-        assert is_valid is True
-        assert warning is None
-
-        is_valid, warning = service.validate_term_sync("CACHED:0002")
-        assert is_valid is False
-        assert "not found" in warning
+        # Cached entries are served without a lookup, including negatives.
+        term = service.get_term_sync("CACHED:0001")
+        assert term is not None and term.label == "Test Term"
+        assert service.get_term_sync("CACHED:0002") is None
 
     def test_ontology_service_cache_clear(self) -> None:
         """Cache can be cleared."""

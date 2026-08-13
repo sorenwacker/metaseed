@@ -153,23 +153,6 @@ a function body that import-graph linters do not see.
 | `get_entity_service` | `Callable` | Factory for EntityService instances |
 | `dataset_factory` | `DatasetManagerFactory` | Manages dataset persistence |
 
-### ProfileContext
-
-`ProfileContext` is an immutable dataclass that encapsulates the `(profile, version)` pair used throughout the codebase. This reduces parameter passing and provides a consistent cache key.
-
-```python
-from metaseed.core.context import ProfileContext
-
-ctx = ProfileContext(profile="miappe", version="1.2")
-loader.load_profile(ctx=ctx)
-loader.load_entity("Investigation", ctx=ctx)
-```
-
-| Attribute | Type | Description |
-|-----------|------|-------------|
-| `profile` | `str` | Profile name (e.g., "miappe", "isa", "darwin-core") |
-| `version` | `str` | Profile version, `MAJOR.MINOR` (e.g., "1.1", "1.0") — see [Profile Versioning](../api/schema-specs.md#profile-versioning) |
-| `cache_key` | `str` | Generated key in format "profile:version" |
 
 The `cache_key` property enables consistent caching across components that operate on profile-version combinations.
 

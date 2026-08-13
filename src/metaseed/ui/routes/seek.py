@@ -226,7 +226,15 @@ def register_seek_routes(  # noqa: C901
             )
 
             pid = project_id or client.default_project_id()
-            plan = build_provisioning_plan(_load_profile_named(profile, version))
+            # Enrichment wired here, at the one place a SEEK instance is
+            # actually provisioned: CV terms carry their ontology IRIs when a
+            # configured source can name them. The preview stays label-only —
+            # it must render without a network round trip per term.
+            from metaseed.services.terms import get_term_source
+
+            plan = build_provisioning_plan(
+                _load_profile_named(profile, version), term_source=get_term_source()
+            )
             return execute_provisioning_plan(client, plan, project_id=pid)
 
         try:
