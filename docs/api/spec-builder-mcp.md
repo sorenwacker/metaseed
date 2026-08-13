@@ -50,7 +50,8 @@ agent can edit without tracking positions. The single exception is
 `spec_validate` reports two lists and they are not the same kind of finding.
 
 - **`issues`** are defects: the spec does not build, a reference dangles, the
-  `version` is malformed. `valid` is `false` while any issue remains.
+  `version` is malformed, a rule's `where` names a field that does not exist.
+  `valid` is `false` while any issue remains.
 - **`warnings`** are advisory: the spec builds and loads, but something in it is
   likely not what the author meant. Warnings never set `valid` to `false` and
   never block `spec_save`.
@@ -235,9 +236,35 @@ through `spec_import_yaml`.
 | `spec_update_rule` | `rule_name`, rule fields | Update a rule. |
 | `spec_delete_rule` | `rule_name` | Remove a rule. |
 
-Rule fields follow `ValidationRuleSpec`: `type`, `message`, `applies_to`,
-`field`, `condition`, `pattern`, `minimum`, `maximum`, `enum`, `reference`,
-`min_items`, `max_items`, `lat_field`, `lon_field`, `start_field`, `end_field`.
+Both tools take every attribute of `ValidationRuleSpec`: `type`, `description`,
+`message`, `applies_to`, `field`, `condition`, `pattern`, `minimum`, `maximum`,
+`enum`, `reference`, `unique_within`, `min_items`, `max_items`, `lat_field`,
+`lon_field`, `start_field`, `end_field`, `where`, `when`, `require`. A test gates that list against
+the model, so a key added to the rule format is unauthorable over MCP only until
+that test is made to pass — half of them were missing before #211, which is why
+an agent could declare a cardinality rule's type but not its bounds.
+
+`where` is a predicate selecting which items a cardinality rule counts, passed as
+a mapping:
+
+```python
+spec_add_rule(
+    name="exactly_one_display_column",
+    type="cardinality",
+    applies_to="SampleType",
+    field="attributes",
+    min_items=1,
+    max_items=1,
+    where={"field": "is_display_column", "op": "==", "value": True},
+)
+```
+
+Groups are `{"all": [...]}`, `{"any": [...]}` and `{"not": {...}}`; the
+operators are `==`, `!=`, `in`, `not_in`, `>`, `>=`, `<`, `<=`, `is_set` and
+`is_not_set`. `when` is the same shape and pairs with `require` to make a
+requirement depend on a value. A predicate naming a field the counted entity does not declare is
+reported by `spec_validate` as an issue, not a warning: the rule carrying it
+would never fire. See [Rule Predicates](schema-specs.md#rule-predicates).
 
 ## Return values and errors
 

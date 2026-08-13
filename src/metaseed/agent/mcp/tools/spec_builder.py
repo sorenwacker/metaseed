@@ -13,6 +13,7 @@ import json
 from typing import TYPE_CHECKING, Any
 
 from metaseed.specs.builder import (
+    RULE_ATTRIBUTE_NAMES,
     SpecBuilder,
     normalize_markers,
     validate_constraint_names,
@@ -108,6 +109,16 @@ def _comparison_payload(
         "breaking": [change.to_dict() for change in comparison.breaking],
         "compatible": [change.to_dict() for change in comparison.compatible],
     }
+
+
+def _rule_attributes(arguments: dict[str, Any]) -> dict[str, Any]:
+    """The rule attributes among a tool's arguments.
+
+    Read off the tool's own locals against :data:`RULE_ATTRIBUTE_NAMES` rather
+    than listed a third time: a key added to the rule format then reaches both
+    tools by adding one parameter, and the gate test fails until it does.
+    """
+    return {name: arguments[name] for name in RULE_ATTRIBUTE_NAMES if name in arguments}
 
 
 def _clean(attrs: dict[str, Any]) -> dict[str, Any]:
@@ -640,26 +651,43 @@ def register_spec_builder_tools(  # noqa: C901
     def spec_add_rule(
         name: str,
         type: str | None = None,
+        description: str | None = None,
         message: str | None = None,
         applies_to: str | None = None,
         field: str | None = None,
+        condition: str | None = None,
+        pattern: str | None = None,
+        minimum: float | None = None,
+        maximum: float | None = None,
+        enum: list[str] | None = None,
         reference: str | None = None,
+        unique_within: str | None = None,
+        min_items: int | None = None,
+        max_items: int | None = None,
+        lat_field: str | None = None,
+        lon_field: str | None = None,
+        start_field: str | None = None,
+        end_field: str | None = None,
+        where: dict[str, Any] | None = None,
+        when: dict[str, Any] | None = None,
+        require: list[str] | None = None,
     ) -> str:
-        """Add a validation rule to the draft."""
+        """Add a validation rule to the draft.
+
+        Every attribute of the rule format is settable here. `where` is a
+        predicate selecting which items a cardinality rule counts, written as a
+        mapping: `{"field": "is_display_column", "op": "==", "value": true}`, or
+        a group `{"all": [...]}` / `{"any": [...]}` / `{"not": {...}}`.
+        Operators: ==, !=, in, not_in, >, >=, <, <=, is_set, is_not_set.
+
+        `when` is the same shape and makes a requirement depend on a value:
+        with `require=["cv_terms"]` it demands those fields of any record the
+        predicate selects. It replaces `condition`, which only tests whether a
+        field is present; a rule setting both is rejected at load.
+        """
         try:
             builder = _require_draft(current_state())
-            builder.add_rule(
-                name,
-                **_clean(
-                    {
-                        "type": type,
-                        "message": message,
-                        "applies_to": applies_to,
-                        "field": field,
-                        "reference": reference,
-                    }
-                ),
-            )
+            builder.add_rule(name, **_clean(_rule_attributes(locals())))
         except ValueError as exc:
             return json.dumps({"error": str(exc)})
         return json.dumps(_status(builder), indent=2)
@@ -667,25 +695,35 @@ def register_spec_builder_tools(  # noqa: C901
     @mcp.tool()
     def spec_update_rule(
         rule_name: str,
+        type: str | None = None,
+        description: str | None = None,
         message: str | None = None,
         applies_to: str | None = None,
         field: str | None = None,
+        condition: str | None = None,
+        pattern: str | None = None,
+        minimum: float | None = None,
+        maximum: float | None = None,
+        enum: list[str] | None = None,
         reference: str | None = None,
+        unique_within: str | None = None,
+        min_items: int | None = None,
+        max_items: int | None = None,
+        lat_field: str | None = None,
+        lon_field: str | None = None,
+        start_field: str | None = None,
+        end_field: str | None = None,
+        where: dict[str, Any] | None = None,
+        when: dict[str, Any] | None = None,
+        require: list[str] | None = None,
     ) -> str:
-        """Update a validation rule in place. Only supplied attributes change."""
+        """Update a validation rule in place. Only supplied attributes change.
+
+        See `spec_add_rule` for the shape of `where`.
+        """
         try:
             builder = _require_draft(current_state())
-            builder.update_rule(
-                rule_name,
-                **_clean(
-                    {
-                        "message": message,
-                        "applies_to": applies_to,
-                        "field": field,
-                        "reference": reference,
-                    }
-                ),
-            )
+            builder.update_rule(rule_name, **_clean(_rule_attributes(locals())))
         except ValueError as exc:
             return json.dumps({"error": str(exc)})
         return json.dumps(_status(builder), indent=2)

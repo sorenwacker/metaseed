@@ -46,6 +46,15 @@ SHORT_HASH_DIGITS = 12
 """Hex digits kept by :func:`short_hash`. Display only -- compare on the full hash."""
 
 
+SUPPORTED_SPEC_VERSION = "0.7"
+"""The highest ``spec_version`` this metaseed understands.
+
+Documentation listed the format versions; nothing in the code knew which of them
+it could read, so a profile using a newer construct failed with a message naming
+the rejected key and not the reason. See ``docs/api/schema-specs.md``.
+"""
+
+
 def check_profile_version(value: str) -> str | None:
     """Report why ``value`` is not a valid profile version.
 

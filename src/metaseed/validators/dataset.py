@@ -17,10 +17,12 @@ import yaml
 from metaseed.profiles import ProfileFactory
 from metaseed.services.term_check import check_entity_terms
 from metaseed.specs.loader import SpecLoader, SpecLoadError
+from metaseed.specs.predicates import Predicate, render_predicate
 from metaseed.utils import to_snake_case
 from metaseed.validators.api import _pydantic_constraint_errors
 from metaseed.validators.base import ValidationError
 from metaseed.validators.engine import create_engine_for_entity
+from metaseed.validators.predicates import PredicateError, evaluate
 
 
 class _UniquenessRuleDef(NamedTuple):
@@ -31,6 +33,7 @@ class _UniquenessRuleDef(NamedTuple):
     scope: str  # "parent" or "global"
     applies_to: set[str]  # snake_case entity types, or {"all"}
     message: str | None
+    where: Predicate | None = None  # which records are counted at all
 
 
 @dataclass
@@ -252,6 +255,7 @@ class DatasetValidator:
                     scope=rule.unique_within or "parent",
                     applies_to=applies_snake,
                     message=rule.message,
+                    where=rule.where,
                 )
             )
 
@@ -495,6 +499,11 @@ class DatasetValidator:
                 value = d.get(rule.field)
                 if value is None:
                     continue
+                if rule.where is not None and not self._selected(rule, d, p, errors):
+                    # Outside the counted subset: not compared, and not recorded
+                    # either, or an exempt record would still collide with the
+                    # next one that is not exempt.
+                    continue
                 scope_key = "" if rule.scope == "global" else re.sub(r"\[\d+\]$", "", p)
                 key = (rule.name, scope_key, str(value))
                 if key in seen:
@@ -503,6 +512,11 @@ class DatasetValidator:
                         f"Value '{value}' is not unique for '{rule.field}' "
                         f"within {rule.scope} scope"
                     )
+                    if rule.where is not None:
+                        msg += (
+                            f"; counted among records matching "
+                            f"{render_predicate(rule.where)}"
+                        )
                     errors.append(
                         ValidationError(
                             field=field_path, message=msg, rule="uniqueness"
@@ -513,6 +527,32 @@ class DatasetValidator:
 
         self._traverse_entity_tree(data, entity_type, check_unique, path)
         return errors
+
+    def _selected(
+        self: Self,
+        rule: _UniquenessRuleDef,
+        record: dict[str, Any],
+        path: str,
+        errors: list[ValidationError],
+    ) -> bool:
+        """Whether a record is in the subset a predicated uniqueness rule counts.
+
+        A predicate that cannot be applied is reported against the record rather
+        than read as "not selected": excluding it would leave the rule quietly
+        satisfied by a predicate that never worked.
+        """
+        assert rule.where is not None
+        try:
+            return evaluate(rule.where, record)
+        except PredicateError as exc:
+            errors.append(
+                ValidationError(
+                    field=f"{path}.{rule.field}" if path else rule.field,
+                    message=f"{rule.name}: {exc}",
+                    rule="uniqueness",
+                )
+            )
+            return False
 
     def _validate_entity(
         self: Self,

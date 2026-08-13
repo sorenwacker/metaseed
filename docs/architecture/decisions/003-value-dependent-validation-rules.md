@@ -1,7 +1,7 @@
 # ADR 003: Value-Dependent Validation Rules (Predicates on Rules)
 
 **Date:** 2026-08-02
-**Status:** Proposed
+**Status:** Accepted and implemented (all three slices)
 **Context:** [Issue #211](https://github.com/sorenwacker/metaseed/issues/211) — validation rules cannot depend on field values
 
 ## Decision
@@ -271,6 +271,18 @@ validation_rules:
 Rendered for messages and for the UI, these read exactly as the issue wrote them: `data_type == 'Controlled Vocabulary'`, `is_display_column == true`, `data_type == 'Registered Sample List'`, and `isa_tag in ['source', 'protocol', 'sample', 'data_file', 'other_material'] and name != 'Input'`.
 
 Comparator outcome for adding these four rules to an existing profile: all four are new rules, so all four are `validation_rule_added` and `required_bump` is `major`. Adding the `where` to rule 2 *later*, on an existing `min_items: 1` rule, would also be `major` (decision 5); adding the `where` to rule 3 later would be `minor`.
+
+## What shipped
+
+All three slices, in the order below. One finding from doing it is recorded here
+because it changed what "done" means: a rule scoped to a **nested** entity never
+fired through `DatasetValidator` at all. A profile writes `SampleAttribute`, the
+validator reaches a nested child as `sample_attribute` and its own root as
+`sampletype`, and `_applies_to_entity` compared on case alone — so the root
+matched and every nested entity missed, silently disabling 54 rules across the
+shipped profiles. Slice 3's motivating constraint is a rule on a nested entity,
+so it could not work until that was fixed. Blast radius measured against every
+shipped example before shipping: no error count changed.
 
 ## First implementation slice
 

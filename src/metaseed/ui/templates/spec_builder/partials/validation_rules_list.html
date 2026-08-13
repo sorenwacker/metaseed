@@ -20,6 +20,11 @@
                 {{ rule.applies_to|join(', ') }}
                 {% endif %}
             </span>
+            {% if predicates.get(loop.index0) %}
+            <span class="rule-predicate" data-testid="rule-predicate-summary">
+                where {{ predicates[loop.index0] }}
+            </span>
+            {% endif %}
         </div>
         <button class="btn-icon danger"
                 hx-delete="/spec-builder/validation-rule/{{ loop.index0 }}"

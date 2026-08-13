@@ -650,3 +650,79 @@ class TestCinemaOnePointOne:
 
     def test_the_two_versions_are_distinguishable_by_content_hash(self) -> None:
         assert self.old().content_hash != self.new().content_hash
+
+
+class TestPredicateEdits:
+    """A `where` is classified on its own terms, not as "the rule changed" (#211).
+
+    A predicated rule fails a record when the predicate selects it *and* the
+    body fails, so narrowing the selection rejects less — except on a lower
+    bound, where narrowing the counted population is exactly how a record that
+    satisfied `min_items` stops satisfying it.
+    """
+
+    def _with_rule(self, **kwargs: Any) -> ProfileSpec:
+        spec = base()
+        spec.validation_rules.append(
+            ValidationRuleSpec(
+                name="one_lead",
+                type="cardinality",
+                applies_to=["Film"],
+                field="credits",
+                **kwargs,
+            )
+        )
+        return spec
+
+    LEAD = {"field": "role", "op": "==", "value": "lead"}
+
+    def test_adding_one_to_an_upper_bound_rejects_less(self) -> None:
+        old = self._with_rule(max_items=1)
+        new = self._with_rule(max_items=1, where=self.LEAD)
+
+        change = only(old, new)
+        assert change.kind == ChangeKind.RULE_PREDICATE_ADDED
+        assert change.compatibility is Compatibility.COMPATIBLE
+        assert required_bump(old, new) == "minor"
+        assert "role == 'lead'" in change.message
+
+    def test_adding_one_to_a_lower_bound_can_reject_more(self) -> None:
+        """Four credits satisfied `min_items: 1`; counting only the leads may
+        find none."""
+        old = self._with_rule(min_items=1)
+        new = self._with_rule(min_items=1, where=self.LEAD)
+
+        change = only(old, new)
+        assert change.kind == ChangeKind.RULE_PREDICATE_NARROWED_COUNT
+        assert change.compatibility is Compatibility.BREAKING
+        assert required_bump(old, new) == "major"
+
+    def test_editing_one_is_breaking_because_containment_is_undecidable(self) -> None:
+        old = self._with_rule(max_items=1, where=self.LEAD)
+        new = self._with_rule(
+            max_items=1,
+            where={"field": "role", "op": "in", "value": ["lead", "narrator"]},
+        )
+
+        change = only(old, new)
+        assert change.kind == ChangeKind.RULE_PREDICATE_CHANGED
+        assert change.compatibility is Compatibility.BREAKING
+
+    def test_removing_one_widens_the_rule_to_everything(self) -> None:
+        old = self._with_rule(max_items=1, where=self.LEAD)
+        new = self._with_rule(max_items=1)
+
+        change = only(old, new)
+        assert change.kind == ChangeKind.RULE_PREDICATE_REMOVED
+        assert change.compatibility is Compatibility.BREAKING
+
+    def test_a_rule_that_changed_in_more_than_its_predicate_is_reported_coarsely(
+        self,
+    ) -> None:
+        """The narrow classification is only sound when nothing else moved."""
+        old = self._with_rule(max_items=1)
+        new = self._with_rule(max_items=2, where=self.LEAD)
+
+        change = only(old, new)
+        assert change.kind == ChangeKind.VALIDATION_RULE_CHANGED
+        assert change.compatibility is Compatibility.BREAKING

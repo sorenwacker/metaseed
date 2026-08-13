@@ -17,14 +17,17 @@ User-defined specs are stored in:
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar, Self
+from typing import TYPE_CHECKING, Any, ClassVar, Self
 
 import yaml
 from pydantic import ValidationError
 
 from metaseed.paths import get_builtin_specs_dir, get_user_specs_dir
+from metaseed.specs.predicates import profile_predicate_issues
 from metaseed.specs.schema import Constraints, EntitySpec, FieldType, ProfileSpec
+from metaseed.specs.versioning import SUPPORTED_SPEC_VERSION
 
 if TYPE_CHECKING:
     from metaseed.specs.schema import EntityDefSpec, FieldSpec, ValidationRuleSpec
@@ -240,10 +243,20 @@ class SpecLoader:
                 msg = first_error["msg"]
                 raise SpecLoadError(
                     f"Invalid profile {profile_path} at {loc}: {msg}"
+                    f"{_version_hint(data, first_error)}"
                 ) from e
             raise SpecLoadError(f"Invalid profile {profile_path}: {e}") from e
 
         _merge_rule_constraints_into_fields(loaded_profile)
+
+        predicate_problems = profile_predicate_issues(loaded_profile)
+        if predicate_problems:
+            # Loudly, once, at load: a predicate naming a field that does not
+            # exist is a rule that never fires, and finding that out from the
+            # record it failed to catch is the defect class it guards against.
+            raise SpecLoadError(
+                f"Invalid profile {profile_path}: " + "; ".join(predicate_problems)
+            )
 
         self._profile_cache[cache_key] = loaded_profile
         logger.debug(
@@ -506,3 +519,29 @@ class SpecLoader:
                 return True
 
         return False
+
+
+def _version_hint(data: dict[str, Any], error: Mapping[str, Any]) -> str:
+    """A second sentence naming a format-version mismatch, when that is the cause.
+
+    "Extra inputs are not permitted" names the key it rejected but not why, and
+    the why is usually that the profile was written for a newer metaseed. Only
+    added for that error kind: on a genuine typo the version is not the reason.
+    """
+    if error.get("type") != "extra_forbidden":
+        return ""
+    declared = str(data.get("spec_version", "0.1"))
+    if _as_version(declared) <= _as_version(SUPPORTED_SPEC_VERSION):
+        return ""
+    return (
+        f" (the profile declares spec_version {declared}; "
+        f"this metaseed supports up to {SUPPORTED_SPEC_VERSION})"
+    )
+
+
+def _as_version(value: str) -> tuple[int, ...]:
+    """A dotted version as comparable integers, unparseable parts as zero."""
+    parts = []
+    for part in value.split("."):
+        parts.append(int(part) if part.isdigit() else 0)
+    return tuple(parts)

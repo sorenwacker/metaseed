@@ -10,6 +10,7 @@ from typing import Any, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
+from metaseed.specs.predicates import Predicate
 from metaseed.specs.versioning import (
     content_hash as _content_hash,
 )
@@ -405,6 +406,17 @@ class ValidationRuleSpec(BaseModel):
         lon_field: Longitude field name for coordinate_pair rules.
         start_field: Start field name for date_range rules.
         end_field: End field name for date_range rules.
+        where: Predicate selecting which items a cardinality rule counts, or
+            which records a uniqueness rule compares. A rule about *some* of a
+            collection had no expression before it, so "exactly one attribute is
+            the display column" lived in a checker outside metaseed (#211). See
+            :mod:`metaseed.specs.predicates`.
+        when: Predicate deciding whether ``require`` applies to a record. The
+            legacy ``condition`` tests only whether fields are *present*, so
+            "required when another field holds a particular value" could not be
+            written (#211). The two are alternatives, not layers: a rule setting
+            both is rejected rather than resolved by precedence.
+        require: Fields a record must carry when ``when`` holds.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -428,6 +440,9 @@ class ValidationRuleSpec(BaseModel):
     lon_field: str | None = None
     start_field: str | None = None
     end_field: str | None = None
+    where: Predicate | None = None
+    when: Predicate | None = None
+    require: list[str] | None = None
 
 
 class OntologyDefinition(BaseModel):

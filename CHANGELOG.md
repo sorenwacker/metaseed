@@ -2,7 +2,52 @@
 
 ## Unreleased
 
+### Added
+- Validation rules can depend on field values (#211, spec_version 0.7,
+  [ADR 003](docs/architecture/decisions/003-value-dependent-validation-rules.md)).
+  A `cardinality` rule may carry a `where` predicate selecting which items it
+  counts; a `uniqueness` rule may carry one selecting which records it compares,
+  which is how an exemption is written; and a `conditional` rule may carry
+  `when`/`require`, a requirement that depends on another field's value. The
+  legacy `condition` only ever tested whether fields were *present*.
+  A rule about *some* of a collection had no expression, so "exactly one
+  attribute is the display column" lived in a checker outside metaseed — which
+  found a template with zero display columns that metaseed reported as valid.
+  A predicate is a mapping (`{field, op, value}`, or a group `all`/`any`/`not`),
+  not an expression string: a mapping is canonical under `canonical_json`, so
+  reformatting one cannot change a content hash or force a MAJOR bump. Its
+  one-line spelling survives as the rendering, which is what messages, the rules
+  list and `spec_validate` show.
+- A predicated failure states what was counted and out of what — "expected
+  exactly 1 of 24 'attributes' to match is_display_column == true, found 0" —
+  and names the offending members when there are too many, by the item entity's
+  own `is_label`/`is_identifier` field. "Expected 1, got 0" cannot be acted on
+  against 24 children.
+- Predicates are checked at profile load and by `spec_validate`, not when a
+  record is validated: a predicate naming a field the entity does not declare is
+  a rule that never fires. Bounds (depth 8, 64 nodes, 256-entry literal lists)
+  are structural and checked once, which the form has no backtracking to defeat.
+- The rule editor builds a predicate as rows of (field, operator, value), with
+  the field offered from the fields the counted entity declares — so the
+  load-time "unknown field" error is unreachable from the editor. A predicate
+  that nests deeper than rows can show is displayed as its one-line spelling and
+  survives a save untouched.
+- `SUPPORTED_SPEC_VERSION`: metaseed had no record of which format versions it
+  understands, so a profile using a newer construct failed with a message naming
+  the rejected key and not the reason. The load error now says which.
+
 ### Changed
+- `spec_add_rule` and `spec_update_rule` take every attribute of the rule format,
+  gated by a test against the model. They took six; an agent could declare a
+  cardinality rule's type but not its bounds, a uniqueness rule but not its
+  scope.
+- A rule edit whose only difference is its predicate is classified on its own
+  terms rather than as "the rule changed". Adding a `where` narrows what a rule
+  rejects, so it is compatible — except on a rule with `min_items`, where
+  narrowing the counted population is exactly how a record that satisfied the
+  bound stops satisfying it. Editing or removing one is breaking: predicate
+  containment is not decidable here, the same reason a changed `pattern` counts
+  as tightened.
 - `is_identifier` is compared per entity rather than per field (#212). What a
   consumer can observe is which field an entity is keyed by — the marked one, or
   absent a marker the first non-reference one — so declaring the field inference
@@ -25,6 +70,14 @@
   about what a dataset is keyed by.
 
 ### Fixed
+- A validation rule scoped to a nested entity now fires on the path the
+  application validates through. A profile writes `SampleAttribute`, the dataset
+  validator reaches a nested child as `sample_attribute` and its own root as
+  `sampletype`, and the three were compared on case alone — so the root matched
+  and every nested entity missed, silently disabling 54 rules across the shipped
+  profiles. Found while wiring #211, whose first constraint is a rule on a
+  nested entity. Blast radius measured against every shipped example: no error
+  count changed.
 - An entity annotated with the JERM class it represents is exported as it
   (#234). The SEEK role map read the entity's *name* against nine strings and
   never its `ontology_term`, so a profile derived faithfully from JERM exported

@@ -16,7 +16,7 @@ import yaml
 
 from metaseed.agent.mcp.server import create_server, reset_mcp_state
 from metaseed.facade.core import ProfileFacade
-from metaseed.specs.builder import FIELD_MARKER_NAMES
+from metaseed.specs.builder import FIELD_MARKER_NAMES, RULE_ATTRIBUTE_NAMES
 from metaseed.specs.schema import ProfileSpec
 from tests.test_agent.helpers import get_tool
 
@@ -332,6 +332,81 @@ class TestFieldMarkersOverMcp:
             parameters = inspect.signature(get_tool(server, tool)).parameters
             missing = [n for n in FIELD_MARKER_NAMES if n not in parameters]
             assert not missing, f"{tool} does not expose {missing}"
+
+    def test_every_rule_attribute_is_a_parameter_of_both_rule_tools(self, server):
+        """The same gate for rules. Half of them were unauthorable over MCP: an
+        agent could declare a cardinality rule and not its bounds (#211)."""
+        for tool in ("spec_add_rule", "spec_update_rule"):
+            parameters = inspect.signature(get_tool(server, tool)).parameters
+            missing = [n for n in RULE_ATTRIBUTE_NAMES if n not in parameters]
+            assert not missing, f"{tool} does not expose {missing}"
+
+    def test_a_predicate_authored_over_mcp_survives_a_yaml_round_trip(self, server):
+        call(server, "spec_create", name="p", version="1.0")
+        call(server, "spec_add_entity", name="SampleType")
+        call(server, "spec_add_entity", name="SampleAttribute")
+        call(
+            server,
+            "spec_add_field",
+            entity="SampleAttribute",
+            name="is_display_column",
+            field_type="boolean",
+        )
+        call(
+            server,
+            "spec_add_field",
+            entity="SampleType",
+            name="attributes",
+            field_type="list",
+            items="SampleAttribute",
+        )
+        call(
+            server,
+            "spec_add_rule",
+            name="exactly_one_display_column",
+            type="cardinality",
+            applies_to="SampleType",
+            field="attributes",
+            min_items=1,
+            max_items=1,
+            where={"field": "is_display_column", "op": "==", "value": True},
+        )
+
+        spec = ProfileSpec.model_validate(
+            yaml.safe_load(get_tool(server, "spec_preview_yaml")())
+        )
+
+        assert spec.validation_rules[0].where is not None
+        assert spec.validation_rules[0].max_items == 1
+
+    def test_a_predicate_naming_an_unknown_field_is_reported_by_spec_validate(
+        self, server
+    ):
+        call(server, "spec_create", name="p", version="1.0")
+        call(server, "spec_add_entity", name="SampleType")
+        call(server, "spec_add_entity", name="SampleAttribute")
+        call(
+            server,
+            "spec_add_field",
+            entity="SampleType",
+            name="attributes",
+            field_type="list",
+            items="SampleAttribute",
+        )
+        call(
+            server,
+            "spec_add_rule",
+            name="one",
+            type="cardinality",
+            applies_to="SampleType",
+            field="attributes",
+            max_items=1,
+            where={"field": "is_dispaly_column", "op": "is_set"},
+        )
+
+        result = call(server, "spec_validate")
+
+        assert any("is_dispaly_column" in issue for issue in result["issues"])
 
     @pytest.mark.parametrize(
         ("marker", "value"),

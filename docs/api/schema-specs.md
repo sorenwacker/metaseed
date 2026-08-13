@@ -78,8 +78,19 @@ The `spec_version` field indicates which version of the specification language f
 | `0.4` | Adds `ontologies` field to FieldSpec for scoping `ontology_term` type fields to specific OLS ontologies. |
 | `0.5` | Adds `dcat` field to FieldSpec for mapping a root entity's fields onto DCAT/DCAT-AP properties (see DCAT Mapping). |
 | `0.6` | Adds relationship-role and metadata markers to FieldSpec: `owns` (owning-parent relationship), `is_identifier`/`is_label` (declared identity/label), and `example`, `options`, `unit`, `label`, `tier` (form/template metadata). See Field Markers. |
+| `0.7` | Adds predicates to validation rules: `where` (the subset a `cardinality` rule counts or a `uniqueness` rule compares) and `when`/`require` (a requirement that depends on a value). See Rule Predicates. |
 
 Existing specs without `spec_version` are automatically treated as version `0.1`.
+
+`SUPPORTED_SPEC_VERSION` (`metaseed.specs.versioning`) is the highest version this metaseed understands. A profile declaring a higher one still loads if it happens to use nothing new; if it uses a construct this version does not know, the load error names the mismatch rather than only the rejected key:
+
+```
+SpecLoadError: Invalid profile /path/to/profile.yaml at validation_rules.3.where:
+Extra inputs are not permitted
+(the profile declares spec_version 0.7; this metaseed supports up to 0.6)
+```
+
+Nothing branches on `spec_version` at runtime: it is declarative, so a 0.7 construct in a spec declaring 0.5 is read normally.
 
 ## Profile Versioning
 
@@ -833,6 +844,94 @@ validation_rules:
 | `end_field` | conditional | End field for date_range |
 | `lat_field` | no | Latitude field for coordinate_pair (default: `latitude`) |
 | `lon_field` | no | Longitude field for coordinate_pair (default: `longitude`) |
+| `where` | no | Predicate selecting which items a `cardinality` rule counts, or which records a `uniqueness` rule compares (spec_version 0.7) |
+| `when` | no | Predicate deciding whether `require` applies to a record (spec_version 0.7) |
+| `require` | no | Fields a record must carry when `when` holds (spec_version 0.7) |
+
+### Rule Predicates
+
+A `cardinality` rule counts the items of a list. `where` says *which* items to count, so a constraint about some of a collection can be written — "exactly one attribute is the display column", not "the attribute list has exactly one entry".
+
+```yaml
+- name: exactly_one_display_column
+  type: cardinality
+  applies_to: [SampleType]
+  field: attributes
+  where:
+    field: is_display_column
+    op: "=="
+    value: true
+  min_items: 1
+  max_items: 1
+```
+
+**A predicate is a mapping, not an expression string.** Its leaf form is `{field, op, value}`; its composite forms are `{all: [...]}`, `{any: [...]}` and `{not: {...}}`. YAML types the literal for free (`value: true` is a boolean, `value: "true"` a string), a malformed predicate is rejected field by field at construction rather than at parse time, and — the deciding reason — a mapping is canonical under `canonical_json`, so reformatting cannot change the content hash or force a MAJOR bump. The one-line spelling survives as the *rendering*: `render_predicate()` produces `is_display_column == true`, which is what error messages, the rules list and `spec_validate` show.
+
+| Operator | Holds when |
+|---|---|
+| `==`, `!=` | The value equals / differs from `value`. A type mismatch is simply false. |
+| `in`, `not_in` | The value is / is not a member of the `value` list. |
+| `>`, `>=`, `<`, `<=` | Both operands are numbers, or both are dates, and the comparison holds. Anything else is a validation error against that record, not a false — a mistyped comparison must not silently disable the constraint it was written for. |
+| `is_set`, `is_not_set` | The field carries a value / does not. `value` is omitted. |
+
+**An absent or null field makes every operator false except `is_not_set`.** So a predicate over an optional field selects only the records where it is set. The other reading is written explicitly:
+
+```yaml
+where:
+  any:
+    - field: name
+      op: is_not_set
+    - field: name
+      op: "!="
+      value: Input
+```
+
+**What a predicate can see is the item being counted, and nothing else.** In the example above `is_display_column` is read from each `SampleAttribute`, not from the `SampleType` the rule is declared on: the rule already reaches one level down through `field`, and the predicate adds no traversal of its own. Parent fields, other entity types, dotted paths and aggregate functions are deliberately absent; a wider scope can be added later without changing what an existing predicate means.
+
+**Bounds, checked once at profile load rather than per value:** nesting depth at most 8, at most 64 nodes, and at most 256 entries in a literal list. A predicate naming a field the item entity does not declare is also rejected at load, so a rule cannot silently never fire. `spec_validate` reports the same problems while a draft is being edited.
+
+#### `where` on a uniqueness rule
+
+`uniqueness` compares a field's values across records. `where` says which records are compared at all, which is how an exemption is written:
+
+```yaml
+- name: singleton_isa_tags
+  type: uniqueness
+  applies_to: [SampleAttribute]
+  field: isa_tag
+  unique_within: parent
+  where:
+    all:
+      - field: isa_tag
+        op: in
+        value: [source, protocol, sample, data_file, other_material]
+      - field: name
+        op: "!="
+        value: Input
+```
+
+A record the predicate excludes is neither compared nor remembered — remembering it would let an exempt record collide with the next one that is not exempt. The predicate here reads the record whose value is being counted, not a parent.
+
+Uniqueness is enforced by `DatasetValidator` over the whole tree rather than by an engine rule, because an engine sees one record and uniqueness is a question about the records around it.
+
+#### `when` and `require`
+
+The `condition` string tests whether fields are *present*; it never reads a value, so "required when another field holds a particular value" could not be written. `when` is a predicate over the record's own fields and `require` names what it demands:
+
+```yaml
+- name: cv_terms_required_for_controlled_vocabulary
+  type: conditional
+  applies_to: [SampleAttribute]
+  when:
+    field: data_type
+    op: "=="
+    value: Controlled Vocabulary
+  require: [cv_terms]
+```
+
+They are an alternative to `condition`, not a layer over it: a rule setting both is rejected at load rather than resolved by a precedence nobody would remember. `when` without `require` (or the reverse) is rejected too — half of one construct reports nothing, or is a plain required field written in the wrong place. A missing field is reported as *incompleteness*, like any other required field, so it does not block saving work in progress.
+
+**Comparator.** Adding a `where` where none existed narrows what the rule rejects, so it is `rule_predicate_added` and compatible — except on a rule with `min_items`, where narrowing the counted population can push a record below the bound; that is `rule_predicate_narrowed_count` and breaking. Editing or removing an existing predicate is breaking: deciding whether one predicate selects a superset of another is not decidable here, the same reason a changed `pattern` counts as tightened.
 
 ### Condition Syntax
 

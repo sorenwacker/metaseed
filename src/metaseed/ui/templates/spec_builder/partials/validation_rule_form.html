@@ -4,6 +4,10 @@
       hx-on::after-request="hideRuleModal()"
       class="rule-form rule-form-modal">
 
+    {% if error %}
+    <div class="alert alert-error" data-testid="rule-error">{{ error }}</div>
+    {% endif %}
+
     <!-- Step 1: Rule Type Selection -->
     <div class="form-group">
         <label class="form-label">Rule Type</label>
@@ -77,7 +81,55 @@
                    class="form-input"
                    value="{{ rule.condition or '' }}"
                    placeholder="end_date >= start_date, A OR B, A AND B">
-            <span class="form-help">Logical expression using field names</span>
+            <span class="form-help">
+                Logical expression over field names. It asks only whether a field
+                has a value; to depend on what the value <em>is</em>, use the
+                requirement below instead. A rule cannot use both.
+            </span>
+
+            <!-- Value-dependent requirement (spec_version 0.7) -->
+            <div class="form-group" data-testid="rule-requirement">
+                <label class="form-label">Require these fields</label>
+                <input type="text"
+                       name="require"
+                       class="form-input"
+                       data-testid="rule-require"
+                       value="{{ (rule.require or []) | join(', ') }}"
+                       placeholder="cv_terms">
+                <label class="form-label">when</label>
+                {% if when_rows is none %}
+                <input type="hidden" name="when_keep" value="1">
+                <p class="form-help" data-testid="when-readonly">
+                    <code>{{ when_text }}</code><br>
+                    This predicate nests, which this editor cannot show as rows.
+                    It is kept as written; edit it in the YAML.
+                </p>
+                {% else %}
+                <select name="when_join" class="form-input" data-testid="when-join">
+                    <option value="all" {% if when_join == 'all' %}selected{% endif %}>all of these</option>
+                    <option value="any" {% if when_join == 'any' %}selected{% endif %}>any of these</option>
+                </select>
+                <div id="when-rows">
+                    {% for row in when_rows %}
+                    <div class="predicate-row" data-testid="when-row">
+                        <input type="text" name="when_field" class="form-input" value="{{ row.field }}" placeholder="field">
+                        <select name="when_op" class="form-input">
+                            {% for op in operators %}
+                            <option value="{{ op }}" {% if row.op == op %}selected{% endif %}>{{ op }}</option>
+                            {% endfor %}
+                        </select>
+                        <input type="text" name="when_value" class="form-input" value="{{ row.value }}" placeholder="value">
+                        <button type="button" class="btn btn-sm" onclick="this.parentElement.remove()">Remove</button>
+                    </div>
+                    {% endfor %}
+                </div>
+                <button type="button" class="btn btn-sm" data-testid="add-when-row"
+                        onclick="addWhenRow()">Add condition</button>
+                <p class="form-help">
+                    Reads the record's own fields. Values are read as YAML.
+                </p>
+                {% endif %}
+            </div>
         </div>
 
         <!-- Type-specific fields: Date Range -->
@@ -126,9 +178,18 @@
                 <label class="form-label">Field</label>
                 <input type="text"
                        name="field"
+                       id="cardinality-field"
                        class="form-input"
+                       list="cardinality-field-options"
+                       data-testid="rule-field"
                        value="{{ rule.field or '' }}"
-                       placeholder="field_name">
+                       placeholder="field_name"
+                       onchange="updatePredicateFieldOptions()">
+                <datalist id="cardinality-field-options">
+                    {% for option in list_fields %}
+                    <option value="{{ option.field }}">{{ option.entity }}.{{ option.field }} ({{ option.items }})</option>
+                    {% endfor %}
+                </datalist>
             </div>
             <div class="form-group">
                 <label class="form-label">Min Items</label>
@@ -145,6 +206,47 @@
                        class="form-input"
                        min="0"
                        value="{{ rule.max_items if rule.max_items is not none else '' }}">
+            </div>
+
+            <!-- Which items to count: the predicate (spec_version 0.7) -->
+            <div class="form-group" data-testid="rule-predicate">
+                <label class="form-label">Count only items where</label>
+                {% if where_rows is none %}
+                <input type="hidden" name="where_keep" value="1">
+                <p class="form-help" data-testid="predicate-readonly">
+                    <code>{{ where_text }}</code><br>
+                    This predicate nests, which this editor cannot show as rows.
+                    It is kept as written; edit it in the YAML.
+                </p>
+                {% else %}
+                <select name="where_join" class="form-input" data-testid="predicate-join">
+                    <option value="all" {% if where_join == 'all' %}selected{% endif %}>all of these</option>
+                    <option value="any" {% if where_join == 'any' %}selected{% endif %}>any of these</option>
+                </select>
+                <div id="predicate-rows">
+                    {% for row in where_rows %}
+                    <div class="predicate-row" data-testid="predicate-row">
+                        <input type="text" name="where_field" class="form-input predicate-field"
+                               list="predicate-field-options" value="{{ row.field }}" placeholder="field">
+                        <select name="where_op" class="form-input">
+                            {% for op in operators %}
+                            <option value="{{ op }}" {% if row.op == op %}selected{% endif %}>{{ op }}</option>
+                            {% endfor %}
+                        </select>
+                        <input type="text" name="where_value" class="form-input" value="{{ row.value }}" placeholder="value">
+                        <button type="button" class="btn btn-sm" onclick="this.parentElement.remove()">Remove</button>
+                    </div>
+                    {% endfor %}
+                </div>
+                <datalist id="predicate-field-options"></datalist>
+                <button type="button" class="btn btn-sm" data-testid="add-predicate-row"
+                        onclick="addPredicateRow()">Add condition</button>
+                <p class="form-help">
+                    Values are read as YAML: <code>true</code> is a boolean,
+                    <code>3</code> a number, <code>[a, b]</code> a list, anything
+                    else text. Leave empty to count every item.
+                </p>
+                {% endif %}
             </div>
         </div>
 
@@ -243,6 +345,48 @@
 </form>
 
 <script>
+const listFieldOptions = {{ list_fields | tojson }};
+const predicateOperators = {{ operators | list | tojson }};
+
+function updatePredicateFieldOptions() {
+    // The predicate reads the *item* entity's fields, not the parent's, so the
+    // list a rule counts decides what a condition may name.
+    const chosen = document.getElementById('cardinality-field');
+    const datalist = document.getElementById('predicate-field-options');
+    if (!chosen || !datalist) return;
+    const match = listFieldOptions.find(o => o.field === chosen.value);
+    datalist.innerHTML = '';
+    (match ? match.item_fields : []).forEach(name => {
+        const option = document.createElement('option');
+        option.value = name;
+        datalist.appendChild(option);
+    });
+}
+
+function addWhenRow() {
+    addRowTo('when-rows', 'when');
+}
+
+function addPredicateRow() {
+    addRowTo('predicate-rows', 'where');
+}
+
+function addRowTo(containerId, prefix) {
+    const rows = document.getElementById(containerId);
+    if (!rows) return;
+    const row = document.createElement('div');
+    row.className = 'predicate-row';
+    row.setAttribute('data-testid', prefix === 'when' ? 'when-row' : 'predicate-row');
+    const options = predicateOperators.map(op => `<option value="${op}">${op}</option>`).join('');
+    const list = prefix === 'where' ? ' list="predicate-field-options"' : '';
+    row.innerHTML =
+        `<input type="text" name="${prefix}_field" class="form-input"${list} placeholder="field">` +
+        `<select name="${prefix}_op" class="form-input">${options}</select>` +
+        `<input type="text" name="${prefix}_value" class="form-input" placeholder="value">` +
+        '<button type="button" class="btn btn-sm" onclick="this.parentElement.remove()">Remove</button>';
+    rows.appendChild(row);
+}
+
 function showRuleTypeFields(type) {
     // Hide all type-specific fields first
     document.querySelectorAll('.rule-type-fields').forEach(el => el.hidden = true);
@@ -277,5 +421,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if (select) {
         showRuleTypeFields(select.value);
     }
+    updatePredicateFieldOptions();
 });
 </script>

@@ -169,6 +169,62 @@ errors = rule.validate({"samples": []})
 # Error: 'samples' must have at least 1 item(s), but has 0
 ```
 
+With a `where` predicate the rule counts only the items the predicate selects,
+which is how a constraint about *some* of a collection is written (spec_version
+0.7 — see [Rule Predicates](schema-specs.md#rule-predicates)):
+
+```python
+from metaseed.specs.predicates import parse_predicate
+
+rule = ListCardinalityRule(
+    field="attributes",
+    min_items=1,
+    max_items=1,
+    where=parse_predicate({"field": "is_display_column", "op": "==", "value": True}),
+    label_field="name",
+)
+
+errors = rule.validate({"attributes": [{"name": "Title", "is_display_column": False}]})
+# Error: expected exactly 1 of 1 'attributes' to match is_display_column == true, found 0
+```
+
+The message states the bound, the matched count, the population and the
+predicate, and names the matched members when there are too many: "expected
+exactly 1, got 0" cannot be acted on against 24 children when the reader cannot
+see which of them were counted. `label_field` is how a member is named, resolved
+by the engine from the item entity's `is_label` / `is_identifier` markers.
+
+A predicate that cannot be applied to an item — an ordering operator over
+operands that are not both numbers or both dates — is reported as an error
+against the record. It is not counted as "did not match", which would leave the
+rule quietly satisfied by a predicate that never worked.
+
+### ConditionalRequirementRule
+
+Requires fields when a predicate holds of the record (spec_version 0.7 `when` /
+`require`).
+
+```python
+from metaseed.specs.predicates import parse_predicate
+from metaseed.validators.rules import ConditionalRequirementRule
+
+rule = ConditionalRequirementRule(
+    when=parse_predicate(
+        {"field": "data_type", "op": "==", "value": "Controlled Vocabulary"}
+    ),
+    require=["cv_terms"],
+    rule_name="cv_terms_required_for_controlled_vocabulary",
+)
+
+errors = rule.validate({"data_type": "Controlled Vocabulary"})
+# Error: Field 'cv_terms' is required when data_type == 'Controlled Vocabulary'
+```
+
+`ConditionalRule` reads a condition string and asks only whether the fields it
+names are *present*. This is the value-dependent form; the two are alternatives,
+and a rule setting both `when` and `condition` is rejected at profile load. A
+missing field is reported as incompleteness, like any other required field.
+
 ## Rules on a single extracted record
 
 `ExtractionContext.validate_instance` validates one row extracted from a source
@@ -196,8 +252,9 @@ Which of the profile's `validation_rules` run:
 | `pattern` on a `uri` / `ontology_term` field | Runs | Single-value check. A pattern on a `string` field is merged onto the field's constraints at load and is applied by the field-level checks instead. |
 | `minimum` / `maximum` / `enum` | Runs as a field constraint | Merged onto the field at load; applied by the field-level checks, not by an engine rule. |
 | `cardinality` over a list of scalars | Runs | The list is a value of the record. A missing field counts as zero items, as it does on every other path. |
-| `cardinality` over a child collection | Skipped | The children are extracted as their own records, so the parent record never holds them and the rule would report zero items for every row. |
-| `uniqueness` | Not built by any engine | Needs the sibling records, which no engine sees. Enforced over the whole tree by `DatasetValidator`. |
+| `cardinality` over a child collection | Skipped | The children are extracted as their own records, so the parent record never holds them and the rule would report zero items for every row. A `where` does not change this: a predicated rule over children is skipped on this path for the same reason. |
+| `conditional` with `when` / `require` | Runs | Reads only the record's own fields. |
+| `uniqueness` | Not built by any engine | Needs the sibling records, which no engine sees. Enforced over the whole tree by `DatasetValidator`, including its `where` predicate. |
 | `reference` | Not built by any engine | Needs the identifiers held elsewhere in the dataset. Enforced over the whole tree by `DatasetValidator`. |
 
 Rules derived from the entity spec rather than declared in the profile

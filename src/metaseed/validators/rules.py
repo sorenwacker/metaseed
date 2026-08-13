@@ -9,7 +9,9 @@ from typing import Any, Self
 
 import regex
 
+from metaseed.specs.predicates import Predicate, render_predicate
 from metaseed.validators.base import Kind, ValidationError, ValidationRule, has_value
+from metaseed.validators.predicates import PredicateError, evaluate
 
 # Ceiling on evaluating a single user-supplied pattern against one value. Patterns
 # come from user-authored specs and are matched against user data, so a
@@ -421,6 +423,89 @@ class PatternRule(ValidationRule):
         return []
 
 
+class ConditionalRequirementRule(ValidationRule):
+    """Requires fields of a record when a predicate holds of that record.
+
+    The legacy :class:`ConditionalRule` reads a condition string by asking
+    whether each named field is *present*; it never reads a value, so
+    "``cv_terms`` is required when ``data_type`` is Controlled Vocabulary" could
+    not be written (#211). This is the value-dependent form: ``when`` is a
+    predicate over the record's own fields and ``require`` names what it demands.
+
+    The two are alternatives rather than layers -- a rule setting both ``when``
+    and ``condition`` is rejected at profile load, since a precedence between
+    them would be a rule nobody could remember.
+
+    Attributes:
+        when: The predicate deciding whether the requirement applies.
+        require: Fields the record must carry when it does.
+        rule_name: Name for this specific rule instance.
+        custom_message: Optional custom error message.
+    """
+
+    def __init__(
+        self: Self,
+        when: Predicate,
+        require: list[str],
+        rule_name: str = "conditional_requirement",
+        message: str | None = None,
+    ) -> None:
+        """Initialize the rule.
+
+        Args:
+            when: Predicate over the record's own fields.
+            require: Fields required when the predicate holds.
+            rule_name: Name for this rule instance.
+            message: Optional custom error message.
+        """
+        self.when = when
+        self.require = require
+        self.rule_name = rule_name
+        self.custom_message = message
+
+    @property
+    def name(self: Self) -> str:
+        """Return the rule name."""
+        return self.rule_name
+
+    def validate(self: Self, data: dict[str, Any]) -> list[ValidationError]:
+        """Report the required fields a record is missing.
+
+        Args:
+            data: The record.
+
+        Returns:
+            One error per missing field, or one error if the predicate could not
+            be applied to this record at all.
+        """
+        try:
+            applies = evaluate(self.when, data)
+        except PredicateError as exc:
+            return [
+                ValidationError(field="", message=f"{self.name}: {exc}", rule=self.name)
+            ]
+        if not applies:
+            return []
+
+        reason = f"is required when {render_predicate(self.when)}"
+        return [
+            ValidationError(
+                field=field,
+                message=(
+                    f"{self.custom_message} (field '{field}' {reason})"
+                    if self.custom_message
+                    else f"Field '{field}' {reason}"
+                ),
+                rule=self.name,
+                # A field that is not filled in yet, exactly like any other
+                # required field: reported, not blocking (#246).
+                kind=Kind.COMPLETENESS,
+            )
+            for field in self.require
+            if not has_value(data, field)
+        ]
+
+
 class ConditionalRule(ValidationRule):
     """Validates conditional field requirements.
 
@@ -537,7 +622,13 @@ class ConditionalRule(ValidationRule):
 
 
 class ListCardinalityRule(ValidationRule):
-    """Validates list field cardinality (min/max items).
+    """Validates list field cardinality (min/max items), optionally over a subset.
+
+    With a ``where`` predicate the rule counts only the items it selects, which
+    is what lets a constraint be written about *some* of a collection — "exactly
+    one attribute is the display column" rather than "the list has one entry"
+    (#211). The predicate reads each **item**; the rule already reaches one level
+    down through ``field``, and the predicate adds no traversal of its own.
 
     Attributes:
         field: Name of the list field.
@@ -545,6 +636,10 @@ class ListCardinalityRule(ValidationRule):
         max_items: Maximum number of items allowed (None = no maximum).
         rule_name: Name for this specific rule instance.
         custom_message: Optional custom error message.
+        where: Predicate selecting which items count (None = all of them).
+        label_field: Field of an item to name it by when reporting which items
+            were counted. Resolved from the item entity's declared identity
+            markers by the engine; ``None`` falls back to the index alone.
     """
 
     def __init__(
@@ -554,6 +649,8 @@ class ListCardinalityRule(ValidationRule):
         max_items: int | None = None,
         rule_name: str = "list_cardinality",
         message: str | None = None,
+        where: Predicate | None = None,
+        label_field: str | None = None,
     ) -> None:
         """Initialize the rule.
 
@@ -563,12 +660,16 @@ class ListCardinalityRule(ValidationRule):
             max_items: Maximum number of items allowed.
             rule_name: Name for this rule instance.
             message: Optional custom error message.
+            where: Predicate selecting which items are counted.
+            label_field: Field of an item to name it by in a message.
         """
         self.field = field
         self.min_items = min_items
         self.max_items = max_items
         self.rule_name = rule_name
         self.custom_message = message
+        self.where = where
+        self.label_field = label_field
 
     @property
     def name(self: Self) -> str:
@@ -585,26 +686,60 @@ class ListCardinalityRule(ValidationRule):
             List of errors if cardinality constraints violated.
         """
         value = data.get(self.field)
-        errors: list[ValidationError] = []
 
         # Treat None or missing as empty list for min_items check
         if value is None:
             value = []
 
         if not isinstance(value, list):
-            return errors
+            return []
 
-        count = len(value)
+        if self.where is None:
+            return self._bound_errors(len(value), None, len(value))
 
+        try:
+            matched = self._matching(value)
+        except PredicateError as exc:
+            # Not swallowed into "nothing matched": that would leave the rule
+            # quietly satisfied by a predicate that cannot be applied at all.
+            return [
+                ValidationError(
+                    field=self.field,
+                    message=f"{self.name}: {exc}",
+                    rule=self.name,
+                )
+            ]
+        return self._bound_errors(len(matched), matched, len(value))
+
+    def _matching(self: Self, items: list[Any]) -> list[tuple[int, Any]]:
+        """The items the predicate selects, with their positions.
+
+        An item that is not a record has no fields to read, so it matches
+        nothing. A ``where`` over a list of scalars is rejected at profile load;
+        this only keeps a dataset that holds one from crashing the run.
+        """
+        assert self.where is not None
+        return [
+            (index, item)
+            for index, item in enumerate(items)
+            if isinstance(item, dict) and evaluate(self.where, item)
+        ]
+
+    def _bound_errors(
+        self: Self,
+        count: int,
+        matched: list[tuple[int, Any]] | None,
+        population: int,
+    ) -> list[ValidationError]:
+        """The errors the counted total produces against the declared bounds."""
+        errors: list[ValidationError] = []
         if self.min_items is not None and count < self.min_items:
-            msg = (
-                self.custom_message
-                or f"'{self.field}' must have at least {self.min_items} item(s), but has {count}"
-            )
             errors.append(
                 ValidationError(
                     field=self.field,
-                    message=msg,
+                    message=self._message(
+                        "at least", self.min_items, count, matched, population
+                    ),
                     rule=self.name,
                     # "Not enough yet" — a Study whose profile wants three
                     # design descriptors cannot be saved for the first time if
@@ -612,21 +747,61 @@ class ListCardinalityRule(ValidationRule):
                     kind=Kind.COMPLETENESS,
                 )
             )
-
         if self.max_items is not None and count > self.max_items:
-            msg = (
-                self.custom_message
-                or f"'{self.field}' must have at most {self.max_items} item(s), but has {count}"
-            )
             errors.append(
                 ValidationError(
                     field=self.field,
-                    message=msg,
+                    message=self._message(
+                        "at most", self.max_items, count, matched, population
+                    ),
                     rule=self.name,
                 )
             )
-
         return errors
+
+    def _message(
+        self: Self,
+        direction: str,
+        bound: int,
+        count: int,
+        matched: list[tuple[int, Any]] | None,
+        population: int,
+    ) -> str:
+        """Render the failure.
+
+        Unpredicated, this is the message it has always been. Predicated, it
+        states what was counted and out of what: "expected exactly 1, found 0"
+        is unactionable against 24 children when the reader cannot see which of
+        them were counted or why.
+        """
+        if matched is None or self.where is None:
+            return (
+                self.custom_message
+                or f"'{self.field}' must have {direction} {bound} item(s), but has {count}"
+            )
+
+        quantifier = (
+            "exactly"
+            if self.min_items is not None and self.min_items == self.max_items
+            else direction
+        )
+        detail = (
+            f"expected {quantifier} {bound} of {population} '{self.field}' to match "
+            f"{render_predicate(self.where)}, found {count}"
+        )
+        if matched:
+            detail += ": " + ", ".join(
+                self._named(index, item) for index, item in matched
+            )
+        # A custom message on a predicated rule is prefixed rather than
+        # substituted: replacing it would discard the only actionable part.
+        return f"{self.custom_message} ({detail})" if self.custom_message else detail
+
+    def _named(self: Self, index: int, item: Any) -> str:
+        """One counted member, as ``attributes[3] 'Sample Name'``."""
+        path = f"{self.field}[{index}]"
+        label = item.get(self.label_field) if self.label_field else None
+        return f"{path} '{label}'" if label else path
 
 
 class CoordinatePairRule(ValidationRule):

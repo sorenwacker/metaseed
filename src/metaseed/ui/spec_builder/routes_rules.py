@@ -13,7 +13,15 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
+from metaseed.specs.predicates import render_predicate
 from metaseed.specs.schema import ValidationRuleSpec
+
+from .predicate_form import (
+    OPERATORS,
+    list_field_options,
+    predicate_from_rows,
+    rows_from_predicate,
+)
 
 if TYPE_CHECKING:
     from .state import SpecBuilderState
@@ -41,6 +49,17 @@ class RuleUpdateData(BaseModel):
     lon_field: str = ""
     start_field: str = ""
     end_field: str = ""
+    where_join: str = "all"
+    where_keep: str = ""
+    when_join: str = "all"
+    when_keep: str = ""
+    when_fields: list[str] = []
+    when_ops: list[str] = []
+    when_values: list[str] = []
+    require: str = ""
+    where_fields: list[str] = []
+    where_ops: list[str] = []
+    where_values: list[str] = []
 
     def parse_applies_to(self) -> str | list[str]:
         """Parse applies_to into proper format."""
@@ -77,6 +96,17 @@ class RuleUpdateData(BaseModel):
         rule.lon_field = self.lon_field.strip() or None
         rule.start_field = self.start_field.strip() or None
         rule.end_field = self.end_field.strip() or None
+        if not self.where_keep:
+            rule.where = predicate_from_rows(
+                self.where_join, self.where_fields, self.where_ops, self.where_values
+            )
+        if not self.when_keep:
+            rule.when = predicate_from_rows(
+                self.when_join, self.when_fields, self.when_ops, self.when_values
+            )
+        rule.require = [
+            name.strip() for name in self.require.split(",") if name.strip()
+        ] or None
 
 
 def register_rule_routes(
@@ -121,6 +151,13 @@ def register_rule_routes(
             "spec_builder/partials/validation_rules_list.html",
             {
                 "rules": builder.spec.validation_rules,
+                # Rendered here rather than in the template: the one-line
+                # spelling is what a rule reads as, and it exists exactly once.
+                "predicates": {
+                    index: render_predicate(rule.where)
+                    for index, rule in enumerate(builder.spec.validation_rules)
+                    if rule.where is not None
+                },
                 "editing_rule_idx": builder.editing_rule_idx,
                 "entities": list(builder.spec.entities.keys()),
                 "error": error,
@@ -133,9 +170,16 @@ def register_rule_routes(
         builder: SpecBuilderState,
         rule: ValidationRuleSpec,
         idx: int,
+        error: str | None = None,
+        typed_rows: tuple[str, list[dict[str, object]]] | None = None,
     ) -> HTMLResponse:
         """Helper to return rule form template response."""
         assert builder.spec is not None  # caller resolves via _require_spec
+        # On the error path the rows come back from what was posted, not from
+        # the stored rule: a predicate is fiddly enough that losing the typing
+        # to report one bad value would be worse than the mistake.
+        editable = typed_rows or rows_from_predicate(rule.where)
+        requirement = rows_from_predicate(rule.when)
         return templates.TemplateResponse(
             request,
             "spec_builder/partials/validation_rule_form.html",
@@ -143,6 +187,18 @@ def register_rule_routes(
                 "rule": rule,
                 "rule_idx": idx,
                 "entities": list(builder.spec.entities.keys()),
+                "list_fields": list_field_options(builder.spec),
+                "operators": OPERATORS,
+                # None means the stored predicate nests deeper than rows can
+                # express: shown as its one-line spelling and left untouched
+                # rather than flattened into something else.
+                "where_join": editable[0] if editable else "all",
+                "where_rows": editable[1] if editable else None,
+                "where_text": render_predicate(rule.where) if rule.where else "",
+                "when_join": requirement[0] if requirement else "all",
+                "when_rows": requirement[1] if requirement else None,
+                "when_text": render_predicate(rule.when) if rule.when else "",
+                "error": error,
             },
         )
 
@@ -207,6 +263,17 @@ def register_rule_routes(
         lon_field: str = Form(""),
         start_field: str = Form(""),
         end_field: str = Form(""),
+        where_join: str = Form("all"),
+        where_keep: str = Form(""),
+        when_join: str = Form("all"),
+        when_keep: str = Form(""),
+        when_field: list[str] = Form([]),
+        when_op: list[str] = Form([]),
+        when_value: list[str] = Form([]),
+        require: str = Form(""),
+        where_field: list[str] = Form([]),
+        where_op: list[str] = Form([]),
+        where_value: list[str] = Form([]),
     ) -> HTMLResponse:
         """Update a validation rule."""
         builder = _require_spec()
@@ -233,8 +300,40 @@ def register_rule_routes(
             lon_field=lon_field,
             start_field=start_field,
             end_field=end_field,
+            where_join=where_join,
+            where_keep=where_keep,
+            when_join=when_join,
+            when_keep=when_keep,
+            when_fields=when_field,
+            when_ops=when_op,
+            when_values=when_value,
+            require=require,
+            where_fields=where_field,
+            where_ops=where_op,
+            where_values=where_value,
         )
-        update_data.apply_to_rule(rule)
+        try:
+            update_data.apply_to_rule(rule)
+        except ValueError as exc:
+            # Back to the form with what was typed still in it: a predicate row
+            # is fiddly enough that discarding the whole edit to report one bad
+            # value would be worse than the mistake.
+            return _rule_form_response(
+                request,
+                builder,
+                rule,
+                idx,
+                error=str(exc),
+                typed_rows=(
+                    where_join,
+                    [
+                        {"field": f, "op": o, "value": v}
+                        for f, o, v in zip(
+                            where_field, where_op, where_value, strict=False
+                        )
+                    ],
+                ),
+            )
 
         builder.editing_rule_idx = None
         builder.mark_changed()

@@ -228,6 +228,25 @@ five were not one problem:
 A test pins the expected set per profile, so a profile edit cannot introduce a
 new weak identifier unnoticed.
 
+## The rule editor
+
+Validation rules are edited by name, one form per rule, with the fields shown
+per rule type. Two of those fields are predicates (`where` on a cardinality or
+uniqueness rule, `when` on a conditional one), and they are edited as repeated
+rows of field / operator / value with an all-or-any toggle, assembled into the
+structured predicate server-side.
+
+Rows rather than a text box, because the field can then be offered from the
+fields the counted entity actually declares — which puts the load-time "unknown
+field" error out of the editor's reach instead of moving it to after the save.
+Values are read as YAML, which is how the same value would be written in the
+profile: `true` is a boolean, `3` a number, `[a, b]` a list.
+
+A flat group is what rows can express. A predicate loaded from YAML that nests
+deeper is shown read-only as its one-line `render_predicate()` spelling and
+posted back untouched: the editor not being able to show something is not a
+reason to destroy it.
+
 ## Persistence
 
 User-created specs are written under the platform data directory

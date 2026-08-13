@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, Any, Self
 import yaml
 from pydantic import ValidationError
 
+from metaseed.specs.predicates import profile_predicate_issues
 from metaseed.specs.schema import (
     Constraints,
     EntityDefSpec,
@@ -59,6 +60,18 @@ _CORE_FIELD_ATTRIBUTES: frozenset[str] = frozenset(
 
 ``constraints`` is here because it is exposed flattened, as the eight
 :data:`CONSTRAINT_NAMES` arguments, rather than as one object.
+"""
+
+RULE_ATTRIBUTE_NAMES: tuple[str, ...] = tuple(
+    name for name in ValidationRuleSpec.model_fields if name != "name"
+)
+"""Every :class:`ValidationRuleSpec` attribute a rule editor can set.
+
+Derived from the model for the same reason as :data:`FIELD_MARKER_NAMES`: an
+adapter reads the set instead of hardcoding it, so a key added to the format
+reaches the editors rather than being quietly unauthorable. Half of these were
+unauthorable over MCP until #211 -- an agent could declare a cardinality rule's
+type but not its bounds.
 """
 
 FIELD_MARKER_NAMES: tuple[str, ...] = tuple(
@@ -596,8 +609,12 @@ class SpecBuilder:
         unknown = set(attrs) - valid
         if unknown:
             raise ValueError(f"Unknown rule attribute(s): {', '.join(sorted(unknown))}")
-        for key, value in attrs.items():
-            setattr(rule, key, value)
+        # Rebuilt rather than assigned onto: pydantic does not validate an
+        # assignment, so a `where` set as a plain mapping would sit in the spec
+        # unparsed and the rule would silently do nothing with it.
+        merged = {**rule.model_dump(exclude_none=True), **attrs}
+        index = self._spec.validation_rules.index(rule)
+        self._spec.validation_rules[index] = ValidationRuleSpec.model_validate(merged)
 
     def delete_rule(self: Self, rule_name: str) -> None:
         """Delete a validation rule by name.
@@ -670,6 +687,10 @@ class SpecBuilder:
             issues.append(f"root_entity '{spec.root_entity}' is not a defined entity")
 
         issues.extend(self._field_issues(spec.entities.items()))
+        # A predicate problem is a defect, not an advisory: the rule carrying it
+        # would never fire. Reported here so a draft is told while it is being
+        # edited rather than when someone tries to load the saved profile.
+        issues.extend(profile_predicate_issues(spec))
 
         try:
             from metaseed.facade.core import ProfileFacade

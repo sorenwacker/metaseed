@@ -31,6 +31,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import BaseModel
 
+from metaseed.specs.predicates import render_predicate
 from metaseed.specs.schema import FieldSpec, identifying_field
 
 if TYPE_CHECKING:
@@ -90,6 +91,11 @@ class ChangeKind(StrEnum):
     VALIDATION_RULE_REMOVED = "validation_rule_removed"
     VALIDATION_RULE_CHANGED = "validation_rule_changed"
 
+    RULE_PREDICATE_ADDED = "rule_predicate_added"
+    RULE_PREDICATE_NARROWED_COUNT = "rule_predicate_narrowed_count"
+    RULE_PREDICATE_CHANGED = "rule_predicate_changed"
+    RULE_PREDICATE_REMOVED = "rule_predicate_removed"
+
 
 COMPATIBILITY_BY_KIND: dict[ChangeKind, Compatibility] = {
     ChangeKind.ROOT_ENTITY_CHANGED: Compatibility.BREAKING,
@@ -119,6 +125,10 @@ COMPATIBILITY_BY_KIND: dict[ChangeKind, Compatibility] = {
     ChangeKind.VALIDATION_RULE_ADDED: Compatibility.BREAKING,
     ChangeKind.VALIDATION_RULE_REMOVED: Compatibility.COMPATIBLE,
     ChangeKind.VALIDATION_RULE_CHANGED: Compatibility.BREAKING,
+    ChangeKind.RULE_PREDICATE_ADDED: Compatibility.COMPATIBLE,
+    ChangeKind.RULE_PREDICATE_NARROWED_COUNT: Compatibility.BREAKING,
+    ChangeKind.RULE_PREDICATE_CHANGED: Compatibility.BREAKING,
+    ChangeKind.RULE_PREDICATE_REMOVED: Compatibility.BREAKING,
 }
 """The classification table. Every :class:`ChangeKind` appears exactly once."""
 
@@ -683,17 +693,83 @@ def _rule_changes(old: ProfileSpec, new: ProfileSpec) -> list[SpecChange]:
             )
         )
     for name in (n for n in new_rules if n in old_rules):
-        if old_rules[name] != new_rules[name]:
-            found.append(
-                _change(
-                    ChangeKind.VALIDATION_RULE_CHANGED,
-                    name,
-                    f"validation rule {name!r} changed",
-                    old_rules[name],
-                    new_rules[name],
-                )
+        before, after = old_rules[name], new_rules[name]
+        if before == after:
+            continue
+        predicate_only = _predicate_change(name, before, after)
+        found.append(
+            predicate_only
+            or _change(
+                ChangeKind.VALIDATION_RULE_CHANGED,
+                name,
+                f"validation rule {name!r} changed",
+                before,
+                after,
             )
+        )
     return found
+
+
+def _predicate_change(
+    name: str, old: ValidationRuleSpec, new: ValidationRuleSpec
+) -> SpecChange | None:
+    """Classify a rule edit whose only difference is its predicate.
+
+    A rule with a predicate fails a record when the predicate selects it *and*
+    the rule body fails, so narrowing the selection can only reject less --
+    except on a lower bound, where narrowing the counted population is exactly
+    how a record that satisfied ``min_items`` stops satisfying it.
+
+    Which of two predicates selects a superset of the other is predicate
+    containment, undecidable here in general, so every predicate-to-predicate
+    edit reports breaking. That is the same policy the module already applies to
+    a changed regular expression, and for the same reason.
+
+    Args:
+        name: The rule name, used as the change target.
+        old: The rule as it was.
+        new: The rule as it is.
+
+    Returns:
+        The classified change, or ``None`` when the rules differ in more than
+        their predicate (the caller then reports the coarser kind).
+    """
+    if old.where == new.where:
+        return None
+    if old.model_copy(update={"where": None}) != new.model_copy(update={"where": None}):
+        return None
+
+    if old.where is None and new.where is not None:
+        narrows_a_lower_bound = new.min_items is not None
+        kind = (
+            ChangeKind.RULE_PREDICATE_NARROWED_COUNT
+            if narrows_a_lower_bound
+            else ChangeKind.RULE_PREDICATE_ADDED
+        )
+        detail = (
+            " -- it counts fewer items, so a record that met 'min_items' may no longer"
+            if narrows_a_lower_bound
+            else ""
+        )
+        message = (
+            f"validation rule {name!r} now applies only where "
+            f"{render_predicate(new.where)}{detail}"
+        )
+    elif new.where is None and old.where is not None:
+        kind = ChangeKind.RULE_PREDICATE_REMOVED
+        message = (
+            f"validation rule {name!r} no longer restricts itself to "
+            f"{render_predicate(old.where)}, so it applies to everything"
+        )
+    elif old.where is not None and new.where is not None:
+        kind = ChangeKind.RULE_PREDICATE_CHANGED
+        message = (
+            f"validation rule {name!r} applies where "
+            f"{render_predicate(new.where)} instead of {render_predicate(old.where)}"
+        )
+    else:  # pragma: no cover - both None means they were equal above
+        return None
+    return _change(kind, name, message, old.where, new.where)
 
 
 def _profile_changes(old: ProfileSpec, new: ProfileSpec) -> list[SpecChange]:

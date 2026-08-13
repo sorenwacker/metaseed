@@ -9,13 +9,16 @@ from typing import Any, Self
 from metaseed.logging import get_logger
 from metaseed.specs.loader import SpecLoader, SpecLoadError
 from metaseed.specs.schema import (
+    EntityDefSpec,
     FieldSpec,
     FieldType,
     ProfileSpec,
     ValidationRuleSpec,
+    identifying_field,
 )
 from metaseed.validators.base import ValidationCheck, ValidationError, ValidationRule
 from metaseed.validators.rules import (
+    ConditionalRequirementRule,
     ConditionalRule,
     CoordinatePairRule,
     DateRangeRule,
@@ -164,6 +167,7 @@ _VALID_RULE_TYPES = frozenset(
 def _create_rule_by_type(
     rule_spec: ValidationRuleSpec,
     field_types: dict[str, FieldType] | None = None,
+    item_label_field: str | None = None,
 ) -> ValidationRule | None:
     """Create a rule based on explicit type field.
 
@@ -171,6 +175,9 @@ def _create_rule_by_type(
         rule_spec: The rule specification.
         field_types: Declared field types for the entity, so a comparison is
             routed by what it compares.
+        item_label_field: For a predicated cardinality rule, the field naming an
+            item of the counted list, so a failure can say which members it
+            counted rather than only how many.
 
     Returns:
         A ValidationRule instance, or None for a declared type that this engine
@@ -179,6 +186,13 @@ def _create_rule_by_type(
     rule_type = rule_spec.type
 
     if rule_type == "conditional":
+        if rule_spec.when is not None and rule_spec.require:
+            return ConditionalRequirementRule(
+                when=rule_spec.when,
+                require=rule_spec.require,
+                rule_name=rule_spec.name,
+                message=rule_spec.message,
+            )
         if not rule_spec.condition:
             return None
         return ConditionalRule(
@@ -227,6 +241,8 @@ def _create_rule_by_type(
             max_items=rule_spec.max_items,
             rule_name=rule_spec.name,
             message=rule_spec.message,
+            where=rule_spec.where,
+            label_field=item_label_field,
         )
 
     # A uniqueness or reference rule is a question about the records around
@@ -317,6 +333,7 @@ def _compares_numbers(
 def _infer_rule_type(
     rule_spec: ValidationRuleSpec,
     field_types: dict[str, FieldType] | None = None,
+    item_label_field: str | None = None,
 ) -> ValidationRule | None:
     """Infer rule type from fields (backward compatibility).
 
@@ -326,11 +343,24 @@ def _infer_rule_type(
             being built for. Used to route a comparison by what it compares;
             without it a comparison is read as a date range, which is what the
             engine did for every profile before #246.
+        item_label_field: For a predicated cardinality rule, the field naming an
+            item of the counted list.
 
     Returns:
         A ValidationRule instance, or None if type cannot be inferred or is
         enforced elsewhere.
     """
+    # A value-dependent requirement is recognisable from its own keys, and is
+    # checked before the rest: `when`/`require` name no field of their own, so
+    # nothing below would infer it.
+    if rule_spec.when is not None and rule_spec.require:
+        return ConditionalRequirementRule(
+            when=rule_spec.when,
+            require=rule_spec.require,
+            rule_name=rule_spec.name,
+            message=rule_spec.message,
+        )
+
     # Skip rules handled by Pydantic constraints (these are documented in the spec
     # but shouldn't create engine rules)
     if rule_spec.pattern and rule_spec.field:
@@ -354,6 +384,8 @@ def _infer_rule_type(
             max_items=rule_spec.max_items,
             rule_name=rule_spec.name,
             message=rule_spec.message,
+            where=rule_spec.where,
+            label_field=item_label_field,
         )
 
     # Uniqueness and reference rules span records, so they are enforced by
@@ -403,6 +435,7 @@ def _infer_rule_type(
 def _create_rule_from_spec(
     rule_spec: ValidationRuleSpec,
     field_types: dict[str, FieldType] | None = None,
+    item_label_field: str | None = None,
 ) -> ValidationRule | None:
     """Create a ValidationRule instance from a ValidationRuleSpec.
 
@@ -411,6 +444,8 @@ def _create_rule_from_spec(
         field_types: Field name -> declared type for the entity this rule is
             for, so a comparison is routed by what it compares. Optional: a
             caller that does not know the entity gets the previous reading.
+        item_label_field: For a predicated cardinality rule, the field naming an
+            item of the counted list.
 
     Returns:
         A ValidationRule instance, or None if the rule is enforced somewhere
@@ -437,10 +472,24 @@ def _create_rule_from_spec(
                 f"Validation rule '{rule_spec.name}' has unknown type "
                 f"'{rule_spec.type}'. Valid types are: {valid}."
             )
-        return _create_rule_by_type(rule_spec, field_types)
+        return _create_rule_by_type(rule_spec, field_types, item_label_field)
 
     # Legacy: infer from fields (backward compatibility)
-    return _infer_rule_type(rule_spec, field_types)
+    return _infer_rule_type(rule_spec, field_types, item_label_field)
+
+
+def _comparable(name: str) -> str:
+    """An entity name in the one form every caller's spelling reduces to.
+
+    Callers do not agree on how they spell an entity: ``DatasetValidator``
+    reaches a nested child as ``sample_attribute`` and its own root as
+    ``sampletype``, while a profile writes ``SampleAttribute``. Comparing on
+    case alone therefore matched the root and missed every nested entity, so a
+    rule scoped to a child — 54 of them across the shipped profiles — never
+    fired on the path the application validates through. Ignoring case *and*
+    separators is what makes all three spellings the same name.
+    """
+    return name.lower().replace("_", "").replace("-", "")
 
 
 def _applies_to_entity(rule_spec: ValidationRuleSpec, entity: str) -> bool:
@@ -448,21 +497,21 @@ def _applies_to_entity(rule_spec: ValidationRuleSpec, entity: str) -> bool:
 
     Args:
         rule_spec: The rule specification.
-        entity: Entity name to check (case-insensitive).
+        entity: Entity name to check, in any of the spellings callers use.
 
     Returns:
         True if rule applies to this entity.
     """
     applies_to = rule_spec.applies_to
-    entity_lower = entity.lower()
+    wanted = _comparable(entity)
 
     if applies_to == "all":
         return True
 
     if isinstance(applies_to, list):
-        return any(e.lower() == entity_lower for e in applies_to)
+        return any(_comparable(e) == wanted for e in applies_to)
 
-    return applies_to.lower() == entity_lower
+    return _comparable(applies_to) == wanted
 
 
 def _profile_rules_for_entity(
@@ -479,9 +528,9 @@ def _profile_rules_for_entity(
         One ValidationRule per declared rule that applies to the entity and is
         not already enforced as a Pydantic constraint.
     """
-    entity_lower = entity.lower()
+    wanted = _comparable(entity)
     entity_def = next(
-        (e for n, e in profile_spec.entities.items() if n.lower() == entity_lower),
+        (e for n, e in profile_spec.entities.items() if _comparable(n) == wanted),
         None,
     )
     field_types = {f.name: f.type for f in entity_def.fields} if entity_def else {}
@@ -505,10 +554,41 @@ def _profile_rules_for_entity(
                 )
             )
             continue
-        rule = _create_rule_from_spec(rule_spec, field_types)
+        rule = _create_rule_from_spec(
+            rule_spec,
+            field_types,
+            _item_label_field(rule_spec, entity_def, profile_spec),
+        )
         if rule:
             rules.append(rule)
     return rules
+
+
+def _item_label_field(
+    rule_spec: ValidationRuleSpec,
+    entity_def: EntityDefSpec | None,
+    profile_spec: ProfileSpec,
+) -> str | None:
+    """The field naming one item of the list a predicated rule counts.
+
+    Read from the item entity's declared identity markers rather than guessed
+    from field names: a field marked ``is_label`` says what to call the thing,
+    and failing that the identifier does. Used only to make a message readable,
+    so ``None`` is a fine answer.
+    """
+    if rule_spec.where is None or not rule_spec.field or entity_def is None:
+        return None
+    field = next((f for f in entity_def.fields if f.name == rule_spec.field), None)
+    item_entity = (
+        profile_spec.entities.get(field.items) if field and field.items else None
+    )
+    if item_entity is None:
+        return None
+    labelled = next((f for f in item_entity.fields if f.is_label), None)
+    if labelled:
+        return labelled.name
+    identifier = identifying_field(item_entity.fields)
+    return identifier.name if identifier else None
 
 
 def _child_collection_fields(entity: str, profile_spec: ProfileSpec) -> set[str]:
