@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Fixed
+- A reference field naming its own entity type can build a hierarchy without
+  the risk of closing one. Because a reference decides the parent here, two
+  records naming each other each became the other's parent: the dataset then
+  had no roots at all — every node had a parent, so it read as empty — and the
+  `children` graph recursed without end. A node is never parented under one of
+  its own descendants, and the refusal is logged rather than silent.
+
+  No shipped profile declares a self-referencing reference yet, so nothing
+  changes today. Darwin Core is full of them — `parentEventID` names another
+  Event, `acceptedNameUsageID` another Taxon — and this is what has to be right
+  before those can be declared (#246).
+
 ### Changed
 - An `ontology_term` field that names no ontologies means **any** ontology, now
   stated in the schema and pinned by tests rather than left to be inferred

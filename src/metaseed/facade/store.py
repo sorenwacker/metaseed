@@ -642,7 +642,18 @@ class EntityStore:
     def _link_by_reference_fields(
         self: Self, id_to_node: dict[str, EntityNode]
     ) -> None:
-        """Link orphan nodes to parents via reference fields."""
+        """Link orphan nodes to parents via reference fields.
+
+        A reference field does not merely record a link here: it decides the
+        parent. That is what makes a self-referencing type — Darwin Core's
+        ``parentEventID`` naming another Event, ``acceptedNameUsageID`` naming
+        another Taxon — able to build a hierarchy at all, and also what makes a
+        cycle dangerous. Two records naming each other would each become the
+        other's parent, leaving a dataset with no roots (every node has a
+        parent) and a ``children`` graph that recurses without end.
+
+        A node is therefore never parented under one of its own descendants.
+        """
         for node in list(self._instances.values()):
             if node.parent_id:
                 continue
@@ -660,10 +671,41 @@ class EntityStore:
                     continue
 
                 parent_node = id_to_node.get(str(ref_value))
-                if parent_node and parent_node.id != node.id:
-                    node.parent_id = parent_node.id
-                    parent_node.children.append(node)
-                    break
+                if parent_node is None or parent_node.id == node.id:
+                    continue
+                if self._would_cycle(node, parent_node):
+                    logger.warning(
+                        "%s '%s' references '%s', which is already beneath it; "
+                        "leaving it unparented rather than closing a cycle.",
+                        node.entity_type,
+                        node.id,
+                        ref_value,
+                    )
+                    continue
+                node.parent_id = parent_node.id
+                parent_node.children.append(node)
+                break
+
+    def _would_cycle(self: Self, node: EntityNode, parent: EntityNode) -> bool:
+        """Whether parenting ``node`` under ``parent`` closes a loop.
+
+        True when ``parent`` is ``node`` itself or sits beneath it already.
+        Walked upwards from the proposed parent, which is bounded by the number
+        of nodes even if the graph is already inconsistent.
+        """
+        seen: set[str] = set()
+        current: EntityNode | None = parent
+        while current is not None:
+            if current.id == node.id:
+                return True
+            if current.id in seen:
+                # The existing graph is already looped; refuse to add to it.
+                return True
+            seen.add(current.id)
+            current = (
+                self._instances.get(current.parent_id) if current.parent_id else None
+            )
+        return False
 
     def clear(self: Self) -> None:
         """Clear all stored entity instances."""
