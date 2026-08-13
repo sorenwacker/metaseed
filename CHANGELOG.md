@@ -3,6 +3,25 @@
 ## Unreleased
 
 ### Added
+- A reference may declare that its target resolves outside the dataset
+  (`reference_scope: external`, spec_version 0.8). A reference has meant one
+  thing — the target is a record in this file — but many identifiers are minted
+  elsewhere: Darwin Core's `acceptedNameUsageID` names a taxon in GBIF's
+  backbone, `occurrenceID` can name a museum catalogue record, and DiSSCo and
+  ENA both carry external accessions. Declaring those as plain references
+  reported correct data as broken, so they were left undeclared and checked by
+  nothing at all. Three outcomes now, as the term check has: a value naming a
+  record here is still checked, one that does not is reported as *not checked*,
+  and only a within-dataset reference can be broken. "Not checked" is reported
+  once per field with a count, not once per value — a checklist of 10,000 rows
+  would otherwise repeat itself 10,000 times.
+- Darwin Core declares its three self-referencing identifiers (`parentEventID`,
+  `acceptedNameUsageID`, `parentNameUsageID`), which had been waiting on that
+  key. The cycle guard in `EntityStore` was already in place for them. Measured
+  against every shipped example: no error count changed.
+- The spreadsheet export leaves an externally-scoped reference column
+  unrestricted. Offering only this dataset's rows would tell someone their
+  correct value is wrong.
 - Validation rules can depend on field values (#211, spec_version 0.7,
   [ADR 003](docs/architecture/decisions/003-value-dependent-validation-rules.md)).
   A `cardinality` rule may carry a `where` predicate selecting which items it

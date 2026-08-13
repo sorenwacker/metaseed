@@ -79,6 +79,7 @@ The `spec_version` field indicates which version of the specification language f
 | `0.5` | Adds `dcat` field to FieldSpec for mapping a root entity's fields onto DCAT/DCAT-AP properties (see DCAT Mapping). |
 | `0.6` | Adds relationship-role and metadata markers to FieldSpec: `owns` (owning-parent relationship), `is_identifier`/`is_label` (declared identity/label), and `example`, `options`, `unit`, `label`, `tier` (form/template metadata). See Field Markers. |
 | `0.7` | Adds predicates to validation rules: `where` (the subset a `cardinality` rule counts or a `uniqueness` rule compares) and `when`/`require` (a requirement that depends on a value). See Rule Predicates. |
+| `0.8` | Adds `reference_scope` to FieldSpec, declaring that a reference may resolve outside the dataset. See Entity References. |
 
 Existing specs without `spec_version` are automatically treated as version `0.1`.
 
@@ -337,6 +338,7 @@ fields:
 | `dcat` | no | DCAT/DCAT-AP property this root-entity field maps to (see DCAT Mapping) |
 | `owns` | no | On a relationship field, marks it the owning-parent/containment relationship (see Field Markers) |
 | `is_identifier` | no | Marks this field as the entity's declared identifier (see Field Markers) |
+| `reference_scope` | no | `dataset` (default) or `external` — whether a `reference` must resolve here (see Entity References) |
 | `is_label` | no | Marks this field as the entity's declared display label (see Field Markers) |
 | `example` | no | Illustrative value for templates/forms |
 | `options` | no | Allowed values (controlled vocabulary); falls back to `constraints.enum` |
@@ -650,6 +652,30 @@ Use `reference` for any entity-to-entity link:
 ```
 
 This validates that the referenced entity exists and enables auto-linking.
+
+#### References that resolve outside the dataset
+
+By default a reference means *the target is a record in this dataset*, and a value with no match is reported as `Reference not found`. Many identifiers are not like that. Darwin Core's `acceptedNameUsageID` and `parentNameUsageID` name a taxon in GBIF's backbone or Catalogue of Life; `occurrenceID` can name a museum catalogue record; DiSSCo and ENA both carry accessions minted elsewhere. Declaring such a field with a plain `reference` would report correct data as broken, which is why those fields were left undeclared and unchecked instead.
+
+`reference_scope` says which it is (spec_version 0.8):
+
+```yaml
+- name: acceptedNameUsageID
+  type: string
+  reference: Taxon.taxonID
+  reference_scope: external
+```
+
+| Value | Meaning |
+|---|---|
+| `dataset` (default, and what an absent key means) | The target must be a record in this dataset. A value with no match is an error. |
+| `external` | The target may live elsewhere. A value that *does* match a record here is still checked — an external identifier is not an excuse to stop looking — and one that does not is reported as **not checked**, never as broken. |
+
+Three outcomes rather than two, for the same reason the [term check](../architecture/term-sources.md) has three: an identifier nobody can resolve from here is not thereby wrong, and calling it wrong fills a dataset with errors it cannot justify.
+
+"Not checked" is reported once per field, with a count — one warning naming `Taxon.acceptedNameUsageID` and how many values went unresolved, not one per row. A dataset of 10,000 occurrences would otherwise report the same fact 10,000 times, and a surface that noisy is one nobody reads.
+
+**Where this grows.** The next question an external reference raises is *outside where* — GBIF's backbone, ROR, ORCID, a particular museum. The `ontologies:` section is the precedent: external vocabularies declared once at profile level, with fields pointing at them by name. An identifier authority would take the same shape, adding a URI template and a pattern so an external identifier becomes checkable rather than merely unchecked. It is deliberately not built yet — no profile has asked for it, and building a resolution port before one has is designing against a guess. When it is, it arrives as a key beside `reference_scope`, and every spec written today keeps its meaning.
 
 ### One-to-One Embedding
 

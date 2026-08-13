@@ -1,3 +1,4 @@
+spec_version: '0.8'
 version: "1.0"
 name: darwin-core
 display_name: Darwin Core
@@ -284,6 +285,9 @@ entities:
         required: false
         description: "Identifier for the parent event"
         ontology_term: dwc:parentEventID
+        reference: "Event.eventID"
+        # A survey often cites the campaign it belonged to without shipping it.
+        reference_scope: external
 
       - name: eventDate
         type: string
@@ -719,12 +723,20 @@ entities:
         required: false
         description: "Identifier for the accepted name usage"
         ontology_term: dwc:acceptedNameUsageID
+        reference: "Taxon.taxonID"
+        # Names the accepted taxon, which is usually a GBIF backbone or
+        # Catalogue of Life identifier rather than a row in this dataset.
+        reference_scope: external
 
       - name: parentNameUsageID
         type: string
         required: false
         description: "Identifier for the parent taxon"
         ontology_term: dwc:parentNameUsageID
+        reference: "Taxon.taxonID"
+        # As above: the parent taxon is normally in the checklist this dataset
+        # is classified against, not in the dataset itself.
+        reference_scope: external
 
       - name: originalNameUsageID
         type: string

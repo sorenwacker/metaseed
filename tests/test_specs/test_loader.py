@@ -370,8 +370,11 @@ class TestSpecVersionBackwardCompatibility:
     def test_profile_without_spec_version_gets_default(
         self, loader: SpecLoader
     ) -> None:
-        """A profile that declares no spec_version defaults to 0.1."""
-        profile = loader.load_profile(version="1.0", profile="darwin-core")
+        """A profile that declares no spec_version defaults to 0.1.
+
+        Was darwin-core, which now declares 0.8 for `reference_scope`.
+        """
+        profile = loader.load_profile(version="0.4", profile="dissco")
         assert profile.spec_version == "0.1"
 
     def test_profile_with_explicit_spec_version(self, tmp_path: Path) -> None:

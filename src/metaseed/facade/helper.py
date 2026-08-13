@@ -210,6 +210,22 @@ class EntityHelper:
         return refs
 
     @property
+    def external_reference_fields(self: Self) -> set[str]:
+        """Reference fields whose target may live outside the dataset.
+
+        A consumer that offers the dataset's own rows as the values of a
+        reference — the spreadsheet's cross-sheet dropdown, a picker — must not
+        do so for these: the value legitimately names something the dataset does
+        not contain, and restricting the column would tell the person their
+        correct value is wrong.
+        """
+        return {
+            f.name
+            for f in self._spec.fields
+            if f.reference and f.reference_scope == "external"
+        }
+
+    @property
     def identifier_field(self: Self) -> str | None:
         """Field name used as the entity identifier (for indexing/node IDs).
 

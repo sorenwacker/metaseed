@@ -254,6 +254,13 @@
                         <input type="text" name="reference" class="form-input"
                                value="{{ field.reference or '' }}" placeholder="Entity.field">
                     </div>
+                    <div class="form-group">
+                        <label class="form-label" title="Whether the referenced record must be in this dataset, or may be held elsewhere (a GBIF taxon, a museum catalogue record). An external value that does name a record here is still checked; one that does not is reported as not checked, never as broken.">Reference Resolves</label>
+                        <select name="reference_scope" class="form-input" data-testid="reference-scope">
+                            <option value="" {% if field.reference_scope != 'external' %}selected{% endif %}>In this dataset</option>
+                            <option value="external" {% if field.reference_scope == 'external' %}selected{% endif %}>Outside this dataset</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label class="form-label" title="Parent reference for nested entities (deprecated, use reference)">Parent Ref</label>

@@ -1121,3 +1121,51 @@ class TestSpecBuilderDcat:
         )
         html = client.get("/spec-builder/entity/Sample/field/0").text
         assert 'name="dcat"' in html
+
+
+class TestReferenceScopeInTheFieldEditor:
+    """A reference that resolves outside the dataset, set from the UI."""
+
+    def _field(self, client) -> None:
+        client.get("/spec-builder/new")
+        client.post("/spec-builder/entity", data={"name": "Taxon"})
+        client.post(
+            "/spec-builder/entity/Taxon/field",
+            data={"name": "taxonID", "field_type": "string"},
+        )
+        client.post(
+            "/spec-builder/entity/Taxon/field",
+            data={"name": "acceptedNameUsageID", "field_type": "string"},
+        )
+
+    def _save(self, client, **extra):
+        data = {
+            "name": "acceptedNameUsageID",
+            "field_type": "string",
+            "reference": "Taxon.taxonID",
+        }
+        data.update(extra)
+        return client.put("/spec-builder/entity/Taxon/field/1", data=data)
+
+    def test_the_editor_offers_it(self, client) -> None:
+        self._field(client)
+
+        form = client.get("/spec-builder/entity/Taxon/field/1").text
+
+        assert 'data-testid="reference-scope"' in form
+
+    def test_it_is_saved(self, client) -> None:
+        self._field(client)
+
+        self._save(client, reference_scope="external")
+
+        assert "reference_scope: external" in client.get("/spec-builder/preview").text
+
+    def test_the_default_is_not_written_back(self, client) -> None:
+        """`dataset` is what an absent key already means, so writing it would
+        record in the content hash which way it happened to be said."""
+        self._field(client)
+
+        self._save(client, reference_scope="")
+
+        assert "reference_scope" not in client.get("/spec-builder/preview").text

@@ -42,6 +42,7 @@ class FieldForm:
     parent_ref: str = ""
     unique_within: str = ""
     reference: str = ""
+    reference_scope: str = ""
     # Constraints
     pattern: str = ""
     min_length: str = ""
@@ -109,6 +110,10 @@ class FieldForm:
         field.parent_ref = self.parent_ref.strip() or None
         field.unique_within = self.unique_within.strip() or None
         field.reference = self.reference.strip() or None
+        # "dataset" is what an absent key already means, so it is not written
+        # back: the content hash must not record which way it was said.
+        scope = self.reference_scope.strip()
+        field.reference_scope = scope if scope == "external" else None  # type: ignore[assignment]
         field.constraints = self.build_constraints()
         field.owns = self.owns or None
         field.is_identifier = self.is_identifier or None

@@ -859,6 +859,9 @@ class SpecBuilder:
     ) -> list[str]:
         """Report container fields with no element type, and dangling targets.
 
+        Also a ``reference_scope`` on a field that declares no ``reference``,
+        which says how something resolves that does not exist.
+
         A ``list`` or ``entity`` field must name its element type in ``items``.
         The model build cannot catch an omission -- ``list`` becomes
         ``list[Any]`` and ``entity`` becomes ``Any`` whatever ``items`` says --
@@ -897,4 +900,11 @@ class SpecBuilder:
                             f"{entity_name}.{field.name}: {attr} target "
                             f"'{ref.split('.')[0]}' is not a defined entity"
                         )
+                if field.reference_scope and not field.reference:
+                    # Otherwise the marker is decorative: it says how a
+                    # reference resolves on a field that declares none.
+                    issues.append(
+                        f"{entity_name}.{field.name}: reference_scope "
+                        f"'{field.reference_scope}' needs a 'reference'"
+                    )
         return issues

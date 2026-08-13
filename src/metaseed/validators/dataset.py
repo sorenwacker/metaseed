@@ -36,6 +36,22 @@ class _UniquenessRuleDef(NamedTuple):
     where: Predicate | None = None  # which records are counted at all
 
 
+class _ReferenceFieldDef(NamedTuple):
+    """A declared reference, resolved for dataset-level checking.
+
+    Attributes:
+        name: The field holding the value.
+        target: The ``Entity.field`` it names.
+        external: Whether the target may live outside this dataset. An external
+            value that happens to name a record here is still checked; one that
+            does not is reported as *not checked* rather than as broken.
+    """
+
+    name: str
+    target: str
+    external: bool = False
+
+
 @dataclass
 class DatasetValidationResult:
     """Result of dataset validation.
@@ -212,7 +228,12 @@ class DatasetValidator:
         self.version = version
         self._loader = SpecLoader(profile=profile)
         self._registry = IdRegistry()
-        self._reference_fields: dict[str, list[tuple[str, str]]] = {}
+        self._reference_fields: dict[str, list[_ReferenceFieldDef]] = {}
+        # (entity, field, target) -> how many externally-scoped values named
+        # nothing here. Accumulated across the whole run and reported once per
+        # field: a checklist of 10,000 rows would otherwise say the same thing
+        # 10,000 times, and a directory would repeat it per file.
+        self._unchecked: dict[tuple[str, str, str], int] = {}
         self._load_reference_fields()
         self._uniqueness_rules: list[_UniquenessRuleDef] = []
         self._load_uniqueness_rules()
@@ -272,7 +293,13 @@ class DatasetValidator:
                 refs = []
                 for f in spec.fields:
                     if f.reference:
-                        refs.append((f.name, f.reference))
+                        refs.append(
+                            _ReferenceFieldDef(
+                                name=f.name,
+                                target=f.reference,
+                                external=f.reference_scope == "external",
+                            )
+                        )
                 if refs:
                     # Key by snake_case so lookups during traversal, which use
                     # the snake_case entity type, actually match.
@@ -413,8 +440,8 @@ class DatasetValidator:
         """
         fields = {"unique_id"}
         for targets in self._reference_fields.values():
-            for _field_name, ref_type in targets:
-                target_entity, _, target_field = ref_type.partition(".")
+            for declared in targets:
+                target_entity, _, target_field = declared.target.partition(".")
                 if to_snake_case(target_entity) == entity_type and target_field:
                     fields.add(target_field)
         return fields
@@ -438,25 +465,53 @@ class DatasetValidator:
         errors: list[ValidationError] = []
 
         def check_refs(d: dict[str, Any], etype: str, p: str) -> None:
-            if etype in self._reference_fields:
-                for field_name, ref_type in self._reference_fields[etype]:
-                    # ``ref_type`` is an "Entity.field" string (e.g.
-                    # "Study.unique_id"); the registered entity type is the
-                    # snake_case form of the entity part only.
-                    ref_entity = to_snake_case(ref_type.split(".")[0])
-                    for ref_value in _referenced_ids(d.get(field_name)):
-                        if not self._registry.exists(ref_entity, ref_value):
-                            field_path = f"{p}.{field_name}" if p else field_name
-                            errors.append(
-                                ValidationError(
-                                    field=field_path,
-                                    message=f"Reference not found: {ref_type} '{ref_value}'",
-                                    rule="reference_integrity",
-                                )
-                            )
+            for declared in self._reference_fields.get(etype, []):
+                # ``target`` is an "Entity.field" string (e.g.
+                # "Study.unique_id"); the registered entity type is the
+                # snake_case form of the entity part only.
+                ref_entity = to_snake_case(declared.target.split(".")[0])
+                for ref_value in _referenced_ids(d.get(declared.name)):
+                    if self._registry.exists(ref_entity, ref_value):
+                        continue
+                    if declared.external:
+                        # The target may be a GBIF taxon or a museum record.
+                        # Not resolvable from here is not the same as wrong.
+                        key = (etype, declared.name, declared.target)
+                        self._unchecked[key] = self._unchecked.get(key, 0) + 1
+                        continue
+                    field_path = f"{p}.{declared.name}" if p else declared.name
+                    errors.append(
+                        ValidationError(
+                            field=field_path,
+                            message=(
+                                f"Reference not found: {declared.target} '{ref_value}'"
+                            ),
+                            rule="reference_integrity",
+                        )
+                    )
 
         self._traverse_entity_tree(data, entity_type, check_refs, path)
         return errors
+
+    def _unchecked_references(self: Self) -> list[ValidationError]:
+        """One report per field whose external values named nothing here.
+
+        Not an error -- an identifier nobody can resolve from here is not
+        thereby wrong -- and not silence either, which would hide how much of a
+        dataset went unverified.
+        """
+        return [
+            ValidationError(
+                field=f"{entity}.{field_name}",
+                message=(
+                    f"{count} value(s) name {target} outside this dataset and "
+                    f"were not checked; the field is declared "
+                    f"reference_scope: external"
+                ),
+                rule="reference_not_checked",
+            )
+            for (entity, field_name, target), count in self._unchecked.items()
+        ]
 
     def _validate_uniqueness(
         self: Self,
@@ -711,6 +766,7 @@ class DatasetValidator:
 
         # Reset registry for single file validation
         self._registry = IdRegistry()
+        self._unchecked = {}
 
         # Pass 1: Collect IDs
         self._collect_ids(data, entity_type)
@@ -727,6 +783,8 @@ class DatasetValidator:
         # Count entities
         self._count_entities(data, entity_type, result.entity_counts)
 
+        result.warnings.extend(self._unchecked_references())
+
         return result
 
     def validate_directory(self: Self, path: Path) -> DatasetValidationResult:
@@ -742,6 +800,7 @@ class DatasetValidator:
 
         # Reset registry for directory validation
         self._registry = IdRegistry()
+        self._unchecked = {}
 
         # Find all YAML and JSON files
         files = list(path.glob("**/*.yaml")) + list(path.glob("**/*.yml"))
@@ -845,5 +904,9 @@ class DatasetValidator:
 
             # Count entities
             self._count_entities(data, entity_type, result.entity_counts)
+
+        # Once per field for the whole directory, not once per file: the counts
+        # accumulated across every file above.
+        result.warnings.extend(self._unchecked_references())
 
         return result

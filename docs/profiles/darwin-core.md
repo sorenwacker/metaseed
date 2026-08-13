@@ -87,6 +87,19 @@ The Darwin Core profile includes validation rules for:
 - Controlled vocabularies for basisOfRecord, occurrenceStatus, taxonRank
 - Positive coordinate uncertainty values
 
+### Cross-references
+
+Seven fields declare what they point at, so a value naming nothing is reported rather than accepted as free text. They split by where the target lives:
+
+| Field | Names | Resolves |
+|---|---|---|
+| `Event.occurrenceID`, `Identification.occurrenceID`, `Organism.occurrenceID` | `Occurrence.occurrenceID` | in this dataset |
+| `Location.eventID` | `Event.eventID` | in this dataset |
+| `Event.parentEventID` | `Event.eventID` | outside it |
+| `Taxon.acceptedNameUsageID`, `Taxon.parentNameUsageID` | `Taxon.taxonID` | outside it |
+
+The last three are `reference_scope: external` ([Entity References](../api/schema-specs.md#references-that-resolve-outside-the-dataset)). A taxon's accepted or parent name usage is normally an identifier in GBIF's backbone or Catalogue of Life, and a survey commonly cites the campaign it belonged to without shipping it. Declared as plain references they would report correct data as broken; left undeclared, as they were, they were checked by nothing at all. Scoped external, a value that *does* name a record in the dataset is still checked, and one that does not is reported as not checked.
+
 ## Use Cases
 
 - **Biodiversity databases**: GBIF, iDigBio, VertNet, ALA

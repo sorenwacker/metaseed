@@ -184,6 +184,13 @@ class FieldSpec(BaseModel):
             **owning-parent** relationship (this entity contains the target) rather
             than a plain lookup/reference. Absent (None) = plain reference. Lets a
             consumer identify the containment relationship without heuristics (#137).
+        reference_scope: Whether this field's ``reference`` must resolve inside
+            the dataset (``"dataset"``, the default and what an absent key
+            means) or may name a record held elsewhere (``"external"``). Many
+            identifiers are minted outside the file that cites them — a GBIF
+            taxon, a museum catalogue record, an ENA accession — and declaring
+            those as plain references reported correct data as broken, so they
+            were left undeclared and checked by nothing instead.
         is_identifier: Marks this field as the entity's declared identifier
             (overrides the positional first-non-reference-field convention) (#143).
         is_label: Marks this field as the entity's declared display label
@@ -224,6 +231,7 @@ class FieldSpec(BaseModel):
     parent_ref: str | None = None
     unique_within: str | None = None
     reference: str | None = None
+    reference_scope: Literal["dataset", "external"] | None = None
     dcat: str | None = None
     owns: bool | None = None
     is_identifier: bool | None = None

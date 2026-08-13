@@ -46,7 +46,7 @@ SHORT_HASH_DIGITS = 12
 """Hex digits kept by :func:`short_hash`. Display only -- compare on the full hash."""
 
 
-SUPPORTED_SPEC_VERSION = "0.7"
+SUPPORTED_SPEC_VERSION = "0.8"
 """The highest ``spec_version`` this metaseed understands.
 
 Documentation listed the format versions; nothing in the code knew which of them

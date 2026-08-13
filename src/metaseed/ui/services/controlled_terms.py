@@ -232,6 +232,12 @@ def apply_reference_validations(
         targets: dict[str, tuple[str, str]] = dict(
             getattr(helper, "reference_fields", {}) or {}
         )
+        # A reference declared to resolve outside the dataset is deliberately
+        # left unrestricted: its value names a GBIF taxon or a museum record,
+        # and offering only this dataset's rows would tell the person their
+        # correct value is wrong.
+        for external in getattr(helper, "external_reference_fields", set()) or set():
+            targets.pop(external, None)
         if "_parent" in columns and entity in parents:
             parent_entity, parent_field = parents[entity]
             targets["_parent"] = (parent_entity, parent_field)
