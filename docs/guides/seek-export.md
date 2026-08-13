@@ -104,3 +104,25 @@ To import it, in SEEK:
   entity in the Spec Builder) re-types the exported node — choosing which JERM
   class it becomes — but does not move it in the tree, which SEEK infers from
   where the entity sits.
+
+## What an entity is exported as
+
+Three things are consulted, in order: the entity's **SEEK role**, then the class
+its own `ontology_term` names, then its type name. An entity annotated with the
+class it represents therefore exports as that class whatever it is called, which
+is what a profile derived from JERM needs.
+
+The class names recognised in an annotation are those the export can place:
+
+| Annotation names | Exported as |
+|---|---|
+| `Investigation`, `Study`, `Sample` | itself |
+| `Assay`, and JERM's `experimental_assay`, `informatics_analysis`, `modelling_analysis` | Assay |
+| PPEO's `observation_unit` | ObservationUnit |
+
+Anything else is left out, and every entity left out is named in a warning when
+the export runs. That includes real JERM classes with no position in the chain
+SEEK reads — `treatment`, `Data`, `Model`, `SOP` — which are reported rather
+than placed as something they are not. JERM identifies its classes by name and
+has no numeric accessions, so an annotation such as `JERM:00021` names nothing
+in it; give such an entity a SEEK role instead.

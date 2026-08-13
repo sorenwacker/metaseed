@@ -46,7 +46,7 @@ except (
 from metaseed.logging import get_logger
 from metaseed.seek.naming import property_uri
 from metaseed.seek.roles import JERM_CLASSES as _JERM
-from metaseed.seek.roles import jerm_class_from_annotation, unmapped_entities
+from metaseed.seek.roles import role_from_annotation, unmapped_entities
 
 if TYPE_CHECKING:
     from metaseed.api.client import MetaseedClient
@@ -157,7 +157,7 @@ def _profile_index(
     roles: dict[str, str] = {}
     for name, entity in profile.entities.items():
         role = entity.seek.role if entity.seek else None
-        resolved = role or jerm_class_from_annotation(entity.ontology_term)
+        resolved = role or role_from_annotation(entity.ontology_term)
         if resolved:
             roles[name] = resolved
 

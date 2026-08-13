@@ -28,31 +28,56 @@ JERM_CLASSES: dict[str, tuple[str, str]] = {
 
 SAMPLE_CLASS = "Sample"
 
-#: The JERM classes an entity's annotation may name directly. Deliberately the
-#: values of :data:`JERM_CLASSES` plus nothing invented: these are the classes
-#: this exporter knows how to place.
-KNOWN_JERM_CLASSES: frozenset[str] = frozenset(
-    {jerm for jerm, _prefix in JERM_CLASSES.values()}
-)
+JERM_ONTOLOGY_URL = "https://jermontology.org/ontology/JERMOntology"
+"""Where the class names below were read from, and what the gate re-reads."""
+
+ANNOTATION_CLASSES: dict[str, str] = {
+    # JERM's four placeable classes, and the three subclasses of Assay it
+    # declares.
+    "Investigation": "Investigation",
+    "Study": "Study",
+    "Assay": "Assay",
+    "experimental_assay": "Assay",
+    "informatics_analysis": "Assay",
+    "modelling_analysis": "Assay",
+    "Sample": "Sample",
+    # Not JERM: SEEK types the observation-unit level from PPEO, and so does
+    # this exporter. ``ObservationUnit`` is SEEK's own name for that resource.
+    "observation_unit": "ObservationUnit",
+    "ObservationUnit": "ObservationUnit",
+}
+"""The class an annotation may name, and the role this exporter places it as.
+
+Read from the ontologies rather than assumed. JERM names all 294 of its classes
+and holds no numeric accession at all, so ``JERM:00021`` names nothing in it and
+stays unmapped; a table of accession numbers would be inventing identifiers.
+
+Only four JERM classes have a place in the chain SEEK's reader walks
+(Investigation → Study → ObservationUnit → Sample → Assay). ``treatment`` is a
+real JERM class — a subclass of ``process``, sibling to ``Assay``, ``Study`` and
+``Investigation`` — but that chain has no slot for it, so an entity annotated
+with it is reported by :func:`unmapped_entities` rather than placed as something
+it is not. The same holds for JERM's asset classes (``Data``, ``Model``,
+``SOP``, ``Publication``): real classes, no position in this export.
+"""
 
 
-def jerm_class_from_annotation(ontology_term: str | None) -> str | None:
-    """The JERM class an entity's own annotation names, if it names one.
+def role_from_annotation(ontology_term: str | None) -> str | None:
+    """The role an entity's own annotation names, if it names one.
 
-    Read from the annotation's local name only — ``JERM:Assay``,
-    ``http://.../JERM.owl#Assay`` — never from a numeric accession. JERM is
-    carried by no source we can reach (it is not in OLS), so an accession such
-    as ``JERM:00021`` cannot be resolved to a class here, and guessing a table
-    of accession numbers would be inventing identifiers rather than reading
-    them.
+    Read from the annotation's local name, however it is written —
+    ``JERM:Assay``, ``http://jermontology.org/ontology/JERMOntology#Assay`` —
+    and matched against :data:`ANNOTATION_CLASSES`, which holds only class names
+    that exist in the ontologies concerned.
 
     Returns:
-        The class, or ``None`` when the annotation names no known one.
+        The role, or ``None`` when the annotation names no class this exporter
+        can place.
     """
     if not ontology_term:
         return None
     local = ontology_term.rsplit("#", 1)[-1].rsplit("/", 1)[-1].rsplit(":", 1)[-1]
-    return local if local in KNOWN_JERM_CLASSES else None
+    return ANNOTATION_CLASSES.get(local)
 
 
 def entity_jerm_class(
@@ -73,7 +98,7 @@ def entity_jerm_class(
     """
     if role:
         return role
-    annotated = jerm_class_from_annotation(ontology_term)
+    annotated = role_from_annotation(ontology_term)
     if annotated:
         return annotated
     mapping = JERM_CLASSES.get(entity_type)

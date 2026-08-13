@@ -7,9 +7,9 @@ merely *named* `Assay` and annotated with nothing was exported (#234). The
 annotations were decorative on this path.
 
 What is read is the class the annotation *names*, never a numeric accession:
-JERM is carried by no source we can reach, so `JERM:00021` cannot be resolved
-to "Assay" here, and a hardcoded table of accession numbers would be inventing
-identifiers rather than reading them.
+JERM holds no numeric accessions at all (see
+`test_annotation_classes_exist.py`, which re-reads the ontology), so
+`JERM:00021` names nothing there.
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ import pytest
 
 from metaseed.seek.roles import (
     entity_jerm_class,
-    jerm_class_from_annotation,
+    role_from_annotation,
     unmapped_entities,
 )
 
@@ -37,13 +37,37 @@ class TestReadingTheAnnotation:
     ) -> None:
         assert entity_jerm_class("Experiment", None, annotation) == "Assay"
 
+    @pytest.mark.parametrize(
+        ("annotation", "role"),
+        [
+            ("JERM:experimental_assay", "Assay"),
+            ("JERM:informatics_analysis", "Assay"),
+            ("JERM:modelling_analysis", "Assay"),
+            ("http://purl.org/ppeo/PPEO.owl#observation_unit", "ObservationUnit"),
+        ],
+    )
+    def test_a_subclass_is_placed_as_the_class_it_specialises(
+        self, annotation: str, role: str
+    ) -> None:
+        """The three classes JERM declares beneath Assay, and the observation
+        unit — which is PPEO's, not JERM's, and is what this exporter emits."""
+        assert role_from_annotation(annotation) == role
+
     def test_a_numeric_accession_is_not_guessed_at(self) -> None:
-        """JERM is not resolvable from here, so this must stay unmapped rather
-        than be matched against an invented table."""
-        assert jerm_class_from_annotation("JERM:00021") is None
+        """JERM holds no numeric accessions, so this names nothing there and
+        must stay unmapped rather than be matched against an invented table."""
+        assert role_from_annotation("JERM:00021") is None
 
     def test_an_unknown_class_is_not_invented_either(self) -> None:
-        assert jerm_class_from_annotation("JERM:Telescope") is None
+        assert role_from_annotation("JERM:Telescope") is None
+
+    def test_a_real_class_with_nowhere_to_go_stays_unmapped(self) -> None:
+        """``treatment`` is a JERM class, a sibling of Assay under ``process``.
+        SEEK's reader walks Investigation → Study → ObservationUnit → Sample →
+        Assay, which has no slot for it, so it is reported rather than placed as
+        something it is not."""
+        assert role_from_annotation("JERM:treatment") is None
+        assert role_from_annotation("JERM:SOP") is None
 
     def test_an_explicit_role_still_wins(self) -> None:
         assert entity_jerm_class("Experiment", "Study", "JERM:Assay") == "Study"

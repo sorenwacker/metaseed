@@ -11,10 +11,16 @@
   exported. The annotations were decorative on this path.
 
   Only the class an annotation *names* is read — `JERM:Assay`,
-  `…JERM.owl#Assay` — never a numeric accession. JERM is carried by no source
-  we can reach, so `JERM:00021` cannot be resolved to a class here, and a
-  hardcoded table of accession numbers would be inventing identifiers rather
-  than reading them; such an entity stays unmapped and is reported.
+  `…JERMOntology#Assay`. The recognised names were read from the ontology
+  itself: JERM declares 294 classes and no numeric accession at all, so
+  `JERM:00021` names nothing there and stays unmapped rather than being matched
+  against an invented table. Four of those classes have a place in the chain
+  SEEK's reader walks, along with the three subclasses JERM declares beneath
+  `Assay`; the observation-unit level is PPEO's `observation_unit`, which is
+  what this exporter emits. `treatment` is a real JERM class with no slot in
+  that chain, so it is reported rather than placed as something it is not. A
+  release-gated test re-reads the ontology and fails when a recognised name is
+  not in it.
 - An entity that maps to no JERM class is named in a warning rather than
   silently omitted. The complaint in #234 was not that the export fails, but
   that it succeeds while producing less than its author expects.
