@@ -292,20 +292,31 @@ def register_ontology_tools(  # noqa: C901
 
     @mcp.tool()
     def validate_ontology_terms() -> str:
-        """Check ontology_term field values in the current dataset against OLS.
+        """Check ontology_term field values against the configured term sources.
 
-        For every ontology_term field that has a value, searches OLS (restricted
-        to the field's spec-declared ontologies) and returns whether the value
-        matches a known term plus suggested terms. Fails open: if OLS is
-        unreachable a field is reported with no suggestions rather than erroring.
+        For every ontology_term field that has a value, asks the application's
+        term router (local vocabularies first, then OLS) whether the value is a
+        real term in the ontologies the field declares, and within the branch
+        it declares if any. Three outcomes per value, never two:
+
+        - ``valid: true`` — confirmed a term where the field allows.
+        - ``valid: false`` — demonstrably wrong, with a message saying why and
+          suggested replacements.
+        - ``checked: false`` (``valid: null``) — nobody could say: the service
+          did not answer, or no configured source carries the ontology. An
+          outage must never be reported as invalid data.
 
         Returns:
             JSON with total_checked and results of {entity, type, field, value,
-            valid, suggestions:[{id, label}]}.
+            valid, checked, message, suggestions:[{id, label, source}]}.
         """
+        from metaseed.services.term_check import Outcome, check_term
+        from metaseed.services.terms import get_term_source
+
         session = current_state()
         try:
             facade = session.get_or_create_facade()
+            source = get_term_source()
             results = []
             for node in session.nodes_by_id.values():
                 helper = getattr(facade, node.entity_type, None)
@@ -320,36 +331,43 @@ def register_ontology_tools(  # noqa: C901
                     if not value or not isinstance(value, str):
                         continue
 
-                    params: dict[str, Any] = {"q": value, "rows": 5}
                     ontologies = info.get("ontologies")
-                    if ontologies:
-                        params["ontology"] = ",".join(o.lower() for o in ontologies)
-
-                    response = _make_request("/select", params)
-                    docs = (response or {}).get("response", {}).get("docs", [])
-                    suggestions = [
-                        {
-                            "id": doc.get("obo_id") or doc.get("short_form"),
-                            "label": doc.get("label"),
-                        }
-                        for doc in docs[:5]
-                    ]
-                    valid = any(
-                        value.lower()
-                        in {
-                            str(s["id"]).lower() if s["id"] else "",
-                            str(s["label"]).lower() if s["label"] else "",
-                        }
-                        for s in suggestions
+                    verdict = check_term(
+                        value, ontologies, source, within=info.get("within")
                     )
 
+                    suggestions: list[dict[str, Any]] = []
+                    if verdict.is_problem:
+                        # Only a wrong value needs replacements; suggesting
+                        # alternatives for a term nobody could check would
+                        # read as doubt the check has not earned.
+                        try:
+                            hits = source.search_sync(
+                                value,
+                                ",".join(o.lower() for o in ontologies)
+                                if ontologies
+                                else None,
+                                5,
+                            )
+                        except Exception:
+                            hits = []
+                        suggestions = [
+                            {"id": h.id, "label": h.label, "source": h.source}
+                            for h in hits
+                        ]
+
+                    checked = verdict.outcome is not Outcome.NOT_CHECKED
                     results.append(
                         {
                             "entity": node.label or node.id,
                             "type": node.entity_type,
                             "field": field,
                             "value": value,
-                            "valid": valid,
+                            "valid": (verdict.outcome is Outcome.OK)
+                            if checked
+                            else None,
+                            "checked": checked,
+                            "message": verdict.message,
                             "suggestions": suggestions,
                         }
                     )

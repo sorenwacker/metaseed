@@ -282,3 +282,36 @@ class TestResolveDatasetManager:
         # Same shared repository, and it is the one datasets.py resolves to.
         assert m1.repository is m2.repository
         assert m1.repository is _resolve_factory().sync_repo
+
+
+class TestLoadKeepsCatalogMetadata:
+    """`_restore_state_from_data` set the loaded catalog metadata, then called
+    `reset()` — which clears catalog metadata. Loading a dataset therefore
+    wiped the very catalog card it was loading; the next save persisted the
+    wipe."""
+
+    def test_loading_a_dataset_keeps_its_catalog(self) -> None:
+        from unittest.mock import Mock
+
+        from metaseed.repositories.dataset_repository import (
+            CatalogMetadata,
+            DatasetData,
+        )
+        from metaseed.ui.dataset_manager import DatasetManager
+        from metaseed.ui.state import AppState
+
+        state = AppState(profile="miappe", version="1.1")
+        manager = DatasetManager(Mock(), state)
+        catalog = CatalogMetadata(title="Wheat drought study")
+        data = DatasetData(
+            name="withcard",
+            profile="miappe",
+            version="1.1",
+            entities=[],
+            catalog_metadata=catalog,
+        )
+
+        manager._restore_state_from_data(data)
+
+        assert state.catalog_metadata is not None
+        assert state.catalog_metadata.title == "Wheat drought study"

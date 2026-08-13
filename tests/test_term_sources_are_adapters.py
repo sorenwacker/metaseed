@@ -31,7 +31,10 @@ MAY_CALL_OLS_HTTP: dict[str, str] = {
     "services/ontology.py": "is the OLS adapter",
     "agent/mcp/tools/ontology.py": (
         "holds the OLS catalogue tools — listing the ontologies a service "
-        "hosts is a question about OLS, not about a term"
+        "hosts is a question about OLS, not about a term. The exemption is for "
+        "the catalogue alone: every term-resolving function in the module is "
+        "in MUST_ROUTE, which is what catches the next tool that borrows the "
+        "module's exemption for a term question"
     ),
 }
 
@@ -44,6 +47,11 @@ MUST_ROUTE = {
         "search_ontology",
         "get_ontology_term",
         "suggest_ontology_term",
+        # The one the gate missed: it resolved terms over OLS's HTTP API under
+        # cover of this module's catalogue exemption, and reported outages as
+        # invalid terms. Any function here that answers about a *term* routes;
+        # the exemption covers only questions about OLS itself.
+        "validate_ontology_terms",
     ],
     "services/term_check.py": ["check_term"],
     "validators/cv.py": ["validate_cv_terms"],

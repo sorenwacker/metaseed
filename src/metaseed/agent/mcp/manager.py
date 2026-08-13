@@ -118,13 +118,27 @@ class MCPServerManager:
 
             logger.info("Starting MCP server: %s", " ".join(cmd))
 
-            # Start process
-            self._process = subprocess.Popen(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-            )
+            # The child's output goes to a log file, never a PIPE. uvicorn
+            # writes an access-log line per request; a PIPE that nothing drains
+            # fills its ~64KB OS buffer, after which the child's next write
+            # blocks and the server freezes mid-request — the classic
+            # undrained-Popen deadlock for long-lived children. A file has no
+            # such limit, and its tail is what the fail-fast branch reports.
+            from metaseed.paths import get_user_data_dir
+
+            log_path = get_user_data_dir() / "mcp-server.log"
+            self._log_path = log_path
+            log_file = log_path.open("a", encoding="utf-8")
+            try:
+                self._process = subprocess.Popen(
+                    cmd,
+                    stdout=log_file,
+                    stderr=log_file,
+                    text=True,
+                )
+            finally:
+                # The child holds its own descriptor; ours would only leak.
+                log_file.close()
 
             self._transport = transport
             self._host = host
@@ -135,12 +149,17 @@ class MCPServerManager:
 
             # Check if it's still running
             if self._process.poll() is not None:
-                # Process exited, get error
-                _, stderr = self._process.communicate()
+                # Process exited; its dying words are the log tail.
                 self._process = None
+                tail = ""
+                try:
+                    text = log_path.read_text(encoding="utf-8")
+                    tail = "\n".join(text.splitlines()[-20:])
+                except OSError:
+                    pass
                 return MCPServerStatus(
                     running=False,
-                    error=f"Server failed to start: {stderr}",
+                    error=f"Server failed to start: {tail}",
                 )
 
             logger.info(

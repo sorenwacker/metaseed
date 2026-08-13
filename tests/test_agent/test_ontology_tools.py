@@ -279,8 +279,7 @@ class TestOntologyTools:
             assert len(data["suggestions"]) == 2
             assert data["suggestions"][0]["label"] == "temperature"
 
-    def test_validate_ontology_terms_checks_filled_values(self, server) -> None:
-        """Ontology-term fields are checked against OLS with suggestions."""
+    def _dataset_with_term(self, value: str):
         from metaseed.agent.mcp.server import get_entity_service, set_mcp_state
         from metaseed.ui.state import AppState
 
@@ -299,58 +298,87 @@ class TestOntologyTools:
                 "unique_id": "var-1",
                 "study_id": "STU-1",
                 "name": "plant height",
-                "trait_accession_number": "plant height",
+                "trait_accession_number": value,
             },
             parent_id=stu["id"],
         )
+        return server
 
-        fake = {
-            "response": {"docs": [{"obo_id": "TO:0000207", "label": "plant height"}]}
-        }
-        with patch(
-            "metaseed.agent.mcp.tools.ontology._make_request", return_value=fake
-        ):
+    def test_validate_ontology_terms_asks_the_router(self) -> None:
+        """The tool spoke OLS4's HTTP API directly, so a vocabulary configured
+        on the server was invisible to it — the exact bypass the adapter gate
+        exists to prevent, reached through a tool the gate did not list."""
+        from metaseed.services.local_terms import LocalVocabulary
+        from metaseed.services.terms import register_term_source, reset_term_sources
+
+        server = self._dataset_with_term("TO:0000207")
+        reset_term_sources()
+        try:
+            router = register_term_source(
+                LocalVocabulary(ontology_id="to", terms={"TO:0000207": "plant height"}),
+                first=True,
+            )
+            router.sources = [router.sources[0]]
+
             out = json.loads(get_tool(server, "validate_ontology_terms")())
+        finally:
+            reset_term_sources()
 
         assert out["total_checked"] == 1
         result = out["results"][0]
         assert result["field"] == "trait_accession_number"
         assert result["valid"] is True
-        assert result["suggestions"][0]["id"] == "TO:0000207"
+        assert result["checked"] is True
 
-    def test_validate_ontology_terms_fails_open(self, server) -> None:
-        """When OLS is unreachable, fields are reported without suggestions."""
-        from metaseed.agent.mcp.server import get_entity_service, set_mcp_state
-        from metaseed.ui.state import AppState
+    def test_an_outage_is_not_checked_never_invalid(self) -> None:
+        """It reported `valid: false` when OLS did not answer — someone else's
+        downtime marking a researcher's data wrong, the three-outcome rule
+        broken at an MCP boundary."""
+        from metaseed.services.terms import register_term_source, reset_term_sources
 
-        set_mcp_state(AppState(profile="miappe", version="1.2"))
-        server = create_server()
-        svc = get_entity_service()
-        inv = svc.create_entity("Investigation", {"unique_id": "INV-1", "title": "I"})
-        stu = svc.create_entity(
-            "Study",
-            {"unique_id": "STU-1", "investigation_id": "INV-1", "title": "S"},
-            parent_id=inv["id"],
-        )
-        svc.create_entity(
-            "ObservedVariable",
-            {
-                "unique_id": "var-1",
-                "study_id": "STU-1",
-                "name": "h",
-                "trait_accession_number": "obscure value",
-            },
-            parent_id=stu["id"],
-        )
+        class _Down:
+            def get_term_sync(self, term_id):
+                raise ConnectionError("EBI is down")
 
-        with patch(
-            "metaseed.agent.mcp.tools.ontology._make_request", return_value=None
-        ):
+            def has_ontology_sync(self, ontology_id):
+                return None
+
+        server = self._dataset_with_term("TO:0000207")
+        reset_term_sources()
+        try:
+            router = register_term_source(_Down(), first=True)
+            router.sources = [router.sources[0]]
+
             out = json.loads(get_tool(server, "validate_ontology_terms")())
+        finally:
+            reset_term_sources()
+
+        result = out["results"][0]
+        assert result["checked"] is False
+        assert result["valid"] is None
+        assert "could not be checked" in (result["message"] or "")
+
+    def test_a_wrong_ontology_is_invalid_with_suggestions(self) -> None:
+        from metaseed.services.local_terms import LocalVocabulary
+        from metaseed.services.terms import register_term_source, reset_term_sources
+
+        server = self._dataset_with_term("PATO:0000001")
+        reset_term_sources()
+        try:
+            router = register_term_source(
+                LocalVocabulary(ontology_id="to", terms={"TO:0000207": "plant height"}),
+                first=True,
+            )
+            router.sources = [router.sources[0]]
+
+            out = json.loads(get_tool(server, "validate_ontology_terms")())
+        finally:
+            reset_term_sources()
 
         result = out["results"][0]
         assert result["valid"] is False
-        assert result["suggestions"] == []
+        assert result["checked"] is True
+        assert "PATO" in result["message"]
 
     def test_search_limits_rows(self, server) -> None:
         """A caller asking for 200 results gets the cap, not 200 requests."""

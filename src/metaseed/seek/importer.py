@@ -19,6 +19,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from metaseed.api.client import MetaseedClient
+from metaseed.seek.client import SeekApiError
 
 if TYPE_CHECKING:
     from metaseed.seek.client import SeekClient
@@ -70,12 +71,10 @@ def _core_fields(*with_children: str | None) -> list[dict[str, Any]]:
 
 def _assays(client: SeekClient, study_id: str) -> list[dict[str, Any]]:
     """A study's Assay refs, or ``[]`` when the instance does not serve them."""
-    import httpx
-
     try:
         data = client.get(f"/studies/{study_id}/assays").get("data", [])
-    except httpx.HTTPStatusError as exc:
-        if 400 <= exc.response.status_code < 500:
+    except SeekApiError as exc:
+        if 400 <= exc.status_code < 500:
             return []
         raise
     return data if isinstance(data, list) else []
@@ -87,16 +86,19 @@ def _observation_units(client: SeekClient, study_id: str) -> list[dict[str, Any]
     ObservationUnits require SEEK's ISA-JSON compliance; an instance without it
     answers the sub-route with a 4xx, so the study imports with no samples rather
     than aborting the whole import.
-    """
-    import httpx
 
+    ``SeekApiError`` is what :class:`SeekClient` raises — this caught
+    ``httpx.HTTPStatusError``, which the client never lets escape, so the
+    degradation could not fire and every instance without ISA-JSON aborted the
+    whole import.
+    """
     try:
         data = client.get(f"/studies/{study_id}/observation_units").get("data", [])
-    except httpx.HTTPStatusError as exc:
+    except SeekApiError as exc:
         # A 4xx means the instance has no ISA-JSON observation-unit route — degrade
         # to "no observation units". Any other status (5xx) or a connect/timeout
         # error is a real failure and must not masquerade as an empty study.
-        if 400 <= exc.response.status_code < 500:
+        if 400 <= exc.status_code < 500:
             return []
         raise
     return data if isinstance(data, list) else []

@@ -115,7 +115,6 @@ class DatasetManager:
         # AppState uses None to mean "latest"; an empty/missing version must
         # not be pinned as a concrete version (breaks model/entity resolution).
         self._state.version = data.version or None
-        self._state.catalog_metadata = data.catalog_metadata
         self._state.facade = None
         # Restoring is not a reset in the user's sense: the same dataset stays
         # open. ``reset()`` clears the current-dataset pointer, and the polling
@@ -125,6 +124,11 @@ class DatasetManager:
         current = self._state._current_dataset
         self._state.reset()
         self._state._current_dataset = current
+        # After the reset, not before: reset() clears catalog metadata (a reset
+        # to the overview must not carry a previous dataset's card forward), so
+        # setting it earlier wiped the very card being loaded — and the next
+        # save persisted the wipe.
+        self._state.catalog_metadata = data.catalog_metadata
 
         facade = self._state.get_or_create_facade()
         loaded_count = facade.load_from_dict(data.entities)

@@ -145,39 +145,6 @@ def test_imported_dataset_round_trips_to_fds_rdf():
     assert "CLEAN-A" in ttl and "leaf" in ttl  # sample value survives the round trip
 
 
-def _http_error(status: int) -> httpx.HTTPStatusError:
-    request = httpx.Request("GET", "http://seek.test/studies/10/observation_units")
-    response = httpx.Response(status, request=request)
-    return httpx.HTTPStatusError(f"{status}", request=request, response=response)
-
-
-def test_import_tolerates_instances_without_observation_units():
-    # A 4xx on the observation_units sub-route means no ISA-JSON; the study still
-    # imports (with no samples) rather than aborting.
-    class _NoOus(_FakeSeek):
-        def get(self, path: str) -> Any:
-            if path.endswith("/observation_units"):
-                raise _http_error(422)
-            return super().get(path)
-
-    dataset = import_from_seek(_NoOus(), "8")  # type: ignore[arg-type]
-    types = {e["_type"] for e in dataset.serialize()["entities"]}
-    assert types == {"Investigation", "Study"}  # skeleton imported, no samples
-
-
-def test_import_reraises_server_errors_on_observation_units():
-    # A 5xx / transport error is a real failure and must NOT be swallowed into an
-    # empty study.
-    class _Boom(_FakeSeek):
-        def get(self, path: str) -> Any:
-            if path.endswith("/observation_units"):
-                raise _http_error(500)
-            return super().get(path)
-
-    with pytest.raises(httpx.HTTPStatusError):
-        import_from_seek(_Boom(), "8")  # type: ignore[arg-type]
-
-
 def test_import_routes_core_attributes_onto_title():
     entities = _imported().serialize()["entities"]
     inv = next(e for e in entities if e["_type"] == "Investigation")
@@ -216,3 +183,43 @@ def test_import_caches_sample_type_lookups():
     fake = _FakeSeek()
     import_from_seek(fake, "8")  # type: ignore[arg-type]
     assert fake.reads.count("/sample_types/20") == 1
+
+
+def _seek_api_error(status: int):
+    """What the real client actually raises — not httpx's exception."""
+    from metaseed.seek.client import SeekApiError
+
+    request = httpx.Request("GET", "http://seek.test/studies/10/observation_units")
+    response = httpx.Response(
+        status, request=request, json={"errors": [{"detail": "no ISA-JSON here"}]}
+    )
+    return SeekApiError(response)
+
+
+def test_the_degradation_fires_on_what_the_client_raises():
+    """`SeekClient.get` raises SeekApiError, never httpx.HTTPStatusError — so
+    the 4xx degradation below was written against an exception that can not
+    occur, and every instance without ISA-JSON aborted the whole import."""
+
+    class _NoOus(_FakeSeek):
+        def get(self, path: str) -> Any:
+            if path.endswith("/observation_units") or path.endswith("/assays"):
+                raise _seek_api_error(422)
+            return super().get(path)
+
+    dataset = import_from_seek(_NoOus(), "8")  # type: ignore[arg-type]
+    types = {e["_type"] for e in dataset.serialize()["entities"]}
+    assert types == {"Investigation", "Study"}
+
+
+def test_a_server_side_seek_error_still_aborts():
+    from metaseed.seek.client import SeekApiError
+
+    class _Boom(_FakeSeek):
+        def get(self, path: str) -> Any:
+            if path.endswith("/observation_units"):
+                raise _seek_api_error(500)
+            return super().get(path)
+
+    with pytest.raises(SeekApiError):
+        import_from_seek(_Boom(), "8")  # type: ignore[arg-type]

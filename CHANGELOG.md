@@ -1,5 +1,27 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- The spawned MCP server can no longer deadlock on its own logging. It was
+  started with piped stdout/stderr that nothing drained, so once uvicorn's
+  access log filled the ~64KB OS pipe buffer the child's next write blocked
+  and the server froze mid-request. Output goes to `mcp-server.log` under the
+  user data directory; a server that dies on startup reports the log tail.
+- `validate_ontology_terms` (MCP) asks the configured term sources instead of
+  speaking OLS4's HTTP API directly, and answers with three outcomes: a
+  vocabulary configured on the server is now visible to it, and an OLS outage
+  reads as `checked: false`, never as invalid data. The adapter gate has been
+  widened to list the tool, and its exemption for this module is now stated to
+  cover the OLS catalogue alone — this is the tool that slipped through it.
+- The SEEK importer's 4xx degradation fires. It caught `httpx.HTTPStatusError`,
+  which `SeekClient` never lets escape (it raises `SeekApiError`), so an
+  instance without ISA-JSON observation units aborted the whole import instead
+  of importing the study without samples.
+- Loading a dataset keeps its catalog metadata. The load set the catalog card
+  and then called `reset()`, which clears it — so opening a dataset wiped the
+  card it was opening, and the next save persisted the wipe.
+
 ## v0.34.0 (260813)
 
 ### Added
