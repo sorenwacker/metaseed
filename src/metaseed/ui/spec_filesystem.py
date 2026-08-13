@@ -30,15 +30,22 @@ class FilesystemSpecPersistence(SpecPersistence):
         """Initialize the filesystem persistence layer."""
         self._loader = SpecLoader()
 
-    async def save(self: Self, spec: ProfileSpec, name: str | None = None) -> str:
+    async def save(
+        self: Self,
+        spec: ProfileSpec,
+        name: str | None = None,
+        notes: str | None = None,
+    ) -> str:
         """Save a spec to the filesystem.
 
         Saves to specs/<name>/<version>/profile.yaml structure in the user
-        specs directory.
+        specs directory; notes, when given, land in ``notes.md`` beside it.
 
         Args:
             spec: The ProfileSpec to save.
             name: Optional name override. If not provided, uses spec.name.
+            notes: Working notes to store beside the spec; ``None`` removes
+                any previously stored notes.
 
         Returns:
             The file path where the spec was saved.
@@ -49,6 +56,11 @@ class FilesystemSpecPersistence(SpecPersistence):
         from metaseed.ui.helpers.spec_builder_helpers import save_spec
 
         path = save_spec(spec, name)
+        notes_path = path.parent / "notes.md"
+        if notes:
+            notes_path.write_text(notes, encoding="utf-8")
+        elif notes_path.exists():
+            notes_path.unlink()
         return str(path)
 
     async def delete(self: Self, name: str, version: str | None = None) -> bool:

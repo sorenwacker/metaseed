@@ -7,6 +7,7 @@ Both UI routes and MCP tools use this service via dependency injection.
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from typing import Any, Self
 
 from metaseed.repositories.base import EntityData, EntityRepository
@@ -22,13 +23,24 @@ class EntityService:
     (memory, file, database) via the EntityRepository interface.
     """
 
-    def __init__(self: Self, repository: EntityRepository) -> None:
+    def __init__(
+        self: Self,
+        repository: EntityRepository,
+        notifier: Callable[..., None] | None = None,
+    ) -> None:
         """Initialize with a repository.
 
         Args:
             repository: EntityRepository implementation for storage.
+            notifier: Called after each change with ``(event, entity_type=...,
+                entity_id=...)``. The web app passes the websocket broadcast;
+                headless composition passes nothing. Injected rather than
+                discovered — the service used to try-import the websocket
+                module itself, a hidden dependency no caller could substitute
+                and no boundary test could see.
         """
         self._repo = repository
+        self._notifier = notifier
 
     @property
     def repository(self: Self) -> EntityRepository:
@@ -212,13 +224,10 @@ class EntityService:
             event: Event type (created, updated, deleted).
             entity: The affected entity.
         """
-        try:
-            from metaseed.ui.websocket import notify_state_changed
-
-            notify_state_changed(
-                event=event,
-                entity_type=entity.entity_type,
-                entity_id=entity.id,
-            )
-        except ImportError:
-            pass
+        if self._notifier is None:
+            return
+        self._notifier(
+            event=event,
+            entity_type=entity.entity_type,
+            entity_id=entity.id,
+        )

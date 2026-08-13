@@ -75,7 +75,12 @@ def create_app(state: AppState | None = None, base_url: str = "") -> FastAPI:
 
     # Create entity service factory that always uses current facade
     def get_entity_service() -> EntityService:
-        return EntityService(MemoryEntityRepository(state, on_change=auto_save))
+        from metaseed.ui.websocket import notify_state_changed
+
+        return EntityService(
+            MemoryEntityRepository(state, on_change=auto_save),
+            notifier=notify_state_changed,
+        )
 
     # Create MCP context with all dependencies
     context = MCPContext(

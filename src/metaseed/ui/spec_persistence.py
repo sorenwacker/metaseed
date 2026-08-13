@@ -24,12 +24,19 @@ class SpecPersistence(ABC):
     """
 
     @abstractmethod
-    async def save(self, spec: "ProfileSpec", name: str | None = None) -> str:
+    async def save(
+        self, spec: "ProfileSpec", name: str | None = None, notes: str | None = None
+    ) -> str:
         """Save a spec to persistent storage.
 
         Args:
             spec: The ProfileSpec to save.
             name: Optional name override. If not provided, uses spec.name.
+            notes: The author's working notes, stored beside the spec. ``None``
+                means no notes: any previously stored notes are removed. Part
+                of the port because the export route used to compute a path
+                from the returned location and write the file itself — around
+                the very abstraction that decides where specs live.
 
         Returns:
             The save location or identifier (e.g., file path or database key).

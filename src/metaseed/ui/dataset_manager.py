@@ -18,9 +18,9 @@ for loading and saving operations.
 from __future__ import annotations
 
 import re
+import weakref
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Self
-from weakref import WeakValueDictionary
 
 from metaseed.repositories.dataset_repository import (
     DatasetData,
@@ -262,9 +262,10 @@ class DatasetManager:
 class DatasetManagerFactory:
     """Factory for creating DatasetManager instances tied to AppState.
 
-    Manages DatasetManager instances using WeakValueDictionary to allow
-    garbage collection when AppState instances are no longer referenced.
-    This avoids global state by associating each manager with its AppState.
+    Manages one DatasetManager per live AppState. The manager is held for as
+    long as its state lives and evicted by a finalizer when the state is
+    collected — held weakly, it vanished between requests and every access
+    rebuilt it with its per-manager attributes reset.
 
     Usage:
         factory = DatasetManagerFactory()
@@ -281,7 +282,13 @@ class DatasetManagerFactory:
             sync_repo: Sync repository implementation (default: FilesystemDatasetRepository).
         """
         self._sync_repo = sync_repo or FilesystemDatasetRepository()
-        self._managers: WeakValueDictionary[int, DatasetManager] = WeakValueDictionary()
+        # Held strongly for as long as the state lives, evicted by a finalizer
+        # on the state. The previous WeakValueDictionary held the *manager*
+        # weakly keyed by id(state): nothing referenced the manager between
+        # requests, so it was collected between calls and every access built a
+        # fresh one — `manager.current_dataset` silently reset — and an id()
+        # key could even collide with a new state at a reused address.
+        self._managers: dict[int, DatasetManager] = {}
 
     @property
     def sync_repo(self) -> DatasetRepository:
@@ -302,6 +309,9 @@ class DatasetManagerFactory:
         if manager is None:
             manager = DatasetManager(self._sync_repo, state)
             self._managers[state_id] = manager
+            # Evict when the state goes away, so the id cannot be reused by a
+            # different state while the old manager still answers for it.
+            weakref.finalize(state, self._managers.pop, state_id, None)
         return manager
 
 

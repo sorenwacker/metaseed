@@ -151,18 +151,10 @@ def register_export_routes(  # noqa: C901
             )
 
         try:
-            saved_path = await persistence.save(builder.spec)
-
-            # Save notes alongside the spec
-            from pathlib import Path
-
-            spec_dir = Path(saved_path).parent
-            notes_path = spec_dir / "notes.md"
-            if builder.notes:
-                notes_path.write_text(builder.notes, encoding="utf-8")
-            elif notes_path.exists():
-                # Remove notes file if notes are empty
-                notes_path.unlink()
+            # Notes travel through the port with the spec: computing a path
+            # from the returned location and writing beside it went around the
+            # abstraction that decides where specs live at all.
+            saved_path = await persistence.save(builder.spec, notes=builder.notes)
 
             builder.mark_saved()
             return templates.TemplateResponse(

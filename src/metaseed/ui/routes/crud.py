@@ -109,7 +109,10 @@ def register_entity_crud_routes(
 
         from ..datasets import auto_save
 
-        auto_save(state)
+        # Through the factory the app was composed with, not the ambient one:
+        # a host serving several sessions would otherwise read through its own
+        # repository and write through a private default.
+        auto_save(state, getattr(request.app.state, "dataset_factory", None))
 
         if warning:
             message = (
@@ -203,7 +206,10 @@ def register_entity_crud_routes(
         # Always persist — a draft save is not rejected for incompleteness.
         from ..datasets import auto_save
 
-        auto_save(state)
+        # Through the factory the app was composed with, not the ambient one:
+        # a host serving several sessions would otherwise read through its own
+        # repository and write through a private default.
+        auto_save(state, getattr(request.app.state, "dataset_factory", None))
 
         action = form_data.get("_action", "")
 
@@ -262,7 +268,10 @@ def register_entity_crud_routes(
 
         from ..datasets import auto_save
 
-        auto_save(state)
+        # Through the factory the app was composed with, not the ambient one:
+        # a host serving several sessions would otherwise read through its own
+        # repository and write through a private default.
+        auto_save(state, getattr(request.app.state, "dataset_factory", None))
 
         facade = state.get_or_create_facade()
         return templates.TemplateResponse(

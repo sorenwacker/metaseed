@@ -113,8 +113,10 @@ def register_export_routes(
 
         from metaseed.api.client import MetaseedClient
 
-        client = MetaseedClient.__new__(MetaseedClient)
-        client._facade = state.get_or_create_facade()
+        # from_facade exists for exactly this: wrapping a facade the app
+        # already composed. __new__ plus a private attribute skipped the
+        # constructor and would silently break with it.
+        client = MetaseedClient.from_facade(state.get_or_create_facade())
 
         try:
             export_fn = action.resolve()

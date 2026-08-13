@@ -373,17 +373,23 @@ class ProfileFacade:
         return DocumentLoader(self, self._root_entity())
 
     def _root_entity(self: Self) -> str | None:
-        """The profile's root entity, where the profile names one."""
+        """The profile's root entity, where the profile names one.
+
+        Asked of the facade's own injected loader — building a fresh
+        ``SpecLoader`` here silently ignored whatever loader the caller
+        composed, so a facade over a custom source answered this one question
+        from the default filesystem instead.
+        """
         if self._spec is not None and self._spec.root_entity:
             return str(self._spec.root_entity)
 
-        from metaseed.specs.loader import SpecLoader, SpecLoadError
+        from metaseed.specs.loader import SpecLoadError
 
         try:
-            spec = SpecLoader(profile=self.profile).load_profile(
-                self.version, self.profile
-            )
+            spec = self._loader.load_profile(self.version, self.profile)
         except (SpecLoadError, OSError):
+            return None
+        if spec is None:
             return None
         return str(spec.root_entity) if spec.root_entity else None
 
