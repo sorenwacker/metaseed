@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.34.0 (260813)
 
 ### Added
 - A term source declares whether it can serve interactive lookup, and how
