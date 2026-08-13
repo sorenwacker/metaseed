@@ -178,18 +178,46 @@ def _shipped_profiles() -> list[tuple[str, Path]]:
 
 _SHIPPED = _shipped_profiles()
 
-# Recorded state of every shipped profile under the rule. Seven are clean; the
-# three listed genuinely identify an entity by an optional free-text field, which
-# is a real finding about those profiles rather than a reason to weaken the rule.
+# Recorded state of every shipped profile under the rule. The advisory fired five
+# times when it was introduced; three of those entities have since declared the
+# identifier they were already keyed by (#212). The two left are not oversights:
+# SpatialDistribution is a value object with no identity of its own, and PRIDE
+# Publication is identified by its doi, which is a different field from the one
+# inference picks and so cannot move before a MAJOR version.
 _EXPECTED_WARNING_TARGETS: dict[str, set[str]] = {
-    "isa/1.0": {"Process.name"},
-    "miappe-htp/1.0": {
-        "Location.name",
-        "ObservationLevelHierarchy.name",
-        "SpatialDistribution.description",
-    },
+    "miappe-htp/1.0": {"SpatialDistribution.description"},
     "pride/1.0": {"Publication.title"},
 }
+
+# Entity -> the identifier it now declares, per profile. Each must be the field
+# inference already resolved to: that is what makes declaring it a compatible
+# change rather than a MAJOR bump, and what stops the declaration re-keying a
+# dataset that was written before it.
+_DECLARED_IDENTIFIERS: dict[str, dict[str, str]] = {
+    "isa/1.0": {"Process": "name"},
+    "miappe-htp/1.0": {"Location": "name", "ObservationLevelHierarchy": "name"},
+}
+
+
+@pytest.mark.parametrize(
+    ("label", "path"), _SHIPPED, ids=[label for label, _ in _SHIPPED]
+)
+def test_a_declared_identifier_is_the_one_inference_would_pick(
+    label: str, path: Path
+) -> None:
+    """Recording an inference, not overriding it."""
+    spec = ProfileSpec.model_validate(yaml.safe_load(path.read_text()))
+
+    for entity_name, expected in _DECLARED_IDENTIFIERS.get(label, {}).items():
+        fields = spec.entities[entity_name].fields
+        declared = next(f.name for f in fields if f.is_identifier)
+        inferred = next(f.name for f in fields if not f.reference)
+
+        assert declared == expected
+        assert declared == inferred, (
+            f"{label} {entity_name}: declaring {declared!r} moves the identifier "
+            f"off {inferred!r}, which re-keys existing data"
+        )
 
 
 @pytest.mark.parametrize(

@@ -8,6 +8,13 @@ keyed by `name` (a few — `Observation`, `FactorValue`, `ExperimentalDesign`,
 `SpatialDistribution` — use other identifying fields). The root entity is
 **`Investigation`**.
 
+`SpatialDistribution` has no identifier of its own. It is a value object — a
+description and three coordinates — nested one-to-one in the ObservationUnit it
+describes, and its identity is that position rather than any of its fields. The
+spec-builder advisory reports it for that reason and the report is accurate; no
+field is marked, because marking one would state an identity the entity does not
+have.
+
 ## Entities
 
 | Category | Entities |

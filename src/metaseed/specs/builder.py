@@ -23,6 +23,7 @@ from metaseed.specs.schema import (
     FieldType,
     ProfileSpec,
     ValidationRuleSpec,
+    identifying_field,
 )
 from metaseed.specs.versioning import check_profile_version
 
@@ -701,12 +702,10 @@ class SpecBuilder:
     def _weak_identifier_warnings(self: Self) -> list[str]:
         """Report an entity whose identifier is inferred onto a weak field.
 
-        Inference is duplicated from
-        :attr:`~metaseed.facade.helper.EntityHelper.identifier_field` -- a
-        declared ``is_identifier`` wins, otherwise the first non-reference field
-        -- so the advisory cannot name a different field than the one a dataset
-        actually gets indexed by. Importing the helper is not an option: it needs
-        a built ``EntitySpec``, and a draft mid-edit may not build.
+        Which field is asked about comes from
+        :func:`~metaseed.specs.schema.identifying_field`, the one definition of
+        the rule, so the advisory cannot name a different field than the one a
+        dataset actually gets indexed by.
 
         A field is "weak" when nothing in the spec says its value will be present
         (not ``required``), distinguishing (no ``unique_within``) or shaped (no
@@ -715,12 +714,10 @@ class SpecBuilder:
         """
         issues: list[str] = []
         for entity_name, entity_def in self._spec.entities.items():
-            if any(field.is_identifier for field in entity_def.fields):
+            inferred = identifying_field(entity_def.fields)
+            if inferred is None or inferred.is_identifier:
                 continue
-            inferred = next(
-                (field for field in entity_def.fields if not field.reference), None
-            )
-            if inferred is None or not self._is_weak_identifier(inferred):
+            if not self._is_weak_identifier(inferred):
                 continue
             issues.append(
                 f"{entity_name}: no field declares is_identifier, so the "

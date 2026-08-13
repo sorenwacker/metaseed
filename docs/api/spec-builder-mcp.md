@@ -72,8 +72,9 @@ warning names the entity, the field it would infer, and the fix:
 }
 ```
 
-The check uses the same rule the facade uses (`EntityHelper.identifier_field`),
-so it cannot disagree with the identifier a dataset actually gets. It stays quiet
+The check asks `specs.schema.identifying_field`, the one definition of the rule —
+the same one the facade and the version comparator use — so it cannot disagree
+with the identifier a dataset actually gets. It stays quiet
 when the entity declares `is_identifier`, when the inferred field is `required`,
 when it is not a string, when a `pattern`, `enum`, `options` or `unique_within`
 already pins its shape or uniqueness, and when the field's own name states that

@@ -1,3 +1,4 @@
+spec_version: '0.6'
 version: '1.0'
 name: miappe-htp
 display_name: MIAPPE-HTP
@@ -517,6 +518,7 @@ entities:
       codename: locationName
       type: string
       required: false
+      is_identifier: true
       description: Location name.
       ontology_term: PPEO:hasName
     - name: latitude
@@ -671,6 +673,7 @@ entities:
       codename: hierarchyName
       type: string
       required: false
+      is_identifier: true
       description: Hierarchy name.
       ontology_term: PPEO:hasName
     - name: levels

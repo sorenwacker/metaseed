@@ -90,7 +90,7 @@ class TestTheClassificationTableIsTotal:
         assert set(COMPATIBILITY_BY_KIND) == set(ChangeKind)
 
     def test_every_field_attribute_is_either_handled_or_bucketed(self) -> None:
-        handled = {"name", "type", "required", "items", "constraints"}
+        handled = {"name", "type", "required", "items", "constraints", "is_identifier"}
 
         assert (handled | COSMETIC_FIELD_ATTRIBUTES | SEMANTIC_FIELD_ATTRIBUTES) == set(
             FieldSpec.model_fields
@@ -276,7 +276,6 @@ class TestBreaking:
             ("parent_ref", "Film.title"),
             ("unique_within", "parent"),
             ("owns", True),
-            ("is_identifier", True),
             ("options", ["director"]),
         ],
     )
@@ -290,6 +289,79 @@ class TestBreaking:
         assert change.kind == ChangeKind.FIELD_CHANGED
         assert change.compatibility is Compatibility.BREAKING
         assert attribute in change.message
+
+
+class TestIdentifierDeclaration:
+    """`is_identifier` is compared per entity, not per field (#212).
+
+    What a consumer can observe is the entity's *effective* identifier: the
+    marked field, or absent a marker the first non-reference one. Comparing the
+    attribute field-by-field made "say out loud what the format already does" a
+    breaking change, which is why three shipped profiles carried an undeclared
+    identifier rather than a MAJOR bump.
+
+    In `base()`, `Credit`'s first non-reference field is `person`, so that is
+    what inference already resolves to.
+    """
+
+    def test_declaring_the_inferred_identifier_is_compatible(self) -> None:
+        new = base()
+        field_of(new, "Credit", "person").is_identifier = True
+
+        change = only(base(), new)
+        assert change.kind == ChangeKind.IDENTIFIER_DECLARED
+        assert change.compatibility is Compatibility.COMPATIBLE
+        assert required_bump(base(), new) == "minor"
+
+    def test_declaring_a_different_field_is_breaking(self) -> None:
+        new = base()
+        field_of(new, "Credit", "role").is_identifier = True
+
+        change = only(base(), new)
+        assert change.kind == ChangeKind.IDENTIFIER_CHANGED
+        assert change.compatibility is Compatibility.BREAKING
+        assert "person" in change.message and "role" in change.message
+
+    def test_moving_the_marker_is_breaking(self) -> None:
+        old = base()
+        field_of(old, "Credit", "person").is_identifier = True
+        new = copy.deepcopy(old)
+        field_of(new, "Credit", "person").is_identifier = None
+        field_of(new, "Credit", "role").is_identifier = True
+
+        change = only(old, new)
+        assert change.kind == ChangeKind.IDENTIFIER_CHANGED
+        assert change.compatibility is Compatibility.BREAKING
+
+    def test_dropping_a_marker_inference_would_not_reproduce_is_breaking(self) -> None:
+        old = base()
+        field_of(old, "Credit", "role").is_identifier = True
+        new = copy.deepcopy(old)
+        field_of(new, "Credit", "role").is_identifier = None
+
+        change = only(old, new)
+        assert change.kind == ChangeKind.IDENTIFIER_CHANGED
+
+    def test_dropping_a_marker_inference_reproduces_is_compatible(self) -> None:
+        """Undeclaring is the mirror of declaring: nothing is keyed differently."""
+        old = base()
+        field_of(old, "Credit", "person").is_identifier = True
+        new = copy.deepcopy(old)
+        field_of(new, "Credit", "person").is_identifier = None
+
+        change = only(old, new)
+        assert change.kind == ChangeKind.IDENTIFIER_DECLARED
+        assert change.compatibility is Compatibility.COMPATIBLE
+
+    def test_reordering_fields_past_the_identifier_is_breaking(self) -> None:
+        """Field order *is* the identifier when nothing declares one, so moving
+        another field to the front of an undeclared entity re-keys it."""
+        new = base()
+        fields = new.entities["Credit"].fields
+        fields.insert(1, fields.pop(2))
+
+        found = changes(base(), new)
+        assert any(c.kind == ChangeKind.IDENTIFIER_CHANGED for c in found)
 
 
 # ----------------------------------------------------------------------
@@ -387,13 +459,16 @@ class TestCompatible:
         assert change.compatibility is Compatibility.COMPATIBLE
 
     def test_fields_reordered(self) -> None:
+        """Below the identifier: `identifier` stays first, so nothing is keyed
+        differently. Reordering *past* it is breaking, see
+        :class:`TestIdentifierDeclaration`."""
         new = base()
-        fields = new.entities["Credit"].fields
+        fields = new.entities["Film"].fields
         fields[1], fields[2] = fields[2], fields[1]
 
         change = only(base(), new)
         assert change.kind == ChangeKind.FIELDS_REORDERED
-        assert change.target == "Credit"
+        assert change.target == "Film"
         assert change.compatibility is Compatibility.COMPATIBLE
 
     @pytest.mark.parametrize(

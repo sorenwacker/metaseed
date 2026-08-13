@@ -2,6 +2,28 @@
 
 ## Unreleased
 
+### Changed
+- `is_identifier` is compared per entity rather than per field (#212). What a
+  consumer can observe is which field an entity is keyed by — the marked one, or
+  absent a marker the first non-reference one — so declaring the field inference
+  already resolved to is now classified `identifier_declared`, compatible: it
+  records a decision the format was already making and re-keys nothing. Marking a
+  different field, dropping a marker inference would not reproduce, or reordering
+  fields past an undeclared identifier is `identifier_changed`, breaking. Before
+  this, saying out loud what a profile already did counted as a breaking change,
+  which is why three shipped profiles carried an undeclared identifier.
+- `isa` 1.0 `Process`, `miappe-htp` 1.0 `Location` and `ObservationLevelHierarchy`
+  declare the identifier they were already keyed by. No version was bumped,
+  because nothing about them is keyed differently. Two of the five entities the
+  advisory reported are unchanged and stay reported: `miappe-htp`
+  `SpatialDistribution` is a value object with no identity of its own, and
+  `pride` `Publication` is identified by its `doi` rather than the `title`
+  inference picks — moving it is a real change and belongs in a MAJOR version.
+- One definition of the identifier rule, `specs.schema.identifying_field`, used by
+  the facade, the weak-identifier advisory and the comparator. It was written out
+  three times; three copies of an inference rule is three chances to disagree
+  about what a dataset is keyed by.
+
 ### Fixed
 - An entity annotated with the JERM class it represents is exported as it
   (#234). The SEEK role map read the entity's *name* against nine strings and

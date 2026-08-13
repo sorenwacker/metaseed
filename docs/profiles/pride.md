@@ -20,6 +20,12 @@ describe a proteomics experiment.
 | `DataFile` | A raw/peak/result file, optionally linked to samples |
 | `CustomAttribute` | A free `name`/`value` annotation on a sample |
 
+`Publication` is keyed by its `title` in 1.0, because nothing declares an
+identifier and the first field is what inference falls back to. Its identifier is
+the `doi`. Moving it changes what existing datasets are keyed by, so it belongs
+in a MAJOR version rather than a patch; until then the spec-builder advisory
+reports the weakness, which is accurate.
+
 ## Entity-Relationship Diagram
 
 ```mermaid

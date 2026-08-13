@@ -170,16 +170,20 @@ required_bump(old_spec, new_spec)  # same value, without the change list
 | `maximum` / `max_length` / `max_items` lowered or introduced | breaking | `constraint_tightened` |
 | `pattern` added or changed | breaking | `pattern_tightened` |
 | Validation rule added or changed | breaking | `validation_rule_added`, `validation_rule_changed` |
-| Any other semantic field attribute changed (`reference`, `parent_ref`, `unique_within`, `owns`, `is_identifier`, `options`) | breaking | `field_changed` |
+| The entity's effective identifier changed | breaking | `identifier_changed` |
+| Any other semantic field attribute changed (`reference`, `parent_ref`, `unique_within`, `owns`, `options`) | breaking | `field_changed` |
 | Entity added | compatible | `entity_added` |
 | Optional field added | compatible | `optional_field_added` |
 | Required field became optional | compatible | `field_became_optional` |
 | Enum widened or dropped | compatible | `enum_widened` |
 | A bound loosened or dropped | compatible | `constraint_loosened` |
 | `pattern` removed | compatible | `pattern_relaxed` |
-| Fields reordered within an entity | compatible | `fields_reordered` |
+| Fields reordered within an entity (also `identifier_changed` when it moves an undeclared identifier) | compatible | `fields_reordered` |
 | `description`, `ontology_term`, `display_name`, `label`, `codename`, `example`, `unit`, `tier`, `dcat`, `is_label` changed | compatible | `field_metadata_changed`, `entity_metadata_changed`, `profile_metadata_changed` |
+| `is_identifier` declared on the field inference already resolved to | compatible | `identifier_declared` |
 | Validation rule removed | compatible | `validation_rule_removed` |
+
+**`is_identifier` is compared per entity, not per field.** What a consumer can observe is the entity's *effective* identifier — the field marked `is_identifier`, or, absent a marker, the first non-reference field. Marking the field that inference already chose leaves that unchanged, so it is classified compatible: it records a decision the format was already making, and no dataset is keyed differently afterwards. Marking a different field, or removing a marker so inference lands elsewhere, changes index keys and node IDs and is breaking.
 
 Three rules resolve the cases classification cannot decide by inspection, all erring toward breaking:
 

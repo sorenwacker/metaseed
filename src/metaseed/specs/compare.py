@@ -31,7 +31,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import BaseModel
 
-from metaseed.specs.schema import FieldSpec
+from metaseed.specs.schema import FieldSpec, identifying_field
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -63,6 +63,8 @@ class ChangeKind(StrEnum):
     ENTITY_REMOVED = "entity_removed"
     ENTITY_ADDED = "entity_added"
     ENTITY_METADATA_CHANGED = "entity_metadata_changed"
+    IDENTIFIER_CHANGED = "identifier_changed"
+    IDENTIFIER_DECLARED = "identifier_declared"
 
     FIELD_REMOVED = "field_removed"
     REQUIRED_FIELD_ADDED = "required_field_added"
@@ -95,6 +97,8 @@ COMPATIBILITY_BY_KIND: dict[ChangeKind, Compatibility] = {
     ChangeKind.ENTITY_REMOVED: Compatibility.BREAKING,
     ChangeKind.ENTITY_ADDED: Compatibility.COMPATIBLE,
     ChangeKind.ENTITY_METADATA_CHANGED: Compatibility.COMPATIBLE,
+    ChangeKind.IDENTIFIER_CHANGED: Compatibility.BREAKING,
+    ChangeKind.IDENTIFIER_DECLARED: Compatibility.COMPATIBLE,
     ChangeKind.FIELD_REMOVED: Compatibility.BREAKING,
     ChangeKind.REQUIRED_FIELD_ADDED: Compatibility.BREAKING,
     ChangeKind.OPTIONAL_FIELD_ADDED: Compatibility.COMPATIBLE,
@@ -120,9 +124,14 @@ COMPATIBILITY_BY_KIND: dict[ChangeKind, Compatibility] = {
 
 
 _HANDLED_FIELD_ATTRIBUTES = frozenset(
-    {"name", "type", "required", "items", "constraints"}
+    {"name", "type", "required", "items", "constraints", "is_identifier"}
 )
-"""Field attributes compared by dedicated rules below."""
+"""Field attributes compared by dedicated rules below.
+
+``is_identifier`` is compared per *entity* (:func:`_identifier_changes`): what a
+consumer observes is which field the entity is keyed by, and comparing the marker
+field-by-field made recording an existing inference a breaking change.
+"""
 
 COSMETIC_FIELD_ATTRIBUTES = frozenset(
     {
@@ -568,6 +577,52 @@ def _entity_metadata_changes(
     ]
 
 
+def _identifier_changes(
+    entity: str, old: EntityDefSpec, new: EntityDefSpec
+) -> list[SpecChange]:
+    """Classify what the entity is keyed by, rather than where the marker sits.
+
+    Two questions, in order. Did the *effective* identifier move — the field
+    :func:`~metaseed.specs.schema.identifying_field` resolves to, whether it was
+    declared or inferred? That re-keys existing data, so it is breaking, and it
+    happens whether the cause is a marker or a reordering that puts a different
+    field first. Failing that, did a marker appear or disappear over the field
+    inference already chose? Then the format now says out loud what it was
+    already doing, which no dataset can tell apart (#212).
+    """
+    before = identifying_field(old.fields)
+    after = identifying_field(new.fields)
+    before_name = before.name if before else None
+    after_name = after.name if after else None
+
+    if before_name != after_name:
+        return [
+            _change(
+                ChangeKind.IDENTIFIER_CHANGED,
+                entity,
+                f"{entity} is identified by {after_name!r} instead of {before_name!r}",
+                before_name,
+                after_name,
+            )
+        ]
+
+    declared_before = bool(before and before.is_identifier)
+    declared_after = bool(after and after.is_identifier)
+    if declared_before != declared_after:
+        verb = "declares" if declared_after else "no longer declares"
+        return [
+            _change(
+                ChangeKind.IDENTIFIER_DECLARED,
+                entity,
+                f"{entity} {verb} {after_name!r} as its identifier, which is "
+                f"the field it was already keyed by",
+                declared_before,
+                declared_after,
+            )
+        ]
+    return []
+
+
 def _entity_changes(old: ProfileSpec, new: ProfileSpec) -> list[SpecChange]:
     """Classify entities removed, added, and edited."""
     found: list[SpecChange] = []
@@ -593,6 +648,7 @@ def _entity_changes(old: ProfileSpec, new: ProfileSpec) -> list[SpecChange]:
     for name in (n for n in new.entities if n in old.entities):
         before, after = old.entities[name], new.entities[name]
         found.extend(_entity_metadata_changes(name, before, after))
+        found.extend(_identifier_changes(name, before, after))
         found.extend(_field_set_changes(name, before, after))
     return found
 

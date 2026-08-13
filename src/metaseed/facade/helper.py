@@ -12,7 +12,13 @@ from typing import Any, Self, cast
 
 from pydantic import BaseModel
 
-from metaseed.specs.schema import PRIMITIVE_TYPES, EntitySpec, FieldSpec, FieldType
+from metaseed.specs.schema import (
+    PRIMITIVE_TYPES,
+    EntitySpec,
+    FieldSpec,
+    FieldType,
+    identifying_field,
+)
 
 __all__ = ["EntityHelper", "validate_ontology_term"]
 
@@ -211,18 +217,14 @@ class EntityHelper:
         declared identifier, the convention is the first non-reference field in
         the entity definition. This value is consumed for index keys and node
         IDs; display labels are handled separately by derive_label / get_label.
-        Reference fields (e.g., run_ref, sample_ref) are skipped since they point
-        to other entities rather than identifying this one.
+
+        The rule itself lives in :func:`~metaseed.specs.schema.identifying_field`,
+        so the advisory that reports a weak identifier and the comparator that
+        decides whether a new version re-keys data cannot disagree with what a
+        dataset is actually keyed by.
         """
-        for f in self._spec.fields:
-            if f.is_identifier:
-                return f.name
-        for f in self._spec.fields:
-            # Skip reference fields (these point to other entities)
-            if f.reference:
-                continue
-            return f.name
-        return None
+        field = identifying_field(self._spec.fields)
+        return field.name if field else None
 
     @property
     def example_data(self: Self) -> dict[str, Any]:

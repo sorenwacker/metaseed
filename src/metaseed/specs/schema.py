@@ -4,6 +4,7 @@ This module defines the structure of YAML specification files that describe
 profile entities and their fields.
 """
 
+from collections.abc import Sequence
 from enum import StrEnum
 from typing import Any, Literal, Self
 
@@ -260,6 +261,35 @@ class FieldSpec(BaseModel):
         if self.type == FieldType.LIST and self.items:
             return self.items not in PRIMITIVE_TYPES
         return False
+
+
+def identifying_field(fields: Sequence[FieldSpec]) -> FieldSpec | None:
+    """The field an entity is keyed by, declared or inferred.
+
+    A field marked ``is_identifier`` wins. Absent one, the convention is the
+    first field that is not a reference — a reference points at another entity
+    rather than identifying this one. The result is what index keys and node IDs
+    are built from.
+
+    One definition, used by everything that has to agree on it: the facade's
+    :attr:`~metaseed.facade.helper.EntityHelper.identifier_field`, the advisory
+    that reports a weak one, and the comparator that decides whether a new
+    version re-keys existing data. Three copies of an inference rule is three
+    chances to disagree about what a dataset is keyed by.
+
+    Args:
+        fields: The entity's field specs, in declaration order.
+
+    Returns:
+        The field, or ``None`` when the entity has nothing but references.
+    """
+    for field in fields:
+        if field.is_identifier:
+            return field
+    for field in fields:
+        if not field.reference:
+            return field
+    return None
 
 
 def _check_single_marked_field(fields: list[FieldSpec], entity_label: str) -> None:

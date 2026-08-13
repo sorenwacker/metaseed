@@ -206,16 +206,27 @@ resolves identity and never changes what a dataset is keyed by; at worst it
 withholds a suggestion. That is a different risk class from the heuristics the
 markers replaced, which silently picked the wrong field.
 
-Across the ten shipped profiles the advisory fires five times — `isa` 1.0
-(`Process.name`), `miappe-htp` 1.0 (`Location.name`,
-`ObservationLevelHierarchy.name`, `SpatialDistribution.description`) and `pride`
-1.0 (`Publication.title`); the other seven are clean. Those five are real: each
-identifies an entity by an optional free-text column. They are left as advisories
-rather than fixed in place, because adding `is_identifier` to a released profile
-is classified breaking by the [comparator](../api/schema-specs.md#comparing-versions)
-and would force a MAJOR bump on three shipped standards to record an identifier
-that inference already resolves to the same field. A test pins the expected set
-per profile, so a profile edit cannot introduce a new weak identifier unnoticed.
+The advisory fired five times across the ten shipped profiles (#212), and the
+five were not one problem:
+
+- `isa` 1.0 `Process.name`, `miappe-htp` 1.0 `Location.name` and
+  `ObservationLevelHierarchy.name` are entities whose identifier *is* that field
+  — it was simply never declared. They now declare it. Nothing about them is
+  keyed differently: the marker names the field inference already resolved to,
+  which the [comparator](../api/schema-specs.md#comparing-versions) classifies
+  compatible, so no version was bumped to record it. That reclassification was
+  the substance of the fix; before it, saying out loud what the format already
+  did counted as a breaking change.
+- `miappe-htp` 1.0 `SpatialDistribution` has no identifier. It is a value object
+  nested one-to-one in an ObservationUnit — a description and three coordinates
+  — and marking any of them would state an identity the entity does not have.
+  The advisory is accurate and stays.
+- `pride` 1.0 `Publication` is identified by its `doi`, not by the `title`
+  inference picks. Moving it is a real change to what datasets are keyed by, so
+  it belongs in a MAJOR version rather than in a patch.
+
+A test pins the expected set per profile, so a profile edit cannot introduce a
+new weak identifier unnoticed.
 
 ## Persistence
 
