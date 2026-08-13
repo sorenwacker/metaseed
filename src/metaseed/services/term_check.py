@@ -117,7 +117,10 @@ def check_term(
 
     Args:
         value: The value as written in the dataset.
-        ontologies: OLS ids the field allows, or ``None`` for any.
+        ontologies: The ontologies the field allows, by id. ``None`` or empty
+            means any: the value is still checked to be a real term, and only
+            the restriction is lifted. Stated rather than implied, because two
+            shipped profiles depend on it (#246).
         source: Where to ask whether a term exists. ``None`` asks the
             application's router, which holds whichever adapters are
             configured — local vocabularies, OLS, or both.

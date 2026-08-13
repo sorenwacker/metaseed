@@ -136,3 +136,62 @@ class TestAnOntologyTheSourceDoesNotCarry:
 
         assert verdict.outcome is Outcome.NOT_FOUND
         assert verdict.is_problem
+
+
+class TestNoListMeansAnyOntology:
+    """A field that names no ontology takes a term from any of them.
+
+    Not "no lookup at all", which is how a consumer keying its picker off this
+    key read it: `isa` and `seek` both declare
+    `OntologyAnnotation.term_accession` as `ontology_term` with no `ontologies`
+    list, so the one field whose declared *type* is literally "ontology term"
+    offered nothing (#246). The behaviour was already right; nothing pinned it,
+    so nothing stopped it being "tidied" into a restriction.
+    """
+
+    class _Source:
+        def get_term_sync(self, term_id: str) -> object | None:
+            return object() if term_id == "PATO:0000001" else None
+
+        def has_ontology_sync(self, ontology_id: str) -> bool | None:
+            return True
+
+    def test_a_real_term_passes_whatever_ontology_it_is_from(self) -> None:
+        assert check_term("PATO:0000001", None, self._Source()).outcome is Outcome.OK
+
+    def test_an_empty_list_reads_the_same_as_none(self) -> None:
+        assert check_term("PATO:0000001", [], self._Source()).outcome is Outcome.OK
+
+    def test_a_term_that_does_not_exist_is_still_reported(self) -> None:
+        """Unrestricted is not unchecked."""
+        verdict = check_term("PATO:9999999", None, self._Source())
+
+        assert verdict.outcome is Outcome.NOT_FOUND
+        assert verdict.is_problem
+
+    def test_no_field_is_ever_told_its_ontology_is_wrong(self) -> None:
+        """NOT_IN_ONTOLOGY cannot arise without a declared list."""
+        for value in ("PATO:0000001", "CO_321:0000123", "TO:0000387"):
+            assert (
+                check_term(value, None, self._Source()).outcome
+                is not Outcome.NOT_IN_ONTOLOGY
+            )
+
+
+def test_the_profiles_that_rely_on_this_still_do() -> None:
+    """If isa or seek gains an ontologies list, this test should be revisited
+    rather than silently kept passing by the general rule above."""
+    from metaseed.specs.loader import SpecLoader
+
+    unrestricted = []
+    for profile, version in (("isa", "1.0"), ("seek", "1.0")):
+        spec = SpecLoader(profile=profile).load_profile(version, profile)
+        for entity in spec.entities.values():
+            for field in entity.fields:
+                if field.type == "ontology_term" and not field.ontologies:
+                    unrestricted.append(f"{profile}: {field.name}")
+
+    assert unrestricted, (
+        "no shipped profile declares an unrestricted ontology_term any more; "
+        "the documented meaning of an absent list now rests on nothing"
+    )

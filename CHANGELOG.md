@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+- An `ontology_term` field that names no ontologies means **any** ontology, now
+  stated in the schema and pinned by tests rather than left to be inferred
+  (#246). The value is still checked to be a real term; only the restriction is
+  lifted. `isa` and `seek` both declare `OntologyAnnotation.term_accession`
+  this way, so the one field whose declared type is literally "ontology term"
+  offered a consumer nothing — read as "no lookup" instead of "unrestricted".
+  A test also fails if no shipped profile relies on this any more, so the
+  documented meaning cannot come to rest on nothing.
+
 ## v0.33.0 (260812)
 
 ### Added

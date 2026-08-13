@@ -162,7 +162,13 @@ class FieldSpec(BaseModel):
             so a consumer can decide for itself what to enforce.
         description: Human-readable description.
         ontology_term: Reference to ontology term (e.g., MIAPPE:DM-1).
-        ontologies: List of OLS IDs to search for ontology_term type fields.
+        ontologies: The ontologies a value may come from, by id (e.g.
+            ``["to", "co_321"]``). **Absent or empty means any ontology**: the
+            value is still checked to be a real term, but not against a
+            particular vocabulary. Two shipped profiles rely on this —
+            ``isa`` and ``seek`` declare ``OntologyAnnotation.term_accession``
+            with no list — and a consumer keying a picker off this key gets
+            "unrestricted", never "no lookup at all" (#246).
         constraints: Validation constraints.
         items: For list type, the entity type of list items.
         parent_ref: Parent entity reference in format "Entity.field" (e.g., "Study.identifier").
