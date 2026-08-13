@@ -369,10 +369,35 @@ class DatasetValidator:
         """
 
         def register_id(d: dict[str, Any], etype: str, _path: str) -> None:
-            if "unique_id" in d:
-                self._registry.register(etype, d["unique_id"])
+            for field_name in self._identifier_fields_for(etype):
+                value = d.get(field_name)
+                if value is not None and isinstance(value, str | int):
+                    self._registry.register(etype, str(value))
 
         self._traverse_entity_tree(data, entity_type, register_id)
+
+    def _identifier_fields_for(self: Self, entity_type: str) -> set[str]:
+        """The fields whose values other entities may name.
+
+        Read from the reference declarations themselves: a field declaring
+        ``reference: "Occurrence.occurrenceID"`` says, of the Occurrence, that
+        its ``occurrenceID`` is what gets referenced. Deriving it this way is
+        what makes reference integrity work for a profile that does not use
+        MIAPPE's ``unique_id`` convention — only entities carrying a literal
+        ``unique_id`` were ever registered, so Darwin Core (``occurrenceID``),
+        DiSSCo (``identifier``) and ENA (``alias``) had an empty registry and a
+        reference that could never resolve.
+
+        ``unique_id`` is kept unconditionally, so profiles that do use it are
+        unaffected whether or not anything references them.
+        """
+        fields = {"unique_id"}
+        for targets in self._reference_fields.values():
+            for _field_name, ref_type in targets:
+                target_entity, _, target_field = ref_type.partition(".")
+                if to_snake_case(target_entity) == entity_type and target_field:
+                    fields.add(target_field)
+        return fields
 
     def _validate_references(
         self: Self,

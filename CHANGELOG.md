@@ -3,6 +3,24 @@
 ## Unreleased
 
 ### Fixed
+- Reference integrity works for a profile that does not use MIAPPE's
+  `unique_id`. Only entities carrying a field literally named `unique_id` were
+  ever registered, so for Darwin Core (`occurrenceID`), DiSSCo (`identifier`)
+  and ENA (`alias`) the registry stayed empty and a declared reference could
+  never resolve. Nothing reported it, because a reference is only checked when
+  the field holds a value — the failure was invisible until Darwin Core
+  declared its first reference and a plainly-present identifier came back "not
+  found". The referenced field is now read from the declaration itself: a field
+  saying `reference: "Occurrence.occurrenceID"` states that an Occurrence is
+  referenced by its `occurrenceID`. `unique_id` is still always registered.
+- Darwin Core declares its within-dataset cross-references, as the other five
+  profiles do: `Event.occurrenceID`, `Location.eventID`,
+  `Identification.occurrenceID` and `Organism.occurrenceID` (#246). A consumer
+  rendering reference pickers gave DwC users free-text boxes where every other
+  profile got a checked lookup. Measured across every shipped example: no new
+  errors in Darwin Core, and one surfaced in the ISA example — `assay_id`
+  declares `reference: "Assay.filename"` and names something that is not an
+  Assay filename, which the empty registry had been hiding.
 - A reference field naming its own entity type can build a hierarchy without
   the risk of closing one. Because a reference decides the parent here, two
   records naming each other each became the other's parent: the dataset then

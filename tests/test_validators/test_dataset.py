@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+import pytest
+
 from metaseed.validators.dataset import (
     DatasetValidationResult,
     DatasetValidator,
@@ -528,3 +530,87 @@ class TestAReferenceFieldNeedNotHoldOneString:
         for path in examples:
             profile, version = path.parent.parent.name, path.parent.name
             DatasetValidator(profile, version, _NoService()).validate_file(path)
+
+
+class TestReferenceIntegrityWithoutUniqueId:
+    """A profile need not use MIAPPE's `unique_id` to have references checked.
+
+    Only entities carrying a field literally named ``unique_id`` were ever
+    registered, so for Darwin Core (``occurrenceID``), DiSSCo (``identifier``)
+    and ENA (``alias``) the registry stayed empty and a declared reference could
+    never resolve. Nothing reported it, because a reference is only checked
+    when the field holds a value — so the failure was invisible until Darwin
+    Core declared its first reference and a plainly-present identifier came
+    back "not found".
+
+    The referenced field is now read from the declaration itself: a field
+    saying ``reference: "Occurrence.occurrenceID"`` states that an Occurrence
+    is referenced by its ``occurrenceID``.
+    """
+
+    def test_the_referenced_field_is_registered(self) -> None:
+        from metaseed.validators.dataset import DatasetValidator
+
+        validator = DatasetValidator("darwin-core", "1.0")
+
+        assert "occurrenceID" in validator._identifier_fields_for("occurrence")
+
+    def test_unique_id_is_still_registered_everywhere(self) -> None:
+        """Profiles that do use the convention are unaffected."""
+        from metaseed.validators.dataset import DatasetValidator
+
+        validator = DatasetValidator("miappe", "1.1")
+
+        assert "unique_id" in validator._identifier_fields_for("study")
+
+    def test_a_darwin_core_reference_resolves(self, tmp_path) -> None:
+        import yaml
+
+        from metaseed.validators.dataset import DatasetValidator
+
+        path = tmp_path / "dwc.yaml"
+        path.write_text(
+            yaml.safe_dump(
+                {
+                    "occurrenceID": "urn:cat:1",
+                    "basisOfRecord": "HumanObservation",
+                    "event": {"eventID": "EV-1", "occurrenceID": "urn:cat:1"},
+                }
+            )
+        )
+
+        result = DatasetValidator("darwin-core", "1.0").validate_file(path)
+
+        assert not [e for e in result.errors if e.rule == "reference_integrity"]
+
+    @pytest.mark.xfail(
+        reason=(
+            "A singular `entity`-typed child is not traversed as an entity: "
+            "Occurrence nests one Event under `event` (not a list), and the "
+            "child's fields are validated against the parent instead, "
+            "reporting 'Extra inputs are not permitted' for eventID. Its "
+            "reference is therefore never checked. Registration is correct — "
+            "the registry holds the occurrence — so this is the traversal, not "
+            "this fix."
+        ),
+        strict=True,
+    )
+    def test_a_dangling_darwin_core_reference_is_reported(self, tmp_path) -> None:
+        import yaml
+
+        from metaseed.validators.dataset import DatasetValidator
+
+        path = tmp_path / "dwc.yaml"
+        path.write_text(
+            yaml.safe_dump(
+                {
+                    "occurrenceID": "urn:cat:1",
+                    "basisOfRecord": "HumanObservation",
+                    "event": {"eventID": "EV-1", "occurrenceID": "urn:cat:MISSING"},
+                }
+            )
+        )
+
+        result = DatasetValidator("darwin-core", "1.0").validate_file(path)
+
+        assert [e for e in result.errors if e.rule == "reference_integrity"]

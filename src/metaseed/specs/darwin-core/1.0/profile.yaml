@@ -277,6 +277,7 @@ entities:
         required: true
         description: "Reference to the parent Occurrence"
         ontology_term: dwc:occurrenceID
+        reference: "Occurrence.occurrenceID"
 
       - name: parentEventID
         type: string
@@ -422,6 +423,7 @@ entities:
         required: true
         description: "Reference to the parent Event"
         ontology_term: dwc:eventID
+        reference: "Event.eventID"
 
       - name: higherGeographyID
         type: string
@@ -943,6 +945,7 @@ entities:
         required: true
         description: "Reference to the parent Occurrence"
         ontology_term: dwc:occurrenceID
+        reference: "Occurrence.occurrenceID"
 
       - name: verbatimIdentification
         type: string
@@ -1024,6 +1027,7 @@ entities:
         required: true
         description: "Reference to the parent Occurrence"
         ontology_term: dwc:occurrenceID
+        reference: "Occurrence.occurrenceID"
 
       - name: organismName
         type: string
