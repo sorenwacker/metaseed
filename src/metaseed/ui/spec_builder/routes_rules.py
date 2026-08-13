@@ -71,8 +71,15 @@ class RuleUpdateData(BaseModel):
             return values[0]
         return values
 
-    def apply_to_rule(self, rule: ValidationRuleSpec) -> None:
-        """Apply update data to a validation rule."""
+    def build_updated_rule(self, rule: ValidationRuleSpec) -> ValidationRuleSpec:
+        """The rule with this form applied, built fresh rather than mutated.
+
+        Mutating in place meant a failure halfway — a bad number, an unreadable
+        predicate value — left the stored rule carrying the fields that had
+        already been assigned. Build-and-swap makes a failed edit change
+        nothing, the same shape ``SpecBuilder.update_rule`` already uses.
+        """
+        rule = rule.model_copy(deep=True)
         rule.name = self.name.strip()
         rule.description = self.description.strip()
         rule.type = self.rule_type.strip() or None
@@ -107,6 +114,7 @@ class RuleUpdateData(BaseModel):
         rule.require = [
             name.strip() for name in self.require.split(",") if name.strip()
         ] or None
+        return rule
 
 
 def register_rule_routes(
@@ -172,6 +180,7 @@ def register_rule_routes(
         idx: int,
         error: str | None = None,
         typed_rows: tuple[str, list[dict[str, object]]] | None = None,
+        typed_when: tuple[str, list[dict[str, object]]] | None = None,
     ) -> HTMLResponse:
         """Helper to return rule form template response."""
         assert builder.spec is not None  # caller resolves via _require_spec
@@ -179,7 +188,7 @@ def register_rule_routes(
         # the stored rule: a predicate is fiddly enough that losing the typing
         # to report one bad value would be worse than the mistake.
         editable = typed_rows or rows_from_predicate(rule.where)
-        requirement = rows_from_predicate(rule.when)
+        requirement = typed_when or rows_from_predicate(rule.when)
         return templates.TemplateResponse(
             request,
             "spec_builder/partials/validation_rule_form.html",
@@ -313,11 +322,13 @@ def register_rule_routes(
             where_values=where_value,
         )
         try:
-            update_data.apply_to_rule(rule)
+            # Built fresh and swapped in below: a failure here leaves the
+            # stored rule exactly as it was, instead of half-edited.
+            updated = update_data.build_updated_rule(rule)
         except ValueError as exc:
-            # Back to the form with what was typed still in it: a predicate row
-            # is fiddly enough that discarding the whole edit to report one bad
-            # value would be worse than the mistake.
+            # Back to the form with what was typed still in it — both
+            # predicates, not only `where`: discarding the typed `when` rows
+            # while keeping `where` lost half the edit on every error.
             return _rule_form_response(
                 request,
                 builder,
@@ -333,7 +344,18 @@ def register_rule_routes(
                         )
                     ],
                 ),
+                typed_when=(
+                    when_join,
+                    [
+                        {"field": f, "op": o, "value": v}
+                        for f, o, v in zip(
+                            when_field, when_op, when_value, strict=False
+                        )
+                    ],
+                ),
             )
+        assert builder.spec is not None  # _require_spec guarantees spec is set
+        builder.spec.validation_rules[idx] = updated
 
         builder.editing_rule_idx = None
         builder.mark_changed()

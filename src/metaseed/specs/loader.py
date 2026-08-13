@@ -461,7 +461,11 @@ class SpecLoader:
                     if version_dir.is_dir() and (version_dir / "profile.yaml").exists():
                         versions.add(version_dir.name)
 
-        return sorted(versions)
+        # Numeric order, not text: "1.10" outranks "1.9". versions[-1] is what
+        # every caller means by latest.
+        from metaseed.specs.versioning import version_sort_key
+
+        return sorted(versions, key=version_sort_key)
 
     def list_profiles(self: Self) -> list[str]:
         """List available profiles.

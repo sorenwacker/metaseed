@@ -272,6 +272,33 @@ class FieldSpec(BaseModel):
         return False
 
 
+def comparable_entity_name(name: str) -> str:
+    """An entity name in the one form every caller's spelling reduces to.
+
+    A profile writes ``SampleAttribute``; the dataset validator reaches a
+    nested child as ``sample_attribute`` and its own root as ``sampletype``.
+    Comparing on case alone matched the root and missed every nested entity,
+    silently disabling 54 shipped rules — and the load-time predicate checks
+    repeated the same split one layer up by comparing exact-case. One
+    normaliser, imported by both, is what keeps the two answers the same.
+    """
+    return name.lower().replace("_", "").replace("-", "")
+
+
+def applies_to_entity(applies_to: list[str] | str, entity: str) -> bool:
+    """Whether a rule's ``applies_to`` covers ``entity``, however spelled.
+
+    ``"all"`` covers everything; any other bare string names exactly one
+    entity — it is not a synonym for all, which is how a load-time check once
+    read it.
+    """
+    if applies_to == "all":
+        return True
+    wanted = comparable_entity_name(entity)
+    names = [applies_to] if isinstance(applies_to, str) else applies_to
+    return any(comparable_entity_name(name) == wanted for name in names)
+
+
 def identifying_field(fields: Sequence[FieldSpec]) -> FieldSpec | None:
     """The field an entity is keyed by, declared or inferred.
 

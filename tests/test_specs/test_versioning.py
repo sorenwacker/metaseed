@@ -383,3 +383,54 @@ class TestLoaderConstraintInjection:
             (tmp_path / "cinema" / "1.0" / "profile.yaml").read_text()
         ).spec
         assert loaded.content_hash == on_disk.content_hash
+
+
+class TestVersionOrdering:
+    """Versions order numerically, not lexicographically: '1.9' < '1.10'.
+
+    Both 'latest version' answers — the profile catalogue's and the spec
+    filesystem's — sorted version strings as text, so releasing 1.10 after 1.9
+    made 'latest' step backwards to 1.9 (#review-260813)."""
+
+    def test_the_key_orders_two_digit_minors_after_one_digit(self) -> None:
+        from metaseed.specs.versioning import version_sort_key
+
+        assert sorted(["1.10", "1.9", "1.2"], key=version_sort_key) == [
+            "1.2",
+            "1.9",
+            "1.10",
+        ]
+
+    def test_a_malformed_version_sorts_first_not_crashes(self) -> None:
+        """A stray directory name must not take 'latest' from a real version."""
+        from metaseed.specs.versioning import version_sort_key
+
+        assert sorted(["1.1", "not-a-version"], key=version_sort_key)[-1] == "1.1"
+
+    def test_list_versions_uses_it(self, tmp_path, monkeypatch) -> None:
+        import yaml
+
+        from metaseed.specs.loader import SpecLoader
+
+        monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
+        for version in ("1.9", "1.10", "1.2"):
+            d = tmp_path / "metaseed" / "specs" / "orderly" / version
+            d.mkdir(parents=True)
+            (d / "profile.yaml").write_text(
+                yaml.safe_dump(
+                    {
+                        "name": "orderly",
+                        "version": version,
+                        "root_entity": "Thing",
+                        "entities": {
+                            "Thing": {"fields": [{"name": "id", "type": "string"}]}
+                        },
+                    }
+                )
+            )
+
+        versions = SpecLoader().list_versions("orderly")
+
+        assert versions == ["1.2", "1.9", "1.10"], (
+            "versions[-1] is what 'latest' means everywhere"
+        )

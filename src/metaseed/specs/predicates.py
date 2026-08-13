@@ -407,14 +407,20 @@ def _is_cardinality(rule: ValidationRuleSpec) -> bool:
 def _target_entities(
     profile: ProfileSpec, rule: ValidationRuleSpec
 ) -> list[tuple[str, EntityDefSpec]]:
-    """The entities a rule applies to that actually declare its field."""
-    if isinstance(rule.applies_to, str):
-        named = list(profile.entities)
-    else:
-        named = list(rule.applies_to)
+    """The entities a rule applies to that actually declare its field.
+
+    Matched with the same normaliser the engine enforces with
+    (:func:`~metaseed.specs.schema.applies_to_entity`): matching exact-case
+    here while the engine normalises is how a rule gets checked under one
+    reading and run under another. A bare string names one entity, not all —
+    the earlier reading raised phantom predicate issues against every entity
+    that happened to share the field name.
+    """
+    from metaseed.specs.schema import applies_to_entity
+
     return [
-        (name, profile.entities[name])
-        for name in named
-        if name in profile.entities
-        and any(f.name == rule.field for f in profile.entities[name].fields)
+        (name, entity)
+        for name, entity in profile.entities.items()
+        if applies_to_entity(rule.applies_to, name)
+        and any(f.name == rule.field for f in entity.fields)
     ]

@@ -46,6 +46,27 @@ SHORT_HASH_DIGITS = 12
 """Hex digits kept by :func:`short_hash`. Display only -- compare on the full hash."""
 
 
+def version_sort_key(version: str) -> tuple[int, tuple[int, ...] | str]:
+    """A sort key that orders versions numerically: ``1.9`` before ``1.10``.
+
+    Both "latest version" answers sorted version strings as text, so releasing
+    1.10 after 1.9 made *latest* step backwards to 1.9. Versions are
+    ``MAJOR.MINOR`` by the format rule; anything unparseable — a stray
+    directory name — sorts before every real version rather than crashing or
+    winning.
+
+    Args:
+        version: The version string, usually a spec directory name.
+
+    Returns:
+        A tuple sortable against other keys from this function.
+    """
+    parts = version.split(".")
+    if parts and all(part.isdigit() for part in parts):
+        return (1, tuple(int(part) for part in parts))
+    return (0, version)
+
+
 SUPPORTED_SPEC_VERSION = "0.8"
 """The highest ``spec_version`` this metaseed understands.
 

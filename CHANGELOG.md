@@ -3,6 +3,31 @@
 ## Unreleased
 
 ### Fixed
+- `ValidationError.kind` survives every boundary that rebuilds errors: the
+  cascade path, `validate_directory`'s file prefixing, the extraction agent's
+  `ValidationIssue` (which gained a `kind` field) and the public API's
+  `ValidationIssue` (likewise). The VALUE/COMPLETENESS split was computed by
+  the validators and then discarded at each of these, so every consumer
+  downstream saw a half-entered dataset as blocking-invalid. One gate test per
+  boundary now constructs a missing-required-field error and asserts the kind
+  arrives.
+- Profile versions order numerically. Both "latest version" answers — the
+  catalogue's and the spec filesystem's — sorted version strings as text, so
+  releasing 1.10 after 1.9 stepped *latest* back to 1.9. One
+  `version_sort_key`, used by `SpecLoader.list_versions` (the root every
+  caller reads) and the descending list.
+- `applies_to` means the same thing at load time and run time. The load-time
+  predicate checks matched entity names exact-case and read a bare string as
+  "all", while the engine normalises case and separators — the same defect
+  class as the 54 silently-disabled rules, one layer up. One matcher
+  (`specs.schema.applies_to_entity`), imported by both.
+- A failing spec-builder edit changes nothing. Rule and field edits assigned
+  the stored object attribute by attribute, so an unreadable value halfway
+  left the draft half-edited (and the field route 500'd on top). Both build a
+  copy and swap it in on success; the rule form's error path now keeps the
+  typed `when` rows as well as the `where` rows.
+
+### Fixed
 - The spawned MCP server can no longer deadlock on its own logging. It was
   started with piped stdout/stderr that nothing drained, so once uvicorn's
   access log filled the ~64KB OS pipe buffer the child's next write blocked

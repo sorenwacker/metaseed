@@ -198,3 +198,78 @@ class TestWhatIsRejectedAtLoad:
         issues = predicate_issues(parse_predicate({"all": []}), {"a"})
 
         assert issues and "empty" in issues[0]
+
+
+class TestAppliesToMatchesLikeTheEngine:
+    """Load-time predicate checks matched `applies_to` exact-case and read any
+    single-entity string as 'all', while the runtime engine normalises case and
+    separators — the same defect class as the 54 silently-disabled rules, one
+    layer up (#review-260813)."""
+
+    def _profile(self, applies_to):
+        from metaseed.specs.schema import (
+            EntityDefSpec,
+            FieldSpec,
+            FieldType,
+            ProfileSpec,
+            ValidationRuleSpec,
+        )
+
+        return ProfileSpec(
+            name="p",
+            version="1.0",
+            root_entity="SampleType",
+            entities={
+                "SampleType": EntityDefSpec(
+                    fields=[
+                        FieldSpec(name="title", type=FieldType.STRING),
+                        FieldSpec(
+                            name="attributes",
+                            type=FieldType.LIST,
+                            items="SampleAttribute",
+                        ),
+                    ]
+                ),
+                "SampleAttribute": EntityDefSpec(
+                    fields=[FieldSpec(name="flag", type=FieldType.BOOLEAN)]
+                ),
+                "Other": EntityDefSpec(
+                    fields=[
+                        FieldSpec(
+                            name="attributes",
+                            type=FieldType.LIST,
+                            items="SampleAttribute",
+                        )
+                    ]
+                ),
+            },
+            validation_rules=[
+                ValidationRuleSpec(
+                    name="one",
+                    type="cardinality",
+                    applies_to=applies_to,
+                    field="attributes",
+                    max_items=1,
+                    where=parse_predicate({"field": "flag", "op": "is_set"}),
+                )
+            ],
+        )
+
+    def test_a_snake_case_spelling_still_finds_the_entity(self) -> None:
+        from metaseed.specs.predicates import profile_predicate_issues
+
+        issues = profile_predicate_issues(self._profile(["sample_type"]))
+
+        assert issues == [], "the engine would run this rule; load-time must agree"
+
+    def test_a_single_entity_string_scopes_to_that_entity_not_all(self) -> None:
+        """`applies_to: SampleType` as a bare string was read as every entity,
+        so a predicate valid only for SampleType's items raised phantom issues
+        against the others."""
+        from metaseed.specs.predicates import profile_predicate_issues
+
+        profile = self._profile("SampleType")
+        # Make Other's items differ so scoping to all WOULD complain.
+        profile.entities["Other"].fields[0].items = "SampleType"
+
+        assert profile_predicate_issues(profile) == []

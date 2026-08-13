@@ -1224,3 +1224,40 @@ class TestBranchScopeInTheFieldEditor:
         )
 
         assert "within:" not in client.get("/spec-builder/preview").text
+
+
+class TestFieldEditFailsWhole:
+    """`update_field` applied the form field by field with no error handling:
+    an invalid field_type 500'd after half the assignments had landed, so the
+    person saw a server error and the draft kept the damage."""
+
+    def _field(self, client) -> None:
+        client.get("/spec-builder/new")
+        client.post("/spec-builder/entity", data={"name": "Thing"})
+        client.post(
+            "/spec-builder/entity/Thing/field",
+            data={"name": "size", "field_type": "integer"},
+        )
+
+    def test_a_bad_type_is_an_error_message_not_a_500(self, client) -> None:
+        self._field(client)
+
+        response = client.put(
+            "/spec-builder/entity/Thing/field/0",
+            data={"name": "size", "field_type": "no-such-type"},
+        )
+
+        assert response.status_code == 200
+        assert "not saved" in response.text.lower()
+
+    def test_the_stored_field_survives_the_failure(self, client) -> None:
+        self._field(client)
+
+        client.put(
+            "/spec-builder/entity/Thing/field/0",
+            data={"name": "renamed", "field_type": "no-such-type"},
+        )
+
+        preview = client.get("/spec-builder/preview").text
+        assert "size" in preview, "the failed edit must not have renamed the field"
+        assert "renamed" not in preview

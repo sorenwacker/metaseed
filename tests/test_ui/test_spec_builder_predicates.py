@@ -289,3 +289,66 @@ class TestARequirementThatDependsOnAValue:
         preview = client.get("/spec-builder/preview").text
         assert "when:" not in preview
         assert "require:" not in preview
+
+
+class TestAFailedEditChangesNothing:
+    """`apply_to_rule` mutated the stored rule field by field, so a failure
+    halfway — an unreadable predicate value — left it half-edited. The route
+    now builds the updated rule fresh and swaps it in only on success; the
+    error response keeps the typed `when` rows as well as the `where` rows."""
+
+    def test_a_failing_edit_leaves_the_stored_rule_untouched(self, client) -> None:
+        client.get("/spec-builder/new")
+        client.post("/spec-builder/entity", data={"name": "SampleType"})
+        client.post("/spec-builder/validation-rule", data={"name": "steady"})
+        client.put(
+            "/spec-builder/validation-rule/0",
+            data={
+                "name": "steady",
+                "rule_type": "cardinality",
+                "applies_to": "SampleType",
+                "field": "attributes",
+                "max_items": "3",
+            },
+        )
+
+        # A new name plus an unreadable predicate value: the edit must fail
+        # whole, not rename the rule and then stop.
+        client.put(
+            "/spec-builder/validation-rule/0",
+            data={
+                "name": "renamed",
+                "rule_type": "cardinality",
+                "applies_to": "SampleType",
+                "field": "attributes",
+                "max_items": "3",
+                "where_field": ["flag"],
+                "where_op": ["=="],
+                "where_value": [""],
+            },
+        )
+
+        preview = client.get("/spec-builder/preview").text
+        assert "steady" in preview, "the failed edit must not have renamed the rule"
+        assert "renamed" not in preview
+
+    def test_the_error_response_keeps_the_typed_when_rows(self, client) -> None:
+        client.get("/spec-builder/new")
+        client.post("/spec-builder/entity", data={"name": "SampleAttribute"})
+        client.post("/spec-builder/validation-rule", data={"name": "cv"})
+
+        response = client.put(
+            "/spec-builder/validation-rule/0",
+            data={
+                "name": "cv",
+                "rule_type": "conditional",
+                "applies_to": "SampleAttribute",
+                "require": "cv_terms",
+                "when_field": ["data_type"],
+                "when_op": ["=="],
+                "when_value": [""],
+            },
+        )
+
+        assert 'data-testid="rule-error"' in response.text
+        assert 'value="data_type"' in response.text, "the typed when row survives"

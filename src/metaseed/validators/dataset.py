@@ -877,6 +877,9 @@ class DatasetValidator:
                         field=f"{file_path}:{error.field}",
                         message=error.message,
                         rule=error.rule,
+                        # Carried, not re-derived: dropping it upgraded every
+                        # per-file completeness report to a blocking error.
+                        kind=error.kind,
                     )
                 )
 
@@ -888,6 +891,7 @@ class DatasetValidator:
                         field=f"{file_path}:{error.field}",
                         message=error.message,
                         rule=error.rule,
+                        kind=error.kind,
                     )
                 )
 
@@ -899,6 +903,7 @@ class DatasetValidator:
                         field=f"{file_path}:{error.field}",
                         message=error.message,
                         rule=error.rule,
+                        kind=error.kind,
                     )
                 )
 

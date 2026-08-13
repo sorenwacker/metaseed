@@ -136,12 +136,19 @@ class ValidationIssue(BaseModel):
         value: The offending value, where the issue is about one field's value.
         rule: Name of the profile validation rule that produced the issue, or
             None for the required-field and field-constraint checks.
+        kind: What the issue claims — ``"value"`` (something supplied is wrong,
+            true now and later) or ``"completeness"`` (something is absent or
+            insufficient, true of every dataset mid-entry). The split exists so
+            a consumer can block on the first without blocking on the second;
+            dropping it here silently upgraded every missing field to a
+            blocking error (#review-260813).
     """
 
     field: str
     message: str
     value: Any = None
     rule: str | None = None
+    kind: str = "value"
 
 
 class ExtractionResult(BaseModel):
@@ -421,6 +428,9 @@ class ExtractionContext:
                     ValidationIssue(
                         field=field.name,
                         message=f"Required field '{field.name}' is missing",
+                        # Not filled in yet, not wrong: must not block saving
+                        # what is already there.
+                        kind="completeness",
                     )
                 )
             elif field.name in data and data[field.name] is not None:
@@ -453,6 +463,7 @@ class ExtractionContext:
                 message=error.message,
                 value=data.get(error.field),
                 rule=error.rule,
+                kind=error.kind.value,
             )
             for error in engine.validate(data)
         ]

@@ -87,10 +87,17 @@ def _validate_nested(
     # Validate current entity
     engine = create_engine_for_entity(entity, version, profile=profile)
     for error in engine.validate(data):
-        # Prefix field with path for nested errors
+        # Prefix field with path for nested errors. `kind` rides along: a
+        # rebuild that drops it silently upgrades every completeness report to
+        # a blocking value error downstream.
         error_field = f"{path}.{error.field}" if path else error.field
         errors.append(
-            ValidationError(field=error_field, message=error.message, rule=error.rule)
+            ValidationError(
+                field=error_field,
+                message=error.message,
+                rule=error.rule,
+                kind=error.kind,
+            )
         )
 
     # Find and validate nested list fields
@@ -106,7 +113,12 @@ def _validate_nested(
     for error in _pydantic_constraint_errors(data, spec):
         error_field = f"{path}.{error.field}" if path else error.field
         errors.append(
-            ValidationError(field=error_field, message=error.message, rule=error.rule)
+            ValidationError(
+                field=error_field,
+                message=error.message,
+                rule=error.rule,
+                kind=error.kind,
+            )
         )
 
     for field in spec.fields:

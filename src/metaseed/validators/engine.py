@@ -14,6 +14,8 @@ from metaseed.specs.schema import (
     FieldType,
     ProfileSpec,
     ValidationRuleSpec,
+    applies_to_entity,
+    comparable_entity_name,
     identifying_field,
 )
 from metaseed.validators.base import ValidationCheck, ValidationError, ValidationRule
@@ -478,22 +480,12 @@ def _create_rule_from_spec(
     return _infer_rule_type(rule_spec, field_types, item_label_field)
 
 
-def _comparable(name: str) -> str:
-    """An entity name in the one form every caller's spelling reduces to.
-
-    Callers do not agree on how they spell an entity: ``DatasetValidator``
-    reaches a nested child as ``sample_attribute`` and its own root as
-    ``sampletype``, while a profile writes ``SampleAttribute``. Comparing on
-    case alone therefore matched the root and missed every nested entity, so a
-    rule scoped to a child — 54 of them across the shipped profiles — never
-    fired on the path the application validates through. Ignoring case *and*
-    separators is what makes all three spellings the same name.
-    """
-    return name.lower().replace("_", "").replace("-", "")
-
-
 def _applies_to_entity(rule_spec: ValidationRuleSpec, entity: str) -> bool:
     """Check if a rule applies to a specific entity.
+
+    Delegates to :func:`metaseed.specs.schema.applies_to_entity`, the one
+    matcher the load-time predicate checks use too — two matchers is how a
+    rule ends up checked under one reading and enforced under another.
 
     Args:
         rule_spec: The rule specification.
@@ -502,16 +494,7 @@ def _applies_to_entity(rule_spec: ValidationRuleSpec, entity: str) -> bool:
     Returns:
         True if rule applies to this entity.
     """
-    applies_to = rule_spec.applies_to
-    wanted = _comparable(entity)
-
-    if applies_to == "all":
-        return True
-
-    if isinstance(applies_to, list):
-        return any(_comparable(e) == wanted for e in applies_to)
-
-    return _comparable(applies_to) == wanted
+    return applies_to_entity(rule_spec.applies_to, entity)
 
 
 def _profile_rules_for_entity(
@@ -528,9 +511,13 @@ def _profile_rules_for_entity(
         One ValidationRule per declared rule that applies to the entity and is
         not already enforced as a Pydantic constraint.
     """
-    wanted = _comparable(entity)
+    wanted = comparable_entity_name(entity)
     entity_def = next(
-        (e for n, e in profile_spec.entities.items() if _comparable(n) == wanted),
+        (
+            e
+            for n, e in profile_spec.entities.items()
+            if comparable_entity_name(n) == wanted
+        ),
         None,
     )
     field_types = {f.name: f.type for f in entity_def.fields} if entity_def else {}

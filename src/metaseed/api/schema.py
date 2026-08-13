@@ -90,12 +90,18 @@ class ValidationIssue:
         entity_id: Id of the entity instance the issue belongs to, when known.
             Lets a caller identify which instance is at fault without encoding it
             into ``field``.
+        kind: What the issue claims — ``"value"`` (wrong now and later) or
+            ``"completeness"`` (absent or insufficient, normal mid-entry). A
+            consumer enforcing a specification blocks on the first and reports
+            the second; the split was computed by the validators and then
+            discarded here, so every API consumer saw everything as blocking.
     """
 
     field: str
     message: str
     rule: str
     entity_id: str | None = None
+    kind: str = "value"
 
 
 @dataclass(slots=True)

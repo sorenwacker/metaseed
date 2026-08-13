@@ -97,6 +97,7 @@ class ValidationMixin(InstanceDataMixin):
                             message=err.message,
                             rule=err.rule,
                             entity_id=node.id,
+                            kind=err.kind.value,
                         )
                     )
 
@@ -140,7 +141,11 @@ class ValidationMixin(InstanceDataMixin):
 
         issues = [
             ValidationIssue(
-                field=err.field, message=err.message, rule=err.rule, entity_id=node.id
+                field=err.field,
+                message=err.message,
+                rule=err.rule,
+                entity_id=node.id,
+                kind=err.kind.value,
             )
             for err in errors
         ]

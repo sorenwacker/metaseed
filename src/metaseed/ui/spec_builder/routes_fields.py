@@ -168,7 +168,7 @@ def register_field_routes(
         # from the UI. FieldForm.build_constraints collapses an all-empty form to
         # None, matching the merge path's rule that no constraints means no
         # constraints block.
-        FieldForm(
+        form = FieldForm(
             name=name,
             field_type=field_type,
             required=required,
@@ -199,7 +199,21 @@ def register_field_routes(
             example=example,
             options=options,
             dcat=dcat,
-        ).apply_to(entity.fields[idx])
+        )
+
+        # Applied to a copy and swapped in on success: `apply_to` assigns field
+        # by field, so a bad value mid-way (an invalid field_type, a malformed
+        # constraint) used to leave the stored field half-edited — and the
+        # route had no error handling at all, so the person saw a 500 and the
+        # draft kept the damage.
+        try:
+            updated = entity.fields[idx].model_copy(deep=True)
+            form.apply_to(updated)
+        except (ValueError, TypeError) as exc:
+            return _entity_editor_response(
+                request, builder, entity_name, error=f"Field not saved: {exc}"
+            )
+        entity.fields[idx] = updated
 
         builder.editing_field_idx = None
         builder.mark_changed()

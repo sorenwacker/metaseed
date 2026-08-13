@@ -170,8 +170,10 @@ class FilesystemSpecProvider(SpecProvider):
         versions = self._loader.list_versions(profile)
         if not versions:
             raise FileNotFoundError(f"Profile not found: {profile}")
-        # Return in descending order (newest first)
-        return sorted(versions, reverse=True)
+        # Newest first, numerically: a text sort put "1.9" above "1.10".
+        from metaseed.specs.versioning import version_sort_key
+
+        return sorted(versions, key=version_sort_key, reverse=True)
 
     async def get_spec(self: Self, profile: str, version: str) -> ProfileSpec:
         """Load a specific spec from the filesystem.
