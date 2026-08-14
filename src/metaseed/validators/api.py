@@ -42,7 +42,9 @@ def _pydantic_constraint_errors(
     try:
         model_class = create_model_from_spec(entity_spec)
         nested_field_names = {
-            f.name for f in entity_spec.fields if f.type.value == "list" and f.items
+            f.name
+            for f in entity_spec.fields
+            if f.type.value in ("list", "entity") and f.items
         }
         simple_data = {
             key: value
@@ -122,28 +124,37 @@ def _validate_nested(
         )
 
     for field in spec.fields:
-        if field.type.value == "list" and field.items:
-            items = data.get(field.name, [])
-            if not items:
-                continue
+        if field.type.value not in ("list", "entity") or not field.items:
+            continue
+        value = data.get(field.name)
+        # An entity-typed field holds ONE child dict — Darwin Core nests its
+        # Event and Organism this way — and skipping that branch left singly
+        # nested children unvalidated. An empty dict is still a claimed child
+        # (its required fields must be reported); an absent field is not.
+        single = field.type.value == "entity"
+        if single:
+            items = [value] if isinstance(value, dict) else []
+        else:
+            items = value or []
 
-            # Check if items is a known entity type
-            item_entity = to_snake_case(field.items)
-            try:
-                loader.load_entity(item_entity, version)
-            except (FileNotFoundError, KeyError, ValueError, SpecLoadError):
-                # Not a known entity type, skip nested validation
-                continue
+        if not items:
+            continue
 
-            # Validate each item in the list
-            for i, item in enumerate(items):
-                if isinstance(item, dict):
-                    item_path = (
-                        f"{path}.{field.name}[{i}]" if path else f"{field.name}[{i}]"
-                    )
-                    errors.extend(
-                        _validate_nested(item, item_entity, version, profile, item_path)
-                    )
+        # Check if items is a known entity type
+        item_entity = to_snake_case(field.items)
+        try:
+            loader.load_entity(item_entity, version)
+        except (FileNotFoundError, KeyError, ValueError, SpecLoadError):
+            # Not a known entity type, skip nested validation
+            continue
+
+        for i, item in enumerate(items):
+            if isinstance(item, dict):
+                label = field.name if single else f"{field.name}[{i}]"
+                item_path = f"{path}.{label}" if path else label
+                errors.extend(
+                    _validate_nested(item, item_entity, version, profile, item_path)
+                )
 
     return errors
 
@@ -328,7 +339,9 @@ def validate_entity_with_report(  # noqa: C901
 
     # Get nested field names (to exclude from Pydantic validation)
     nested_field_names = {
-        f.name for f in entity_spec.fields if f.type.value == "list" and f.items
+        f.name
+        for f in entity_spec.fields
+        if f.type.value in ("list", "entity") and f.items
     }
 
     # 1. Pydantic validation - checks types, patterns, ranges, etc.
