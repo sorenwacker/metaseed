@@ -392,7 +392,6 @@ src/metaseed/agent/
 │   ├── csv.py               # CSV/TSV parser
 │   ├── json.py              # JSON parser
 │   └── excel.py             # Excel parser
-├── llm/                     # LLM abstraction (for future direct LLM use)
 │   ├── __init__.py
 │   ├── base.py
 │   └── anthropic.py
