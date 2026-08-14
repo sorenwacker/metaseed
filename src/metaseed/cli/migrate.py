@@ -47,7 +47,10 @@ def migrate_dataset(path: Path, dry_run: bool = True) -> dict[str, Any]:
 
     changes = []
 
-    # Migrate _parent_id to _parent_unique_id
+    # Migrate _parent_id to _parent_unique_id. Every mutation lands in
+    # `changes`: an untracked deletion either kept the file from ever being
+    # saved (deletions were the only difference, so --apply never converged)
+    # or was written silently alongside a tracked change.
     for entity in entities:
         old_parent_id = entity.get("_parent_id")
 
@@ -65,12 +68,34 @@ def migrate_dataset(path: Path, dry_run: bool = True) -> dict[str, Any]:
                     }
                 )
 
-            # Remove old field
             del entity["_parent_id"]
+            changes.append(
+                {
+                    "entity": entity.get("unique_id") or entity.get("_type"),
+                    "field": "_parent_id",
+                    "old": old_parent_id,
+                    "new": "(removed)",
+                }
+            )
 
-        # Remove _node_id (no longer needed)
-        if "_node_id" in entity:
+    # _node_id is dropped only once nothing needs it: a dangling _parent_id
+    # (parent had no unique_id, so it could not resolve) still points at a
+    # _node_id, and deleting that key would make the migration unrepeatable.
+    still_needed = {
+        entity.get("_parent_id") for entity in entities if entity.get("_parent_id")
+    }
+    for entity in entities:
+        node_id = entity.get("_node_id")
+        if node_id and node_id not in still_needed:
             del entity["_node_id"]
+            changes.append(
+                {
+                    "entity": entity.get("unique_id") or entity.get("_type"),
+                    "field": "_node_id",
+                    "old": node_id,
+                    "new": "(removed)",
+                }
+            )
 
     # Migrate entity reference fields (like material_source)
     # These are fields with values that look like node IDs

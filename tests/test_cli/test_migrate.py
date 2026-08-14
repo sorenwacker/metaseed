@@ -291,3 +291,75 @@ class TestPrintMigrationReport:
         captured = capsys.readouterr()
         assert "Total:" in captured.out
         assert "2 datasets" in captured.out
+
+
+class TestUntrackedDeletionsAreNeitherLostNorSilent:
+    """Every mutation is a tracked change, and _node_id is kept while needed.
+
+    Deleting _parent_id/_node_id without appending to `changes` meant a
+    dataset whose only mutations were those deletions was never saved even
+    with --apply (the migration never converged), while a dataset with one
+    tracked change silently persisted them unreported. And _node_id was
+    deleted even when a dangling _parent_id still needed it to resolve later.
+    """
+
+    def test_a_deletion_only_dataset_still_saves(self, tmp_path):
+        path = tmp_path / "d.json"
+        path.write_text(
+            json.dumps(
+                {
+                    "entities": [
+                        {
+                            "_type": "Study",
+                            "unique_id": "STU-1",
+                            "_node_id": "a1b2c3d4",
+                            "_parent_id": "deadbeef",
+                            "_parent_unique_id": "INV-1",
+                        },
+                        {
+                            "_type": "Investigation",
+                            "unique_id": "INV-1",
+                            "_node_id": "deadbeef",
+                        },
+                    ]
+                }
+            )
+        )
+
+        report = migrate_dataset(path, dry_run=False)
+
+        assert report["saved"] is True, report
+        saved = json.loads(path.read_text())
+        assert "_parent_id" not in saved["entities"][0]
+
+    def test_node_id_survives_while_a_dangling_parent_needs_it(self, tmp_path):
+        path = tmp_path / "d.json"
+        path.write_text(
+            json.dumps(
+                {
+                    "entities": [
+                        {
+                            # Parent lacking unique_id: the child's _parent_id
+                            # cannot resolve yet, so this _node_id is the only
+                            # key that ever could.
+                            "_type": "Investigation",
+                            "_node_id": "deadbeef",
+                        },
+                        {
+                            "_type": "Study",
+                            "unique_id": "STU-1",
+                            "_node_id": "a1b2c3d4",
+                            "_parent_id": "deadbeef",
+                        },
+                    ]
+                }
+            )
+        )
+
+        migrate_dataset(path, dry_run=False)
+
+        saved = json.loads(path.read_text())
+        parent = next(e for e in saved["entities"] if e["_type"] == "Investigation")
+        child = next(e for e in saved["entities"] if e["_type"] == "Study")
+        assert child.get("_parent_id") == "deadbeef", "unresolvable link kept"
+        assert parent.get("_node_id") == "deadbeef", "its target key kept too"
