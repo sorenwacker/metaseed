@@ -326,3 +326,40 @@ class TestFieldDiff:
         conflicts = comparison.conflicting_fields
         # May or may not have conflicts depending on profiles
         assert isinstance(conflicts, list)
+
+
+class TestEveryFieldAttributeIsCompared:
+    """A FieldSpec attribute added to the schema must be compared, not skipped.
+
+    The comparator hardcoded 9 attributes while FieldSpec had grown a dozen
+    more (is_identifier, options, reference_scope, ...), so two profiles
+    differing only in one of those compared as UNCHANGED and the merger
+    silently took the first spec. The sibling specs/compare.py derives its
+    sets from FieldSpec.model_fields for exactly this reason.
+    """
+
+    def test_the_compared_set_is_derived_from_the_model(self) -> None:
+        from metaseed.specs.merge.comparator import FIELD_ATTRIBUTES_TO_COMPARE
+        from metaseed.specs.schema import FieldSpec
+
+        uncompared = (
+            set(FieldSpec.model_fields)
+            - set(FIELD_ATTRIBUTES_TO_COMPARE)
+            - {"name", "constraints"}  # identity key; compared separately
+        )
+        assert not uncompared, f"attributes the comparator ignores: {uncompared}"
+
+    def test_a_difference_in_is_identifier_is_seen(self) -> None:
+        from metaseed.specs.merge.comparator import SpecComparator
+        from metaseed.specs.merge.models import DiffType
+        from metaseed.specs.schema import FieldSpec, FieldType
+
+        marked = FieldSpec(name="code", type=FieldType.STRING, is_identifier=True)
+        plain = FieldSpec(name="code", type=FieldType.STRING)
+
+        diff_type, changed, _values = SpecComparator()._analyze_field_diff(
+            {"a/1.0": marked, "b/1.0": plain}, ["a/1.0", "b/1.0"]
+        )
+
+        assert "is_identifier" in changed
+        assert diff_type is not DiffType.UNCHANGED

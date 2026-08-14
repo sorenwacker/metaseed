@@ -27,6 +27,15 @@ from .models import (
 logger = logging.getLogger(__name__)
 
 
+#: Every FieldSpec attribute the field diff compares, derived from the model —
+#: like specs/compare.py — so a new attribute cannot silently compare as
+#: UNCHANGED and be dropped by the merger. `name` is the identity key and
+#: `constraints` is compared structurally by `_compare_constraints`.
+FIELD_ATTRIBUTES_TO_COMPARE: tuple[str, ...] = tuple(
+    sorted(set(FieldSpec.model_fields) - {"name", "constraints"})
+)
+
+
 class SpecComparator:
     """Compares N profile specifications.
 
@@ -395,17 +404,7 @@ class SpecComparator:
             return DiffType.MODIFIED, [], {}
 
         # Field exists in all profiles - compare attributes
-        attributes_to_compare = [
-            "type",
-            "required",
-            "description",
-            "ontology_term",
-            "ontologies",
-            "items",
-            "parent_ref",
-            "unique_within",
-            "reference",
-        ]
+        attributes_to_compare = FIELD_ATTRIBUTES_TO_COMPARE
 
         changed_attrs: list[str] = []
         values: dict[str, dict[str, object]] = {}
