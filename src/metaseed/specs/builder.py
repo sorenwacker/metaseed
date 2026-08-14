@@ -493,10 +493,27 @@ class SpecBuilder:
             raise ValueError(
                 f"Unknown field attribute(s): {', '.join(sorted(unknown))}"
             )
-        for key, value in attrs.items():
-            if key == "type" and value is not None:
-                value = FieldType(value)
-            setattr(field, key, value)
+        # Rebuilt rather than assigned onto, like update_rule: pydantic does
+        # not validate an assignment, so a bad isa_tag or a second
+        # is_identifier sat in the spec and surfaced only on load-back.
+        merged = {**field.model_dump(exclude_none=True), **attrs}
+        try:
+            rebuilt = FieldSpec.model_validate(merged)
+        except ValidationError as exc:
+            raise ValueError(str(exc)) from exc
+        entity_def = self._spec.entities[entity]
+        index = entity_def.fields.index(field)
+        replaced = list(entity_def.fields)
+        replaced[index] = rebuilt
+        # The single-identifier invariant lives on the entity model; swapping
+        # the list through model_validate is what makes it re-run.
+        try:
+            entity_def.__class__.model_validate(
+                {**entity_def.model_dump(exclude_none=True), "fields": replaced}
+            )
+        except ValidationError as exc:
+            raise ValueError(str(exc)) from exc
+        entity_def.fields[index] = rebuilt
 
     def update_field_constraints(
         self: Self,

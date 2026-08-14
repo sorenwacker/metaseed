@@ -697,3 +697,43 @@ def _list_field(name: str, items: str):
     from metaseed.specs.schema import FieldSpec
 
     return FieldSpec(name=name, type=FieldType.LIST, items=items)
+
+
+class TestUpdateFieldValidatesLikeUpdateRule:
+    """update_field must rebuild through the model, as update_rule does.
+
+    Plain setattr bypassed every field_validator and the entity-level
+    single-identifier invariant, so an invalid isa_tag or a second
+    is_identifier field was accepted silently and the defect surfaced only
+    when the saved YAML refused to load back.
+    """
+
+    def _builder(self) -> SpecBuilder:
+        builder = SpecBuilder.empty("p", "0.1")
+        builder.add_entity("Study")
+        builder.add_field("Study", "title", FieldType.STRING)
+        builder.add_field("Study", "code", FieldType.STRING)
+        return builder
+
+    def test_an_invalid_isa_tag_is_rejected(self):
+        builder = self._builder()
+        with pytest.raises(ValueError):
+            builder.update_field("Study", "title", isa_tag="not-a-tag")
+
+    def test_a_second_identifier_is_rejected(self):
+        builder = self._builder()
+        builder.update_field("Study", "title", is_identifier=True)
+        with pytest.raises(ValueError):
+            builder.update_field("Study", "code", is_identifier=True)
+
+    def test_a_failed_update_changes_nothing(self):
+        builder = self._builder()
+        with pytest.raises(ValueError):
+            builder.update_field(
+                "Study", "title", description="kept?", isa_tag="not-a-tag"
+            )
+        field = next(
+            f for f in builder.spec.entities["Study"].fields if f.name == "title"
+        )
+        assert field.description != "kept?"
+        assert field.isa_tag is None
