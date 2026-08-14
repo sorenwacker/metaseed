@@ -22,6 +22,7 @@ from fastapi.templating import Jinja2Templates
 from metaseed.specs.schema import ProfileSpec
 
 from ..helpers.spec_builder_helpers import spec_to_yaml
+from .access import require_spec
 
 if TYPE_CHECKING:
     from ..spec_persistence import SpecPersistence
@@ -50,11 +51,7 @@ def register_export_routes(  # noqa: C901
         persistence = FilesystemSpecPersistence()
 
     def _require_spec() -> SpecBuilderState:
-        """Get builder state, raising HTTPException if no spec in progress."""
-        builder = get_builder_state()
-        if builder.spec is None:
-            raise HTTPException(status_code=400, detail="No spec in progress")
-        return builder
+        return require_spec(get_builder_state)
 
     @router.get("/graph-data", response_class=JSONResponse)
     async def get_graph_data() -> JSONResponse:

@@ -18,6 +18,7 @@ from ..helpers.spec_builder_helpers import (
     clone_spec,
     create_empty_spec,
 )
+from .access import require_spec
 
 if TYPE_CHECKING:
     from ..spec_persistence import SpecPersistence
@@ -47,11 +48,7 @@ def register_main_routes(  # noqa: C901
         persistence = FilesystemSpecPersistence()
 
     def _require_spec() -> SpecBuilderState:
-        """Get builder state, raising HTTPException if no spec in progress."""
-        builder = get_builder_state()
-        if builder.spec is None:
-            raise HTTPException(status_code=400, detail="No spec in progress")
-        return builder
+        return require_spec(get_builder_state)
 
     @router.get("", response_class=HTMLResponse)
     async def spec_builder_index(request: Request) -> HTMLResponse:

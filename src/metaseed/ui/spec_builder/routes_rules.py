@@ -16,6 +16,7 @@ from pydantic import BaseModel
 from metaseed.specs.predicates import render_predicate
 from metaseed.specs.schema import ValidationRuleSpec
 
+from .access import require_spec
 from .predicate_form import (
     OPERATORS,
     list_field_options,
@@ -133,11 +134,7 @@ def register_rule_routes(
     """
 
     def _require_spec() -> SpecBuilderState:
-        """Get builder state, raising HTTPException if no spec in progress."""
-        builder = get_builder_state()
-        if builder.spec is None:
-            raise HTTPException(status_code=400, detail="No spec in progress")
-        return builder
+        return require_spec(get_builder_state)
 
     def _require_rule(builder: SpecBuilderState, idx: int) -> ValidationRuleSpec:
         """Get rule by index, raising HTTPException if not found."""

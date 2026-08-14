@@ -63,3 +63,27 @@ def test_the_example_route_loads_through_the_facade() -> None:
         assert call in source, (
             f"{module} no longer asks the library to load the document"
         )
+
+
+def test_require_spec_is_not_reimplemented_in_a_registrar() -> None:
+    """access.require_spec exists so the guard lives once.
+
+    Three registrars kept byte-identical local copies after the extraction;
+    a wrapper delegating to access.require_spec is fine, a re-statement of
+    the guard body is not.
+    """
+    import re
+    from pathlib import Path
+
+    spec_builder = (
+        Path(__file__).parent.parent / "src" / "metaseed" / "ui" / "spec_builder"
+    )
+    offenders = []
+    for path in sorted(spec_builder.glob("routes_*.py")):
+        text = path.read_text()
+        if re.search(
+            r'raise HTTPException\(\s*status_code=400,\s*detail="No spec in progress"',
+            text,
+        ):
+            offenders.append(path.name)
+    assert not offenders, f"local require_spec bodies in: {offenders}"
