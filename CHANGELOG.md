@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Added
+- A self-referencing field must not close a loop (#250). Two shapes resolved
+  and therefore passed the existence check: a record naming itself, and a
+  cycle (`A.parent = B`, `B.parent = A`) — both of which a tree render or an
+  ancestry export walks forever. `DatasetValidator` now reports them as
+  `reference_self` and `reference_cycle`, blocking value errors on the same
+  channel as `reference_integrity`, reported against the cycle's members
+  only: a clean record hanging off a pre-existing loop is not blamed for it.
+
 ### Fixed
 - `to_graph` draws list-valued references — one dashed edge per member — so
   MIAPPE's `Event.observation_unit_ids` finally appears; it is the one link a

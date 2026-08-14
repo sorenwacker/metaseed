@@ -234,6 +234,12 @@ class DatasetValidator:
         # field: a checklist of 10,000 rows would otherwise say the same thing
         # 10,000 times, and a directory would repeat it per file.
         self._unchecked: dict[tuple[str, str, str], int] = {}
+        # (entity_type, field_name) -> {record identifier: referenced identifier},
+        # for the fields that reference their own entity type. Accumulated during
+        # reference validation and walked afterwards: a cycle can span files, so
+        # it cannot be judged record by record (#250).
+        self._self_referencing: dict[tuple[str, str], dict[str, str]] = {}
+        self._identifier_fields: dict[str, str] = {}
         self._load_reference_fields()
         self._uniqueness_rules: list[_UniquenessRuleDef] = []
         self._load_uniqueness_rules()
@@ -304,6 +310,11 @@ class DatasetValidator:
                     # Key by snake_case so lookups during traversal, which use
                     # the snake_case entity type, actually match.
                     self._reference_fields[to_snake_case(entity_name)] = refs
+                identifier = next(
+                    (f.name for f in spec.fields if f.is_identifier), None
+                )
+                if identifier:
+                    self._identifier_fields[to_snake_case(entity_name)] = identifier
             except SpecLoadError:
                 continue
 
@@ -470,7 +481,32 @@ class DatasetValidator:
                 # "Study.unique_id"); the registered entity type is the
                 # snake_case form of the entity part only.
                 ref_entity = to_snake_case(declared.target.split(".")[0])
+                own_id = None
+                if ref_entity == etype:
+                    id_field = self._identifier_fields.get(etype)
+                    raw = d.get(id_field) if id_field else None
+                    own_id = str(raw) if raw not in (None, "") else None
                 for ref_value in _referenced_ids(d.get(declared.name)):
+                    if own_id is not None:
+                        if ref_value == own_id:
+                            # Its own ancestor: the target exists, so the
+                            # existence check below would pass it (#250).
+                            field_path = f"{p}.{declared.name}" if p else declared.name
+                            errors.append(
+                                ValidationError(
+                                    field=field_path,
+                                    message=(
+                                        f"'{own_id}' names itself in "
+                                        f"{declared.name}; a record cannot be "
+                                        "its own ancestor"
+                                    ),
+                                    rule="reference_self",
+                                )
+                            )
+                            continue
+                        self._self_referencing.setdefault((etype, declared.name), {})[
+                            own_id
+                        ] = ref_value
                     if self._registry.exists(ref_entity, ref_value):
                         continue
                     if declared.external:
@@ -491,6 +527,48 @@ class DatasetValidator:
                     )
 
         self._traverse_entity_tree(data, entity_type, check_refs, path)
+        return errors
+
+    def _reference_cycles(self: Self) -> list[ValidationError]:
+        """One error per record inside a closed loop of self-references.
+
+        Every step of a cycle resolves and every record exists, so nothing
+        else reports it — while an ancestry query, a tree render or an export
+        recursing parents never terminates on it. Reported against the
+        cycle's members only: a clean record that merely hangs off a
+        pre-existing loop is not to blame for it (#250).
+        """
+        errors: list[ValidationError] = []
+        for (etype, field_name), parent_of in self._self_referencing.items():
+            resolved: set[str] = set()
+            for start in parent_of:
+                if start in resolved:
+                    continue
+                path: list[str] = []
+                seen_at: dict[str, int] = {}
+                current: str | None = start
+                while current is not None and current in parent_of:
+                    if current in resolved:
+                        break
+                    if current in seen_at:
+                        cycle = path[seen_at[current] :]
+                        joined = " -> ".join([*cycle, cycle[0]])
+                        for member in cycle:
+                            errors.append(
+                                ValidationError(
+                                    field=f"{etype}.{field_name}",
+                                    message=(
+                                        f"'{member}' is part of a "
+                                        f"{field_name} cycle: {joined}"
+                                    ),
+                                    rule="reference_cycle",
+                                )
+                            )
+                        break
+                    seen_at[current] = len(path)
+                    path.append(current)
+                    current = parent_of.get(current)
+                resolved.update(path)
         return errors
 
     def _unchecked_references(self: Self) -> list[ValidationError]:
@@ -767,6 +845,7 @@ class DatasetValidator:
         # Reset registry for single file validation
         self._registry = IdRegistry()
         self._unchecked = {}
+        self._self_referencing = {}
 
         # Pass 1: Collect IDs
         self._collect_ids(data, entity_type)
@@ -779,6 +858,8 @@ class DatasetValidator:
 
         # Pass 4: Validate declared uniqueness rules across records
         result.errors.extend(self._validate_uniqueness(data, entity_type, set()))
+
+        result.errors.extend(self._reference_cycles())
 
         # Count entities
         self._count_entities(data, entity_type, result.entity_counts)
@@ -801,6 +882,7 @@ class DatasetValidator:
         # Reset registry for directory validation
         self._registry = IdRegistry()
         self._unchecked = {}
+        self._self_referencing = {}
 
         # Find all YAML and JSON files
         files = list(path.glob("**/*.yaml")) + list(path.glob("**/*.yml"))
@@ -909,6 +991,10 @@ class DatasetValidator:
 
             # Count entities
             self._count_entities(data, entity_type, result.entity_counts)
+
+        # After every file: a cycle can span files, so it is only judgeable
+        # over the whole accumulated map.
+        result.errors.extend(self._reference_cycles())
 
         # Once per field for the whole directory, not once per file: the counts
         # accumulated across every file above.
