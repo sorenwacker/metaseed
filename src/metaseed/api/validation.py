@@ -82,24 +82,27 @@ class ValidationMixin(InstanceDataMixin):
 
         def validate_node(node: Any) -> None:
             data = self._data_with_children(node)
-            if data:
-                errors = validate_entity(
-                    data,
-                    entity_type=node.entity_type,
-                    profile=self._facade.profile,
-                    version=self._facade.version,
-                )
+            # No `if data:` guard: an entity whose dump is {} (created empty
+            # with skip_validation) still has required fields to report —
+            # skipping it made validate() call an entity valid that
+            # validate_entity() on the same node calls invalid.
+            errors = validate_entity(
+                data,
+                entity_type=node.entity_type,
+                profile=self._facade.profile,
+                version=self._facade.version,
+            )
 
-                for err in errors:
-                    all_issues.append(
-                        ValidationIssue(
-                            field=err.field,
-                            message=err.message,
-                            rule=err.rule,
-                            entity_id=node.id,
-                            kind=err.kind.value,
-                        )
+            for err in errors:
+                all_issues.append(
+                    ValidationIssue(
+                        field=err.field,
+                        message=err.message,
+                        rule=err.rule,
+                        entity_id=node.id,
+                        kind=err.kind.value,
                     )
+                )
 
             # Always descend; an empty node must not hide its subtree.
             for child in node.children:

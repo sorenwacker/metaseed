@@ -1,5 +1,75 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- Silent data-loss and wrong-write paths: `load()` refuses a payload with
+  neither `tree` nor `entities` instead of clearing the store; nested-array
+  linking no longer depends on input order (a parented mid-level node still
+  links its own children); deleting a child removes its identifier from the
+  parent's reference field (file and memory paths); an exactly-one-child
+  (`type: entity`) reference stays a scalar instead of being coerced into a
+  list; nothing the file repository returns can mutate its internal store;
+  and a child that fails to save for any reason stays in the form with an
+  error instead of vanishing.
+- Validation gaps: `validate(cascade=True)` descends entity-typed (singly
+  nested) children — Darwin Core's Event and Organism were never visited —
+  and no longer feeds the child dict into the parent's model;
+  `TypeConverter._to_boolean` reports an unrecognized value as a failed
+  conversion instead of storing `False`; a malformed local vocabulary file
+  names itself at load and degrades term checks to NOT_CHECKED instead of
+  raising inside validators; PRIDE's file-mapping presence rules fire on an
+  empty mapping instead of being skipped by it.
+- UI correctness: notification toasts show the message, not the literal word
+  "error" (seven swapped call sites, now gated by a scan test); every table
+  mutation route applies the cell editor's valid-field gate (bulk, paste,
+  file parts, malformed paste entries); switching profiles clears the stale
+  version; server redirects stay inside the mount prefix; the explore routes
+  answer bad input with 400 and name the malformed profile spec; the field
+  editor can author `isa_tag`; the typing-time uniqueness warning and the
+  conditional formatting in exported workbooks derive from one `key_columns`
+  rule.
+- MCP and CLI: `create_dataset` proves the profile loads before touching the
+  live session; `metaseed migrate` exits non-zero on per-file errors, tracks
+  every mutation it makes, and keeps `_node_id` while a dangling parent link
+  still needs it; `metaseed validate` reports an unknown entity cleanly and
+  runs profile-declared `validate` actions — the ProteomeXchange
+  submission/CV checks are now reachable from the shell (new `validate`
+  action kind in the adapter registry).
+- Profile machinery: a renamed profile (`jerm` → `seek`) resolves on every
+  lookup path including the constructor default; `SpecBuilder.update_field`
+  validates through the model like `update_rule` (bad `isa_tag`, duplicate
+  identifiers, and half-applied edits all refused); the merge comparator
+  derives its attribute set from `FieldSpec.model_fields` instead of a
+  9-item memory of it; merged entities keep their `seek` role config; the
+  least-restrictive merge lets an unconstrained profile drop bounds and
+  neither strategy returns an empty `Constraints()`.
+- Exports and SEEK: the ISA-Tab investigation names its `s_*.txt` study
+  files; a draft value cannot make the ENA XML unparseable; the downloaded
+  DCAT card carries the user's catalog metadata and dataset name like the
+  page card (exports can now declare host-context parameters); each
+  MetaboLights assay reads the MAF it declares (multi-MAF studies import
+  again); the SEEK sync resolves JERM roles from ontology annotations at all
+  three remaining name-only sites; Controlled Vocabulary ids keep their
+  entity namespace end to end; `SyncResult` reports `synced_count` and a
+  `created_count` that actually excludes reused records, with reuse recorded
+  for studies and assays too.
+
+### Removed
+- The `llm` package (`LLMService`): wired to no interface in this repository
+  and unused by the hub. Dead per the project rule that a capability
+  reachable only as a library call is unfinished work.
+- Dead declarations kept alive only by their own tests: `mime_types` on the
+  parser protocol and parsers, `get_parent_identifier`,
+  `SpecBuilderState.is_active`/`get_entity_names`; the export-side
+  `collect_entities_by_type` was renamed `collect_rows_by_type` to end the
+  same-name/different-meaning collision; the triplicated spec-builder
+  `_require_spec` bodies now delegate to `access.require_spec`, gated.
+- Docstrings stopped promising behavior the code does not have: the file
+  repository's nested-children format and default-path claims, `create()`'s
+  ontology-validation note, the controlled-terms identifier claim, and the
+  model registry's version-key contract.
+
 ## v0.35.0 (260813)
 
 ### Fixed

@@ -1025,3 +1025,24 @@ class TestAlternateConstructorErrors:
         from metaseed.api import InvalidSpecError
 
         assert issubclass(InvalidSpecError, MetaseedError)
+
+
+def test_an_empty_node_is_still_validated():
+    """validate() and validate_entity() agree on an empty entity.
+
+    The per-node guard `if data:` skipped nodes whose data dump was {} —
+    created empty with skip_validation — so dataset validation reported
+    valid=True for an entity that validate_entity() on the same node reports
+    as missing its required fields.
+    """
+    client = MetaseedClient("miappe", "1.2")
+    node = client.create_entity("Person", {}, skip_validation=True)
+
+    dataset_result = client.validate()
+    entity_result = client.validate_entity(node.id)
+
+    assert not entity_result.valid
+    assert not dataset_result.valid, (
+        "the dataset view must not call an entity valid that the entity "
+        "view calls invalid"
+    )
