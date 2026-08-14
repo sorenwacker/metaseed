@@ -12,7 +12,7 @@ one dataset, and it is the shape that cannot be embedded in a page as-is.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from metaseed.api.client import MetaseedClient
@@ -62,7 +62,12 @@ def build_card(
     )
 
 
-def to_dcat(client: MetaseedClient) -> dict[str, str]:
+def to_dcat(
+    client: MetaseedClient,
+    *,
+    catalog_metadata: Any = None,
+    identifier: str | None = None,
+) -> dict[str, str]:
     """Render the client's dataset as a DCAT card in both serializations.
 
     Args:
@@ -75,7 +80,10 @@ def to_dcat(client: MetaseedClient) -> dict[str, str]:
     Raises:
         ModuleNotFoundError: If the ``metaseed[dcat]`` extra is not installed.
     """
-    card = build_card(client)
+    # The host passes its explicit catalog metadata and dataset name so the
+    # downloaded card cannot differ from the /dcat page card built from the
+    # same values.
+    card = build_card(client, catalog_metadata=catalog_metadata, identifier=identifier)
     if card is None:
         return {}
 

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import zipfile
 from io import BytesIO
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from fastapi import Form, HTTPException, UploadFile
 from fastapi.responses import HTMLResponse, StreamingResponse
@@ -16,7 +16,12 @@ from starlette.requests import Request
 
 from metaseed import adapters
 
-from ..datasets import ImportSourceError, import_dataset, import_from_source
+from ..datasets import (
+    ImportSourceError,
+    get_current_dataset_name,
+    import_dataset,
+    import_from_source,
+)
 from ..services.export import export_to_bytes, generate_filename
 
 if TYPE_CHECKING:
@@ -132,8 +137,24 @@ def register_export_routes(
                 status_code=500, detail=f"{fmt} export is misconfigured."
             ) from exc
 
+        # An export that names these parameters receives the host's context;
+        # the shared call shape stays fn(client) for everything else. This is
+        # how the DCAT card gets the user's explicit metadata and the dataset
+        # name — without it the downloaded card differed from the page card.
+        import inspect
+
+        host_context: dict[str, Any] = {
+            "catalog_metadata": state.catalog_metadata,
+            "identifier": get_current_dataset_name(state),
+        }
+        accepted = {
+            name: value
+            for name, value in host_context.items()
+            if name in inspect.signature(export_fn).parameters
+        }
+
         try:
-            files: dict[str, str] = export_fn(client)
+            files: dict[str, str] = export_fn(client, **accepted)
         except Exception as exc:  # any plugin failure degrades to an error page
             raise HTTPException(
                 status_code=500, detail=f"{fmt} export failed: {exc}"

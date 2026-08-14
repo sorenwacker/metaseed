@@ -111,3 +111,27 @@ def test_dataset_page_offers_no_exports_for_a_profile_without_any() -> None:
 
     assert response.status_code == 200
     assert "btn-export-metabolights" not in response.text
+
+
+def test_dcat_export_carries_the_users_catalog_metadata():
+    """The downloaded card equals the page card.
+
+    The adapter export called build_card with neither catalog_metadata nor
+    identifier, so the explicit title/publisher a user entered was silently
+    absent from the exported file and every dataset exported its PROFILE name
+    as its identifier — while the /dcat page showed the right values.
+    """
+    from metaseed.repositories.dataset_repository import CatalogMetadata
+
+    state = AppState()
+    client = TestClient(create_app(state), follow_redirects=True)
+    client.get("/load-example/miappe/1.1")
+
+    state.catalog_metadata = CatalogMetadata(title="The Explicit Title")
+
+    response = client.get("/export/adapter/dcat")
+    assert response.status_code == 200
+    bundle = zipfile.ZipFile(io.BytesIO(response.content))
+    jsonld = bundle.read("dcat.jsonld").decode()
+
+    assert "The Explicit Title" in jsonld
