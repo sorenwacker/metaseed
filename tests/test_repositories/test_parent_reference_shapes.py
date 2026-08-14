@@ -64,3 +64,40 @@ def test_a_list_typed_reference_still_appends() -> None:
         )
 
     assert parent_data["studies"] == ["S1", "S2"]
+
+
+class TestDeleteRemovesTheParentReference:
+    """create writes the child into the parent's reference field; delete must
+    take it back out, or exports and reloads carry a dangling reference."""
+
+    def test_the_file_repository_cleans_up_on_delete(self, tmp_path) -> None:
+        from metaseed.repositories.file import FileEntityRepository
+
+        repo = FileEntityRepository(
+            dataset_path=tmp_path / "d.json", profile="miappe", version="1.1"
+        )
+        root = repo.create_entity("Investigation", {"unique_id": "INV-1", "title": "T"})
+        child = repo.create_entity(
+            "Study", {"unique_id": "STU-1", "title": "S"}, parent_id=root.id
+        )
+        assert "STU-1" in repo.get_entity(root.id).data.get("studies", [])
+
+        assert repo.delete_entity(child.id)
+
+        assert "STU-1" not in repo.get_entity(root.id).data.get("studies", [])
+
+    def test_the_memory_path_cleans_up_on_delete(self) -> None:
+        from metaseed.repositories.memory import MemoryEntityRepository
+        from metaseed.ui.state import AppState
+
+        repo = MemoryEntityRepository(AppState(profile="miappe", version="1.1"))
+        root = repo.create_entity("Investigation", {"unique_id": "INV-1", "title": "T"})
+        child = repo.create_entity(
+            "Study", {"unique_id": "STU-1", "title": "S"}, parent_id=root.id
+        )
+        assert "STU-1" in (repo.get_entity(root.id).data.get("studies") or [])
+
+        assert repo.delete_entity(child.id)
+
+        refs = repo.get_entity(root.id).data.get("studies") or []
+        assert "STU-1" not in refs

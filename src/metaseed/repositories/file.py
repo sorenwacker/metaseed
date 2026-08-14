@@ -21,6 +21,7 @@ from metaseed.repositories.helpers import (
     find_parent_ref_field,
     get_identifier,
     normalize_reference_fields,
+    remove_parent_reference,
     update_parent_reference,
 )
 
@@ -423,6 +424,16 @@ class FileEntityRepository(EntityRepository):
         if entity.parent_id and entity.parent_id in self._entities:
             parent = self._entities[entity.parent_id]
             parent.children = [c for c in parent.children if c.id != entity_id]
+            # Take the reference back out of the parent's data — create put
+            # it there, and a dangling identifier survives save and export.
+            remove_parent_reference(
+                self._get_facade(),
+                parent.data,
+                parent.entity_type,
+                entity.data,
+                entity.entity_type,
+                entity.id,
+            )
         else:
             self._tree = [e for e in self._tree if e.id != entity_id]
 

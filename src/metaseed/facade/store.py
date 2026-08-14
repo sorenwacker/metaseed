@@ -349,9 +349,55 @@ class EntityStore:
         if node.parent_id and node.parent_id in self._instances:
             parent = self._instances[node.parent_id]
             parent.children = [c for c in parent.children if c.id != node_id]
+            self._remove_reference_from_parent(parent, node)
 
         remove_recursively(node)
         return True
+
+    def _remove_reference_from_parent(
+        self: Self, parent: EntityNode, child: EntityNode
+    ) -> None:
+        """Take the deleted child's identifier out of the parent's data.
+
+        Creation writes it into the parent's nested reference field; leaving
+        it after a delete hands every save and export a reference to a record
+        that no longer exists. The instance is immutable-by-convention, so the
+        cleaned value goes in via ``model_copy``.
+        """
+        if parent.instance is None or child.instance is None:
+            return
+        try:
+            helper = self._get_helper(parent.entity_type)
+        except (KeyError, AttributeError):
+            return
+
+        target_field = next(
+            (
+                name
+                for name, ref_type in helper.nested_fields.items()
+                if ref_type == child.entity_type
+            ),
+            None,
+        )
+        if target_field is None:
+            return
+
+        child_data = child.instance.model_dump()
+        child_refs = {
+            str(v)
+            for f in self._get_identifier_fields(child.entity_type)
+            if (v := child_data.get(f))
+        } or {child.id}
+
+        current = getattr(parent.instance, target_field, None)
+        if isinstance(current, list):
+            cleaned = [v for v in current if str(v) not in child_refs]
+            if len(cleaned) != len(current):
+                parent.instance = parent.instance.model_copy(
+                    update={target_field: cleaned}
+                )
+        elif current is not None and str(current) in child_refs:
+            parent.instance = parent.instance.model_copy(update={target_field: None})
 
     def get_children(self: Self, node_id: str) -> list[EntityNode]:
         """Get all direct children of a node.

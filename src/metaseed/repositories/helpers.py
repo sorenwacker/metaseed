@@ -185,6 +185,47 @@ def update_parent_reference(
     return cast("str", target_field)
 
 
+def remove_parent_reference(
+    facade: Any,
+    parent_data: dict[str, Any],
+    parent_type: str,
+    child_data: dict[str, Any],
+    child_type: str,
+    child_id: str,
+) -> str | None:
+    """Undo :func:`update_parent_reference` when the child is deleted.
+
+    ``create`` writes the child's identifier into the parent's nested
+    reference field; a delete that leaves it there hands every export and
+    reload a reference to a record that no longer exists.
+
+    Returns:
+        Name of the field the reference was removed from, or None.
+    """
+    parent_helper = getattr(facade, parent_type, None)
+    if not parent_helper:
+        return None
+
+    target_field = None
+    for field_name, ref_type in parent_helper.nested_fields.items():
+        if ref_type == child_type:
+            target_field = field_name
+            break
+    if not target_field:
+        return None
+
+    child_helper = getattr(facade, child_type, None)
+    child_ref = get_identifier(child_data, child_helper) or child_id
+
+    current = parent_data.get(target_field)
+    if target_field in parent_helper.single_entity_fields:
+        if current == child_ref:
+            parent_data[target_field] = None
+    elif isinstance(current, list) and child_ref in current:
+        parent_data[target_field] = [v for v in current if v != child_ref]
+    return cast("str", target_field)
+
+
 def normalize_reference_fields(
     data: dict[str, Any], helper: EntityHelper, facade: Any = None
 ) -> dict[str, Any]:
