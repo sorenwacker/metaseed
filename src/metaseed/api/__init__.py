@@ -9,10 +9,9 @@ Example:
     >>> client.list_entity_types()
     ['Investigation', 'Study', 'Person', ...]
 
-For REST API access, see metaseed.api.rest.
+The hub (metaseed-hub) is the deployed REST surface; this package is the
+Python client API.
 """
-
-from typing import TYPE_CHECKING
 
 from metaseed.api.client import MetaseedClient
 from metaseed.api.entities import Entity, EntityNode
@@ -31,24 +30,6 @@ from metaseed.api.schema import (
     ValidationResult,
 )
 from metaseed.api.serialization import SkippedNode
-
-if TYPE_CHECKING:
-    from metaseed.api.rest import app
-
-
-def __getattr__(name: str) -> object:
-    """Lazily expose the FastAPI ``app``.
-
-    Importing it eagerly would pull FastAPI/Starlette into every consumer that
-    imports ``metaseed`` (or any submodule), defeating the framework-agnostic
-    boundary. ``from metaseed.api import app`` still works — it loads on access.
-    """
-    if name == "app":
-        from metaseed.api.rest import app
-
-        return app
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-
 
 __all__ = [
     "Entity",

@@ -187,6 +187,5 @@ Data attributes:
 ## See Also
 
 - [Schema Specification](../api/schema-specs.md) - Field type reference
-- [REST API](../api/rest.md) - API endpoint documentation
 - [OLS4 Ontologies Browser](https://www.ebi.ac.uk/ols4/ontologies) - Browse all available ontologies
 - [OLS4 API Documentation](https://www.ebi.ac.uk/ols4/docs/api) - OLS4 REST API reference

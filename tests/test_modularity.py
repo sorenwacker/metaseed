@@ -207,12 +207,6 @@ def test_list_profiles_is_public_and_lists_builtins() -> None:
     assert "list_profiles" in metaseed.__all__
 
 
-def test_rest_app_is_still_importable_lazily() -> None:
-    from metaseed.api import app
-
-    assert app.__class__.__name__ == "FastAPI"
-
-
 def test_the_save_callback_resolves_when_it_is_called() -> None:
     """Patching ``auto_save`` must take effect on a session already built.
 

@@ -120,7 +120,6 @@ nav:
       - MetaseedClient: api/client.md
       - CLI: api/cli.md
       - Facade: api/facade.md
-      - REST API: api/rest.md
       - Spec Builder MCP: api/spec-builder-mcp.md
       - Validators: api/validators.md
       - Storage: api/storage.md

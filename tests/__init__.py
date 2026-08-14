@@ -1,1 +1,1 @@
-"""Tests for MIAPPE-API."""
+"""Tests for metaseed."""

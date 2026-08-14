@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Removed
+- The `api/rest.py` FastAPI app. It was a second REST surface — miappe-only,
+  unauthenticated, still titled MIAPPE-API — that nothing served: no CLI
+  command, no script entry point, and the hub (the deployed REST surface)
+  never mounted it. `from metaseed.api import app` is gone with it.
+
 ### Changed
 - `OntologyService` is the synchronous OLS adapter, full stop: its async
   `search`/`get_term` twins — ~200 byte-identical lines that had already
