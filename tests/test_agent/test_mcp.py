@@ -1967,3 +1967,47 @@ class TestMCPStandaloneMode:
                 f"Expected 2 entities but got {data['total']}. "
                 "State is not being shared across tool calls."
             )
+
+
+class TestCreateDatasetValidatesBeforeWiping:
+    """A typo'd profile must not cost the whole unsaved session.
+
+    create_dataset mutated the live session first (profile, version,
+    facade=None, reset) and validated after, so a profile that never loads
+    left the previous in-memory entities wiped and the state pointing at a
+    profile no other tool could use.
+    """
+
+    @pytest.fixture(autouse=True)
+    def reset_standalone_state(self):
+        from metaseed.agent.mcp.server import reset_mcp_state
+
+        reset_mcp_state()
+        yield
+        reset_mcp_state()
+
+    def test_a_bad_profile_keeps_the_current_session(self):
+        from metaseed.agent.mcp.server import create_server
+
+        server = create_server()
+        tools = server._tool_manager._tools
+        create_fn = tools.get("create_dataset")
+        entity_fn = tools.get("create_entity")
+        info_fn = tools.get("get_dataset_info")
+
+        with patch("metaseed.ui.datasets.auto_save"):
+            assert "error" not in json.loads(
+                create_fn.fn(name="keep-me", profile="miappe", version="1.1")
+            )
+            assert "error" not in json.loads(
+                entity_fn.fn(entity_type="Investigation", data='{"title": "Precious"}')
+            )
+
+            result = json.loads(
+                create_fn.fn(name="oops", profile="not-a-profile", version="9.9")
+            )
+            assert "error" in result
+
+            info = json.loads(info_fn.fn())
+            assert info["profile"] == "miappe"
+            assert info["entity_counts"] == {"Investigation": 1}

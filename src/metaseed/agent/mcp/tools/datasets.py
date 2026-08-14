@@ -183,12 +183,19 @@ def register_dataset_tools(  # noqa: C901
         """
         try:
             state = current_state()
+
+            # Prove the profile/version loads BEFORE touching the live
+            # session: a typo'd profile name must cost an error message, not
+            # the caller's unsaved entities and a state no tool can use.
+            from metaseed.facade import ProfileFacade
+
+            facade = ProfileFacade(profile, version)
+
             state.profile = profile
             state.version = version
             state.facade = None
             state.reset()
-
-            facade = state.get_or_create_facade()
+            state.facade = facade
 
             manager = _get_dataset_manager(resolve_context())
             manager.save_dataset(name)
