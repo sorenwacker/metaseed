@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.36.0 (260814)
 
 ### Fixed
 - Silent data-loss and wrong-write paths: `load()` refuses a payload with

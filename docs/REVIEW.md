@@ -25,7 +25,7 @@ Confirmed: **4 high, 73 medium, 12 low**. By category: correctness 40, consisten
 
 **Remediation status (0.35.0):** all 4 highs and the 6 recurring themes below are fixed — 31 findings, each marked **fixed in 0.35.0** in place. The CV-IRI enrichment (`seek/provision.py:130`) was wired to the term-source router rather than deleted. The remaining medium/low findings are tracked as backlog.
 
-**Triage (260814):** every mechanical correctness and dead-code finding is fixed on main (marked in place); the `llm` package is deleted (wired to no interface here, unused by the hub); `pride`/`metabolights` `validate_cv`/`validate_submission` are wired into the CLI validate path as `validate` actions. *Design debt stays as recorded backlog*: the global mutable model context and dual model caches (`models/factory.py:123`, `:125`), the miappe-hardcoded REST API (`api/rest.py:22`), the sync/async duplication in `services/ontology.py:405`, and the structure-owning tree component (task: composite link/unlink ownership).
+**Triage (260814):** every mechanical correctness and dead-code finding is fixed in 0.36.0 (marked in place); the `llm` package is deleted (wired to no interface here, unused by the hub); `pride`/`metabolights` `validate_cv`/`validate_submission` are wired into the CLI validate path as `validate` actions. *Design debt stays as recorded backlog*: the global mutable model context and dual model caches (`models/factory.py:123`, `:125`), the miappe-hardcoded REST API (`api/rest.py:22`), the sync/async duplication in `services/ontology.py:405`, and the structure-owning tree component (task: composite link/unlink ownership).
 
 Recurring themes, each spanning several findings:
 
@@ -76,7 +76,7 @@ _restore_state_from_data assigns `self._state.catalog_metadata = data.catalog_me
 
 #### `agent/core.py:108` — _to_boolean silently coerces any unrecognized value to False, contradicting the documented contract
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 TypeConverter.convert's docstring promises 'Converted value or None if conversion fails', and _to_integer/_to_float honor that by returning None so _extract_row can report a conversion failure for required fields (line 368). _to_boolean never fails: `return str(value).lower() in ("true", "1", "yes")` turns 'N/A', 'unknown', 'FALSE '(with typo), or any garbage string into False, which is then stored as a real value (converted is not None). For a metadata-extraction tool this is silent data corruption on boolean fields, and no test covers boolean conversion.
 
@@ -92,7 +92,7 @@ _profile_rule_issues rebuilds each engine error as ValidationIssue(field=..., me
 
 #### `agent/mcp/tools/datasets.py:186` — create_dataset destroys the current session before validating the new profile
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 `create_dataset` mutates the live session first (`state.profile = profile; state.version = version; state.facade = None; state.reset()`) and only then calls `state.get_or_create_facade()` and `manager.save_dataset(name)`. If the profile/version is invalid (facade construction raises) or the name is rejected by save, the tool returns `{"error": ...}` but the caller's previous in-memory entities are already wiped and the state left pointing at a profile that never loaded. A typo'd profile name costs the whole unsaved session.
 
@@ -114,7 +114,7 @@ The internal validators' ValidationError (src/metaseed/validators/base.py) carri
 
 #### `api/serialization.py:178` — load() silently wipes the store on a malformed payload
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 In `load()`, a dict with neither "tree" nor "entities" falls through to `entities = data if isinstance(data, list) else []`, i.e. an empty list, and `self._facade.load_from_dict([])` first calls `self.clear()` (src/metaseed/facade/store.py:434-447). So `client.load({"profile": "miappe", "entitles": [...]})` (typo'd key, wrong shape, truncated file) destroys every existing entity and returns 0 without raising. This contradicts the module's own design contract stated in the `load()` docstring: 'a permissive load cannot discard data without telling the caller' — here even a strict load discards everything and tells the caller nothing.
 
@@ -122,7 +122,7 @@ In `load()`, a dict with neither "tree" nor "entities" falls through to `entitie
 
 #### `api/validation.py:85` — validate() skips empty-data nodes that validate_entity() reports on
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 `validate()` guards per-node validation with `if data:` — a node whose `_get_instance_data` returns {} (instance is None, or all fields None under exclude_none=True, e.g. created with skip_validation=True) contributes no issues, so dataset-level validation reports valid=True for it. `validate_entity(entity_id)` on the same node has no such guard: it calls the validator with `{}` and returns the missing-required-field errors. The same entity is 'valid' from one public method and invalid from the other. The comment 'Always descend; an empty node must not hide its subtree' covers descent but not this asymmetry, and test_validate_descends_into_children_of_empty_node only pins the descent behavior.
 
@@ -138,7 +138,7 @@ def observations(self, study_db_id) is referenced by no code and no test (grep a
 
 #### `cli/app.py:428` — migrate command exits 0 on per-file errors while migrate-specs exits non-zero
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 migrate_datasets prints the report and returns; reports containing `{"error": ...}` entries (OSError/JSONDecodeError from migrate_all_datasets) still produce exit code 0 even with --apply. The sibling command migrate-specs gates its exit code via `migrate_specs.has_failures(migrations)` and raises `typer.Exit(ExitCode.VALIDATION_ERROR)`. Scripted callers of `metaseed migrate --apply` cannot detect failed dataset migrations.
 
@@ -146,7 +146,7 @@ migrate_datasets prints the report and returns; reports containing `{"error": ..
 
 #### `cli/commands/example.py:181` — Duplicate 'Person' sheet name yields a silently renamed 'Person1' sheet
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 _export_investigation_example_to_excel calls `add_sheet("Person", records)` for investigation-level contacts (line 109) and again for study-level persons (line 181). openpyxl deduplicates sheet titles by appending a number, so an example with both contacts and study persons exports two sheets named 'Person' and 'Person1' instead of one merged Person sheet.
 
@@ -154,7 +154,7 @@ _export_investigation_example_to_excel calls `add_sheet("Person", records)` for 
 
 #### `cli/migrate.py:68` — Untracked deletions are lost or written silently depending on unrelated changes
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 migrate_dataset mutates entities with `del entity["_parent_id"]` (when `_parent_unique_id` already exists, line 69) and `del entity["_node_id"]` (line 73) without appending to `changes`. The file is only written when `changes` is non-empty (`if not dry_run and changes:`), so a dataset whose only mutations are these deletions is never saved even with --apply, while a dataset with one tracked change gets the deletions written silently and unreported. Additionally, `_node_id` is deleted even for entities lacking a `unique_id`; a `_parent_id` pointing at such an entity is kept as a dangling node ID while the only key that could later resolve it is destroyed on the next tracked-change save, making the migration unrepeatable.
 
@@ -186,7 +186,7 @@ Grep shows `to_json_dict` referenced only in core/__init__.py (export) and tests
 
 #### `dcat/export.py:78` — to_dcat drops catalog metadata and dataset name, so the downloaded card differs from the UI card
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 to_dcat calls build_card(client) with neither catalog_metadata nor identifier, while the DCAT page route (src/metaseed/ui/routes/dcat.py) calls build_card(..., catalog_metadata=state.catalog_metadata, identifier=name). The route's comment claims 'the page and the downloaded file cannot describe the dataset differently', but the adapter export path (/export/adapter/dcat via metaseed.dcat.export:to_dcat) produces a card without the user's explicit title/publisher/license/keywords and falls back to identifier=facade.profile — so every dataset of a given profile exports identifier 'ena'/'miappe' instead of its name. The explicit-wins metadata a user entered is silently absent from the exported file.
 
@@ -194,7 +194,7 @@ to_dcat calls build_card(client) with neither catalog_metadata nor identifier, w
 
 #### `ena/export.py:87` — library_layout/platform values are used as raw XML tag names, silently producing invalid XML
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 _experiment_set does ET.SubElement(layout, str(e["library_layout"]).upper()) and ET.SubElement(platform, str(e["platform"]).upper()). ElementTree does not validate tag names, so a user-authored ena-profile dataset (this export is reachable from the UI export route for any ena dataset) with platform 'Illumina HiSeq' or layout 'paired end' serializes to '<ILLUMINA HISEQ />' — malformed XML emitted without any error, which ENA will reject with no hint of the cause.
 
@@ -216,7 +216,7 @@ _experiment_set does ET.SubElement(layout, str(e["library_layout"]).upper()) and
 
 #### `facade/store.py:620` — _link_by_nested_arrays skips linking children of any already-parented node
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 In `_link_by_nested_arrays` the loop guard is `if node.parent_id: continue`, but the node being examined is the potential PARENT (its nested array fields name its children). The guard therefore prevents a mid-level node from linking its own children once that node has itself been parented. In a three-level hierarchy loaded from a flat list where parents carry child ids in nested array fields (Investigation -> Study -> Sample), if Investigation is processed first it links Study; when the loop reaches Study, Study now has a parent_id and is skipped, so Sample is never linked via Study's nested arrays. The outcome is order-dependent: reversing entity order links everything. The correct orphan check already exists on the child side (`if child_node and child_node.parent_id is None`). Compare `_link_by_reference_fields` (line 658), where the identical guard is correct because there the iterated node is the CHILD seeking its parent — the guard appears to have been copied between the two methods.
 
@@ -224,7 +224,7 @@ In `_link_by_nested_arrays` the loop guard is `if node.parent_id: continue`, but
 
 #### `isatab/__init__.py:152` — Investigation file never emits 'Study File Name', so emitted s_*.txt files are unreferenced
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 _study_sections writes Study Identifier/Title/Description and 'Study Assay File Name' for assays, but no 'Study File Name' row. to_isatab computes study_filename(study) and writes an s_<study>.txt document per study, yet the i_Investigation.txt it produces never names those files. ISA-Tab consumers (isatools et al.) locate the study table via the STUDY section's 'Study File Name' field; without it the study files are orphaned and the investigation cannot be parsed as a complete ISA archive. A grep for 'Study File Name' across src/tests/docs confirms it is emitted nowhere.
 
@@ -232,7 +232,7 @@ _study_sections writes Study Identifier/Title/Description and 'Study Assay File 
 
 #### `llm/service.py` — LLMService is wired to no interface in this repo
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 Grep across src/ finds no consumer of LLMService or metaseed.llm outside the llm package — no UI route, no CLI command, no MCP tool; only tests/test_llm.py imports it. The module docstring says "It can be used by any UI (hub, CLI, etc.)" and get_response_sync's docstring says "for CLI usage", but the CLI in this repo does not call it, making both claims aspirational. Per the project rule, a capability reachable only as a library call is unfinished work; if the external hub is the intended consumer, that should be stated in the docstring instead of "CLI".
 
@@ -240,7 +240,7 @@ Grep across src/ finds no consumer of LLMService or metaseed.llm outside the llm
 
 #### `llm/service.py:12` — Bare top-level httpx import with no declared dependency and no extra
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 `import httpx` at module top, but httpx is not in the project's core dependencies — it appears only in the dev/ena/brapi/pride/metabolights/seek extras, and no `llm` extra exists. The sibling adapters (pride/client.py, metabolights/client.py) wrap the same import in try/except ModuleNotFoundError with a friendly "pip install 'metaseed[...]'" message; llm/service.py does neither, so on an install where httpx does not arrive transitively, `import metaseed.llm` raises a raw ModuleNotFoundError. Today it happens to work because `mcp` pulls httpx in transitively, which directly violates the project rule "Declare every package the code imports directly in pyproject; never rely on it arriving transitively."
 
@@ -248,7 +248,7 @@ Grep across src/ finds no consumer of LLMService or metaseed.llm outside the llm
 
 #### `metabolights/mapper.py:533` — MAF selection ignores the assay's declared metabolite_assignment_file
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 _add_assay parses the per-assay MAF name from comments (`"metabolite_assignment_file": _maf_from_comments(...)`) but then selects the MAF text with `maf_file = _isatab_for_prefix(isatab_files, "m_")`, which returns a file only when exactly one `m_*.tsv` exists and never consults the declared name. Consequences: (a) a study with one MAF but several assays attaches the same Metabolite children to every assay, so export re-emits identical populated MAFs per assay and validate_cv checks each accession once per assay; (b) a study with multiple MAFs (one per assay, the normal MetaboLights layout for multi-assay studies) imports no metabolites at all, even though each assay's exact MAF filename is known both from the comments and from the FTP listing. The sibling `_isatab_for_assay` does exact-name matching for `a_*.txt` files, so the machinery for the correct behavior already exists.
 
@@ -268,7 +268,7 @@ Generated models are cached twice: in `ModelContext._models` keyed "profile:vers
 
 #### `pride/validate.py` — validate_cv and validate_submission reachable only as library calls
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 Both functions are exported in metaseed.pride.__all__ but nothing in src/ calls them: the adapters registry (adapters.py) declares only import/export actions for the pride adapter, client.validate() does not invoke them, and no UI/CLI/MCP surface exposes them. Only tests reference them. The same applies to metaseed/metabolights/validate.py's validate_cv. Per the project rule, a capability reachable only from a library call and not from the UI is unfinished work.
 
@@ -276,7 +276,7 @@ Both functions are exported in metaseed.pride.__all__ but nothing in src/ calls 
 
 #### `pride/validate.py:175` — File-mapping rules are skipped entirely when submission.px has no FME rows
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 In validate_submission the checks `"RAW" not in file_types`, the COMPLETE/RESULT and PARTIAL/SEARCH requirements, and file-type validity are all inside `if files:`. A dataset with no DataFile entities produces a submission.px with no file section, and the validator reports no file-mapping errors at all — the emptiest possible mapping passes the very rules the docstring says are enforced ("at least one RAW file", "a RESULT (COMPLETE) or SEARCH (PARTIAL) file"). The missing-RAW/RESULT/SEARCH errors should fire precisely when the section is absent.
 
@@ -284,7 +284,7 @@ In validate_submission the checks `"RAW" not in file_types`, the COMPLETE/RESULT
 
 #### `repositories/file.py:45` — Class docstring documents a nested-children file format that _load silently drops
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 The class docstring shows the file format with `"children": [ ... ]` nested inside each entity, but _parse_entities only iterates the top-level `entities` list and explicitly strips the `children` key from data (`k not in ("id", "entity_type", "label", "parent_id", "children")`). _save also writes a flat list (hierarchy carried by parent_id only). A file actually written in the documented nested format would have every nested entity silently discarded on load.
 
@@ -292,7 +292,7 @@ The class docstring shows the file format with `"children": [ ... ]` nested insi
 
 #### `repositories/file.py:72` — __init__ docstring claims a default path is used when dataset_path is None, but None means no persistence
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 The docstring says "dataset_path: Path to the JSON file. If None, uses default location." but __init__ just stores None (`self._path = dataset_path`) and _save() then skips every write with only a log warning ("No dataset path configured, skipping save"). A repository constructed with the default arguments silently loses all mutations on process exit. The test suite confirms the actual behavior (`assert repo._path is None`). Callers reading the docstring will believe FileEntityRepository() persists to DEFAULT_DATASETS_DIR.
 
@@ -300,7 +300,7 @@ The docstring says "dataset_path: Path to the JSON file. If None, uses default l
 
 #### `repositories/file.py:408` — delete_entity leaves the deleted child's identifier dangling in the parent's reference field
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 create_entity wires the parent's nested reference via update_parent_reference (appends the child identifier to the parent's list field), but delete_entity only removes the child from _entities and from parent.children; it never removes the identifier from the parent's data. After create + delete, the saved parent entity still references a non-existent child, so exports and reloads carry a dangling reference. The memory adapter has the same asymmetry (delete_entity just delegates to state.delete_node).
 
@@ -308,7 +308,7 @@ create_entity wires the parent's nested reference via update_parent_reference (a
 
 #### `repositories/file.py:432` — get_tree, create_entity and update_entity return internal EntityData objects despite the deep-copy protection rationale in list_entities/get_entity
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 list_entities and get_entity deliberately deep-copy "so a caller mutating a result cannot corrupt the repository's internal store", but get_tree returns `self._tree` (the live internal list of live EntityData objects) and create_entity/update_entity return the internal entity object. A caller mutating a get_tree result (or the returned entity's .data / .children) corrupts the store and the next _save persists the corruption, defeating the stated invariant.
 
@@ -316,7 +316,7 @@ list_entities and get_entity deliberately deep-copy "so a caller mutating a resu
 
 #### `repositories/helpers.py:168` — update_parent_reference coerces single-entity (ENTITY-typed) nested fields into lists
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 The function matches the child type against `parent_helper.nested_fields`, which includes both LIST and ENTITY (exactly-one-child) fields (facade/helper.py nested_fields). It then unconditionally treats the parent field as a list: `refs = parent_data.get(target_field, [])`, `refs = [refs] if refs else []`, `refs.append(child_ref)`, `parent_data[target_field] = refs`. For an ENTITY-typed field this rewrites a scalar reference into a list (and permits multiple children on an exactly-one-child field). Because the model factory annotates ENTITY fields as `Any` (models/factory.py line 364), Pydantic validation in MemoryEntityRepository._update_parent_ref never catches the wrong shape, so the corrupted shape persists and is saved.
 
@@ -324,7 +324,7 @@ The function matches the child type against `parent_helper.nested_fields`, which
 
 #### `seek/placement.py:46` — Sync resolves JERM roles without the entity's ontology annotation, unlike every other SEEK path
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 place_node computes `entity_jerm_class(node.entity_type, ctx.roles.get(node.entity_type))` with no ontology_term, and sync.py does the same at lines 126 and 181 (assay_role_entities and the assay-first child ordering). Meanwhile fairds._profile_index, preview._extended_metadata, roles.unmapped_entities and roles.sample_role_entities all pass entity.ontology_term so an entity annotated e.g. JERM:Assay or JERM:Sample resolves via role_from_annotation (the #234 fix). The sync is internally inconsistent: sample_chain_entities/build via sample_role_entities honors annotations, so an annotation-only Sample entity is planned into the Sample Type chain, but place_node then computes its jerm_class from the name alone, gets None, and skips the node with 'has no SEEK role' - while the FDS export of the same profile exports it.
 
@@ -340,7 +340,7 @@ build_provisioning_plan(profile, *, ontology=None) enriches CV terms with IRIs v
 
 #### `seek/provision.py:237` — resolve_cv_ids keys Controlled Vocabulary ids by bare field name, undoing the entity namespacing of _cv_title
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 _cv_title deliberately namespaces CV titles as '{profile} {entity}.{field}' so 'a field name reused across entities/profiles doesn't collide' (line 102-105). resolve_cv_ids then flattens that back to `ids[field.name] = existing` - if two sample-role entities both declare an enum field with the same name but different enums (two distinct CVs in SEEK), the last entity iterated wins and both entities' attributes bind to that one CV id. The consumer (isa_types.sample_type_attributes, line 210: `vocabularies[plan.field_name or plan.title]`) looks up by field name per level, so the Source level can silently get the assay entity's vocabulary.
 
@@ -356,7 +356,7 @@ Grep across src/ shows `ChainedTermSource` and `as_source` appear nowhere outsid
 
 #### `services/local_terms.py:224` — A malformed vocabulary file makes every term check raise instead of reporting the problem
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 VocabularyStore.from_directory calls `LocalVocabulary.from_file(path)` with no error handling; from_file raises ValueError for a file with no ontology id, and json.loads raises JSONDecodeError for broken JSON. _default_router (terms.py:404) calls from_directory lazily on the first term lookup, and check_term calls get_term_source() outside its try block, so one bad *.json file in METASEED_VOCABULARIES turns every subsequent validation call into an unhandled exception deep inside validators — not a verdict, not NOT_CHECKED, and not a clear startup error either. The module docstring promises the source will 'answer honestly, and say when it cannot'.
 
@@ -378,7 +378,7 @@ Grep across src/ shows `validate_term` and `validate_term_sync` are called only 
 
 #### `specs/builder.py:496` — update_field assigns attributes without validation, unlike update_rule
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 `update_rule` deliberately rebuilds the model through `ValidationRuleSpec.model_validate` with the comment "pydantic does not validate an assignment", but `update_field` does plain `setattr(field, key, value)`. So `update_field(entity, name, isa_tag="typo")` or `tier="mandatory"` installs an invalid value the schema validators would reject, and marking a second field `is_identifier=True` bypasses `_check_single_marked_field`; the defect surfaces only when the saved YAML is loaded back. Adapters calling `validate_marker_values` first are protected, but the shared engine itself -- the class whose docstring says both interfaces share one implementation -- accepts the bad edit.
 
@@ -386,7 +386,7 @@ Grep across src/ shows `validate_term` and `validate_term_sync` are called only 
 
 #### `specs/field_form.py:1` — FieldForm claims to cover every FieldSpec attribute but cannot author isa_tag
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 The module docstring says FieldForm is "the single source of truth for turning the raw values a field editor collects into a populated FieldSpec -- every attribute", but the form has no `isa_tag` input and `apply_to` never touches `field.isa_tag`. The UI field editor (ui/spec_builder/routes_fields.py) therefore cannot set or clear a field's ISA tag; only the MCP tools can (agent/mcp/tools/spec_builder.py passes isa_tag through markers). Per the project rule, a capability reachable only from MCP and not the UI is unfinished work; at minimum the "every attribute" claim is now false.
 
@@ -394,7 +394,7 @@ The module docstring says FieldForm is "the single source of truth for turning t
 
 #### `specs/loader.py:357` — RENAMED_PROFILES fallback applies only in load_profile with an explicit profile argument
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 The rename fallback (`jerm` -> `seek`) is consulted only inside `load_profile`, and only when `profile` is passed non-None: with `SpecLoader(profile="jerm")` and `load_profile()` (profile=None), `_resolve_renamed(None)` returns None and the fallback never triggers, so the documented rescue ("a dataset records the profile it was built against ... dropping the old name would stop it opening") fails for the constructor-default path. `load_entity`, `list_entities`, and `list_versions` never consult the mapping at all, so any caller resolving entities or versions by the old name gets 'Profile not found' despite the mapping.
 
@@ -402,7 +402,7 @@ The rename fallback (`jerm` -> `seek`) is consulted only inside `load_profile`, 
 
 #### `specs/merge/comparator.py:398` — Hardcoded attribute list silently ignores newer FieldSpec attributes
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 `_analyze_field_diff` compares only 9 hardcoded attributes (`type, required, description, ontology_term, ontologies, items, parent_ref, unique_within, reference`). FieldSpec has since grown `within, owns, is_identifier, is_label, options, unit, label, tier, isa_tag, dcat, example, codename, reference_scope`; two profiles differing only in, e.g., `is_identifier` or `options` compare as UNCHANGED and the merger silently takes the first spec with no warning. The sibling module `specs/compare.py` derives its attribute sets from `FieldSpec.model_fields` precisely so a new attribute cannot pass unclassified; this comparator has no such guard and has already drifted.
 
@@ -410,7 +410,7 @@ The rename fallback (`jerm` -> `seek`) is consulted only inside `load_profile`, 
 
 #### `specs/merge/merger.py:138` — Merged entities drop the seek config
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 When rebuilding entities, `merged_entities[...] = EntityDefSpec(ontology_term=..., description=..., fields=..., example=...)` omits `seek`, so a source entity's `SeekEntityConfig` (SEEK role routing) is silently absent from the merged profile. Same hardcoded-constructor drift as the comparator: EntityDefSpec gained an attribute and the merger was not updated.
 
@@ -418,7 +418,7 @@ When rebuilding entities, `merged_entities[...] = EntityDefSpec(ontology_term=..
 
 #### `specs/merge/strategies.py:253` — LeastRestrictiveStrategy is not least restrictive when a profile has no constraint
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 `_merge_constraints_permissive` builds from `[s.constraints for s in specs if s.constraints is not None]`, so a profile that declares NO constraint (the loosest possible state: unbounded, no enum) does not loosen the result. Example: profile A has `enum: [x, y]` (or `max_length: 10`), profile B is unconstrained -- the least restrictive merge should drop the enum/bound, but the strategy keeps A's constraint. The class docstring promises "Looser constraints win", which this violates; the analogous bound-keeping in MostRestrictiveStrategy is correct. Both strategies can also return an empty-but-non-None `Constraints()`, which serializes as `constraints: {}` -- the empty-object state that builder.py and loader.py deliberately collapse to None to keep content hashes stable.
 
@@ -466,7 +466,7 @@ create_app composes a DatasetManagerFactory and binds it to app.state.dataset_fa
 
 #### `ui/helpers/entity_helpers.py:148` — extract_nested_from_tree hand-parses references from the private _spec instead of using helper.reference_fields
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 It iterates `child_helper._spec.fields` and matches `field.reference.startswith(f"{parent_type}.")`, while the sibling validation.py (line 198) uses the public `child_helper.reference_fields` property that already yields (target_entity, target_field). Reaching into _spec bypasses the facade's public API, duplicates the reference-parsing logic that lives in facade/helper.py, and ignores external_reference_fields semantics. The synthetic field name `child.entity_type.lower() + "s"` is additionally a naive pluralization guess (e.g. 'Study' -> 'studys') in a module family whose table_helpers explicitly promises 'field names are never guessed into entity types'.
 
@@ -474,7 +474,7 @@ It iterates `child_helper._spec.fields` and matches `field.reference.startswith(
 
 #### `ui/helpers/validation.py:310` — Non-ValidationError failures silently drop the user's item
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 _update_existing_child and _create_new_child (lines 310-311 and 344-345) end with `except Exception as e: logger.warning(f"Error creating {child_type}: {e}")`. Unlike the ValidationError branch, this path neither calls result.add_error nor result.add_failed_item. rebuild_nested_items_with_failures then rebuilds state.current_nested_items only from the stored node plus failed_items, so an item that hit any non-Pydantic error (e.g. a state.add_node/update_node failure) vanishes from the form with no message — silent data loss in the UI.
 
@@ -482,7 +482,7 @@ _update_existing_child and _create_new_child (lines 310-311 and 344-345) end wit
 
 #### `ui/routes/core.py:213` — switch_profile leaves a stale state.version from the previous profile
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 `switch_profile` sets `state.profile = name; state.facade = None; state.reset()` but never clears `state.version`. `AppState.reset()` deliberately leaves `version` intact, its docstring saying "callers such as switch_profile can set them" — but switch_profile only sets `profile`. Other profile-entry paths do set version (`forms.py` new_entity_form sets `state.version = version`, `examples.py` sets `state.version = version`). Concrete failure: load the miappe 1.1 example (version becomes "1.1"), then GET /profile/isa; the next `get_or_create_facade()` builds `ProfileFacade("isa", "1.1")` — `ProfileFacade.__init__` uses the explicit version instead of resolving the latest, so entity loading for a nonexistent isa/1.1 fails (SpecLoadError → 500) or silently binds the wrong spec version.
 
@@ -490,7 +490,7 @@ _update_existing_child and _create_new_child (lines 310-311 and 344-345) end wit
 
 #### `ui/routes/core.py:217` — base_url prefix applied inconsistently: redirects, script tags, and half the JS fetches bypass it
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 The app threads base_url (e.g. "/hub") into every template for links, but several server-side redirects hardcode unprefixed absolute paths: core.py line 217 `RedirectResponse(url="/")` in switch_profile, examples.py line 124 `RedirectResponse(url=f"/dataset/{dataset_name}/edit")`, and spec_builder/routes_export.py line 281 redirects to `router.prefix` without base_url. The same split exists client-side: base.html lines 123-129 and spec_builder/base.html lines 242-270 hardcode `/static/js/...` (explore/index.html correctly uses `{{ base_url }}/static/...`); partials/form.html line 35 and partials/profile_select.html line 32 link `/load-example/...` unprefixed; core.js (`fetch('/api/validate')`, '/api/dcat'), graph.js ('/api/graph'), table-edit.js ('/table/.../paste'), app.js ('/api/lookup', '/api/graph', '/table/...') and spec-builder.js (`url: '/spec-builder' + path`) all skip BASE_URL, while mcp.js, dataset.js and app.js's dataset section use `BASE_URL + ...`. Under the documented "/hub" mount every unprefixed path escapes the prefix and 404s or hits the wrong app.
 
@@ -498,7 +498,7 @@ The app threads base_url (e.g. "/hub") into every template for links, but severa
 
 #### `ui/routes/explore.py:118` — Bad user input yields 500 instead of 400, and malformed profile specs are silently dropped
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 All three explore handlers map `ValueError` (user-selected profiles) to status 500, whereas api.py's `/api/merge` maps `ValueError` to 400 and `/api/compare` pre-validates the profile format returning 400 with a clear message. Additionally, compare_profiles (lines 84-88) silently drops any submitted spec without a "/" instead of rejecting it, so an entirely malformed selection reaches `compare([])` and surfaces as a 500. Same route family, divergent error contracts.
 
@@ -514,7 +514,7 @@ All three explore handlers map `ValueError` (user-selected profiles) to status 5
 
 #### `ui/routes/table.py:291` — bulk_update_rows and paste_cells bypass the valid-field gate that update_table_cell enforces
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 `update_table_cell` filters submitted keys against the child entity's `all_fields` (`if not key.startswith("_") and (not valid_fields or key in valid_fields)`), but `bulk_update_rows` (`item[field] = value`) and `paste_cells` (`item[field] = value`) write any client-supplied field name into the same items store. The same store is edited through three routes with different input validation; a pasted or bulk-edited bogus field name silently pollutes rows the cell editor would have rejected.
 
@@ -522,7 +522,7 @@ All three explore handlers map `ValueError` (user-selected profiles) to status 5
 
 #### `ui/services/controlled_terms.py:154` — Term identifiers (iris) are never populated; module docstring claims they are kept
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 The module docstring states 'The identifiers are kept, not just the labels ... the terms' identifiers travel in a hidden sheet so nothing semantic is lost to a label.' In practice every TermList is built with `iris=[""] * len(values)` (_term_list line 154, ontology branch line 124), because FieldSpec.options is `list[str] | None` (specs/schema.py:240) and carries no IRIs. The 'identifier' column written by write_terms_sheet is therefore always empty: the mechanism is scaffolding nothing can fill, and the documentation promises something the code does not do.
 
@@ -530,7 +530,7 @@ The module docstring states 'The identifiers are kept, not just the labels ... t
 
 #### `ui/services/controlled_terms.py:415` — apply_uniqueness_validations still uses the identifier_field fallback that key_columns deliberately excludes
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 key_columns (line 354) documents that facade identifier_field must not decide uniqueness on its own because it falls back to the first field, 'which is how File.filename ... came to be treated as identifiers and flagged on every row that legitimately repeated'. But apply_uniqueness_validations (lines 415-417) does exactly that: `identifier = getattr(helper, "identifier_field", None); if identifier: unique_columns.add(identifier)`. It also omits the referenced-target-field rule that key_columns adds. The two enforcement mechanisms for the same rule disagree: typing a legitimately repeated File.filename triggers the duplicate warning dialog, while the conditional formatting (via key_columns) correctly does not flag it.
 
@@ -554,7 +554,7 @@ The spec itself is saved through the injected SpecPersistence (`saved_path = awa
 
 #### `ui/spec_builder/routes_export.py:281` — Import redirect ignores base_url, breaking deployments with a URL prefix
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 import_yaml redirects with `url=f"{router.prefix or '/spec-builder'}"`, producing the absolute path "/spec-builder". app.py wires a non-empty base_url (docstring example "/hub") and every template link is prefixed with it, but this Location header is not, so after a successful import under a prefixed deployment the browser is redirected to a path outside the app. The registrar receives the prefix as `_base_url` and discards it. Additionally `router.prefix or '/spec-builder'` is a dead fallback: __init__.py always constructs the router with prefix="/spec-builder", so the right-hand side can never be taken.
 
@@ -570,7 +570,7 @@ add_field routes through SpecBuilder.from_spec(...).add_field, which validates t
 
 #### `ui/spec_builder/routes_main.py:49` — _require_spec re-implemented in three registrars despite the shared helper in access.py
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 access.py exists precisely to hold require_spec once (its module docstring says the duplicated copies in the entity and field registrars were extracted there after the duplication gate found them), and routes_entities.py/routes_fields.py wrap access.require_spec. But routes_main.py (lines 49-54), routes_rules.py (lines 127-132), and routes_export.py (lines 52-57) each still define a local `_require_spec` with an identical body (`if builder.spec is None: raise HTTPException(400, "No spec in progress")`). The duplication gate test (tests/test_ui_does_not_reimplement_the_library.py) does not cover this helper, so the copies persist unguarded.
 
@@ -618,7 +618,7 @@ app.js (1775 lines) exceeds the project's 1000-line file limit and duplicates, n
 
 #### `ui/static/js/core.js:106` — showNotification called with swapped (type, message) argument order
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 The only definition of showNotification loaded on base.html pages is mcp.js line 66: `function showNotification(message, type)`. Every caller passes (message, type) — except core.js, which passes (type, message) at lines 106, 141, 164, 210, 218, 243, 247: e.g. `showNotification('error', 'Validation error: ' + data.error)`. On the main UI pages this renders the literal word "error"/"success" as the notification text and uses the real message as the CSS class suffix ('notification-Validation error: ...'), so validation failures, DCAT errors, copy confirmations and metadata-saved confirmations all display wrong.
 
@@ -634,7 +634,7 @@ In _validate_nested, engine errors are rebuilt to prefix the path: `ValidationEr
 
 #### `validators/api.py:113` — Cascade validation never descends entity-typed (singly nested) children
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 _validate_nested recurses only into fields where `field.type.value == "list" and field.items`. FieldType.ENTITY exists (specs/schema.py line 40) and holds a single nested child dict. dataset.py's _traverse_entity_tree handles both cases, and its comment documents the consequence of missing the entity branch: 'an entity nested this way was never visited ... Darwin Core nests both its Event and its Organism this way.' The same gap remains in api.py: validate(cascade=True) never runs engine rules (required fields, patterns, profile rules) on a singly nested child. Relatedly, _pydantic_constraint_errors and validate_entity_with_report build nested_field_names from list-typed fields only (api.py lines 44-46, 318-320), so entity-typed child dicts are passed into the parent's Pydantic model while list children are excluded — an asymmetry inherited from the same omission.
 
@@ -652,7 +652,7 @@ In validate_directory, entity errors from _validate_entity are rebuilt as `Valid
 
 #### `agent/parsers/registry.py:49` — mime_types is declared on the FileParser protocol and all three parsers but read nowhere
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 Grep across src and tests shows `mime_types` only at its four declaration sites (registry.py:49, csv.py:16, excel.py:21, json.py:15); no code or test ever reads parser.mime_types. It is already drifting: ExcelParser lists '.xlsm' in extensions but omits the .xlsm mime type (application/vnd.ms-excel.sheet.macroEnabled.12). Project rule: code (or protocol-required data) that nothing reaches is a defect - wire it in or delete it. Relatedly, @runtime_checkable on FileParser (line 44) enables isinstance checks that no code performs.
 
@@ -660,7 +660,7 @@ Grep across src and tests shows `mime_types` only at its four declaration sites 
 
 #### `facade/helper.py:476` — create() docstring claims ontology terms are validated during creation; the code deliberately does not
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 The Note in `create()` says 'Ontology term fields are validated against OLS4. Invalid terms generate warnings but do not prevent entity creation.' — but the implementation comment directly below (lines 501-506) states 'Deliberately no ontology check here' and explains why the check was removed from the construction path (one network request per entity). The docstring documents removed behavior and will mislead callers into believing terms are checked at create time.
 
@@ -668,7 +668,7 @@ The Note in `create()` says 'Ontology term fields are validated against OLS4. In
 
 #### `models/registry.py:67` — ModelRegistry version-key contract diverges from its only production caller
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 The registry documents keys as (name, version) with version like "1.1", but the sole production caller (models/__init__.py get_model) stores composite keys: `cache_version = f"{profile.lower()}:{version}"` (e.g. "miappe:1.2"). Consequently `list_models(version="1.2")` can never match a production entry, and the docstrings on register/get/has (`version: Profile version (e.g., "1.1")`) are wrong for real usage. `list_models` and `clear` are referenced only by tests (tests/test_models/test_registry.py), which register plain versions and so never exercise the real key scheme. The union return type `list[tuple[str, str]] | list[str]` depending on the argument is a further inconsistency.
 
@@ -676,7 +676,7 @@ The registry documents keys as (name, version) with version like "1.1", but the 
 
 #### `repositories/file.py:102` — from_dataset_name ignores the METASEED_DATASETS_DIR override that the sibling repository honors
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 filesystem_dataset.py defines DATASETS_DIR_ENV = "METASEED_DATASETS_DIR" and default_datasets_dir() so tests and sandboxed deployments can redirect dataset storage; its docstring says the selenium suite relies on it for hermetic isolation. file.py duplicates the DEFAULT_DATASETS_DIR constant (identical value and docstring) but from_dataset_name uses it directly (`base_dir = datasets_dir or DEFAULT_DATASETS_DIR`) without consulting the env var. With the override set, FilesystemDatasetRepository writes to the redirected directory while FileEntityRepository.from_dataset_name still writes into the user's real data dir. This is also duplicated logic the project rules say should be shared.
 
@@ -684,7 +684,7 @@ filesystem_dataset.py defines DATASETS_DIR_ENV = "METASEED_DATASETS_DIR" and def
 
 #### `seek/context.py:43` — created_count counts reused resources, and reuse is only recorded for Investigations and Samples
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 SyncResult.created_count ('Total SEEK resources created') sums the investigations/studies/assays/samples/data_files dicts, but reused records are inserted into those same dicts (placement.py:68 for a reused Investigation, 383 for a reused Sample), so a second push of an unchanged dataset reports the full count. The UI renders it as 'Synced {{ sync_result.created_count }} resources' (ui/templates/seek/index.html:33). Worse, the reuse ledger is asymmetric: place_node records r.reused for Investigation and place_sample for Samples, but the reuse paths of place_study (placement.py:191-210) and place_assay (259-264) record nothing in r.reused, so a caller cannot even subtract reused from the total.
 
@@ -700,7 +700,7 @@ ChainedTermSource delegates only get_term_sync, has_ontology_sync and search_syn
 
 #### `ui/helpers/navigation_helpers.py:134` — get_parent_identifier has no production caller
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 Grep across src shows get_parent_identifier is defined here, re-exported in helpers/__init__.py, and referenced only by tests (tests/test_ui/test_navigation_helpers.py). No route, service, or other production module calls it. Per project rules, code kept alive only by its own tests is dead code.
 
@@ -708,7 +708,7 @@ Grep across src shows get_parent_identifier is defined here, re-exported in help
 
 #### `ui/routes/table.py:256` — update_table_cell can store an UploadFile object as a cell value
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 `for key, value in form_data.items(): ... item[key] = value` — Starlette form values are `str | UploadFile`, and unlike the sibling handler in nested.py (`save_nested_item` guards with `isinstance(value, str)`), this loop stores whatever arrives. A multipart POST with a file part writes an `UploadFile` into the item dict, which later breaks model creation/serialization (auto_save, export) far from the cause.
 
@@ -716,7 +716,7 @@ Grep across src shows get_parent_identifier is defined here, re-exported in help
 
 #### `ui/routes/table.py:370` — paste_cells crashes with an unhandled 500 on malformed change entries
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 `changes = json.loads(changes_json)` is only guarded against JSONDecodeError. Each entry is then used as `change.get("idx")` and compared `0 <= idx < len(items)`. A payload like `["x"]` raises AttributeError (list of strings has no .get), and `[{"idx": "0", "field": "f", "value": "v"}]` raises TypeError on the int comparison — both surface as unhandled 500s, while the sibling `bulk_update_rows` returns a friendly `error_response` for bad indices.
 
@@ -724,7 +724,7 @@ Grep across src shows get_parent_identifier is defined here, re-exported in help
 
 #### `ui/services/export.py:130` — Two public functions named collect_entities_by_type with different semantics
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 services/export.py:130 defines collect_entities_by_type(facade) returning raw row dicts for the workbook, while helpers/entity_helpers.py:217 defines collect_entities_by_type(state, facade) returning {value,label,data} dropdown entries. Both are public and both are imported elsewhere (routes/api.py uses the helpers one; export and tests use this one). Same name, different signature and meaning in the same package tree invites the wrong import and makes greps ambiguous.
 
@@ -732,7 +732,7 @@ services/export.py:130 defines collect_entities_by_type(facade) returning raw ro
 
 #### `ui/spec_builder/state.py:56` — SpecBuilderState.is_active and get_entity_names have no production callers
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 Grep across src (including all templates) and tests shows `is_active` and `get_entity_names` are referenced only by their own unit tests (tests/test_ui/test_spec_builder.py:132-144); no route, template, or other module calls them. Production code checks `builder.spec is not None` and `list(builder.spec.entities.keys())` inline instead (e.g. routes_rules.py:162). Per the project rule, code that is written but never reached is a defect: tests exercising a method nothing calls keep dead code green.
 
@@ -740,7 +740,7 @@ Grep across src (including all templates) and tests shows `is_active` and `get_e
 
 #### `validators/api.py:88` — validate() raises SpecLoadError for an unknown entity while validate_entity() returns an error list
 
-**Status: fixed on main (unreleased).**
+**Status: fixed in 0.36.0.**
 
 validate() calls create_engine_for_entity (line 88 via _validate_nested, line 186 non-cascade), which raises SpecLoadError when the entity is found in neither the spec nor the profile (engine.py lines 774-775). validate()'s docstring promises 'List of validation errors. Empty if validation passes.' and documents no raise. Its siblings validate_entity() and validate_entity_with_report() catch the load failure and return a ValidationError/ValidationCheck (rule="error", check="load_spec") instead. Two public entry points of the same module answer the same failure in opposite ways, so callers such as api/rest.py and the CLI get an unhandled exception from one path and a clean error report from the other.
 
