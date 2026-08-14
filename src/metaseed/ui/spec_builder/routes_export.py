@@ -33,7 +33,7 @@ def register_export_routes(  # noqa: C901
     templates: Jinja2Templates,
     get_builder_state: Callable[[], SpecBuilderState],
     persistence: SpecPersistence | None = None,
-    _base_url: str = "",
+    base_url: str = "",
 ) -> None:
     """Register export and save routes.
 
@@ -271,7 +271,7 @@ def register_export_routes(  # noqa: C901
 
             # Redirect to spec builder
             return RedirectResponse(
-                url=f"{router.prefix or '/spec-builder'}",
+                url=f"{base_url}{router.prefix}",
                 status_code=303,
             )
 

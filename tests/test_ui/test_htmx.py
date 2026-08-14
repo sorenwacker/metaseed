@@ -1273,3 +1273,45 @@ class TestSwitchProfileClearsTheVersion:
         facade = state.get_or_create_facade()
         assert facade.profile == "isa"
         assert facade.version != "1.1"
+
+
+class TestRedirectsHonorTheBaseUrl:
+    """Server-side redirects must carry the base_url prefix like links do.
+
+    Templates prefix every link with base_url, but three redirects hardcoded
+    unprefixed absolute paths, so under a "/hub" mount the browser was sent
+    outside the app: switch_profile to "/", load_example to "/dataset/...",
+    and the spec-builder import to "/spec-builder".
+    """
+
+    def _make_client(self) -> TestClient:
+        state = AppState()
+        app = create_app(state, base_url="/hub")
+        return TestClient(app)
+
+    def test_switch_profile_redirects_inside_the_prefix(self):
+        client = self._make_client()
+        response = client.get("/profile/isa", follow_redirects=False)
+        assert response.status_code == 303
+        assert response.headers["location"] == "/hub/"
+
+    def test_load_example_redirects_inside_the_prefix(self):
+        client = self._make_client()
+        response = client.get("/load-example/miappe/1.1", follow_redirects=False)
+        assert response.status_code == 303
+        assert response.headers["location"].startswith("/hub/dataset/")
+
+    def test_spec_builder_import_redirects_inside_the_prefix(self):
+        client = self._make_client()
+        yaml_payload = (
+            "name: tiny\nversion: '1.0'\nroot_entity: Thing\n"
+            "entities:\n  Thing:\n    fields:\n"
+            "      - name: title\n        type: string\n"
+        )
+        response = client.post(
+            "/spec-builder/import",
+            files={"file": ("tiny.yaml", yaml_payload, "application/x-yaml")},
+            follow_redirects=False,
+        )
+        assert response.status_code == 303
+        assert response.headers["location"] == "/hub/spec-builder"

@@ -32,12 +32,15 @@ EXAMPLES_DIR = UI_DIR.parent / "examples"
 def register_example_routes(
     app: FastAPI,
     get_state: Callable[[], AppState],
+    base_url: str = "",
 ) -> None:
     """Register example loading routes on the FastAPI app.
 
     Args:
         app: FastAPI application instance.
         get_state: Callable returning AppState.
+        base_url: URL prefix the app is mounted under (e.g. "/hub");
+            redirects must carry it or they escape the mount.
     """
 
     @app.get("/load-example/{profile_name}/{version}")
@@ -121,4 +124,6 @@ def register_example_routes(
         save_dataset(state, dataset_name)
         set_current_dataset_name(state, dataset_name)
 
-        return RedirectResponse(url=f"/dataset/{dataset_name}/edit", status_code=303)
+        return RedirectResponse(
+            url=f"{base_url}/dataset/{dataset_name}/edit", status_code=303
+        )

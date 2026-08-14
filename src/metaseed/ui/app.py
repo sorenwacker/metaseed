@@ -156,7 +156,7 @@ def create_app(state: AppState | None = None, base_url: str = "") -> FastAPI:
     register_export_routes(app, templates, get_state)
     register_import_routes(app, templates, get_state)
     register_validation_routes(app, templates, get_state)
-    register_example_routes(app, get_state)
+    register_example_routes(app, get_state, base_url=base_url)
     register_api_routes(app, get_state)
     register_explore_routes(app, templates, get_state, base_url=base_url)
     register_settings_routes(app, templates, get_state, base_url=base_url)

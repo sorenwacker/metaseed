@@ -218,7 +218,7 @@ def register_core_routes(
         state.facade = None
         state.reset()
 
-        return RedirectResponse(url="/", status_code=303)
+        return RedirectResponse(url=f"{base_url}/", status_code=303)
 
     @app.post("/reset", response_class=HTMLResponse)
     async def reset_state() -> HTMLResponse:
