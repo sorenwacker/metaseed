@@ -164,12 +164,20 @@ def update_parent_reference(
     child_helper = getattr(facade, child_type, None)
     child_ref = get_identifier(child_data, child_helper) or child_id
 
-    # Get or create the list field
+    # An ENTITY-typed field holds exactly one scalar reference; coercing it
+    # into a list silently corrupted its shape (entity fields are typed Any,
+    # so no model ever caught it) and stacked children onto an
+    # exactly-one-child field. The first child claims it; later children are
+    # still parented through the tree, just not re-referenced here.
+    if target_field in parent_helper.single_entity_fields:
+        if not parent_data.get(target_field):
+            parent_data[target_field] = child_ref
+        return cast("str", target_field)
+
     refs = parent_data.get(target_field, [])
     if not isinstance(refs, list):
         refs = [refs] if refs else []
 
-    # Add reference if not already present
     if child_ref not in refs:
         refs.append(child_ref)
         parent_data[target_field] = refs

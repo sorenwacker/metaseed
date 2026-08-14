@@ -157,6 +157,17 @@ class EntityHelper:
         return nested
 
     @property
+    def single_entity_fields(self: Self) -> set[str]:
+        """Nested fields that hold exactly ONE child (``type: entity``).
+
+        The subset of :attr:`nested_fields` whose value is a scalar reference,
+        not a list — a writer that appends to one of these corrupts its shape.
+        """
+        return {
+            f.name for f in self._spec.fields if f.type == FieldType.ENTITY and f.items
+        }
+
+    @property
     def owned_child_fields(self: Self) -> dict[str, str]:
         """Nested fields explicitly marked ``owns: true`` -- possibly empty.
 
