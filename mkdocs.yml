@@ -79,6 +79,7 @@ nav:
       - DiSSCo: profiles/dissco.md
       - ENA: profiles/ena.md
       - ISA: profiles/isa.md
+      - ISA-MIAPPE Combined: profiles/isa-miappe-combined.md
       - SEEK: profiles/seek.md
       - SEEK-ready template (ISA): profiles/seek-ready-template.md
       - MIAPPE: profiles/miappe.md

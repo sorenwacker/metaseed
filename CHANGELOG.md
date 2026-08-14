@@ -9,6 +9,11 @@
   never mounted it. `from metaseed.api import app` is gone with it.
 
 ### Added
+- The `isa-miappe-combined` profile ships with the package (#49): the ISA
+  framework extended with MIAPPE 1.2 phenotyping entities, reconciled in 0.2
+  to one identifier key, one Factor/FactorValue model, geolocation on Study
+  and material source inline on BiologicalMaterial (27 entities, 55 rules;
+  the naive 0.1 combination is retained). Documented under Profiles.
 - The DCAT export is SHACL-gated (#29): every suite run validates a sample
   export against the vendored DCAT-AP shapes (SEMICeu/dcat-ap_shacl, pinned
   by vendoring) through pySHACL, offline — with the class declarations the
