@@ -147,7 +147,15 @@ def validate(
         echo_error(f"Invalid YAML: {e}")
         raise typer.Exit(ExitCode.INPUT_ERROR) from None
 
-    errors = validate_data(data, entity, version, profile=profile)
+    from metaseed.specs.loader import SpecLoadError
+
+    try:
+        errors = validate_data(data, entity, version, profile=profile)
+    except SpecLoadError as e:
+        # An unknown entity/profile is the caller's mistake — a clear message
+        # and a clean exit, like every sibling command, not a traceback.
+        echo_error(str(e))
+        raise typer.Exit(ExitCode.INPUT_ERROR) from None
 
     # Profile-specific structural checks (e.g. PRIDE's submission.px rules)
     # declare themselves as `validate` actions; running them here makes them

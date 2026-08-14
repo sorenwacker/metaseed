@@ -386,3 +386,22 @@ class TestProfileValidateActionsRunFromTheCli:
 
         assert result.exit_code != 0
         assert "RAW" in result.output
+
+
+def test_validate_reports_an_unknown_entity_without_a_traceback(tmp_path):
+    """An unknown entity name is the caller's mistake, reported cleanly.
+
+    validate() raises SpecLoadError for an entity found nowhere; the CLI let
+    it escape as a traceback while sibling commands catch it and exit with a
+    clear message.
+    """
+    from metaseed.cli.app import app
+
+    path = tmp_path / "data.yaml"
+    path.write_text("title: T\n")
+
+    result = runner.invoke(app, ["validate", str(path), "--entity", "nope"])
+
+    assert result.exit_code != 0
+    assert result.exception is None or isinstance(result.exception, SystemExit)
+    assert "nope" in result.output
