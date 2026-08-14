@@ -149,6 +149,20 @@ def validate(
 
     errors = validate_data(data, entity, version, profile=profile)
 
+    # Profile-specific structural checks (e.g. PRIDE's submission.px rules)
+    # declare themselves as `validate` actions; running them here makes them
+    # reachable from a shell instead of only as library calls.
+    from metaseed.adapters import actions_for_profile
+
+    profile_checks = list(actions_for_profile(profile, kind="validate"))
+    if profile_checks:
+        from metaseed.api.client import MetaseedClient
+
+        client = MetaseedClient(profile, version)
+        client.create_entity(entity, data, skip_validation=True)
+        for action in profile_checks:
+            errors.extend(action.resolve()(client))
+
     if errors:
         typer.echo(f"Validation failed with {len(errors)} error(s):")
         for error in errors:

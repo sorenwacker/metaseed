@@ -31,11 +31,17 @@ metaseed entities --version 1.1
 
 ### validate
 
-Validate a MIAPPE metadata file:
+Validate a metadata file:
 
 ```bash
 metaseed validate <file> --entity investigation --version 1.1
 ```
+
+When the profile's adapter registers `validate` actions, they run after the
+entity validation: `--profile pride` also applies the ProteomeXchange
+submission rules (mandatory MTD fields, RAW/RESULT/SEARCH file mapping) and
+resolves CV terms; `--profile metabolights` resolves its CV terms. Their
+findings count toward the exit code like any other validation error.
 
 ### template
 

@@ -334,3 +334,55 @@ invalid:
             ["convert", str(input_path), str(output_path), "--entity", "nonexistent"],
         )
         assert result.exit_code != 0
+
+
+class TestProfileValidateActionsRunFromTheCli:
+    """PX structural checks are reachable from `metaseed validate`.
+
+    validate_submission/validate_cv existed only as library calls — per the
+    project rule, a capability no interface exposes is unfinished work. The
+    adapter registry now carries them as `validate` actions and the CLI runs
+    every one registered for the chosen profile.
+    """
+
+    def test_the_registry_offers_validate_actions(self):
+        from metaseed.adapters import actions_for_profile
+
+        pride = actions_for_profile("pride", kind="validate")
+        metabolights = actions_for_profile("metabolights", kind="validate")
+
+        assert {a.key for a in pride} >= {"pride-submission", "pride-cv"}
+        assert {a.key for a in metabolights} >= {"metabolights-cv"}
+
+    def test_a_pride_dataset_without_files_fails_the_submission_rules(self, tmp_path):
+        import yaml as yaml_module
+
+        from metaseed.cli.app import app
+
+        dataset = {
+            "project_title": "A title long enough to pass the check",
+            "project_description": "A description long enough to pass it too",
+            "sample_processing_protocol": "Long enough processing protocol text",
+            "data_processing_protocol": "Long enough data protocol text here",
+            "submission_type": "COMPLETE",
+            "files": [],
+        }
+        path = tmp_path / "dataset.yaml"
+        path.write_text(yaml_module.safe_dump(dataset))
+
+        result = runner.invoke(
+            app,
+            [
+                "validate",
+                str(path),
+                "--entity",
+                "Dataset",
+                "--profile",
+                "pride",
+                "--version",
+                "1.0",
+            ],
+        )
+
+        assert result.exit_code != 0
+        assert "RAW" in result.output

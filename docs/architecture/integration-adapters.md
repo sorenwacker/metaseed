@@ -29,11 +29,17 @@ was built first as the reference and the rest mirror it.
 ## The action registry
 
 `metaseed.adapters` is the single declarative list of what each adapter offers.
-An `Action` names a `kind` (`import`, `export`, `push`), a lazy
+An `Action` names a `kind` (`import`, `export`, `push`, `validate`), a lazy
 `"module:function"` `ref`, and a `surface` telling a host where to group its
 control. `actions_for_profile(profile, kind=..., surface=...)` is the only call a
 host needs: a new adapter capability appears in the web UI and in the hub by
 declaring itself here, never by editing a host.
+
+A `validate` action is a profile-specific structural check with the shape
+`fn(client: MetaseedClient) -> list[ValidationError]`. The CLI `validate`
+command runs every `validate` action registered for the chosen profile after
+the entity validation, so a check like PRIDE's submission.px rules is
+reachable from the command line rather than only as a library call.
 
 | Action | Kind | Profile | Takes |
 |--------|------|---------|-------|

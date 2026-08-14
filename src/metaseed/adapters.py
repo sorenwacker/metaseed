@@ -31,7 +31,7 @@ class ConfigField:
     """Optional input placeholder."""
 
 
-ActionKind = Literal["import", "export", "push"]
+ActionKind = Literal["import", "export", "push", "validate"]
 
 
 @dataclass(frozen=True)
@@ -50,7 +50,9 @@ class Action:
     ``"export-menu"`` vs ``"import-menu"`` vs a dataset toolbar), making placement
     data-driven instead of hard-coded per host. ``kind`` says what the action does
     (``export`` returns ``{filename: text}``; ``import`` builds a dataset; ``push``
-    writes to a live service).
+    writes to a live service; ``validate`` is a profile-specific structural
+    check ``fn(client) -> list[ValidationError]`` run by the CLI validate
+    command).
     """
 
     kind: ActionKind
@@ -186,6 +188,20 @@ ADAPTERS: tuple[AdapterInfo, ...] = (
                 input_label="ProteomeXchange accession",
                 input_placeholder="PXD000001",
             ),
+            Action(
+                "validate",
+                "pride-submission",
+                "PX submission rules",
+                "metaseed.pride.validate:validate_submission",
+                surface="validation",
+            ),
+            Action(
+                "validate",
+                "pride-cv",
+                "PRIDE CV terms",
+                "metaseed.pride.validate:validate_cv",
+                surface="validation",
+            ),
         ),
     ),
     AdapterInfo(
@@ -236,6 +252,13 @@ ADAPTERS: tuple[AdapterInfo, ...] = (
                 surface="import-menu",
                 input_label="MetaboLights study accession",
                 input_placeholder="MTBLS1",
+            ),
+            Action(
+                "validate",
+                "metabolights-cv",
+                "MetaboLights CV terms",
+                "metaseed.metabolights.validate:validate_cv",
+                surface="validation",
             ),
         ),
     ),
