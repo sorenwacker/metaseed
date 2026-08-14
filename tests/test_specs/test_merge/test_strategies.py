@@ -416,3 +416,48 @@ class TestPreferProfileStrategy:
         )
         resolved = strategy.resolve_field(diff, ["profile_a", "profile_b"])
         assert resolved.description == "A"
+
+
+class TestLeastRestrictiveHonorsAbsentConstraints:
+    """An unconstrained profile is the loosest state and must loosen the merge.
+
+    The permissive merge dropped constraints=None specs from consideration, so
+    profile A's enum or bound survived even though profile B allowed anything —
+    'Looser constraints win' from the class docstring, violated for exactly the
+    loosest input. Both strategies also returned empty-but-non-None
+    Constraints(), the state builder and loader deliberately collapse to None.
+    """
+
+    def _field(self, **constraints) -> FieldSpec:
+        built = Constraints(**constraints) if constraints else None
+        return FieldSpec(name="f", type=FieldType.STRING, constraints=built)
+
+    def test_an_unconstrained_profile_drops_the_enum(self) -> None:
+        strategy = LeastRestrictiveStrategy()
+        merged = strategy._merge_constraints_permissive(
+            [self._field(enum=["x", "y"]), self._field()]
+        )
+        assert merged is None or merged.enum is None
+
+    def test_a_bound_absent_anywhere_is_absent_from_the_merge(self) -> None:
+        strategy = LeastRestrictiveStrategy()
+        merged = strategy._merge_constraints_permissive(
+            [
+                self._field(max_length=10),
+                self._field(pattern="^x"),
+            ]
+        )
+        assert merged is None or (merged.max_length is None and merged.pattern is None)
+
+    def test_no_strategy_returns_an_empty_constraints_object(self) -> None:
+        permissive = LeastRestrictiveStrategy()._merge_constraints_permissive(
+            [self._field(), self._field()]
+        )
+        restrictive = MostRestrictiveStrategy()._merge_constraints_restrictive(
+            [
+                FieldSpec(name="f", type=FieldType.STRING, constraints=Constraints()),
+                self._field(),
+            ]
+        )
+        assert permissive is None
+        assert restrictive is None

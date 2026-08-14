@@ -197,6 +197,10 @@ class MostRestrictiveStrategy(MergeStrategy):
                 intersection = intersection & e
             merged.enum = sorted(intersection)
 
+        # An all-None object serializes as `constraints: {}`; builder and
+        # loader deliberately collapse that to None to keep hashes stable.
+        if merged == Constraints():
+            return None
         return merged
 
 
@@ -250,56 +254,44 @@ class LeastRestrictiveStrategy(MergeStrategy):
         Returns:
             Merged Constraints or None.
         """
-        all_constraints = [s.constraints for s in specs if s.constraints is not None]
-        if not all_constraints:
+        # A profile with NO constraint is the loosest possible state: under
+        # "looser wins" it drops every bound, not just its own. A bound is
+        # therefore kept only when EVERY profile declares it.
+        all_constraints = [s.constraints for s in specs]
+        if any(c is None for c in all_constraints):
             return None
+        present = [c for c in all_constraints if c is not None]
 
         merged = Constraints()
 
-        # Pattern: use first non-None
-        for c in all_constraints:
-            if c.pattern is not None:
-                merged.pattern = c.pattern
-                break
+        # Pattern: kept only when every profile requires the same one — a
+        # pattern half the profiles do not impose is not least restrictive.
+        patterns = {c.pattern for c in present}
+        if len(patterns) == 1:
+            merged.pattern = patterns.pop()
 
-        # Min values: use lowest (least restrictive)
-        min_lengths = [
-            c.min_length for c in all_constraints if c.min_length is not None
-        ]
-        if min_lengths:
-            merged.min_length = min(min_lengths)
+        def _all_or_none(values: list[Any], pick: Any) -> Any:
+            return pick(values) if all(v is not None for v in values) else None
 
-        minimums = [c.minimum for c in all_constraints if c.minimum is not None]
-        if minimums:
-            merged.minimum = min(minimums)
+        merged.min_length = _all_or_none([c.min_length for c in present], min)
+        merged.minimum = _all_or_none([c.minimum for c in present], min)
+        merged.min_items = _all_or_none([c.min_items for c in present], min)
+        merged.max_length = _all_or_none([c.max_length for c in present], max)
+        merged.maximum = _all_or_none([c.maximum for c in present], max)
+        merged.max_items = _all_or_none([c.max_items for c in present], max)
 
-        min_items = [c.min_items for c in all_constraints if c.min_items is not None]
-        if min_items:
-            merged.min_items = min(min_items)
-
-        # Max values: use highest (least restrictive)
-        max_lengths = [
-            c.max_length for c in all_constraints if c.max_length is not None
-        ]
-        if max_lengths:
-            merged.max_length = max(max_lengths)
-
-        maximums = [c.maximum for c in all_constraints if c.maximum is not None]
-        if maximums:
-            merged.maximum = max(maximums)
-
-        max_items = [c.max_items for c in all_constraints if c.max_items is not None]
-        if max_items:
-            merged.max_items = max(max_items)
-
-        # Enum: union values
-        enums = [set(c.enum) for c in all_constraints if c.enum is not None]
-        if enums:
+        # Enum: union, and only when every profile has one — an enum-less
+        # profile accepts any value, so the merge must too.
+        if all(c.enum is not None for c in present):
             union: set[Any] = set()
-            for e in enums:
-                union = union | e
+            for c in present:
+                union |= set(c.enum or [])
             merged.enum = sorted(union) if union else None
 
+        # An all-None object serializes as `constraints: {}`; builder and
+        # loader deliberately collapse that to None to keep hashes stable.
+        if merged == Constraints():
+            return None
         return merged
 
 
