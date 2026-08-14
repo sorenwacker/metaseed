@@ -1251,3 +1251,25 @@ class TestHelperFunctionIntegration:
         response = client.get("/form/Investigation")
         assert response.status_code == 200
         # Should still show profile options even if some aren't in display info dict
+
+
+class TestSwitchProfileClearsTheVersion:
+    """Switching profiles must not carry the old profile's version along.
+
+    switch_profile set profile but left state.version, so after loading a
+    miappe 1.1 example a switch to isa built ProfileFacade("isa", "1.1") —
+    a version that does not exist — and every facade-dependent endpoint
+    500'd until something else reset the version.
+    """
+
+    def test_the_next_facade_resolves_the_new_profiles_latest(self, client):
+        state = client.app.state.ui_state
+        state.profile = "miappe"
+        state.version = "1.1"
+
+        response = client.get("/profile/isa", follow_redirects=False)
+        assert response.status_code == 303
+
+        facade = state.get_or_create_facade()
+        assert facade.profile == "isa"
+        assert facade.version != "1.1"

@@ -211,6 +211,10 @@ def register_core_routes(
             raise HTTPException(status_code=400, detail=f"Unknown profile: {name}")
 
         state.profile = name
+        # reset() deliberately preserves version for callers that set it —
+        # this caller does not, and a stale version from the previous profile
+        # made the next facade build e.g. isa v1.1, which does not exist.
+        state.version = None
         state.facade = None
         state.reset()
 
