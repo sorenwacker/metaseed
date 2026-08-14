@@ -176,7 +176,15 @@ class VocabularyStore:
         if not directory.is_dir():
             return store
         for path in sorted(directory.glob("*.json")):
-            store.add(LocalVocabulary.from_file(path))
+            try:
+                store.add(LocalVocabulary.from_file(path))
+            except (ValueError, OSError) as exc:
+                # Name the file: the raw JSONDecodeError surfaced on the
+                # first term lookup with a traceback pointing nowhere near
+                # the configuration mistake that caused it.
+                raise ValueError(
+                    f"Vocabulary file {path} could not be loaded: {exc}"
+                ) from exc
         return store
 
     def add(self, vocabulary: LocalVocabulary) -> None:

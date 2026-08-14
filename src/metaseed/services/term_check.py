@@ -246,7 +246,18 @@ def check_term(
     if source is None:
         from metaseed.services.terms import get_term_source
 
-        source = get_term_source()
+        try:
+            source = get_term_source()
+        except Exception as exc:
+            # A source that cannot even be built (e.g. a malformed local
+            # vocabulary file) is a configuration problem, not a verdict on
+            # this value. Crashing here buried the cause deep in a validator.
+            return TermVerdict(
+                Outcome.NOT_CHECKED,
+                f"'{value}' could not be checked: the term sources could not "
+                f"be loaded ({exc}).",
+                allowed,
+            )
 
     try:
         term = source.get_term_sync(value)
