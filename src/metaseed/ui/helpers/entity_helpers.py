@@ -142,17 +142,19 @@ def extract_nested_from_tree(
             if child.entity_type in type_to_field:
                 continue  # Already handled by nested array
 
-            # Check if child has a reference field pointing to this parent
+            # Check if child has a reference field pointing to this parent —
+            # through the public reference_fields property (the same one
+            # validation.py uses), not by hand-parsing the private _spec.
             child_helper = getattr(facade, child.entity_type, None)
             if child_helper:
-                for field in child_helper._spec.fields:
-                    if field.reference and field.reference.startswith(
-                        f"{parent_type}."
-                    ):
-                        # This child type references our parent type
-                        # Use pluralized entity type as field name
-                        field_name = child.entity_type.lower() + "s"
-                        type_to_field[child.entity_type] = field_name
+                for target_type, _target in child_helper.reference_fields.values():
+                    if target_type == parent_type:
+                        # Synthetic grouping key; internal to this dict, but
+                        # naive pluralization ("Study" -> "studys") reads as
+                        # a guessed field name, which this module family
+                        # promises never to do.
+                        key = f"_referenced_{child.entity_type.lower()}"
+                        type_to_field[child.entity_type] = key
                         break
 
     for child in node.children:
