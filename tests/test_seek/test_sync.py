@@ -16,6 +16,7 @@ import pytest
 from metaseed import MetaseedClient
 from metaseed.seek.ports import IsaWriter
 from metaseed.seek.sync import sync_dataset_to_seek
+from metaseed.specs.loader import SpecLoader
 
 
 class _AnyTemplate(dict):
@@ -755,3 +756,57 @@ class TestPushingTwiceDoesNotDuplicate:
         again = sync_dataset_to_seek(second, _dataset(), project_id="1")
 
         assert set(again.investigations.values()) == {"1"}
+
+
+class TestAnnotationOnlyEntitiesAreSynced:
+    """The sync resolves JERM roles from annotations like every other path.
+
+    fairds/preview/roles all pass entity.ontology_term to entity_jerm_class
+    (the #234 fix), but place_node and the two sync.py sites computed the
+    class from the NAME alone — so an entity called Measurement annotated as
+    JERM:Assay planned into the chain, was exported by FDS, and was then
+    skipped by the sync with 'has no SEEK role'.
+    """
+
+    def _client_with_annotated_assay(self) -> MetaseedClient:
+        base = SpecLoader().load_profile("3.0", "seek-ready-template")
+        spec = base.model_copy(deep=True)
+        # Rename the Assay entity to a name outside the JERM name map, keeping
+        # its JERM annotation as the only way to resolve its role.
+        assay = spec.entities.pop("Assay")
+        assay = assay.model_copy(update={"ontology_term": "JERM:Assay", "seek": None})
+        spec.entities["Measurement"] = assay
+        study_fields = []
+        for study_field in spec.entities["Study"].fields:
+            if study_field.items == "Assay":
+                study_field = study_field.model_copy(update={"items": "Measurement"})
+            study_fields.append(study_field)
+        spec.entities["Study"] = spec.entities["Study"].model_copy(
+            update={"fields": study_fields}
+        )
+
+        client = MetaseedClient.from_spec(spec)
+        inv = client.create_entity(
+            "Investigation",
+            {"identifier": "INV1", "title": "Inv"},
+            skip_validation=True,
+        )
+        study = client.create_entity(
+            "Study",
+            {"identifier": "STU1", "title": "Study"},
+            parent_id=inv.id,
+            skip_validation=True,
+        )
+        client.create_entity(
+            "Measurement",
+            {"identifier": "M1", "title": "Measured"},
+            parent_id=study.id,
+            skip_validation=True,
+        )
+        return client
+
+    def test_an_annotated_assay_is_placed(self) -> None:
+        seek = _FakeSeek()
+        sync_dataset_to_seek(seek, self._client_with_annotated_assay(), project_id="1")
+
+        assert _of_kind(seek, "assay"), "the annotation-only Assay must be exported"

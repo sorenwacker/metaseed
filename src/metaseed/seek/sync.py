@@ -23,7 +23,7 @@ from typing import TYPE_CHECKING, Any
 
 from metaseed.seek.context import SyncContext, SyncResult
 from metaseed.seek.placement import place_node, placeholder_sample_type_id
-from metaseed.seek.roles import entity_jerm_class
+from metaseed.seek.roles import jerm_class_in_profile
 from metaseed.seek.templates import sample_chain_entities
 from metaseed.seek.values import base_url, file_fields, profile_of
 
@@ -123,7 +123,7 @@ def sync_dataset_to_seek(
     assay_role_entities = {name for name, role in roles.items() if role == "Assay"} | {
         name
         for name in profile.entities
-        if entity_jerm_class(name, roles.get(name)) == "Assay"
+        if jerm_class_in_profile(profile, name, roles) == "Assay"
     }
     assay_reference_fields = {
         name: [
@@ -178,7 +178,7 @@ def sync_dataset_to_seek(
         assay_children = [
             child
             for child in node.children
-            if entity_jerm_class(child.entity_type, ctx.roles.get(child.entity_type))
+            if jerm_class_in_profile(ctx.profile, child.entity_type, ctx.roles)
             == "Assay"
         ]
         for child in [

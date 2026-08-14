@@ -10,6 +10,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from metaseed.specs.schema import ProfileSpec
 
 # metaseed entity type -> (JERM class, URI id-prefix). Only ISA-structural and
@@ -78,6 +80,21 @@ def role_from_annotation(ontology_term: str | None) -> str | None:
         return None
     local = ontology_term.rsplit("#", 1)[-1].rsplit("/", 1)[-1].rsplit(":", 1)[-1]
     return ANNOTATION_CLASSES.get(local)
+
+
+def jerm_class_in_profile(
+    profile: ProfileSpec, entity_type: str, roles: Mapping[str, str | None]
+) -> str | None:
+    """`entity_jerm_class` with the entity's own annotation supplied.
+
+    The sync computed the class from the NAME alone at three sites while
+    every other path passed ``entity.ontology_term`` — so an annotation-only
+    entity was planned into the Sample Type chain and exported by FDS, then
+    skipped by the very sync that planned it.
+    """
+    entity = profile.entities.get(entity_type)
+    ontology_term = entity.ontology_term if entity is not None else None
+    return entity_jerm_class(entity_type, roles.get(entity_type), ontology_term)
 
 
 def entity_jerm_class(

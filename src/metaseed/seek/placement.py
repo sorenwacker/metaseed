@@ -15,7 +15,7 @@ from metaseed.seek.isa_types import (
     sample_type_attributes,
 )
 from metaseed.seek.payloads import ASSAY_CLASS_IDS, sample_attribute
-from metaseed.seek.roles import entity_jerm_class
+from metaseed.seek.roles import jerm_class_in_profile
 from metaseed.seek.templates import CHAIN_LEVELS, seek_level_for, template_title
 from metaseed.seek.values import sample_data, title_of
 
@@ -43,7 +43,7 @@ def place_node(
     """
     r = ctx.result
     values = ctx.values_by_node.get(node.id, {})
-    jerm_class = entity_jerm_class(node.entity_type, ctx.roles.get(node.entity_type))
+    jerm_class = jerm_class_in_profile(ctx.profile, node.entity_type, ctx.roles)
     title = title_of(node, values)
     description = values.get("description")
     next_investigation, next_study, next_assay = investigation_id, study_id, assay_id
