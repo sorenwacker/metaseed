@@ -249,9 +249,12 @@ def register_table_routes(  # noqa: C901
             item = items[idx]
             if isinstance(item, dict):
                 for key, value in form_data.items():
-                    # Only accept valid child entity fields
-                    if not key.startswith("_") and (
-                        not valid_fields or key in valid_fields
+                    # Only accept valid child entity fields; a non-string
+                    # form value is a file part, not a cell value.
+                    if (
+                        isinstance(value, str)
+                        and not key.startswith("_")
+                        and (not valid_fields or key in valid_fields)
                     ):
                         item[key] = value
 
@@ -268,8 +271,10 @@ def register_table_routes(  # noqa: C901
         facade = state.get_or_create_facade()
 
         form_data = await request.form()
-        field = form_data.get("bulk-edit-field", "")
-        value = form_data.get("bulk-edit-value", "")
+        field_raw = form_data.get("bulk-edit-field", "")
+        field = field_raw if isinstance(field_raw, str) else ""
+        value_raw = form_data.get("bulk-edit-value", "")
+        value = value_raw if isinstance(value_raw, str) else ""
         indices_raw = form_data.get("indices", "")
         indices_str = indices_raw if isinstance(indices_raw, str) else ""
 
@@ -280,16 +285,6 @@ def register_table_routes(  # noqa: C901
             indices = [int(i.strip()) for i in indices_str.split(",") if i.strip()]
         except ValueError:
             return error_response(request, templates, "Invalid indices format")
-
-        _, items = get_items_store(state, parent_entity_type, field_name)
-
-        updated_count = 0
-        for idx in indices:
-            if 0 <= idx < len(items):
-                item = items[idx]
-                if isinstance(item, dict):
-                    item[field] = value
-                    updated_count += 1
 
         try:
             helper = getattr(facade, parent_entity_type)
@@ -304,6 +299,29 @@ def register_table_routes(  # noqa: C901
                 status_code=404,
                 detail=f"'{field_name}' is not a nested field of {parent_entity_type}",
             )
+
+        # Same valid-field gate as the cell editor: all three routes mutate
+        # the same items store, so a bulk edit must not write a field name
+        # the cell editor would refuse.
+        child_helper = getattr(facade, nested_entity_type, None)
+        valid_fields = set(child_helper.all_fields) if child_helper else set()
+        if field.startswith("_") or (valid_fields and field not in valid_fields):
+            return error_response(
+                request,
+                templates,
+                f"'{field}' is not a field of {nested_entity_type}",
+            )
+
+        _, items = get_items_store(state, parent_entity_type, field_name)
+
+        updated_count = 0
+        for idx in indices:
+            if 0 <= idx < len(items):
+                item = items[idx]
+                if isinstance(item, dict):
+                    item[field] = value
+                    updated_count += 1
+
         col_info = get_table_column_info(facade, nested_entity_type)
 
         reference_fields = get_reference_fields(
@@ -351,6 +369,7 @@ def register_table_routes(  # noqa: C901
     ) -> HTMLResponse:
         """Apply pasted cell values from clipboard."""
         state = get_state()
+        facade = state.get_or_create_facade()
         form_data = await request.form()
         changes_raw = form_data.get("changes", "[]")
         changes_json = changes_raw if isinstance(changes_raw, str) else "[]"
@@ -360,15 +379,39 @@ def register_table_routes(  # noqa: C901
         except json.JSONDecodeError:
             return error_response(request, templates, "Invalid paste data format")
 
+        if not isinstance(changes, list):
+            return error_response(request, templates, "Invalid paste data format")
+
         _, items = get_items_store(state, parent_entity_type, field_name)
+
+        # Same valid-field gate as the cell editor: a pasted bogus field name
+        # (or the internal '_idx' marker) must not pollute the rows, and a
+        # malformed entry is skipped, not a 500.
+        entity_type = infer_entity_type_from_field(
+            facade, parent_entity_type, field_name
+        )
+        valid_fields: set[str] = set()
+        if entity_type:
+            child_helper = getattr(facade, entity_type, None)
+            if child_helper:
+                valid_fields = set(child_helper.all_fields)
 
         updated_count = 0
         for change in changes:
+            if not isinstance(change, dict):
+                continue
             idx = change.get("idx")
             field = change.get("field")
             value = change.get("value")
 
-            if idx is not None and field and 0 <= idx < len(items):
+            if not isinstance(idx, int) or isinstance(idx, bool):
+                continue
+            if not isinstance(field, str) or field.startswith("_"):
+                continue
+            if valid_fields and field not in valid_fields:
+                continue
+
+            if 0 <= idx < len(items):
                 item = items[idx]
                 if isinstance(item, dict):
                     item[field] = value

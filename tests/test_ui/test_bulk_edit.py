@@ -390,3 +390,61 @@ class TestBulkEditWithEmptyTable:
             data={"changes": json.dumps(changes)},
         )
         assert response.status_code == 200
+
+
+class TestAllTableRoutesGateTheirInput:
+    """bulk and paste must apply the same valid-field gate as the cell editor.
+
+    All three routes mutate the same items store; a pasted or bulk-edited
+    bogus field name silently polluted rows the cell editor would have
+    rejected, paste could even overwrite the internal '_idx' marker, and a
+    malformed paste entry crashed with an unhandled 500.
+    """
+
+    def test_bulk_update_rejects_an_unknown_field(self, client_with_studies):
+        response = client_with_studies.post(
+            "/table/Investigation/studies/bulk",
+            data={
+                "bulk-edit-field": "not_a_field",
+                "bulk-edit-value": "x",
+                "indices": "0",
+            },
+        )
+        state = client_with_studies.app.state.ui_state
+        assert "not_a_field" not in state.current_nested_items["studies"][0]
+        assert response.status_code in (200, 400)
+        assert b"not_a_field" in response.content  # named in the error
+
+    def test_paste_rejects_an_unknown_field(self, client_with_studies):
+        response = client_with_studies.post(
+            "/table/Investigation/studies/paste",
+            data={"changes": json.dumps([{"idx": 0, "field": "_idx", "value": "9"}])},
+        )
+        assert response.status_code == 200
+        state = client_with_studies.app.state.ui_state
+        assert "_idx" not in state.current_nested_items["studies"][0]
+
+    def test_paste_survives_malformed_entries(self, client_with_studies):
+        response = client_with_studies.post(
+            "/table/Investigation/studies/paste",
+            data={"changes": json.dumps(["not a change", {"idx": "0"}])},
+        )
+        assert response.status_code == 200  # friendly response, not a 500
+
+    def test_paste_survives_a_non_list_payload(self, client_with_studies):
+        response = client_with_studies.post(
+            "/table/Investigation/studies/paste",
+            data={"changes": json.dumps({"idx": 0})},
+        )
+        assert response.status_code == 200
+
+    def test_cell_edit_ignores_file_uploads(self, client_with_studies):
+        """A file part under a valid field name must not become the value."""
+        response = client_with_studies.post(
+            "/table/Investigation/studies/row/0/cell",
+            files={"title": ("evil.bin", b"\x00", "application/octet-stream")},
+        )
+        assert response.status_code == 200
+        state = client_with_studies.app.state.ui_state
+        item = state.current_nested_items["studies"][0]
+        assert isinstance(item["title"], str), f"stored {type(item['title'])}"
