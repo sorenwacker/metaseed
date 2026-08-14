@@ -29,6 +29,8 @@ from metaseed.seek.naming import property_uri
 from metaseed.seek.roles import sample_role_entities
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from metaseed.seek.client import SeekClient
     from metaseed.services.term_check import TermSource
     from metaseed.specs.schema import FieldSpec, ProfileSpec
@@ -244,8 +246,28 @@ def resolve_cv_ids(client: SeekClient, profile: ProfileSpec) -> dict[str, str]:
                 _cv_title(profile, entity_name, field)
             )
             if existing is not None:
-                ids[field.name] = existing
+                # Keyed "Entity.field", keeping the namespacing _cv_title
+                # built: a bare field name reused across entities collapsed
+                # two distinct SEEK CVs into whichever entity iterated last.
+                ids[f"{entity_name}.{field.name}"] = existing
     return ids
+
+
+def cv_ids_for_entity(cv_ids: Mapping[str, str], entity_name: str) -> dict[str, str]:
+    """The one entity's slice of :func:`resolve_cv_ids`, keyed by bare field.
+
+    ``sample_type_attributes`` renders one entity's fields, so it looks
+    vocabularies up by field name; this narrows the namespaced mapping to
+    that entity (passing bare legacy keys through unchanged).
+    """
+    narrowed: dict[str, str] = {}
+    prefix = f"{entity_name}."
+    for key, value in cv_ids.items():
+        if key.startswith(prefix):
+            narrowed[key[len(prefix) :]] = value
+        elif "." not in key:
+            narrowed.setdefault(key, value)
+    return narrowed
 
 
 def execute_provisioning_plan(

@@ -372,3 +372,66 @@ class TestPropertyUriEscaping:
 
         assert "schema.org/Source Name" not in text, "an unserializable URI"
         assert property_uri("Source Name").rsplit("/", 1)[-1] in text
+
+
+class TestCvIdsAreNamespacedByEntity:
+    """resolve_cv_ids must not flatten the entity namespacing _cv_title built.
+
+    Keying by bare field name meant two sample-role entities with same-named
+    enum fields (distinct CVs in SEEK) collided: the last entity iterated won
+    and every level's attributes bound to that one CV id, silently validating
+    against the wrong vocabulary.
+    """
+
+    class _Client:
+        def find_controlled_vocab_id_by_title(self, title: str) -> str | None:
+            return f"id-for::{title}"
+
+    def _profile_with_shared_field_name(self):
+        from metaseed.specs.schema import (
+            Constraints,
+            EntityDefSpec,
+            FieldSpec,
+            FieldType,
+            ProfileSpec,
+            SeekEntityConfig,
+        )
+
+        def entity(enum):
+            return EntityDefSpec(
+                seek=SeekEntityConfig(role="Sample"),
+                fields=[
+                    FieldSpec(
+                        name="status",
+                        type=FieldType.STRING,
+                        constraints=Constraints(enum=enum),
+                    )
+                ],
+            )
+
+        return ProfileSpec(
+            name="p",
+            version="1.0",
+            root_entity="Source",
+            entities={
+                "Source": entity(["raw", "washed"]),
+                "Sample": entity(["frozen", "fresh"]),
+            },
+        )
+
+    def test_same_named_fields_on_two_entities_do_not_collide(self):
+        from metaseed.seek.provision import resolve_cv_ids
+
+        ids = resolve_cv_ids(self._Client(), self._profile_with_shared_field_name())
+
+        distinct = set(ids.values())
+        assert len(distinct) == 2, f"the two CVs collapsed into one: {ids}"
+
+    def test_each_entity_reads_back_its_own_vocabulary(self):
+        from metaseed.seek.provision import cv_ids_for_entity, resolve_cv_ids
+
+        ids = resolve_cv_ids(self._Client(), self._profile_with_shared_field_name())
+
+        source = cv_ids_for_entity(ids, "Source")
+        sample = cv_ids_for_entity(ids, "Sample")
+        assert source["status"] != sample["status"]

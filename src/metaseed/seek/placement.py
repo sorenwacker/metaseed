@@ -15,6 +15,7 @@ from metaseed.seek.isa_types import (
     sample_type_attributes,
 )
 from metaseed.seek.payloads import ASSAY_CLASS_IDS, sample_attribute
+from metaseed.seek.provision import cv_ids_for_entity
 from metaseed.seek.roles import jerm_class_in_profile
 from metaseed.seek.templates import CHAIN_LEVELS, seek_level_for, template_title
 from metaseed.seek.values import sample_data, title_of
@@ -158,6 +159,13 @@ def chain_entity(ctx: SyncContext, level: int) -> EntityDefSpec | None:
     return ctx.profile.entities.get(ctx.chain_entities[level])
 
 
+def chain_entity_name(ctx: SyncContext, level: int) -> str:
+    """The chain entity's NAME at ``level``, or "" past the chain's end."""
+    if level >= len(ctx.chain_entities):
+        return ""
+    return ctx.chain_entities[level]
+
+
 def template_id_for(ctx: SyncContext, level: str) -> str | None:
     """The Template id for one level of the chain, or ``None`` with an error.
 
@@ -221,7 +229,7 @@ def place_study(ctx: SyncContext, title: str, investigation_id: str) -> str:
             source_entity,
             level="source",
             isa_tag_ids=ctx.isa_tag_ids,
-            cv_ids=ctx.cv_ids,
+            cv_ids=cv_ids_for_entity(ctx.cv_ids, chain_entity_name(ctx, 0)),
         ),
         sharing=ctx.sharing,
         source_template_id=template_id_for(ctx, "source"),
@@ -231,7 +239,7 @@ def place_study(ctx: SyncContext, title: str, investigation_id: str) -> str:
             collection_entity,
             level="sample_collection",
             isa_tag_ids=ctx.isa_tag_ids,
-            cv_ids=ctx.cv_ids,
+            cv_ids=cv_ids_for_entity(ctx.cv_ids, chain_entity_name(ctx, 1)),
             linked_sample_type_id=ctx.placeholder_type_id,
         ),
     )
@@ -279,7 +287,7 @@ def place_assay(
             entity,
             level="assay",
             isa_tag_ids=ctx.isa_tag_ids,
-            cv_ids=ctx.cv_ids,
+            cv_ids=cv_ids_for_entity(ctx.cv_ids, chain_entity_name(ctx, 2)),
             linked_sample_type_id=collection_id,
         ),
     )
