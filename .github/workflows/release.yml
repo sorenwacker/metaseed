@@ -77,6 +77,15 @@ jobs:
       - name: Build package
         run: uv build
 
+      - name: Generate SBOM (CycloneDX, full locked closure)
+        # The bill of materials for what this release actually resolves —
+        # base, every extra, and dev — so a consumer or scanner can answer
+        # "does 0.x ship package P at version V" without reconstructing the
+        # environment.
+        run: |
+          uv export --format requirements-txt --no-emit-project --no-hashes --all-extras             > /tmp/requirements-sbom.txt
+          uvx --python 3.12 --from cyclonedx-bom cyclonedx-py requirements /tmp/requirements-sbom.txt             --output-file dist/sbom.cdx.json
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -158,3 +167,8 @@ jobs:
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          # Explicit, though it is the default under Trusted Publishing:
+          # PEP 740 attestations are generated and uploaded with the
+          # distributions, so a consumer can verify what CI built.
+          attestations: true

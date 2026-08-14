@@ -14,6 +14,13 @@
   to one identifier key, one Factor/FactorValue model, geolocation on Study
   and material source inline on BiologicalMaterial (27 entities, 55 rules;
   the naive 0.1 combination is retained). Documented under Profiles.
+- Supply-chain closure for releases (#65): Dependabot update PRs (pip and
+  actions, weekly, grouped) carry fixes through the same gated CI as any
+  change; every release attaches a CycloneDX SBOM of the full locked closure
+  (base + all extras + dev); and PEP 740 attestations are explicit on the
+  Trusted-Publishing upload. The rest of the acceptance already held: PRs
+  are blocked on the lint/format/mypy/pytest gate, coverage publishes on
+  release, and pip-audit sweeps the locked closure.
 - The DCAT export is SHACL-gated (#29): every suite run validates a sample
   export against the vendored DCAT-AP shapes (SEMICeu/dcat-ap_shacl, pinned
   by vendoring) through pySHACL, offline — with the class declarations the
