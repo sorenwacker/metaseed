@@ -43,7 +43,10 @@ class FileEntityRepository(EntityRepository):
     Stores entities as JSON files with hierarchy metadata.
     Multiple processes can share the same file for state synchronization.
 
-    File format:
+    File format — a FLAT entity list; hierarchy is carried by ``parent_id``
+    only. ``_load`` iterates the top-level list and does not recurse, so a
+    file written with children nested inside entities would have every
+    nested entity silently dropped:
     {
         "profile": "miappe",
         "version": "1.2",
@@ -54,8 +57,7 @@ class FileEntityRepository(EntityRepository):
                 "entity_type": "Investigation",
                 "label": "My Investigation",
                 "data": { ... },
-                "parent_id": null,
-                "children": [ ... ]
+                "parent_id": null
             }
         ]
     }
@@ -70,7 +72,9 @@ class FileEntityRepository(EntityRepository):
         """Initialize the file repository.
 
         Args:
-            dataset_path: Path to the JSON file. If None, uses default location.
+            dataset_path: Path to the JSON file. If None, the repository holds
+                data in memory only and every save is skipped with a warning —
+                use :meth:`from_dataset_name` for the default location.
             profile: Initial profile name.
             version: Initial version, None for latest.
         """

@@ -16,8 +16,11 @@ class ModelNotFoundError(Exception):
 class ModelRegistry:
     """Registry for storing and retrieving generated models.
 
-    Models are keyed by (name, version) tuples to support multiple
-    profile versions.
+    Models are keyed by ``(name, version)`` tuples. The registry does not
+    interpret ``version``: its only production caller (``models.get_model``)
+    passes the composite ``"profile:version"`` cache key (e.g.
+    ``"miappe:1.2"``), so filters like ``list_models(version="1.2")`` will not
+    match production entries — filter on the composite key instead.
     """
 
     def __init__(self: Self) -> None:
@@ -29,7 +32,7 @@ class ModelRegistry:
 
         Args:
             name: Model name (e.g., "Investigation").
-            version: Profile version (e.g., "1.1").
+            version: Version key; in production the composite "profile:version".
             model: Pydantic model class to register.
         """
         self._models[(name, version)] = model

@@ -484,8 +484,10 @@ class EntityHelper:
             If you need to reuse the input data, make a deep copy first:
             ``import copy; data = copy.deepcopy(original_data)``
 
-            Ontology term fields are validated against OLS4. Invalid terms
-            generate warnings but do not prevent entity creation.
+            Ontology terms are NOT checked at construction — that check cost
+            one network request per entity and was deliberately moved to the
+            validation pass. Use :meth:`validate_ontology_terms` (or dataset
+            validation) to check them.
 
             When skip_validation=True, the instance is created without type
             checking. Call validate_entity() separately to check for issues.

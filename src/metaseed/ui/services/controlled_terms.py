@@ -8,16 +8,17 @@ allowed values and refuses anything else, with no network and no knowledge of
 ontologies required.
 
 The approach is RightField's (Wolstencroft et al., 2011, *Bioinformatics*
-27(14):2021): a curator marks up the template, the scientist fills it in
-natively, and the terms' identifiers travel in a hidden sheet so nothing
-semantic is lost to a label. Two of its findings are followed here deliberately:
+27(14):2021): a curator marks up the template and the scientist fills it in
+natively. One of its findings is followed, one is only prepared for:
 
-- The identifiers are kept, not just the labels. A label is ambiguous across
-  ontologies and unusable as provenance; the IRI is what a downstream system
-  can resolve.
 - The terms are frozen into the workbook at export. A series of experiments has
   to be annotated against the same vocabulary even if the live ontology moves
   underneath it, so the sheet records the version it captured.
+- The hidden sheet has an identifier column, but it is EMPTY today:
+  ``FieldSpec.options`` and enum constraints carry labels only, so there is no
+  IRI to write. The column exists so a spec format that gains term IRIs can
+  fill it without changing the workbook layout — RightField's
+  keep-the-identifiers rule is the goal, not yet the behavior.
 
 What is *not* attempted: embedding an ontology. A field that names NCBI
 Taxonomy cannot carry its two million names into a spreadsheet, and a dropdown
