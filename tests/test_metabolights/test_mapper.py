@@ -117,3 +117,48 @@ def test_assay_references_raw_files_as_urls_not_downloads():
 def test_empty_document_yields_empty_dataset():
     assert build_dataset({}).serialize()["entities"] == []
     assert build_dataset({"isaInvestigation": {}}).serialize()["entities"] == []
+
+
+class TestMafSelectionHonorsTheDeclaredFile:
+    """Each assay imports metabolites from ITS OWN declared MAF.
+
+    The MAF was selected by "the sole m_* file": a multi-MAF study (the
+    normal MetaboLights layout for multi-assay studies) imported no
+    metabolites at all, and a single-MAF multi-assay study attached the same
+    metabolites to every assay — even though each assay's exact MAF name was
+    parsed from its comments and stored beside the choice being made.
+    """
+
+    _MAF = (
+        "database_identifier\tchemical_formula\tsmiles\tinchi\t"
+        "metabolite_identification\n"
+        "CHEBI:{n}\tC6H12O6\t-\t-\tmetabolite-{n}\n"
+    )
+
+    def _study_with_two_assays(self) -> dict:
+        study = _study()
+        assay = json.loads(
+            json.dumps(study["isaInvestigation"]["studies"][0]["assays"][0])
+        )
+        assay["filename"] = "a_second.txt"
+        assay["comments"] = [
+            {"name": "Metabolite Assignment File", "value": "m_second_maf.tsv"}
+        ]
+        study["isaInvestigation"]["studies"][0]["assays"].append(assay)
+        return study
+
+    def test_two_assays_each_get_their_own_maf(self):
+        study = self._study_with_two_assays()
+        isatab = {
+            "m_MTBLS1_NMR_metabolite_profiling_v2_maf.tsv": self._MAF.format(n=1),
+            "m_second_maf.tsv": self._MAF.format(n=2),
+        }
+
+        client = build_dataset(study, isatab_files=isatab)
+
+        assays = _by_type(client, "Assay")
+        metabolites = _by_type(client, "Metabolite")
+        assert metabolites, "a multi-MAF study must import metabolites"
+        names = {m.get("metabolite_identification") for m in metabolites}
+        assert names == {"metabolite-1", "metabolite-2"}
+        assert len(assays) == 2

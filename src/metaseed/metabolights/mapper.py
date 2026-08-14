@@ -69,6 +69,20 @@ def _isatab_for_assay(files: dict[str, str], assay_filename: str | None) -> str 
     return _isatab_for_prefix(files, "a_")
 
 
+def _maf_for_assay(files: dict[str, str], maf_filename: str | None) -> str | None:
+    """The assay's MAF text: its declared name first, else the sole ``m_*``.
+
+    Selecting only "the sole m_* file" meant a multi-MAF study — the normal
+    MetaboLights layout for multi-assay studies — imported no metabolites at
+    all, while a single-MAF multi-assay study attached the same metabolites
+    to every assay. The declared name is parsed from the assay's comments and
+    is the same key the FTP listing uses.
+    """
+    if maf_filename and maf_filename in files:
+        return files[maf_filename]
+    return _isatab_for_prefix(files, "m_")
+
+
 def _isatab_characteristic(
     characteristics: list[dict[str, Any]], category: str
 ) -> str | None:
@@ -530,6 +544,8 @@ def _add_assay(
         assay_file = _isatab_for_assay(isatab_files, filename)
         if assay_file:
             _add_data_files_from_isatab(client, assay_file, parent_id=assay_entity.id)
-    maf_file = _isatab_for_prefix(isatab_files, "m_")
+    maf_file = _maf_for_assay(
+        isatab_files, _maf_from_comments(assay.get("comments") or [])
+    )
     if maf_file:
         _add_metabolites_from_isatab(client, maf_file, parent_id=assay_entity.id)
