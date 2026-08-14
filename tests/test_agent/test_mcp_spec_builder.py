@@ -758,3 +758,23 @@ class TestSpecCompare:
         result = call(server, "spec_compare", profile="miappe", version="1.2")
 
         assert "MAJOR.MINOR" in result["error"]
+
+
+class TestMultiEntityRulesAreAuthorable:
+    """The declared applies_to schema admits a list, as the spec schema does.
+
+    The tools narrowed it to str, so a rule scoped to several entities
+    (`applies_to: list[str] | str` in the schema) was unauthorable over a
+    real MCP client, which obeys the declared parameter schema.
+    """
+
+    @pytest.mark.parametrize("tool_name", ["spec_add_rule", "spec_update_rule"])
+    def test_the_declared_schema_admits_a_list(self, tool_name) -> None:
+        import inspect
+
+        from metaseed.agent.mcp.server import create_server
+
+        server = create_server()
+        fn = server._tool_manager._tools[tool_name].fn
+        annotation = inspect.signature(fn).parameters["applies_to"].annotation
+        assert "list" in str(annotation), annotation
