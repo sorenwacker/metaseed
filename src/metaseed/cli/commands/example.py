@@ -103,10 +103,12 @@ def _export_investigation_example_to_excel(data: dict[str, Any], output: Path) -
     root_record = flatten_entity(data)
     add_sheet("Investigation", [root_record])
 
-    # Contacts/Persons at investigation level
+    # Persons are collected across levels into ONE sheet: openpyxl silently
+    # renames a duplicate sheet title, so a second add_sheet("Person") split
+    # the records between "Person" and a "Person1" nothing imports.
+    person_records: list[dict[str, Any]] = []
     if data.get("contacts"):
-        records = [flatten_entity(c) for c in data["contacts"]]
-        add_sheet("Person", records)
+        person_records.extend(flatten_entity(c) for c in data["contacts"])
 
     # Studies
     if data.get("studies"):
@@ -177,8 +179,7 @@ def _export_investigation_example_to_excel(data: dict[str, Any], output: Path) -
                 all_assays.extend(flatten_entity(a) for a in study["assays"])
 
         add_sheet("Study", study_records)
-        if all_persons:
-            add_sheet("Person", all_persons)
+        person_records.extend(all_persons)
         if all_locations:
             add_sheet("Location", all_locations)
         if all_bio_materials:
@@ -205,6 +206,9 @@ def _export_investigation_example_to_excel(data: dict[str, Any], output: Path) -
             add_sheet("Source", all_sources)
         if all_assays:
             add_sheet("Assay", all_assays)
+
+    if person_records:
+        add_sheet("Person", person_records)
 
     output.parent.mkdir(parents=True, exist_ok=True)
     wb.save(output)

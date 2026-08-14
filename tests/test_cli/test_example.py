@@ -254,3 +254,26 @@ class TestFlattenEntity:
         headers = [cell.value for cell in inv_sheet[1]]
         assert "unique_id" in headers
         assert "title" in headers
+
+
+def test_contacts_and_study_persons_share_one_person_sheet(tmp_path):
+    """Two add_sheet('Person') calls must not yield 'Person' and 'Person1'.
+
+    openpyxl silently renames a duplicate sheet title, so the shipped miappe
+    examples — which carry both investigation contacts and study persons —
+    exported two sheets, splitting the person records under a name nothing
+    imports.
+    """
+    import typer
+    from openpyxl import load_workbook
+
+    app = typer.Typer()
+    app.command()(export_example)
+
+    out = tmp_path / "example.xlsx"
+    result = runner.invoke(app, ["miappe/1.1", "-o", str(out)])
+    assert result.exit_code == 0, result.output
+
+    names = load_workbook(out).sheetnames
+    assert "Person1" not in names
+    assert names.count("Person") == 1
