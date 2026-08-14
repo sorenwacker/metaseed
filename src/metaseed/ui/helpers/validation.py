@@ -308,7 +308,11 @@ def _update_existing_child(
         result.add_error(child_type, _format_validation_error(child_type, e))
         result.add_failed_item(field_name, item)
     except Exception as e:
+        # Reported like a validation failure: an item that vanishes from the
+        # rebuilt form with only a log line is silent data loss in the UI.
         logger.warning(f"Error updating {child_type}: {e}")
+        result.add_error(child_type, f"{child_type} could not be saved: {e}")
+        result.add_failed_item(field_name, item)
 
 
 def _create_new_child(
@@ -342,7 +346,11 @@ def _create_new_child(
         result.add_error(child_type, _format_validation_error(child_type, e))
         result.add_failed_item(field_name, item)
     except Exception as e:
+        # Reported like a validation failure: an item that vanishes from the
+        # rebuilt form with only a log line is silent data loss in the UI.
         logger.warning(f"Error creating {child_type}: {e}")
+        result.add_error(child_type, f"{child_type} could not be saved: {e}")
+        result.add_failed_item(field_name, item)
 
 
 def rebuild_nested_items_with_failures(
