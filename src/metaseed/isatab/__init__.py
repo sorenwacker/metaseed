@@ -152,6 +152,9 @@ def _study_sections(
         _line("Study Identifier", [study.get("identifier")]),
         _line("Study Title", [study.get("title")]),
         _line("Study Description", [study.get("description")]),
+        # Consumers locate the study table through this field; without it the
+        # emitted s_*.txt files are orphans and the archive is incomplete.
+        _line("Study File Name", [study_filename(study)]),
         "STUDY DESIGN DESCRIPTORS",
         _line("Study Design Type", study.get("study_design_descriptors") or []),
     ]

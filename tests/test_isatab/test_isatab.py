@@ -84,3 +84,21 @@ def test_multi_study_investigation_partitions_children_per_study():
     # Each factor belongs to exactly one study, so it appears once, not once per study.
     assert inv_txt.count("FactorA") == 1
     assert inv_txt.count("FactorB") == 1
+
+
+def test_the_investigation_names_its_study_files():
+    """Each STUDY section carries 'Study File Name' pointing at its s_*.txt.
+
+    to_isatab writes an s_<study>.txt per study, but the investigation never
+    referenced them — ISA-Tab consumers locate the study table through this
+    field, so the emitted study files were orphans and the archive could not
+    be parsed as complete ISA-Tab.
+    """
+    files = to_isatab(_client())
+
+    investigation = files["i_Investigation.txt"]
+    study_files = [name for name in files if name.startswith("s_")]
+    assert study_files
+    assert "Study File Name" in investigation
+    for name in study_files:
+        assert name in investigation
