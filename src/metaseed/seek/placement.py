@@ -200,6 +200,9 @@ def place_study(ctx: SyncContext, title: str, investigation_id: str) -> str:
         title, investigation_id=investigation_id
     )
     if existing is not None:
+        # Recorded like every other reuse, so synced_count minus the ledger
+        # says what this push actually created.
+        ctx.result.reused[f"study:{title}"] = existing
         # Its Sample Types and stream already exist too; remember them so the
         # Assays and Samples below attach to what is there.
         types = ctx.client.study_sample_type_ids(existing)
@@ -266,6 +269,7 @@ def place_assay(
     """Reuse or create an Assay inside its Study's stream, with its Sample Type."""
     existing = ctx.client.find_assay_id_by_title(title, study_id=study_id)
     if existing is not None:
+        ctx.result.reused[f"assay:{title}"] = existing
         owned = ctx.client.assay_sample_type_ids(existing).get(f"{title} - Sample Type")
         if owned is not None:
             ctx.assay_sample_type[existing] = owned

@@ -30,7 +30,7 @@
     {% set not_uploaded = sync_result.skipped|length + sync_result.errors|length %}
     <div class="notification {{ 'notification-warning' if not_uploaded else 'notification-success' }}"
          data-testid="seek-sync-result" style="{{ box }}{% if not_uploaded %} border-color:#c60;{% endif %}">
-        <strong>Synced {{ sync_result.created_count }} resource{{ "" if sync_result.created_count == 1 else "s" }} to SEEK{% if not_uploaded %}, but {{ not_uploaded }} entit{{ "y was" if not_uploaded == 1 else "ies were" }} not uploaded{% endif %}.</strong>
+        <strong>Synced {{ sync_result.synced_count }} resource{{ "" if sync_result.synced_count == 1 else "s" }} to SEEK{% if not_uploaded %}, but {{ not_uploaded }} entit{{ "y was" if not_uploaded == 1 else "ies were" }} not uploaded{% endif %}.</strong>
         <div class="muted" style="font-size:0.85rem;">
             {{ sync_result.investigations|length }} investigation(s),
             {{ sync_result.studies|length }} study(ies),

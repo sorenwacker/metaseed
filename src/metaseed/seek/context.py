@@ -40,8 +40,12 @@ class SyncResult:
     reused: dict[str, str] = dc_field(default_factory=dict)
 
     @property
-    def created_count(self) -> int:
-        """Total SEEK resources created."""
+    def synced_count(self) -> int:
+        """Total SEEK resources this push touched — created OR reused.
+
+        The per-kind dicts deliberately include reused records (a re-push
+        reports the full picture), so this is not a creation count.
+        """
         return sum(
             len(d)
             for d in (
@@ -52,6 +56,11 @@ class SyncResult:
                 self.data_files,
             )
         )
+
+    @property
+    def created_count(self) -> int:
+        """SEEK resources this push actually created (reused ones excluded)."""
+        return max(0, self.synced_count - len(self.reused))
 
 
 @dataclass
