@@ -249,7 +249,10 @@ class TestCreateEntity:
         )
 
         assert child.parent_id == parent.id
-        assert child in parent.children
+        # Fetched fresh: returns are copies now, so the earlier `parent`
+        # snapshot does not gain children.
+        stored_parent = empty_repo.get_entity(parent.id)
+        assert child.id in [c.id for c in stored_parent.children]
 
     def test_create_derives_label_from_data(self, empty_repo):
         """Created entity label is derived from the spec's first field."""
@@ -518,3 +521,51 @@ class TestParseEntities:
         # Label is derived from the spec's first field (unique_id), not the
         # generic "New {entity_type}" fallback.
         assert entity.label == "INV-001"
+
+
+class TestReadsCannotCorruptTheStore:
+    """Every path out of the repository is a copy, as list/get document.
+
+    get_tree returned the live internal list of live EntityData objects, and
+    create/update returned the internal entity — so a caller mutating any of
+    them corrupted the store, and the next _save persisted the corruption,
+    defeating the deep-copy invariant list_entities/get_entity state.
+    """
+
+    def _repo(self, tmp_path):
+        from metaseed.repositories.file import FileEntityRepository
+
+        return FileEntityRepository(
+            dataset_path=tmp_path / "d.json", profile="miappe", version="1.1"
+        )
+
+    def test_mutating_a_get_tree_result_changes_nothing(self, tmp_path) -> None:
+        repo = self._repo(tmp_path)
+        created = repo.create_entity(
+            "Investigation", {"unique_id": "INV-1", "title": "T"}
+        )
+        tree = repo.get_tree()
+        tree[0].data["title"] = "vandalised"
+        tree.clear()
+
+        assert repo.get_entity(created.id).data["title"] == "T"
+        assert repo.get_tree(), "the tree itself must survive a cleared copy"
+
+    def test_mutating_a_create_result_changes_nothing(self, tmp_path) -> None:
+        repo = self._repo(tmp_path)
+        created = repo.create_entity(
+            "Investigation", {"unique_id": "INV-1", "title": "T"}
+        )
+        created.data["title"] = "vandalised"
+
+        assert repo.get_entity(created.id).data["title"] == "T"
+
+    def test_mutating_an_update_result_changes_nothing(self, tmp_path) -> None:
+        repo = self._repo(tmp_path)
+        created = repo.create_entity(
+            "Investigation", {"unique_id": "INV-1", "title": "T"}
+        )
+        updated = repo.update_entity(created.id, {"title": "T2"})
+        updated.data["title"] = "vandalised"
+
+        assert repo.get_entity(created.id).data["title"] == "T2"

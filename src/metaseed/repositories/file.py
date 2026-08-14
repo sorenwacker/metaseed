@@ -345,7 +345,9 @@ class FileEntityRepository(EntityRepository):
             self._tree.append(entity)
 
         self._save()
-        return entity
+        # A copy, like every read path: the internal object persisted by the
+        # next _save must not be reachable from outside.
+        return copy.deepcopy(entity)
 
     def update_entity(self: Self, entity_id: str, data: dict[str, Any]) -> EntityData:
         """Update an existing entity."""
@@ -375,7 +377,9 @@ class FileEntityRepository(EntityRepository):
         )
 
         self._save()
-        return entity
+        # A copy, like every read path: the internal object persisted by the
+        # next _save must not be reachable from outside.
+        return copy.deepcopy(entity)
 
     def _find_parent_from_references(
         self: Self, helper: Any, data: dict[str, Any]
@@ -441,8 +445,8 @@ class FileEntityRepository(EntityRepository):
         return True
 
     def get_tree(self: Self) -> list[EntityData]:
-        """Get the full entity tree with nested children."""
-        return self._tree
+        """Get the full entity tree with nested children (deep copies)."""
+        return copy.deepcopy(self._tree)
 
     def get_profile(self: Self) -> str:
         """Get the current profile name."""
