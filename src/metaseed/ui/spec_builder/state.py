@@ -52,13 +52,3 @@ class SpecBuilderState:
     def mark_saved(self: Self) -> None:
         """Mark that all changes have been saved."""
         self.has_unsaved_changes = False
-
-    def is_active(self: Self) -> bool:
-        """Check if a spec is currently being edited."""
-        return self.spec is not None
-
-    def get_entity_names(self: Self) -> list[str]:
-        """Get list of entity names in the spec."""
-        if self.spec is None:
-            return []
-        return list(self.spec.entities.keys())

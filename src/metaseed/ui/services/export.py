@@ -127,7 +127,11 @@ def _identifier_of(facade: Any, entity_type: str, data: dict[str, Any]) -> str:
     return str(data.get(field, "")) if field else ""
 
 
-def collect_entities_by_type(facade: Any) -> dict[str, list[dict[str, Any]]]:
+def collect_rows_by_type(facade: Any) -> dict[str, list[dict[str, Any]]]:
+    # Renamed from collect_entities_by_type: helpers/entity_helpers.py exports
+    # a same-named function with a different signature and meaning (dropdown
+    # entries), and two public names that differ only by import path invite
+    # the wrong one.
     """Group every entity in ``facade`` by its type, each appearing once.
 
     An entity can be present twice over: as a stored row of its own, and as the
@@ -177,7 +181,7 @@ def build_workbook_from_facade(facade: Any) -> Workbook:
     function for exactly that reason, and the copy did not gain the dropdowns,
     the tables or the descriptions this one has.
     """
-    entities_by_type = collect_entities_by_type(facade)
+    entities_by_type = collect_rows_by_type(facade)
 
     wb = Workbook()
     wb.remove(wb.active)

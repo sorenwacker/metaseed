@@ -13,7 +13,6 @@ class JSONParser:
     """Parser for JSON files."""
 
     extensions = [".json"]
-    mime_types = ["application/json"]
 
     def can_parse(self: Self, path: Path) -> bool:
         """Check if this parser can handle the file."""

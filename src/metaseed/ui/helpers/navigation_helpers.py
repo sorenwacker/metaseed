@@ -131,33 +131,6 @@ def get_parent_id_fields(
     return parent_id_fields
 
 
-def get_parent_identifier(
-    state: AppState, parent_entity_type: str, target_field: str
-) -> str:
-    """Get the parent entity's identifier value.
-
-    Args:
-        state: Application state.
-        parent_entity_type: The parent entity type.
-        target_field: The field to get (e.g., "unique_id", "identifier").
-
-    Returns:
-        The parent's identifier value, or empty string if not found.
-    """
-    # Check if we're editing a root node
-    if state.editing_node_id:
-        node = state.nodes_by_id.get(state.editing_node_id)
-        if (
-            node
-            and node.entity_type == parent_entity_type
-            and hasattr(node.instance, "model_dump")
-        ):
-            data = node.instance.model_dump(exclude_none=True)
-            return str(data.get(target_field, ""))
-
-    return ""
-
-
 def build_breadcrumb(state: AppState) -> list[dict[str, Any]]:
     """Build breadcrumb navigation from nested edit stack."""
     breadcrumb: list[dict[str, Any]] = []
@@ -222,6 +195,5 @@ __all__ = [
     "build_breadcrumb",
     "error_response",
     "get_parent_id_fields",
-    "get_parent_identifier",
     "get_reference_fields",
 ]

@@ -44,7 +44,6 @@ from metaseed.ui.helpers.navigation_helpers import (
     build_breadcrumb,
     error_response,
     get_parent_id_fields,
-    get_parent_identifier,
     get_reference_fields,
 )
 
@@ -84,7 +83,6 @@ __all__ = [
     "get_items_store",
     "get_nested_items_for_edit",
     "get_parent_id_fields",
-    "get_parent_identifier",
     "get_reference_fields",
     "get_table_column_info",
     "get_table_columns",

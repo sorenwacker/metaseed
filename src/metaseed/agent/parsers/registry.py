@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Protocol, Self, runtime_checkable
+from typing import Any, Protocol, Self
 
 from pydantic import BaseModel, Field
 
@@ -41,12 +41,10 @@ class ParsedTable(BaseModel):
         return [dict(zip(self.headers, row, strict=False)) for row in self.rows]
 
 
-@runtime_checkable
 class FileParser(Protocol):
     """Protocol for file parsers."""
 
     extensions: list[str]
-    mime_types: list[str]
 
     def can_parse(self, path: Path) -> bool:
         """Check if this parser can handle the file."""

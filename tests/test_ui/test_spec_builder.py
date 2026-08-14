@@ -129,20 +129,6 @@ class TestSpecBuilderState:
         state.mark_saved()
         assert state.has_unsaved_changes is False
 
-    def test_is_active(self, sample_spec):
-        """is_active returns True when spec is set."""
-        state = SpecBuilderState()
-        assert state.is_active() is False
-        state.spec = sample_spec
-        assert state.is_active() is True
-
-    def test_get_entity_names(self, sample_spec):
-        """get_entity_names returns entity names from spec."""
-        state = SpecBuilderState()
-        assert state.get_entity_names() == []
-        state.spec = sample_spec
-        assert "TestEntity" in state.get_entity_names()
-
 
 class TestSpecBuilderHelpers:
     """Tests for spec builder helper functions."""

@@ -13,7 +13,6 @@ class CSVParser:
     """Parser for CSV files."""
 
     extensions = [".csv", ".tsv"]
-    mime_types = ["text/csv", "text/tab-separated-values"]
 
     def can_parse(self: Self, path: Path) -> bool:
         """Check if this parser can handle the file."""

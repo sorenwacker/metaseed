@@ -398,7 +398,7 @@ class TestAnEntityAppearsOnce:
 
     def _collected(self):
         from metaseed import MetaseedClient
-        from metaseed.ui.services.export import collect_entities_by_type
+        from metaseed.ui.services.export import collect_rows_by_type
 
         client = MetaseedClient("ena", "1.0")
         study = client.create_entity(
@@ -417,7 +417,7 @@ class TestAnEntityAppearsOnce:
             parent_id=study.id,
             skip_validation=True,
         )
-        return collect_entities_by_type(client.facade)
+        return collect_rows_by_type(client.facade)
 
     def test_the_embedded_copy_is_not_a_second_row(self) -> None:
         samples = self._collected()["Sample"]

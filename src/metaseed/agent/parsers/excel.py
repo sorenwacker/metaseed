@@ -18,9 +18,6 @@ class ExcelParser:
     """
 
     extensions = [".xlsx", ".xlsm"]
-    mime_types = [
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    ]
 
     def can_parse(self: Self, path: Path) -> bool:
         """Check if this parser can handle the file."""
