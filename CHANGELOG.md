@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.38.0 (260814)
 
 ### Removed
 - The `api/rest.py` FastAPI app. It was a second REST surface — miappe-only,
