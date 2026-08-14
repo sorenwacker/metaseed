@@ -451,3 +451,26 @@ class TestOnlyRealKeysMustBeUnique:
         assert self._keys("File") == set(), (
             "File.filename is the first field, not a key: files repeat names"
         )
+
+
+class TestBothUniquenessMechanismsAgree:
+    """The typing-time warning and the conditional formatting use ONE key rule.
+
+    key_columns deliberately excludes the bare identifier_field fallback
+    (File.filename flagged on every legitimately repeated row) and adds
+    referenced target fields. apply_uniqueness_validations still used the
+    fallback and skipped referenced targets, so typing a repeated filename
+    raised the duplicate dialog the formatting correctly did not.
+    """
+
+    def test_the_validation_columns_are_the_key_columns(self):
+        import inspect
+
+        from metaseed.ui.services import controlled_terms
+
+        source = inspect.getsource(controlled_terms.apply_uniqueness_validations)
+        assert "key_columns(" in source, (
+            "apply_uniqueness_validations must derive its columns from "
+            "key_columns, the single statement of what is a key"
+        )
+        assert "identifier_field" not in source

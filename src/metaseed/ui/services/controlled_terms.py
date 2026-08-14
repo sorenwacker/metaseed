@@ -407,15 +407,12 @@ def apply_uniqueness_validations(
             continue
 
         fields = fields_by_entity.get(entity, {})
-        unique_columns = {
-            name
-            for name, field in fields.items()
-            if getattr(field, "unique_within", None)
-            or getattr(field, "is_identifier", False)
-        }
-        identifier = getattr(helper, "identifier_field", None)
-        if identifier:
-            unique_columns.add(identifier)
+        # ONE statement of what is a key: key_columns deliberately excludes
+        # the bare identifier-field fallback (File.filename flagged on every
+        # legitimately repeated row) and adds referenced target fields. Using
+        # anything else here made the typing-time dialog disagree with the
+        # conditional formatting on the same sheet.
+        unique_columns = key_columns(facade, entity, fields)
 
         for column in unique_columns & set(columns):
             letter = get_column_letter(columns.index(column) + 1)
