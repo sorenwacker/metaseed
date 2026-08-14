@@ -203,3 +203,23 @@ class TestMergeResult:
         )
 
         assert result.merged_profile.version == "2.0"
+
+
+class TestMergeKeepsTheSeekConfig:
+    """Merging a seek-configured profile must not strip its SEEK roles.
+
+    The merged-entity constructor listed attributes by hand and omitted
+    `seek`, so merging any seek-configured profile silently produced a
+    profile whose entities had no SEEK role routing — a sync of the merged
+    profile skipped every node.
+    """
+
+    def test_seek_roles_survive_a_merge(self) -> None:
+        result = merge([("seek-ready-template", "3.0"), ("seek-ready-template", "2.0")])
+
+        with_seek = [
+            name
+            for name, entity in result.merged_profile.entities.items()
+            if entity.seek is not None
+        ]
+        assert with_seek, "the source profiles carry seek config on entities"

@@ -124,6 +124,7 @@ class SpecMerger:
             ontology_term = None
             description = ""
             example = None
+            seek = None
 
             for profile_id in profile_order:
                 if entity_diff.profiles.get(profile_id, False):
@@ -134,12 +135,17 @@ class SpecMerger:
                         ontology_term = ontology_term or entity_def.ontology_term
                         description = description or entity_def.description
                         example = example or entity_def.example
+                        # SEEK role routing carries over like the rest of the
+                        # metadata: dropping it silently produced a merged
+                        # profile whose sync skipped every node.
+                        seek = seek or entity_def.seek
 
             merged_entities[entity_diff.entity_name] = EntityDefSpec(
                 ontology_term=ontology_term,
                 description=description,
                 fields=merged_fields,
                 example=example,
+                seek=seek,
             )
 
         # Merge validation rules
