@@ -1,0 +1,492 @@
+version: '2.0'
+spec_version: '0.7'
+name: pride
+display_name: PRIDE
+description: PRIDE PRoteomics IDEntifications database submission format. Based on ProteomeXchange PX XML schema for mass spectrometry proteomics data.
+root_entity: Dataset
+ontology: pride
+
+validation_rules:
+- name: publication_identity
+  description: A publication carries a resolvable identifier
+  type: conditional
+  applies_to: [Publication]
+  when: {field: pubmed_id, op: is_not_set}
+  require: [doi]
+  message: A publication needs a doi or a pubmed_id; a title alone cannot identify it
+
+- name: identifier_pattern
+  description: Identifiers must be alphanumeric with underscores/hyphens
+  applies_to: all
+  field: identifier
+  pattern: ^[A-Za-z0-9_-]+$
+
+- name: pxd_accession_format
+  description: ProteomeXchange accession must follow PXD pattern
+  applies_to: [Dataset]
+  field: accession
+  pattern: ^PXD[0-9]+$
+
+- name: email_format
+  description: Email must be valid format
+  applies_to: [Contact]
+  field: email
+  pattern: ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$
+
+- name: orcid_format
+  description: ORCID must be in standard format
+  applies_to: [Contact]
+  field: orcid
+  pattern: ^[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X]$
+
+- name: doi_format
+  description: DOI must follow standard format
+  applies_to: [Publication]
+  field: doi
+  pattern: ^10\.\d{4,}/.*$
+
+- name: pubmed_format
+  description: PubMed ID must be numeric
+  applies_to: [Publication]
+  field: pubmed_id
+  pattern: ^[0-9]+$
+
+- name: ncbi_taxonomy_format
+  description: NCBI Taxonomy ID must be numeric
+  applies_to: [Sample, Species]
+  field: ncbi_taxonomy_id
+  pattern: ^[0-9]+$
+
+- name: cv_accession_format
+  description: CV accession must follow MS or MOD pattern
+  applies_to: [Instrument, Modification]
+  field: cv_accession
+  pattern: ^(MS|MOD|UNIMOD):[0-9]+$
+
+- name: contacts_required
+  description: Dataset must have submitter and lab head contacts
+  applies_to: [Dataset]
+  field: contacts
+  min_items: 2
+
+- name: species_required
+  description: Dataset must have at least one species
+  applies_to: [Dataset]
+  field: species
+  min_items: 1
+
+- name: instruments_required
+  description: Dataset must have at least one instrument
+  applies_to: [Dataset]
+  field: instruments
+  min_items: 1
+
+- name: files_required
+  description: Dataset must have data files
+  applies_to: [Dataset]
+  field: files
+  min_items: 1
+
+- name: samples_required
+  description: Dataset must have at least one sample
+  applies_to: [Dataset]
+  field: samples
+  min_items: 1
+
+entities:
+  Dataset:
+    ontology_term: pride:Dataset
+    description: Top-level container for a PRIDE/ProteomeXchange submission. Represents a complete proteomics dataset.
+    fields:
+    - name: identifier
+      dcat: dct:identifier
+      type: string
+      required: true
+      description: A locally unique identifier for the dataset
+      constraints:
+        min_length: 1
+        max_length: 100
+
+    - name: accession
+      # dct:source, not dct:identifier: see docs/architecture/dcat.md.
+      # A submitted dataset may legitimately be identified by its accession;
+      # a platform that knows it originated the dataset promotes it.
+      dcat: dct:source
+      type: string
+      required: false
+      description: ProteomeXchange accession number (assigned upon submission)
+
+    - name: title
+      dcat: dct:title
+      type: string
+      required: true
+      description: A concise descriptive title for the dataset
+      constraints:
+        min_length: 10
+        max_length: 500
+
+    - name: description
+      dcat: dct:description
+      type: string
+      required: true
+      description: Detailed description of the dataset and experimental goals
+      constraints:
+        min_length: 50
+
+    - name: sample_processing_protocol
+      type: string
+      required: true
+      description: Description of sample processing and preparation
+      constraints:
+        min_length: 50
+
+    - name: data_processing_protocol
+      type: string
+      required: true
+      description: Description of data processing and analysis methods
+      constraints:
+        min_length: 50
+
+    - name: submission_type
+      type: string
+      required: true
+      description: Type of submission (COMPLETE or PARTIAL)
+      constraints:
+        enum: [COMPLETE, PARTIAL]
+
+    - name: experiment_types
+      type: list
+      items: string
+      required: false
+      description: Experiment type(s), e.g. "Shotgun proteomics" (PX experiment_type)
+
+    - name: reason_for_partial
+      type: string
+      required: false
+      description: Why the submission is PARTIAL (required by PX for PARTIAL submissions)
+
+    - name: doi
+      type: string
+      required: false
+      description: DOI assigned to the dataset by ProteomeXchange
+
+    - name: license
+      dcat: dct:license
+      type: string
+      required: false
+      description: Terms under which the dataset may be reused
+
+    - name: submission_date
+      type: date
+      required: false
+      description: Date the dataset was submitted
+
+    - name: announcement_date
+      dcat: dct:issued
+      type: date
+      required: false
+      description: Date the dataset was announced
+
+    - name: keywords
+      dcat: dcat:keyword
+      type: list
+      items: string
+      required: true
+      description: Keywords describing the dataset
+
+    - name: species
+      type: list
+      items: Species
+      required: true
+      description: Species in the dataset
+
+    - name: instruments
+      type: list
+      items: Instrument
+      required: true
+      description: Mass spectrometers used
+
+    - name: modifications
+      type: list
+      items: Modification
+      required: false
+      description: Protein/peptide modifications
+
+    - name: contacts
+      dcat: dcat:contactPoint
+      type: list
+      items: Contact
+      required: true
+      description: Contact persons (submitter and lab head required)
+
+    - name: publications
+      type: list
+      items: Publication
+      required: false
+      description: Related publications
+
+    - name: samples
+      type: list
+      items: Sample
+      required: true
+      description: Biological samples
+
+    - name: files
+      type: list
+      items: DataFile
+      required: true
+      description: Data files (raw, result, peak lists)
+
+  Sample:
+    ontology_term: pride:Sample
+    description: A biological sample used in the proteomics experiment.
+    fields:
+    - name: name
+      type: string
+      required: true
+      description: Sample name
+
+    - name: species
+      type: string
+      required: true
+      description: Source organism name
+
+    - name: ncbi_taxonomy_id
+      type: string
+      required: true
+      description: NCBI Taxonomy ID
+
+    - name: tissue
+      type: string
+      required: false
+      description: Tissue type
+
+    - name: tissue_accession
+      type: ontology_term
+      required: false
+      description: Tissue ontology accession
+      ontologies:
+        - uberon
+
+    - name: cell_type
+      type: string
+      required: false
+      description: Cell type
+
+    - name: disease
+      type: string
+      required: false
+      description: Disease state
+
+    - name: description
+      type: string
+      required: false
+      description: Sample description
+
+    - name: custom_attributes
+      type: list
+      items: CustomAttribute
+      required: false
+      description: Additional sample attributes
+
+  Species:
+    ontology_term: pride:Species
+    description: Taxonomic species information.
+    fields:
+    - name: name
+      type: string
+      required: true
+      description: Species name
+
+    - name: ncbi_taxonomy_id
+      type: string
+      required: true
+      description: NCBI Taxonomy ID
+
+  Instrument:
+    ontology_term: pride:Instrument
+    description: Mass spectrometry instrument information.
+    fields:
+    - name: name
+      type: string
+      required: true
+      description: Instrument name
+
+    - name: cv_accession
+      type: string
+      required: true
+      description: PSI-MS controlled vocabulary accession
+
+    - name: cv_name
+      type: string
+      required: false
+      description: CV term name
+
+    - name: source
+      type: string
+      required: false
+      description: Ion source type
+
+    - name: analyzer
+      type: list
+      items: string
+      required: false
+      description: Mass analyzer types
+
+    - name: detector
+      type: string
+      required: false
+      description: Detector type
+
+  Modification:
+    ontology_term: pride:Modification
+    description: Post-translational or chemical modification.
+    fields:
+    - name: name
+      type: string
+      required: true
+      description: Modification name
+
+    - name: cv_accession
+      type: string
+      required: true
+      description: PSI-MOD or UNIMOD accession
+
+    - name: mass_delta
+      type: float
+      required: false
+      description: Mass delta in Daltons
+      constraints:
+        minimum: -500
+        maximum: 500
+
+    - name: residues
+      type: string
+      required: false
+      description: Target amino acid residues
+      constraints:
+        pattern: ^[ACDEFGHIKLMNPQRSTVWY]+$
+
+    - name: position
+      type: string
+      required: false
+      description: Position specificity (anywhere, N-term, C-term)
+      constraints:
+        enum: [Anywhere, Any N-term, Any C-term, Protein N-term, Protein C-term]
+
+  Contact:
+    ontology_term: pride:Contact
+    description: A contact person for the dataset.
+    fields:
+    - name: name
+      type: string
+      required: true
+      description: Full name
+
+    - name: email
+      type: string
+      required: true
+      description: Email address
+
+    - name: affiliation
+      type: string
+      required: true
+      description: Institutional affiliation
+
+    - name: orcid
+      type: string
+      required: false
+      description: ORCID identifier
+
+    - name: role
+      type: string
+      required: true
+      description: Role in the project (submitter, lab head, principal investigator, researcher)
+      constraints:
+        enum: [submitter, lab head, principal investigator, researcher]
+
+  Publication:
+    ontology_term: pride:Publication
+    description: A publication associated with the dataset.
+    fields:
+    - name: title
+      type: string
+      required: false
+      description: Publication title
+
+    - name: doi
+      type: string
+      required: false
+      is_identifier: true
+      description: Digital Object Identifier — the publication's identity;
+        title is a display label two submissions can share (#249)
+
+    - name: pubmed_id
+      type: string
+      required: false
+      description: PubMed ID
+
+    - name: reference
+      type: string
+      required: false
+      description: Full reference string
+
+  DataFile:
+    ontology_term: pride:DataFile
+    description: A data file in the submission.
+    fields:
+    - name: filename
+      type: string
+      required: true
+      description: Name of the file
+
+    - name: file_type
+      type: string
+      required: true
+      description: Type of file (RAW, PEAK, RESULT, SEARCH, QUANT, etc.)
+      constraints:
+        enum: [RAW, PEAK, RESULT, SEARCH, QUANT, GEL, FASTA, SPECTRUM_LIBRARY, MS_IMAGE_DATA, OTHER]
+
+    - name: file_format
+      type: string
+      required: false
+      description: File format (mzML, mzIdentML, etc.)
+
+    - name: checksum
+      type: string
+      required: false
+      description: MD5 checksum
+      constraints:
+        pattern: ^[a-fA-F0-9]{32}$
+
+    - name: file_size
+      type: integer
+      required: false
+      description: File size in bytes
+      constraints:
+        minimum: 1
+
+    - name: sample_refs
+      type: list
+      items: string
+      required: false
+      description: Names of associated samples
+
+  CustomAttribute:
+    ontology_term: pride:CustomAttribute
+    description: A custom key-value attribute.
+    fields:
+    - name: name
+      type: string
+      required: true
+      description: Attribute name
+
+    - name: value
+      type: string
+      required: true
+      description: Attribute value
+
+    - name: cv_accession
+      type: string
+      required: false
+      description: Controlled vocabulary accession if applicable

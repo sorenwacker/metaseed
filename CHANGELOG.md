@@ -3,6 +3,12 @@
 ## Unreleased
 
 ### Added
+- `pride/2.0`: a `Publication` is identified by its `doi` (#249) — `title`
+  is a display label two submissions can share. A MAJOR version because the
+  marker changes what existing datasets are keyed by; 1.0 is untouched. The
+  doi-or-pubmed question is answered with a value-dependent rule
+  (`publication_identity`): a publication without a `pubmed_id` must carry a
+  `doi`.
 - A self-referencing field must not close a loop (#250). Two shapes resolved
   and therefore passed the existence check: a record naming itself, and a
   cycle (`A.parent = B`, `B.parent = A`) — both of which a tree render or an

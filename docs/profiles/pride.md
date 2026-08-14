@@ -21,10 +21,14 @@ describe a proteomics experiment.
 | `CustomAttribute` | A free `name`/`value` annotation on a sample |
 
 `Publication` is keyed by its `title` in 1.0, because nothing declares an
-identifier and the first field is what inference falls back to. Its identifier is
-the `doi`. Moving it changes what existing datasets are keyed by, so it belongs
-in a MAJOR version rather than a patch; until then the spec-builder advisory
-reports the weakness, which is accurate.
+identifier and the first field is what inference falls back to. **2.0 declares
+`doi` as its identifier** (#249): a title is a display label two submissions
+can share. Moving the marker changes what existing datasets are keyed by,
+which is why it is a MAJOR version — datasets written against 1.0 keep their
+keys. PRIDE submissions carry a `doi` or a `pubmed_id`; a single marker
+cannot express "whichever is present", so 2.0 pairs the marker with a
+value-dependent rule (`publication_identity`): a publication without a
+`pubmed_id` must carry a `doi`.
 
 ## Entity-Relationship Diagram
 
