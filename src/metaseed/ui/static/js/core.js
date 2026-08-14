@@ -103,7 +103,7 @@ function validateDataset() {
             btn.textContent = 'Validate';
 
             if (data.error) {
-                showNotification('error', 'Validation error: ' + data.error);
+                showNotification('Validation error: ' + data.error, 'error');
                 return;
             }
 
@@ -138,7 +138,7 @@ function validateDataset() {
         .catch(function(err) {
             btn.disabled = false;
             btn.textContent = 'Validate';
-            showNotification('error', 'Validation failed: ' + err.message);
+            showNotification('Validation failed: ' + err.message, 'error');
         });
 }
 
@@ -161,7 +161,7 @@ function showDcatCard() {
             btn.disabled = false;
 
             if (data.error) {
-                showNotification('error', 'DCAT error: ' + data.error);
+                showNotification('DCAT error: ' + data.error, 'error');
                 return;
             }
 
@@ -207,7 +207,7 @@ function showDcatCard() {
         })
         .catch(function(err) {
             btn.disabled = false;
-            showNotification('error', 'DCAT failed: ' + err.message);
+            showNotification('DCAT failed: ' + err.message, 'error');
         });
 }
 
@@ -215,7 +215,7 @@ function dcatCopy(fmt) {
     if (!_dcatCard) { return; }
     var text = fmt === 'turtle' ? _dcatCard.turtle : _dcatCard.jsonld;
     navigator.clipboard.writeText(text).then(function() {
-        showNotification('success', 'Copied ' + (fmt === 'turtle' ? 'Turtle' : 'JSON-LD'));
+        showNotification('Copied ' + (fmt === 'turtle' ? 'Turtle' : 'JSON-LD'), 'success');
     });
 }
 
@@ -240,11 +240,11 @@ function saveDcatMetadata(event) {
     fetch('/api/dcat/metadata', { method: 'POST', body: body })
         .then(function(response) {
             if (!response.ok) { throw new Error('HTTP ' + response.status); }
-            showNotification('success', 'Catalog metadata saved');
+            showNotification('Catalog metadata saved', 'success');
             showDcatCard();  // refresh the card with the new values
         })
         .catch(function(err) {
-            showNotification('error', 'Save failed: ' + err.message);
+            showNotification('Save failed: ' + err.message, 'error');
         });
 }
 
