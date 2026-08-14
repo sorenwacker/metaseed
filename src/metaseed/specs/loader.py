@@ -325,6 +325,23 @@ class SpecLoader:
             return None
         return self.RENAMED_PROFILES.get(profile.lower(), profile)
 
+    def _load_profile_following_renames(
+        self: Self, version: str, profile: str | None
+    ) -> ProfileSpec | None:
+        """Load, retrying under the profile's current name after a rename.
+
+        The old name arrives on every path — an explicit argument OR the
+        constructor default a dataset was recorded against — so the fallback
+        must sit under all of them, not only inside ``load_profile``.
+        """
+        loaded = self._load_profile(version, profile)
+        if loaded is None:
+            effective = profile or self._default_profile
+            renamed = self._resolve_renamed(effective)
+            if renamed is not None and renamed != effective:
+                loaded = self._load_profile(version, renamed)
+        return loaded
+
     def load_profile(
         self: Self,
         version: str = "1.2",
@@ -342,11 +359,7 @@ class SpecLoader:
             SpecLoadError: If profile not found.
         """
         profile_name = profile or self._default_profile
-        loaded = self._load_profile(version, profile)
-        if loaded is None:
-            renamed = self._resolve_renamed(profile)
-            if renamed is not None and renamed != profile:
-                loaded = self._load_profile(version, renamed)
+        loaded = self._load_profile_following_renames(version, profile)
         if loaded is None:
             raise SpecLoadError(f"Profile not found: {profile_name} version {version}")
         return loaded
@@ -372,7 +385,7 @@ class SpecLoader:
         """
         profile_name = profile or self._default_profile
 
-        loaded_profile = self._load_profile(version, profile)
+        loaded_profile = self._load_profile_following_renames(version, profile)
         if loaded_profile is not None:
             try:
                 return loaded_profile.get_entity(entity)
@@ -405,7 +418,7 @@ class SpecLoader:
         """
         profile_name = profile or self._default_profile
 
-        loaded_profile = self._load_profile(version, profile)
+        loaded_profile = self._load_profile_following_renames(version, profile)
         if loaded_profile is not None:
             return loaded_profile.list_entities()
 
@@ -423,15 +436,27 @@ class SpecLoader:
             List of version strings (e.g., ["1.1"]).
         """
         profile_name = (profile or self._default_profile).lower()
-        versions = set()
+        versions: set[str] = set()
 
-        # Search both user and built-in specs
-        for specs_dir in [self._user_specs_dir, self._builtin_specs_dir]:
-            profile_dir = specs_dir / profile_name
-            if profile_dir.exists() and profile_dir.is_dir():
-                for version_dir in profile_dir.iterdir():
-                    if version_dir.is_dir() and (version_dir / "profile.yaml").exists():
-                        versions.add(version_dir.name)
+        # The renamed directory answers for the old name here too: a dataset
+        # recorded against the old name lists versions before loading.
+        candidates = [profile_name]
+        renamed = self._resolve_renamed(profile_name)
+        if renamed and renamed.lower() != profile_name:
+            candidates.append(renamed.lower())
+
+        for candidate in candidates:
+            if versions:
+                break
+            for specs_dir in [self._user_specs_dir, self._builtin_specs_dir]:
+                profile_dir = specs_dir / candidate
+                if profile_dir.exists() and profile_dir.is_dir():
+                    for version_dir in profile_dir.iterdir():
+                        if (
+                            version_dir.is_dir()
+                            and (version_dir / "profile.yaml").exists()
+                        ):
+                            versions.add(version_dir.name)
 
         # Numeric order, not text: "1.10" outranks "1.9". versions[-1] is what
         # every caller means by latest.

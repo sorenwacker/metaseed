@@ -629,3 +629,33 @@ class TestRenamedProfiles:
 
         with pytest.raises(SpecLoadError):
             loader.load_profile(version="1.0", profile="not-a-profile")
+
+
+class TestARenameCoversEveryLookupPath:
+    """The jerm->seek rescue must work wherever the old name can arrive.
+
+    The mapping was consulted only inside load_profile and only when profile
+    was passed explicitly. A dataset records the profile it was built against
+    and hands it to the CONSTRUCTOR (`SpecLoader(profile="jerm")`), then calls
+    load_profile()/list_versions()/list_entities() — every one of which failed
+    with 'Profile not found' despite the mapping existing for exactly this.
+    """
+
+    def test_the_constructor_default_path_follows_the_rename(self) -> None:
+        loader = SpecLoader(profile="jerm")
+        versions = loader.list_versions()
+        assert versions, "the renamed profile has versions"
+        spec = loader.load_profile(versions[-1])
+        assert spec.name == "seek"
+
+    def test_list_entities_follows_the_rename(self) -> None:
+        loader = SpecLoader()
+        versions = loader.list_versions("jerm")
+        assert versions
+        assert loader.list_entities(versions[-1], "jerm")
+
+    def test_load_entity_follows_the_rename(self) -> None:
+        loader = SpecLoader()
+        versions = loader.list_versions("jerm")
+        entities = loader.list_entities(versions[-1], "jerm")
+        assert loader.load_entity(entities[0], versions[-1], "jerm")
