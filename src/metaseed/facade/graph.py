@@ -64,7 +64,16 @@ def to_graph(  # noqa: C901
 
     Builds nodes and edges for visualization. Includes:
     - Containment edges (parent-child, solid lines)
-    - Reference edges (entity references, dashed lines)
+    - Reference edges (entity references, dashed lines, labelled with the
+      field name). A ``type: list`` reference contributes one edge per
+      member — the one link a containment tree cannot show, since the
+      members live elsewhere in it (#251).
+
+    A reference edge whose endpoints already share a containment edge (a
+    child naming its parent in a declared field, e.g. ``Study.
+    investigation_id``) carries ``"redundant": True``. It is still drawn —
+    the reference IS declared, and hiding it would be a UI judgement — but a
+    consumer can suppress or style it without re-deriving containment (#251).
 
     Args:
         store: EntityStore containing the entity instances.
@@ -78,6 +87,9 @@ def to_graph(  # noqa: C901
 
     # Maps for resolving references by unique_id/alias
     unique_id_to_vis_id: dict[str, str] = {}
+    # Undirected containment pairs, for flagging the reference edges that
+    # restate them.
+    containment_pairs: set[frozenset[str]] = set()
 
     def truncate(text: str, max_len: int = 25) -> str:
         if len(text) <= max_len:
@@ -154,6 +166,7 @@ def to_graph(  # noqa: C901
 
         # Parent-child containment edge
         if parent_vis_id:
+            containment_pairs.add(frozenset((parent_vis_id, vis_id)))
             edges.append(
                 {
                     "id": f"{parent_vis_id}->{vis_id}",
@@ -181,24 +194,32 @@ def to_graph(  # noqa: C901
         if not helper:
             continue
 
-        # Check reference fields (e.g., sample_ref -> Sample.alias)
+        # Check reference fields (e.g., sample_ref -> Sample.alias). A
+        # list-valued reference is N references: one edge per member (#251).
         for field_name in helper.reference_fields:
             ref_value = entity_data.get(field_name)
-            if not ref_value or not isinstance(ref_value, str):
+            if isinstance(ref_value, list):
+                members = [m for m in ref_value if isinstance(m, str) and m]
+            elif isinstance(ref_value, str) and ref_value:
+                members = [ref_value]
+            else:
                 continue
 
-            target_vis_id = unique_id_to_vis_id.get(ref_value)
-            if target_vis_id and target_vis_id != vis_id:
-                edges.append(
-                    {
-                        "id": f"{vis_id}->{target_vis_id}:{field_name}",
-                        "from": vis_id,
-                        "to": target_vis_id,
-                        "dashes": True,
-                        "label": field_name,
-                        "font": {"size": 8},
-                    }
-                )
+            for index, member in enumerate(members):
+                target_vis_id = unique_id_to_vis_id.get(member)
+                if not target_vis_id or target_vis_id == vis_id:
+                    continue
+                edge: dict[str, Any] = {
+                    "id": f"{vis_id}->{target_vis_id}:{field_name}[{index}]",
+                    "from": vis_id,
+                    "to": target_vis_id,
+                    "dashes": True,
+                    "label": field_name,
+                    "font": {"size": 8},
+                }
+                if frozenset((vis_id, target_vis_id)) in containment_pairs:
+                    edge["redundant"] = True
+                edges.append(edge)
 
         # Check nested fields for list references
         for field_name in helper.nested_fields:

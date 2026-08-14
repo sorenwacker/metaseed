@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- `to_graph` draws list-valued references — one dashed edge per member — so
+  MIAPPE's `Event.observation_unit_ids` finally appears; it is the one link a
+  containment tree cannot show (#251). A reference edge whose endpoints
+  already share a containment edge carries `redundant: true`: still drawn,
+  since the reference is declared, but a consumer can suppress or style it
+  without re-deriving containment itself.
+
 ## v0.36.0 (260814)
 
 ### Fixed
