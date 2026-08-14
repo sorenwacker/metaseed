@@ -3,6 +3,16 @@
 ## Unreleased
 
 ### Changed
+- Nested-entity resolution binds to the generated class, not to a mutable
+  global. The model context's profile:version was set by every `get_model`
+  call and facade build while `_convert_nested_entities` ran at validation
+  time — so building a second facade for another profile made every later
+  validation through the first resolve nested entities in the WRONG profile
+  (MIAPPE and ISA share entity names). A generated class now carries
+  `__model_key__` and resolves its nested types under it. The two parallel
+  model caches with different key schemes are one: `get_model` reads and
+  writes the same `ModelContext` store the resolution reads, and
+  `ModelRegistry` is deleted (only `ModelNotFoundError` remains).
 - The parent-child invariant of the entity tree is decided in ONE module
   (`facade.linking`, ADR 005): which parent field references a child type,
   the LIST-vs-ENTITY shape rule, and the structural link/unlink. The store

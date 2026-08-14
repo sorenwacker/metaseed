@@ -91,6 +91,10 @@ class ModelContext:
         v = version or self._version
         key = f"{p}:{v}:{name}"
         self._models[key] = model
+        # The class carries its own identity: nested-entity resolution at
+        # validation time must not depend on whatever profile was set LAST in
+        # this process — that made a second facade hijack the first's models.
+        model.__model_key__ = (p, v)  # type: ignore[attr-defined]
 
     def get(self: Self, name: str) -> type[BaseModel] | None:
         """Get a registered model by name using current profile context.
@@ -104,8 +108,29 @@ class ModelContext:
         Returns:
             Model class or None if not found.
         """
-        key = f"{self._profile}:{self._version}:{name}"
-        model = self._models.get(key)
+        return self.get_in(self._profile, self._version, name)
+
+    def peek(
+        self: Self, profile: str, version: str, name: str
+    ) -> type[BaseModel] | None:
+        """The cached model under an explicit key, WITHOUT the loader.
+
+        ``get_model`` is the loader, so a lookup that may trigger the loader
+        cannot be used from inside it — that recursion is why this exists.
+        """
+        return self._models.get(f"{profile}:{version}:{name}")
+
+    def get_in(
+        self: Self, profile: str, version: str, name: str
+    ) -> type[BaseModel] | None:
+        """Get a registered model under an EXPLICIT profile and version.
+
+        The resolution a generated class performs for its nested entities:
+        keyed by the class's own ``__model_key__``, never by the mutable
+        current context, so validating profile A's data while profile B was
+        set last still resolves A's models.
+        """
+        model = self.peek(profile, version, name)
 
         if model is None and self._loader is not None:
             # The loader (get_model) signals an unresolvable entity with
@@ -115,7 +140,7 @@ class ModelContext:
             from metaseed.specs.loader import SpecLoadError
 
             with contextlib.suppress(SpecLoadError, ModelNotFoundError):
-                model = self._loader(name, self._version, self._profile)
+                model = self._loader(name, version, profile)
 
         return model
 
@@ -297,13 +322,24 @@ class EntityBaseModel(BaseModel):
             return data
 
         entity_fields = getattr(cls, "__entity_fields__", {})
+        bound_key = getattr(cls, "__model_key__", None)
 
         for field_name, entity_type in entity_fields.items():
             if field_name not in data:
                 continue
 
             value = data[field_name]
-            model_class = get_registered_model(entity_type)
+            # Resolved under the CLASS's own profile:version when it carries
+            # one — the ambient context is whatever was set last anywhere in
+            # the process, which is the wrong answer whenever two profiles
+            # coexist (MCP and the UI share a process, and profiles share
+            # entity names).
+            if bound_key is not None:
+                model_class = _global_context.get_in(
+                    bound_key[0], bound_key[1], entity_type
+                )
+            else:
+                model_class = get_registered_model(entity_type)
 
             if model_class is None:
                 continue
