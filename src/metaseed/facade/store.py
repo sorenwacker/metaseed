@@ -12,6 +12,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel, ValidationError
 
+from metaseed.facade.linking import link_child, unlink_child
 from metaseed.facade.node import IDENTIFIER_FIELDS, EntityNode
 from metaseed.logging import get_logger
 
@@ -140,8 +141,7 @@ class EntityStore:
 
         # Link to parent's children list if parent exists
         if resolved_parent_id and resolved_parent_id in self._instances:
-            parent_node = self._instances[resolved_parent_id]
-            parent_node.children.append(node)
+            link_child(self._instances[resolved_parent_id], node)
 
         # Index by every identifier field (common + entity-specific) for lookups
         for id_field in self._get_identifier_fields(entity_type):
@@ -348,8 +348,8 @@ class EntityStore:
         # Remove from parent's children list
         if node.parent_id and node.parent_id in self._instances:
             parent = self._instances[node.parent_id]
-            parent.children = [c for c in parent.children if c.id != node_id]
             self._remove_reference_from_parent(parent, node)
+            unlink_child(parent, node)
 
         remove_recursively(node)
         return True
@@ -364,6 +364,12 @@ class EntityStore:
         that no longer exists. The instance is immutable-by-convention, so the
         cleaned value goes in via ``model_copy``.
         """
+        from metaseed.facade.linking import (
+            NO_CHANGE,
+            target_reference_field,
+            unlinked_reference_value,
+        )
+
         if parent.instance is None or child.instance is None:
             return
         try:
@@ -371,14 +377,7 @@ class EntityStore:
         except (KeyError, AttributeError):
             return
 
-        target_field = next(
-            (
-                name
-                for name, ref_type in helper.nested_fields.items()
-                if ref_type == child.entity_type
-            ),
-            None,
-        )
+        target_field = target_reference_field(helper, child.entity_type)
         if target_field is None:
             return
 
@@ -389,15 +388,18 @@ class EntityStore:
             if (v := child_data.get(f))
         } or {child.id}
 
-        current = getattr(parent.instance, target_field, None)
-        if isinstance(current, list):
-            cleaned = [v for v in current if str(v) not in child_refs]
-            if len(cleaned) != len(current):
-                parent.instance = parent.instance.model_copy(
-                    update={target_field: cleaned}
-                )
-        elif current is not None and str(current) in child_refs:
-            parent.instance = parent.instance.model_copy(update={target_field: None})
+        # The decision is facade.linking's (ADR 005); this applier lands it
+        # via model_copy, since the instance is immutable-by-convention.
+        new_value = unlinked_reference_value(
+            helper,
+            target_field,
+            getattr(parent.instance, target_field, None),
+            child_refs,
+        )
+        if new_value is not NO_CHANGE:
+            parent.instance = parent.instance.model_copy(
+                update={target_field: new_value}
+            )
 
     def get_children(self: Self, node_id: str) -> list[EntityNode]:
         """Get all direct children of a node.
@@ -658,8 +660,7 @@ class EntityStore:
                 else old_id_to_node.get(parent_ref)
             )
             if parent_node:
-                node.parent_id = parent_node.id
-                parent_node.children.append(node)
+                link_child(parent_node, node)
 
     def _link_by_nested_arrays(self: Self, id_to_node: dict[str, EntityNode]) -> None:
         """Link children via parent's nested array fields.
@@ -686,8 +687,7 @@ class EntityStore:
                 for child_id in child_ids:
                     child_node = id_to_node.get(str(child_id))
                     if child_node and child_node.parent_id is None:
-                        child_node.parent_id = node.id
-                        node.children.append(child_node)
+                        link_child(node, child_node)
 
     def _link_by_reference_fields(
         self: Self, id_to_node: dict[str, EntityNode]
@@ -732,8 +732,7 @@ class EntityStore:
                         ref_value,
                     )
                     continue
-                node.parent_id = parent_node.id
-                parent_node.children.append(node)
+                link_child(parent_node, node)
                 break
 
     def _would_cycle(self: Self, node: EntityNode, parent: EntityNode) -> bool:

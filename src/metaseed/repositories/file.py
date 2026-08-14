@@ -14,6 +14,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Self
 
+from metaseed.facade.linking import link_child, unlink_child
 from metaseed.paths import user_data_base
 from metaseed.repositories.base import EntityData, EntityRepository
 from metaseed.repositories.helpers import (
@@ -340,7 +341,7 @@ class FileEntityRepository(EntityRepository):
         self._entities[entity.id] = entity
 
         if parent:
-            parent.children.append(entity)
+            link_child(parent, entity)
             # Update parent's nested reference
             update_parent_reference(
                 facade,
@@ -436,7 +437,6 @@ class FileEntityRepository(EntityRepository):
         # Remove from parent or tree
         if entity.parent_id and entity.parent_id in self._entities:
             parent = self._entities[entity.parent_id]
-            parent.children = [c for c in parent.children if c.id != entity_id]
             # Take the reference back out of the parent's data — create put
             # it there, and a dangling identifier survives save and export.
             remove_parent_reference(
@@ -447,6 +447,7 @@ class FileEntityRepository(EntityRepository):
                 entity.entity_type,
                 entity.id,
             )
+            unlink_child(parent, entity)
         else:
             self._tree = [e for e in self._tree if e.id != entity_id]
 

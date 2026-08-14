@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+- The parent-child invariant of the entity tree is decided in ONE module
+  (`facade.linking`, ADR 005): which parent field references a child type,
+  the LIST-vs-ENTITY shape rule, and the structural link/unlink. The store
+  and both repositories apply the same decisions to their own
+  representations, and a gate test fails if the shape rule grows a second
+  home — the dangling-reference bug class the 260814 triage fixed three
+  times is now unwritable without editing the one module that owns it.
+
 ## v0.37.0 (260814)
 
 ### Added

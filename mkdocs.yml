@@ -98,6 +98,7 @@ nav:
       - Edge-Case Behavior (ADR): architecture/decisions/002-edge-case-behavior.md
       - Value-Dependent Validation Rules (ADR): architecture/decisions/003-value-dependent-validation-rules.md
       - Core Does Not Import the Web App (ADR): architecture/decisions/004-core-does-not-import-the-web-app.md
+      - The Tree Owns Link and Unlink (ADR): architecture/decisions/005-the-tree-owns-link-and-unlink.md
       - Integration Adapters: architecture/integration-adapters.md
       - Term Sources: architecture/term-sources.md
       - Exceptions: architecture/exceptions.md

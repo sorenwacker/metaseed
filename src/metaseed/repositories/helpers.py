@@ -145,18 +145,17 @@ def update_parent_reference(
     Returns:
         Name of updated field, or None if no matching field found.
     """
+    from metaseed.facade.linking import (
+        NO_CHANGE,
+        linked_reference_value,
+        target_reference_field,
+    )
+
     parent_helper = getattr(facade, parent_type, None)
     if not parent_helper:
         return None
 
-    # Find which field on parent references the child's type
-    nested_fields = parent_helper.nested_fields
-    target_field = None
-    for field_name, ref_type in nested_fields.items():
-        if ref_type == child_type:
-            target_field = field_name
-            break
-
+    target_field = target_reference_field(parent_helper, child_type)
     if not target_field:
         return None
 
@@ -164,25 +163,15 @@ def update_parent_reference(
     child_helper = getattr(facade, child_type, None)
     child_ref = get_identifier(child_data, child_helper) or child_id
 
-    # An ENTITY-typed field holds exactly one scalar reference; coercing it
-    # into a list silently corrupted its shape (entity fields are typed Any,
-    # so no model ever caught it) and stacked children onto an
-    # exactly-one-child field. The first child claims it; later children are
-    # still parented through the tree, just not re-referenced here.
-    if target_field in parent_helper.single_entity_fields:
-        if not parent_data.get(target_field):
-            parent_data[target_field] = child_ref
-        return cast("str", target_field)
+    # The decision — including the LIST-vs-ENTITY shape rule — is owned by
+    # facade.linking (ADR 005); this applier only lands it on the data dict.
+    new_value = linked_reference_value(
+        parent_helper, target_field, parent_data.get(target_field), child_ref
+    )
+    if new_value is not NO_CHANGE:
+        parent_data[target_field] = new_value
 
-    refs = parent_data.get(target_field, [])
-    if not isinstance(refs, list):
-        refs = [refs] if refs else []
-
-    if child_ref not in refs:
-        refs.append(child_ref)
-        parent_data[target_field] = refs
-
-    return cast("str", target_field)
+    return target_field
 
 
 def remove_parent_reference(
@@ -202,28 +191,29 @@ def remove_parent_reference(
     Returns:
         Name of the field the reference was removed from, or None.
     """
+    from metaseed.facade.linking import (
+        NO_CHANGE,
+        target_reference_field,
+        unlinked_reference_value,
+    )
+
     parent_helper = getattr(facade, parent_type, None)
     if not parent_helper:
         return None
 
-    target_field = None
-    for field_name, ref_type in parent_helper.nested_fields.items():
-        if ref_type == child_type:
-            target_field = field_name
-            break
+    target_field = target_reference_field(parent_helper, child_type)
     if not target_field:
         return None
 
     child_helper = getattr(facade, child_type, None)
     child_ref = get_identifier(child_data, child_helper) or child_id
 
-    current = parent_data.get(target_field)
-    if target_field in parent_helper.single_entity_fields:
-        if current == child_ref:
-            parent_data[target_field] = None
-    elif isinstance(current, list) and child_ref in current:
-        parent_data[target_field] = [v for v in current if v != child_ref]
-    return cast("str", target_field)
+    new_value = unlinked_reference_value(
+        parent_helper, target_field, parent_data.get(target_field), {child_ref}
+    )
+    if new_value is not NO_CHANGE:
+        parent_data[target_field] = new_value
+    return target_field
 
 
 def normalize_reference_fields(
