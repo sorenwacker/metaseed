@@ -1,6 +1,6 @@
 """Routes for profile exploration and comparison functionality."""
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -16,6 +16,24 @@ from metaseed.specs.merge import (
 )
 from metaseed.ui.spec_provider import SpecProvider
 from metaseed.ui.state import AppState
+
+
+def _parse_profile_specs(
+    specs: Sequence[object],
+) -> tuple[list[tuple[str, str]], str | None]:
+    """Parse "name/version" strings, naming the first malformed one.
+
+    Silently dropping a spec without a "/" let a fully malformed selection
+    reach compare([]) and surface as a 500; the malformed entry is the
+    caller's mistake and must be named in a 400.
+    """
+    tuples: list[tuple[str, str]] = []
+    for spec in specs:
+        if not isinstance(spec, str) or "/" not in spec:
+            return [], f"Malformed profile spec: {spec!r} (expected name/version)"
+        name, version = spec.split("/", 1)
+        tuples.append((name, version))
+    return tuples, None
 
 
 def register_explore_routes(  # noqa: C901
@@ -80,12 +98,9 @@ def register_explore_routes(  # noqa: C901
                 status_code=400,
             )
 
-        # Parse profile specs
-        profile_tuples = []
-        for spec in profile_specs:
-            if isinstance(spec, str) and "/" in spec:
-                parts = spec.split("/", 1)
-                profile_tuples.append((parts[0], parts[1]))
+        profile_tuples, parse_error = _parse_profile_specs(list(profile_specs))
+        if parse_error:
+            return JSONResponse({"error": parse_error}, status_code=400)
 
         try:
             result = compare(profile_tuples)
@@ -116,10 +131,9 @@ def register_explore_routes(  # noqa: C901
             )
 
         except (ValueError, SpecLoadError) as e:
-            return JSONResponse(
-                {"error": str(e)},
-                status_code=500,
-            )
+            # Same contract as /api/merge: user-selected profiles that fail
+            # to load are the caller's mistake.
+            return JSONResponse({"error": str(e)}, status_code=400)
 
     @app.get("/explore/graph/{profiles:path}")
     async def get_diff_graph(profiles: str) -> JSONResponse:
@@ -136,11 +150,9 @@ def register_explore_routes(  # noqa: C901
                 status_code=400,
             )
 
-        profile_tuples = []
-        for spec in profile_specs:
-            if "/" in spec:
-                parts = spec.split("/", 1)
-                profile_tuples.append((parts[0], parts[1]))
+        profile_tuples, parse_error = _parse_profile_specs(profile_specs)
+        if parse_error:
+            return JSONResponse({"error": parse_error}, status_code=400)
 
         try:
             result = compare(profile_tuples)
@@ -150,10 +162,9 @@ def register_explore_routes(  # noqa: C901
             return JSONResponse(graph_data)
 
         except (ValueError, SpecLoadError) as e:
-            return JSONResponse(
-                {"error": str(e)},
-                status_code=500,
-            )
+            # The caller named the profiles; a profile that does not exist is
+            # their mistake, not a server failure — same contract as /api/merge.
+            return JSONResponse({"error": str(e)}, status_code=400)
 
     @app.get("/explore/report/{format_type}/{profiles:path}")
     async def get_report(format_type: str, profiles: str) -> HTMLResponse:
@@ -165,11 +176,9 @@ def register_explore_routes(  # noqa: C901
         """
         profile_specs = profiles.split(",")
 
-        profile_tuples = []
-        for spec in profile_specs:
-            if "/" in spec:
-                parts = spec.split("/", 1)
-                profile_tuples.append((parts[0], parts[1]))
+        profile_tuples, parse_error = _parse_profile_specs(profile_specs)
+        if parse_error:
+            return HTMLResponse(content=f"Error: {parse_error}", status_code=400)
 
         try:
             result = compare(profile_tuples)
@@ -187,7 +196,4 @@ def register_explore_routes(  # noqa: C901
             return HTMLResponse(content=content, media_type=media_type)
 
         except (ValueError, SpecLoadError) as e:
-            return HTMLResponse(
-                content=f"Error: {e}",
-                status_code=500,
-            )
+            return HTMLResponse(content=f"Error: {e}", status_code=400)
