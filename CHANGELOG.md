@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.37.0 (260814)
 
 ### Added
 - `pride/2.0`: a `Publication` is identified by its `doi` (#249) — `title`
