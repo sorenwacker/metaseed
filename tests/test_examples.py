@@ -17,6 +17,7 @@ from pydantic import ValidationError
 from metaseed.models import get_model
 from metaseed.specs.loader import SpecLoader, SpecLoadError
 from metaseed.specs.schema import EntityDefSpec, FieldSpec, FieldType
+from tests.builtin_specs import builtin_only_loader
 
 EXAMPLES_DIR = Path(__file__).parent.parent / "src" / "metaseed" / "examples"
 
@@ -94,14 +95,9 @@ def get_all_inline_examples() -> list[tuple[str, str, str, dict]]:
         List of (profile, version, entity_name, example_data) tuples.
     """
     examples = []
-    loader = SpecLoader()
+    loader = builtin_only_loader()
 
     for profile in loader.list_profiles():
-        # Validate only built-in (repo) specs. User-defined specs under the
-        # data directory are runtime artifacts, not part of the test suite;
-        # enumerating them makes the suite depend on the developer's machine.
-        if loader.is_user_defined(profile):
-            continue
         for version in loader.list_versions(profile):
             try:
                 profile_spec = loader.load_profile(version, profile)

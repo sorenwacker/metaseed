@@ -16,20 +16,18 @@ from __future__ import annotations
 from urllib.parse import urlparse
 
 import pytest
+from tests.builtin_specs import builtin_only_loader
 
 from metaseed.seek.naming import property_uri
 from metaseed.seek.provision import build_provisioning_plan
-from metaseed.specs.loader import SpecLoader
 
 pytestmark = pytest.mark.filterwarnings("ignore::UserWarning")
 
 
 def _built_in_profiles():
     """Every built-in profile, newest version, as (name, spec)."""
-    loader = SpecLoader()
+    loader = builtin_only_loader()
     for name in loader.list_profiles():
-        if loader.is_user_defined(name):
-            continue
         versions = loader.list_versions(name)
         if not versions:
             continue

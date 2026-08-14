@@ -1064,7 +1064,6 @@ entities:
         max_length: 100
     example:
       unique_id: INV-DROUGHT-2024
-      identifier: INV-DROUGHT-2024
       title: Drought Tolerance in European Wheat Cultivars
       description: Multi-year field study assessing drought response across 50 wheat varieties under controlled water deficit
         conditions
@@ -2116,7 +2115,6 @@ entities:
       items: OntologyAnnotation
     example:
       unique_id: STU-FIELD-2024
-      identifier: STU-FIELD-2024
       investigation_id: INV-DROUGHT-2024
       title: Field Trial Summer 2024
       description: Randomized complete block design with 3 replicates testing 50 wheat cultivars
