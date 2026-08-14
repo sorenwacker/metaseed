@@ -29,7 +29,7 @@
                     </button>
                     {% if version in profile.example_versions %}
                     <a class="btn btn-sm btn-outline-secondary"
-                       href="/load-example/{{ profile.name }}/{{ version }}"
+                       href="{{ base_url }}/load-example/{{ profile.name }}/{{ version }}"
                        data-testid="example-{{ profile.name }}-v{{ version }}"
                        title="Load a fully populated example dataset for v{{ version }}">
                         Load Example

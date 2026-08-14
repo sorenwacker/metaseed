@@ -354,7 +354,7 @@ function loadGraph() {
         graphView.innerHTML = '<div class="graph-loading">Loading graph...</div>';
     }
 
-    fetch('/api/graph')
+    fetch(BASE_URL + '/api/graph')
         .then(function(response) { return response.json(); })
         .then(function(data) {
             // Show empty graph canvas even with no entities

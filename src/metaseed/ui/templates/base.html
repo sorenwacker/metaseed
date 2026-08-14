@@ -14,7 +14,7 @@
     <div class="layout">
         <header class="header">
             <h1 class="header-title">
-                <img src="/static/images/metaseed-logo-light.svg" alt="Metaseed" class="header-logo">
+                <img src="{{ base_url }}/static/images/metaseed-logo-light.svg" alt="Metaseed" class="header-logo">
             </h1>
             <nav class="header-nav">
                 <a href="{{ base_url }}/" class="nav-btn active" data-testid="nav-datasets">Datasets</a>
@@ -120,12 +120,12 @@
         const BASE_URL = "{{ base_url }}";
     </script>
     <!-- Modular JS files -->
-    <script src="/static/js/core.js?v=9"></script>
-    <script src="/static/js/validation.js?v=9"></script>
-    <script src="/static/js/table-edit.js?v=9"></script>
-    <script src="/static/js/lookup.js?v=10"></script>
-    <script src="/static/js/graph.js?v=11"></script>
-    <script src="/static/js/mcp.js?v=9"></script>
-    <script src="/static/js/dataset.js?v=9"></script>
+    <script src="{{ base_url }}/static/js/core.js?v=9"></script>
+    <script src="{{ base_url }}/static/js/validation.js?v=9"></script>
+    <script src="{{ base_url }}/static/js/table-edit.js?v=9"></script>
+    <script src="{{ base_url }}/static/js/lookup.js?v=10"></script>
+    <script src="{{ base_url }}/static/js/graph.js?v=11"></script>
+    <script src="{{ base_url }}/static/js/mcp.js?v=9"></script>
+    <script src="{{ base_url }}/static/js/dataset.js?v=9"></script>
 </body>
 </html>

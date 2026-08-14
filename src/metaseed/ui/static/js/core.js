@@ -96,7 +96,7 @@ function validateDataset() {
     btn.disabled = true;
     btn.textContent = 'Validating...';
 
-    fetch('/api/validate')
+    fetch(BASE_URL + '/api/validate')
         .then(function(response) { return response.json(); })
         .then(function(data) {
             btn.disabled = false;
@@ -155,7 +155,7 @@ function showDcatCard() {
 
     btn.disabled = true;
 
-    fetch('/api/dcat')
+    fetch(BASE_URL + '/api/dcat')
         .then(function(response) { return response.json(); })
         .then(function(data) {
             btn.disabled = false;
@@ -237,7 +237,7 @@ function dcatDownload(fmt) {
 function saveDcatMetadata(event) {
     event.preventDefault();
     var body = new URLSearchParams(new FormData(event.target));
-    fetch('/api/dcat/metadata', { method: 'POST', body: body })
+    fetch(BASE_URL + '/api/dcat/metadata', { method: 'POST', body: body })
         .then(function(response) {
             if (!response.ok) { throw new Error('HTTP ' + response.status); }
             showNotification('Catalog metadata saved', 'success');

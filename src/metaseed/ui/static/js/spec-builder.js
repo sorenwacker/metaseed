@@ -17,7 +17,7 @@ const specBuilder = SpecBuilderGraph.create({
     rootEntity: function() { return rootEntity; },
     // Navigates to /spec-builder when called with '' (not /new, which resets
     // state).
-    url: function(path) { return '/spec-builder' + path; },
+    url: function(path) { return (typeof BASE_URL !== 'undefined' ? BASE_URL : '') + '/spec-builder' + path; },
     afterSidebarTabSwitch: function(tabName) {
         // Widen sidebar for the notes tab, then refit the graph.
         const sidebar = document.querySelector('.erd-sidebar');

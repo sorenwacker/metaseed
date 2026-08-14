@@ -32,7 +32,7 @@
             </a>
             {% endfor %}
             {% elif example_available %}
-            <a href="/load-example/{{ current_profile }}/{{ current_version }}"
+            <a href="{{ base_url }}/load-example/{{ current_profile }}/{{ current_version }}"
                class="btn btn-outline-secondary btn-sm"
                data-testid="btn-load-example"
                title="Load a fully populated example dataset">

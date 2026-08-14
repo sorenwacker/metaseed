@@ -263,9 +263,12 @@
         let rootEntity = {{ spec.root_entity | tojson | safe }};
         const fieldTypes = {{ field_types | tojson | safe }};
     </script>
-    <script src="/static/js/erd-common.js?v=1"></script>
-    <script src="/static/js/spec-builder-core.js?v=1"></script>
-    <script src="/static/js/spec-builder.js?v=28"></script>
-    <script src="/static/js/help-markers.js?v=1"></script>
+    <script>
+        const BASE_URL = "{{ base_url }}";
+    </script>
+    <script src="{{ base_url }}/static/js/erd-common.js?v=1"></script>
+    <script src="{{ base_url }}/static/js/spec-builder-core.js?v=1"></script>
+    <script src="{{ base_url }}/static/js/spec-builder.js?v=28"></script>
+    <script src="{{ base_url }}/static/js/help-markers.js?v=1"></script>
 </body>
 </html>

@@ -311,7 +311,7 @@ function handlePaste(text) {
 
     // Send paste data to server
     if (changes.length > 0) {
-        fetch('/table/' + parentType + '/' + fieldName + '/paste', {
+        fetch(BASE_URL + '/table/' + parentType + '/' + fieldName + '/paste', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',

@@ -1315,3 +1315,51 @@ class TestRedirectsHonorTheBaseUrl:
         )
         assert response.status_code == 303
         assert response.headers["location"] == "/hub/spec-builder"
+
+
+class TestStaticAssetsAndFetchesHonorTheBaseUrl:
+    """No template script tag or JS fetch escapes the mount prefix.
+
+    Templates prefixed their links but hardcoded /static script tags and half
+    the JS fetches skipped BASE_URL, so a "/hub" mount loaded assets and hit
+    APIs at site root. Scan-gated: there is no JS test harness.
+    """
+
+    def test_no_template_hardcodes_a_static_path(self):
+        from pathlib import Path
+
+        templates = (
+            Path(__file__).resolve().parents[2]
+            / "src"
+            / "metaseed"
+            / "ui"
+            / "templates"
+        )
+        offenders = [
+            f"{path.relative_to(templates)}:{i}"
+            for path in templates.rglob("*.html")
+            for i, line in enumerate(path.read_text().splitlines(), start=1)
+            if 'src="/static' in line or 'href="/load-example' in line
+        ]
+        assert not offenders, offenders
+
+    def test_no_js_fetch_skips_the_prefix(self):
+        import re
+        from pathlib import Path
+
+        js = (
+            Path(__file__).resolve().parents[2]
+            / "src"
+            / "metaseed"
+            / "ui"
+            / "static"
+            / "js"
+        )
+        bare = re.compile(r"""fetch\(\s*['"`]/(api|table|dataset|spec-builder)""")
+        offenders = [
+            f"{path.name}:{i}"
+            for path in sorted(js.glob("*.js"))
+            for i, line in enumerate(path.read_text().splitlines(), start=1)
+            if bare.search(line)
+        ]
+        assert not offenders, offenders
