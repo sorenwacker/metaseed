@@ -17,8 +17,13 @@ Configuration via environment variables:
 Example:
     >>> from metaseed.services import get_ontology_service
     >>> service = get_ontology_service()
-    >>> results = await service.search("drought", ontology="pato")
-    >>> term = await service.get_term("PATO:0000001")
+    >>> results = service.search_sync("drought", ontology="pato")
+    >>> term = service.get_term_sync("PATO:0000001")
+
+    This adapter is synchronous; async access goes through
+    :class:`~metaseed.services.terms.TermRouter`, whose ``search``/``get_term``
+    wrap the sync implementations in a worker thread. The async twins that
+    lived here were byte-for-byte copies that had already drifted once.
 """
 
 from __future__ import annotations
@@ -306,102 +311,6 @@ class OntologyService:
             "valid_entries": total - expired,
         }
 
-    async def search(
-        self: Self,
-        query: str,
-        ontology: str | None = None,
-        rows: int = 10,
-        exact: bool = False,
-        within: str | None = None,
-    ) -> list[OntologySearchResult]:
-        """Search OLS4 for ontology terms.
-
-        Args:
-            query: Search query string.
-            ontology: Optional ontology ID to filter (e.g., "pato", "go").
-            rows: Maximum number of results (default: 10).
-            exact: If True, only return exact matches.
-            within: Restrict to terms beneath this one, e.g. ``JERM:00025``.
-
-        Returns:
-            List of OntologySearchResult objects.
-        """
-        if not query or not query.strip():
-            return []
-
-        # The branch joins the key only when there is one, so an unscoped
-        # search keeps the key it has always had and its cached entries.
-        cache_key = f"search:{query}:{ontology}:{rows}:{exact}"
-        if within:
-            cache_key += f":{within}"
-
-        # Check cache
-        cached = self._get_cached(cache_key)
-        if cached is not _MISSING:
-            logger.debug("Cache hit for search: %s", query)
-            # Return a copy so a caller mutating the list cannot corrupt the cache.
-            return list(cached)
-
-        # Rate limit
-        await self._rate_limiter.acquire()
-
-        # Build request
-        params: dict[str, Any] = {
-            "q": query,
-            "rows": rows,
-            "fieldList": "iri,label,short_form,obo_id,ontology_name,ontology_prefix,description",
-        }
-        if ontology:
-            params["ontology"] = ontology.lower()
-        if exact:
-            params["exact"] = "true"
-        if within:
-            iri = self._construct_iri(within)
-            if iri:
-                params["childrenOf"] = iri
-
-        try:
-            async with httpx.AsyncClient(
-                timeout=DEFAULT_TIMEOUT, headers=DEFAULT_HEADERS
-            ) as client:
-                response = await client.get(f"{self.base_url}/search", params=params)
-                response.raise_for_status()
-                data = response.json()
-        except httpx.HTTPStatusError as e:
-            logger.warning(
-                "OLS4 search error: %s %s", e.response.status_code, e.response.text
-            )
-            return []
-        except httpx.RequestError as e:
-            logger.warning("OLS4 search request failed: %s", e)
-            return []
-
-        # Parse results
-        results: list[OntologySearchResult] = []
-        docs = data.get("response", {}).get("docs", [])
-
-        for doc in docs:
-            term_id = doc.get("obo_id") or doc.get("short_form") or ""
-            results.append(
-                OntologySearchResult(
-                    term_id=term_id,
-                    label=doc.get("label", ""),
-                    description=(doc.get("description") or [""])[0]
-                    if doc.get("description")
-                    else None,
-                    ontology=doc.get("ontology_prefix") or doc.get("ontology_name"),
-                    iri=doc.get("iri"),
-                    short_form=doc.get("short_form"),
-                )
-            )
-
-        # Cache results
-        self._set_cached(cache_key, results)
-        logger.debug("Cached search results for: %s (%d results)", query, len(results))
-
-        # Return a copy so a caller mutating the list cannot corrupt the cache.
-        return list(results)
-
     def search_sync(
         self: Self,
         query: str,
@@ -500,88 +409,6 @@ class OntologyService:
 
         # Return a copy so a caller mutating the list cannot corrupt the cache.
         return list(results)
-
-    async def get_term(self: Self, term_id: str) -> OntologyTerm | None:
-        """Get detailed information about an ontology term.
-
-        Args:
-            term_id: Ontology term ID (e.g., "PATO:0000001", "GO:0008150").
-
-        Returns:
-            OntologyTerm object, or None if the term genuinely does not exist
-            (HTTP 404).
-
-        Raises:
-            OntologyServiceError: If the OLS4 service is unreachable or returns
-                a non-404 error. This is distinct from a missing term so callers
-                can fail open rather than treat an outage as proof of absence.
-        """
-        if not term_id:
-            return None
-
-        cache_key = f"term:{term_id}"
-
-        # Check cache
-        cached = self._get_cached(cache_key)
-        if cached is not _MISSING:
-            logger.debug("Cache hit for term: %s", term_id)
-            return cast("OntologyTerm | None", cached)
-
-        # Parse term ID to get ontology
-        ontology = self._parse_ontology_from_term_id(term_id)
-        if not ontology:
-            logger.warning("Could not determine ontology from term ID: %s", term_id)
-            return None
-
-        # Rate limit
-        await self._rate_limiter.acquire()
-
-        # Construct the OLS4 term path. The endpoint expects the full IRI
-        # double-URL-encoded as a single path segment.
-        iri = self._construct_iri(term_id)
-        encoded_iri = quote(quote(iri, safe=""), safe="") if iri else ""
-
-        try:
-            async with httpx.AsyncClient(
-                timeout=DEFAULT_TIMEOUT, headers=DEFAULT_HEADERS
-            ) as client:
-                url = f"{self.base_url}/ontologies/{ontology}/terms/{encoded_iri}"
-                response = await client.get(url)
-                response.raise_for_status()
-                data = response.json()
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code == 404:
-                logger.debug("Term not found: %s", term_id)
-                # Cache negative result
-                self._set_cached(cache_key, None)
-                return None
-            logger.warning("OLS4 term lookup error: %s", e)
-            raise OntologyServiceError(
-                f"OLS4 term lookup failed for '{term_id}': {e}"
-            ) from e
-        except httpx.RequestError as e:
-            logger.warning("OLS4 term request failed: %s", e)
-            raise OntologyServiceError(
-                f"OLS4 term request failed for '{term_id}': {e}"
-            ) from e
-
-        # Parse result
-        term = OntologyTerm(
-            term_id=data.get("obo_id") or data.get("short_form") or term_id,
-            label=data.get("label", ""),
-            description=(data.get("description") or [""])[0]
-            if data.get("description")
-            else None,
-            ontology=data.get("ontology_prefix") or data.get("ontology_name"),
-            iri=data.get("iri"),
-            synonyms=data.get("synonyms", []),
-        )
-
-        # Cache result
-        self._set_cached(cache_key, term)
-        logger.debug("Cached term: %s", term_id)
-
-        return term
 
     def get_term_sync(self: Self, term_id: str) -> OntologyTerm | None:
         """Synchronous version of get_term.

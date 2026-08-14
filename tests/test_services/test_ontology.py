@@ -285,16 +285,6 @@ class TestOntologyService:
         with pytest.raises(OntologyServiceError):
             service.get_term_sync("PATO:0000001")
 
-    async def test_search_empty_query(self) -> None:
-        """Empty search query returns empty list."""
-        service = OntologyService()
-
-        results = await service.search("")
-        assert results == []
-
-        results = await service.search("   ")
-        assert results == []
-
     def test_search_sync_empty_query(self) -> None:
         """Sync search with empty query returns empty list."""
         service = OntologyService()
@@ -302,15 +292,14 @@ class TestOntologyService:
         results = service.search_sync("")
         assert results == []
 
-    @pytest.mark.asyncio
-    async def test_search_uses_cache(self) -> None:
+    def test_search_uses_cache(self) -> None:
         """Search uses cached results."""
         service = OntologyService()
 
         cached_results = [OntologySearchResult(term_id="TEST:001", label="Test Term")]
         service._set_cached("search:drought:None:10:False", cached_results)
 
-        results = await service.search("drought")
+        results = service.search_sync("drought")
         assert len(results) == 1
         assert results[0].term_id == "TEST:001"
 
@@ -336,3 +325,28 @@ class TestOntologyServiceSingleton:
         service2 = get_ontology_service()
 
         assert service1 is not service2
+
+
+def test_async_lives_on_the_router_not_the_adapter() -> None:
+    """OntologyService is the sync OLS adapter; async wrapping is TermRouter's.
+
+    search/search_sync and get_term/get_term_sync were ~200 byte-identical
+    lines apart from the client class, had already drifted once (a comment
+    existed only in the sync copy), and the async copies had no production
+    caller — every async consumer awaits TermRouter, which wraps the sync
+    implementations in a worker thread. The async twins are deleted; this
+    scan keeps them from growing back.
+    """
+    import inspect
+
+    from metaseed.services.ontology import OntologyService
+
+    async_twins = [
+        name
+        for name in ("search", "get_term")
+        if inspect.iscoroutinefunction(getattr(OntologyService, name, None))
+    ]
+    assert not async_twins, (
+        f"async duplicates on the OLS adapter: {async_twins}; async access "
+        "goes through TermRouter's thread wrappers"
+    )

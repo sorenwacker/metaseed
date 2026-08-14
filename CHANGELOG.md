@@ -3,6 +3,12 @@
 ## Unreleased
 
 ### Changed
+- `OntologyService` is the synchronous OLS adapter, full stop: its async
+  `search`/`get_term` twins — ~200 byte-identical lines that had already
+  drifted once and had no production caller — are deleted. Async access goes
+  through `TermRouter`, whose `search`/`get_term` wrap the sync
+  implementations in a worker thread; a scan test keeps the twins from
+  growing back.
 - Nested-entity resolution binds to the generated class, not to a mutable
   global. The model context's profile:version was set by every `get_model`
   call and facade build while `_convert_nested_entities` ran at validation
