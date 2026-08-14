@@ -242,3 +242,28 @@ class TestPermissiveLoad:
         roots = client.facade.get_roots()
         assert len(roots) == 1
         assert [c.entity_type for c in roots[0].children] == ["Study"]
+
+
+class TestAMalformedPayloadCannotWipeTheStore:
+    """A dict with neither "tree" nor "entities" must refuse, not clear.
+
+    The fallthrough `data if isinstance(data, list) else []` turned a typo'd
+    key ({"entitles": ...}), a wrong shape, or a truncated file into an empty
+    list, and load_from_dict clears the store before loading — so a malformed
+    payload silently destroyed every existing entity and returned 0.
+    """
+
+    def test_a_typoed_key_raises_and_keeps_the_data(
+        self, client: MetaseedClient
+    ) -> None:
+        client.create_entity("Investigation", {"title": "Keep me"})
+
+        with pytest.raises(ValueError, match=r"tree|entities"):
+            client.load({"entitles": [{"_type": "Investigation"}]})
+
+        assert len(client.get_roots()) == 1
+
+    def test_a_bare_list_still_loads(self, client: MetaseedClient) -> None:
+        loaded = client.load([{"_type": "Investigation", "title": "T"}])
+
+        assert loaded == 1

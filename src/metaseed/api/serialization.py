@@ -174,8 +174,16 @@ class SerializationMixin(InstanceDataMixin):
 
         if "entities" in data:
             entities = data["entities"]
+        elif isinstance(data, list):
+            entities = data
         else:
-            entities = data if isinstance(data, list) else []
+            # A mapping with neither key is a malformed payload (typo'd key,
+            # wrong shape, truncated file). Falling through to an empty list
+            # would clear the store before loading nothing — a silent wipe.
+            raise ValueError(
+                "Payload has neither 'tree' nor 'entities'; refusing to "
+                "replace the loaded dataset with it."
+            )
 
         return self._facade.load_from_dict(entities)
 

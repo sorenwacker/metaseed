@@ -25,6 +25,8 @@ Confirmed: **4 high, 73 medium, 12 low**. By category: correctness 40, consisten
 
 **Remediation status (0.35.0):** all 4 highs and the 6 recurring themes below are fixed — 31 findings, each marked **fixed in 0.35.0** in place. The CV-IRI enrichment (`seek/provision.py:130`) was wired to the term-source router rather than deleted. The remaining medium/low findings are tracked as backlog.
 
+**Triage (260814):** the remaining findings are being worked through in three groups. *Mechanical correctness and dead code* are being fixed one issue at a time (marked in place as they land). The `llm` package is deleted (wired to no interface here, unused by the hub). `pride`/`metabolights` `validate_cv`/`validate_submission` get wired into the CLI validate path. *Design debt stays as recorded backlog*: the global mutable model context and dual model caches (`models/factory.py:123`, `:125`), the miappe-hardcoded REST API (`api/rest.py:22`), and the sync/async duplication in `services/ontology.py:405`.
+
 Recurring themes, each spanning several findings:
 
 1. **`ValidationError.kind` is dropped at boundaries.** The VALUE/COMPLETENESS split exists in the validators but is discarded wherever errors are rebuilt — the cascade path, `validate_directory`'s file prefixes, the agent's `ValidationIssue`, the public API's schema. Everything downstream of those points sees every error as blocking again.
