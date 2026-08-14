@@ -105,10 +105,17 @@ class TypeConverter:
             return None
 
     @staticmethod
-    def _to_boolean(value: Any) -> bool:
+    def _to_boolean(value: Any) -> bool | None:
         if isinstance(value, bool):
             return value
-        return str(value).lower() in ("true", "1", "yes")
+        # None for anything unrecognized, honouring convert()'s contract:
+        # 'N/A' silently stored as False is data corruption, not a boolean.
+        text = str(value).strip().lower()
+        if text in ("true", "1", "yes"):
+            return True
+        if text in ("false", "0", "no"):
+            return False
+        return None
 
     @staticmethod
     def _to_list(value: Any) -> list[Any]:
