@@ -100,7 +100,12 @@ class FileEntityRepository(EntityRepository):
         Returns:
             FileEntityRepository instance.
         """
-        base_dir = datasets_dir or DEFAULT_DATASETS_DIR
+        from metaseed.repositories.filesystem_dataset import default_datasets_dir
+
+        # Shared resolver, not the bare constant: METASEED_DATASETS_DIR must
+        # redirect this repository exactly as it does the dataset repository,
+        # or a sandboxed run writes half its data into the real user dir.
+        base_dir = datasets_dir or default_datasets_dir()
         base_dir.mkdir(parents=True, exist_ok=True)
         path = base_dir / f"{name}.json"
         return cls(dataset_path=path)

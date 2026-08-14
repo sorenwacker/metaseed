@@ -569,3 +569,20 @@ class TestReadsCannotCorruptTheStore:
         updated.data["title"] = "vandalised"
 
         assert repo.get_entity(created.id).data["title"] == "T2"
+
+
+def test_from_dataset_name_honours_the_datasets_dir_override(
+    tmp_path, monkeypatch
+) -> None:
+    """The env override the sibling repository honours applies here too.
+
+    With METASEED_VOCABULARIES-style redirection set, FilesystemDatasetRepository
+    wrote to the redirected directory while from_dataset_name still wrote into
+    the user's real data dir — the hermetic isolation the override exists for,
+    split down the middle.
+    """
+    monkeypatch.setenv("METASEED_DATASETS_DIR", str(tmp_path / "redirected"))
+
+    repo = FileEntityRepository.from_dataset_name("iso-test")
+
+    assert str(tmp_path / "redirected") in str(repo._path)
