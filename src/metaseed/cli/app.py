@@ -428,6 +428,11 @@ def migrate_datasets(
     reports = migrate_all_datasets(dry_run=not apply)
     print_migration_report(reports)
 
+    # Same contract as migrate-specs: scripted callers read the exit code,
+    # and a failed dataset migration must not report success.
+    if any("error" in report for report in reports):
+        raise typer.Exit(ExitCode.VALIDATION_ERROR)
+
 
 @app.command(name="migrate-specs")
 def migrate_spec_versions(

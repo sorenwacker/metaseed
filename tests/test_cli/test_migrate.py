@@ -363,3 +363,35 @@ class TestUntrackedDeletionsAreNeitherLostNorSilent:
         child = next(e for e in saved["entities"] if e["_type"] == "Study")
         assert child.get("_parent_id") == "deadbeef", "unresolvable link kept"
         assert parent.get("_node_id") == "deadbeef", "its target key kept too"
+
+
+class TestMigrateExitCode:
+    """`metaseed migrate --apply` must exit non-zero on per-file errors.
+
+    The sibling migrate-specs gates its exit code on failures; migrate printed
+    [ERROR] lines and exited 0, so scripted callers could not detect a failed
+    dataset migration.
+    """
+
+    def test_errors_produce_a_nonzero_exit(self, tmp_path, monkeypatch):
+        from typer.testing import CliRunner
+
+        from metaseed.cli.app import app
+
+        monkeypatch.setenv("METASEED_DATASETS_DIR", str(tmp_path))
+        (tmp_path / "broken.json").write_text("{not json")
+
+        result = CliRunner().invoke(app, ["migrate", "--apply"])
+
+        assert result.exit_code != 0
+
+    def test_a_clean_run_still_exits_zero(self, tmp_path, monkeypatch):
+        from typer.testing import CliRunner
+
+        from metaseed.cli.app import app
+
+        monkeypatch.setenv("METASEED_DATASETS_DIR", str(tmp_path))
+
+        result = CliRunner().invoke(app, ["migrate", "--apply"])
+
+        assert result.exit_code == 0
