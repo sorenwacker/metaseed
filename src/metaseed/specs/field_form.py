@@ -3,7 +3,8 @@
 This is the single source of truth for turning the raw values a field editor
 collects (all strings/booleans) into a populated ``FieldSpec`` -- every attribute
 including the spec_version 0.6 markers (``owns``, ``is_identifier``, ``is_label``,
-``tier``, ``label``, ``unit``, ``example``, ``options``) and the ``Constraints``.
+``tier``, ``label``, ``unit``, ``example``, ``options``, ``isa_tag``) and the
+``Constraints``.
 
 It is pure (no I/O) and is meant to be shared by every field editor -- the
 built-in spec builder UI, the metaseed-hub spec builder, and the MCP
@@ -58,6 +59,7 @@ class FieldForm:
     is_identifier: bool = False
     is_label: bool = False
     tier: str = ""
+    isa_tag: str = ""
     label: str = ""
     unit: str = ""
     example: str = ""
@@ -121,6 +123,7 @@ class FieldForm:
         field.is_identifier = self.is_identifier or None
         field.is_label = self.is_label or None
         field.tier = self._tier()
+        field.isa_tag = self.isa_tag.strip() or None
         field.label = self.label.strip() or None
         field.unit = self.unit.strip() or None
         field.example = self.example.strip() or None

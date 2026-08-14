@@ -14,7 +14,7 @@ from fastapi.templating import Jinja2Templates
 
 from metaseed.specs.builder import SpecBuilder
 from metaseed.specs.field_form import FieldForm
-from metaseed.specs.schema import EntityDefSpec, FieldSpec, FieldType
+from metaseed.specs.schema import ISA_TAGS, EntityDefSpec, FieldSpec, FieldType
 from metaseed.ui.spec_builder.access import (
     entity_editor_response,
     require_entity,
@@ -113,6 +113,7 @@ def register_field_routes(
                 "field": entity.fields[idx],
                 "field_idx": idx,
                 "field_types": [t.value for t in FieldType],
+                "isa_tags": ISA_TAGS,
             },
         )
 
@@ -146,6 +147,7 @@ def register_field_routes(
         is_identifier: bool = Form(False),
         is_label: bool = Form(False),
         tier: str = Form(""),
+        isa_tag: str = Form(""),
         label: str = Form(""),
         unit: str = Form(""),
         example: str = Form(""),
@@ -194,6 +196,7 @@ def register_field_routes(
             is_identifier=is_identifier,
             is_label=is_label,
             tier=tier,
+            isa_tag=isa_tag,
             label=label,
             unit=unit,
             example=example,

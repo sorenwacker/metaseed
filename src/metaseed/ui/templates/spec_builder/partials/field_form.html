@@ -40,6 +40,15 @@
                         <option value="optional" {% if field.tier == 'optional' %}selected{% endif %}>optional</option>
                     </select>
                 </div>
+                <div class="form-group">
+                    <label class="form-label" title="The ISA tag this field carries into a SEEK Sample Type attribute">ISA tag</label>
+                    <select name="isa_tag" class="form-input">
+                        <option value="" {% if not field.isa_tag %}selected{% endif %}>(unset)</option>
+                        {% for tag in isa_tags %}
+                        <option value="{{ tag }}" {% if field.isa_tag == tag %}selected{% endif %}>{{ tag }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
             </div>
 
             <div class="form-row">

@@ -1247,3 +1247,41 @@ class TestFieldEditFailsWhole:
         preview = client.get("/spec-builder/preview").text
         assert "size" in preview, "the failed edit must not have renamed the field"
         assert "renamed" not in preview
+
+
+class TestTheFieldEditorCanAuthorAnIsaTag:
+    """isa_tag is settable from the UI, not only over MCP.
+
+    FieldForm's docstring claims it covers every FieldSpec attribute, but it
+    had no isa_tag input, so a profile author working in the web spec builder
+    could not tag the field a SEEK Sample Type attribute needs.
+    """
+
+    def test_update_field_sets_and_clears_the_tag(self, client):
+        client.get("/spec-builder/new")
+        client.post("/spec-builder/entity", data={"name": "Sample"})
+        client.post(
+            "/spec-builder/entity/Sample/field",
+            data={"name": "name", "field_type": "string"},
+        )
+
+        response = client.put(
+            "/spec-builder/entity/Sample/field/0",
+            data={
+                "name": "name",
+                "field_type": "string",
+                "isa_tag": "source_characteristic",
+            },
+        )
+        assert response.status_code == 200
+
+        builder = client.app.state.ui_state.spec_builder
+        assert builder.spec.entities["Sample"].fields[0].isa_tag == (
+            "source_characteristic"
+        )
+
+        client.put(
+            "/spec-builder/entity/Sample/field/0",
+            data={"name": "name", "field_type": "string", "isa_tag": ""},
+        )
+        assert builder.spec.entities["Sample"].fields[0].isa_tag is None
