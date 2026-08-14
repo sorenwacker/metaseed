@@ -616,11 +616,15 @@ class EntityStore:
                 parent_node.children.append(node)
 
     def _link_by_nested_arrays(self: Self, id_to_node: dict[str, EntityNode]) -> None:
-        """Link children via parent's nested array fields."""
-        for node in list(self._instances.values()):
-            if node.parent_id:
-                continue
+        """Link children via parent's nested array fields.
 
+        Every node is examined as a potential PARENT here — a mid-level node
+        that has itself been parented still owns children, so there is no
+        parent_id short-circuit (the child-side ``parent_id is None`` check
+        below already prevents re-linking). The same guard IS correct in
+        ``_link_by_reference_fields``, where the iterated node is the child.
+        """
+        for node in list(self._instances.values()):
             try:
                 helper = self._get_helper(node.entity_type)
             except (KeyError, AttributeError):

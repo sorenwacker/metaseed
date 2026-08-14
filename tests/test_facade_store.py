@@ -266,3 +266,45 @@ def test_hierarchy_survives_reload_without_a_unique_id_parent() -> None:
     roots = reloaded.get_roots()
     assert [r.entity_type for r in roots] == ["Dataset"]
     assert [c.entity_type for c in roots[0].children] == ["Sample"]
+
+
+class _Free(BaseModel):
+    """Accepts any fields, like generated entity models with optional fields."""
+
+    model_config = {"extra": "allow"}
+
+
+def test_nested_array_linking_is_not_order_dependent() -> None:
+    """A mid-level parent must still link its children after being parented.
+
+    The loop guard `if node.parent_id: continue` skipped the node being
+    examined as a PARENT once it had itself been linked, so in a 3-level
+    hierarchy loaded parent-first (the natural root-first order) the middle
+    level never linked its own children — reversing the input order linked
+    everything, which is how the defect hid.
+    """
+    helpers = {
+        "Investigation": _FakeHelper(
+            identifier_field="name", fields=["name", "studies"]
+        ),
+        "Study": _FakeHelper(identifier_field="name", fields=["name", "samples"]),
+        "Sample": _FakeHelper(identifier_field="name", fields=["name"]),
+    }
+    helpers["Investigation"].nested_fields = {"studies": "Study"}
+    helpers["Study"].nested_fields = {"samples": "Sample"}
+
+    store = EntityStore(
+        helper_getter=lambda t: helpers[t],
+        instance_creator=lambda _t, data: _Free(**data),
+    )
+
+    entities = [
+        {"_type": "Investigation", "name": "inv", "studies": ["stu"]},
+        {"_type": "Study", "name": "stu", "samples": ["sam"]},
+        {"_type": "Sample", "name": "sam"},
+    ]
+    assert store.load_from_dict(entities) == 3
+
+    nodes = {n.instance.name: n for n in store._instances.values()}
+    assert nodes["stu"].parent_id == nodes["inv"].id
+    assert nodes["sam"].parent_id == nodes["stu"].id
