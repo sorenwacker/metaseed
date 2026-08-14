@@ -163,3 +163,20 @@ def test_no_dataset_reports_missing_submission():
     errors = validate_submission(MetaseedClient("pride", "1.0"))
     assert len(errors) == 1
     assert errors[0].rule == "px_structure"
+
+
+def test_the_emptiest_mapping_does_not_pass_the_file_rules():
+    """A submission with NO files must fail the presence rules, not skip them.
+
+    The RAW/RESULT/SEARCH requirements were nested inside `if files:`, so a
+    dataset with no DataFile entities — the emptiest possible mapping —
+    reported no file-mapping errors at all.
+    """
+    dataset = _complete_dataset()
+    dataset["files"] = []
+
+    errors = validate_submission(_submission_client(dataset))
+    messages = " ".join(e.message for e in errors)
+
+    assert "RAW" in messages
+    assert "RESULT" in messages

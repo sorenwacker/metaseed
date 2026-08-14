@@ -170,18 +170,20 @@ def validate_submission(client: MetaseedClient) -> list[ValidationError]:
             )
         )
 
-    # File mapping: FME columns are file_id, file_type, file_path.
+    # File mapping: FME columns are file_id, file_type, file_path. Only the
+    # per-row validity loop needs rows to exist — the presence rules fire
+    # precisely when the section is empty or absent, which is the emptiest
+    # possible mapping and must not pass the rules the docstring promises.
     file_types = [row[2] for row in files if len(row) >= 3]
-    if files:
-        for row in files:
-            ftype = row[2] if len(row) >= 3 else ""
-            if ftype not in _VALID_FILE_TYPES:
-                errors.append(_err(f"invalid file_type '{ftype}' in file mapping"))
-        if "RAW" not in file_types:
-            errors.append(_err("file mapping must include at least one RAW file"))
-        if submission_type == "COMPLETE" and "RESULT" not in file_types:
-            errors.append(_err("COMPLETE submissions require at least one RESULT file"))
-        if submission_type == "PARTIAL" and "SEARCH" not in file_types:
-            errors.append(_err("PARTIAL submissions require at least one SEARCH file"))
+    for row in files:
+        ftype = row[2] if len(row) >= 3 else ""
+        if ftype not in _VALID_FILE_TYPES:
+            errors.append(_err(f"invalid file_type '{ftype}' in file mapping"))
+    if "RAW" not in file_types:
+        errors.append(_err("file mapping must include at least one RAW file"))
+    if submission_type == "COMPLETE" and "RESULT" not in file_types:
+        errors.append(_err("COMPLETE submissions require at least one RESULT file"))
+    if submission_type == "PARTIAL" and "SEARCH" not in file_types:
+        errors.append(_err("PARTIAL submissions require at least one SEARCH file"))
 
     return errors
