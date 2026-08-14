@@ -10,6 +10,7 @@ This is the round-trip partner of :func:`metaseed.ena.import_accession`.
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, Any
 from xml.etree import ElementTree as ET
 
@@ -62,6 +63,21 @@ def _sample_set(samples: list[dict[str, Any]]) -> str:
     return _serialize(root)
 
 
+def _tag_name(value: Any) -> str:
+    """A well-formed XML element name for an enum-derived tag.
+
+    ENA's schema spells these values as element names (``<PAIRED/>``,
+    ``<ILLUMINA>``). A draft value like "Illumina HiSeq" used raw produced
+    malformed XML with no error — ENA rejects that with no hint of the cause.
+    Sanitizing keeps the document parseable; whether the VALUE is a legal ENA
+    term stays the enum validation's job, where it is reported per field.
+    """
+    cleaned = re.sub(r"[^A-Za-z0-9_.-]", "_", str(value).strip().upper())
+    if not cleaned or not (cleaned[0].isalpha() or cleaned[0] == "_"):
+        cleaned = f"_{cleaned}"
+    return cleaned
+
+
 def _experiment_set(experiments: list[dict[str, Any]]) -> str:
     root = ET.Element("EXPERIMENT_SET")
     for e in experiments:
@@ -81,10 +97,10 @@ def _experiment_set(experiments: list[dict[str, Any]]) -> str:
         _text(lib, "LIBRARY_SELECTION", e.get("library_selection"))
         if e.get("library_layout"):
             layout = ET.SubElement(lib, "LIBRARY_LAYOUT")
-            ET.SubElement(layout, str(e["library_layout"]).upper())
+            ET.SubElement(layout, _tag_name(e["library_layout"]))
         if e.get("platform"):
             platform = ET.SubElement(exp, "PLATFORM")
-            model = ET.SubElement(platform, str(e["platform"]).upper())
+            model = ET.SubElement(platform, _tag_name(e["platform"]))
             _text(model, "INSTRUMENT_MODEL", e.get("instrument_model"))
     return _serialize(root)
 

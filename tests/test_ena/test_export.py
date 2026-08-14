@@ -88,3 +88,32 @@ def test_ena_export_validates_against_official_sra_xsd():
     ]:
         schema = xmlschema.XMLSchema(base + xsd, base_url=base)
         schema.validate(docs[doc])  # raises XMLSchemaValidationError if invalid
+
+
+class TestTagNamesAreAlwaysWellFormed:
+    """A draft value must not serialize into unparseable XML.
+
+    library_layout/platform were used as raw element tag names; ElementTree
+    validates nothing, so a draft value like 'Illumina HiSeq' produced
+    '<ILLUMINA HISEQ/>' — malformed XML emitted with no error, which ENA
+    rejects with no hint of the cause. The tag is sanitized to a well-formed
+    name; the value itself is still the enum validation's job.
+    """
+
+    def test_a_spaced_platform_still_parses(self):
+        import xml.etree.ElementTree as ET
+
+        from metaseed.ena.export import _experiment_set
+
+        xml = _experiment_set(
+            [
+                {
+                    "alias": "E1",
+                    "platform": "Illumina HiSeq",
+                    "library_layout": "paired end",
+                }
+            ]
+        )
+
+        parsed = ET.fromstring(xml)
+        assert parsed is not None
