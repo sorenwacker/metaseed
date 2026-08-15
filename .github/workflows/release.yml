@@ -82,14 +82,18 @@ jobs:
         # base, every extra, and dev — so a consumer or scanner can answer
         # "does 0.x ship package P at version V" without reconstructing the
         # environment.
+        # The SBOM lives outside dist/: the PyPI upload publishes everything
+        # in dist/ and refuses a file that is not a distribution.
         run: |
           uv export --format requirements-txt --no-emit-project --no-hashes --all-extras             > /tmp/requirements-sbom.txt
-          uvx --python 3.12 --from cyclonedx-bom cyclonedx-py requirements /tmp/requirements-sbom.txt             --output-file dist/sbom.cdx.json
+          uvx --python 3.12 --from cyclonedx-bom cyclonedx-py requirements /tmp/requirements-sbom.txt             --output-file sbom.cdx.json
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/*
+          files: |
+            dist/*
+            sbom.cdx.json
           generate_release_notes: true
 
       - name: Upload dist for the publish job
