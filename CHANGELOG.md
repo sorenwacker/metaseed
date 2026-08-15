@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.39.0 (260815)
 
 ### Changed
 - `graph.js` is reusable by other applications (#254). The drawing — legend,
