@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+- `graph.js` is reusable by other applications (#254). The drawing — legend,
+  per-type counts, click-to-hide filtering — was closed behind its transport:
+  the endpoint was `BASE_URL + '/api/graph'` with no way for a host to name
+  its own dataset, and nothing drew the graph on an ordinary page load, so an
+  embedder got a blank canvas and no error. `renderGraphData(data)` is now the
+  public drawing entry point for a host with its own transport; `loadGraph`
+  takes a URL and otherwise reads `window.METASEED_GRAPH_URL` at call time;
+  and the graph draws itself on DOMContentLoaded where its container is
+  present, suppressible with `METASEED_GRAPH_AUTOLOAD = false`. The contract
+  is documented under Guides and gated by a scan test.
+
 ## v0.38.0 (260814)
 
 ### Removed

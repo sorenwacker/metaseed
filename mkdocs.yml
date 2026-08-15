@@ -73,6 +73,7 @@ nav:
       - Profile Comparison: guides/spec-merge.md
       - Publishing to SEEK: guides/seek-export.md
       - Authoring a SEEK-ready profile: guides/seek-ready-profiles.md
+      - Embedding the entity graph: guides/embedding-the-graph.md
       - Logging: guides/logging.md
   - Profiles:
       - Darwin Core: profiles/darwin-core.md

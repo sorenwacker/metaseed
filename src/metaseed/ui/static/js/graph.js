@@ -346,7 +346,89 @@ function updateGraphIncremental(newNodes, newEdges) {
     return true;
 }
 
-function loadGraph() {
+// Where the graph data comes from, decided when the graph is drawn rather
+// than when this file loads: an embedding application sets
+// window.METASEED_GRAPH_URL (or passes a URL to loadGraph) after the script
+// tag, and metaseed's own UI falls back to its single-dataset endpoint.
+function graphUrl(url) {
+    if (url) return url;
+    if (window.METASEED_GRAPH_URL) return window.METASEED_GRAPH_URL;
+    return (typeof BASE_URL === 'undefined' ? '' : BASE_URL) + '/api/graph';
+}
+
+// The public drawing entry point: everything the fetch path does once the
+// response has arrived. A host with its own transport calls this and never
+// touches the fetch below — the drawing is what is worth reusing.
+function renderGraphData(data) {
+    var graphView = document.getElementById('graph-view');
+    try {
+        // Show empty graph canvas even with no entities
+        if (!data || !data.nodes || data.nodes.length === 0) {
+            data = { nodes: [], edges: [] };
+        }
+
+        // Check if this is initial load
+        var isFirstLoad = !graphNetwork || !graphData;
+
+        // Store original data for filtering
+        allGraphNodes = data.nodes.slice();
+        allGraphEdges = data.edges.slice();
+
+        // Only initialize visible groups on first load
+        if (isFirstLoad) {
+            visibleGroups.clear();
+            knownGroups.clear();
+            // Use entity types from spec if available, otherwise from nodes
+            var types = data.entity_types || [];
+            types.forEach(function(t) {
+                visibleGroups.add(t);
+                knownGroups.add(t);
+            });
+            // Also add any types from nodes (in case spec is incomplete)
+            allGraphNodes.forEach(function(n) {
+                visibleGroups.add(n.group);
+                knownGroups.add(n.group);
+            });
+        }
+
+        // Check for genuinely new entity types before preparing data. A type
+        // is new only if never seen before; a type the user toggled off is
+        // already known and must not be re-shown by a poll.
+        var hadNewTypes = false;
+        if (!isFirstLoad) {
+            data.nodes.forEach(function(n) {
+                if (!knownGroups.has(n.group)) {
+                    knownGroups.add(n.group);
+                    visibleGroups.add(n.group);
+                    hadNewTypes = true;
+                }
+            });
+        }
+
+        // Prepare node styling
+        data = prepareGraphData(data);
+
+        // If graph exists, update incrementally
+        if (!isFirstLoad) {
+            updateGraphIncremental(data.nodes, data.edges);
+            // Update legend if new entity types appeared
+            if (hadNewTypes) {
+                renderGraphLegend(data);
+            }
+        } else {
+            // Initial render
+            renderGraph(data);
+            renderGraphLegend(data);
+        }
+    } catch (error) {
+        console.error('Error drawing graph:', error);
+        if (graphView) {
+            graphView.innerHTML = '<div class="graph-error">Failed to draw graph</div>';
+        }
+    }
+}
+
+function loadGraph(url) {
     var graphView = document.getElementById('graph-view');
 
     // Only show loading message on initial load
@@ -354,68 +436,9 @@ function loadGraph() {
         graphView.innerHTML = '<div class="graph-loading">Loading graph...</div>';
     }
 
-    fetch(BASE_URL + '/api/graph')
+    return fetch(graphUrl(url))
         .then(function(response) { return response.json(); })
-        .then(function(data) {
-            // Show empty graph canvas even with no entities
-            if (!data.nodes || data.nodes.length === 0) {
-                data = { nodes: [], edges: [] };
-            }
-
-            // Check if this is initial load
-            var isFirstLoad = !graphNetwork || !graphData;
-
-            // Store original data for filtering
-            allGraphNodes = data.nodes.slice();
-            allGraphEdges = data.edges.slice();
-
-            // Only initialize visible groups on first load
-            if (isFirstLoad) {
-                visibleGroups.clear();
-                knownGroups.clear();
-                // Use entity types from spec if available, otherwise from nodes
-                var types = data.entity_types || [];
-                types.forEach(function(t) {
-                    visibleGroups.add(t);
-                    knownGroups.add(t);
-                });
-                // Also add any types from nodes (in case spec is incomplete)
-                allGraphNodes.forEach(function(n) {
-                    visibleGroups.add(n.group);
-                    knownGroups.add(n.group);
-                });
-            }
-
-            // Check for genuinely new entity types before preparing data. A type
-            // is new only if never seen before; a type the user toggled off is
-            // already known and must not be re-shown by a poll.
-            var hadNewTypes = false;
-            if (!isFirstLoad) {
-                data.nodes.forEach(function(n) {
-                    if (!knownGroups.has(n.group)) {
-                        knownGroups.add(n.group);
-                        visibleGroups.add(n.group);
-                        hadNewTypes = true;
-                    }
-                });
-            }
-
-            // Prepare node styling
-            data = prepareGraphData(data);
-
-            // If graph exists, update incrementally
-            if (!isFirstLoad) {
-                var hasChanges = updateGraphIncremental(data.nodes, data.edges);
-                // Update legend if new entity types appeared
-                if (hadNewTypes) {
-                    renderGraphLegend(data);
-                }
-            } else {
-                // Initial render
-                renderGraph(data);
-                renderGraphLegend(data);
-            }
-        })
+        .then(renderGraphData)
         .catch(function(error) {
             console.error('Error loading graph:', error);
             if (graphView) {
@@ -615,6 +638,25 @@ if (window.matchMedia) {
         }
     });
 }
+
+// An embedding page that simply includes this file gets a drawn graph rather
+// than a blank canvas and no error. Metaseed's own UI reveals the graph
+// through htmx instead, so this only fires where the container is already on
+// the page; a host driving its own draw sets METASEED_GRAPH_AUTOLOAD = false.
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.METASEED_GRAPH_AUTOLOAD === false) return;
+    var container = document.getElementById('graph-container');
+    if (container && container.classList.contains('hidden')) return;
+    if (document.getElementById('graph-view')) {
+        loadGraph();
+    }
+});
+
+// The embedding contract, documented in docs/guides/embedding-the-graph.md.
+// Assigning explicitly rather than relying on implicit globals keeps the entry
+// points findable, and survives a future move into a module.
+window.renderGraphData = renderGraphData;
+window.loadGraph = loadGraph;
 
 // Refresh graph after entity operations (if graph is visible)
 document.addEventListener('htmx:afterSwap', function(e) {
