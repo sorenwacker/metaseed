@@ -80,7 +80,10 @@ def validate_dataset_name(name: str) -> str | None:
     """
     if not name:
         return "Dataset name is required"
-    if not re.match(r"^[a-zA-Z0-9][a-zA-Z0-9_-]*$", name):
+    # fullmatch, not match with `$`: `$` also matches before a trailing
+    # newline, so "ok\n" passed the check that keeps a name from becoming a
+    # path.
+    if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_-]*", name):
         return "Name must start with alphanumeric and contain only letters, numbers, hyphens, underscores"
     if len(name) > 64:
         return "Name must be 64 characters or less"
