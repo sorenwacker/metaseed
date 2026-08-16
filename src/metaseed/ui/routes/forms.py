@@ -31,7 +31,6 @@ if TYPE_CHECKING:
     from ..state import AppState
 
 UI_DIR = Path(__file__).parent.parent
-EXAMPLES_DIR = UI_DIR.parent / "examples"
 
 
 def register_form_routes(  # noqa: C901
@@ -97,7 +96,9 @@ def register_form_routes(  # noqa: C901
         if "miappe_version" in helper.all_fields:
             auto_values["miappe_version"] = facade.version
 
-        example_exists = (EXAMPLES_DIR / state.profile / facade.version).exists()
+        from metaseed.ui.routes.examples import example_exists as _example_exists
+
+        example_available = _example_exists(state.profile, facade.version)
 
         return templates.TemplateResponse(
             request,
@@ -117,7 +118,7 @@ def register_form_routes(  # noqa: C901
                 "auto_fields": set(auto_values.keys()),
                 "current_profile": state.profile,
                 "current_version": facade.version,
-                "example_available": example_exists,
+                "example_available": example_available,
             },
         )
 

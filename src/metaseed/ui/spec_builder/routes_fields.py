@@ -45,6 +45,11 @@ def register_field_routes(
 
     _require_entity = require_entity
 
+    def _spec_builder(state: SpecBuilderState) -> SpecBuilder:
+        """The library builder over the state's spec, which _require_spec set."""
+        assert state.spec is not None  # _require_spec guarantees it
+        return SpecBuilder(state.spec)
+
     def _require_field(entity: EntityDefSpec, idx: int) -> FieldSpec:
         """Get field by index, raising HTTPException if not found."""
         if idx < 0 or idx >= len(entity.fields):
@@ -230,8 +235,10 @@ def register_field_routes(
         """Delete a field from an entity."""
         builder = _require_spec()
         entity = _require_entity(builder, entity_name)
-        _require_field(entity, idx)
-        del entity.fields[idx]
+        field = _require_field(entity, idx)
+        # Through the library, as add_field already goes: the route deleted
+        # in place while SpecBuilder.delete_field owns the operation.
+        _spec_builder(builder).delete_field(entity_name, field.name)
         builder.editing_field_idx = None
         builder.mark_changed()
 
@@ -246,14 +253,9 @@ def register_field_routes(
         """Move a field up in the list."""
         builder = _require_spec()
         entity = _require_entity(builder, entity_name)
-        _require_field(entity, idx)
-
-        if idx > 0:
-            entity.fields[idx], entity.fields[idx - 1] = (
-                entity.fields[idx - 1],
-                entity.fields[idx],
-            )
-            builder.mark_changed()
+        field = _require_field(entity, idx)
+        _spec_builder(builder).move_field(entity_name, field.name, "up")
+        builder.mark_changed()
 
         return _entity_editor_response(request, builder, entity_name)
 
@@ -266,13 +268,8 @@ def register_field_routes(
         """Move a field down in the list."""
         builder = _require_spec()
         entity = _require_entity(builder, entity_name)
-        _require_field(entity, idx)
-
-        if idx < len(entity.fields) - 1:
-            entity.fields[idx], entity.fields[idx + 1] = (
-                entity.fields[idx + 1],
-                entity.fields[idx],
-            )
-            builder.mark_changed()
+        field = _require_field(entity, idx)
+        _spec_builder(builder).move_field(entity_name, field.name, "down")
+        builder.mark_changed()
 
         return _entity_editor_response(request, builder, entity_name)

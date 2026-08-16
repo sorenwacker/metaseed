@@ -391,7 +391,9 @@ def register_api_routes(  # noqa: C901
             )
 
     # =========================================================================
-    # MCP Server Status (MCP is mounted in-process, always running)
+    # MCP server control. The server is a SEPARATE process managed through
+    # MCPServerManager — start/stop/status drive that child, nothing is
+    # mounted in-process here.
     # =========================================================================
 
     @app.get("/api/mcp/status")

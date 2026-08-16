@@ -75,9 +75,12 @@ def sync_dataset_to_seek(
             production a :class:`~metaseed.seek.client.SeekClient`.
         metaseed_client: The metaseed client holding the loaded dataset.
         project_id: SEEK project to attach the created content to.
-        cv_ids: ``field name -> Controlled Vocabulary id`` for the dataset's enum
-            fields, from a provisioning run. An enum field with no entry here is
-            an error: SEEK rejects a CV attribute with no vocabulary.
+        cv_ids: ``"Entity.field" -> Controlled Vocabulary id`` for the
+            dataset's enum fields, as ``resolve_cv_ids`` produces them
+            (``cv_ids_for_entity`` narrows to bare field names per entity;
+            bare keys are accepted for backward compatibility). An enum field
+            with no entry here is an error: SEEK rejects a CV attribute with
+            no vocabulary.
         sharing: The SEEK sharing level to apply -- one of
             :data:`~metaseed.seek.payloads.SHARING_LEVELS`. ``None`` leaves
             SEEK's own default, which is private to the contributor. Note that

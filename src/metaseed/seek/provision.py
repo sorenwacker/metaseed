@@ -145,7 +145,12 @@ def _cv_terms(
 def build_provisioning_plan(
     profile: ProfileSpec, *, term_source: TermSource | None = None
 ) -> ProvisioningPlan:
-    """Project ``profile`` onto SEEK CVs + Sample Types (pure, deterministic).
+    """Project ``profile`` onto SEEK CVs + Sample Types.
+
+    Deterministic in shape — the same profile plans the same types and
+    attributes — but not pure: with a ``term_source`` supplied, CV terms are
+    enriched with IRIs through it, which is network I/O when the source is
+    OLS. Without one the plan is label-only and no request is made.
 
     Every Sample Type leads with a ``Title`` (``is_title``) and ``Description``
     attribute — the two SEEK's FAIR-Data-Station importer populates from a

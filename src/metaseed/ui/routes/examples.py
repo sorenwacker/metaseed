@@ -29,6 +29,19 @@ UI_DIR = Path(__file__).parent.parent
 EXAMPLES_DIR = UI_DIR.parent / "examples"
 
 
+def example_exists(profile_name: str, version: str) -> bool:
+    """Whether a loadable example dataset ships for this profile version.
+
+    THE definition of "an example exists": a directory with at least one YAML
+    file, exactly what the load route requires. Three modules each had their
+    own copy of the path and two different answers to this question — one
+    checked only that the directory existed, so a "Load Example" control could
+    point at a version whose load would 404.
+    """
+    version_dir = EXAMPLES_DIR / profile_name / version
+    return version_dir.is_dir() and any(version_dir.glob("*.yaml"))
+
+
 def register_example_routes(
     app: FastAPI,
     get_state: Callable[[], AppState],
