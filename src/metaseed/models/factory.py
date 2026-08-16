@@ -496,7 +496,7 @@ def _create_field_definition(field: FieldSpec) -> tuple[Any, Any]:
     return (annotated_type | None, None)
 
 
-def create_model_from_spec(spec: EntitySpec) -> type:
+def create_model_from_spec(spec: EntitySpec) -> type[BaseModel]:
     """Create a Pydantic model from an entity specification.
 
     Args:

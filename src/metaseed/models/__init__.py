@@ -4,8 +4,6 @@ This module provides the public API for accessing models from various profiles
 (MIAPPE, ISA, etc.), dynamically generating them from specifications when needed.
 """
 
-from typing import cast
-
 from pydantic import BaseModel
 
 from metaseed.models.factory import (
@@ -78,7 +76,7 @@ def get_model(
     if cached is not None:
         return cached
 
-    return cast("type[BaseModel]", create_model_from_spec(spec))
+    return create_model_from_spec(spec)
 
 
 # Initialize the model loader for nested entity resolution

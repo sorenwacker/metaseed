@@ -14,7 +14,7 @@ from typing import Any, NamedTuple, Self, cast
 import yaml
 
 from metaseed.profiles import ProfileFactory
-from metaseed.services.term_check import Outcome, check_entity_terms
+from metaseed.services.term_check import Outcome, TermSource, check_entity_terms
 from metaseed.specs.loader import SpecLoader, SpecLoadError
 from metaseed.utils import to_snake_case
 from metaseed.validators.api import _pydantic_constraint_errors
@@ -188,7 +188,7 @@ class DatasetValidator:
         self: Self,
         profile: str | None = None,
         version: str | None = None,
-        term_source: Any = None,
+        term_source: TermSource | None = None,
     ) -> None:
         """Initialize the dataset validator.
 
