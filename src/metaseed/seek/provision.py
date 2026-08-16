@@ -60,8 +60,13 @@ class CvPlan:
 
 
 @dataclass(frozen=True)
-class AttributePlan:
-    """One attribute of a Sample Type."""
+class SampleAttributePlan:
+    """One attribute of a Sample Type, as the SEEK API will be asked for it.
+
+    Renamed from ``AttributePlan``: the package already has one in
+    ``isa_types`` with a different shape (tag/type NAMES for rendering), and
+    two same-named dataclasses in one package made every import ambiguous.
+    """
 
     title: str
     attribute_type_title: str
@@ -79,7 +84,7 @@ class SampleTypePlan:
 
     entity_type: str
     title: str
-    attributes: tuple[AttributePlan, ...]
+    attributes: tuple[SampleAttributePlan, ...]
 
 
 @dataclass(frozen=True)
@@ -165,15 +170,15 @@ def build_provisioning_plan(
     for entity_name in sorted(sample_role_entities(profile)):
         entity = profile.entities[entity_name]
 
-        attributes: list[AttributePlan] = [
-            AttributePlan(
+        attributes: list[SampleAttributePlan] = [
+            SampleAttributePlan(
                 title="Title",
                 attribute_type_title="String",
                 required=True,
                 is_title=True,
                 pos=1,
             ),
-            AttributePlan(
+            SampleAttributePlan(
                 title="Description",
                 attribute_type_title="String",
                 required=False,
@@ -203,7 +208,7 @@ def build_provisioning_plan(
                         ),
                     )
             attributes.append(
-                AttributePlan(
+                SampleAttributePlan(
                     title=field.name,
                     attribute_type_title=attribute_type_title(field),
                     required=field.required,
