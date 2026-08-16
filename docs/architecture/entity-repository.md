@@ -199,6 +199,18 @@ repo._save()  # Write to file
 repo.reload()  # Read from file
 ```
 
+## When the file cannot be read
+
+`FileEntityRepository` reads the dataset file when it is constructed. A read that fails — a truncated file, a permission error, a half-written save — leaves the repository with no entities, which is indistinguishable from a dataset that is genuinely empty. Writing that state back would replace the user's records with nothing, so the repository does not:
+
+- A failed load is recorded. Every subsequent save refuses and raises `DatasetLoadFailedError`, naming the file and the original error.
+- `reload()` clears the condition once a read succeeds, so a transient failure (a concurrent writer, a busy filesystem) is recoverable without constructing a new repository.
+- Reads still work and return what was loaded, which is nothing. The refusal is on the write path, where the damage would be permanent.
+
+An unreadable file is therefore reported, never silently treated as an empty dataset.
+
+Saves are atomic: the repository writes a temporary file beside the target and renames it into place. An interrupted save leaves the previous file intact rather than a truncated one — which matters here in particular, because a truncated file is exactly what makes the next load fail.
+
 ## Service Operations
 
 All entity operations are methods on `EntityService`; there are no module-level

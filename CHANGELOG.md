@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- An unreadable dataset file is no longer written over (260816 review). A
+  failed read left `FileEntityRepository` empty and indistinguishable from one
+  opened on a new file, so the next create/update/delete serialized that
+  emptiness over the user's records — a transient permission error or a
+  half-written file destroyed the dataset. A failed load is now recorded and
+  every save refuses with `DatasetLoadFailedError`, naming the file and the
+  original error, until a `reload()` succeeds; a genuinely empty file still
+  saves. Saves are also atomic (write beside the target, rename over it), so
+  an interrupted save no longer produces the truncated file that made the
+  next load fail.
+
 ## v0.39.0 (260815)
 
 ### Changed

@@ -28,6 +28,17 @@ from metaseed.repositories.helpers import (
 
 logger = logging.getLogger(__name__)
 
+
+class DatasetLoadFailedError(RuntimeError):
+    """The dataset file could not be read, so it must not be written over.
+
+    An unreadable file leaves the repository with no entities, which is
+    indistinguishable from a dataset that is genuinely empty. Saving that state
+    would replace the user's records with nothing, so every save refuses until
+    a :meth:`FileEntityRepository.reload` succeeds.
+    """
+
+
 DEFAULT_DATASETS_DIR = user_data_base() / "datasets"
 """Where datasets live when nothing overrides it.
 
@@ -85,6 +96,9 @@ class FileEntityRepository(EntityRepository):
         self._facade: Any = None  # Lazy loaded
         self._entities: dict[str, EntityData] = {}
         self._tree: list[EntityData] = []
+        # Set when a read failed. Empty-because-unreadable and empty-because-new
+        # are the same state otherwise, and only one of them may be saved.
+        self._load_error: Exception | None = None
 
         # Load existing data if file exists
         if self._path and self._path.exists():
@@ -132,6 +146,7 @@ class FileEntityRepository(EntityRepository):
             with open(self._path) as f:
                 data = json.load(f)
 
+            self._load_error = None
             self._profile = data.get("profile", self._profile)
             self._version = data.get("version", self._version)
 
@@ -147,7 +162,10 @@ class FileEntityRepository(EntityRepository):
             )
 
         except (json.JSONDecodeError, OSError) as e:
-            logger.warning("Failed to load dataset: %s", e)
+            # Kept, not raised: a caller may still want to inspect or reload the
+            # repository. The write path is where this must not pass silently.
+            self._load_error = e
+            logger.warning("Failed to load dataset %s: %s", self._path, e)
 
     def _parse_entities(
         self: Self, raw_entities: list[dict[str, Any]]
@@ -225,10 +243,23 @@ class FileEntityRepository(EntityRepository):
         return tree
 
     def _save(self: Self) -> None:
-        """Save entities to file."""
+        """Save entities to file.
+
+        Raises:
+            DatasetLoadFailedError: The file could not be read when this
+                repository was constructed, so writing would replace records
+                that are still on disk with the nothing that was loaded.
+        """
         if not self._path:
             logger.warning("No dataset path configured, skipping save")
             return
+
+        if self._load_error is not None:
+            raise DatasetLoadFailedError(
+                f"Refusing to write {self._path}: it could not be read "
+                f"({self._load_error}). Fix or restore the file and call "
+                "reload() before saving, or the records still in it are lost."
+            )
 
         # Serialize tree to flat list with hierarchy metadata
         entities_data: list[dict[str, Any]] = []
@@ -256,8 +287,16 @@ class FileEntityRepository(EntityRepository):
         }
 
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        with open(self._path, "w") as f:
-            json.dump(data, f, indent=2, default=str)
+        # Written beside the target and renamed over it: an interrupted save
+        # leaves the previous file intact instead of a truncated one, which is
+        # precisely the file that makes the next load fail.
+        tmp_path = self._path.with_name(self._path.name + ".tmp")
+        try:
+            with open(tmp_path, "w") as f:
+                json.dump(data, f, indent=2, default=str)
+            tmp_path.replace(self._path)
+        finally:
+            tmp_path.unlink(missing_ok=True)
 
         logger.info("Saved %d entities to %s", len(self._entities), self._path)
 
