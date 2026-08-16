@@ -43,6 +43,23 @@ repository already has to bound in time (``rules._matches_within_timeout``), and
 leaving it out is what lets the bounds below be structural and checked once.
 """
 
+OPERATORS: tuple[str, ...] = (
+    "==",
+    "!=",
+    "in",
+    "not_in",
+    ">",
+    ">=",
+    "<",
+    "<=",
+    "is_set",
+    "is_not_set",
+)
+"""The same vocabulary as :data:`Operator`, as a runtime tuple in menu order.
+
+The form offered its own copy, which is one edit away from offering an
+operator the evaluator rejects — or hiding one it accepts."""
+
 MEMBERSHIP_OPERATORS: frozenset[str] = frozenset({"in", "not_in"})
 ORDERING_OPERATORS: frozenset[str] = frozenset({">", ">=", "<", "<="})
 SET_OPERATORS: frozenset[str] = frozenset({"is_set", "is_not_set"})

@@ -23,14 +23,22 @@ from typing import TYPE_CHECKING, Any
 
 import yaml
 
+from metaseed.specs.predicates import (
+    OPERATORS as _OPERATORS,
+)
+from metaseed.specs.predicates import (
+    SET_OPERATORS as _SET_OPERATORS,
+)
 from metaseed.specs.predicates import AllOf, AnyOf, Comparison, parse_predicate
 
 if TYPE_CHECKING:
     from metaseed.specs.predicates import NotPredicate, Predicate
     from metaseed.specs.schema import ProfileSpec
 
-SET_OPERATORS = ("is_set", "is_not_set")
-OPERATORS = ("==", "!=", "in", "not_in", ">", ">=", "<", "<=", *SET_OPERATORS)
+# Derived, not restated: predicates.py owns the vocabulary the evaluator
+# accepts, and a local copy is one edit away from disagreeing with it.
+SET_OPERATORS = tuple(sorted(_SET_OPERATORS))
+OPERATORS = _OPERATORS
 
 
 def rows_from_predicate(
