@@ -379,7 +379,10 @@ class ExtractionContext:
             converted = self._convert_value(value, field_spec)
             if converted is not None:
                 instance[field_spec.name] = converted
-            elif field_spec.required and value:
+            elif value:
+                # Reported whether or not the field is required: an optional
+                # field's unconvertible value was dropped without a word, so
+                # the user's data vanished and nothing said why.
                 errors.append(
                     ValidationIssue(
                         field=field_spec.name,
