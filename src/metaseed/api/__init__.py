@@ -46,5 +46,4 @@ __all__ = [
     "ValidationError",
     "ValidationIssue",
     "ValidationResult",
-    "app",
 ]
