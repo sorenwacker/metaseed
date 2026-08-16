@@ -485,6 +485,16 @@ class ProfileFacade:
     # ========================================================================
 
     @property
+    def profile_spec(self: Self) -> Any:
+        """The in-memory ProfileSpec this facade was built from, or ``None``.
+
+        Set for a facade composed with a supplied spec (``from_spec`` /
+        ``from_yaml`` / an importer-derived profile); ``None`` for one that
+        loads by name. Public so consumers stop reaching for ``_spec``.
+        """
+        return self._spec
+
+    @property
     def profile(self: Self) -> str:
         """Profile name."""
         return self._profile

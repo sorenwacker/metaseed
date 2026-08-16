@@ -138,5 +138,5 @@ def profile_of(client: MetaseedClient) -> ProfileSpec:
     """
     from metaseed.specs.loader import SpecLoader
 
-    in_memory = getattr(client._facade, "_spec", None)
+    in_memory = client.facade.profile_spec
     return in_memory or SpecLoader().load_profile(client.version, client.profile)
