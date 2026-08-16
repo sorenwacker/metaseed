@@ -84,7 +84,10 @@ class TestStrictLoadIsTheDefault:
     def test_unknown_entity_type_raises(self, client: MetaseedClient) -> None:
         payload = {"tree": [_node("NotAThing", "T")]}
 
-        with pytest.raises(KeyError, match="NotAThing"):
+        # AttributeError, matching add_entity's documented contract: the
+        # skip-validation route used to raise KeyError instead, so which
+        # exception a caller got depended on the flag.
+        with pytest.raises(AttributeError, match="NotAThing"):
             client.load(payload)
 
     def test_missing_entity_type_raises(self, client: MetaseedClient) -> None:
