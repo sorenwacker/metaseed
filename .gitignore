@@ -67,3 +67,4 @@ Thumbs.db
 # Type checking
 .mypy_cache/
 .pytype/
+docs/REVIEW.md
