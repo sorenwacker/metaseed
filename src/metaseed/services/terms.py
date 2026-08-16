@@ -380,10 +380,17 @@ class TermRouter:
         before branches existed keeps working, and simply does not answer
         branch-scoped queries.
         """
+        import inspect
+
+        # Asked of the signature, not of a raised TypeError: catching the
+        # exception also swallowed a TypeError raised INSIDE a supporting
+        # adapter, reporting a real bug as "this source cannot restrict to a
+        # branch" and silently widening the search.
         try:
-            return list(searches(query, ontology, limit, within=within))
-        except TypeError:
+            inspect.signature(searches).bind(query, ontology, limit, within=within)
+        except (TypeError, ValueError):
             return None
+        return list(searches(query, ontology, limit, within=within))
 
     async def get_term(self, term_id: str) -> object | None:
         """:meth:`get_term_sync` off the event loop.

@@ -147,3 +147,22 @@ def test_the_agent_tool_says_unchecked_rather_than_not_found() -> None:
 
     assert answer.get("checked") is False
     assert "not found" not in answer.get("error", "").lower()
+
+
+def test_branch_support_is_decided_by_the_signature() -> None:
+    """`within` support is a question about the signature, not about a raise.
+
+    `_search_within` used to call the adapter and read a TypeError as "this
+    source cannot restrict to a branch". A TypeError raised INSIDE a supporting
+    adapter was read the same way, silently widening the search instead of
+    surfacing the bug. The signature is asked first, so the two are distinct.
+    """
+    import inspect
+
+    from metaseed.services import terms
+
+    source = inspect.getsource(terms)
+
+    assert "inspect.signature" in source, (
+        "branch support is still inferred from a raised TypeError"
+    )
