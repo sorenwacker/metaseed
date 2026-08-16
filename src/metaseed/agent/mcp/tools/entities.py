@@ -663,7 +663,10 @@ def register_entity_tools(  # noqa: C901
                             "label": result.get("label"),
                         }
                     )
-                except ValueError as e:
+                except Exception as e:
+                    # Any failure is this item's, reported in its row: catching
+                    # only ValueError meant a KeyError or a validation error
+                    # aborted the whole batch after some items had updated.
                     results.append(
                         {
                             "id": node_id,
