@@ -10,6 +10,15 @@
   it. `dataset.py` was 1018 lines against the project's 1000-line limit.
 
 ### Added
+- `httpx` is declared as a runtime dependency. It is imported at module level
+  by the MCP ontology tools, which the server imports at import time, but
+  reached the environment only through `mcp`'s own pin — the transitive
+  arrangement the project rule forbids.
+- Every shipped requirement carries an upper bound below the next major, and a
+  test enforces both rules. Only `mcp` was bounded; a lockfile-based suite
+  stays green while a fresh install resolves a new major, which is how
+  `mcp` 2.0 removing `mcp.server.fastmcp` broke fresh installs once already.
+  No resolved version changed: the bounds sit above what was already locked.
 - A test that fails when any file under `src/` exceeds 1000 lines. The limit
   was a rule with no gate, which is how it drifted past unnoticed.
 

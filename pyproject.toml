@@ -27,20 +27,27 @@ classifiers = [
 ]
 
 dependencies = [
-    "pydantic>=2.0",
-    "pydantic-settings>=2.0",
-    "fastapi>=0.110",
-    "typer>=0.12",
-    "uvicorn>=0.29",
-    "pyyaml>=6.0",
-    "jinja2>=3.1",
-    "python-multipart>=0.0.9",
-    "openpyxl>=3.1",
+    "pydantic>=2.0,<3",
+    "pydantic-settings>=2.0,<3",
+    "fastapi>=0.110,<1",
+    "typer>=0.12,<1",
+    "uvicorn>=0.29,<1",
+    "pyyaml>=6.0,<7",
+    "jinja2>=3.1,<4",
+    "python-multipart>=0.0.9,<1",
+    "openpyxl>=3.1,<4",
     "mcp>=1.28,<2",
+    # Imported at module level by agent/mcp/tools/ontology.py, which the MCP
+    # server imports at import time. It arrived through mcp's own pin, which
+    # is exactly the transitive arrangement the project rule forbids.
+    "httpx>=0.27,<1",
     # regex (not stdlib re) so user-supplied validation patterns can be matched
     # with a per-match timeout; the stdlib re holds the GIL during matching and
     # cannot be preempted, so a catastrophic-backtracking pattern would hang.
-    "regex>=2024.5.15",
+    # regex is calendar-versioned, so "next major" is the next year rather
+    # than a semantic break; the bound exists to stop a fresh install
+    # resolving something unreleased at the time of writing.
+    "regex>=2024.5.15,<2027",
 ]
 
 [project.optional-dependencies]
@@ -52,10 +59,10 @@ dev = [
     "mypy>=1.8",
     "types-regex>=2024.5.15",
     "pre-commit>=3.7",
-    "httpx>=0.27",
+    "httpx>=0.27,<1",
     "jupyter>=1.0",
-    "xmlschema>=3.0",
-    "jsonschema>=4.0",
+    "xmlschema>=3.0,<5",
+    "jsonschema>=4.0,<5",
 ]
 docs = [
     "mkdocs>=1.6,<2.0",
@@ -64,23 +71,23 @@ docs = [
     "mkdocs-panzoom-plugin>=0.4",
 ]
 dcat = [
-    "rdflib>=7.0",
+    "rdflib>=7.0,<8",
 ]
 ena = [
-    "httpx>=0.27",
+    "httpx>=0.27,<1",
 ]
 brapi = [
-    "httpx>=0.27",
+    "httpx>=0.27,<1",
 ]
 pride = [
-    "httpx>=0.27",
+    "httpx>=0.27,<1",
 ]
 metabolights = [
-    "httpx>=0.27",
+    "httpx>=0.27,<1",
 ]
 seek = [
-    "httpx>=0.27",
-    "rdflib>=7.0",
+    "httpx>=0.27,<1",
+    "rdflib>=7.0,<8",
 ]
 
 [project.urls]
