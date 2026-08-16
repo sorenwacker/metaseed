@@ -42,13 +42,16 @@ class ExcelParser:
         # releases its backing file on close, so reading them after is unsafe).
         sheet_names = list(workbook.sheetnames)
 
-        for sheet_name in sheet_names:
-            sheet = workbook[sheet_name]
-            table = self._parse_sheet(sheet, sheet_name)
-            if table:
-                tables.append(table)
-
-        workbook.close()
+        # Closed however the parse ends: a sheet that raises used to leave the
+        # workbook — and its file handle — open for the process's lifetime.
+        try:
+            for sheet_name in sheet_names:
+                sheet = workbook[sheet_name]
+                table = self._parse_sheet(sheet, sheet_name)
+                if table:
+                    tables.append(table)
+        finally:
+            workbook.close()
 
         return ParsedContent(
             source_path=str(path),
