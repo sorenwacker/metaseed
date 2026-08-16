@@ -15,7 +15,6 @@ from pathlib import Path
 from typing import Any, Self
 
 from metaseed.facade.linking import link_child, unlink_child
-from metaseed.paths import user_data_base
 from metaseed.repositories.base import EntityData, EntityRepository
 from metaseed.repositories.helpers import (
     derive_label,
@@ -39,7 +38,6 @@ class DatasetLoadFailedError(RuntimeError):
     """
 
 
-DEFAULT_DATASETS_DIR = user_data_base() / "datasets"
 """Where datasets live when nothing overrides it.
 
 Derived from the same base as every other metaseed data directory, so
