@@ -245,7 +245,9 @@ def register_profile_tools(  # noqa: C901
             entity_def = spec.entities[entity_name]
             helper = getattr(facade, entity_name, None)
 
-            children = sorted(set(helper.nested_fields.values())) if helper else []
+            # The hierarchy this tool is the authority on is the one
+            # create_entity enforces: child_fields honours `owns:`.
+            children = sorted(set(helper.child_fields.values())) if helper else []
             cross_references = (
                 {
                     field: f"{target_type}.{target_field}"

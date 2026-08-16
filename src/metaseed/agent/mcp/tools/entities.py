@@ -113,7 +113,10 @@ def _creation_hints(state: AppState, entity_type: str) -> dict[str, Any] | None:
         if not helper:
             return None
 
-        children = sorted(set(helper.nested_fields.values()))
+        # child_fields, not nested_fields: the repository validates a
+        # parent-child pair against the spec's `owns:` markers, so a
+        # merely-nested type is advice the create call would reject.
+        children = sorted(set(helper.child_fields.values()))
         consumers = []
         for other in facade.entities:
             other_helper = getattr(facade, other, None)

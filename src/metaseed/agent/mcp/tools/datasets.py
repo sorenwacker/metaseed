@@ -208,7 +208,9 @@ def register_dataset_tools(  # noqa: C901
                     "name": name,
                     "profile": profile,
                     "version": version,
-                    "root_entity": facade._spec.root_entity if facade._spec else None,
+                    # `_spec` is set only when a caller passes a pre-loaded spec, so
+                    # this was null on every real call; the facade knows the answer.
+                    "root_entity": facade._root_entity(),
                 },
                 indent=2,
             )

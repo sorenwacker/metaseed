@@ -3,6 +3,18 @@
 ## Unreleased
 
 ### Fixed
+- The MCP tools advise what `create_entity` accepts. Three built their answers
+  from `nested_fields` while the repository validates a parent-child pair
+  against `child_fields`, which honours the spec's `owns:` markers — ISA 1.0
+  uses them in 33 places, so the two disagreed for 13 entity types.
+  `create_entity` suggested creating a `Comment` under an Investigation,
+  `get_profile_relationships` (which the server instructions name as the
+  authority on the hierarchy) listed child types that cannot be created, and
+  `validate_relationships` warned that impossible links were missing.
+- `create_dataset` reports the profile's root entity instead of `null`. It read
+  `facade._spec.root_entity`, which is populated only when a caller passes a
+  pre-loaded spec, so the documented field was null on every real call — while
+  the server instructions tell agents to add entities root-first.
 - The profile comparison report escapes the spec content it renders. Every
   value — entity and field names, descriptions, patterns, examples, profile
   ids — was interpolated raw into a page served as `text/html`, and profiles

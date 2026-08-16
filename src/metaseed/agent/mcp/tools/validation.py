@@ -275,7 +275,10 @@ def register_validation_tools(  # noqa: C901
 
                 # Container with no child of a type it can hold.
                 child_types_present = {c.entity_type for c in node.children}
-                for child_type in helper.nested_fields.values():
+                # Only links that can actually be made: a non-owned nested type
+                # cannot be created under this parent, so reporting it as
+                # missing sends an agent after something impossible.
+                for child_type in helper.child_fields.values():
                     if child_type not in child_types_present:
                         warnings.append(
                             {
