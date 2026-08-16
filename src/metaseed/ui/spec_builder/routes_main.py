@@ -195,14 +195,23 @@ def register_main_routes(  # noqa: C901
         spec = builder.spec
         assert spec is not None  # _require_spec guarantees spec is set
         form_data = await request.form()
-        spec.name = cast("str", form_data.get("name", "")).strip()
-        spec.version = cast("str", form_data.get("version", "")).strip()
-        spec.display_name = (
-            cast("str", form_data.get("display_name", "")).strip() or None
-        )
-        spec.description = cast("str", form_data.get("description", "")).strip()
-        spec.ontology = cast("str", form_data.get("ontology", "")).strip() or None
-        root_entity = cast("str", form_data.get("root_entity", "")).strip()
+
+        def text(field: str) -> str:
+            """The field as text, empty for a file upload.
+
+            `form_data.get` returns an UploadFile for a multipart file part;
+            casting it to str satisfied the checker and raised AttributeError
+            at runtime on `.strip()`.
+            """
+            value = form_data.get(field, "")
+            return value.strip() if isinstance(value, str) else ""
+
+        spec.name = text("name")
+        spec.version = text("version")
+        spec.display_name = text("display_name") or None
+        spec.description = text("description")
+        spec.ontology = text("ontology") or None
+        root_entity = text("root_entity")
         if root_entity:
             # Through the builder, whose whole purpose here is to refuse a root
             # that names no entity. Assigning it directly produced a profile
