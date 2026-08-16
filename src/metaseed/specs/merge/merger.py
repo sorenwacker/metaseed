@@ -200,6 +200,37 @@ class SpecMerger:
             for r in resolutions
         }
 
+    def _chosen_for_modified(
+        self: Self,
+        field_diff: FieldDiff,
+        strategy: MergeStrategy,
+        profile_order: list[str],
+    ) -> FieldSpec | None:
+        """The spec to keep for a field that is MODIFIED or UNCHANGED.
+
+        A MODIFIED field differs on description, example, label or a
+        non-structural constraint; only CONFLICT used to consult the strategy,
+        so whichever strategy the caller chose, the first profile's wording won.
+        UNCHANGED is identical everywhere, so any copy will do and the strategy
+        answers the same thing.
+
+        Args:
+            field_diff: The field's difference across profiles.
+            strategy: The conflict-resolution strategy in force.
+            profile_order: Profiles in precedence order.
+
+        Returns:
+            The chosen :class:`FieldSpec`, or ``None`` if no profile has one.
+        """
+        try:
+            return strategy.resolve_field(field_diff, profile_order)
+        except ValueError:
+            for profile_id in profile_order:
+                spec = field_diff.profiles.get(profile_id)
+                if spec is not None:
+                    return spec
+        return None
+
     def _merge_entity_fields(
         self: Self,
         entity_name: str,
@@ -275,13 +306,10 @@ class SpecMerger:
                     except ValueError:
                         unresolved.append(field_diff)
 
-            elif field_diff.diff_type in [DiffType.UNCHANGED, DiffType.MODIFIED]:
-                # Use first available spec
-                for profile_id in profile_order:
-                    spec = field_diff.profiles.get(profile_id)
-                    if spec is not None:
-                        merged_fields.append(spec)
-                        break
+            elif field_diff.diff_type in (DiffType.MODIFIED, DiffType.UNCHANGED):
+                chosen = self._chosen_for_modified(field_diff, strategy, profile_order)
+                if chosen is not None:
+                    merged_fields.append(chosen)
 
             elif field_diff.diff_type == DiffType.ADDED:
                 # Include fields that exist in any profile
@@ -367,7 +395,20 @@ class SpecMerger:
         # Apply resolutions
         data = base_spec.model_dump()
         for resolution in resolutions:
-            data[resolution.attribute] = resolution.resolved_value
+            # The comparator names a constraint conflict `constraints.<name>`.
+            # Writing that dotted string as a top-level key made
+            # `FieldSpec` (extra="forbid") reject it and took the whole merge
+            # down, rather than resolving the one field the user answered for.
+            head, _, rest = resolution.attribute.partition(".")
+            if rest:
+                nested = data.get(head)
+                data[head] = (
+                    {**nested, rest: resolution.resolved_value}
+                    if isinstance(nested, dict)
+                    else {rest: resolution.resolved_value}
+                )
+            else:
+                data[head] = resolution.resolved_value
 
         return FieldSpec.model_validate(data)
 

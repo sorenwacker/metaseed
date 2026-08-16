@@ -136,7 +136,10 @@ class FieldForm:
         """Build a fresh ``FieldSpec`` from this form."""
         field = FieldSpec(name=self.name.strip(), type=FieldType(self.field_type))
         self.apply_to(field)
-        return field
+        # Re-validated rather than returned as assigned: pydantic does not
+        # validate assignment, so `apply_to` could leave an unknown isa_tag in
+        # the draft that only failed when the saved profile was loaded.
+        return FieldSpec.model_validate(field.model_dump())
 
 
 def _opt_int(value: str) -> int | None:

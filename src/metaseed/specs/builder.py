@@ -470,6 +470,13 @@ class SpecBuilder:
             )
 
         field = FieldSpec(name=name, type=FieldType(field_type), **attrs)
+        # Deliberately NOT re-validating the entity here, unlike update_field.
+        # The spec-builder flow is add-then-validate: an agent adds fields and
+        # `spec_validate` reports what is wrong, including a second
+        # `is_identifier` (tests/test_agent/test_mcp_spec_builder.py pins that
+        # as an issue rather than a warning). Refusing at add time makes that
+        # report unreachable for a spec built through the tools and turns a
+        # correctable draft into a hard error mid-build.
         entity_def.fields.append(field)
         self._auto_create_back_reference(entity, entity_def, field)
 
@@ -856,8 +863,13 @@ class SpecBuilder:
             )
             id_field = "identifier"
 
+        # A field of that NAME already there is a collision whether or not it
+        # declares a reference: appending a second one produced a spec with two
+        # fields of the same name, which nothing rejects.
+        back_ref_name = f"{to_snake_case(entity_name)}_id"
         has_back_ref = any(
-            f.reference and f.reference.startswith(f"{entity_name}.")
+            (f.reference and f.reference.startswith(f"{entity_name}."))
+            or f.name == back_ref_name
             for f in target.fields
         )
         if not has_back_ref:

@@ -3,6 +3,27 @@
 ## Unreleased
 
 ### Fixed
+- A profile comparison reports a value set in one profile and absent in the
+  other. Both difference checks filtered `None` out before counting distinct
+  values, so an ontology term, description or display name present on one side
+  and missing on the other collapsed to one value and read as agreement.
+- A merge applies the strategy it was given to MODIFIED fields, not only to
+  CONFLICT ones. The comparator reserves CONFLICT for structural disagreement
+  (type, required, items, constraints), so a field differing on description,
+  example or label always took the first profile whatever the caller chose.
+- Resolving a constraint conflict no longer takes the whole merge down. The
+  comparator names such a conflict `constraints.<name>`, which was written as
+  a top-level key into a model that forbids extra fields.
+- A generated back-reference does not duplicate an existing field name. The
+  check looked only at `reference`, so a target already carrying a plain field
+  of that name got a second one, and nothing rejects duplicate field names.
+- `FieldForm.to_field_spec` re-validates what it built. It populated the spec
+  by attribute assignment, which pydantic does not validate, so an unknown
+  `isa_tag` reached the saved YAML and failed only on load-back.
+- The spec-builder routes go through the library's guards: a root entity that
+  names no entity is refused (`SpecBuilder.set_root_entity`), and a duplicate
+  rule name is reported instead of appended (`SpecBuilder.add_rule`). Both
+  guards existed; the routes assigned and appended around them.
 - The MCP tools advise what `create_entity` accepts. Three built their answers
   from `nested_fields` while the repository validates a parent-child pair
   against `child_fields`, which honours the spec's `owns:` markers — ISA 1.0

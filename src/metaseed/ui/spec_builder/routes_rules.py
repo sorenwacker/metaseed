@@ -13,6 +13,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
+from metaseed.specs.builder import SpecBuilder
 from metaseed.specs.predicates import render_predicate
 from metaseed.specs.schema import ValidationRuleSpec
 
@@ -227,12 +228,25 @@ def register_rule_routes(
         if not name:
             return _rules_list_response(request, builder, error="Rule name is required")
 
-        new_rule = ValidationRuleSpec(
-            name=name,
-            description="",
-            applies_to="all",
-        )
-        builder.spec.validation_rules.append(new_rule)
+        # Through the builder, which refuses a duplicate rule name; appending
+        # directly let the UI create two rules the library would reject.
+        try:
+            SpecBuilder(builder.spec).add_rule(name, description="", applies_to="all")
+        except ValueError:
+            existing = next(
+                (r for r in builder.spec.validation_rules if r.name == name), None
+            )
+            if existing is not None:
+                idx = builder.spec.validation_rules.index(existing)
+                return _rule_form_response(
+                    request,
+                    builder,
+                    existing,
+                    idx,
+                    error=f"A validation rule named '{name}' already exists.",
+                )
+            raise
+        new_rule = builder.spec.validation_rules[-1]
         builder.editing_rule_idx = len(builder.spec.validation_rules) - 1
         builder.mark_changed()
 

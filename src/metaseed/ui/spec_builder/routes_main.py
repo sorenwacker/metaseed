@@ -5,6 +5,7 @@ Handles the index page, new spec creation, cloning templates, and reset.
 
 from __future__ import annotations
 
+import contextlib
 from collections.abc import Callable
 from typing import TYPE_CHECKING, cast
 
@@ -12,6 +13,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
+from metaseed.specs.builder import SpecBuilder
 from metaseed.specs.schema import FieldType
 
 from ..helpers.spec_builder_helpers import (
@@ -200,7 +202,18 @@ def register_main_routes(  # noqa: C901
         )
         spec.description = cast("str", form_data.get("description", "")).strip()
         spec.ontology = cast("str", form_data.get("ontology", "")).strip() or None
-        spec.root_entity = cast("str", form_data.get("root_entity", "")).strip()
+        root_entity = cast("str", form_data.get("root_entity", "")).strip()
+        if root_entity:
+            # Through the builder, whose whole purpose here is to refuse a root
+            # that names no entity. Assigning it directly produced a profile
+            # that cannot build anything.
+            # Left as it was when the entity does not exist: a root naming
+            # nothing would make the profile unable to build anything, and the
+            # form still shows what the draft actually holds.
+            with contextlib.suppress(ValueError):
+                SpecBuilder(spec).set_root_entity(root_entity)
+        else:
+            spec.root_entity = ""
         builder.mark_changed()
 
         return templates.TemplateResponse(

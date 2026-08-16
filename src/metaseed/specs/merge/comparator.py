@@ -206,7 +206,8 @@ class SpecComparator:
                 values[profile_id] = getattr(spec, field_name, None)
 
             # Only include if values differ
-            unique_values = {str(v) for v in values.values() if v is not None}
+            # Absence counts here too — see _values_differ.
+            unique_values = {None if v is None else str(v) for v in values.values()}
             if len(unique_values) > 1:
                 diffs[field_name] = values
 
@@ -547,7 +548,11 @@ class SpecComparator:
         Returns:
             True if values differ, False if all same.
         """
-        unique = {str(v) for v in values.values() if v is not None}
+        # Absence counts. Filtering None out first collapsed
+        # {"a": None, "b": "MIAPPE:DM-1"} to a single value and reported no
+        # difference — for a profile that carries the term and one that does
+        # not, which is exactly what a comparison is asked about.
+        unique = {None if v is None else str(v) for v in values.values()}
         return len(unique) > 1
 
     def _calculate_statistics(
