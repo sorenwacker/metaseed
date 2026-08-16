@@ -418,9 +418,14 @@ def register_api_routes(  # noqa: C901
         # list of results is indistinguishable from there being less to find
         # (#247).
         hits = await source.search(q, ontology, 20, within, interactive=True)
+        # Both ways a source is left out are named: declared too slow for a
+        # picker, and unable to honour the branch restriction — no local
+        # vocabulary implements `within`, so a branch-scoped search skipped
+        # every local source with nothing to say so.
+        not_asked = sorted({*source.not_interactive(), *source.cannot_restrict(within)})
         return JSONResponse(
             content={
                 "results": [hit.to_dict() for hit in hits],
-                "not_asked": source.not_interactive(),
+                "not_asked": not_asked,
             }
         )

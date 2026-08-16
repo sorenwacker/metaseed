@@ -219,6 +219,29 @@ class TermRouter:
         """
         return [c.name for c in self.describe() if not c.interactive]
 
+    def cannot_restrict(self, within: str | None) -> list[str]:
+        """The sources a branch-scoped search leaves out, by name.
+
+        The same reporting rule as :meth:`not_interactive`, for the other way
+        a source is skipped: no local vocabulary implements ``within``, so a
+        branch-scoped picker silently excluded every local source and nothing
+        could say so.
+        """
+        if not within:
+            return []
+        import inspect
+
+        left_out = []
+        for source in self.sources:
+            searches = getattr(source, "search_sync", None)
+            if not callable(searches):
+                continue
+            try:
+                inspect.signature(searches).bind("q", None, 1, within=within)
+            except (TypeError, ValueError):
+                left_out.append(_capabilities_of(source).name)
+        return left_out
+
     def capabilities(self) -> SourceCapabilities:
         """What the router as a whole can do.
 

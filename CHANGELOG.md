@@ -4,6 +4,11 @@
 
 ### Removed
 
+- The `POST /api/compare` and `POST /api/merge` endpoints. They duplicated
+  what `/explore/compare` and the explore merge routes serve, with divergent
+  parsing and error contracts, had no UI surface, no tests, and no caller in
+  metaseed or metaseed-hub. The explore routes are the supported surface.
+
 **Importable names that no longer exist.** Each had no caller in metaseed or
 metaseed-hub (checked), but an outside consumer importing one will fail at
 import, so they are listed rather than buried under "Fixed":
