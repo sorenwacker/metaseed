@@ -26,12 +26,12 @@ from typing import TYPE_CHECKING
 from metaseed.seek import payloads
 from metaseed.seek.attribute_types import attribute_type_title, is_cv_field
 from metaseed.seek.naming import property_uri
+from metaseed.seek.ports import Provisioner
 from metaseed.seek.roles import sample_role_entities
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from metaseed.seek.client import SeekClient
     from metaseed.services.term_check import TermSource
     from metaseed.specs.schema import FieldSpec, ProfileSpec
 
@@ -240,7 +240,7 @@ def sample_type_title(profile: ProfileSpec, entity_type: str) -> str:
     return f"{profile.name} {entity_type}"
 
 
-def resolve_cv_ids(client: SeekClient, profile: ProfileSpec) -> dict[str, str]:
+def resolve_cv_ids(client: Provisioner, profile: ProfileSpec) -> dict[str, str]:
     """Look up already-provisioned Controlled Vocabulary ids by field name.
 
     The compliant sync builds its Sample Types per Assay, but the vocabularies
@@ -281,7 +281,7 @@ def cv_ids_for_entity(cv_ids: Mapping[str, str], entity_name: str) -> dict[str, 
 
 
 def execute_provisioning_plan(
-    client: SeekClient, plan: ProvisioningPlan, *, project_id: str
+    client: Provisioner, plan: ProvisioningPlan, *, project_id: str
 ) -> ProvisionResult:
     """Create the plan's CVs then Sample Types in SEEK, idempotently.
 

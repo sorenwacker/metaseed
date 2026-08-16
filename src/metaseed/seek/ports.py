@@ -18,6 +18,40 @@ if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
 
+class Provisioner(Protocol):
+    """Creates CVs and Sample Types, and reads back existing ones by title.
+
+    What `execute_provisioning_plan` and `resolve_cv_ids` actually call. Its
+    sibling `sync` already depended on `IsaWriter` while provisioning bound to
+    the concrete `SeekClient`, so a test or an alternative backend could
+    substitute one half of the pipeline but not the other.
+    """
+
+    def find_controlled_vocab_id_by_title(self, title: str) -> str | None: ...
+
+    def sample_attribute_type_id(self, title: str) -> str:
+        """Resolve a base attribute-type id by title; instance-assigned."""
+        ...
+
+    def create_controlled_vocab(
+        self,
+        *,
+        title: str,
+        terms: list[dict[str, Any]],
+        description: str | None = None,
+        source_ontology: str | None = None,
+        ols_root_term_uris: str | None = None,
+    ) -> str: ...
+
+    def find_sample_type_id_by_title(
+        self, title: str, *, project_id: str | None = None
+    ) -> str | None: ...
+
+    def create_sample_type(
+        self, *, title: str, project_id: str, attributes: list[dict[str, Any]]
+    ) -> str: ...
+
+
 class IsaWriter(Protocol):
     """Creates the ISA resources a compliant sync needs, and reads back their ids."""
 
