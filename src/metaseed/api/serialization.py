@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Self
 
 from metaseed.api.base import InstanceDataMixin
+from metaseed.logging import get_logger
 
 if TYPE_CHECKING:
     from metaseed.facade import ProfileFacade
@@ -68,6 +69,9 @@ def _report_skip(
             descendants_dropped=_count_descendants(node),
         )
     )
+
+
+logger = get_logger(__name__)
 
 
 class SerializationMixin(InstanceDataMixin):
@@ -201,6 +205,11 @@ class SerializationMixin(InstanceDataMixin):
         Returns:
             Number of entities loaded.
         """
+        # Strict mode aborts on a bad node, and the store has to be cleared
+        # before loading — so without this the caller's dataset was destroyed
+        # by a payload that was then rejected. `load()` guards the empty-payload
+        # case for the same reason; this is the same guard for the tree path.
+        previous = self._facade.to_dict() if on_skip is None else None
         self._facade.clear()
         count = 0
 
@@ -233,8 +242,19 @@ class SerializationMixin(InstanceDataMixin):
             for child in self._node_list(node.get("children", []), on_skip, "children"):
                 load_node(child, parent_id=created.id)
 
-        for root in self._node_list(tree, on_skip, "tree"):
-            load_node(root)
+        try:
+            for root in self._node_list(tree, on_skip, "tree"):
+                load_node(root)
+        except Exception:
+            if previous is not None:
+                self._facade.clear()
+                try:
+                    self._facade.load_from_dict(previous)
+                except Exception:  # pragma: no cover - restoring must not mask
+                    logger.exception(
+                        "could not restore the dataset after a rejected load"
+                    )
+            raise
 
         return count
 

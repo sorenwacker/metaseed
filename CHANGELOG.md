@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+### Fixed
+- A rejected payload no longer destroys the dataset it failed to replace.
+  `_load_tree` cleared the store first, so in strict mode a malformed node
+  aborted the load after the caller's data was already gone — the very thing
+  `load()` guards against for an empty payload. The tree path now snapshots
+  and restores.
+- A child survives a reload under a parent that has no identifier value,
+  routine for the drafts the UI persists. `to_dict` emitted a parent link only
+  as `_parent_unique_id`; where the parent had no identifier there was no link
+  at all and the children became roots. The node id is written only as a
+  fallback, so parent links still resolve by identifier wherever there is one.
+- An owned `type: entity` nested field keeps its direction on reload.
+  `linking.linked_reference_value` writes a scalar for such a field but reload
+  read only lists, so the field was never linked there and the reference pass
+  then linked it backwards — isa's `Process.executes_protocol` came back with
+  the Protocol as parent and the Process as its child.
+
 ### Changed
 - ADR 005's second decision — which parent field references a child of a given
   type — is made only in `facade/linking.py`. It had five other homes

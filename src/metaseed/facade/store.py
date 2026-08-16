@@ -442,7 +442,9 @@ class EntityStore:
         entities: list[dict[str, Any]] = []
 
         def serialize_node(
-            node: EntityNode, parent_unique_id: str | None = None
+            node: EntityNode,
+            parent_unique_id: str | None = None,
+            parent_node_id: str | None = None,
         ) -> None:
             if node.instance and hasattr(node.instance, "model_dump"):
                 data = node.instance.model_dump(mode="json", exclude_none=True)
@@ -456,7 +458,14 @@ class EntityStore:
             # a fresh id each reload and re-appear in the graph on every tick.
             data["_node_id"] = node.id
             if parent_unique_id:
+                # Parent links resolve by identifier, which survives a reload
+                # and is readable in a hand-written payload.
                 data["_parent_unique_id"] = parent_unique_id
+            elif parent_node_id:
+                # Only when the parent has no identifier VALUE — routine for
+                # the drafts the UI persists. Without this the child had no
+                # parent reference at all and was orphaned on reload.
+                data["_parent_id"] = parent_node_id
             entities.append(data)
 
             # The identifier value children reference. Consult the entity's own
@@ -479,7 +488,7 @@ class EntityStore:
                         node_unique_id = str(candidate)
 
             for child in node.children:
-                serialize_node(child, node_unique_id)
+                serialize_node(child, node_unique_id, node.id)
 
         for root in self.get_roots():
             serialize_node(root)
@@ -687,9 +696,15 @@ class EntityStore:
             node_data = node.instance.model_dump() if node.instance else {}
 
             for field_name in helper.nested_fields:
-                child_ids = node_data.get(field_name, [])
-                if not isinstance(child_ids, list):
+                value = node_data.get(field_name)
+                if value in (None, "", [], {}):
                     continue
+                # `linking.linked_reference_value` writes a SCALAR for a
+                # `type: entity` field and a list otherwise. Reading only lists
+                # meant an owned single-entity field was never linked here, and
+                # `_link_by_reference_fields` then linked it the other way
+                # round — the owned child became the parent.
+                child_ids = value if isinstance(value, list) else [value]
 
                 for child_id in child_ids:
                     child_node = id_to_node.get(str(child_id))
