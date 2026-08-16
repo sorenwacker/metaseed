@@ -11,7 +11,10 @@ import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from metaseed.ui.dataset_manager import DatasetManagerFactory
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -41,13 +44,20 @@ TEMPLATES_DIR = UI_DIR / "templates"
 STATIC_DIR = UI_DIR / "static"
 
 
-def create_app(state: AppState | None = None, base_url: str = "") -> FastAPI:
+def create_app(
+    state: AppState | None = None,
+    base_url: str = "",
+    dataset_factory: DatasetManagerFactory | None = None,
+) -> FastAPI:
     """Create the FastAPI application with HTMX routes.
 
     Args:
         state: Optional initial state. Creates new state if not provided.
         base_url: Base URL prefix for the application (e.g., "/hub").
             Should not have a trailing slash. Defaults to empty string.
+        dataset_factory: Where datasets are stored. ``None`` uses the default
+            filesystem repository; a host embedding this app supplies its own
+            here instead of monkeypatching ``app.state.dataset_factory``.
 
     Returns:
         Configured FastAPI application.
@@ -70,8 +80,8 @@ def create_app(state: AppState | None = None, base_url: str = "") -> FastAPI:
 
     app.state.settings = Settings()
 
-    # Create dataset manager factory with default filesystem repository
-    dataset_factory = DatasetManagerFactory()
+    # The host's storage wins; the filesystem repository is only the default.
+    dataset_factory = dataset_factory or DatasetManagerFactory()
 
     # Create entity service factory that always uses current facade
     def get_entity_service() -> EntityService:
