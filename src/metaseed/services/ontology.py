@@ -28,7 +28,6 @@ Example:
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import os
 import time
@@ -162,30 +161,6 @@ class RateLimiter:
         self._max_requests = max_requests
         self._window_seconds = window_seconds
         self._request_times: list[float] = []
-        self._lock = asyncio.Lock()
-
-    async def acquire(self: Self) -> None:
-        """Wait until a request can be made within rate limits."""
-        async with self._lock:
-            now = time.time()
-            cutoff = now - self._window_seconds
-
-            # Remove expired timestamps
-            self._request_times = [t for t in self._request_times if t > cutoff]
-
-            if len(self._request_times) >= self._max_requests:
-                # Wait until oldest request expires
-                oldest = self._request_times[0]
-                wait_time = oldest + self._window_seconds - now
-                if wait_time > 0:
-                    logger.debug("Rate limit reached, waiting %.2f seconds", wait_time)
-                    await asyncio.sleep(wait_time)
-                    # Clean up again after waiting
-                    now = time.time()
-                    cutoff = now - self._window_seconds
-                    self._request_times = [t for t in self._request_times if t > cutoff]
-
-            self._request_times.append(time.time())
 
     def acquire_sync(self: Self) -> None:
         """Synchronous version of acquire for non-async contexts."""

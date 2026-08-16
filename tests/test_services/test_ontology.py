@@ -84,18 +84,6 @@ class TestRateLimiter:
         # Should have 5 requests tracked
         assert len(limiter._request_times) == 5
 
-    @pytest.mark.asyncio
-    async def test_rate_limiter_async(self) -> None:
-        """Async rate limiter works."""
-        limiter = RateLimiter(max_requests=3, window_seconds=60)
-
-        # Should allow requests
-        await limiter.acquire()
-        await limiter.acquire()
-        await limiter.acquire()
-
-        assert len(limiter._request_times) == 3
-
 
 class TestOntologyService:
     """Tests for OntologyService."""
