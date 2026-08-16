@@ -78,9 +78,28 @@ class MCPServerManager:
         if self.is_running(port):
             return self.status()
 
-        # Kill any orphaned process on the port
+        # Kill an orphan of OURS on the port — never an unrelated process.
+        # `lsof` reports whatever listens there, and this is reachable from an
+        # unauthenticated local route, so killing on the strength of the port
+        # alone would take down another dev server or a database tunnel.
         if self._check_port_in_use(port):
-            logger.warning("Port %d is already in use, killing orphaned process", port)
+            if not self._check_mcp_responding(host, port):
+                logger.warning(
+                    "Port %d is in use by a process that is not an MCP server; "
+                    "refusing to kill it",
+                    port,
+                )
+                return MCPServerStatus(
+                    running=False,
+                    transport=transport,
+                    host=host,
+                    port=port,
+                    error=(
+                        f"Port {port} is in use by something that is not an "
+                        "MCP server. Stop it, or start on another port."
+                    ),
+                )
+            logger.warning("Port %d holds an orphaned MCP server, stopping it", port)
             self.kill_orphaned(port)
             time.sleep(0.5)
 

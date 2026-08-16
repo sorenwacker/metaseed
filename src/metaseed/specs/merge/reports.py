@@ -274,6 +274,19 @@ class MarkdownReportGenerator(ReportGenerator):
         return icons.get(diff_type, "?")
 
 
+def _safe(value: object) -> str:
+    """Profile text as page text, never as markup.
+
+    Every value here comes from profile YAML, and profiles are not all
+    first-party — a user directory or a hub-authored profile can carry
+    `<script>`. The report is served as `text/html`, so an unescaped value
+    would run in the reader's browser.
+    """
+    from html import escape
+
+    return escape(str(value), quote=True)
+
+
 class HTMLReportGenerator(ReportGenerator):
     """Generates styled HTML reports for profile comparisons."""
 
@@ -297,7 +310,7 @@ class HTMLReportGenerator(ReportGenerator):
         # Header
         lines.append("<h1>Profile Comparison Report</h1>")
         lines.append(
-            f"<p>Profiles compared: <strong>{', '.join(self.comparison.profiles)}</strong></p>"
+            f"<p>Profiles compared: <strong>{_safe(', '.join(self.comparison.profiles))}</strong></p>"
         )
 
         # Statistics
@@ -420,7 +433,7 @@ class HTMLReportGenerator(ReportGenerator):
         lines.append("<th>Entity</th>")
         lines.append("<th>Status</th>")
         for profile_id in self.comparison.profiles:
-            lines.append(f"<th>{profile_id}</th>")
+            lines.append(f"<th>{_safe(profile_id)}</th>")
         lines.append("<th>Fields</th>")
         lines.append("<th>Conflicts</th>")
         lines.append("</tr>")
@@ -428,7 +441,7 @@ class HTMLReportGenerator(ReportGenerator):
         for ed in sorted(self.comparison.entity_diffs, key=lambda x: x.entity_name):
             css_class = ed.diff_type.value
             lines.append(f"<tr class='{css_class}'>")
-            lines.append(f"<td>{ed.entity_name}</td>")
+            lines.append(f"<td>{_safe(ed.entity_name)}</td>")
             lines.append(
                 f"<td><span class='badge {css_class}'>{ed.diff_type.value}</span></td>"
             )
@@ -453,27 +466,29 @@ class HTMLReportGenerator(ReportGenerator):
             if not ed.conflicting_fields:
                 continue
 
-            lines.append(f"<h3>{ed.entity_name}</h3>")
+            lines.append(f"<h3>{_safe(ed.entity_name)}</h3>")
 
             for fd in ed.conflicting_fields:
                 lines.append(
                     "<div class='conflict' style='padding: 12px; margin-bottom: 12px;'>"
                 )
-                lines.append(f"<strong>{fd.field_name}</strong>")
-                lines.append(f"<p>Changed: {', '.join(fd.attributes_changed)}</p>")
+                lines.append(f"<strong>{_safe(fd.field_name)}</strong>")
+                lines.append(
+                    f"<p>Changed: {_safe(', '.join(fd.attributes_changed))}</p>"
+                )
 
                 if fd.values:
                     lines.append("<table style='margin-top: 8px;'>")
                     lines.append("<tr><th>Attribute</th>")
                     for profile_id in self.comparison.profiles:
-                        lines.append(f"<th>{profile_id}</th>")
+                        lines.append(f"<th>{_safe(profile_id)}</th>")
                     lines.append("</tr>")
 
                     for attr, values in fd.values.items():
-                        lines.append(f"<tr><td>{attr}</td>")
+                        lines.append(f"<tr><td>{_safe(attr)}</td>")
                         for profile_id in self.comparison.profiles:
                             val = values.get(profile_id, "-")
-                            lines.append(f"<td>{val}</td>")
+                            lines.append(f"<td>{_safe(val)}</td>")
                         lines.append("</tr>")
 
                     lines.append("</table>")
@@ -490,20 +505,20 @@ class HTMLReportGenerator(ReportGenerator):
             if not ed.field_diffs:
                 continue
 
-            lines.append(f"<h3>{ed.entity_name}</h3>")
+            lines.append(f"<h3>{_safe(ed.entity_name)}</h3>")
             lines.append("<table>")
             lines.append("<tr>")
             lines.append("<th>Field</th>")
             lines.append("<th>Status</th>")
             for profile_id in self.comparison.profiles:
-                lines.append(f"<th>{profile_id} Type</th>")
+                lines.append(f"<th>{_safe(profile_id)} Type</th>")
             lines.append("<th>Changes</th>")
             lines.append("</tr>")
 
             for fd in ed.field_diffs:
                 css_class = fd.diff_type.value
                 lines.append(f"<tr class='{css_class}'>")
-                lines.append(f"<td>{fd.field_name}</td>")
+                lines.append(f"<td>{_safe(fd.field_name)}</td>")
                 lines.append(
                     f"<td><span class='badge {css_class}'>{fd.diff_type.value}</span></td>"
                 )
@@ -511,9 +526,11 @@ class HTMLReportGenerator(ReportGenerator):
                 for profile_id in self.comparison.profiles:
                     spec = fd.profiles.get(profile_id)
                     type_val = spec.type.value if spec else "-"
-                    lines.append(f"<td>{type_val}</td>")
+                    lines.append(f"<td>{_safe(type_val)}</td>")
 
-                lines.append(f"<td>{', '.join(fd.attributes_changed) or '-'}</td>")
+                lines.append(
+                    f"<td>{_safe(', '.join(fd.attributes_changed) or '-')}</td>"
+                )
                 lines.append("</tr>")
 
             lines.append("</table>")

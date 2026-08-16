@@ -3,6 +3,16 @@
 ## Unreleased
 
 ### Fixed
+- The profile comparison report escapes the spec content it renders. Every
+  value — entity and field names, descriptions, patterns, examples, profile
+  ids — was interpolated raw into a page served as `text/html`, and profiles
+  are not all first-party: comparing one carrying `<script>` ran it in the
+  reader's browser.
+- Starting the MCP server no longer kills whatever holds its port. Any
+  listener reported by `lsof` was sent SIGTERM and then SIGKILL, from an
+  unauthenticated local route, so a click could stop an unrelated dev server
+  or tunnel. The existing `_check_mcp_responding` check now decides: an orphan
+  of ours is still cleaned up, anything else is reported and left alone.
 - A rejected payload no longer destroys the dataset it failed to replace.
   `_load_tree` cleared the store first, so in strict mode a malformed node
   aborted the load after the caller's data was already gone — the very thing
