@@ -590,19 +590,28 @@ def _child_collection_fields(entity: str, profile_spec: ProfileSpec) -> set[str]
         The names of list fields whose ``items`` is another entity of the
         profile. Empty if the profile does not define the entity.
     """
-    entity_lower = entity.lower()
+    # Through the one normaliser, as its sibling _profile_rules_for_entity
+    # does: comparing on case alone matches the root and misses every nested
+    # entity, which is the failure comparable_entity_name exists to prevent.
+    wanted = comparable_entity_name(entity)
     entity_def = next(
-        (e for n, e in profile_spec.entities.items() if n.lower() == entity_lower),
+        (
+            e
+            for n, e in profile_spec.entities.items()
+            if comparable_entity_name(n) == wanted
+        ),
         None,
     )
     if entity_def is None:
         return set()
 
-    entity_names = {name.lower() for name in profile_spec.entities}
+    entity_names = {comparable_entity_name(name) for name in profile_spec.entities}
     return {
         f.name
         for f in entity_def.fields
-        if f.type == FieldType.LIST and f.items and f.items.lower() in entity_names
+        if f.type == FieldType.LIST
+        and f.items
+        and comparable_entity_name(f.items) in entity_names
     }
 
 
