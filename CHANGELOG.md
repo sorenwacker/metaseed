@@ -3,6 +3,23 @@
 ## Unreleased
 
 ### Fixed
+- Exports no longer drop records silently (260816 review).
+  - The FAIR Data Station export descends past an entity with no JERM class
+    instead of dropping its whole subtree. `walk` returned at the top for an
+    unmapped node, so the branch that meant to skip it and keep going never
+    ran — an Investigation with an unmapped level beneath it exported nothing
+    below that level, and the unmapped-entity warning named only the entity,
+    never the content lost under it. Surfaced descendants attach to the
+    nearest mapped ancestor.
+  - ISA-Tab study tables carry characteristics and factor values authored as
+    child entities, not only those embedded in the sample. The MetaboLights
+    importer creates them as children, so an import-then-export round trip
+    emitted `Characteristics[Organism]` and lost every other qualifier.
+  - A factor value is named by `factor_name`, which every ISA-shaped profile
+    declares, rather than `category`, which none of them declare on
+    `FactorValue`; it had been producing anonymous `Factor Value[]` columns.
+    The round-trip fixture that authored the forbidden shape (and so agreed
+    with the bug) is corrected.
 - An ontology service that cannot be reached reports *not checked*, never
   invalid (260816 review). `TermRouter` caught every source failure and
   returned `None` — the same value that means "asked, and the term is not

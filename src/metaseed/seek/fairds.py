@@ -246,14 +246,29 @@ def to_fair_data_station_rdf(client: MetaseedClient) -> str:  # noqa: C901
             return None
         return f"{mapping[1]}_{_slug(node_identity(node))}"
 
-    def walk(node: Any, parent_path: str) -> None:
+    def walk(node: Any, parent_path: str, parent_uri: URIRef | None = None) -> None:
+        """Emit ``node`` and its descendants beneath ``parent_path``.
+
+        An entity with no JERM class is not exported, but it does not take its
+        descendants with it: they are emitted against the nearest mapped
+        ancestor instead. Dropping a whole subtree because one level in the
+        middle has no mapping loses content silently — ``unmapped_entities``
+        warns about the unmapped entity, never about what hung beneath it.
+        """
         mapping = resolve(node.entity_type)
         seg = segment(node)
         if mapping is None or seg is None:
+            for child in node.children:
+                walk(child, parent_path, parent_uri)
             return
         jerm_class = mapping[0]
         path = f"{parent_path}/{seg}" if parent_path else seg
         uri = URIRef(_BASE + path)
+
+        if parent_uri is not None:
+            # Added here rather than by the caller so a node surfaced from
+            # under an unmapped parent is attached too.
+            graph.add((parent_uri, JERM.hasPart, uri))
 
         identity = node_identity(node)
         graph.add((uri, RDF.type, JERM[jerm_class]))
@@ -295,7 +310,7 @@ def to_fair_data_station_rdf(client: MetaseedClient) -> str:  # noqa: C901
         for child in node.children:
             child_seg = segment(child)
             if child_seg is None:
-                walk(child, path)
+                walk(child, path, uri)
                 continue
             child_mapping = resolve(child.entity_type)
             if jerm_class == "Study" and child_mapping and child_mapping[0] == "Sample":
@@ -313,13 +328,9 @@ def to_fair_data_station_rdf(client: MetaseedClient) -> str:  # noqa: C901
                 graph.add((ou_uri, SCHEMA.title, Literal(identity)))
                 graph.add((ou_uri, SCHEMA.name, Literal(identity)))
                 graph.add((uri, JERM.hasPart, ou_uri))
-                graph.add(
-                    (ou_uri, JERM.hasPart, URIRef(f"{_BASE}{ou_path}/{child_seg}"))
-                )
-                walk(child, ou_path)
+                walk(child, ou_path, ou_uri)
                 continue
-            graph.add((uri, JERM.hasPart, URIRef(f"{_BASE}{path}/{child_seg}")))
-            walk(child, path)
+            walk(child, path, uri)
 
     for root in client.get_tree():
         walk(root, "")

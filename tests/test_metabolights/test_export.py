@@ -183,7 +183,9 @@ def test_sample_characteristics_round_trip_through_the_study_table():
                 "organism": "Homo sapiens",
                 "organism_part": "liver",
                 "characteristics": [{"category": "Age", "value": "42"}],
-                "factor_values": [{"category": "Dose", "value": "high"}],
+                # `factor_name` is what the profile declares; the old fixture
+                # said `category`, which agreed with a bug in the exporter.
+                "factor_values": [{"factor_name": "Dose", "value": "high"}],
             }
         )
     )

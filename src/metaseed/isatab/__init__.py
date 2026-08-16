@@ -186,15 +186,36 @@ def _study_sections(
     return lines
 
 
-def _sample_qualifiers(sample: dict[str, Any]) -> list[tuple[str, str, str, str]]:
+#: What each qualifier kind is named by, and which field carries its name.
+#: ``Characteristic`` declares ``category``; ``FactorValue`` declares
+#: ``factor_name`` in every ISA-shaped profile that ships. Reading ``category``
+#: for both produced anonymous ``Factor Value[]`` columns.
+_QUALIFIER_KINDS: tuple[tuple[str, str, str], ...] = (
+    ("Characteristics", "characteristics", "category"),
+    ("Factor Value", "factor_values", "factor_name"),
+)
+
+
+def _sample_qualifiers(
+    sample: dict[str, Any],
+    children: list[dict[str, Any]] | None = None,
+) -> list[tuple[str, str, str, str]]:
     """The sample's ISA-Tab qualified columns as ``(kind, category, value, accession)``.
 
     Promotes the dedicated ``organism`` / ``organism_part`` fields (which the
     MetaboLights importer recovers from ``Characteristics[Organism]`` /
     ``Characteristics[Organism part]``) back to those standard columns, then
-    appends generic ``characteristics`` and ``factor_values`` list entries. This
-    is the inverse of :func:`metaseed.isatab.reader.read_samples`, so authored
+    appends generic ``characteristics`` and ``factor_values`` entries. This is
+    the inverse of :func:`metaseed.isatab.reader.read_samples`, so authored
     sample content -- including the required organism -- survives export.
+
+    Args:
+        sample: The serialized Sample.
+        children: The sample's ``Characteristic`` / ``FactorValue`` child
+            entities. A qualifier can be authored either way -- embedded in the
+            sample, or as a child node, which is what the MetaboLights importer
+            creates -- and an export that read only the embedded lists dropped
+            every imported qualifier on the way back out.
     """
     quals: list[tuple[str, str, str, str]] = []
     organism = sample.get("organism")
@@ -205,15 +226,22 @@ def _sample_qualifiers(sample: dict[str, Any]) -> list[tuple[str, str, str, str]
     organism_part = sample.get("organism_part")
     if organism_part:
         quals.append(("Characteristics", "Organism part", str(organism_part), ""))
-    for kind, key in (
-        ("Characteristics", "characteristics"),
-        ("Factor Value", "factor_values"),
-    ):
-        for item in sample.get(key) or []:
+    by_kind: dict[str, list[dict[str, Any]]] = {"Characteristic": [], "FactorValue": []}
+    for child in children or []:
+        entity_type = str(child.get("_type", ""))
+        if entity_type in by_kind:
+            by_kind[entity_type].append(child)
+
+    for kind, key, name_field in _QUALIFIER_KINDS:
+        embedded = [i for i in (sample.get(key) or []) if isinstance(i, dict)]
+        nested = by_kind[
+            "Characteristic" if key == "characteristics" else "FactorValue"
+        ]
+        for item in [*embedded, *nested]:
             quals.append(
                 (
                     kind,
-                    str(item.get("category", "")),
+                    str(item.get(name_field) or item.get("category", "")),
                     str(item.get("value", "")),
                     str(item.get("term_accession", "")),
                 )
@@ -221,7 +249,10 @@ def _sample_qualifiers(sample: dict[str, Any]) -> list[tuple[str, str, str, str]
     return quals
 
 
-def _study_file(samples: list[dict[str, Any]]) -> str:
+def _study_file(
+    samples: list[dict[str, Any]],
+    children_by_sample: dict[str, list[dict[str, Any]]] | None = None,
+) -> str:
     """Build a study (``s_*.txt``) file: header row plus one row per Sample.
 
     Beyond Source/Sample Name, each sample's characteristics and factor values
@@ -235,7 +266,8 @@ def _study_file(samples: list[dict[str, Any]]) -> str:
     per_sample: list[dict[tuple[str, str], tuple[str, str]]] = []
     for sample in samples:
         mapping: dict[tuple[str, str], tuple[str, str]] = {}
-        for kind, category, value, accession in _sample_qualifiers(sample):
+        children = (children_by_sample or {}).get(str(sample.get("_node_id")), [])
+        for kind, category, value, accession in _sample_qualifiers(sample, children):
             col = (kind, category)
             if col not in has_accession:
                 columns.append(col)
@@ -372,11 +404,21 @@ def to_isatab(client: MetaseedClient) -> dict[str, str]:
         )
 
     documents: dict[str, str] = {"i_Investigation.txt": "\n".join(lines) + "\n"}
+    direct_parent = _direct_parent_map(client)
+
+    # A qualifier authored as a child node belongs to the sample it hangs from;
+    # the importer creates them this way, so the export has to look for both.
+    children_by_sample: dict[str, list[dict[str, Any]]] = {}
+    for entity_type in ("Characteristic", "FactorValue"):
+        for child in by_type.get(entity_type, []):
+            parent_id = direct_parent.get(str(child.get("_node_id")))
+            if parent_id:
+                children_by_sample.setdefault(parent_id, []).append(child)
+
     for study in studies:
         documents[study_filename(study)] = _study_file(
-            of(samples, study.get("_node_id"))
+            of(samples, study.get("_node_id")), children_by_sample
         )
-    direct_parent = _direct_parent_map(client)
     for assay in assays:
         assay_id = str(assay.get("_node_id"))
         assay_data_files = [
