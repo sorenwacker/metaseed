@@ -9,8 +9,10 @@ So OLS is one adapter among several, and the application asks a router rather
 than a service. The router's rule is that a source claiming an ontology is
 authoritative for it — a term missing from a vocabulary we hold is missing, and
 falling through to a public service would silently widen a list somebody
-narrowed on purpose. When nobody can say, the answer is ``None``, which the
-check reports as *not checked* rather than as invalid.
+narrowed on purpose. When nobody can say — every source unreachable rather than
+answering — the router raises ``TermSourceUnavailableError`` instead of
+returning ``None``, because ``None`` means *asked, and it is not there*; the
+check turns that into *not checked* rather than invalid.
 
 See ``docs/architecture/term-sources.md``.
 """
@@ -144,33 +146,58 @@ class TermRouter:
     def get_term_sync(self, term_id: str) -> object | None:
         """The term from the first source that has it, or ``None``.
 
-        The first source claiming the term's ontology is asked alone: if it
-        does not list the term, the term is not in that vocabulary, and asking
-        anything else afterwards would answer about a different one. Later
-        claimants do not get a say — two sources holding the same ontology is
-        exactly the case where order has to decide.
+        The first source claiming the term's ontology answers alone: if it
+        says the term is not there, the term is not in that vocabulary, and
+        asking anything else afterwards would answer about a different one.
+        Later claimants do not get a say — two sources holding the same
+        ontology is exactly the case where order has to decide.
+
+        That applies to an answer, not to a failure. A claimant that could not
+        be reached has not spoken, so the remaining sources are asked.
+
+        Raises:
+            TermSourceUnavailableError: No source answered and at least one
+                could not be asked. Returning ``None`` would say the term does
+                not exist, which is a verdict on the user's data that an
+                outage does not support.
         """
-        from metaseed.services.term_check import ontology_of
+        from metaseed.services.term_check import (
+            TermSourceUnavailableError,
+            ontology_of,
+        )
 
         prefix = ontology_of(term_id)
         owner = next((s for s in self.sources if _owns(s, prefix)), None)
-        for source in [owner] if owner is not None else self.sources:
+        ordered = (
+            [owner, *(s for s in self.sources if s is not owner)]
+            if owner is not None
+            else list(self.sources)
+        )
+
+        unreachable = False
+        for source in ordered:
             try:
                 term: object | None = source.get_term_sync(term_id)
             except Exception:
-                # Someone else's outage is not the next source's problem, and
-                # it is certainly not the dataset's. Logged rather than
-                # swallowed: a source that always fails is a misconfiguration,
-                # and silence is how it survives.
+                # Logged rather than swallowed: a source that always fails is a
+                # misconfiguration, and silence is how it survives.
                 logger.warning(
                     "term source %s failed on %s",
                     type(source).__name__,
                     term_id,
                     exc_info=True,
                 )
+                unreachable = True
                 continue
             if term is not None:
                 return term
+            if source is owner:
+                return None
+
+        if unreachable:
+            raise TermSourceUnavailableError(
+                f"no term source could be asked about {term_id}"
+            )
         return None
 
     def describe(self) -> list[SourceCapabilities]:

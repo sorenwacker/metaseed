@@ -37,8 +37,17 @@ def _make_request(
         params: Query parameters.
 
     Returns:
-        JSON response or None on error.
+        The JSON response, or ``None`` when OLS answered that there is no such
+        thing (a 4xx).
+
+    Raises:
+        TermSourceUnavailableError: OLS could not be asked — a transport
+            failure or a 5xx. Returning ``None`` here would report the absence
+            of an answer as the absence of a term, which is a verdict on the
+            user's data that somebody else's downtime does not support.
     """
+    from metaseed.services.term_check import TermSourceUnavailableError
+
     url = f"{OLS4_BASE_URL}{endpoint}"
     try:
         with httpx.Client(timeout=DEFAULT_TIMEOUT) as client:
@@ -47,10 +56,35 @@ def _make_request(
             return cast("dict[str, Any]", response.json())
     except httpx.HTTPStatusError as e:
         logger.warning("OLS4 API error: %s %s", e.response.status_code, e.response.text)
+        if e.response.status_code >= 500:
+            raise TermSourceUnavailableError(
+                f"OLS returned {e.response.status_code} for {endpoint}"
+            ) from e
         return None
     except httpx.RequestError as e:
         logger.warning("OLS4 request failed: %s", e)
-        return None
+        raise TermSourceUnavailableError(f"OLS could not be reached: {e}") from e
+
+
+def _iri_and_ontology(term_id: str) -> tuple[str, str | None] | None:
+    """The OLS IRI and ontology prefix a term id names.
+
+    Args:
+        term_id: A CURIE (``PATO:0000015``) or a full IRI.
+
+    Returns:
+        ``(iri, ontology)``, where ontology is ``None`` when the IRI is not in
+        OBO form; ``None`` when the identifier is neither shape.
+    """
+    if term_id.startswith(("http://", "https://")):
+        if "/obo/" in term_id:
+            parts = term_id.rsplit("/obo/", maxsplit=1)[-1].split("_", maxsplit=1)
+            return term_id, (parts[0].lower() if parts else None)
+        return term_id, None
+    if ":" in term_id:
+        prefix, local_id = term_id.split(":", 1)
+        return f"http://purl.obolibrary.org/obo/{prefix}_{local_id}", prefix.lower()
+    return None
 
 
 def register_ontology_tools(  # noqa: C901
@@ -134,13 +168,20 @@ def register_ontology_tools(  # noqa: C901
             JSON with term details including label, description, and synonyms.
         """
         from metaseed.services.ontology import OntologyTerm
-        from metaseed.services.terms import get_term_source
 
         # Ask the configured sources first. A term held in a local vocabulary
         # is answered from there; only OLS terms continue to the detail request
         # below, which asks for the parts — obsolescence, annotations — that
         # only OLS has.
-        found = get_term_source().get_term_sync(term_id)
+        from metaseed.services.term_check import TermSourceUnavailableError
+        from metaseed.services.terms import get_term_source
+
+        try:
+            found = get_term_source().get_term_sync(term_id)
+        except TermSourceUnavailableError:
+            # The configured sources could not be asked; OLS below may still
+            # answer, and only if that fails too is the term unchecked.
+            found = None
         if found is not None and not isinstance(found, OntologyTerm):
             return json.dumps(
                 {
@@ -151,23 +192,10 @@ def register_ontology_tools(  # noqa: C901
                 indent=2,
             )
 
-        # Determine if it's a CURIE or IRI
-        if term_id.startswith("http://") or term_id.startswith("https://"):
-            iri = term_id
-            # Try to extract ontology from IRI
-            if "/obo/" in iri:
-                # OBO format: http://purl.obolibrary.org/obo/PATO_0000015
-                parts = iri.split("/obo/")[-1].split("_")
-                ontology = parts[0].lower() if parts else None
-            else:
-                ontology = None
-        elif ":" in term_id:
-            prefix, local_id = term_id.split(":", 1)
-            ontology = prefix.lower()
-            # Convert to OBO IRI format
-            iri = f"http://purl.obolibrary.org/obo/{prefix}_{local_id}"
-        else:
+        parsed = _iri_and_ontology(term_id)
+        if parsed is None:
             return json.dumps({"error": f"Invalid term ID format: {term_id}"})
+        iri, ontology = parsed
 
         if not ontology:
             return json.dumps({"error": "Could not determine ontology from term ID"})
@@ -175,7 +203,19 @@ def register_ontology_tools(  # noqa: C901
         # URL encode the IRI twice (OLS4 requirement)
         encoded_iri = urllib.parse.quote(urllib.parse.quote(iri, safe=""), safe="")
 
-        data = _make_request(f"/ontologies/{ontology}/terms/{encoded_iri}")
+        try:
+            data = _make_request(f"/ontologies/{ontology}/terms/{encoded_iri}")
+        except TermSourceUnavailableError as exc:
+            return json.dumps(
+                {
+                    "checked": False,
+                    "error": (
+                        f"'{term_id}' could not be checked: the ontology "
+                        f"service did not answer ({exc})."
+                    ),
+                },
+                indent=2,
+            )
         if data is None:
             return json.dumps({"error": f"Term not found: {term_id}"})
 
@@ -223,7 +263,18 @@ def register_ontology_tools(  # noqa: C901
         rows = min(max(1, rows), 500)
 
         params = {"size": rows}
-        data = _make_request("/ontologies", params)
+        from metaseed.services.term_check import TermSourceUnavailableError
+
+        try:
+            data = _make_request("/ontologies", params)
+        except TermSourceUnavailableError as exc:
+            return json.dumps(
+                {
+                    "checked": False,
+                    "error": f"the ontology service did not answer ({exc}).",
+                },
+                indent=2,
+            )
         if data is None:
             return json.dumps({"error": "Failed to list ontologies"})
 

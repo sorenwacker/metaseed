@@ -28,6 +28,16 @@ if TYPE_CHECKING:
     from metaseed.specs.schema import FieldSpec
 
 
+class TermSourceUnavailableError(RuntimeError):
+    """A term source could not be asked, which is not an answer about a term.
+
+    Returning ``None`` for this is the bug it exists to prevent: ``None`` means
+    the source was asked and does not carry the term, and a caller acting on
+    that reports the user's value as wrong because somebody else's service was
+    down.
+    """
+
+
 class Outcome(StrEnum):
     """What was learned about a value."""
 
@@ -275,7 +285,16 @@ def check_term(
         # beside it, so every Crop Ontology term would be reported as missing
         # from a vocabulary the service simply does not carry.
         hosts = getattr(source, "has_ontology_sync", None)
-        available = hosts(prefix) if callable(hosts) else True
+        try:
+            available = hosts(prefix) if callable(hosts) else True
+        except Exception:
+            # Asked outside the lookup's guard above, so an outage here would
+            # otherwise escape as a crash instead of a verdict.
+            return TermVerdict(
+                Outcome.NOT_CHECKED,
+                f"'{value}' could not be checked: the ontology service did not answer.",
+                allowed,
+            )
         if available is not True:
             return TermVerdict(
                 Outcome.NOT_CHECKED,

@@ -15,7 +15,7 @@ So OLS is one adapter. A term source is anything that can answer the same questi
 
 | Method | Answers |
 | --- | --- |
-| `get_term_sync(term_id)` | The term, or `None` when this source does not have it |
+| `get_term_sync(term_id)` | The term, or `None` when this source does not have it. Raise to say it could not be asked — `None` is an answer about the term, not about the service |
 | `has_ontology_sync(ontology_id)` | Whether this source carries that ontology; `None` when it cannot say |
 | `search_sync(query, ontology, limit)` | Matching terms, for a picker. Optional |
 | `is_within_sync(term_id, ancestor)` | Whether the term sits beneath that one. Optional |
@@ -38,8 +38,9 @@ An adapter is not required to live in metaseed. Anything with those methods can 
 `metaseed.services.terms.get_term_source()` returns the `TermRouter` the application asks. Its rule:
 
 1. If a source claims the ontology a term id names (`has_ontology_sync` returns `True`), that source is **authoritative** for it. A term missing there is missing, and no other source is asked — otherwise a local vocabulary that deliberately narrows a public ontology would be silently widened again by the public one.
-2. Otherwise every source is asked in order, and the first answer wins.
-3. When nobody can say, the answer is `None`, which the check reports as *not checked* — never as invalid.
+2. Being authoritative applies to an answer, not to a failure. A claimant that could not be reached has not spoken, so the remaining sources are asked.
+3. Otherwise every source is asked in order, and the first answer wins.
+4. When no source answered and at least one could not be asked, the router raises `TermSourceUnavailableError`. It does not return `None`: `None` means *asked, and it is not there*, and acting on that reports the user's value as wrong because a service was down. The check turns the exception into *not checked* — never invalid.
 
 Order is composition, not preference given at each call: local vocabularies are registered ahead of OLS, so offline work resolves without a network round trip.
 

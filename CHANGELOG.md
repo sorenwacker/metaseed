@@ -3,6 +3,23 @@
 ## Unreleased
 
 ### Fixed
+- An ontology service that cannot be reached reports *not checked*, never
+  invalid (260816 review). `TermRouter` caught every source failure and
+  returned `None` — the same value that means "asked, and the term is not
+  there" — so `check_term` concluded the value was wrong. Measured against the
+  shipped examples, an outage where the ontology is known but the term
+  endpoint fails reported 61 of 61 ontology values as invalid (miappe/1.1 26,
+  miappe/1.2 20, isa/1.0 15); all 61 now report as unchecked, and nothing that
+  passed before fails now. The router raises `TermSourceUnavailableError`
+  instead of returning `None`, a source that could not be reached no longer
+  blocks the other sources from being asked, and `has_ontology_sync` raising
+  no longer escapes `check_term` as a crash.
+- The `get_ontology_term` MCP tool no longer answers "Term not found" when OLS
+  is unreachable: `_make_request` raises on a transport failure or a 5xx and
+  returns `None` only for a genuine 4xx, and the tool reports
+  `{"checked": false}` with the reason. The same for `list_ontologies`. Three
+  of the tool's tests had been passing only because the router swallowed a
+  blocked network connection.
 - A loaded entity is stored once (260816 review). `load_nested` — the path
   behind `load_yaml` and every shipped example — materialised each embedded
   child as its own node but left the whole child object inside the parent's
