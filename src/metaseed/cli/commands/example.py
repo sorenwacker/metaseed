@@ -7,6 +7,7 @@ import typer
 import yaml
 
 from metaseed.cli.output import ExitCode, echo_error, echo_success
+from metaseed.specs.versioning import version_sort_key
 
 
 def _is_investigation_shaped(data: dict[str, Any]) -> bool:
@@ -287,7 +288,10 @@ def export_example(  # noqa: C901
                 f"No examples for profile '{profile_input}'. Available: {', '.join(sorted(example_files.keys()))}"
             )
             raise typer.Exit(ExitCode.CONFIG_ERROR)
-        example_key = sorted(matching)[-1]  # Latest version
+        # Numerically, so 1.10 beats 1.9. The keys are "<profile>/<version>".
+        example_key = max(
+            matching, key=lambda key: version_sort_key(key.split("/", 1)[-1])
+        )
 
     if example_key not in example_files:
         echo_error(

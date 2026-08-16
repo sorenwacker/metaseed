@@ -221,12 +221,10 @@ class FilesystemSpecProvider(SpecProvider):
         Raises:
             FileNotFoundError: If the profile does not exist.
         """
-        versions = self._loader.list_versions(profile)
-        if not versions:
-            raise FileNotFoundError(f"Profile not found: {profile}")
-
-        # Load the latest version to get display name
-        latest_version = sorted(versions)[-1]
+        # Through list_versions, which orders numerically and raises for an
+        # unknown profile: sorting the raw strings here made 1.9 look newer
+        # than 1.10.
+        latest_version = (await self.list_versions(profile))[0]
         try:
             spec = self._loader.load_profile(version=latest_version, profile=profile)
             return spec.display_name or profile
