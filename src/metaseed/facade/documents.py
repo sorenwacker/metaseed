@@ -104,16 +104,32 @@ class DocumentLoader:
         root_type = entity_type or self.default_root
         if root_type is None:
             return 0
-        node = self.sink.add_entity(root_type, document, skip_validation=True)
-        return 1 + self._load_children(document, root_type, node.id)
+        stored, embedded = self._split_embedded(document, root_type)
+        node = self.sink.add_entity(root_type, stored, skip_validation=True)
+        return 1 + self._load_children(embedded, node.id)
 
-    def _load_children(
-        self, parent_data: dict[str, Any], parent_type: str, parent_id: str
-    ) -> int:
-        """Add every entity embedded in ``parent_data``, recursively."""
-        helper = self.sink.get_helper(parent_type)
+    def _split_embedded(
+        self, data: dict[str, Any], entity_type: str
+    ) -> tuple[dict[str, Any], list[tuple[str, dict[str, Any]]]]:
+        """Separate an entity's own data from the children embedded in it.
+
+        A child that is materialised as its own node must not also remain
+        inside its parent: the store would hold the record twice, every export
+        would emit it twice, and deleting the node would leave the parent's
+        copy behind. The link is carried by the child's parent-reference field,
+        which ``add_entity`` fills, so the embedded object is a duplicate and
+        not a second link.
+
+        A plain string in the same field NAMES a child rather than embedding
+        one. That is a reference, and it is kept.
+
+        Returns:
+            The data to store for this entity, and the (child type, data)
+            pairs to load beneath it.
+        """
+        helper = self.sink.get_helper(entity_type)
         if helper is None:
-            return 0
+            return data, []
 
         child_fields = (
             helper.owned_child_fields
@@ -121,22 +137,42 @@ class DocumentLoader:
             else helper.nested_fields
         )
 
-        loaded = 0
+        stored = dict(data)
+        embedded: list[tuple[str, dict[str, Any]]] = []
         for field_name, child_type in child_fields.items():
-            items = parent_data.get(field_name)
-            if isinstance(items, dict):
-                items = [items]
+            raw = data.get(field_name)
+            items = [raw] if isinstance(raw, dict) else raw
             if not isinstance(items, list):
                 continue
             if self.sink.get_helper(child_type) is None:
                 continue
-            for item in items:
-                if not isinstance(item, dict):
-                    continue  # a plain string names a child, it does not embed one
-                child = self.sink.add_entity(
-                    child_type, item, parent_id=parent_id, skip_validation=True
-                )
-                loaded += 1 + self._load_children(item, child_type, child.id)
+
+            objects = [item for item in items if isinstance(item, dict)]
+            if not objects:
+                continue
+            embedded.extend((child_type, item) for item in objects)
+
+            named = [item for item in items if not isinstance(item, dict)]
+            if isinstance(raw, dict):
+                # An exactly-one-child field held that child; it has no list
+                # shape to preserve, so the field goes rather than emptying.
+                stored.pop(field_name, None)
+            else:
+                stored[field_name] = named
+
+        return stored, embedded
+
+    def _load_children(
+        self, embedded: list[tuple[str, dict[str, Any]]], parent_id: str
+    ) -> int:
+        """Add each embedded child under ``parent_id``, recursively."""
+        loaded = 0
+        for child_type, item in embedded:
+            stored, nested = self._split_embedded(item, child_type)
+            child = self.sink.add_entity(
+                child_type, stored, parent_id=parent_id, skip_validation=True
+            )
+            loaded += 1 + self._load_children(nested, child.id)
         return loaded
 
 

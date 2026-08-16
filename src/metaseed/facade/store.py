@@ -359,10 +359,17 @@ class EntityStore:
     ) -> None:
         """Take the deleted child's identifier out of the parent's data.
 
-        Creation writes it into the parent's nested reference field; leaving
-        it after a delete hands every save and export a reference to a record
-        that no longer exists. The instance is immutable-by-convention, so the
-        cleaned value goes in via ``model_copy``.
+        The repositories write that identifier into the parent's reference
+        field when the child is created; this store does not, so on many
+        profiles there is nothing to remove and the decision below reports
+        ``NO_CHANGE``. Where the reference does exist, leaving it after a
+        delete hands every save and export a pointer to a record that no
+        longer exists. The instance is immutable-by-convention, so the cleaned
+        value goes in via ``model_copy``.
+
+        Only identifiers are matched. A parent field holding a whole embedded
+        child is a duplicate record rather than a reference, and the loader no
+        longer produces one — see ``DocumentLoader._split_embedded``.
         """
         from metaseed.facade.linking import (
             NO_CHANGE,

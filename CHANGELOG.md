@@ -3,6 +3,17 @@
 ## Unreleased
 
 ### Fixed
+- A loaded entity is stored once (260816 review). `load_nested` — the path
+  behind `load_yaml` and every shipped example — materialised each embedded
+  child as its own node but left the whole child object inside the parent's
+  containment field, so every entity below the root was held twice and every
+  save or export emitted it twice. The loader now separates an entity's own
+  data from the children embedded in it; a plain string in the same field
+  names a child rather than embedding one, and is kept as the reference it is.
+  This also fixes deletion: `delete_entity` removed the node while the
+  parent's copy of the record stayed behind and was re-emitted by `to_dict`
+  and by every exporter, which no unlink could have repaired while the
+  duplicate existed.
 - An unreadable dataset file is no longer written over (260816 review). A
   failed read left `FileEntityRepository` empty and indistinguishable from one
   opened on a new file, so the next create/update/delete serialized that
