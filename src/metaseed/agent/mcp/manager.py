@@ -374,9 +374,13 @@ class MCPServerManager:
         actual_port = self._port or port
         transport = self._transport or "streamable-http"
 
-        if transport == "streamable-http":
+        # Any HTTP transport has a URL. Matching only "streamable-http" left a
+        # server started with transport="http" running and unreachable, with
+        # nothing to show the user.
+        if "http" in transport:
             return f"http://{host}:{actual_port}"
 
+        # stdio has no URL: the client speaks to the process, not a port.
         return None
 
 
