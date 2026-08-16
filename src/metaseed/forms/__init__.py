@@ -120,18 +120,19 @@ def get_field_data(
     for field_name in helper.all_fields:
         info = helper.field_info(field_name)
 
-        # Check if this field references the parent type - if so, skip it
+        # Check if this field references the parent type - if so, skip it.
+        # Which field that is comes from the profile's own `reference:`
+        # declaration, the same map `EntityStore._fill_parent_reference` fills
+        # from. Guessing the name instead (`f"{parent.lower()}_id"`) missed
+        # every multi-word parent — ObservationUnit is `observation_unit_id`,
+        # not `observationunit_id` — and every `_ref` convention, so the form
+        # offered a field the store was about to fill.
         if exclude_parent_ref:
             items = info.get("items")
             if items and items == exclude_parent_ref:
                 continue
-            # Also check field name patterns like "study_id" for parent "Study"
-            parent_lower = exclude_parent_ref.lower()
-            if field_name.lower() in [
-                f"{parent_lower}_id",
-                f"{parent_lower}_identifier",
-                f"{parent_lower}_unique_id",
-            ]:
+            reference = helper.reference_fields.get(field_name)
+            if reference and reference[0] == exclude_parent_ref:
                 continue
 
         field_data = {

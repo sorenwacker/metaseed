@@ -27,6 +27,7 @@ from metaseed.specs.schema import (
     identifying_field,
 )
 from metaseed.specs.versioning import check_profile_version
+from metaseed.utils.text import to_snake_case
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -863,7 +864,11 @@ class SpecBuilder:
             target.fields.insert(
                 0,
                 FieldSpec(
-                    name=f"{entity_name.lower()}_id",
+                    # snake_case, not lower(): every shipped profile writes
+                    # `observation_unit_id`, and a generated profile that says
+                    # `observationunit_id` does not read like the ones it sits
+                    # beside. The reference below is what carries the meaning.
+                    name=f"{to_snake_case(entity_name)}_id",
                     type=FieldType.STRING,
                     required=True,
                     description=f"Reference to parent {entity_name}",

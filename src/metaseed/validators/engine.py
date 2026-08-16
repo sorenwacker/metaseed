@@ -3,6 +3,7 @@
 This module provides the validation engine that coordinates rule execution.
 """
 
+import contextlib
 import re
 from typing import Any, Self
 
@@ -717,48 +718,76 @@ def create_engine_for_entity(
         Configured ValidationEngine instance.
     """
     loader = SpecLoader()
+    profile_spec = None
+    # A missing profile is not fatal here: the entity spec below may still
+    # describe the entity, and build_engine_for_entity reports the case where
+    # neither does.
+    with contextlib.suppress(SpecLoadError):
+        profile_spec = loader.load_profile(version, profile)
+    try:
+        entity_spec = loader.load_entity(entity, version, profile)
+    except SpecLoadError:
+        entity_spec = None
+
+    return build_engine_for_entity(
+        entity, entity_spec, profile_spec, origin=f"{profile} v{version}"
+    )
+
+
+def build_engine_for_entity(
+    entity: str,
+    entity_spec: Any,
+    profile_spec: Any,
+    origin: str = "the supplied spec",
+) -> ValidationEngine:
+    """Configure an engine from specs the caller already holds.
+
+    Separated from :func:`create_engine_for_entity` so a client composed with a
+    spec — ``MetaseedClient.from_spec`` / ``from_yaml`` — validates against that
+    spec instead of one re-resolved by name, which for a supplied spec does not
+    exist on disk at all.
+
+    Args:
+        entity: Entity name.
+        entity_spec: Its :class:`EntitySpec`, or ``None`` if the profile does
+            not describe it separately.
+        profile_spec: The :class:`ProfileSpec` carrying the validation rules,
+            or ``None``.
+        origin: What to name in the error when the entity is in neither, so a
+            missing profile and a missing entity read differently.
+
+    Returns:
+        A configured :class:`ValidationEngine`.
+
+    Raises:
+        SpecLoadError: The entity appears in neither spec.
+    """
     engine = ValidationEngine()
     entity_found = False
 
-    # Load the profile first: what it declares about a field decides whether
-    # the identifier default below applies at all.
-    profile_spec = None
-    try:
-        profile_spec = loader.load_profile(version, profile)
-        entity_lower = entity.lower()
-        profile_entities = [e.lower() for e in profile_spec.entities]
-        if entity_lower in profile_entities:
+    if profile_spec is not None:
+        if entity.lower() in [e.lower() for e in profile_spec.entities]:
             entity_found = True
-    except SpecLoadError:
-        # If profile not found, continue with basic rules only
-        pass
 
-    # Load entity spec for required fields
-    try:
-        spec = loader.load_entity(entity, version, profile)
+    if entity_spec is not None:
         entity_found = True
 
-        # Add required fields rule
-        required_fields = [f.name for f in spec.get_required_fields()]
+        required_fields = [f.name for f in entity_spec.get_required_fields()]
         if required_fields:
             engine.add_rule(RequiredFieldsRule(fields=required_fields))
 
-        for field in spec.fields:
+        for field in entity_spec.fields:
             if field.name in ("unique_id", "identifier"):
                 rule = _identifier_rule(field, entity, profile_spec)
                 if rule is not None:
                     engine.add_rule(rule)
                 break
-    except SpecLoadError:
-        # Entity spec not found, check if profile has this entity
-        pass
 
     if profile_spec is not None:
         for rule in _profile_rules_for_entity(entity, profile_spec):
             engine.add_rule(rule)
 
-    # Raise error if entity was not found in either spec or profile
     if not entity_found:
-        raise SpecLoadError(f"Entity not found: {entity} ({profile} v{version})")
+        raise SpecLoadError(f"Entity not found: {entity} ({origin})")
 
     return engine

@@ -96,6 +96,15 @@ class EntityHelper:
         return self._model
 
     @property
+    def spec(self: Self) -> EntitySpec:
+        """The entity spec this helper was built from.
+
+        Exposed so a caller can validate against the spec the facade already
+        holds rather than re-resolving one by name.
+        """
+        return self._spec
+
+    @property
     def description(self: Self) -> str:
         """Entity description from spec."""
         return self._spec.description

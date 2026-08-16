@@ -223,6 +223,8 @@ def validate_entity(
     entity_type: str,
     profile: str = "miappe",
     version: str = "1.2",
+    entity_spec: Any = None,
+    profile_spec: Any = None,
 ) -> list[ValidationError]:
     """Validate an entity with comprehensive checks.
 
@@ -237,6 +239,12 @@ def validate_entity(
         entity_type: Entity type name (e.g., "Investigation", "Study").
         profile: Profile name (e.g., "miappe", "isa").
         version: Profile version.
+        entity_spec: The entity's spec, when the caller already holds it. Given
+            this, nothing is re-resolved by name — which is the only way a
+            client composed with a supplied spec (``MetaseedClient.from_spec``)
+            can be validated, since no file exists to re-resolve.
+        profile_spec: The profile spec carrying the validation rules, on the
+            same terms.
 
     Returns:
         List of validation errors. Empty if validation passes.
@@ -252,25 +260,31 @@ def validate_entity(
     from metaseed.specs.loader import SpecLoader, SpecLoadError
 
     errors: list[ValidationError] = []
-    loader = SpecLoader(profile=profile)
 
-    try:
-        entity_spec = loader.load_entity(entity_type, version)
-    except (FileNotFoundError, SpecLoadError) as e:
-        errors.append(
-            ValidationError(
-                field=entity_type,
-                message=f"Unknown entity type: {entity_type} - {e}",
-                rule="error",
+    if entity_spec is None:
+        loader = SpecLoader(profile=profile)
+        try:
+            entity_spec = loader.load_entity(entity_type, version)
+        except (FileNotFoundError, SpecLoadError) as e:
+            errors.append(
+                ValidationError(
+                    field=entity_type,
+                    message=f"Unknown entity type: {entity_type} - {e}",
+                    rule="error",
+                )
             )
-        )
-        return errors
+            return errors
 
     # 1. Pydantic validation - checks types, patterns, ranges, etc.
     errors.extend(_pydantic_constraint_errors(data, entity_spec))
 
     # 2. Custom rule validation from profile spec
-    engine = create_engine_for_entity(entity_type, version, profile=profile)
+    if profile_spec is None:
+        engine = create_engine_for_entity(entity_type, version, profile=profile)
+    else:
+        from metaseed.validators.engine import build_engine_for_entity
+
+        engine = build_engine_for_entity(entity_type, entity_spec, profile_spec)
     errors.extend(engine.validate(data))
 
     return errors

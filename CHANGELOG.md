@@ -3,6 +3,29 @@
 ## Unreleased
 
 ### Fixed
+- A client built from a supplied spec validates against it (260816 review).
+  `MetaseedClient.from_spec()` / `from_yaml()` are the documented way to use a
+  custom or generated schema, but `validate()` discarded the spec the client
+  held and re-resolved one by (profile, version) from disk — which does not
+  exist for a supplied spec, so every entity came back "Unknown entity type:
+  X - Profile not found" and a genuinely invalid entity was indistinguishable
+  from a valid one. Engine construction is now separable from its loading
+  (`build_engine_for_entity`), and `validate_entity` accepts the specs the
+  caller already has. Clients built by profile name resolve exactly as before.
+- The child-create form no longer offers the parent reference as an editable
+  field. Which field that is now comes from the profile's `reference:`
+  declaration rather than a guess at `f"{parent.lower()}_id"`, which matched
+  only single-word parents with an `_id` suffix: MIAPPE's
+  `observation_unit_id` and every ENA `_ref` field were shown to the user, and
+  filling one linked the entity to whatever was typed instead of to its parent.
+
+### Changed
+- The spec builder names a generated back-reference in snake_case
+  (`observation_unit_id`), matching every shipped profile, rather than
+  `observationunit_id`. The `reference:` declaration carried the meaning
+  either way, so existing generated profiles keep working.
+
+### Fixed
 - Exports no longer drop records silently (260816 review).
   - The FAIR Data Station export descends past an entity with no JERM class
     instead of dropping its whole subtree. `walk` returned at the top for an

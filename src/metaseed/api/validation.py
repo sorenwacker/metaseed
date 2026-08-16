@@ -68,6 +68,23 @@ class ValidationMixin(InstanceDataMixin):
                 data[target_field] = child_data
         return data
 
+    def _supplied_specs(self: Self, entity_type: str) -> dict[str, Any]:
+        """The specs this client was composed with, for the validator to use.
+
+        Empty for a client built by profile name, which leaves the validator
+        resolving as before. A client built from a supplied spec has no profile
+        on disk to resolve, so passing what it holds is the only way its
+        entities can be validated at all rather than reported unknown.
+        """
+        profile_spec = getattr(self._facade, "_spec", None)
+        if profile_spec is None:
+            return {}
+        helper = getattr(self._facade, entity_type, None)
+        entity_spec = getattr(helper, "spec", None)
+        if entity_spec is None:
+            return {}
+        return {"entity_spec": entity_spec, "profile_spec": profile_spec}
+
     def validate(self: Self) -> ValidationResult:
         """Validate all entities.
 
@@ -91,6 +108,7 @@ class ValidationMixin(InstanceDataMixin):
                 entity_type=node.entity_type,
                 profile=self._facade.profile,
                 version=self._facade.version,
+                **self._supplied_specs(node.entity_type),
             )
 
             for err in errors:
@@ -140,6 +158,7 @@ class ValidationMixin(InstanceDataMixin):
             entity_type=node.entity_type,
             profile=self._facade.profile,
             version=self._facade.version,
+            **self._supplied_specs(node.entity_type),
         )
 
         issues = [
