@@ -6,7 +6,6 @@ references between entities are valid.
 
 from __future__ import annotations
 
-import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -17,23 +16,11 @@ import yaml
 from metaseed.profiles import ProfileFactory
 from metaseed.services.term_check import check_entity_terms
 from metaseed.specs.loader import SpecLoader, SpecLoadError
-from metaseed.specs.predicates import Predicate, render_predicate
 from metaseed.utils import to_snake_case
 from metaseed.validators.api import _pydantic_constraint_errors
 from metaseed.validators.base import ValidationError
 from metaseed.validators.engine import create_engine_for_entity
-from metaseed.validators.predicates import PredicateError, evaluate
-
-
-class _UniquenessRuleDef(NamedTuple):
-    """A declared uniqueness rule, resolved for dataset-level enforcement."""
-
-    name: str
-    field: str
-    scope: str  # "parent" or "global"
-    applies_to: set[str]  # snake_case entity types, or {"all"}
-    message: str | None
-    where: Predicate | None = None  # which records are counted at all
+from metaseed.validators.uniqueness import UniquenessChecker, rules_from_profile
 
 
 class _ReferenceFieldDef(NamedTuple):
@@ -241,50 +228,43 @@ class DatasetValidator:
         self._self_referencing: dict[tuple[str, str], dict[str, str]] = {}
         self._identifier_fields: dict[str, str] = {}
         self._load_reference_fields()
-        self._uniqueness_rules: list[_UniquenessRuleDef] = []
-        self._load_uniqueness_rules()
+        self._uniqueness = UniquenessChecker(
+            rules_from_profile(self._load_profile_spec())
+        )
 
-    def _load_uniqueness_rules(self: Self) -> None:
-        """Load declared uniqueness rules from the profile.
+    def _load_profile_spec(self: Self) -> Any:
+        """The profile this validator enforces, or ``None`` if it will not load.
 
-        Cross-record identifier uniqueness (e.g. MIAPPE's ``unique_within:
-        parent`` on ``unique_id``) is a dataset-level concern: an engine rule
-        sees one record and cannot see its siblings, so this is the only place
-        a ``uniqueness`` rule is enforced. These definitions drive
-        :meth:`_validate_uniqueness` over the full tree.
+        A profile that cannot be loaded leaves the declared checks with nothing
+        to enforce, which the callers already treat as "no rules" rather than
+        as an error about the data.
         """
         try:
-            profile_spec = self._loader.load_profile(
-                version=self.version, profile=self.profile
-            )
+            return self._loader.load_profile(version=self.version, profile=self.profile)
         except SpecLoadError:
-            return
-        if not profile_spec:
-            return
+            return None
 
-        for rule in profile_spec.validation_rules:
-            is_uniqueness = rule.type == "uniqueness" or (
-                rule.type is None and bool(rule.unique_within)
-            )
-            if not is_uniqueness or not rule.field:
-                continue
-            applies = rule.applies_to
-            if applies == "all" or isinstance(applies, str):
-                applies_snake = (
-                    {"all"} if applies == "all" else {to_snake_case(applies)}
-                )
-            else:
-                applies_snake = {to_snake_case(e) for e in applies}
-            self._uniqueness_rules.append(
-                _UniquenessRuleDef(
-                    name=rule.name,
-                    field=rule.field,
-                    scope=rule.unique_within or "parent",
-                    applies_to=applies_snake,
-                    message=rule.message,
-                    where=rule.where,
-                )
-            )
+    def _validate_uniqueness(
+        self: Self,
+        data: dict[str, Any],
+        entity_type: str,
+        seen: set[tuple[str, str, str]],
+        path: str = "",
+        scope_prefix: str = "",
+    ) -> list[ValidationError]:
+        """Cross-record uniqueness, delegated to the checker that owns it.
+
+        The tree walk stays here — it is this class's — and is handed over, so
+        the checker does not reimplement it.
+        """
+        return self._uniqueness.check(
+            data,
+            entity_type,
+            seen,
+            self._traverse_entity_tree,
+            path,
+            scope_prefix,
+        )
 
     def _load_reference_fields(self: Self) -> None:
         """Load reference field definitions from specs."""
@@ -590,115 +570,6 @@ class DatasetValidator:
             )
             for (entity, field_name, target), count in self._unchecked.items()
         ]
-
-    def _validate_uniqueness(
-        self: Self,
-        data: dict[str, Any],
-        entity_type: str,
-        seen: set[tuple[str, str, str]],
-        path: str = "",
-        scope_prefix: str = "",
-    ) -> list[ValidationError]:
-        """Flag duplicate values for fields declared unique in the profile.
-
-        Enforces the profile's uniqueness rules across records, which the
-        per-record engine rule cannot. ``seen`` accumulates ``(rule, scope_key,
-        value)`` keys so a caller may share it across files for global scope.
-
-        Scope:
-            - ``global``: unique across the whole dataset.
-            - ``parent``: unique among siblings of the same collection. Two
-              records share a parent scope when their paths differ only in the
-              trailing list index, so the scope key is the path with that index
-              stripped.
-
-        Args:
-            data: Entity data dictionary.
-            entity_type: Type of the entity.
-            seen: Accumulator of already-seen (rule, scope_key, value) keys.
-            path: Current path for error reporting.
-            scope_prefix: What distinguishes one parent from another beyond the
-                path — the file, when a directory is validated with one shared
-                accumulator. Without it two files' ``studies[0]`` are the same
-                parent scope, and children of different parents collide.
-
-        Returns:
-            List of uniqueness validation errors.
-        """
-        if not self._uniqueness_rules:
-            return []
-
-        errors: list[ValidationError] = []
-
-        def check_unique(d: dict[str, Any], etype: str, p: str) -> None:
-            for rule in self._uniqueness_rules:
-                if "all" not in rule.applies_to and etype not in rule.applies_to:
-                    continue
-                value = d.get(rule.field)
-                if value is None:
-                    continue
-                if rule.where is not None and not self._selected(rule, d, p, errors):
-                    # Outside the counted subset: not compared, and not recorded
-                    # either, or an exempt record would still collide with the
-                    # next one that is not exempt.
-                    continue
-                # Two records share a parent scope when their paths differ only
-                # in the trailing list index, and — when a directory is
-                # validated through one accumulator — when they are in the same
-                # file. Computed outside the f-string: a backslash in an
-                # f-string expression is a syntax error before Python 3.12.
-                sibling_path = re.sub(r"\[\d+\]$", "", p)
-                scope_key = (
-                    "" if rule.scope == "global" else f"{scope_prefix}{sibling_path}"
-                )
-                key = (rule.name, scope_key, str(value))
-                if key in seen:
-                    field_path = f"{p}.{rule.field}" if p else rule.field
-                    msg = rule.message or (
-                        f"Value '{value}' is not unique for '{rule.field}' "
-                        f"within {rule.scope} scope"
-                    )
-                    if rule.where is not None:
-                        msg += (
-                            f"; counted among records matching "
-                            f"{render_predicate(rule.where)}"
-                        )
-                    errors.append(
-                        ValidationError(
-                            field=field_path, message=msg, rule="uniqueness"
-                        )
-                    )
-                else:
-                    seen.add(key)
-
-        self._traverse_entity_tree(data, entity_type, check_unique, path)
-        return errors
-
-    def _selected(
-        self: Self,
-        rule: _UniquenessRuleDef,
-        record: dict[str, Any],
-        path: str,
-        errors: list[ValidationError],
-    ) -> bool:
-        """Whether a record is in the subset a predicated uniqueness rule counts.
-
-        A predicate that cannot be applied is reported against the record rather
-        than read as "not selected": excluding it would leave the rule quietly
-        satisfied by a predicate that never worked.
-        """
-        assert rule.where is not None
-        try:
-            return evaluate(rule.where, record)
-        except PredicateError as exc:
-            errors.append(
-                ValidationError(
-                    field=f"{path}.{rule.field}" if path else rule.field,
-                    message=f"{rule.name}: {exc}",
-                    rule="uniqueness",
-                )
-            )
-            return False
 
     def _validate_entity(
         self: Self,

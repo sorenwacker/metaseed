@@ -99,8 +99,8 @@ def test_a_global_rule_still_sees_across_files(tmp_path: Path) -> None:
     validator = DatasetValidator(profile="miappe", version="1.2")
     # `_UniquenessRuleDef` is a NamedTuple, so a global-scope variant is built
     # rather than assigned. No shipped profile declares one.
-    validator._uniqueness_rules = [
-        rule._replace(scope="global") for rule in validator._uniqueness_rules
+    validator._uniqueness.rules = [
+        rule._replace(scope="global") for rule in validator._uniqueness.rules
     ]
 
     result = validator.validate_directory(tmp_path)

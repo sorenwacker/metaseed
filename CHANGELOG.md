@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+- Cross-record uniqueness moved out of `validators/dataset.py` into
+  `validators/uniqueness.py`: the rule type, the profile-to-rules resolution,
+  the checker and its predicate selection. The tree walk stays with the
+  validator and is passed in, so the checker does not carry a second copy of
+  it. `dataset.py` was 1018 lines against the project's 1000-line limit.
+
+### Added
+- A test that fails when any file under `src/` exceeds 1000 lines. The limit
+  was a rule with no gate, which is how it drifted past unnoticed.
+
 ## v0.40.0 (260816)
 
 ### Fixed
