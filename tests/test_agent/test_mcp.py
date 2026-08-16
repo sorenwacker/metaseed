@@ -1489,11 +1489,13 @@ class TestMCPEdgeCases:
             entity_data = json.loads(result)
             assert entity_data["data"]["experiment_ref"] == "NONEXISTENT-EXPERIMENT"
 
-    @pytest.mark.xfail(reason="Known issue: orphan references remain after deletion")
-    def test_delete_leaves_orphan_references(self):
-        """Deleting entity leaves orphan references in parent.
+    def test_delete_cleans_the_parent_reference(self):
+        """Deleting a child removes its reference from the parent.
 
-        This documents current behavior - ideally references should be cleaned.
+        Once an xfail documenting the opposite: orphan references remained
+        after deletion until facade/linking.py (ADR 005) made unlink remove
+        them. The fix landed, the test xpassed for days, and the marker hid a
+        regression pin behind an expected failure — so it is a plain test now.
         """
         from metaseed.agent.mcp.server import set_mcp_state
         from metaseed.ui.state import AppState
@@ -1540,8 +1542,6 @@ class TestMCPEdgeCases:
             result = get_fn.fn(node_id=inv_id)
             inv_after_delete = json.loads(result)
 
-            # Assert that orphan reference is cleaned up (the expected behavior)
-            # This test is marked xfail because currently orphan references remain
             assert "ST-ORPHAN-TEST" not in inv_after_delete["data"].get("studies", [])
 
     def test_embedded_objects_with_invalid_fields_rejected(self):
