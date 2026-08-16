@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.40.0 (260816)
 
 ### Fixed
 - `POST /api/dcat/metadata` writes what it says it saved (260816 review). It
