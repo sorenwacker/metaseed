@@ -15,14 +15,12 @@ from metaseed.models.factory import (
     set_model_context,
     set_model_loader,
 )
-from metaseed.models.registry import ModelNotFoundError
 from metaseed.models.types import OntologyTerm
 from metaseed.specs.loader import SpecLoader
 from metaseed.utils import to_snake_case
 
 __all__ = [
     "ModelContext",
-    "ModelNotFoundError",
     "OntologyTerm",
     "create_model_from_spec",
     "get_global_context",
@@ -48,8 +46,8 @@ def get_model(
         Pydantic model class for the specified entity.
 
     Raises:
-        SpecLoadError: If the entity specification is not found.
-        ModelNotFoundError: If the model cannot be generated.
+        SpecLoadError: If the entity specification is not found, which is also
+            what an entity that cannot be generated reports.
 
     Example:
         >>> # MIAPPE model (default)

@@ -134,12 +134,11 @@ class ModelContext:
 
         if model is None and self._loader is not None:
             # The loader (get_model) signals an unresolvable entity with
-            # SpecLoadError / ModelNotFoundError, not KeyError/LookupError;
-            # suppress those so an unknown name returns None per the contract.
-            from metaseed.models.registry import ModelNotFoundError
+            # SpecLoadError, not KeyError/LookupError; suppress it so an
+            # unknown name returns None per the contract.
             from metaseed.specs.loader import SpecLoadError
 
-            with contextlib.suppress(SpecLoadError, ModelNotFoundError):
+            with contextlib.suppress(SpecLoadError):
                 model = self._loader(name, version, profile)
 
         return model
