@@ -29,6 +29,20 @@ if TYPE_CHECKING:
     from .state import SpecBuilderState
 
 
+def _safe_filename(name: str) -> str:
+    """A spec name reduced to something safe inside a header.
+
+    The name is interpolated into `Content-Disposition: ... filename="{}"`. A
+    quote would close the filename and let the rest read as further header
+    content; a newline would split the header. Both are the user's own text, so
+    they are removed here rather than forbidden when the spec is named.
+    """
+    cleaned = "".join(
+        ch for ch in name if ch.isalnum() or (ch in "-_." and ch not in "\r\n")
+    )
+    return cleaned or "profile"
+
+
 def register_export_routes(  # noqa: C901
     router: APIRouter,
     templates: Jinja2Templates,
@@ -105,7 +119,7 @@ def register_export_routes(  # noqa: C901
         builder = _require_spec()
         assert builder.spec is not None  # guaranteed by _require_spec
         yaml_content = spec_to_yaml(builder.spec)
-        filename = f"{builder.spec.name or 'profile'}.yaml"
+        filename = f"{_safe_filename(builder.spec.name or '')}.yaml"
 
         return StreamingResponse(
             iter([yaml_content]),
