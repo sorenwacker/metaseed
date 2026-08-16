@@ -1,5 +1,16 @@
 # Codebase review — metaseed, 260816
 
+> **Remediation complete (260817).** All 123 confirmed findings are fixed —
+> 12 high, 61 medium, 50 low — across the commits between v0.40.0 and this
+> note, each with a test proven red against the unfixed code. Deliberately
+> not done: reconciling the two SEEK role lists (data-affecting; the
+> discrepancy is documented in `metaseed.seek.roles`), deleting
+> `metaseed.dcat.publication` (a documented downstream seam, now gated by
+> `tests/test_dcat/test_publication_is_a_supported_seam.py`), and enforcing
+> the single-identifier rule at `add_field` (the spec-builder flow is
+> add-then-validate by contract). The appendix's 141 unverified notes remain
+> leads, not conclusions.
+
 Per-file review of every source file under `src/metaseed` (210 files reviewed across 17 module groups), with an adversarial verification pass on every high and medium finding. Findings below are what survived that pass; 32 were refuted and are listed at the end.
 
 ## Baseline gates
