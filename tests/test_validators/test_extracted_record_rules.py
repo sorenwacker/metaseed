@@ -127,7 +127,8 @@ class TestRuleSelection:
             }
         )
 
-        assert [e.rule for e in errors] == ["date_range"]
+        # The error names the rule the profile declared, not the constant.
+        assert [e.rule for e in errors] == ["date_order"]
 
     def test_cardinality_over_a_list_of_scalars_runs(self) -> None:
         engine = create_engine_for_extracted_record("Sample", _profile())
@@ -163,7 +164,7 @@ class TestRuleSelection:
 
         assert {rule.name for rule in engine.rules} == {
             "trait_required",
-            "date_range",
+            "date_order",
             "keywords_present",
         }
 

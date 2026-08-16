@@ -301,7 +301,12 @@ def _range_rule(
         otherwise a :class:`DateRangeRule`.
     """
     if not _compares_numbers(lower, upper, field_types):
-        return DateRangeRule(start_field=lower, end_field=upper, message=message)
+        return DateRangeRule(
+            start_field=lower,
+            end_field=upper,
+            message=message,
+            rule_name=rule_name or "date_range",
+        )
 
     if declared_type == "date_range":
         # The data decides: a float field cannot hold a date, so the rule as
@@ -315,7 +320,12 @@ def _range_rule(
             lower,
             upper,
         )
-    return NumericRangeRule(lower_field=lower, upper_field=upper, message=message)
+    return NumericRangeRule(
+        lower_field=lower,
+        upper_field=upper,
+        message=message,
+        rule_name=rule_name or "numeric_range",
+    )
 
 
 def _compares_numbers(

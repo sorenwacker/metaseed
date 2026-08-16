@@ -52,6 +52,7 @@ class DateRangeRule(ValidationRule):
         start_field: str,
         end_field: str,
         message: str | None = None,
+        rule_name: str = "date_range",
     ) -> None:
         """Initialize the rule.
 
@@ -59,15 +60,19 @@ class DateRangeRule(ValidationRule):
             start_field: Name of the start date field.
             end_field: Name of the end date field.
             message: Optional custom error message.
+            rule_name: The profile's declared name for this rule, so an error
+                names the rule the author wrote rather than the constant
+                "date_range" — every other spec-built rule already does.
         """
         self.start_field = start_field
         self.end_field = end_field
         self.custom_message = message
+        self.rule_name = rule_name
 
     @property
     def name(self: Self) -> str:
         """Return the rule name."""
-        return "date_range"
+        return self.rule_name
 
     def validate(self: Self, data: dict[str, Any]) -> list[ValidationError]:
         """Validate that end date is not before start date.
@@ -177,6 +182,7 @@ class NumericRangeRule(ValidationRule):
         lower_field: str,
         upper_field: str,
         message: str | None = None,
+        rule_name: str = "numeric_range",
     ) -> None:
         """Initialize the rule.
 
@@ -184,7 +190,9 @@ class NumericRangeRule(ValidationRule):
             lower_field: Name of the lower-bound field.
             upper_field: Name of the upper-bound field.
             message: Optional custom error message.
+            rule_name: The profile's declared rule name; see DateRangeRule.
         """
+        self.rule_name = rule_name
         self.lower_field = lower_field
         self.upper_field = upper_field
         self.custom_message = message
@@ -192,7 +200,7 @@ class NumericRangeRule(ValidationRule):
     @property
     def name(self: Self) -> str:
         """Return the rule name."""
-        return "numeric_range"
+        return self.rule_name
 
     def validate(self: Self, data: dict[str, Any]) -> list[ValidationError]:
         """Validate that the upper bound is not below the lower bound.
