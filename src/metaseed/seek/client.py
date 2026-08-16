@@ -403,25 +403,6 @@ class SeekClient:
             ),
         )
 
-    def create_assay(
-        self,
-        *,
-        title: str,
-        study_id: str,
-        assay_class_key: str = "EXP",
-        assay_type_uri: str = payloads.DEFAULT_ASSAY_TYPE_URI,
-    ) -> str:
-        """Create an Assay under ``study_id``; return its id."""
-        return self._create(
-            "/assays",
-            payloads.assay_payload(
-                title=title,
-                study_id=study_id,
-                assay_class_key=assay_class_key,
-                assay_type_uri=assay_type_uri,
-            ),
-        )
-
     def create_sample_type(
         self, *, title: str, project_id: str, attributes: list[dict[str, Any]]
     ) -> str:
