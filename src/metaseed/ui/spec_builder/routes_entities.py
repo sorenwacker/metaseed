@@ -12,8 +12,8 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
+from metaseed.seek.roles import SEEK_ROLES
 from metaseed.specs.builder import SpecBuilder
-from metaseed.specs.schema import SEEK_ROLES
 from metaseed.ui.spec_builder.access import (
     entity_editor_response,
     require_entity,

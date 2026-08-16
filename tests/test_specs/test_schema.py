@@ -22,10 +22,11 @@ class TestSeekEntityConfig:
         assert SeekEntityConfig(role="ObservationUnit").role == "ObservationUnit"
 
     def test_accepts_every_role_in_seek_roles(self) -> None:
-        # SEEK_ROLES is the single source of truth: role validation must accept
-        # exactly its members, so adding/removing a role there changes what is
-        # accepted without a second list to keep in sync.
-        from metaseed.specs.schema import SEEK_ROLES
+        # SEEK_ROLES is the single source of truth, and it lives with the
+        # exporter that honours it (metaseed.seek.roles) rather than in the
+        # generic schema, where a second copy had already drifted from the
+        # exporter's own class mapping.
+        from metaseed.seek.roles import SEEK_ROLES
 
         for role in SEEK_ROLES:
             assert SeekEntityConfig(role=role).role == role

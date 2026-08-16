@@ -14,6 +14,29 @@ if TYPE_CHECKING:
 
     from metaseed.specs.schema import ProfileSpec
 
+SEEK_ROLES: tuple[str, ...] = (
+    "Investigation",
+    "Study",
+    "ObservationUnit",
+    "Sample",
+    "Assay",
+    "DataFile",
+)
+"""The object types a metaseed entity may declare as its SEEK ``role``.
+
+Lives here, with the exporter that honours it, rather than in the generic spec
+schema: it is SEEK vocabulary, and keeping it beside :data:`JERM_CLASSES` is
+what stops the two drifting. ``metaseed.specs.schema`` validates against it
+through a local import, so the core schema does not depend on this package at
+import time.
+
+Note it is NOT the same set as :data:`JERM_CLASSES`, and deliberately so today:
+``DataFile`` is a declarable role handled by ``placement``, while the material
+classes (``Source``, ``Extract``, ``LabeledExtract``, ``OtherMaterial``) are
+inferred rather than declared. Any change to either belongs in one review of
+both.
+"""
+
 # metaseed entity type -> (JERM class, URI id-prefix). Only ISA-structural and
 # sample-bearing entities become SEEK/FDS resources; other entities are skipped.
 JERM_CLASSES: dict[str, tuple[str, str]] = {

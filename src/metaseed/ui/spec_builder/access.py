@@ -13,7 +13,8 @@ from typing import TYPE_CHECKING
 from fastapi import HTTPException
 from fastapi.responses import HTMLResponse
 
-from metaseed.specs.schema import SEEK_ROLES, FieldType
+from metaseed.seek.roles import SEEK_ROLES
+from metaseed.specs.schema import FieldType
 
 if TYPE_CHECKING:
     from collections.abc import Callable

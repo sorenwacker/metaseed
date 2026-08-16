@@ -81,20 +81,17 @@ class Constraints(BaseModel):
     enum: list[str] | None = None
 
 
-SEEK_ROLES: tuple[str, ...] = (
-    "Investigation",
-    "Study",
-    "ObservationUnit",
-    "Sample",
-    "Assay",
-    "DataFile",
-)
-"""The ISA/JERM object types a metaseed entity may declare as its SEEK ``role``.
+def _seek_roles() -> tuple[str, ...]:
+    """The declarable SEEK roles, owned by :mod:`metaseed.seek.roles`.
 
-The single source of truth for the Spec Builder's role dropdown and the
-``SeekEntityConfig.role`` validation, so a hand-authored profile with a typo is
-rejected at load rather than silently exporting a nonexistent ``jerm:`` class.
-"""
+    Imported here rather than defined here: it is SEEK vocabulary, and a second
+    copy in the generic schema had already drifted from the exporter's own
+    mapping. Local import so the core schema does not require the seek package
+    at import time.
+    """
+    from metaseed.seek.roles import SEEK_ROLES
+
+    return SEEK_ROLES
 
 
 ISA_TAGS: tuple[str, ...] = (
@@ -144,8 +141,9 @@ class SeekEntityConfig(BaseModel):
         it the single source of truth: editing the tuple changes what this field
         accepts.
         """
-        if value is not None and value not in SEEK_ROLES:
-            raise ValueError(f"role must be one of {SEEK_ROLES}, got {value!r}")
+        roles = _seek_roles()
+        if value is not None and value not in roles:
+            raise ValueError(f"role must be one of {roles}, got {value!r}")
         return value
 
 
