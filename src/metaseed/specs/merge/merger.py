@@ -11,6 +11,7 @@ from metaseed.specs.loader import SpecLoader
 from metaseed.specs.schema import (
     EntityDefSpec,
     FieldSpec,
+    OntologyDefinition,
     ProfileSpec,
     ValidationRuleSpec,
 )
@@ -155,7 +156,22 @@ class SpecMerger:
 
         # Build merged profile metadata
         first_spec = comparison.profile_specs[profile_order[0]]
+        # Ontology definitions from every source, first profile winning a
+        # prefix clash — consistent with how field conflicts resolve here.
+        merged_ontologies: dict[str, OntologyDefinition] = {}
+        for profile_id in reversed(profile_order):
+            source = comparison.profile_specs[profile_id].ontologies
+            if source:
+                merged_ontologies.update(source)
+
         merged_profile = ProfileSpec(
+            # The format version rides along: omitting it stamped the merge
+            # "0.1" whatever its sources declared, and dropping `ontologies`
+            # lost every prefix definition a 0.2 profile carries.
+            spec_version=max(
+                comparison.profile_specs[p].spec_version for p in profile_order
+            ),
+            ontologies=merged_ontologies or None,
             version=output_version,
             name=output_name,
             display_name=output_name.replace("-", " ").title(),
