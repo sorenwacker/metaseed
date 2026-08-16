@@ -226,6 +226,15 @@ class SpecLoader:
             logger.warning("Empty profile file: %s", profile_path)
             return None
 
+        if not isinstance(data, dict):
+            # A YAML file whose top level is a list or a scalar. Reported as a
+            # spec problem, which every caller handles, rather than as the
+            # TypeError the next line would raise from inside the loader.
+            raise SpecLoadError(
+                f"Profile file must contain a mapping, got "
+                f"{type(data).__name__}: {profile_path}"
+            )
+
         # Set default spec_version for backward compatibility with old specs
         if "spec_version" not in data:
             data["spec_version"] = "0.1"
