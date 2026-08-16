@@ -334,12 +334,11 @@ class EntityHelper:
     def get_label(self: Self, instance: BaseModel | dict[str, Any]) -> str:
         """Get a human-readable label for an entity instance.
 
-        Looks for common identifier fields in order of preference:
-        - title (for Investigation, Study)
-        - name (for Person, Factor)
-        - first_name + last_name (for Person)
-        - unique_id / identifier
-        - Falls back to first non-empty string field from spec
+        Delegates to :func:`metaseed.repositories.helpers.derive_label`: a
+        field marked ``is_label`` in the spec wins, otherwise the first field
+        by convention. (An earlier version of this docstring described a
+        title/name/identifier preference order that the code has not
+        implemented since the delegation.)
 
         Args:
             instance: Entity instance (Pydantic model or dict).
