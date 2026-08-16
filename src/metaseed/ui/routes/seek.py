@@ -55,12 +55,15 @@ def register_seek_routes(  # noqa: C901
         return enabled
 
     def _facade_client(state: AppState) -> Any:
-        """Wrap the UI's populated facade in a MetaseedClient (no spec reload)."""
+        """Wrap the UI's populated facade in a MetaseedClient (no spec reload).
+
+        Through the public constructor that exists for exactly this — the
+        ``__new__`` + private-field version predated it and bypassed whatever
+        else ``from_facade`` initializes.
+        """
         from metaseed.api.client import MetaseedClient
 
-        client = MetaseedClient.__new__(MetaseedClient)
-        client._facade = state.get_or_create_facade()
-        return client
+        return MetaseedClient.from_facade(state.get_or_create_facade())
 
     def _seek_client(request: Request) -> tuple[Any, str | None]:
         """Build a SEEK API client from settings; return ``(client, error)``."""
