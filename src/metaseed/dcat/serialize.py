@@ -199,8 +199,11 @@ def _add_dataset(graph: Graph, dataset: DcatDataset) -> Node:
     for relation in dataset.related:
         graph.add((node, DCTERMS.relation, _uri_or_literal(relation)))
     _add_provenance(graph, node, dataset)
-    if dataset.publisher and dataset.publisher.name:
-        graph.add((node, DCTERMS.publisher, _add_agent(graph, dataset.publisher)))
+    publisher = dataset.publisher
+    if publisher and (publisher.name or publisher.uri or publisher.email):
+        # Any identifying attribute is enough. Requiring a name dropped a
+        # publisher identified by URI or email from the graph entirely.
+        graph.add((node, DCTERMS.publisher, _add_agent(graph, publisher)))
     if dataset.contact_point:
         graph.add((node, DCAT.contactPoint, _add_contact(graph, dataset.contact_point)))
     for dist in dataset.distributions:
