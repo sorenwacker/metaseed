@@ -86,8 +86,20 @@ def _validate_nested(
 
     errors: list[ValidationError] = []
 
-    # Validate current entity
-    engine = create_engine_for_entity(entity, version, profile=profile)
+    # Validate current entity. An unknown entity is a returned error, exactly
+    # as validate_entity() reports it: both entry points declare a list of
+    # errors, and which answer a caller got used to depend on the door.
+
+    try:
+        engine = create_engine_for_entity(entity, version, profile=profile)
+    except SpecLoadError as e:
+        return [
+            ValidationError(
+                field=entity,
+                message=f"Unknown entity type: {entity} - {e}",
+                rule="error",
+            )
+        ]
     for error in engine.validate(data):
         # Prefix field with path for nested errors. `kind` rides along: a
         # rebuild that drops it silently upgrades every completeness report to
