@@ -110,11 +110,17 @@ class ProfileFacade:
             EntityHelper for the entity type.
 
         Raises:
-            KeyError: If entity type not found.
+            AttributeError: If entity type not found — the same exception the
+                validated path raises, and the one ``add_entity`` documents.
+                Raising KeyError here meant which error a caller got depended
+                on ``skip_validation``.
         """
         if entity_type in self._entities:
             return self._entities[entity_type]
-        raise KeyError(f"Entity type '{entity_type}' not found")
+        raise AttributeError(
+            f"Entity '{entity_type}' not found in {self._profile} "
+            f"v{self.version}. Available: {', '.join(sorted(self._entities))}"
+        )
 
     def _create_instance(
         self: Self,
