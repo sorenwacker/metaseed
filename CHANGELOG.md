@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.41.0 (260817)
 
 ### Removed
 
