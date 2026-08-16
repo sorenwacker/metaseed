@@ -21,7 +21,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from metaseed.seek.importer import import_from_seek
 from metaseed.seek.payloads import (
     assay_payload,
     controlled_vocab_payload,
@@ -69,6 +68,13 @@ def __getattr__(name: str) -> Any:
         from metaseed.seek import client
 
         return getattr(client, name)
+    if name == "import_from_seek":
+        # httpx-backed, like the client below: importing it eagerly made the
+        # whole package require the `seek` extra, which is what this lazy
+        # accessor exists to avoid.
+        from metaseed.seek import importer
+
+        return importer.import_from_seek
     if name in ("to_fair_data_station_rdf", "to_fair_data_station_model_rdf"):
         from metaseed.seek import fairds
 
