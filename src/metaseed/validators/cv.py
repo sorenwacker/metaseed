@@ -47,11 +47,10 @@ def validate_cv_terms(
     """
     from metaseed.services.term_check import check_term
 
-    if service is None:
-        from metaseed.services.terms import get_term_source
-
-        service = get_term_source()
-
+    # `service` is passed through as given, None included: check_term resolves
+    # it inside a guard that turns a source which cannot be built into
+    # NOT_CHECKED. Resolving it here reinstated the crash that guard exists to
+    # prevent, out of a function declared to return a list of errors.
     errors: list[ValidationError] = []
     for field_path, accession in terms:
         if not accession:
