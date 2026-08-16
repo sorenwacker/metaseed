@@ -487,12 +487,8 @@ def _create_field_definition(field: FieldSpec) -> tuple[Any, Any]:
     if enum_values:
         python_type = _build_enum_type(enum_values)
 
-    if field.type == FieldType.ENTITY:
-        annotated_type = (
-            Annotated[python_type, Field(**constraints)] if constraints else python_type
-        )
-        return (annotated_type | None, None)
-
+    # The ENTITY branch that stood here was byte-identical to this, so it
+    # decided nothing; an entity field is optional and annotated like the rest.
     annotated_type = (
         Annotated[python_type, Field(**constraints)] if constraints else python_type
     )
