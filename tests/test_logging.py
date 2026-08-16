@@ -6,7 +6,7 @@ These tests verify the documented logging behavior.
 import io
 import logging
 
-from metaseed.logging import configure_logging, get_logger
+from metaseed.logging import configure_logging
 
 
 class TestConfigureLogging:
@@ -72,18 +72,25 @@ class TestConfigureLogging:
         assert logger.level == logging.DEBUG
 
 
-class TestGetLogger:
-    """Tests for get_logger function."""
+class TestTheStandardPattern:
+    """The module documents `logging.getLogger(__name__)` as THE pattern.
 
-    def test_returns_logger(self) -> None:
-        """Returns a logger instance."""
-        logger = get_logger("metaseed.test")
-        assert isinstance(logger, logging.Logger)
+    It also used to export a `get_logger` wrapper that only called that, which
+    contradicted its own guidance; the wrapper is gone and this pins the rule
+    so it does not come back.
+    """
 
-    def test_logger_name(self) -> None:
-        """Logger has correct name."""
-        logger = get_logger("metaseed.test.module")
-        assert logger.name == "metaseed.test.module"
+    def test_no_module_wraps_the_standard_getter(self) -> None:
+        from pathlib import Path
+
+        source = Path(__file__).resolve().parent.parent / "src" / "metaseed"
+        offenders = [
+            str(path.relative_to(source))
+            for path in sorted(source.rglob("*.py"))
+            if "def get_logger" in path.read_text()
+        ]
+
+        assert not offenders, f"a logging wrapper reappeared in: {offenders}"
 
 
 class TestModuleLoggers:

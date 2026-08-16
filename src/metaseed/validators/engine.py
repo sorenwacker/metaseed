@@ -4,10 +4,10 @@ This module provides the validation engine that coordinates rule execution.
 """
 
 import contextlib
+import logging
 import re
 from typing import Any, Self
 
-from metaseed.logging import get_logger
 from metaseed.specs.loader import SpecLoader, SpecLoadError
 from metaseed.specs.schema import (
     EntityDefSpec,
@@ -32,7 +32,7 @@ from metaseed.validators.rules import (
     UniqueIdPatternRule,
 )
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 # Field types whose rule-level ``pattern`` the model factory cannot enforce via a
 # Pydantic pattern (uri -> AnyUrl; ontology_term). For these the engine adds a

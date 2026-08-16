@@ -5,12 +5,12 @@ Provides methods for serializing and loading entity data.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Self
 
 from metaseed.api.base import InstanceDataMixin
-from metaseed.logging import get_logger
 
 if TYPE_CHECKING:
     from metaseed.facade import ProfileFacade
@@ -71,7 +71,7 @@ def _report_skip(
     )
 
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class SerializationMixin(InstanceDataMixin):

@@ -6,6 +6,7 @@ Uses EntityService for all CRUD operations to avoid code duplication.
 from __future__ import annotations
 
 import json
+import logging
 from typing import TYPE_CHECKING, Any
 
 from pydantic import ValidationError
@@ -28,9 +29,8 @@ def _auto_save_dataset(ctx: MCPContext) -> None:
     session's own factory, or a host serving two callers would read from one
     repository and write to another.
     """
-    from metaseed.logging import get_logger
 
-    logger = get_logger(__name__)
+    logger = logging.getLogger(__name__)
 
     try:
         ui_datasets.auto_save(ctx.state, factory=ctx.dataset_factory)

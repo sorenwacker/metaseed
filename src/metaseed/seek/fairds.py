@@ -30,6 +30,7 @@ constraints resolves to a single (last-written) definition.
 
 from __future__ import annotations
 
+import logging
 import re
 from typing import TYPE_CHECKING, Any
 
@@ -43,7 +44,6 @@ except (
         "Install with: pip install 'metaseed[seek]'"
     ) from exc
 
-from metaseed.logging import get_logger
 from metaseed.seek.naming import property_uri
 from metaseed.seek.roles import JERM_CLASSES as _JERM
 from metaseed.seek.roles import role_from_annotation, unmapped_entities
@@ -57,7 +57,7 @@ if TYPE_CHECKING:
 from metaseed.seek.values import CORE_FIELDS as _CORE_FIELDS
 from metaseed.seek.values import profile_of
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 JERM = Namespace("http://jermontology.org/ontology/JERMOntology#")
 # MIAPPE's ontology. SEEK types the ObservationUnit level from PPEO while the

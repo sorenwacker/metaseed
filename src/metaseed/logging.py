@@ -79,15 +79,3 @@ def configure_logging(
 
     # Prevent propagation to root logger
     root_logger.propagate = False
-
-
-def get_logger(name: str) -> logging.Logger:
-    """Get a logger for a module.
-
-    Args:
-        name: Module name (typically __name__).
-
-    Returns:
-        Configured logger instance.
-    """
-    return logging.getLogger(name)

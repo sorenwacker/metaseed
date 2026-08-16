@@ -6,6 +6,7 @@ instances, relationship resolution, and serialization.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, Self
 from uuid import uuid4
@@ -14,9 +15,8 @@ from pydantic import BaseModel, ValidationError
 
 from metaseed.facade.linking import link_child, unlink_child
 from metaseed.facade.node import IDENTIFIER_FIELDS, EntityNode
-from metaseed.logging import get_logger
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def _generate_node_id() -> str:
