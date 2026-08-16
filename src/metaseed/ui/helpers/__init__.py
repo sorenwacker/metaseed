@@ -60,7 +60,7 @@ from metaseed.ui.helpers.table_helpers import (
 # Re-export from validation helpers
 from metaseed.ui.helpers.validation import (
     ValidationResult,
-    process_reference_linked_children,
+    materialize_nested_children,
     rebuild_nested_items_with_failures,
 )
 
@@ -88,8 +88,8 @@ __all__ = [
     "get_table_columns",
     "infer_entity_type_from_field",
     "is_nested_field",
+    "materialize_nested_children",
     "missing_required_fields",
-    "process_reference_linked_children",
     "rebuild_nested_items_with_failures",
     "to_dict",
     "walk_nested_entities",

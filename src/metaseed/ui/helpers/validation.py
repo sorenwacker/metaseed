@@ -155,7 +155,7 @@ def _clean_item_for_child_entity(
     return cleaned
 
 
-def process_reference_linked_children(
+def materialize_nested_children(
     state: AppState,
     facade: ProfileFacade,
     node_id: str,
@@ -163,6 +163,10 @@ def process_reference_linked_children(
     parent_identifier: str | None,
 ) -> ValidationResult:
     """Materialize nested items as standalone child entity nodes.
+
+    Renamed from ``process_reference_linked_children``: it handles every
+    nested field, reference-linked or not, and the old name promised a
+    restriction the code does not have.
 
     Items edited in an inline table (e.g. a File row under a Run) live in
     ``current_nested_items``. Each one is created or updated as a child node so
@@ -392,6 +396,6 @@ def rebuild_nested_items_with_failures(
 
 __all__ = [
     "ValidationResult",
-    "process_reference_linked_children",
+    "materialize_nested_children",
     "rebuild_nested_items_with_failures",
 ]

@@ -5,7 +5,7 @@ from metaseed.ui.helpers.entity_helpers import (
     extract_nested_from_tree,
     get_nested_items_for_edit,
 )
-from metaseed.ui.helpers.validation import process_reference_linked_children
+from metaseed.ui.helpers.validation import materialize_nested_children
 from metaseed.ui.state import AppState
 
 
@@ -36,7 +36,7 @@ class TestNestedEntityItemsBecomeChildNodes:
                 }
             ]
         }
-        process_reference_linked_children(
+        materialize_nested_children(
             state=state,
             facade=facade,
             node_id=run_node.id,
@@ -63,7 +63,7 @@ class TestNestedEntityItemsBecomeChildNodes:
                 }
             ]
         }
-        process_reference_linked_children(
+        materialize_nested_children(
             state=state,
             facade=facade,
             node_id=run_node.id,

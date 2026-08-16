@@ -20,8 +20,8 @@ from ..helpers import (
     field_errors_from_validation,
     format_missing_required,
     format_validation_errors,
+    materialize_nested_children,
     missing_required_fields,
-    process_reference_linked_children,
     rebuild_nested_items_with_failures,
 )
 
@@ -161,7 +161,7 @@ def register_entity_crud_routes(
         values = collect_form_values(dict(form_data), helper)
 
         # Nested entity items are materialized as standalone child nodes by
-        # process_reference_linked_children below, so they are intentionally not
+        # materialize_nested_children below, so they are intentionally not
         # embedded into the parent here -- embedding as well would list each item
         # twice in the edit view (once from the parent, once from the child node).
 
@@ -187,7 +187,7 @@ def register_entity_crud_routes(
         parent_data = instance.model_dump() if hasattr(instance, "model_dump") else {}
         parent_identifier = parent_data.get("alias") or parent_data.get("unique_id")
 
-        validation_result = process_reference_linked_children(
+        validation_result = materialize_nested_children(
             state=state,
             facade=facade,
             node_id=node_id,
