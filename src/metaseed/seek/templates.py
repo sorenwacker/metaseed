@@ -30,17 +30,11 @@ if TYPE_CHECKING:
     from metaseed.specs.schema import ProfileSpec
 
 # metaseed's internal level name -> the ``level`` SEEK stores on a Template.
-# The assay level is resolved separately: it depends on whether the level's title
-# attribute is tagged ``data_file`` or ``other_material``.
+# The assay level is not in here: it is always "assay - data file", which
+# seek_level_for explains.
 _SEEK_LEVELS: dict[str, str] = {
     "source": "study source",
     "sample_collection": "study sample",
-}
-
-# ISA tag on an assay level's title attribute -> the SEEK template level.
-_ASSAY_LEVELS: dict[str, str] = {
-    "data_file": "assay - data file",
-    "other_material": "assay - material",
 }
 
 # The levels of the material chain, in order. Only the first heads the chain.
@@ -94,14 +88,25 @@ def sample_chain_entities(profile: ProfileSpec) -> list[str]:
 def seek_level_for(level: str, plans: list[AttributePlan]) -> str:
     """The SEEK template ``level`` for one level of the chain.
 
-    An assay level is ``assay - data file`` or ``assay - material`` depending on
-    what its title attribute is tagged, so it is read off the plans rather than
-    assumed.
+    An assay level is always ``assay - data file``: `isa_types` marks exactly
+    one plan as the title and, for the assay level, tags it ``data_file``
+    (`_LEVEL_TAGS`). This used to read the tag off the plans and map it, with
+    an ``other_material`` entry that nothing could reach — a flexibility the
+    code did not have. If a profile ever plans a material-tagged title, that is
+    a decision to make here deliberately.
+
+    Args:
+        level: The chain level.
+        plans: The level's attribute plans, unused for the assay level but kept
+            so callers need not know which levels consult them.
+
+    Returns:
+        The ``level`` string SEEK stores on a Template.
     """
+    del plans  # the assay level is not variable; see above
     if level in _SEEK_LEVELS:
         return _SEEK_LEVELS[level]
-    title_tag = next((p.isa_tag for p in plans if p.is_title), "data_file")
-    return _ASSAY_LEVELS.get(title_tag, "assay - data file")
+    return "assay - data file"
 
 
 def _attribute(plan: AttributePlan) -> dict[str, Any]:
