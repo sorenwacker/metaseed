@@ -15,6 +15,7 @@ both drive the spec builder through it.
 
 from __future__ import annotations
 
+import copy
 import uuid
 from abc import ABC, abstractmethod
 from collections.abc import Callable
@@ -106,12 +107,15 @@ class MemorySpecDraftStore(AsyncSpecDraftStore):
             modified=self._now(),
         )
         self._drafts[draft.id] = draft
-        return draft
+        # A copy, like every other repository here returns: handing out the
+        # stored object let a caller mutate the store without saving, so an
+        # abandoned edit persisted and a save became a no-op.
+        return copy.deepcopy(draft)
 
     async def load(self, draft_id: str) -> SpecDraftData:
         if draft_id not in self._drafts:
             raise KeyError(draft_id)
-        return self._drafts[draft_id]
+        return copy.deepcopy(self._drafts[draft_id])
 
     async def save(
         self, draft_id: str, name: str, version: str, spec_data: dict[str, Any]
