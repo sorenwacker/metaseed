@@ -106,3 +106,43 @@ def test_a_global_rule_still_sees_across_files(tmp_path: Path) -> None:
     result = validator.validate_directory(tmp_path)
 
     assert len(_duplicate_errors(result)) == 1, _duplicate_errors(result)
+
+
+def test_an_unchecked_ontology_term_is_reported_not_silent(tmp_path: Path) -> None:
+    """Silence hides how much of a dataset went unverified (260816 review).
+
+    A NOT_CHECKED verdict — OLS down, or an ontology no configured source
+    carries — is rightly not an error, but it was dropped entirely, so a
+    dataset whose every term went unverified validated identically to one
+    where every term resolved. References already report this on the same
+    result via `reference_not_checked`; terms now do too.
+    """
+    from metaseed.validators.dataset import DatasetValidator
+
+    class _CannotAnswer:
+        def get_term_sync(self, term_id: str) -> object | None:
+            raise RuntimeError("ontology service unreachable")
+
+        def has_ontology_sync(self, ontology_id: str) -> bool | None:
+            return None
+
+    document = _investigation(1, ["OU-1"])
+    # An ontology_term field the profile actually declares.
+    document["studies"][0]["events"] = [
+        {
+            "unique_id": "EV-1",
+            "study_id": "STU-1",
+            "event_accession_number": "CO_715:0000012",
+        }
+    ]
+    path = tmp_path / "inv.yaml"
+    path.write_text(yaml.safe_dump(document))
+
+    validator = DatasetValidator(
+        profile="miappe", version="1.2", term_source=_CannotAnswer()
+    )
+    result = validator.validate_file(path)
+
+    assert any(w.rule == "ontology_term_not_checked" for w in result.warnings), [
+        w.rule for w in result.warnings
+    ]

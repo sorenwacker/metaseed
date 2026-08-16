@@ -14,7 +14,7 @@ from typing import Any, NamedTuple, Self, cast
 import yaml
 
 from metaseed.profiles import ProfileFactory
-from metaseed.services.term_check import check_entity_terms
+from metaseed.services.term_check import Outcome, check_entity_terms
 from metaseed.specs.loader import SpecLoader, SpecLoadError
 from metaseed.utils import to_snake_case
 from metaseed.validators.api import _pydantic_constraint_errors
@@ -221,6 +221,9 @@ class DatasetValidator:
         # field: a checklist of 10,000 rows would otherwise say the same thing
         # 10,000 times, and a directory would repeat it per file.
         self._unchecked: dict[tuple[str, str, str], int] = {}
+        #: Ontology values a source could not answer for, reported as warnings
+        #: so "how much went unverified" is visible rather than silent.
+        self._unchecked_terms: list[ValidationError] = []
         # (entity_type, field_name) -> {record identifier: referenced identifier},
         # for the fields that reference their own entity type. Accumulated during
         # reference validation and walked afterwards: a cycle can span files, so
@@ -633,10 +636,23 @@ class DatasetValidator:
             for field_name, verdict in check_entity_terms(
                 spec.fields, d, self._term_source
             ).items():
-                if not verdict.is_problem or not verdict.message:
+                if not verdict.is_problem:
                     # NOT_CHECKED is not a fault in the data. An outage, or an
                     # ontology no configured source carries, must not fill a
-                    # dataset with errors it cannot justify.
+                    # dataset with errors it cannot justify — but silence would
+                    # hide how much of it went unverified, so it is reported
+                    # the way an unchecked reference already is.
+                    if verdict.message and verdict.outcome is Outcome.NOT_CHECKED:
+                        field_path = f"{p}.{field_name}" if p else field_name
+                        self._unchecked_terms.append(
+                            ValidationError(
+                                field=field_path,
+                                message=verdict.message,
+                                rule="ontology_term_not_checked",
+                            )
+                        )
+                    continue
+                if not verdict.message:
                     continue
                 field_path = f"{p}.{field_name}" if p else field_name
                 errors.append(
@@ -749,6 +765,7 @@ class DatasetValidator:
         self._count_entities(data, entity_type, result.entity_counts)
 
         result.warnings.extend(self._unchecked_references())
+        result.warnings.extend(self._unchecked_terms)
 
         return result
 
@@ -885,5 +902,6 @@ class DatasetValidator:
         # Once per field for the whole directory, not once per file: the counts
         # accumulated across every file above.
         result.warnings.extend(self._unchecked_references())
+        result.warnings.extend(self._unchecked_terms)
 
         return result
