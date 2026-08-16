@@ -146,7 +146,6 @@ class MCPServerManager:
             from metaseed.paths import get_user_data_dir
 
             log_path = get_user_data_dir() / "mcp-server.log"
-            self._log_path = log_path
             log_file = log_path.open("a", encoding="utf-8")
             try:
                 self._process = subprocess.Popen(
