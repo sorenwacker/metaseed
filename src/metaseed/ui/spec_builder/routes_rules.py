@@ -326,13 +326,21 @@ def register_rule_routes(
             # Back to the form with what was typed still in it — both
             # predicates, not only `where`: discarding the typed `when` rows
             # while keeping `where` lost half the edit on every error.
+            # A predicate the rows cannot express was KEPT, not typed: it
+            # arrives as `where_keep` with no rows. Passing `(join, [])` here
+            # is not None, so the form flips to the editable branch, the
+            # hidden `where_keep` disappears, and the user's next save writes
+            # `where = None` — destroying a predicate the editor could only
+            # not display. None keeps the read-only branch that carries it.
             return _rule_form_response(
                 request,
                 builder,
                 rule,
                 idx,
                 error=str(exc),
-                typed_rows=(
+                typed_rows=None
+                if where_keep
+                else (
                     where_join,
                     [
                         {"field": f, "op": o, "value": v}
@@ -341,7 +349,9 @@ def register_rule_routes(
                         )
                     ],
                 ),
-                typed_when=(
+                typed_when=None
+                if when_keep
+                else (
                     when_join,
                     [
                         {"field": f, "op": o, "value": v}

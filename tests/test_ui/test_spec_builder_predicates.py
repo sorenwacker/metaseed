@@ -198,6 +198,31 @@ class TestAPredicateTheRowsCannotShow:
         assert 'data-testid="predicate-readonly"' in form
         assert "not (is_display_column is set)" in form
 
+    def test_an_error_does_not_destroy_it_on_the_next_save(self, client) -> None:
+        """The error path re-rendered the predicate as empty editable rows.
+
+        `where_keep` is emitted only by the read-only branch, which renders
+        when `where_rows` is None. The error path passed `typed_rows=(join, [])`
+        unconditionally — not None — so the branch flipped to editable, the
+        hidden `where_keep` vanished, and the user's next save (having fixed
+        the reported error) wrote `where = None`, destroying a predicate the
+        editor had merely been unable to display. No message either way.
+        """
+        self._nested(client)
+
+        # A save that genuinely fails (max_items is not a number), with the
+        # predicate kept rather than typed.
+        failed = _save(client, where_keep="1", max_items="not a number")
+        assert 'data-testid="predicate-readonly"' in failed.text, (
+            "the kept predicate was replaced by empty editable rows"
+        )
+
+        # The user corrects the error and saves what the form now carries.
+        _save(client, where_keep="1", min_items="1", max_items="2")
+
+        preview = client.get("/spec-builder/preview").text
+        assert "not:" in preview, "the nested predicate was destroyed"
+
     def test_it_survives_a_save_of_the_rest_of_the_rule(self, client) -> None:
         """Neither flattened nor dropped: the editor cannot show it, which is
         not a reason to destroy it."""

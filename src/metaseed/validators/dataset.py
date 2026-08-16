@@ -597,6 +597,7 @@ class DatasetValidator:
         entity_type: str,
         seen: set[tuple[str, str, str]],
         path: str = "",
+        scope_prefix: str = "",
     ) -> list[ValidationError]:
         """Flag duplicate values for fields declared unique in the profile.
 
@@ -616,6 +617,10 @@ class DatasetValidator:
             entity_type: Type of the entity.
             seen: Accumulator of already-seen (rule, scope_key, value) keys.
             path: Current path for error reporting.
+            scope_prefix: What distinguishes one parent from another beyond the
+                path — the file, when a directory is validated with one shared
+                accumulator. Without it two files' ``studies[0]`` are the same
+                parent scope, and children of different parents collide.
 
         Returns:
             List of uniqueness validation errors.
@@ -637,7 +642,15 @@ class DatasetValidator:
                     # either, or an exempt record would still collide with the
                     # next one that is not exempt.
                     continue
-                scope_key = "" if rule.scope == "global" else re.sub(r"\[\d+\]$", "", p)
+                # Two records share a parent scope when their paths differ only
+                # in the trailing list index, and — when a directory is
+                # validated through one accumulator — when they are in the same
+                # file. Computed outside the f-string: a backslash in an
+                # f-string expression is a syntax error before Python 3.12.
+                sibling_path = re.sub(r"\[\d+\]$", "", p)
+                scope_key = (
+                    "" if rule.scope == "global" else f"{scope_prefix}{sibling_path}"
+                )
                 key = (rule.name, scope_key, str(value))
                 if key in seen:
                     field_path = f"{p}.{rule.field}" if p else rule.field
@@ -978,7 +991,9 @@ class DatasetValidator:
                 )
 
             # Validate declared uniqueness rules across records
-            uniq_errors = self._validate_uniqueness(data, entity_type, uniqueness_seen)
+            uniq_errors = self._validate_uniqueness(
+                data, entity_type, uniqueness_seen, scope_prefix=f"{file_path}:"
+            )
             for error in uniq_errors:
                 result.errors.append(
                     ValidationError(

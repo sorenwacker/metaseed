@@ -14,7 +14,7 @@ from __future__ import annotations
 import html
 from typing import TYPE_CHECKING
 
-from fastapi import Form
+from fastapi import Form, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
 if TYPE_CHECKING:
@@ -110,6 +110,7 @@ def register_dcat_routes(app: FastAPI, get_state: Callable[[], AppState]) -> Non
 
     @app.post("/api/dcat/metadata")
     def set_dcat_metadata(
+        request: Request,
         title: str = Form(""),
         description: str = Form(""),
         publisher: str = Form(""),
@@ -123,6 +124,8 @@ def register_dcat_routes(app: FastAPI, get_state: Callable[[], AppState]) -> Non
         """
         from metaseed.repositories.dataset_repository import CatalogMetadata
 
+        from ..datasets import auto_save
+
         state = get_state()
         state.catalog_metadata = CatalogMetadata(
             title=title.strip() or None,
@@ -131,6 +134,10 @@ def register_dcat_routes(app: FastAPI, get_state: Callable[[], AppState]) -> Non
             license=license.strip() or None,
             keywords=[k.strip() for k in keywords.split(",") if k.strip()],
         )
+        # Saved on the same terms as every other mutating route: without this
+        # the response said "saved" while nothing was written, and the metadata
+        # was gone on the next load.
+        auto_save(state, getattr(request.app.state, "dataset_factory", None))
         return JSONResponse({"status": "saved"})
 
     @app.get("/dcat", response_class=HTMLResponse)

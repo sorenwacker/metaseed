@@ -330,6 +330,12 @@ class FileEntityRepository(EntityRepository):
 
         # Validate entity type against the active profile's spec
         helper = facade.require_helper(entity_type)
+        # `require_helper` resolves case-insensitively; adopt what it resolved.
+        # Everything below — the parent-child check, the reference lookups,
+        # storage and every later lookup — compares canonical spec names with
+        # `==`, so keeping the caller's spelling rejected valid children and,
+        # where the parent was mis-cased, mis-linked them without an error.
+        entity_type = helper.name
 
         # Auto-detect parent from reference fields if not explicitly provided
         if not parent_id:

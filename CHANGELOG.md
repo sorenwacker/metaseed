@@ -3,6 +3,33 @@
 ## Unreleased
 
 ### Fixed
+- `POST /api/dcat/metadata` writes what it says it saved (260816 review). It
+  assigned the catalog metadata and answered `{"status": "saved"}` without the
+  `auto_save` every other mutating route calls, so the title, publisher and
+  licence a user typed — for exactly the profiles that cannot derive them —
+  were gone after a reload.
+- An entity type resolved case-insensitively is stored as resolved. Both
+  repositories kept the caller's spelling after `require_helper` had resolved
+  it, and everything downstream compares canonical names with `==`: a
+  lowercase child type was accepted by the resolver and then rejected as an
+  invalid child, and a mis-cased PARENT silently broke the reference lookups
+  so the child was stored mis-linked rather than refused.
+- The spec-builder rule editor no longer destroys a nested predicate through
+  its error path. A predicate the rows cannot express is kept via a hidden
+  `where_keep`, emitted only by the read-only branch; the error path passed
+  empty typed rows unconditionally, flipping the form to the editable branch
+  and dropping that flag, so the user's next save wrote `where = None` with no
+  message. The same for `when`.
+- Parent-scope uniqueness is per parent across files. `validate_directory`
+  shares one accumulator so a global-scope rule can span files, but the
+  parent-scope key was the file-relative path alone, so `studies[0]` in two
+  files was one scope: two MIAPPE investigations each carrying their own OU-1
+  and OU-2 reported 2 false "not unique within parent scope" errors, and now
+  report none. Records reported invalid become valid; nothing that passed
+  starts failing. Single-file validation was never affected. Global scope,
+  which no shipped profile declares, is pinned by a test.
+
+### Fixed
 - A client built from a supplied spec validates against it (260816 review).
   `MetaseedClient.from_spec()` / `from_yaml()` are the documented way to use a
   custom or generated schema, but `validate()` discarded the spec the client
