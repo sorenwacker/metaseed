@@ -3,6 +3,15 @@
 ## Unreleased
 
 ### Changed
+- ADR 005's second decision — which parent field references a child of a given
+  type — is made only in `facade/linking.py`. It had five other homes
+  (`agent/mcp/tools/entities.py` twice, `api/validation.py`, `pride/export.py`,
+  `ui/helpers/entity_helpers.py`), and one of them inverted the mapping, which
+  takes the LAST matching field where linking.py takes the first: a parent
+  declaring two nested fields of one child type grouped its children under the
+  wrong table. The gate test claimed to catch a second home but scanned for a
+  single string covering the other decision only; it now parses each module and
+  fails on the selection pattern itself.
 - Cross-record uniqueness moved out of `validators/dataset.py` into
   `validators/uniqueness.py`: the rule type, the profile-to-rules resolution,
   the checker and its predicate selection. The tree walk stays with the

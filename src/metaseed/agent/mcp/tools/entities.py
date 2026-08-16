@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 from pydantic import ValidationError
 
 from metaseed.agent.mcp.ui_session import ui_datasets
+from metaseed.facade.linking import target_reference_field
 from metaseed.utils.json import DateAwareEncoder
 
 if TYPE_CHECKING:
@@ -277,12 +278,13 @@ def _find_parent_from_references(
                 if data.get(target_field) == ref_value:
                     # Found the parent! Also find which field on parent holds children of this type
                     parent_helper = getattr(facade, target_entity_type, None)
-                    parent_field = None
-                    if parent_helper:
-                        for fname, ftype in parent_helper.nested_fields.items():
-                            if ftype == entity_type:
-                                parent_field = fname
-                                break
+                    # ADR 005: linking.py owns which field references a child
+                    # of a given type. Deriving it here was a second home.
+                    parent_field = (
+                        target_reference_field(parent_helper, entity_type)
+                        if parent_helper
+                        else None
+                    )
                     return entity_id, parent_field
 
     except Exception:  # noqa: S110
@@ -526,10 +528,9 @@ def register_entity_tools(  # noqa: C901
                     facade = current_state().get_or_create_facade()
                     parent_helper = getattr(facade, parent["entity_type"], None)
                     if parent_helper:
-                        for field_name, ref_type in parent_helper.nested_fields.items():
-                            if ref_type == entity_type:
-                                result["linked_via_field"] = field_name
-                                break
+                        linked_via = target_reference_field(parent_helper, entity_type)
+                        if linked_via is not None:
+                            result["linked_via_field"] = linked_via
 
             # Auto-save to persist changes
             _auto_save_dataset(resolve_context())

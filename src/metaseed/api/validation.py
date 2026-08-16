@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any, Self
 from metaseed.api.base import InstanceDataMixin
 from metaseed.api.errors import EntityNotFoundError
 from metaseed.api.schema import ValidationIssue, ValidationResult
+from metaseed.facade.linking import target_reference_field
 
 if TYPE_CHECKING:
     from metaseed.facade import ProfileFacade
@@ -50,13 +51,10 @@ class ValidationMixin(InstanceDataMixin):
         if helper is None:
             return data
 
-        # entity type -> first nested field of that type
-        field_for_type: dict[str, str] = {}
-        for field_name, entity_type in helper.nested_fields.items():
-            field_for_type.setdefault(entity_type, field_name)
-
         for child in node.children:
-            target_field = field_for_type.get(child.entity_type)
+            # Which field carries a child of this type is linking.py's to say
+            # (ADR 005); deriving it here was a second home for the rule.
+            target_field = target_reference_field(helper, child.entity_type)
             if target_field is None:
                 continue
             child_data = self._get_instance_data(child.instance)

@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from metaseed.facade.linking import target_reference_field
+
 if TYPE_CHECKING:
     from metaseed.facade import ProfileFacade
     from metaseed.ui.state import AppState
@@ -130,8 +132,15 @@ def extract_nested_from_tree(
     if not node.children:
         return result
 
-    # Build mapping: entity_type -> field_name from nested arrays
-    type_to_field = {v: k for k, v in helper.nested_fields.items()}
+    # Which field carries a child of a given type is linking.py's decision
+    # (ADR 005). Inverting the mapping here took the LAST matching field where
+    # linking.py takes the first, so a parent with two nested fields of one
+    # type grouped its children under the wrong table.
+    type_to_field = {
+        child_type: field
+        for child_type in set(helper.nested_fields.values())
+        if (field := target_reference_field(helper, child_type)) is not None
+    }
 
     # Also find children via reference fields (e.g., File.run_ref -> Run)
     # These use a synthetic field name based on entity type (e.g., "files" for File)
