@@ -181,10 +181,12 @@ def _width(ws: Worksheet, index: int, column: str, row_count: int) -> float:
         value = ws.cell(row=row, column=index).value
         if value:
             # Wrapped text needs the width of its longest word, not its whole
-            # length: the rest folds onto the next line.
-            widest = max(
-                widest, min(len(str(value)), max(len(w) for w in str(value).split()))
-            )
+            # length: the rest folds onto the next line. A whitespace-only cell
+            # has no words, and max() of nothing took the whole export down.
+            words = str(value).split()
+            if not words:
+                continue
+            widest = max(widest, min(len(str(value)), max(len(w) for w in words)))
     return max(MIN_WIDTH, min(MAX_WIDTH, widest + 3))
 
 
