@@ -2,6 +2,34 @@
 
 ## Unreleased
 
+### Removed
+
+**Importable names that no longer exist.** Each had no caller in metaseed or
+metaseed-hub (checked), but an outside consumer importing one will fail at
+import, so they are listed rather than buried under "Fixed":
+
+- `metaseed.models.ModelNotFoundError` — never raised by anything;
+  `get_model` reports an unresolvable entity with `SpecLoadError`, so catching
+  it accomplished nothing.
+- `metaseed.logging.get_logger` — a no-op wrapper around
+  `logging.getLogger(__name__)`, which the module's own docstring names as the
+  pattern to use. Replace calls with the stdlib one.
+- `metaseed.repositories.file.DEFAULT_DATASETS_DIR` — a duplicate of the
+  constant in `repositories.filesystem_dataset`, which is the one that is
+  read; import it from there.
+- `RateLimiter.acquire` (async) in `metaseed.services.ontology` — no
+  production caller; `acquire_sync` is what the adapter uses.
+- `metaseed.api.__all__` no longer lists `app`. The name had already been
+  removed, so `from metaseed.api import *` was raising AttributeError.
+
+**Moved:** `SEEK_ROLES` now lives in `metaseed.seek.roles`, beside the
+exporter that honours it, instead of `metaseed.specs.schema`. It had drifted
+from the exporter's own class mapping — declaring `role: Source` was rejected
+at load though the exporter maps it, while `DataFile` was accepted and is not
+a JERM class. Import it from `metaseed.seek.roles`. The two lists are
+deliberately still different sets; reconciling them changes which profiles
+load and needs its own measured change.
+
 ### Fixed
 - A profile comparison reports a value set in one profile and absent in the
   other. Both difference checks filtered `None` out before counting distinct
