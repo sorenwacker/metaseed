@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.42.0 (260817)
 
 ### Removed
 - The `isa-miappe-combined` profile no longer ships with the package. It was
