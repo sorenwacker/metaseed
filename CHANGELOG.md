@@ -1,5 +1,14 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+- The graph embedding guide names the element ids `graph.js` actually reads.
+  It listed `graph-spring-length` and `graph-node-distance`, which the script
+  never looks up, so a host following the contract got spacing controls that
+  silently did nothing. A gate now fails when the guide promises an id the
+  script does not read.
+
 ## v0.42.0 (260817)
 
 ### Removed

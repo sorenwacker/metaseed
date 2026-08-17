@@ -13,7 +13,9 @@ The script looks up these elements by id. Only `graph-view` is required; the res
 | `graph-container` | Wrapper used to decide whether the graph is currently visible. |
 | `graph-layout-btn` | Toggles hierarchical and free layout. |
 | `graph-physics-btn` | Toggles physics simulation. |
-| `graph-spring-length`, `graph-node-distance` | Range inputs for spacing. |
+| `graph-spacing` | Range input for spring length between nodes. |
+| `graph-repulsion` | Range input for how strongly nodes push apart. |
+| `graph-gravity` | Range input for the pull toward the centre. |
 
 ## Supplying the data
 
