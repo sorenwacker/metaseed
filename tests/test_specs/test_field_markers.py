@@ -187,28 +187,6 @@ _SHIPPED = _shipped_profiles()
 _EXPECTED_WARNING_TARGETS: dict[str, set[str]] = {
     "miappe-htp/1.0": {"SpatialDistribution.description"},
     "pride/1.0": {"Publication.title"},
-    # Recorded, not fixed: declaring identifiers re-keys datasets written
-    # against these versions (the pride/2.0 lesson), so it belongs in an
-    # 0.3, not an edit in place. 0.2's shorter list is the reconciliation
-    # dropping Location and MaterialSource.
-    "isa-miappe-combined/0.1": {
-        "BiologicalMaterial.accession_number",
-        "Factor.description",
-        "Location.abbreviation",
-        "MaterialSource.address",
-        "ObservationUnit.entry_type",
-        "ObservedVariable.method",
-        "Person.address",
-        "Publication.author_list",
-    },
-    "isa-miappe-combined/0.2": {
-        "BiologicalMaterial.accession_number",
-        "Factor.description",
-        "ObservationUnit.entry_type",
-        "ObservedVariable.method",
-        "Person.address",
-        "Publication.author_list",
-    },
 }
 
 # Entity -> the identifier it now declares, per profile. Each must be the field

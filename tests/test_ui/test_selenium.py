@@ -208,7 +208,7 @@ def start_new_investigation(
 
     Args:
         driver: Selenium WebDriver
-        profile: Profile to select ("miappe", "isa", or "isa-miappe-combined")
+        profile: Profile to select ("miappe", "isa", or "darwin-core")
         version: Profile version to select (default "1.2" for miappe)
         dataset_name: Name for the new dataset
     """

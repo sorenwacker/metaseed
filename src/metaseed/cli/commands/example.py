@@ -218,7 +218,7 @@ def _export_investigation_example_to_excel(data: dict[str, Any], output: Path) -
 def export_example(  # noqa: C901
     profile: Annotated[
         str | None,
-        typer.Argument(help="Profile name (miappe, isa, isa-miappe-combined)"),
+        typer.Argument(help="Profile name (miappe, isa, darwin-core)"),
     ] = None,
     output: Annotated[
         Path | None,

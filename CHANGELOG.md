@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+### Removed
+- The `isa-miappe-combined` profile no longer ships with the package. It was
+  added in 0.38.0 while documenting it (#49): the issue asked for a docs page
+  for a profile that existed only in the author's user-specs directory, and
+  shipping it was a larger step than the issue called for. It remains a
+  user-defined profile — an installed copy under
+  `~/.local/share/metaseed/specs/` still loads and is still listed — but
+  `list_profiles()` from a fresh install no longer offers it, and neither
+  version (0.1, 0.2) is packaged.
+
+  A profile that was both shipped and locally edited also had two homes, and
+  that is what hid a defect during the 0.38.0 release: the packaged 0.2
+  examples carried a field the profile had deleted, invisible locally because
+  the user copy shadowed them.
+
 ## v0.41.0 (260817)
 
 ### Removed

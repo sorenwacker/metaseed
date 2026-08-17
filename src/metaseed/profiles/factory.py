@@ -84,7 +84,7 @@ class ProfileFactory:
         """Create a ProfileFacade for the specified profile and version.
 
         Args:
-            profile: Profile name (e.g., 'miappe', 'isa', 'isa-miappe-combined').
+            profile: Profile name (e.g., 'miappe', 'isa', 'darwin-core').
             version: Profile version. If None, uses the latest available.
 
         Returns:
