@@ -36,7 +36,7 @@ dependencies = [
     "jinja2>=3.1,<4",
     "python-multipart>=0.0.9,<1",
     "openpyxl>=3.1,<4",
-    "mcp>=1.28,<2",
+    "mcp>=1.28,<3",
     # Imported at module level by agent/mcp/tools/ontology.py, which the MCP
     # server imports at import time. It arrived through mcp's own pin, which
     # is exactly the transitive arrangement the project rule forbids.
