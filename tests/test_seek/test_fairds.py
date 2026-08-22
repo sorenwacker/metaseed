@@ -7,7 +7,7 @@ manually against a live instance).
 
 from __future__ import annotations
 
-from rdflib import RDF, RDFS, Graph, Namespace
+from rdflib import RDF, RDFS, Graph, Literal, Namespace
 
 from metaseed import MetaseedClient
 from metaseed.seek.fairds import (
@@ -210,3 +210,62 @@ def test_model_rdf_defines_every_field_even_unpopulated():
     assert (SCHEMA.tissue, SCHEMA.valuePattern, None) in graph
     # a core field (identifier) is emitted as data, not a property definition
     assert (SCHEMA.identifier, RDF.type, RDF.Property) not in graph
+
+
+def test_model_rdf_carries_a_skeleton_instance_per_isa_level():
+    # SEEK builds Extended Metadata Types from Investigation/Study/Assay
+    # instances and the annotations they carry, not from property definitions.
+    from metaseed.specs.schema import (
+        EntityDefSpec,
+        FieldSpec,
+        FieldType,
+        ProfileSpec,
+        SeekEntityConfig,
+    )
+
+    profile = ProfileSpec(
+        name="p",
+        version="1.0",
+        root_entity="Investigation",
+        entities={
+            "Investigation": EntityDefSpec(
+                seek=SeekEntityConfig(role="Investigation"),
+                fields=[
+                    FieldSpec(name="title", type=FieldType.STRING),
+                    FieldSpec(name="studies", type=FieldType.LIST, items="Study"),
+                ],
+            ),
+            "Study": EntityDefSpec(
+                seek=SeekEntityConfig(role="Study"),
+                fields=[
+                    FieldSpec(name="title", type=FieldType.STRING),
+                    FieldSpec(name="growth_facility", type=FieldType.STRING),
+                    FieldSpec(name="assays", type=FieldType.LIST, items="Assay"),
+                ],
+            ),
+            "Assay": EntityDefSpec(
+                seek=SeekEntityConfig(role="Assay"),
+                fields=[
+                    FieldSpec(name="title", type=FieldType.STRING),
+                    FieldSpec(name="platform", type=FieldType.STRING, required=True),
+                ],
+            ),
+        },
+    )
+    graph = Graph()
+    graph.parse(data=to_fair_data_station_model_rdf(profile), format="turtle")
+
+    inv = next(graph.subjects(RDF.type, JERM.Investigation))
+    stu = next(graph.subjects(RDF.type, JERM.Study))
+    assay = next(graph.subjects(RDF.type, JERM.Assay))
+    assert (inv, JERM.hasPart, stu) in graph
+    assert (stu, JERM.hasPart, assay) in graph
+    for node in (inv, stu, assay):
+        assert (node, SCHEMA.identifier, None) in graph
+        assert (node, SCHEMA.title, None) in graph
+    # every non-core field is carried by the instance filling that role
+    assert (stu, SCHEMA.growth_facility, None) in graph
+    assert (assay, SCHEMA.platform, None) in graph
+    assert (inv, SCHEMA.growth_facility, None) not in graph
+    # and the property definitions are still there for the attribute metadata
+    assert (SCHEMA.platform, SCHEMA.valueRequired, Literal(True)) in graph

@@ -46,11 +46,15 @@ except (
 
 from metaseed.seek.naming import property_uri
 from metaseed.seek.roles import JERM_CLASSES as _JERM
-from metaseed.seek.roles import role_from_annotation, unmapped_entities
+from metaseed.seek.roles import (
+    entity_jerm_class,
+    role_from_annotation,
+    unmapped_entities,
+)
 
 if TYPE_CHECKING:
     from metaseed.api.client import MetaseedClient
-    from metaseed.specs.schema import FieldSpec, ProfileSpec
+    from metaseed.specs.schema import EntityDefSpec, FieldSpec, ProfileSpec
 
 # Core fields emitted as native schema.org triples (or the identifier), so they
 # do not get a property definition of their own.
@@ -104,6 +108,14 @@ def to_fair_data_station_model_rdf(profile: ProfileSpec) -> str:
     Metadata Types → create from FAIR Data Station TTL" flow to define the custom
     metadata the JSON:API cannot create — the model half of the hybrid flow.
 
+    SEEK does not build a type from property definitions alone: its importer
+    walks the ``jerm:Investigation`` / ``jerm:Study`` / ``jerm:Assay`` instances
+    and derives one Extended Metadata Type per level from the annotations those
+    instances carry. A definitions-only file answered "no new Extended Metadata
+    Types". So beside the definitions this emits one skeleton instance per ISA
+    level, chained by ``jerm:hasPart``, each carrying a placeholder value for
+    every non-core field of the entity that fills that role.
+
     As in the data exporter, a field name reused across entities resolves to a
     single (last-wins) global ``schema:<field>`` definition.
     """
@@ -118,8 +130,49 @@ def to_fair_data_station_model_rdf(profile: ProfileSpec) -> str:
                 continue
             seen.add(field.name)
             _emit_property_definition(graph, field.name, field)
+    _emit_skeleton_instances(graph, profile)
     serialized: str = graph.serialize(format="turtle")
     return serialized
+
+
+#: The ISA levels SEEK derives Extended Metadata Types for, top down.
+_EXTENDED_METADATA_LEVELS = ("Investigation", "Study", "Assay")
+
+
+def _emit_skeleton_instances(graph: Graph, profile: ProfileSpec) -> None:
+    """Emit one placeholder instance per ISA level, chained by ``jerm:hasPart``.
+
+    Each level is filled by the first entity whose JERM class is that level and
+    carries that entity's non-core fields. A level no entity fills is still
+    emitted, empty, so the chain SEEK walks positionally stays intact.
+    """
+    by_level: dict[str, EntityDefSpec] = {}
+    for name, entity in profile.entities.items():
+        role = entity.seek.role if entity.seek else None
+        level = entity_jerm_class(name, role, entity.ontology_term)
+        if level in _EXTENDED_METADATA_LEVELS:
+            by_level.setdefault(level, entity)
+
+    parent: URIRef | None = None
+    path = ""
+    for level in _EXTENDED_METADATA_LEVELS:
+        prefix = _ROLE_PREFIX[level]
+        path = f"{path}/{prefix}_template" if path else f"{prefix}_template"
+        uri = URIRef(_BASE + path)
+        identity = f"{profile.name}-{level.lower()}-template"
+        graph.add((uri, RDF.type, JERM[level]))
+        graph.add((uri, SCHEMA.identifier, Literal(identity)))
+        graph.add((uri, SCHEMA.title, Literal(identity)))
+        graph.add((uri, SCHEMA.name, Literal(identity)))
+        if parent is not None:
+            graph.add((parent, JERM.hasPart, uri))
+        filler = by_level.get(level)
+        if filler is not None:
+            for field in filler.fields:
+                if field.is_nested() or field.name in _CORE_FIELDS:
+                    continue
+                graph.add((uri, URIRef(property_uri(field.name)), Literal("")))
+        parent = uri
 
 
 # Default id-prefix per JERM role (for readable URIs).
