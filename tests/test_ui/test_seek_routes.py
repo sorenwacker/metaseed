@@ -323,3 +323,40 @@ def test_seek_preview_endpoint_degrades_on_unknown_profile(make_client):
     response = client.get("/seek/preview", params={"profile": "no-such-profile"})
     assert response.status_code == 200  # never 500 — the panel just hides
     assert 'data-testid="seek-preview-empty"' in response.text
+
+
+def test_the_page_preselects_the_saved_project(make_client, monkeypatch):
+    import metaseed.ui.routes.seek as seek_routes
+    from metaseed.seek.connection import ConnectionCheck
+
+    client, settings, _state = make_client()
+    settings.set_adapter_config(
+        "seek", {"url": "http://seek.test", "api_key": "k", "project_id": "2"}
+    )
+    monkeypatch.setattr(
+        seek_routes,
+        "check_connection",
+        lambda _config, **_kw: ConnectionCheck(
+            ok=True, message="Connected", projects=[("1", "Plants"), ("2", "Soil")]
+        ),
+    )
+    page = client.get("/seek").text
+    assert '<option value="2" selected' in page
+
+
+def test_the_page_explains_why_there_are_no_projects(make_client, monkeypatch):
+    import metaseed.ui.routes.seek as seek_routes
+    from metaseed.seek.connection import ConnectionCheck
+
+    client, settings, _state = make_client()
+    settings.set_adapter_config("seek", {"url": "http://seek.test", "api_key": "bad"})
+    monkeypatch.setattr(
+        seek_routes,
+        "check_connection",
+        lambda _config, **_kw: ConnectionCheck(
+            ok=False, message="SEEK rejected the API key.", projects=[]
+        ),
+    )
+    page = client.get("/seek").text
+    assert 'data-testid="seek-no-projects"' in page
+    assert "rejected the API key" in page

@@ -30,6 +30,16 @@ The SEEK page is hidden until the adapter is enabled and pointed at an instance.
    - **URL** — your SEEK instance, e.g. `http://localhost:3000` (required).
    - **API key** — a SEEK personal access token (optional, but *Provision* and
      *Sync* are disabled without it, since both write to SEEK).
+3. Click **Check connection**. metaseed asks the instance for the projects the
+   key can see and reports one of: connected with the number of visible
+   projects; the host cannot be resolved; nothing answered at the host; the key
+   was rejected (HTTP 401/403); the instance is down (HTTP 5xx); or the URL is
+   not a SEEK API root (HTTP 404). Each message names the cause, so a wrong
+   hostname is not reported as a bad key. The check reads only; it writes
+   nothing to SEEK.
+4. Pick the **Project** from the list the check returned and save it. Every
+   SEEK resource metaseed creates belongs to this project. The SEEK page
+   preselects it; you can still override it there for a single action.
 
 ## The workflow
 
@@ -40,7 +50,9 @@ file-export fallback.
 
 Choose the profile and click **Provision model →**. This creates its Controlled
 Vocabularies and Sample Types in the selected **Project** — a project *on your
-SEEK server*, which every SEEK resource must belong to. Re-running is safe: it
+SEEK server*, which every SEEK resource must belong to. The project saved on the
+Plugins page is preselected. If the project list is empty, the page shows the
+same diagnosis as **Check connection** on the Plugins page. Re-running is safe: it
 reuses what already exists rather than duplicating it.
 
 This step needs no loaded dataset — it describes a *profile*, so you can
@@ -93,11 +105,18 @@ To import it, in SEEK:
   profile and a loaded dataset respectively.
 - **"Project" is a project on your SEEK instance**, fetched live from it, not a
   metaseed concept.
-- **Extended Metadata is derived from a dataset's *non-core* annotations.** An
-  Investigation carrying only title, identifier and description yields no
-  Extended Metadata Type — that is SEEK reading the file correctly, not an
-  export failure. The Extended Metadata download exists for the fields that go
-  beyond SEEK's core set.
+- **SEEK derives Extended Metadata Types from instances, not from property
+  definitions.** Its *Extended Metadata Types → create from FAIR Data Station
+  TTL* flow walks the `jerm:Investigation`, `jerm:Study` and `jerm:Assay` nodes
+  in the file and builds one type per level from the annotations those nodes
+  carry; a file holding only `rdf:Property` definitions yields "no new Extended
+  Metadata Types". The **Download Extended Metadata (.ttl)** file therefore
+  contains one skeleton instance per ISA level (Investigation → Study → Assay,
+  linked by `jerm:hasPart`) carrying every *non-core* field of the entity that
+  fills that role, with a placeholder value, plus the property definitions.
+  A level whose entity has only title, identifier and description (MIAPPE's
+  Investigation, for example) still appears in the file but produces no type,
+  because there is nothing beyond SEEK's core set to add.
 - SEEK reads the ISA hierarchy **positionally**. A profile whose entities do not
   sit at the expected Investigation → Study → (ObservationUnit →) Sample → Assay
   depth will import at a shifted level. An entity's **SEEK role** (set on the

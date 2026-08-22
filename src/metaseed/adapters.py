@@ -29,6 +29,9 @@ class ConfigField:
     """Whether the value is sensitive (rendered masked, e.g. an API key)."""
     placeholder: str = ""
     """Optional input placeholder."""
+    from_check: bool = False
+    """Offered as a choice from the adapter's connection check (e.g. a project),
+    rather than typed. Requires the adapter to declare ``check_ref``."""
 
 
 ActionKind = Literal["import", "export", "push", "validate"]
@@ -140,6 +143,20 @@ class AdapterInfo:
     """UI path to the adapter's action page, if it has one (e.g. ``/seek``)."""
     actions: tuple[Action, ...] = field(default_factory=tuple)
     """Capabilities (imports/exports/pushes) this adapter exposes to hosts."""
+    check_ref: str | None = None
+    """Lazy ``"module:function"`` of a read-only connection check taking the
+    stored config and returning an object with ``ok``, ``message`` and
+    ``projects``; ``None`` when the adapter has nothing to connect to."""
+
+    def resolve_check(self) -> Callable[..., Any]:
+        """Import and return the connection check (only when invoked)."""
+        if self.check_ref is None:
+            raise LookupError(f"Adapter {self.key!r} declares no connection check")
+        module_name, _, attribute = self.check_ref.partition(":")
+        return cast(
+            "Callable[..., Any]",
+            getattr(importlib.import_module(module_name), attribute),
+        )
 
 
 ADAPTERS: tuple[AdapterInfo, ...] = (
@@ -293,8 +310,10 @@ ADAPTERS: tuple[AdapterInfo, ...] = (
         config_fields=(
             ConfigField("url", "SEEK URL", placeholder="http://localhost:3001"),
             ConfigField("api_key", "API key", secret=True),
+            ConfigField("project_id", "Project", from_check=True),
         ),
         action_path="/seek",
+        check_ref="metaseed.seek.connection:check_connection",
     ),
 )
 

@@ -29,11 +29,8 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from starlette.concurrency import run_in_threadpool
 
+from metaseed.seek.connection import check_connection
 from metaseed.ui.state import AppState
-
-# Short timeout for the /seek liveness probe (project list): a misconfigured or
-# unreachable SEEK must not stall the page for the client's full request timeout.
-_PROBE_TIMEOUT = 5.0
 
 
 def _safe_filename(name: str) -> str:
@@ -116,6 +113,11 @@ def register_seek_routes(  # noqa: C901
         except Exception:
             return None
 
+    def _stored_project_id(request: Request) -> str:
+        """The project chosen on the Plugins page, or ``""`` if none."""
+        config = request.app.state.settings.get_adapter_config("seek")
+        return str(config.get("project_id", ""))
+
     def _context(request: Request, **extra: Any) -> dict[str, Any]:
         """Shared template context: export preview + SEEK config + projects."""
         state = get_state()
@@ -138,16 +140,10 @@ def register_seek_routes(  # noqa: C901
             if exported is None or etype in exported
         )
 
-        # Best-effort project list (needs a reachable, configured SEEK). Uses a
-        # short timeout so a misconfigured/unreachable instance can't stall.
-        projects: list[tuple[str, str]] = []
-        try:
-            from metaseed.seek import client_from_settings
-
-            probe = client_from_settings(seek_config, timeout=_PROBE_TIMEOUT)
-            projects = probe.list_projects()
-        except Exception:  # not configured / unreachable / httpx absent
-            projects = []
+        # The same probe the Plugins page runs: its short timeout keeps a
+        # misconfigured instance from stalling the page, and its message says
+        # why the project list is empty instead of a generic "check the URL".
+        check = check_connection(seek_config)
 
         from metaseed.profiles import ProfileFactory
         from metaseed.ui.datasets import get_current_dataset_name
@@ -169,7 +165,9 @@ def register_seek_routes(  # noqa: C901
             "entity_counts": emit_counts,
             "seek_url": seek_config.get("url", ""),
             "api_key_configured": bool(seek_config.get("api_key")),
-            "projects": projects,
+            "projects": check.projects,
+            "connection_message": None if check.ok else check.message,
+            "selected_project_id": seek_config.get("project_id", ""),
             "provision_result": None,
             "sync_result": None,
             "action_error": None,
@@ -228,7 +226,9 @@ def register_seek_routes(  # noqa: C901
                 execute_provisioning_plan,
             )
 
-            pid = project_id or client.default_project_id()
+            pid = (
+                project_id or _stored_project_id(request) or client.default_project_id()
+            )
             # Enrichment wired here, at the one place a SEEK instance is
             # actually provisioned: CV terms carry their ontology IRIs when a
             # configured source can name them. The preview stays label-only —
@@ -265,7 +265,9 @@ def register_seek_routes(  # noqa: C901
             from metaseed.seek.provision import resolve_cv_ids
             from metaseed.seek.sync import sync_dataset_to_seek
 
-            pid = project_id or client.default_project_id()
+            pid = (
+                project_id or _stored_project_id(request) or client.default_project_id()
+            )
             profile = _load_profile(state)
             # Sample Types are created per Assay during the walk (a stream chains
             # them), so only the Controlled Vocabularies come from provisioning.

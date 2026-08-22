@@ -80,3 +80,68 @@ def test_config_refused_when_adapter_disabled(client):
     settings.set_adapter_enabled("seek", False)
     client.post("/settings/adapters/seek/config", data={"url": "http://x:3001"})
     assert settings.get_adapter_config("seek") == {}  # nothing persisted
+
+
+def _configure_seek(client, monkeypatch, result):
+    import metaseed.ui.routes.settings as settings_routes
+
+    client.post(
+        "/settings/adapters/seek/config",
+        data={"url": "http://seek.test", "api_key": "k"},
+    )
+    monkeypatch.setattr(
+        settings_routes, "run_adapter_check", lambda _info, _config: result
+    )
+
+
+def test_seek_row_offers_a_connection_check(client):
+    page = client.get("/settings").text
+    assert 'data-testid="check-seek"' in page
+
+
+def test_check_reports_success_and_offers_the_projects(client, monkeypatch):
+    from metaseed.seek.connection import ConnectionCheck
+
+    _configure_seek(
+        client,
+        monkeypatch,
+        ConnectionCheck(
+            ok=True,
+            message="Connected: 2 projects visible.",
+            projects=[("1", "Plants"), ("2", "Soil")],
+        ),
+    )
+    response = client.post("/settings/adapters/seek/check")
+    assert response.status_code == 200
+    assert 'data-testid="check-seek-ok"' in response.text
+    assert "2 projects visible" in response.text
+    assert 'data-testid="config-seek-project_id"' in response.text
+    assert "Plants" in response.text and "Soil" in response.text
+
+
+def test_check_reports_the_specific_failure(client, monkeypatch):
+    from metaseed.seek.connection import ConnectionCheck
+
+    _configure_seek(
+        client,
+        monkeypatch,
+        ConnectionCheck(ok=False, message="SEEK rejected the API key.", projects=[]),
+    )
+    response = client.post("/settings/adapters/seek/check")
+    assert 'data-testid="check-seek-error"' in response.text
+    assert "rejected the API key" in response.text
+    assert 'data-testid="config-seek-project_id"' not in response.text
+
+
+def test_check_on_an_adapter_without_a_check_is_404(client):
+    assert client.post("/settings/adapters/dcat/check").status_code == 404
+
+
+def test_project_choice_is_saved_with_the_config(client):
+    client.post(
+        "/settings/adapters/seek/config",
+        data={"url": "http://seek.test", "api_key": "k", "project_id": "2"},
+    )
+    settings = client.app.state.settings
+    assert settings.get_adapter_config("seek")["project_id"] == "2"
+    assert "Project: 2" in client.get("/settings").text

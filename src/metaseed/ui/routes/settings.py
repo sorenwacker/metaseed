@@ -4,6 +4,7 @@ from collections.abc import Callable
 from typing import Any
 
 from fastapi import FastAPI, Request
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
@@ -12,13 +13,26 @@ from metaseed.settings import Settings
 from metaseed.ui.state import AppState
 
 
-def _row(settings: Settings, info: adapters.AdapterInfo) -> dict[str, Any]:
-    """Build one adapter view row: availability, enabled state, and stored config."""
+def run_adapter_check(info: adapters.AdapterInfo, config: dict[str, str]) -> Any:
+    """Run the adapter's declared connection check against ``config``.
+
+    A module-level seam so route tests can substitute the outcome without a
+    network; the registry's ``check_ref`` decides which function runs.
+    """
+    return info.resolve_check()(config)
+
+
+def _row(
+    settings: Settings, info: adapters.AdapterInfo, check: Any | None = None
+) -> dict[str, Any]:
+    """Build one adapter view row: availability, enabled state, stored config,
+    and the outcome of a connection check when one was just run."""
     return {
         "info": info,
         "available": adapters.is_available(info),
         "enabled": settings.adapter_enabled(info.key),
         "config": settings.get_adapter_config(info.key),
+        "check": check,
     }
 
 
@@ -34,11 +48,13 @@ def register_settings_routes(
         store: Settings = request.app.state.settings
         return store
 
-    def _render_row(request: Request, info: adapters.AdapterInfo) -> HTMLResponse:
+    def _render_row(
+        request: Request, info: adapters.AdapterInfo, check: Any | None = None
+    ) -> HTMLResponse:
         return templates.TemplateResponse(
             request,
             "partials/adapter_toggle.html",
-            {"row": _row(_settings(request), info), "base_url": base_url},
+            {"row": _row(_settings(request), info, check), "base_url": base_url},
         )
 
     @app.get("/settings", response_class=HTMLResponse)
@@ -60,6 +76,19 @@ def register_settings_routes(
             settings = _settings(request)
             settings.set_adapter_enabled(key, not settings.adapter_enabled(key))
         return _render_row(request, info)
+
+    @app.post("/settings/adapters/{key}/check", response_class=HTMLResponse)
+    async def check_adapter(request: Request, key: str) -> HTMLResponse:
+        """Probe the adapter's configured service and return the row with the verdict."""
+        if not adapters.is_known(key):
+            return HTMLResponse("Unknown adapter", status_code=404)
+        info = adapters.get_adapter(key)
+        settings = _settings(request)
+        if info.check_ref is None or not settings.adapter_enabled(key):
+            return HTMLResponse("Adapter has no connection check", status_code=404)
+        config = settings.get_adapter_config(key)
+        check = await run_in_threadpool(run_adapter_check, info, config)
+        return _render_row(request, info, check)
 
     @app.post("/settings/adapters/{key}/config", response_class=HTMLResponse)
     async def config_adapter(request: Request, key: str) -> HTMLResponse:

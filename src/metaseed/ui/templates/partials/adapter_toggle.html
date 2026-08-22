@@ -33,6 +33,21 @@
           hx-target="#adapter-{{ row.info.key }}" hx-swap="outerHTML"
           style="display:flex; flex-wrap:wrap; align-items:flex-end; gap:0.6rem; margin-top:0.6rem;">
         {% for field in row.info.config_fields %}
+        {% if field.from_check %}
+        {% if row.check and row.check.ok and row.check.projects %}
+        <label style="font-size:0.8rem; display:flex; flex-direction:column; gap:0.15rem;">
+            {{ field.label }}
+            <select name="{{ field.key }}" data-testid="config-{{ row.info.key }}-{{ field.key }}">
+                {% for pid, ptitle in row.check.projects %}
+                <option value="{{ pid }}" {% if row.config.get(field.key) == pid %}selected{% endif %}>{{ ptitle }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        {% elif row.config.get(field.key) %}
+        <span class="muted" style="font-size:0.8rem;" data-testid="configured-{{ row.info.key }}-{{ field.key }}">{{ field.label }}: {{ row.config.get(field.key) }}</span>
+        <input type="hidden" name="{{ field.key }}" value="{{ row.config.get(field.key) }}">
+        {% endif %}
+        {% else %}
         <label style="font-size:0.8rem; display:flex; flex-direction:column; gap:0.15rem;">
             {{ field.label }}{% if field.secret and row.config.get(field.key) %}
             <span class="muted">(configured — leave blank to keep)</span>{% endif %}
@@ -43,8 +58,22 @@
                    autocomplete="off"
                    value="{{ '' if field.secret else row.config.get(field.key, '') }}">
         </label>
+        {% endif %}
         {% endfor %}
         <button type="submit" class="btn btn-secondary btn-sm">Save config</button>
+        {% if row.info.check_ref %}
+        <button type="button" class="btn btn-secondary btn-sm"
+                data-testid="check-{{ row.info.key }}"
+                hx-post="{{ base_url }}/settings/adapters/{{ row.info.key }}/check"
+                hx-target="#adapter-{{ row.info.key }}" hx-swap="outerHTML">Check connection</button>
+        {% endif %}
     </form>
+    {% if row.check %}
+    <div style="font-size:0.85rem; margin-top:0.4rem;"
+         data-testid="check-{{ row.info.key }}-{{ 'ok' if row.check.ok else 'error' }}"
+         class="{{ 'text-success' if row.check.ok else 'text-error' }}">
+        {{ row.check.message }}{% if row.check.ok and row.check.projects %} Choose a project and press Save config.{% endif %}
+    </div>
+    {% endif %}
     {% endif %}
 </div>
