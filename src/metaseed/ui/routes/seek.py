@@ -154,11 +154,18 @@ def register_seek_routes(  # noqa: C901
 
         context: dict[str, Any] = {
             "base_url": base_url,
-            "profile": facade.profile,
-            "version": facade.version,
+            # The profile the page is about: what the user chose for the last
+            # action, else the loaded dataset's. Falling back to the dataset's
+            # profile after every action sent a user who provisioned one profile
+            # a page, and a model download, for another.
+            "profile": extra.get("profile") or facade.profile,
+            "version": extra.get("version") or facade.version,
             "profiles": profiles,
             "profile_versions": profile_versions,
-            "preview": _model_preview(facade.profile, facade.version),
+            "preview": _model_preview(
+                extra.get("profile") or facade.profile,
+                extra.get("version") or facade.version,
+            ),
             "dataset_name": get_current_dataset_name(state),
             "entity_count": len(state.nodes_by_id),
             "exportable_count": sum(n for _, n in emit_counts),
@@ -172,7 +179,9 @@ def register_seek_routes(  # noqa: C901
             "sync_result": None,
             "action_error": None,
         }
-        context.update(extra)
+        context.update(
+            {k: v for k, v in extra.items() if k not in ("profile", "version")}
+        )
         return context
 
     async def _render(request: Request, **extra: Any) -> HTMLResponse:
@@ -218,7 +227,9 @@ def register_seek_routes(  # noqa: C901
 
         client, error = _seek_client(request)
         if client is None:
-            return await _render(request, action_error=error)
+            return await _render(
+                request, action_error=error, profile=profile, version=version
+            )
 
         def work() -> Any:
             from metaseed.seek.provision import (
@@ -240,12 +251,18 @@ def register_seek_routes(  # noqa: C901
             )
             return execute_provisioning_plan(client, plan, project_id=pid)
 
+        chosen = {"profile": profile, "version": version}
         try:
             result = await run_in_threadpool(work)
         except Exception as exc:
-            return await _render(request, action_error=f"Provisioning failed: {exc}")
+            return await _render(
+                request, action_error=f"Provisioning failed: {exc}", **chosen
+            )
         return await _render(
-            request, provision_result=result, provisioned_profile=profile or None
+            request,
+            provision_result=result,
+            provisioned_profile=profile or None,
+            **chosen,
         )
 
     @app.post("/seek/sync", response_class=HTMLResponse)

@@ -360,3 +360,16 @@ def test_the_page_explains_why_there_are_no_projects(make_client, monkeypatch):
     page = client.get("/seek").text
     assert 'data-testid="seek-no-projects"' in page
     assert "rejected the API key" in page
+
+
+def test_an_action_keeps_the_profile_you_chose(make_client):
+    # The loaded dataset is ISA; the user provisions MIAPPE. The page that comes
+    # back must still show MIAPPE, not fall back to the dataset's profile.
+    client, _settings, _state = make_client()
+    page = client.post(
+        "/seek/provision",
+        data={"project_id": "", "profile": "miappe", "version": "1.2"},
+    ).text
+    assert 'data-testid="seek-action-error"' in page  # no SEEK configured
+    assert '<option value="miappe" selected' in page
+    assert '<option value="1.2" selected' in page

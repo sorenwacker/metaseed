@@ -56,7 +56,10 @@ same diagnosis as **Check connection** on the Plugins page. Re-running is safe: 
 reuses what already exists rather than duplicating it.
 
 This step needs no loaded dataset — it describes a *profile*, so you can
-provision before you have built anything.
+provision before you have built anything. The page keeps the profile and
+version you chose after the action, so the preview and the Extended Metadata
+download below it refer to what you just provisioned, not to the loaded
+dataset's profile.
 
 #### Browse what will be created first
 
