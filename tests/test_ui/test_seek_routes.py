@@ -450,4 +450,8 @@ def test_a_value_left_out_of_a_pushed_record_is_a_note_not_a_missing_entity(
     assert "not uploaded" not in html
     assert "did not reach SEEK" not in html
     assert "notification-success" in html
+    # Still counted in the headline, and coloured as a warning: a real
+    # omission in the copy, even though the record itself is there.
+    assert "1 value not sent" in html
     assert "seek-sync-notes" in html and "Values not sent" in html
+    assert "color:#c60" in html.split("seek-sync-notes")[1][:80]

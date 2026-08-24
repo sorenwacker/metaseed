@@ -127,6 +127,13 @@ reported as *unlinked*: SEEK finds a Sample from its Investigation only through
 an Assay, so an unlinked record is reachable solely by listing the project's
 samples, and a re-import drops it.
 
+The result may also list **Values not sent**: the record reached SEEK, but one
+of its values did not. Either the installed Extended Metadata Type has no
+attribute for that field, or the attribute holds a reference to a SEEK record
+(a *Registered Data file*, a *Registered Sample*) that no plain value can fill.
+Add the attribute to the type in SEEK, drop the field from the profile, or
+attach the referenced record in SEEK by hand; the sync will not guess.
+
 ### Or export a file
 
 **Download SEEK ISA RDF (.ttl) →** gives you the dataset as a Turtle file to
