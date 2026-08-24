@@ -369,6 +369,41 @@ def _sharing_pairs(sharing: str | None) -> list[tuple[str, str]]:
     return [("policy_attributes[access_type]", str(SHARING_LEVELS.index(sharing)))]
 
 
+def extended_metadata_pairs(
+    prefix: str, type_id: str | int, data: Mapping[str, Any]
+) -> list[tuple[str, str]]:
+    """Form pairs filling an Extended Metadata Type on an ISA form endpoint.
+
+    ``prefix`` is the record key (``isa_study[study]`` or ``isa_assay[assay]``);
+    SEEK permits ``extended_metadata_attributes[extended_metadata_type_id]`` and
+    ``[data][<attribute>]`` under it, recursing into ``[data][<linked>][<attr>]``
+    for a nested type and ``[]`` for a list-valued attribute
+    (``determine_extended_metadata_keys``). Empty values are left out so SEEK
+    applies its own defaults rather than storing blanks.
+    """
+    root = f"{prefix}[extended_metadata_attributes]"
+    pairs: list[tuple[str, str]] = [
+        (f"{root}[extended_metadata_type_id]", str(type_id))
+    ]
+
+    def add(key: str, value: Any) -> None:
+        if value in (None, "", [], {}):
+            return
+        if isinstance(value, Mapping):
+            for k, v in value.items():
+                add(f"{key}[{k}]", v)
+        elif isinstance(value, list):
+            for v in value:
+                if v not in (None, ""):
+                    pairs.append((f"{key}[]", str(v)))
+        else:
+            pairs.append((key, str(value)))
+
+    for name, value in data.items():
+        add(f"{root}[data][{name}]", value)
+    return pairs
+
+
 def isa_study_form(
     *,
     title: str,
@@ -380,6 +415,7 @@ def isa_study_form(
     source_template_id: str | int | None = None,
     collection_template_id: str | int | None = None,
     sharing: str | None = None,
+    extended_metadata: tuple[str | int, Mapping[str, Any]] | None = None,
 ) -> list[tuple[str, str]]:
     """Form body for ``POST /isa_studies`` — a Study with its two Sample Types.
 
@@ -392,8 +428,10 @@ def isa_study_form(
     pairs: list[tuple[str, str]] = [
         ("isa_study[study][title]", title),
         ("isa_study[study][investigation_id]", str(investigation_id)),
-        ("isa_study[source_sample_type][title]", source_title),
     ]
+    if extended_metadata is not None:
+        pairs += extended_metadata_pairs("isa_study[study]", *extended_metadata)
+    pairs.append(("isa_study[source_sample_type][title]", source_title))
     if source_template_id is not None:
         pairs.append(
             ("isa_study[source_sample_type][template_id]", str(source_template_id))
@@ -430,6 +468,7 @@ def isa_assay_form(
     sample_type_attributes: Sequence[Mapping[str, Any]] | None = None,
     sample_type_template_id: str | int | None = None,
     sharing: str | None = None,
+    extended_metadata: tuple[str | int, Mapping[str, Any]] | None = None,
 ) -> list[tuple[str, str]]:
     """Form body for ``POST /isa_assays`` — an assay stream, or an assay in one.
 
@@ -444,6 +483,8 @@ def isa_assay_form(
         ("isa_assay[assay][assay_type_uri]", assay_type_uri),
         ("isa_assay[assay][position]", str(position)),
     ]
+    if extended_metadata is not None:
+        pairs += extended_metadata_pairs("isa_assay[assay]", *extended_metadata)
     if assay_stream_id is not None:
         pairs.append(("isa_assay[assay][assay_stream_id]", str(assay_stream_id)))
     if input_sample_type_id is not None:

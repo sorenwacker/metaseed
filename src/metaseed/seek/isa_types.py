@@ -30,19 +30,78 @@ if TYPE_CHECKING:
 _LEVEL_TAGS: dict[str, tuple[str, str]] = {
     "source": ("source", "source_characteristic"),
     "sample_collection": ("sample", "sample_characteristic"),
-    # A data-file level comments its attributes; a material level describes
+    # A material level describes its attributes; a data-file level comments
     # them. Mixing the two families against the title tag is what SEEK's own
     # templates never do.
+    "material": ("other_material", "other_material_characteristic"),
     "assay": ("data_file", "data_file_comment"),
 }
 
+# A level's title tag names the level: a field carrying one places its entity
+# in the chain. The inverse of the first element of ``_LEVEL_TAGS``.
+_TITLE_TAG_LEVELS: dict[str, str] = {
+    title_tag: level for level, (title_tag, _) in _LEVEL_TAGS.items()
+}
+
 # Levels whose type sits downstream of another and must link back to it.
-_LEVELS_NEEDING_A_LINK = frozenset({"sample_collection", "assay"})
+_LEVELS_NEEDING_A_LINK = frozenset({"sample_collection", "material", "assay"})
 
 _SEEK_SAMPLE_MULTI_TITLE = "Registered Sample List"
 PROTOCOL_ATTRIBUTE = "Protocol"
 _PROTOCOL_TITLE = PROTOCOL_ATTRIBUTE
 _INPUT_TITLE = "Input"
+_TITLE_ATTRIBUTE = "Title"
+
+
+def _field_tagged(entity: EntityDefSpec | None, *tags: str) -> FieldSpec | None:
+    """The first scalar field of ``entity`` carrying one of ``tags``."""
+    if entity is None:
+        return None
+    return next(
+        (f for f in entity.fields if not f.is_nested() and f.isa_tag in tags),
+        None,
+    )
+
+
+def entity_level(entity: EntityDefSpec | None) -> str | None:
+    """The chain level an entity's title tag places it at, or ``None``.
+
+    A field tagged ``source``, ``sample``, ``other_material`` or ``data_file``
+    is the Sample Type's title attribute, and which of those it is says where
+    the type sits in the chain. An entity with no such field is untagged: its
+    level follows from nesting depth and its structural columns are
+    synthesized (the seek-ready-template shape).
+    """
+    field = _field_tagged(entity, *_TITLE_TAG_LEVELS)
+    return _TITLE_TAG_LEVELS[field.isa_tag] if field and field.isa_tag else None
+
+
+def is_template_bound(entity: EntityDefSpec | None) -> bool:
+    """Whether the entity's own fields are the Sample Type's columns."""
+    return entity_level(entity) is not None
+
+
+def title_attribute_of(entity: EntityDefSpec | None) -> str:
+    """The Sample Type attribute a Sample's title is read from.
+
+    The title-tagged field for a template-bound entity, else the synthesized
+    ``Title``. The key an input link is written under is derived from the
+    *predecessor's* value of this.
+    """
+    field = _field_tagged(entity, *_TITLE_TAG_LEVELS)
+    return field.name if field else _TITLE_ATTRIBUTE
+
+
+def protocol_attribute_of(entity: EntityDefSpec | None) -> str:
+    """The attribute holding a Sample's protocol -- the exporter refuses none."""
+    field = _field_tagged(entity, "protocol")
+    return field.name if field else PROTOCOL_ATTRIBUTE
+
+
+def input_field_of(entity: EntityDefSpec | None) -> str | None:
+    """The profile field naming a Sample's predecessor, if the entity has one."""
+    field = _field_tagged(entity, "input")
+    return field.name if field else None
 
 
 @dataclass(frozen=True)
@@ -87,6 +146,38 @@ def sample_type_attribute_plans(
     title_tag, default_tag = _LEVEL_TAGS[level]
     plans: list[AttributePlan] = []
     position = 1
+
+    if is_template_bound(entity):
+        # The entity's fields ARE the installed template's columns: nothing is
+        # synthesized, the tagged fields supply the structural attributes, and
+        # an untagged column takes the level's characteristic/comment tag.
+        assert entity is not None
+        for field in entity.fields:
+            if field.is_nested():
+                continue
+            tag = field.isa_tag or default_tag
+            is_title = tag == title_tag
+            plans.append(
+                AttributePlan(
+                    title=field.name,
+                    attribute_type_title=(
+                        _SEEK_SAMPLE_MULTI_TITLE
+                        if tag == "input"
+                        else attribute_type_title(field)
+                    ),
+                    isa_tag=tag,
+                    # SEEK derives a Sample's name from its title attribute and
+                    # rejects a blank one, so it is required whatever the
+                    # profile says.
+                    required=field.required or is_title,
+                    is_title=is_title,
+                    pos=position,
+                    field_name=field.name,
+                    enum=_enum_of(field),
+                )
+            )
+            position += 1
+        return plans
 
     if linked:
         # The input attribute must come first: ISAStudy/ISAAssay find it with
@@ -222,9 +313,7 @@ def sample_type_attributes(
                 is_title=plan.is_title,
                 pos=plan.pos,
                 linked_sample_type_id=(
-                    linked_sample_type_id
-                    if plan.isa_tag == "input" and plan.pos == 1
-                    else None
+                    linked_sample_type_id if plan.isa_tag == "input" else None
                 ),
                 sample_controlled_vocab_id=vocabulary_id,
             )

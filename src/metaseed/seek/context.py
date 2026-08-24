@@ -123,3 +123,32 @@ class SyncContext:
     # reachability check treats a material chain as reachable once any node in
     # it carries one, because SEEK derives Study and Investigation from it.
     assay_linked_nodes: set[str] = dc_field(default_factory=set)
+    # SEEK Sample Type id -> the attribute a Sample's title is read from. The
+    # input link into a type is keyed ``Input (<predecessor's title attribute>)``,
+    # SEEK's own naming, so a successor needs to know this about its predecessor.
+    title_attribute_by_type: dict[str, str] = dc_field(default_factory=dict)
+    # SEEK Sample Type id -> the type it takes its inputs from.
+    linked_type_of: dict[str, str] = dc_field(default_factory=dict)
+    # (Sample Type id, title) -> the SEEK sample placed there, so a profile
+    # that names its predecessor through an ``Input`` field can resolve it.
+    sample_by_type_and_title: dict[tuple[str, str], str] = dc_field(
+        default_factory=dict
+    )
+    # Extended Metadata Type title -> id on the target, read once when any
+    # entity declares one, and each consulted type's attributes (title -> the
+    # nested type id it links to, or None), fetched on first use.
+    extended_metadata_type_ids: dict[str, str] = dc_field(default_factory=dict)
+    extended_metadata_attribute_cache: dict[str, dict[str, str | None]] = dc_field(
+        default_factory=dict
+    )
+    # SEEK sample id -> node ids of the samples placed with it as their input.
+    # The reachability report follows these as well as the tree, because a
+    # referenced chain links siblings the tree does not.
+    successor_nodes: dict[str, list[str]] = dc_field(default_factory=dict)
+    # SEEK assay id -> {entity name: (SEEK assay id, Sample Type id)} for a
+    # profile Assay that became several chained SEEK Assays, one per
+    # assay-level entity under it. Keyed by the first assay's id, which is what
+    # the walk threads down.
+    assay_entity_types: dict[str, dict[str, tuple[str, str]]] = dc_field(
+        default_factory=dict
+    )

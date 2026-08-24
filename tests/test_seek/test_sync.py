@@ -60,6 +60,17 @@ class _FakeSeek:
         )
         return {tag: str(i) for i, tag in enumerate(tags, start=1)}
 
+    # Extended Metadata Types "installed" on the fake: title -> id, and per
+    # id its attributes (title -> nested type id or None). Empty by default.
+    emt_ids: dict[str, str] = field(default_factory=dict)
+    emt_attributes: dict[str, dict[str, str | None]] = field(default_factory=dict)
+
+    def extended_metadata_type_ids(self) -> dict[str, str]:
+        return dict(self.emt_ids)
+
+    def extended_metadata_attributes(self, type_id: str) -> dict[str, str | None]:
+        return dict(self.emt_attributes.get(type_id, {}))
+
     def template_ids_by_title(self) -> dict[str, str]:
         """Every ISA Template installed, or none.
 
@@ -101,6 +112,7 @@ class _FakeSeek:
         source_template_id: str | None = None,
         collection_template_id: str | None = None,
         sharing: str | None = None,
+        extended_metadata: tuple[str, Any] | None = None,
     ) -> str:
         study_id = self._next()
         self.calls.append(
@@ -114,6 +126,7 @@ class _FakeSeek:
                     "source_template_id": source_template_id,
                     "collection_template_id": collection_template_id,
                     "sharing": sharing,
+                    "extended_metadata": extended_metadata,
                 },
             )
         )
@@ -135,6 +148,7 @@ class _FakeSeek:
         sample_type_attributes: Any = None,
         sample_type_template_id: str | None = None,
         sharing: str | None = None,
+        extended_metadata: tuple[str, Any] | None = None,
     ) -> str:
         assay_id = self._next()
         self.calls.append(
@@ -148,6 +162,7 @@ class _FakeSeek:
                     "input_sample_type_id": input_sample_type_id,
                     "template_id": sample_type_template_id,
                     "sharing": sharing,
+                    "extended_metadata": extended_metadata,
                 },
             )
         )

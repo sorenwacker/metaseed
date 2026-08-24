@@ -73,6 +73,14 @@ class IsaWriter(Protocol):
         """ISA Template title -> id on this instance."""
         ...
 
+    def extended_metadata_type_ids(self) -> dict[str, str]:
+        """Extended Metadata Type title -> id on this instance (top-level types)."""
+        ...
+
+    def extended_metadata_attributes(self, type_id: str) -> dict[str, str | None]:
+        """A type's attribute titles -> the nested type id each links to, or None."""
+        ...
+
     def create_isa_study(
         self,
         *,
@@ -85,6 +93,7 @@ class IsaWriter(Protocol):
         source_template_id: str | None = None,
         collection_template_id: str | None = None,
         sharing: str | None = None,
+        extended_metadata: tuple[str, Mapping[str, Any]] | None = None,
     ) -> str: ...
 
     def create_isa_assay(
@@ -99,6 +108,7 @@ class IsaWriter(Protocol):
         sample_type_attributes: Sequence[Mapping[str, Any]] | None = None,
         sample_type_template_id: str | None = None,
         sharing: str | None = None,
+        extended_metadata: tuple[str, Mapping[str, Any]] | None = None,
     ) -> str: ...
 
     def study_sample_type_ids(self, study_id: str) -> dict[str, str]: ...

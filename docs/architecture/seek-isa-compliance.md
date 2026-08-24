@@ -164,6 +164,37 @@ Two SEEK behaviours the sync works around, verified live:
 
 Creating a Study needs a placeholder `linked_sample_type_id` (see the `ISAStudy` defect above). The sync creates one Sample Type per project named `<profile> ISA placeholder`, reused by title; it is an artifact of that defect, not part of the ISA structure.
 
+## Two ways a profile can describe the chain
+
+The material chain SEEK exports — source → sample → assay material → assay data file — can be written in a profile in two shapes, and the sync treats them as one model.
+
+**By nesting, untagged** (`seek-ready-template` 3.0): `Source` contains `Sample` contains `AssayMaterial`, an assay material names its Assay by a declared reference, and no field carries an ISA tag. The sync then synthesizes the structural columns every level needs (`Title`, `Input`, `Protocol`), tags the rest by level, derives the level from nesting depth, and looks the ISA Template up under a name it derives itself (`<profile> study source`, `<profile> study sample`, `<profile> assay - data file`) — the name the *Download ISA Templates* file uses.
+
+**By tags, against installed templates** (the CropXR profiles): the entities sit as siblings — sources and samples under the Study, materials and data files under the Assay — and each names its predecessor through an `Input` field rather than by nesting. Such an entity is *template-bound*:
+
+- `seek.template` names the ISA Template installed on the target instance (`CropXR source`, `CropXR phenotyping observation unit`, …). The sync attaches that template by title; the profile carries what the JSON:API does not expose about it.
+- Its fields carry `isa_tag`s. The entity's **own fields are the columns** — nothing is synthesized. The field tagged with a level's title tag is the Sample Type's title attribute, the field tagged `input` is its input, and the field tagged `protocol` its protocol. Tags default by level (title tag on the label field, characteristic/comment tag on the rest), so only the columns that deviate declare one — `parameter_value`, `protocol` on a method column, `other_material` on an experiment id.
+- Its **ISA level follows from its title tag**: `source` → `study source`, `sample` → `study sample`, `other_material` → `assay - material`, `data_file` → `assay - data file`. There is no separate level setting to keep in step with the tags.
+- *Download ISA Templates* renders such an entity from the same plan, so the file reproduces the installed template and can provision a fresh instance with it.
+
+ISA tags are SEEK's closed list of eleven column roles, not ontology terms; a field's `ontology_term` says what a column means, its `isa_tag` what structural role it plays in the ISA graph, and the two are independent.
+
+### Placement follows the level, not the tree
+
+Within a Study the sync places nodes in level order regardless of where they sit in the tree: the SEEK Assays first (a material needs the Assay that measured it), then sources, then samples, then assay materials, then assay data files. Both shapes satisfy every dependency under that order — a nested profile's materials find their Assay by reference, a tagged profile's materials find the observation unit their `Input` names.
+
+Each Study owns its Source and Sample Collection types, built from the source-level and sample-level entities under it. Each **assay-level entity that has nodes under an Assay becomes its own SEEK Assay** in the Study's stream, owning one Sample Type built from that entity — SEEK gives an Assay exactly one Sample Type, so a profile Assay with both a material and a data-file entity becomes two chained SEEK Assays (material → data file), which is how the CropXR instance models a stream. A profile whose Assay carries a single assay-level entity, or none at all, still yields one SEEK Assay as before.
+
+A sample's predecessor is the node it nests under, or — when the profile references instead — the sample the `Input` field names, resolved among the samples already placed in the predecessor type by title. The link is written under the key SEEK itself uses, `Input (<predecessor type's title attribute>)`: `Input (Title)` for a synthesized type, `Input (Source Name)` or `Input (subject_id)` for the CropXR ones. An `Input` that names no placed sample is reported, not written.
+
+### Extended Metadata travels with the Study and Assay
+
+The flat fields of a Study or Assay entity are not Sample Type columns; SEEK holds them as **Extended Metadata**, in a type an administrator installs. An entity names its installed type by title (`seek.extended_metadata: "CropXR phenotyping study"`), and the sync resolves that to the instance's id when it runs and sends the values with the record on the same `/isa_studies` or `/isa_assays` request, under the keys SEEK's `determine_extended_metadata_keys` permits (`extended_metadata_attributes[extended_metadata_type_id]` and `[data][<attribute>]`).
+
+A nested type — `CropXR phenotyping study` links `location`, `experimental_design` and `growth_facility` — is filled from the prefixed fields a profile flattens such a fragment into: `seek.extended_metadata_groups: {site: location, design: experimental_design, facility: growth_facility}` sends `site_latitude` as `location.latitude`. The nested type's attributes are read from the instance too, so a prefixed field the nested type lacks is reported like any other unknown field, and a type the instance does not have is an error rather than a silent drop. A record that is *reused* from a previous push keeps the metadata it has; the sync does not update it.
+
+Investigation-level Extended Metadata is not sent yet: none of the profiles carries any, and the JSON:API route the Investigation is created over encodes it differently from the ISA forms.
+
 ## Reading the structure back
 
 `import_from_seek` understands what the sync writes: assay streams are skipped (they are plumbing, not Assays — reading them back doubled the assay count on every round trip), and an assay sample that names an input is recognised as an assay material. Its input links are followed back to the collection Sample and the Source — which live in Study-owned Sample Types no JSON:API relationship walk reaches — and the chain comes back nested `Source -> Sample -> AssayMaterial`, with the input attribute expressed as that nesting rather than kept as a field value.

@@ -235,6 +235,31 @@ class SeekClient:
             if (row.get("attributes") or {}).get("title")
         }
 
+    def extended_metadata_type_ids(self) -> dict[str, str]:
+        """Extended Metadata Type title -> id, for the top-level types.
+
+        The index serves only the types an Investigation, Study or Assay can
+        carry directly; a nested (linked) type is reached through the attribute
+        that links to it, see :meth:`extended_metadata_attributes`.
+        """
+        return {
+            row["attributes"]["title"]: str(row["id"])
+            for row in self.get("/extended_metadata_types").get("data", [])
+        }
+
+    def extended_metadata_attributes(self, type_id: str) -> dict[str, str | None]:
+        """A type's attribute titles -> the nested type id each links to, or None."""
+        detail = self.get(f"/extended_metadata_types/{type_id}").get("data", {})
+        attributes = detail.get("attributes", {}).get("extended_metadata_attributes")
+        return {
+            a["title"]: (
+                str(a["linked_extended_metadata_type_id"])
+                if a.get("linked_extended_metadata_type_id")
+                else None
+            )
+            for a in attributes or []
+        }
+
     def create_isa_study(
         self,
         *,
@@ -247,6 +272,7 @@ class SeekClient:
         source_template_id: str | None = None,
         collection_template_id: str | None = None,
         sharing: str | None = None,
+        extended_metadata: tuple[str, Mapping[str, Any]] | None = None,
     ) -> str:
         """Create a Study with its Source and Sample Collection types; return its id.
 
@@ -267,6 +293,7 @@ class SeekClient:
                 source_template_id=source_template_id,
                 collection_template_id=collection_template_id,
                 sharing=sharing,
+                extended_metadata=extended_metadata,
             ),
         )
 
@@ -307,6 +334,7 @@ class SeekClient:
         sample_type_attributes: Sequence[Mapping[str, Any]] | None = None,
         sample_type_template_id: str | None = None,
         sharing: str | None = None,
+        extended_metadata: tuple[str, Mapping[str, Any]] | None = None,
     ) -> str:
         """Create an assay stream, or an assay within one; return its id.
 
@@ -326,6 +354,7 @@ class SeekClient:
                 sample_type_attributes=sample_type_attributes,
                 sample_type_template_id=sample_type_template_id,
                 sharing=sharing,
+                extended_metadata=extended_metadata,
             ),
         )
 

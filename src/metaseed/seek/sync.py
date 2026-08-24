@@ -22,9 +22,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from metaseed.seek.context import SyncContext, SyncResult
-from metaseed.seek.placement import place_node, placeholder_sample_type_id
+from metaseed.seek.placement import (
+    place_node,
+    placeholder_sample_type_id,
+    sample_level,
+)
 from metaseed.seek.roles import jerm_class_in_profile
-from metaseed.seek.templates import sample_chain_entities
+from metaseed.seek.templates import LEVEL_ORDER, sample_chain_entities
 from metaseed.seek.values import base_url, file_fields, profile_of
 
 if TYPE_CHECKING:
@@ -58,6 +62,133 @@ def _create_study_data_file(
         )
     except Exception as exc:  # one study's files must not abort the sync
         result.errors.append((node_id, str(exc)))
+
+
+def _jerm(ctx: SyncContext, node: Any) -> str | None:
+    return jerm_class_in_profile(ctx.profile, node.entity_type, ctx.roles)
+
+
+def _place_study_contents(
+    ctx: SyncContext,
+    study_node: Any,
+    investigation_id: str | None,
+    study_id: str | None,
+) -> None:
+    """Place everything under a Study in level order, not tree order.
+
+    The SEEK Assays first (a material needs the Assay that measured it), then
+    sources, samples, assay materials and assay data files, each level only
+    after the one it takes its inputs from. A nested profile and one that
+    references its predecessor through an ``Input`` field both satisfy every
+    dependency under this order.
+    """
+    # (order, node, class, assay-ancestor node id, sample-ancestor node id,
+    # sample depth) for every node below the Study.
+    entries: list[tuple[int, Any, str | None, str | None, str | None, int]] = []
+
+    def collect(
+        node: Any, assay_anc: str | None, sample_anc: str | None, depth: int
+    ) -> None:
+        for child in node.children:
+            cls = _jerm(ctx, child)
+            entries.append((len(entries), child, cls, assay_anc, sample_anc, depth))
+            collect(
+                child,
+                child.id if cls == "Assay" else assay_anc,
+                child.id if cls == "Sample" else sample_anc,
+                depth + 1 if cls == "Sample" else depth,
+            )
+
+    collect(study_node, None, None, 0)
+    seek_assay_by_node: dict[str, str] = {}
+    for _, node, cls, _, _, _ in entries:
+        if cls == "Assay":
+            _, _, seek_assay, _, _ = place_node(
+                ctx, node, investigation_id, study_id, None
+            )
+            if seek_assay is not None:
+                seek_assay_by_node[node.id] = seek_assay
+    samples = sorted(
+        (e for e in entries if e[2] == "Sample"),
+        key=lambda e: (
+            LEVEL_ORDER.index(sample_level(ctx, e[1].entity_type, e[5])),
+            e[0],
+        ),
+    )
+    for _, node, _, assay_anc, sample_anc, depth in samples:
+        place_node(
+            ctx,
+            node,
+            investigation_id,
+            study_id,
+            seek_assay_by_node.get(assay_anc or ""),
+            ctx.result.samples.get(sample_anc or ""),
+            depth,
+        )
+    for _, node, cls, _, _, _ in entries:
+        if cls not in ("Assay", "Sample"):
+            place_node(ctx, node, investigation_id, study_id, None)
+
+
+def _walk(
+    ctx: SyncContext, node: Any, investigation_id: str | None, study_id: str | None
+) -> None:
+    next_investigation, next_study, _, _, _ = place_node(
+        ctx, node, investigation_id, study_id, None
+    )
+    if _jerm(ctx, node) == "Study":
+        _place_study_contents(ctx, node, next_investigation, next_study)
+        return
+    for child in node.children:
+        _walk(ctx, child, next_investigation, next_study)
+
+
+def _report_unreachable(ctx: SyncContext, roots: list[Any]) -> None:
+    """Report every pushed Sample the ISA tree cannot reach.
+
+    A pushed Sample is reachable from the Investigation only through an Assay
+    link somewhere down its material chain — SEEK derives Study and
+    Investigation from that link and ignores everything else. The chain runs
+    through nesting, or through the ``Input`` links the placement resolved;
+    a Sample is reachable once any successor along either is. A chain that
+    never reaches one is stored but invisible to the ISA tree, and a re-import
+    drops it; that is a limitation to report, not to hide.
+    """
+    children: dict[str, list[str]] = {}
+    stack = list(roots)
+    while stack:
+        node = stack.pop()
+        children[node.id] = [c.id for c in node.children]
+        stack.extend(node.children)
+    reachable = set(ctx.assay_linked_nodes)
+    pending = [n for n in ctx.result.samples if n not in reachable]
+    changed = True
+    while changed:
+        changed = False
+        for node_id in list(pending):
+            successors = children.get(node_id, []) + ctx.successor_nodes.get(
+                ctx.result.samples[node_id], []
+            )
+            if any(s in reachable for s in successors):
+                reachable.add(node_id)
+                pending.remove(node_id)
+                changed = True
+    entity_type = {}
+    stack = list(roots)
+    while stack:
+        node = stack.pop()
+        entity_type[node.id] = node.entity_type
+        stack.extend(node.children)
+    for node_id in pending:
+        ctx.result.unlinked.append(
+            (
+                node_id,
+                f"{entity_type.get(node_id, 'Sample')} was created, but its "
+                "material chain reaches no Assay, so nothing walking the ISA "
+                "tree from the Investigation finds it — nest it under an Assay, "
+                "or end the chain in a material that names one",
+            )
+        )
 
 
 def sync_dataset_to_seek(
@@ -164,68 +295,13 @@ def sync_dataset_to_seek(
         result=result,
     )
 
-    def walk(
-        node: Any,
-        investigation_id: str | None,
-        study_id: str | None,
-        assay_id: str | None,
-        parent_sample_id: str | None = None,
-        depth: int = 0,
-    ) -> None:
-        placed = place_node(
-            ctx, node, investigation_id, study_id, assay_id, parent_sample_id, depth
-        )
-        next_investigation, next_study, next_assay, next_sample, next_depth = placed
-        # Assays first: a material names the Assay that measured it, so every
-        # Assay under this node must exist before any material is placed.
-        assay_children = [
-            child
-            for child in node.children
-            if jerm_class_in_profile(ctx.profile, child.entity_type, ctx.roles)
-            == "Assay"
-        ]
-        for child in [
-            *assay_children,
-            *(c for c in node.children if c not in assay_children),
-        ]:
-            walk(
-                child,
-                next_investigation,
-                next_study,
-                next_assay,
-                next_sample,
-                next_depth,
-            )
+    if any(e.seek and e.seek.extended_metadata for e in profile.entities.values()):
+        ctx.extended_metadata_type_ids = client.extended_metadata_type_ids()
 
-    for root in metaseed_client.get_tree():
-        walk(root, None, None, None)
-
-    # A pushed Sample is reachable from the Investigation only through an Assay
-    # link somewhere in its material chain — SEEK derives Study and
-    # Investigation from that link and ignores everything else. A chain that
-    # never reaches one is stored but invisible to the ISA tree, and a re-import
-    # drops it; that is a limitation to report, not to hide.
-    def _reaches_assay(node: Any) -> bool:
-        if node.id in ctx.assay_linked_nodes:
-            return True
-        return any(_reaches_assay(child) for child in node.children)
-
-    def _report_unreachable(node: Any) -> None:
-        if node.id in result.samples and not _reaches_assay(node):
-            result.unlinked.append(
-                (
-                    node.id,
-                    f"{node.entity_type} was created, but its material chain "
-                    "reaches no Assay, so nothing walking the ISA tree from the "
-                    "Investigation finds it — nest it under an Assay, or end "
-                    "the chain in a material that names one",
-                )
-            )
-        for child in node.children:
-            _report_unreachable(child)
-
-    for root in metaseed_client.get_tree():
-        _report_unreachable(root)
+    roots = list(metaseed_client.get_tree())
+    for root in roots:
+        _walk(ctx, root, None, None)
+    _report_unreachable(ctx, roots)
 
     # One remote DataFile per study, pointing at the study's external storage.
     study_id_to_node = {sid: nid for nid, sid in result.studies.items()}

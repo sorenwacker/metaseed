@@ -91,6 +91,21 @@ Without this step, *Sync* refuses with an error naming the missing Template
 (e.g. `no ISA Template titled '<profile> study source'`). One upload per
 profile and version is enough; every later sync reuses the installed Templates.
 
+#### Profiles for an instance whose templates are already installed
+
+If the SEEK instance already has the ISA Templates and Extended Metadata Types
+your model needs (the CropXR instances do), the profile attaches to them by
+name instead of provisioning its own: each Sample-role entity declares
+`seek: {template: "<installed template title>"}` and tags its fields with the
+ISA tags that template uses (`isa_tag: source | sample | other_material |
+data_file | input | protocol | parameter_value | …`); the entity's level in the
+chain follows from its title tag, its predecessor is named in its `Input`
+field. A Study or Assay entity declares `seek: {extended_metadata: "<installed
+type title>"}`, with `extended_metadata_groups: {site: location}` for a nested
+fragment the profile flattened into `site_*` fields. The `cropxr-phenotyping`
+1.4 and `cropxr-sequencing` 1.3 profiles are written this way; the mechanics
+are in [ISA-JSON compliance](../architecture/seek-isa-compliance.md).
+
 ### 2 · Sync the dataset to SEEK
 
 With a dataset loaded, click **Sync to SEEK →**. It pushes the dataset's

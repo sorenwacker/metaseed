@@ -3,6 +3,36 @@
 ## [Unreleased]
 
 ### Added
+- **A profile can describe the ISA chain against templates already installed
+  on the SEEK instance** (#256, #257, #258). An entity that names its
+  installed ISA Template (`seek.template`) and tags its fields (`isa_tag`,
+  which now includes `input`) is *template-bound*: its own fields are the
+  Sample Type's columns, its title-tagged field the title attribute, and its
+  ISA level follows from that tag — `source`, `sample`, `other_material`
+  (`assay - material`, new) or `data_file`. The sync then places samples by
+  level rather than by tree position, creates one SEEK Assay per assay-level
+  entity under a profile Assay (SEEK gives an Assay one Sample Type, so a
+  material and a data file are two chained Assays in the stream), resolves a
+  predecessor named through an `Input` field by title, and writes the input
+  link under SEEK's real key, `Input (<predecessor's title attribute>)`.
+  *Download ISA Templates* renders such entities faithfully, so the same
+  profile can provision a fresh instance. The untagged, nested shape
+  (`seek-ready-template`) is unchanged and remains the live regression gate.
+  See *Two ways a profile can describe the chain* in the ISA-JSON compliance
+  page.
+- **Study and Assay field values are pushed as Extended Metadata** (#259).
+  An entity names its installed Extended Metadata Type
+  (`seek.extended_metadata`); a prefix group
+  (`seek.extended_metadata_groups: {site: location}`) fills a nested type
+  from the flattened `site_*` fields. Fields the type lacks are reported, a
+  type the instance lacks is an error. Verified live: a CropXR phenotyping
+  Study reads back with its nested `location`, `experimental_design` and
+  `growth_facility`.
+- **Load Example** works for profiles installed under the user data dir: the
+  loader looks in `<user data dir>/examples/<profile>/<version>/` as well as
+  the packaged examples, so a user profile can ship example data beside its
+  spec. It looked only in the package before, and the picker offered no
+  example for any user profile.
 - The SEEK page offers **Download ISA Templates (.json)** for the selected
   profile and version. The sync's missing-Template error has always pointed at
   "the SEEK page"; the page now actually has the button. A SEEK administrator

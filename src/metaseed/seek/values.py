@@ -43,7 +43,10 @@ CORE_FIELDS = frozenset(_CORE_TO_ATTRIBUTE)
 
 
 def sample_data(
-    values: Mapping[str, Any], text_list_fields: frozenset[str] = frozenset()
+    values: Mapping[str, Any],
+    text_list_fields: frozenset[str] = frozenset(),
+    *,
+    route_core: bool = True,
 ) -> dict[str, Any]:
     """The postable attribute map for a Sample: drop metadata keys and empties.
 
@@ -62,6 +65,10 @@ def sample_data(
     cannot hold an array; ``text_list_fields`` names those fields so their value
     is joined into a string. A list field *with* an enum is a Controlled
     Vocabulary List and keeps its array.
+
+    ``route_core=False`` keeps every field under its own name: a template-bound
+    Sample Type has no built-in ``Title``/``Description`` -- a column called
+    ``title`` there is a column of the installed template.
     """
     data: dict[str, Any] = {}
     core_winner: dict[str, int] = {}  # attribute -> priority of the value it holds
@@ -81,8 +88,8 @@ def sample_data(
             )
         ):
             continue
-        attribute = _CORE_TO_ATTRIBUTE.get(key, key)
-        if key in _CORE_PRIORITY:
+        attribute = _CORE_TO_ATTRIBUTE.get(key, key) if route_core else key
+        if route_core and key in _CORE_PRIORITY:
             rank = _CORE_PRIORITY[key]
             if attribute in core_winner and core_winner[attribute] <= rank:
                 continue  # a higher-priority core field already claimed it

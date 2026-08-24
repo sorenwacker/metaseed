@@ -22,12 +22,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from metaseed.seek.isa_types import sample_type_attribute_plans
+from metaseed.seek.isa_types import (
+    entity_level,
+    sample_type_attribute_plans,
+)
 from metaseed.seek.roles import sample_role_entities
 
 if TYPE_CHECKING:
     from metaseed.seek.isa_types import AttributePlan
-    from metaseed.specs.schema import ProfileSpec
+    from metaseed.specs.schema import EntityDefSpec, ProfileSpec
 
 # metaseed's internal level name -> the ``level`` SEEK stores on a Template.
 # The assay level is not in here: it is always "assay - data file", which
@@ -35,18 +38,27 @@ if TYPE_CHECKING:
 _SEEK_LEVELS: dict[str, str] = {
     "source": "study source",
     "sample_collection": "study sample",
+    "material": "assay - material",
 }
 
-# The levels of the material chain, in order. Only the first heads the chain.
+# The depth levels of a nested (untagged) material chain, in order. Only the
+# first heads the chain. A tagged profile may add a ``material`` level between
+# the last two; ``LEVEL_ORDER`` is the placement order over all four.
 CHAIN_LEVELS: tuple[str, ...] = ("source", "sample_collection", "assay")
+LEVEL_ORDER: tuple[str, ...] = ("source", "sample_collection", "material", "assay")
 
 
-def template_title(profile: ProfileSpec, seek_level: str) -> str:
-    """The Template title for ``seek_level``, derivable without the file.
+def template_title(
+    profile: ProfileSpec, seek_level: str, entity: EntityDefSpec | None = None
+) -> str:
+    """The Template title an entity's Sample Types are built from.
 
-    The sync looks templates up by this title to attach them to the Sample Types
-    it creates, so it must be reproducible from the profile alone.
+    A template-bound entity names the template installed on the target
+    instance; anything else uses a name derivable from the profile alone, the
+    one *Download ISA Templates* writes, so the sync can find it again.
     """
+    if entity is not None and entity.seek and entity.seek.template:
+        return entity.seek.template
     return f"{profile.name} {seek_level}"
 
 
@@ -63,6 +75,16 @@ def sample_chain_entities(profile: ProfileSpec) -> list[str]:
         if entity.seek and entity.seek.role
     }
     sample_roles = sample_role_entities(profile)
+
+    # A tagged profile says where each entity sits; the chain is the first
+    # entity at each Study level, in the profile's own order.
+    by_level = entities_by_level(profile)
+    if by_level:
+        return [
+            by_level[level][0]
+            for level in ("source", "sample_collection")
+            if by_level.get(level)
+        ]
 
     def first_sample_child(entity_name: str) -> str | None:
         entity = profile.entities.get(entity_name)
@@ -85,25 +107,38 @@ def sample_chain_entities(profile: ProfileSpec) -> list[str]:
     return chain
 
 
+def entities_by_level(profile: ProfileSpec) -> dict[str, list[str]]:
+    """Template-bound Sample-role entities grouped by chain level.
+
+    Empty for an untagged profile, whose levels follow from nesting instead.
+    """
+    grouped: dict[str, list[str]] = {}
+    for name in sample_role_entities(profile):
+        entity = profile.entities.get(name)
+        level = entity_level(entity)
+        if level is not None:
+            grouped.setdefault(level, []).append(name)
+    return grouped
+
+
 def seek_level_for(level: str, plans: list[AttributePlan]) -> str:
     """The SEEK template ``level`` for one level of the chain.
 
-    An assay level is always ``assay - data file``: `isa_types` marks exactly
-    one plan as the title and, for the assay level, tags it ``data_file``
-    (`_LEVEL_TAGS`). This used to read the tag off the plans and map it, with
-    an ``other_material`` entry that nothing could reach — a flexibility the
-    code did not have. If a profile ever plans a material-tagged title, that is
-    a decision to make here deliberately.
+    The level is named by the internal chain level alone: a ``material`` level
+    is ``assay - material``, the (data-file) assay level ``assay - data file``.
+    Which of the two an entity is at follows from its title tag
+    (:func:`~metaseed.seek.isa_types.entity_level`), so the plans carry nothing
+    the level name does not already say.
 
     Args:
         level: The chain level.
-        plans: The level's attribute plans, unused for the assay level but kept
-            so callers need not know which levels consult them.
+        plans: The level's attribute plans, kept so callers need not know that
+            no level consults them.
 
     Returns:
         The ``level`` string SEEK stores on a Template.
     """
-    del plans  # the assay level is not variable; see above
+    del plans
     if level in _SEEK_LEVELS:
         return _SEEK_LEVELS[level]
     return "assay - data file"
@@ -140,12 +175,9 @@ def to_isa_template_json(profile: ProfileSpec) -> dict[str, Any]:
         A document ready to serialise as the file an administrator uploads under
         *Templates -> populate*.
     """
-    chain = sample_chain_entities(profile)
     templates: list[dict[str, Any]] = []
 
-    for order, level in enumerate(CHAIN_LEVELS, start=1):
-        entity_name = chain[order - 1] if order - 1 < len(chain) else None
-        entity = profile.entities.get(entity_name) if entity_name else None
+    def add(order: int, level: str, entity: EntityDefSpec | None) -> None:
         plans = sample_type_attribute_plans(
             entity, level=level, linked=level != "source"
         )
@@ -153,7 +185,7 @@ def to_isa_template_json(profile: ProfileSpec) -> dict[str, Any]:
         templates.append(
             {
                 "metadata": {
-                    "name": template_title(profile, seek_level),
+                    "name": template_title(profile, seek_level, entity),
                     "group": profile.name,
                     "group_order": order,
                     "temporary_name": f"{order}_{profile.name}_{level}",
@@ -165,4 +197,19 @@ def to_isa_template_json(profile: ProfileSpec) -> dict[str, Any]:
             }
         )
 
+    by_level = entities_by_level(profile)
+    if by_level:
+        # One template per template-bound entity, in chain order: the file
+        # reproduces what the profile expects to find installed.
+        order = 1
+        for level in LEVEL_ORDER:
+            for name in by_level.get(level, []):
+                add(order, level, profile.entities[name])
+                order += 1
+        return {"data": templates}
+
+    chain = sample_chain_entities(profile)
+    for order, level in enumerate(CHAIN_LEVELS, start=1):
+        entity_name = chain[order - 1] if order - 1 < len(chain) else None
+        add(order, level, profile.entities.get(entity_name) if entity_name else None)
     return {"data": templates}

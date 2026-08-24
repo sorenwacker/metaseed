@@ -105,6 +105,7 @@ ISA_TAGS: tuple[str, ...] = (
     "other_material_characteristic",
     "data_file",
     "data_file_comment",
+    "input",
 )
 """The ISA tags a field may carry into a SEEK Sample Type attribute.
 
@@ -126,11 +127,26 @@ class SeekEntityConfig(BaseModel):
     :data:`SEEK_ROLES` — overriding the exporter's default entity-name mapping.
     It sets the emitted ``rdf:type`` only; it does not reposition the node in the
     ISA hierarchy (SEEK reads the tree positionally — see ``metaseed.seek.fairds``).
+
+    ``template`` is the title of the ISA Template installed on the target SEEK
+    that this entity's Sample Types are built from. An entity naming one is
+    *template-bound*: its own fields are the template's columns, carrying their
+    ``isa_tag``s, and its ISA level follows from its title tag — see
+    ``docs/architecture/seek-isa-compliance.md``.
     """
 
     model_config = ConfigDict(extra="forbid")
 
     role: str | None = None
+    template: str | None = None
+    # The title of the Extended Metadata Type installed on the target SEEK that
+    # this entity's scalar fields are pushed into (Investigation, Study and
+    # Assay levels). ``extended_metadata_groups`` maps a field-name prefix onto
+    # a nested (linked) attribute of that type: ``{"site": "location"}`` sends
+    # ``site_latitude`` as ``location.latitude``, the way a profile flattens a
+    # one-per-record fragment into prefixed fields.
+    extended_metadata: str | None = None
+    extended_metadata_groups: dict[str, str] | None = None
 
     @field_validator("role")
     @classmethod
