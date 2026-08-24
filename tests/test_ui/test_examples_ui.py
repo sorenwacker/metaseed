@@ -177,3 +177,26 @@ def test_a_long_optional_section_gets_a_filter_and_a_short_one_does_not() -> Non
     assert 'data-testid="optional-filter"' in long_form
     short_form = client.get("/form/Investigation?profile=isa&version=1.0").text
     assert 'data-testid="optional-filter"' not in short_form
+
+
+def test_an_example_under_the_user_data_dir_loads_for_a_user_profile(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Profiles installed under the user data dir (specs/) keep their examples
+    # beside them (examples/<profile>/<version>/*.yaml). The loader used to
+    # look only in the packaged directory, so a user profile could never be
+    # loaded with example data from the UI.
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
+    example_dir = tmp_path / "metaseed" / "examples" / "seek-ready-template" / "3.0"
+    example_dir.mkdir(parents=True)
+    (example_dir / "demo.yaml").write_text(
+        "identifier: INV-demo\ntitle: demo\ndescription: d\nstudies: []\n"
+    )
+    from metaseed.ui.routes.examples import example_exists
+
+    assert example_exists("seek-ready-template", "3.0")
+    client = TestClient(create_app(AppState()))
+    response = client.get(
+        "/load-example/seek-ready-template/3.0", follow_redirects=False
+    )
+    assert response.status_code in (302, 303, 307), response.text

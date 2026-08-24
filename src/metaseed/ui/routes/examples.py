@@ -29,8 +29,24 @@ UI_DIR = Path(__file__).parent.parent
 EXAMPLES_DIR = UI_DIR.parent / "examples"
 
 
+def example_dir(profile_name: str, version: str) -> Path | None:
+    """The directory holding this profile version's example YAML, if any.
+
+    Packaged examples live beside the package; a profile installed under the
+    user data dir keeps its examples there (``examples/<profile>/<version>/``),
+    beside its spec. The packaged location wins when both exist.
+    """
+    from metaseed.paths import user_data_base
+
+    for base in (EXAMPLES_DIR, user_data_base() / "examples"):
+        version_dir = base / profile_name / version
+        if version_dir.is_dir() and any(version_dir.glob("*.yaml")):
+            return version_dir
+    return None
+
+
 def example_exists(profile_name: str, version: str) -> bool:
-    """Whether a loadable example dataset ships for this profile version.
+    """Whether a loadable example dataset exists for this profile version.
 
     THE definition of "an example exists": a directory with at least one YAML
     file, exactly what the load route requires. Three modules each had their
@@ -38,8 +54,7 @@ def example_exists(profile_name: str, version: str) -> bool:
     checked only that the directory existed, so a "Load Example" control could
     point at a version whose load would 404.
     """
-    version_dir = EXAMPLES_DIR / profile_name / version
-    return version_dir.is_dir() and any(version_dir.glob("*.yaml"))
+    return example_dir(profile_name, version) is not None
 
 
 def register_example_routes(
@@ -67,19 +82,13 @@ def register_example_routes(
                 status_code=400, detail=f"Unknown profile: {profile_name}"
             )
 
-        version_dir = EXAMPLES_DIR / profile_name / version
-
-        if not version_dir.exists():
+        version_dir = example_dir(profile_name, version)
+        if version_dir is None:
             raise HTTPException(
                 status_code=404,
                 detail=f"No example available for {profile_name} v{version}",
             )
-
         yaml_files = list(version_dir.glob("*.yaml"))
-        if not yaml_files:
-            raise HTTPException(
-                status_code=404, detail=f"No example file found in {version_dir}"
-            )
 
         example_file = yaml_files[0]
 
