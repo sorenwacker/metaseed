@@ -373,3 +373,16 @@ def test_an_action_keeps_the_profile_you_chose(make_client):
     assert 'data-testid="seek-action-error"' in page  # no SEEK configured
     assert '<option value="miappe" selected' in page
     assert '<option value="1.2" selected' in page
+
+
+def test_seek_page_offers_the_isa_templates_download(make_client):
+    # The sync refuses to run without the profile's ISA Templates installed and
+    # its error says to download them "from the SEEK page" — so the page must
+    # actually offer that download, wired to the chosen profile and version.
+    client, _settings, _state = make_client()
+    response = client.get("/seek")
+    assert response.status_code == 200
+    assert 'data-testid="seek-isa-templates"' in response.text
+    assert "/seek/isa-templates" in response.text
+    assert 'id="seek-tpl-profile"' in response.text  # kept in step with the chooser
+    assert 'id="seek-tpl-version"' in response.text

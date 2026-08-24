@@ -83,7 +83,7 @@
             </label>
             <label style="font-size:0.85rem;">Version
                 <select name="version" id="seek-version" class="form-input" data-testid="seek-model-version"
-                        onchange="var h=document.getElementById('seek-emt-version'); if (h) h.value=this.value;"
+                        onchange="['seek-emt-version','seek-tpl-version'].forEach(function (id) { var h=document.getElementById(id); if (h) h.value=this.value; }, this);"
                         hx-get="{{ base_url }}/seek/preview" hx-target="#seek-preview" hx-swap="innerHTML"
                         hx-trigger="change" hx-include="#seek-profile,#seek-version">
                     {% for v in profile_versions.get(profile, []) %}
@@ -96,8 +96,9 @@
                     {% if not api_key_configured or not projects %}disabled{% endif %}>Set up Sample Types →</button>
         </form>
 
-        {# Repopulate the version list, and keep the Extended Metadata form's
-           hidden profile/version in step, when the profile choice changes. #}
+        {# Repopulate the version list, and keep the Extended Metadata and ISA
+           Templates forms' hidden profile/version in step, when the profile
+           choice changes. #}
         <script>
             var seekProfileVersions = {{ profile_versions|tojson }};
             function seekOnProfileChange(profile) {
@@ -111,10 +112,14 @@
                 });
                 var latest = versions.length ? versions[versions.length - 1] : '';
                 sel.value = latest;
-                var hp = document.getElementById('seek-emt-profile');
-                var hv = document.getElementById('seek-emt-version');
-                if (hp) hp.value = profile;
-                if (hv) hv.value = latest;
+                ['seek-emt-profile', 'seek-tpl-profile'].forEach(function (id) {
+                    var h = document.getElementById(id);
+                    if (h) h.value = profile;
+                });
+                ['seek-emt-version', 'seek-tpl-version'].forEach(function (id) {
+                    var h = document.getElementById(id);
+                    if (h) h.value = latest;
+                });
             }
         </script>
 
@@ -145,6 +150,27 @@
             <p class="muted" style="font-size:0.8rem; margin-top:0.4rem;">
                 Then, as a SEEK admin: <em>Server administration → Extended Metadata Types → New</em>,
                 pick the <strong>FAIR DS TTL</strong> tab, upload the file, and confirm on the preview.
+            </p>
+        </div>
+
+        <div style="margin-top:0.9rem; padding-top:0.8rem; border-top:1px dashed var(--border, #ddd);">
+            <div style="font-size:0.9rem;"><strong>ISA Templates</strong> — SEEK's ISA-JSON exporter
+                reads each Sample Type's Template, and Templates can only be installed by an
+                <strong>administrator</strong>, so download them as a file and pass it to your admin.
+                Without them, <em>Sync</em> reports an error naming the missing Template.</div>
+            <form action="{{ base_url }}/seek/isa-templates" method="get"
+                  style="display:flex; gap:0.6rem; align-items:flex-end; flex-wrap:wrap; margin-top:0.5rem;">
+                {# Mirrors the profile and version chosen above, so this cannot
+                   disagree with what gets provisioned. #}
+                <input type="hidden" name="profile" id="seek-tpl-profile" value="{{ profile }}">
+                <input type="hidden" name="version" id="seek-tpl-version" value="{{ version }}">
+                <button type="submit" class="btn btn-secondary" data-testid="seek-isa-templates">
+                    Download ISA Templates (.json) →</button>
+                <span class="muted" style="font-size:0.8rem;">for the profile and version selected above</span>
+            </form>
+            <p class="muted" style="font-size:0.8rem; margin-top:0.4rem;">
+                Then, as a SEEK admin: <em>Templates → Populate Templates</em>, upload the file, and
+                wait for the background job to finish. Re-uploading is safe; existing Templates are kept.
             </p>
         </div>
     </div>
