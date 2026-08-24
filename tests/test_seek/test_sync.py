@@ -63,12 +63,16 @@ class _FakeSeek:
     # Extended Metadata Types "installed" on the fake: title -> id, and per
     # id its attributes (title -> nested type id or None). Empty by default.
     emt_ids: dict[str, str] = field(default_factory=dict)
-    emt_attributes: dict[str, dict[str, str | None]] = field(default_factory=dict)
+    emt_attributes: dict[str, dict[str, tuple[str | None, str]]] = field(
+        default_factory=dict
+    )
 
     def extended_metadata_type_ids(self) -> dict[str, str]:
         return dict(self.emt_ids)
 
-    def extended_metadata_attributes(self, type_id: str) -> dict[str, str | None]:
+    def extended_metadata_attributes(
+        self, type_id: str
+    ) -> dict[str, tuple[str | None, str]]:
         return dict(self.emt_attributes.get(type_id, {}))
 
     def template_ids_by_title(self) -> dict[str, str]:

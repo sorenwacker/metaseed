@@ -386,3 +386,29 @@ def test_seek_page_offers_the_isa_templates_download(make_client):
     assert "/seek/isa-templates" in response.text
     assert 'id="seek-tpl-profile"' in response.text  # kept in step with the chooser
     assert 'id="seek-tpl-version"' in response.text
+
+
+def test_the_preview_of_a_template_bound_profile_names_its_templates(
+    make_client, tmp_path, monkeypatch
+):
+    # A profile installed under the user data dir whose entities name installed
+    # ISA Templates: the preview lists the templates with levels and tags, and
+    # swaps the step-1 button label to say provisioning creates only the
+    # Controlled Vocabularies (the Sample Types come from the templates).
+    import yaml
+
+    from tests.test_seek.test_template_bound import _SPEC
+
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
+    spec_dir = tmp_path / "metaseed" / "specs" / "cropxr-mini" / "1.0"
+    spec_dir.mkdir(parents=True)
+    (spec_dir / "profile.yaml").write_text(yaml.safe_dump(_SPEC, sort_keys=False))
+    client, _settings, _state = make_client()
+    response = client.get(
+        "/seek/preview", params={"profile": "cropxr-mini", "version": "1.0"}
+    )
+    assert response.status_code == 200
+    assert "CropXR phenotyping observation unit" in response.text
+    assert "assay - material" in response.text
+    assert 'id="seek-provision-label" hx-swap-oob' in response.text
+    assert "Set up Controlled Vocabularies" in response.text

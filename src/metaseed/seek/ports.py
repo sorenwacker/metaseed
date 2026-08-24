@@ -77,8 +77,10 @@ class IsaWriter(Protocol):
         """Extended Metadata Type title -> id on this instance (top-level types)."""
         ...
 
-    def extended_metadata_attributes(self, type_id: str) -> dict[str, str | None]:
-        """A type's attribute titles -> the nested type id each links to, or None."""
+    def extended_metadata_attributes(
+        self, type_id: str
+    ) -> dict[str, tuple[str | None, str]]:
+        """A type's attribute titles -> (nested type id or None, attribute type title)."""
         ...
 
     def create_isa_study(

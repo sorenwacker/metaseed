@@ -28,6 +28,25 @@
   type the instance lacks is an error. Verified live: a CropXR phenotyping
   Study reads back with its nested `location`, `experimental_design` and
   `growth_facility`.
+- The SEEK page reflects a template-bound profile: the preview lists each
+  entity's installed template, ISA level and per-column tag (from the plan the
+  sync builds the types from), and step 1 becomes **Set up Controlled
+  Vocabularies** — provisioning no longer creates profile-named Sample Types
+  the sync never uses beside the templates.
+- An Extended Metadata attribute that holds a reference to a SEEK record
+  (`Registered Data file`, `Registered Sample`, ...) is reported and not sent:
+  a plain value there made SEEK refuse the whole Study or Assay with an HTML
+  422 naming nothing. The SEEK Assays a profile Assay becomes are named after
+  the template each is built from (`<assay> (CropXR phenotyping data file)`)
+  rather than after metaseed's entity names.
+- An `Input` field may declare which entity it references (`reference:
+  ObservationUnit`); the Sample Type then links to that entity's type instead
+  of the level before it, and assay-level entities are grouped into the linear
+  chains SEEK can hold — every chain beyond the first becomes its own assay
+  stream, because SEEK splices an assay whose input another assay in the
+  stream already takes in front of it. This is how an "assay with data file"
+  (input: the study sample) coexists with a material → data file chain under
+  one profile Assay.
 - **Load Example** works for profiles installed under the user data dir: the
   loader looks in `<user data dir>/examples/<profile>/<version>/` as well as
   the packaged examples, so a user profile can ship example data beside its

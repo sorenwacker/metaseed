@@ -62,11 +62,19 @@
     {# ---- 1: set up the model. One profile choice drives both actions here. ---- #}
     <div style="{{ box }}">
         <h3 style="margin-top:0;">1 · Set up the model in SEEK</h3>
+        {% set template_bound = preview and preview.template_bound %}
         <p class="muted" style="font-size:0.9rem;">
+            {% if template_bound %}
+            Choose a profile. This profile builds its Sample Types from the ISA Templates
+            installed on SEEK, so <strong>Set up Controlled Vocabularies</strong> creates only the
+            Controlled Vocabulary for each field with a fixed list of allowed values. Safe to run
+            again — it reuses whatever already exists.
+            {% else %}
             Choose a profile. <strong>Set up Sample Types</strong> creates it in SEEK as Sample
             Types, with a Controlled Vocabulary for each field that has a fixed list of allowed
             values. Safe to run again — it reuses whatever already exists. To sync a dataset later,
             set up the profile it was built on.
+            {% endif %}
         </p>
 
         <form action="{{ base_url }}/seek/provision" method="post" data-testid="seek-provision-form"
@@ -93,7 +101,7 @@
             </label>
             {% include "seek/_project_select.html" %}
             <button type="submit" class="btn btn-primary" data-testid="seek-provision-submit"
-                    {% if not api_key_configured or not projects %}disabled{% endif %}>Set up Sample Types →</button>
+                    {% if not api_key_configured or not projects %}disabled{% endif %}><span id="seek-provision-label">{{ "Set up Controlled Vocabularies" if template_bound else "Set up Sample Types" }}</span> →</button>
         </form>
 
         {# Repopulate the version list, and keep the Extended Metadata and ISA

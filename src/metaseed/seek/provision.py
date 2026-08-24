@@ -25,6 +25,7 @@ from typing import TYPE_CHECKING
 
 from metaseed.seek import payloads
 from metaseed.seek.attribute_types import attribute_type_title, is_cv_field
+from metaseed.seek.isa_types import is_template_bound
 from metaseed.seek.naming import property_uri
 from metaseed.seek.ports import Provisioner
 from metaseed.seek.roles import sample_role_entities
@@ -174,6 +175,23 @@ def build_provisioning_plan(
 
     for entity_name in sorted(sample_role_entities(profile)):
         entity = profile.entities[entity_name]
+
+        if is_template_bound(entity):
+            # Its Sample Types are built from the installed template at sync
+            # time; only its Controlled Vocabularies need provisioning.
+            for field in entity.fields:
+                if field.is_nested() or not is_cv_field(field):
+                    continue
+                bound_cv_title = _cv_title(profile, entity_name, field)
+                if bound_cv_title not in cvs:
+                    cvs[bound_cv_title] = CvPlan(
+                        title=bound_cv_title,
+                        terms=_cv_terms(field, term_source),
+                        source_ontology=(
+                            field.ontologies[0] if field.ontologies else None
+                        ),
+                    )
+            continue
 
         attributes: list[SampleAttributePlan] = [
             SampleAttributePlan(

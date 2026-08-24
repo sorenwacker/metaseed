@@ -34,6 +34,9 @@ def _spec_with_metadata() -> dict[str, Any]:
         "extended_metadata": "CropXR phenotyping study",
         "extended_metadata_groups": {"site": "location"},
     }
+    spec["entities"]["Assay"]["fields"].insert(
+        3, {"name": "instrument_metadata", "type": "uri"}
+    )
     spec["entities"]["Assay"]["seek"] = {
         "role": "Assay",
         "extended_metadata": "CropXR phenotyping assay",
@@ -45,9 +48,19 @@ def _seek() -> _FakeSeek:
     seek = _FakeSeek()
     seek.emt_ids = {"CropXR phenotyping study": "19", "CropXR phenotyping assay": "22"}
     seek.emt_attributes = {
-        "19": {"study_id": None, "study_start_date": None, "location": "18"},
-        "18": {"latitude": None, "country": None},
-        "22": {"trait": None},
+        "19": {
+            "study_id": (None, "String"),
+            "study_start_date": (None, "String"),
+            "location": ("18", "Linked Extended Metadata"),
+        },
+        "18": {
+            "latitude": (None, "String"),
+            "country": (None, "Controlled Vocabulary"),
+        },
+        "22": {
+            "trait": (None, "String"),
+            "instrument_metadata": (None, "Registered Data file"),
+        },
     }
     return seek
 
@@ -72,7 +85,12 @@ def _dataset() -> MetaseedClient:
     )
     c.create_entity(
         "Assay",
-        {"identifier": "A1", "title": "assay one", "trait": "height"},
+        {
+            "identifier": "A1",
+            "title": "assay one",
+            "trait": "height",
+            "instrument_metadata": "https://example.org/camera.json",
+        },
         parent_id=study.id,
         skip_validation=True,
     )
@@ -148,6 +166,17 @@ def test_assay_values_land_in_the_assay_type() -> None:
     sync_dataset_to_seek(seek, _dataset(), project_id="1")
     (assay,) = _of_kind(seek, "assay")
     assert assay["extended_metadata"] == ("22", {"trait": "height"})
+
+
+def test_a_reference_typed_attribute_is_reported_not_sent() -> None:
+    # "Registered Data file" holds a SEEK record reference; a URL value would
+    # make SEEK refuse the whole Assay with an HTML 422 naming nothing.
+    seek = _seek()
+    result = sync_dataset_to_seek(seek, _dataset(), project_id="1")
+    assert not result.errors
+    assert any(
+        "instrument_metadata" in msg and "reference" in msg for _, msg in result.skipped
+    ), result.skipped
 
 
 def test_a_missing_type_is_an_error_not_a_silent_drop() -> None:

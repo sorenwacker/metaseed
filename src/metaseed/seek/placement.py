@@ -233,6 +233,33 @@ def _register_type(
         ctx.linked_type_of[type_id] = linked_to
 
 
+def _metadata_target(
+    attributes_of: Callable[[str], dict[str, tuple[str | None, str]]],
+    type_id: str,
+    groups: Mapping[str, str],
+    name: str,
+) -> tuple[str | None, str, tuple[str | None, str]] | None:
+    """Where a field lands in an Extended Metadata Type, or None if nowhere.
+
+    Returns ``(nested attribute or None, attribute name, attribute info)``: a
+    prefixed field (``site_latitude`` with ``{"site": "location"}``) lands in
+    the nested type the prefix names, anything else on the type itself.
+    """
+    attributes = attributes_of(type_id)
+    prefix = next((p for p in groups if name.startswith(p + "_")), None)
+    if prefix is not None:
+        nested_attribute = groups[prefix]
+        nested_type = attributes.get(nested_attribute, (None, ""))[0]
+        inner = name[len(prefix) + 1 :]
+        nested = attributes_of(nested_type) if nested_type is not None else {}
+        if inner in nested:
+            return nested_attribute, inner, nested[inner]
+        return None
+    if name in attributes:
+        return None, name, attributes[name]
+    return None
+
+
 def extended_metadata_for(
     ctx: SyncContext, node: Any, values: Mapping[str, Any]
 ) -> tuple[str, dict[str, Any]] | None:
@@ -262,16 +289,21 @@ def extended_metadata_for(
         )
         return None
 
-    def attributes_of(some_type: str) -> dict[str, str | None]:
+    def attributes_of(some_type: str) -> dict[str, tuple[str | None, str]]:
         cache = ctx.extended_metadata_attribute_cache
         if some_type not in cache:
             cache[some_type] = ctx.client.extended_metadata_attributes(some_type)
         return cache[some_type]
 
-    attributes = attributes_of(type_id)
+    def takes_a_value(attribute: tuple[str | None, str]) -> bool:
+        # A "Registered ..." attribute holds a reference to a SEEK record
+        # (a data file, a sample, a strain), which no plain value can fill.
+        return not attribute[1].startswith("Registered")
+
     groups = config.extended_metadata_groups or {}
     data: dict[str, Any] = {}
     unknown: list[str] = []
+    references: list[str] = []
     for name, value in values.items():
         if name.startswith("_") or value in (None, "", [], {}):
             continue
@@ -280,23 +312,28 @@ def extended_metadata_for(
         # its description), not metadata attributes beside it.
         if field is None or field.is_nested() or name in CORE_FIELDS:
             continue
-        prefix = next((p for p in groups if name.startswith(p + "_")), None)
-        if prefix is not None:
-            nested_attribute = groups[prefix]
-            nested_type = attributes.get(nested_attribute)
-            inner = name[len(prefix) + 1 :]
-            if nested_type is not None and inner in attributes_of(nested_type):
-                data.setdefault(nested_attribute, {})[inner] = value
-                continue
-        elif name in attributes:
-            data[name] = value
-            continue
-        unknown.append(name)
+        target = _metadata_target(attributes_of, type_id, groups, name)
+        if target is None:
+            unknown.append(name)
+        elif not takes_a_value(target[2]):
+            references.append(name)
+        elif target[0] is None:
+            data[target[1]] = value
+        else:
+            data.setdefault(target[0], {})[target[1]] = value
     if unknown:
         ctx.result.skipped.append(
             (
                 node.id,
                 f"{type_title!r} has no attribute for: " + ", ".join(sorted(unknown)),
+            )
+        )
+    if references:
+        ctx.result.skipped.append(
+            (
+                node.id,
+                f"{type_title!r} holds a reference to a SEEK record, not a value, "
+                "for: " + ", ".join(sorted(references)) + " — not sent",
             )
         )
     return type_id, data
@@ -396,6 +433,48 @@ def place_study(
     return study_id
 
 
+def _input_reference(entity: EntityDefSpec) -> str | None:
+    """The entity an ``Input`` field declares it references, if any."""
+    for field in entity.fields:
+        if field.isa_tag == "input" and field.reference:
+            return field.reference.split(".")[0]
+    return None
+
+
+def _assay_chains(ctx: SyncContext, entity_names: list[str]) -> list[list[str]]:
+    """Group assay-level entities into the linear chains SEEK can hold.
+
+    An entity whose Input references another assay-level entity continues that
+    entity's chain; one referencing a study-level entity (or nothing, at the
+    material level) starts a new one; an unreferenced data-file entity joins
+    the chain still ending in a material, else the last chain.
+    """
+    chains: list[list[str]] = []
+    chain_of: dict[str, int] = {}
+    for name in entity_names:
+        reference = _input_reference(ctx.profile.entities[name])
+        if reference in chain_of:
+            index = chain_of[reference]
+        elif (
+            reference is None
+            and chains
+            and (entity_level(ctx.profile.entities[name]) == "assay")
+        ):
+            # Continue a chain still ending in a material, else the last one.
+            open_chains = [
+                i
+                for i, c in enumerate(chains)
+                if entity_level(ctx.profile.entities[c[-1]]) == "material"
+            ]
+            index = open_chains[0] if open_chains else len(chains) - 1
+        else:
+            chains.append([])
+            index = len(chains) - 1
+        chains[index].append(name)
+        chain_of[name] = index
+    return chains
+
+
 def assay_level_entities_under(ctx: SyncContext, node: Any) -> list[str]:
     """Template-bound assay-level entities with nodes under this Assay, chain order.
 
@@ -403,7 +482,7 @@ def assay_level_entities_under(ctx: SyncContext, node: Any) -> list[str]:
     Type, so a profile Assay holding both a material and a data-file entity is
     two chained SEEK Assays. Empty for an untagged profile.
     """
-    present = {child.entity_type for child in node.children}
+    present = sorted({child.entity_type for child in node.children})
     ordered: list[str] = []
     for level in ("material", "assay"):
         for name in present:
@@ -422,14 +501,15 @@ def _create_assay(
     level: str,
     input_type_id: str | None,
     extended_metadata: tuple[str, dict[str, Any]] | None = None,
+    stream_id: str | None = None,
 ) -> tuple[str, str | None]:
-    """Create one SEEK Assay in the Study's stream with its Sample Type."""
+    """Create one SEEK Assay in a stream (the Study's by default) with its type."""
     sample_type_title = f"{title} - Sample Type"
     assay_id = ctx.client.create_isa_assay(
         title=title,
         study_id=study_id,
         assay_class_id=ASSAY_CLASS_IDS["EXP"],
-        assay_stream_id=ctx.study_stream.get(study_id),
+        assay_stream_id=stream_id or ctx.study_stream.get(study_id),
         input_sample_type_id=input_type_id,
         sample_type_title=sample_type_title,
         sharing=ctx.sharing,
@@ -486,23 +566,59 @@ def place_assay(
             metadata,
         )
     else:
-        input_type_id = collection_id
+        # SEEK Sample Type id per entity placed so far, so an entity whose
+        # Input references another can link to that one's type.
+        type_by_entity: dict[str, str] = {}
+        if source_id := ctx.study_source_type.get(study_id):
+            type_by_entity[chain_entity_name(ctx, 0)] = source_id
+        if collection_id is not None:
+            type_by_entity[chain_entity_name(ctx, 1)] = collection_id
         first_id: str | None = None
-        for name in entity_names:
-            entity = ctx.profile.entities[name]
-            level = entity_level(entity) or "assay"
-            assay_title = title if len(entity_names) == 1 else f"{title} - {name}"
-            created_id, owned = _create_assay(
-                ctx, assay_title, study_id, entity, name, level, input_type_id, metadata
-            )
-            if first_id is None:
-                first_id = created_id
-            if owned is not None:
-                ctx.assay_entity_types.setdefault(first_id, {})[name] = (
-                    created_id,
-                    owned,
+        for k, chain in enumerate(_assay_chains(ctx, entity_names)):
+            # SEEK splices an assay whose input type another assay in the
+            # stream already takes in FRONT of that assay: a stream is a line,
+            # never a branch. Every chain beyond the first is its own stream.
+            stream_id = ctx.study_stream.get(study_id)
+            if k > 0:
+                stream_id = ctx.client.create_isa_assay(
+                    title=f"{title} - {chain[0]} stream",
+                    study_id=study_id,
+                    assay_class_id=ASSAY_CLASS_IDS["STREAM"],
                 )
-                input_type_id = owned
+                ctx.result.assay_streams[f"{study_id}/{title}/{chain[0]}"] = stream_id
+            last_type_at: dict[str, str | None] = {"sample_collection": collection_id}
+            for name in chain:
+                entity = ctx.profile.entities[name]
+                level = entity_level(entity) or "assay"
+                before = "material" if level == "assay" else "sample_collection"
+                fallback = last_type_at.get(before) or collection_id
+                input_type_id = type_by_entity.get(
+                    _input_reference(entity) or "", fallback
+                )
+                template = entity.seek.template if entity.seek else None
+                assay_title = (
+                    title if len(entity_names) == 1 else f"{title} ({template or name})"
+                )
+                created_id, owned = _create_assay(
+                    ctx,
+                    assay_title,
+                    study_id,
+                    entity,
+                    name,
+                    level,
+                    input_type_id,
+                    metadata,
+                    stream_id=stream_id,
+                )
+                if first_id is None:
+                    first_id = created_id
+                if owned is not None:
+                    ctx.assay_entity_types.setdefault(first_id, {})[name] = (
+                        created_id,
+                        owned,
+                    )
+                    type_by_entity[name] = owned
+                    last_type_at[level] = owned
         assert first_id is not None
         assay_id = first_id
     # An AssayMaterial names its Assay by identifier, not by nesting under it.

@@ -138,8 +138,8 @@ class SyncContext:
     # entity declares one, and each consulted type's attributes (title -> the
     # nested type id it links to, or None), fetched on first use.
     extended_metadata_type_ids: dict[str, str] = dc_field(default_factory=dict)
-    extended_metadata_attribute_cache: dict[str, dict[str, str | None]] = dc_field(
-        default_factory=dict
+    extended_metadata_attribute_cache: dict[str, dict[str, tuple[str | None, str]]] = (
+        dc_field(default_factory=dict)
     )
     # SEEK sample id -> node ids of the samples placed with it as their input.
     # The reachability report follows these as well as the tree, because a

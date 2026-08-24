@@ -211,7 +211,12 @@ def register_seek_routes(  # noqa: C901
         return templates.TemplateResponse(
             request,
             "seek/_preview.html",
-            {"preview": preview, "profile": profile, "version": version},
+            {
+                "preview": preview,
+                "profile": profile,
+                "version": version,
+                "swap_label": True,
+            },
         )
 
     @app.post("/seek/provision", response_class=HTMLResponse)

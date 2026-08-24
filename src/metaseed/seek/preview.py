@@ -7,6 +7,9 @@ Assay records will carry — without writing anything to SEEK.
 
 Sample Types are read from the same :func:`~metaseed.seek.provision.build_provisioning_plan`
 that provisioning executes, so the preview cannot drift from what is created.
+A template-bound profile (its entities name installed ISA Templates) has no
+provisioned Sample Types; its preview lists each entity's template, level and
+tagged columns from the same plan the sync builds the types from.
 Extended Metadata is derived from the non-core fields of the ISA-native
 entities, matching what the model TTL carries for the admin flow.
 """
@@ -15,8 +18,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from metaseed.seek.isa_types import sample_type_attribute_plans
 from metaseed.seek.provision import build_provisioning_plan
 from metaseed.seek.roles import entity_jerm_class
+from metaseed.seek.templates import (
+    LEVEL_ORDER,
+    entities_by_level,
+    seek_level_for,
+    template_title,
+)
 from metaseed.seek.values import CORE_FIELDS as _CORE_FIELDS
 from metaseed.specs.schema import FieldSpec, ProfileSpec
 
@@ -35,15 +45,22 @@ class PreviewAttribute:
     type: str
     required: bool
     controlled_vocabulary: bool = False
+    isa_tag: str | None = None
 
 
 @dataclass(frozen=True)
 class PreviewSampleType:
-    """A Sample Type provisioning will create, and its columns."""
+    """A Sample Type and its columns.
+
+    Provisioned from the profile, or -- for a template-bound entity -- built at
+    sync time from the installed ``template`` at ISA ``level``.
+    """
 
     entity_type: str
     title: str
     attributes: tuple[PreviewAttribute, ...]
+    template: str | None = None
+    level: str | None = None
 
 
 @dataclass(frozen=True)
@@ -62,6 +79,9 @@ class ModelPreview:
 
     sample_types: tuple[PreviewSampleType, ...]
     extended_metadata: tuple[PreviewExtendedMetadata, ...]
+    # Whether the Sample Types come from installed templates rather than from
+    # provisioning; the page words its actions accordingly.
+    template_bound: bool = False
 
 
 def _field_is_cv(field: FieldSpec) -> bool:
@@ -100,6 +120,39 @@ def _extended_metadata(profile: ProfileSpec) -> list[PreviewExtendedMetadata]:
     return records
 
 
+def _template_bound_types(
+    profile: ProfileSpec, by_level: dict[str, list[str]]
+) -> list[PreviewSampleType]:
+    """One entry per template-bound entity, in chain order."""
+    types: list[PreviewSampleType] = []
+    for level in LEVEL_ORDER:
+        for name in by_level.get(level, []):
+            entity = profile.entities[name]
+            plans = sample_type_attribute_plans(
+                entity, level=level, linked=level != "source"
+            )
+            seek_level = seek_level_for(level, plans)
+            types.append(
+                PreviewSampleType(
+                    entity_type=name,
+                    title=template_title(profile, seek_level, entity),
+                    template=template_title(profile, seek_level, entity),
+                    level=seek_level,
+                    attributes=tuple(
+                        PreviewAttribute(
+                            name=a.title,
+                            type=a.attribute_type_title,
+                            required=a.required,
+                            controlled_vocabulary=bool(a.enum),
+                            isa_tag=a.isa_tag,
+                        )
+                        for a in plans
+                    ),
+                )
+            )
+    return types
+
+
 def build_model_preview(profile: ProfileSpec) -> ModelPreview:
     """Project a profile into the SEEK model a user can browse before uploading.
 
@@ -110,6 +163,13 @@ def build_model_preview(profile: ProfileSpec) -> ModelPreview:
         The Sample Types (with columns) and Extended Metadata records SEEK will
         hold once the profile is provisioned.
     """
+    by_level = entities_by_level(profile)
+    if by_level:
+        return ModelPreview(
+            sample_types=tuple(_template_bound_types(profile, by_level)),
+            extended_metadata=tuple(_extended_metadata(profile)),
+            template_bound=True,
+        )
     plan = build_provisioning_plan(profile)
     sample_types = tuple(
         PreviewSampleType(

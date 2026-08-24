@@ -229,6 +229,12 @@ class TestTheSyncHonoursTheTemplate:
         seek = _FakeSeek()
         result = sync_dataset_to_seek(seek, _dataset(), project_id="1")
         assays = _of_kind(seek, "assay")
+        # Named after the template each is built from -- the model's own
+        # words, not metaseed's entity names.
+        assert [a["title"] for a in assays] == [
+            "assay one (CropXR phenotyping assay)",
+            "assay one (CropXR phenotyping data file)",
+        ]
         assert [a["template_id"] for a in assays] == [
             "template-for-CropXR phenotyping assay",
             "template-for-CropXR phenotyping data file",
@@ -300,3 +306,127 @@ def test_the_seek_ready_profile_is_the_untagged_case_of_the_same_rules() -> None
     assert entity_level(p.entities["Source"]) is None
     assert sample_chain_entities(p) == ["Source", "Sample", "AssayMaterial"]
     assert title_attribute_of(p.entities["Source"]) == "Title"  # synthesized
+
+
+class TestAnInputReferenceChoosesThePredecessor:
+    def test_an_assay_level_entity_links_to_the_entity_its_input_references(
+        self,
+    ) -> None:
+        # A combined "assay with data file" takes its input from the study
+        # sample, not from the material the level order would chain it to.
+        import copy
+
+        spec = copy.deepcopy(_SPEC)
+        spec["entities"]["Combined"] = {
+            "fields": [
+                _field("Input", isa_tag="input", reference="Unit"),
+                _field("file_name", isa_tag="data_file", required=True),
+                _field("protocol", isa_tag="protocol"),
+            ],
+            "seek": {
+                "role": "Sample",
+                "template": "CropXR phenotyping assay with data file",
+            },
+        }
+        spec["entities"]["Assay"]["fields"].append(
+            {"name": "combined", "type": "list", "items": "Combined"}
+        )
+        c = MetaseedClient.from_spec(spec)
+        inv = c.create_entity(
+            "Investigation", {"identifier": "I1"}, skip_validation=True
+        )
+        study = c.create_entity(
+            "Study", {"study_id": "S1"}, parent_id=inv.id, skip_validation=True
+        )
+        c.create_entity(
+            "Source", {"Source Name": "SRC-1"}, parent_id=study.id, skip_validation=True
+        )
+        c.create_entity(
+            "Unit",
+            {"Input": ["SRC-1"], "subject_id": "OU-1"},
+            parent_id=study.id,
+            skip_validation=True,
+        )
+        assay = c.create_entity(
+            "Assay",
+            {"identifier": "A1", "title": "assay one"},
+            parent_id=study.id,
+            skip_validation=True,
+        )
+        c.create_entity(
+            "Material",
+            {"Input": ["OU-1"], "experiment_id": "EXP-1"},
+            parent_id=assay.id,
+            skip_validation=True,
+        )
+        c.create_entity(
+            "File",
+            {"Input": ["EXP-1"], "file_name": "a.csv"},
+            parent_id=assay.id,
+            skip_validation=True,
+        )
+        c.create_entity(
+            "Combined",
+            {"Input": ["OU-1"], "file_name": "b.zip"},
+            parent_id=assay.id,
+            skip_validation=True,
+        )
+        seek = _FakeSeek()
+        result = sync_dataset_to_seek(seek, c, project_id="1")
+        assert not result.unlinked, result.unlinked
+        assays = {a["title"]: a for a in _of_kind(seek, "assay")}
+        collection_type = list(
+            seek.study_types[next(iter(result.studies.values()))].values()
+        )[1]
+        assert (
+            assays["assay one (CropXR phenotyping assay with data file)"][
+                "input_sample_type_id"
+            ]
+            == collection_type
+        )
+        combined = next(
+            s for s in _of_kind(seek, "sample") if s["data"].get("file_name") == "b.zip"
+        )
+        assert "Input (subject_id)" in combined["data"]
+
+
+class TestTheSeekPageReflectsTheTemplates:
+    def test_provisioning_creates_no_sample_types_for_template_bound_entities(
+        self,
+    ) -> None:
+        # The Sample Types come from the installed templates at sync time;
+        # profile-named copies would sit unused beside them. The Controlled
+        # Vocabularies are still needed, so those are planned.
+        import copy
+
+        from metaseed.seek.provision import build_provisioning_plan
+
+        spec = copy.deepcopy(_SPEC)
+        spec["entities"]["Source"]["fields"][1]["constraints"] = {"enum": ["NL", "DE"]}
+        profile = MetaseedClient.from_spec(spec).facade.profile_spec
+        plan = build_provisioning_plan(profile)
+        assert not plan.sample_types
+        assert [cv.title for cv in plan.cvs] == ["cropxr-mini Source.country"]
+
+    def test_the_preview_shows_the_installed_templates_with_levels_and_tags(
+        self,
+    ) -> None:
+        from metaseed.seek.preview import build_model_preview
+
+        preview = build_model_preview(_profile())
+        assert preview.template_bound
+        by_entity = {st.entity_type: st for st in preview.sample_types}
+        assert [st.entity_type for st in preview.sample_types] == [
+            "Source",
+            "Unit",
+            "Material",
+            "File",
+        ], "chain order, not alphabetical"
+        assert by_entity["Unit"].template == "CropXR phenotyping observation unit"
+        assert by_entity["Unit"].level == "study sample"
+        assert by_entity["Material"].level == "assay - material"
+        cols = {a.name: a for a in by_entity["Unit"].attributes}
+        assert "Title" not in cols, "nothing synthesized: the template's columns only"
+        assert cols["Input"].isa_tag == "input"
+        assert cols["subject_id"].isa_tag == "sample"
+        assert cols["title"].isa_tag == "sample_characteristic"

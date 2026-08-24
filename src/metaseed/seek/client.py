@@ -247,15 +247,25 @@ class SeekClient:
             for row in self.get("/extended_metadata_types").get("data", [])
         }
 
-    def extended_metadata_attributes(self, type_id: str) -> dict[str, str | None]:
-        """A type's attribute titles -> the nested type id each links to, or None."""
+    def extended_metadata_attributes(
+        self, type_id: str
+    ) -> dict[str, tuple[str | None, str]]:
+        """A type's attribute titles -> (nested type id or None, attribute type title).
+
+        The type title tells a value-carrying attribute from one that references
+        a SEEK record (``Registered Data file``, ``Registered Sample`` ...),
+        which no plain value can fill.
+        """
         detail = self.get(f"/extended_metadata_types/{type_id}").get("data", {})
         attributes = detail.get("attributes", {}).get("extended_metadata_attributes")
         return {
             a["title"]: (
-                str(a["linked_extended_metadata_type_id"])
-                if a.get("linked_extended_metadata_type_id")
-                else None
+                (
+                    str(a["linked_extended_metadata_type_id"])
+                    if a.get("linked_extended_metadata_type_id")
+                    else None
+                ),
+                str((a.get("sample_attribute_type") or {}).get("title") or ""),
             )
             for a in attributes or []
         }

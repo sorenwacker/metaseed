@@ -48,7 +48,7 @@ file-export fallback.
 
 ### 1 · Configure the model in SEEK
 
-Choose the profile and click **Provision model →**. This creates its Controlled
+Choose the profile and click **Set up Sample Types →**. This creates its Controlled
 Vocabularies and Sample Types in the selected **Project** — a project *on your
 SEEK server*, which every SEEK resource must belong to. The project saved on the
 Plugins page is preselected. If the project list is empty, the page shows the
@@ -105,6 +105,12 @@ type title>"}`, with `extended_metadata_groups: {site: location}` for a nested
 fragment the profile flattened into `site_*` fields. The `cropxr-phenotyping`
 1.4 and `cropxr-sequencing` 1.3 profiles are written this way; the mechanics
 are in [ISA-JSON compliance](../architecture/seek-isa-compliance.md).
+
+For such a profile the page reads differently: the preview lists each entity
+with the installed template it is built from, its ISA level and the tag on
+every column, and step 1's button is **Set up Controlled Vocabularies →** —
+the Sample Types themselves are created from the templates when you sync, so
+provisioning makes no profile-named copies of them.
 
 ### 2 · Sync the dataset to SEEK
 
