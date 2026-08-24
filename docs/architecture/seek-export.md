@@ -238,13 +238,19 @@ Instances without ISA-JSON compliance answer the `observation_units` sub-route
 with a 4xx; the import degrades gracefully to the Investigation/Study skeleton
 (no samples) rather than aborting.
 
-**Import scope (current).** The importer captures every Sample field with its
-type, but the Investigation/Study/ObservationUnit levels keep only their
-`identifier`/`title`/`description` — other core attributes on those levels are not
-yet read. Samples are read by both routes they can reach SEEK by: ObservationUnit
-(the FAIR-Data-Station import) and Assay (the JSON:API sync), so a dataset pushed
-by the sync comes back with its Assays. Reconstructing custom Extended-Metadata
-attribute types on the non-Sample levels is a follow-up.
+**Import scope (current).** The importer captures every sample-level field with
+its type, but the Investigation/Study/ObservationUnit/Assay levels keep only
+their `identifier`/`title`/`description` — other core attributes on those levels
+are not yet read. Samples are read by both routes they can reach SEEK by:
+ObservationUnit (the FAIR-Data-Station import) and Assay (the JSON:API sync), so
+a dataset pushed by the sync comes back with its Assays. Assay *streams* are
+skipped — they are the sync's plumbing, not Assays. An assay sample naming an
+input is recognised as an assay material and its input links are followed back
+through the ISA material chain, so the chain returns nested
+`Source -> Sample -> AssayMaterial` under the Study (see
+[ISA-JSON compliance](seek-isa-compliance.md)); the input attribute itself is
+expressed as that nesting, not kept as a field value. Reconstructing custom
+Extended-Metadata attribute types on the non-Sample levels is a follow-up.
 
 ## Status of the JSON:API sync path
 

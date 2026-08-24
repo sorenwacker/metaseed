@@ -200,6 +200,33 @@ def sync_dataset_to_seek(
     for root in metaseed_client.get_tree():
         walk(root, None, None, None)
 
+    # A pushed Sample is reachable from the Investigation only through an Assay
+    # link somewhere in its material chain — SEEK derives Study and
+    # Investigation from that link and ignores everything else. A chain that
+    # never reaches one is stored but invisible to the ISA tree, and a re-import
+    # drops it; that is a limitation to report, not to hide.
+    def _reaches_assay(node: Any) -> bool:
+        if node.id in ctx.assay_linked_nodes:
+            return True
+        return any(_reaches_assay(child) for child in node.children)
+
+    def _report_unreachable(node: Any) -> None:
+        if node.id in result.samples and not _reaches_assay(node):
+            result.unlinked.append(
+                (
+                    node.id,
+                    f"{node.entity_type} was created, but its material chain "
+                    "reaches no Assay, so nothing walking the ISA tree from the "
+                    "Investigation finds it — nest it under an Assay, or end "
+                    "the chain in a material that names one",
+                )
+            )
+        for child in node.children:
+            _report_unreachable(child)
+
+    for root in metaseed_client.get_tree():
+        _report_unreachable(root)
+
     # One remote DataFile per study, pointing at the study's external storage.
     study_id_to_node = {sid: nid for nid, sid in result.studies.items()}
     for study_id, files in files_by_study.items():

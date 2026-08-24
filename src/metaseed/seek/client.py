@@ -136,14 +136,11 @@ class SeekClient:
         self._http_client = http_client
 
     def _headers(self) -> dict[str, str]:
-        headers = {
+        return {
             "Accept": JSONAPI_MEDIA_TYPE,
             "Content-Type": JSONAPI_MEDIA_TYPE,
             "User-Agent": USER_AGENT,
         }
-        if self._token:
-            headers["Authorization"] = f"Bearer {self._token}"
-        return headers
 
     def _send(
         self, method: str, path: str, *, headers: Mapping[str, str], **kwargs: Any
@@ -153,8 +150,13 @@ class SeekClient:
         The two encodings this client speaks -- JSON:API and the form bodies the
         ISA endpoints require -- differ only in headers and body, so the auth and
         client-lifetime handling lives here rather than being duplicated per
-        encoding.
+        encoding. The API token is attached here for the same reason: a caller
+        that reached SEEK through this method without it was served the
+        anonymous view — which silently drops what the public cannot see —
+        rather than an auth error.
         """
+        if self._token and "Authorization" not in headers:
+            headers = {**headers, "Authorization": f"Bearer {self._token}"}
         url = f"{self._base_url}{path}"
         if self._http_client is not None:
             return self._http_client.request(
@@ -198,8 +200,6 @@ class SeekClient:
             "Content-Type": "application/x-www-form-urlencoded",
             "User-Agent": USER_AGENT,
         }
-        if self._token:
-            headers["Authorization"] = f"Bearer {self._token}"
         body = "&".join(str(httpx.QueryParams({key: value})) for key, value in pairs)
         response = self._send(
             "POST", path, headers=headers, content=body, follow_redirects=False

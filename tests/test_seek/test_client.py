@@ -360,3 +360,25 @@ def test_seek_client_satisfies_the_isa_writer_port():
 
     writer: IsaWriter = SeekClient("http://seek.test", token="t")  # noqa: S106
     assert writer is not None
+
+
+def test_every_send_path_carries_the_api_token():
+    # ``_send`` is the one place requests leave the client; a caller reaching an
+    # endpoint through it directly (the ISA-JSON export check does) must still
+    # be authenticated, or SEEK silently serves the anonymous view — which
+    # drops every assay whose samples the public cannot see, with no error.
+    seen: list[str | None] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request.headers.get("Authorization"))
+        return httpx.Response(200, json={"data": []})
+
+    client = SeekClient(
+        "http://seek.test",
+        token="sekrit",  # noqa: S106 — a fake for the mock transport, not a secret
+        http_client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+    client._send(
+        "GET", "/investigations/1/export_isa", headers={"Accept": "application/json"}
+    )
+    assert seen == ["Bearer sekrit"]

@@ -28,12 +28,18 @@ class SyncResult:
     data_files: dict[str, str] = dc_field(default_factory=dict)
     skipped: list[tuple[str, str]] = dc_field(default_factory=list)
     errors: list[tuple[str, str]] = dc_field(default_factory=list)
-    # Not created: a Sample with no Assay ancestor has no Sample Type to go in,
-    # since under ISA-JSON compliance an Assay owns the type its Samples use.
+    # Samples the ISA tree cannot reach. An assay material naming no existing
+    # Assay has no Sample Type to go in and is not created; a Sample stored in a
+    # Study-owned type whose chain never reaches an Assay link IS created, but
+    # nothing walking down from the Investigation finds it.
     unlinked: list[tuple[str, str]] = dc_field(default_factory=list)
     # Study id -> the assay stream created for it. Every Assay hangs off one:
     # an assay outside a stream does not render in SEEK's ISA study view.
     assay_streams: dict[str, str] = dc_field(default_factory=dict)
+    # The Study-owned Sample Type ids this push created (Source and Sample
+    # Collection, per new Study). SEEK does not delete them with their Study —
+    # they stay behind as orphans — so a caller cleaning up needs their ids.
+    sample_types: list[str] = dc_field(default_factory=list)
     # Node id -> the SEEK id a previous push had already created. Pushing twice
     # used to make a second copy of everything; these were found and reused
     # instead, and are counted apart from what this push created.
@@ -113,3 +119,7 @@ class SyncContext:
     # Study; see ``_placeholder_sample_type_id``.
     placeholder_type_id: str
     result: SyncResult
+    # Node ids of Samples pushed with an Assay association. The post-walk
+    # reachability check treats a material chain as reachable once any node in
+    # it carries one, because SEEK derives Study and Investigation from it.
+    assay_linked_nodes: set[str] = dc_field(default_factory=set)

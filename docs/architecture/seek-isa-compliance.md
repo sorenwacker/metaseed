@@ -148,10 +148,22 @@ This is the deepest of the upstream gates found, and unlike the others it has no
 
 ## Current status
 
-The sync builds compliant content: Investigations carry `is_isa_json_compliant`, each Study owns a Source and a Sample Collection Sample Type, each Study gets one assay stream, every Assay hangs off it owning its own Sample Type chained to the Study's Sample Collection type, and Samples are created into their Assay's type. Sample Types are therefore created per dataset node rather than per profile entity; provisioning still builds its own for the FAIR-Data-Station file route, which matches samples by attribute PID.
+The sync builds compliant, **exportable** content: Investigations carry `is_isa_json_compliant`, each Study owns a Source and a Sample Collection Sample Type, each Study gets one assay stream, every Assay hangs off it owning its own Sample Type chained to the Study's Sample Collection type, and Samples are created into their Assay's type. Sample Types are therefore created per dataset node rather than per profile entity; provisioning still builds its own for the FAIR-Data-Station file route, which matches samples by attribute PID. With the profile's ISA Templates installed (see below), `GET /investigations/{id}/export_isa` returns the pushed structure as ISA-JSON with its assays, sources and samples — `tests/test_seek/test_live.py::test_a_pushed_dataset_is_exportable_as_isa_json` verifies exactly that against a live instance.
 
-Not yet exportable with Samples present, for the reason above. `tests/test_seek/test_live.py::test_a_pushed_dataset_is_exportable_as_isa_json` is a strict `xfail` recording exactly that gap, so it will fail — and demand attention — the moment it starts passing.
+**The export request must be authenticated.** SEEK serves an unauthenticated `export_isa` the anonymous view: `200 OK`, but `ISAExporter` silently drops every assay stream whose samples the anonymous user cannot see, so a private or download-shared push exports with `assays: []` and no error. This masqueraded as an exporter defect for a while; the actual defect was `SeekClient._send` attaching the API token only on some code paths. The token now rides on every request the client sends.
 
-A Sample with no Assay ancestor is reported in `SyncResult.unlinked` rather than pushed: under compliance a Sample's type is the one its Assay owns, so with no Assay there is no type to create it in.
+Sample placement follows the material chain by depth (Source at 0, Sample Collection at 1, assay material at 2+), with two rules on top:
+
+- A Sample **nested under an Assay** goes in that Assay's own Sample Type, linked to it — the shape profiles without material levels (e.g. `isa` 1.0) use, and the one SEEK itself models. A declared assay reference still wins over tree position.
+- A Sample whose chain **never reaches an Assay link** is created in its Study-owned type but reported in `SyncResult.unlinked`: SEEK derives a Sample's Study and Investigation from its Assay association only, so nothing walking the ISA tree from the Investigation reaches such a record and a re-import drops it.
+
+Two SEEK behaviours the sync works around, verified live:
+
+- List routes can serve a **stale read** right after a create (authorization tables are maintained by background jobs): the just-created Sample Types of a new Study can be momentarily absent from `GET /studies/{id}/sample_types`. The type lookups retry briefly until the expected titles appear.
+- Deleting a Study does **not** delete its Sample Types — they stay behind as orphans. `SyncResult.sample_types` records the created ones so a caller cleaning up after itself (the live tests do) can remove them.
 
 Creating a Study needs a placeholder `linked_sample_type_id` (see the `ISAStudy` defect above). The sync creates one Sample Type per project named `<profile> ISA placeholder`, reused by title; it is an artifact of that defect, not part of the ISA structure.
+
+## Reading the structure back
+
+`import_from_seek` understands what the sync writes: assay streams are skipped (they are plumbing, not Assays — reading them back doubled the assay count on every round trip), and an assay sample that names an input is recognised as an assay material. Its input links are followed back to the collection Sample and the Source — which live in Study-owned Sample Types no JSON:API relationship walk reaches — and the chain comes back nested `Source -> Sample -> AssayMaterial`, with the input attribute expressed as that nesting rather than kept as a field value.

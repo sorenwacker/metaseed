@@ -373,6 +373,65 @@ class TestSamplePlacement:
         sync_dataset_to_seek(seek, _dataset(), project_id="1")
         assert _of_kind(seek, "sample")[0]["data"]["Title"] == "source-1"
 
+    def test_a_sample_nested_under_an_assay_goes_in_that_assays_type_and_links_to_it(
+        self,
+    ) -> None:
+        # Profiles like isa 1.0 nest the Sample directly under the Assay with no
+        # material chain. SEEK hangs Samples off Assays, so the ancestor Assay
+        # supplies both the Sample Type and the ISA link — without it the Sample
+        # lands in the Study's Source type, reachable by nothing.
+        client = MetaseedClient("isa", "1.0")
+        inv = client.create_entity(
+            "Investigation", {"identifier": "I"}, skip_validation=True
+        )
+        study = client.create_entity(
+            "Study", {"identifier": "S"}, parent_id=inv.id, skip_validation=True
+        )
+        assay = client.create_entity(
+            "Assay", {"identifier": "A"}, parent_id=study.id, skip_validation=True
+        )
+        client.create_entity(
+            "Sample", {"name": "smp"}, parent_id=assay.id, skip_validation=True
+        )
+        seek = _FakeSeek()
+        result = sync_dataset_to_seek(seek, client, project_id="1")
+        assert not result.unlinked
+        samples = _of_kind(seek, "sample")
+        assert len(samples) == 1
+        assay_seek_id = next(iter(result.assays.values()))
+        owned_types = seek.assay_types[assay_seek_id].values()
+        assert samples[0]["sample_type_id"] in owned_types
+        assert samples[0]["assay_ids"] == [assay_seek_id]
+
+    def test_a_sample_chain_that_never_reaches_an_assay_is_reported(self) -> None:
+        # A Sample under a Study with no Assay anywhere below it is stored in
+        # the Study's Source type, but nothing walking the ISA tree down from
+        # the Investigation reaches it and a re-import drops it. It is still
+        # created — and the result must say so rather than count it as placed.
+        client = MetaseedClient("isa", "1.0")
+        inv = client.create_entity(
+            "Investigation", {"identifier": "I"}, skip_validation=True
+        )
+        study = client.create_entity(
+            "Study", {"identifier": "S"}, parent_id=inv.id, skip_validation=True
+        )
+        client.create_entity(
+            "Sample", {"name": "smp"}, parent_id=study.id, skip_validation=True
+        )
+        seek = _FakeSeek()
+        result = sync_dataset_to_seek(seek, client, project_id="1")
+        assert result.samples, "the Sample is still created"
+        assert sorted(node_id for node_id, _ in result.unlinked) == sorted(
+            result.samples
+        )
+
+    def test_a_complete_material_chain_reports_nothing_unlinked(self) -> None:
+        # Source and Sample carry no Assay link of their own, but the chain ends
+        # at a material that does — they are reachable, so nothing is reported.
+        seek = _FakeSeek()
+        result = sync_dataset_to_seek(seek, _dataset(), project_id="1")
+        assert not result.unlinked
+
     def test_a_material_naming_no_assay_is_reported_not_silently_orphaned(
         self,
     ) -> None:
@@ -810,3 +869,34 @@ class TestAnnotationOnlyEntitiesAreSynced:
         sync_dataset_to_seek(seek, self._client_with_annotated_assay(), project_id="1")
 
         assert _of_kind(seek, "assay"), "the annotation-only Assay must be exported"
+
+
+class TestFreshTypesAreFound:
+    def test_the_type_lookup_outlasts_a_stale_first_read(self) -> None:
+        # SEEK's list routes can serve a stale view right after a create (its
+        # authorization tables are maintained by background jobs), omitting the
+        # Sample Types the sync just made. One stale read must not turn every
+        # Source under the Study into an unlinked sample.
+        class _StaleFirstRead(_FakeSeek):
+            def __init__(self) -> None:
+                super().__init__()
+                self.stale_reads: set[str] = set()
+
+            def study_sample_type_ids(self, study_id: str) -> dict[str, str]:
+                if study_id not in self.stale_reads:
+                    self.stale_reads.add(study_id)
+                    return {}
+                return super().study_sample_type_ids(study_id)
+
+        seek = _StaleFirstRead()
+        result = sync_dataset_to_seek(seek, _dataset(), project_id="1")
+        assert not result.unlinked, result.unlinked
+        assert not result.errors, result.errors
+
+    def test_created_study_sample_types_are_recorded_for_the_caller(self) -> None:
+        # A deleted Study leaves its Sample Types behind as orphans; a caller
+        # cleaning up after itself (the live tests do) needs their ids.
+        seek = _FakeSeek()
+        result = sync_dataset_to_seek(seek, _dataset(), project_id="1")
+        created = {t for types in seek.study_types.values() for t in types.values()}
+        assert set(result.sample_types) == created

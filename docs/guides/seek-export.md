@@ -78,6 +78,19 @@ The panel refreshes when you change the profile or version, and never writes to
 SEEK — it is there to check a profile maps the way you expect before you
 provision or sync.
 
+#### Install the ISA Templates (one admin step per profile)
+
+SEEK's ISA-JSON exporter reads each Sample Type's ISA **Template**, and
+Templates can only be installed by a SEEK administrator — not over the API. The
+page's **Download ISA Templates (.json) →** button produces the file for the
+selected profile and version; a SEEK admin uploads it under **Templates →
+Populate Templates**, where it runs as a background job. Re-uploading is safe:
+existing Templates are kept.
+
+Without this step, *Sync* refuses with an error naming the missing Template
+(e.g. `no ISA Template titled '<profile> study source'`). One upload per
+profile and version is enough; every later sync reuses the installed Templates.
+
 ### 2 · Sync the dataset to SEEK
 
 With a dataset loaded, click **Sync to SEEK →**. It pushes the dataset's
@@ -86,6 +99,12 @@ Sample Types provisioned in step 1.
 
 If this reports *no dataset loaded*, that is why: unlike *Provision*, *Sync*
 acts on the dataset you have open. Load or create one first.
+
+A Sample that nothing links into the ISA tree — one whose material chain never
+reaches an Assay, in a dataset with no Assay at all — is still created, but
+reported as *unlinked*: SEEK finds a Sample from its Investigation only through
+an Assay, so an unlinked record is reachable solely by listing the project's
+samples, and a re-import drops it.
 
 ### Or export a file
 

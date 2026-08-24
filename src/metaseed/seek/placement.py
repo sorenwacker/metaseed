@@ -6,6 +6,7 @@ needs at that level, and records the ids the levels below it will need.
 
 from __future__ import annotations
 
+import time
 from typing import TYPE_CHECKING, Any
 
 from metaseed.seek.context import SyncContext
@@ -21,7 +22,7 @@ from metaseed.seek.templates import CHAIN_LEVELS, seek_level_for, template_title
 from metaseed.seek.values import sample_data, title_of
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Callable, Mapping
 
     from metaseed.seek.ports import IsaWriter
     from metaseed.specs.schema import EntityDefSpec
@@ -100,10 +101,8 @@ def place_node(
                     ctx, title, study_id, values
                 )
         elif jerm_class == "Sample":
-            # An assay material names the Assay that measured it rather than
-            # descending from it, so ancestry plays no part here.
             next_sample = place_sample(
-                ctx, node, values, title, study_id, parent_sample_id, depth
+                ctx, node, values, title, study_id, assay_id, parent_sample_id, depth
             )
             next_depth = depth + 1
         elif jerm_class == "DataFile":
@@ -188,6 +187,29 @@ def template_id_for(ctx: SyncContext, level: str) -> str | None:
     return template_id
 
 
+def _types_with_titles(
+    fetch: Callable[[], dict[str, str]],
+    *titles: str,
+    delays: tuple[float, ...] = (0.2, 0.5, 1.0, 2.0),
+) -> dict[str, str]:
+    """Fetch a title -> Sample Type id map, waiting out a stale read.
+
+    SEEK's list routes can momentarily omit a record that was just created (its
+    authorization tables are maintained by background jobs, and heavy deletions
+    queue behind them). One stale read right after ``create_isa_study`` would
+    turn every Source under the Study into an unlinked sample, so the lookup
+    retries briefly until the expected titles appear. The normal case sees them
+    on the first read and never sleeps.
+    """
+    types = fetch()
+    for delay in delays:
+        if all(t in types for t in titles):
+            break
+        time.sleep(delay)
+        types = fetch()
+    return types
+
+
 def place_study(ctx: SyncContext, title: str, investigation_id: str) -> str:
     """Reuse or create a compliant Study plus the assay stream its Assays hang off.
 
@@ -246,13 +268,19 @@ def place_study(ctx: SyncContext, title: str, investigation_id: str) -> str:
             linked_sample_type_id=ctx.placeholder_type_id,
         ),
     )
-    types = ctx.client.study_sample_type_ids(study_id)
+    types = _types_with_titles(
+        lambda: ctx.client.study_sample_type_ids(study_id),
+        source_title,
+        collection_title,
+    )
     source_id = types.get(source_title)
     if source_id is not None:
         ctx.study_source_type[study_id] = source_id
+        ctx.result.sample_types.append(source_id)
     collection_id = types.get(collection_title)
     if collection_id is not None:
         ctx.study_collection_type[study_id] = collection_id
+        ctx.result.sample_types.append(collection_id)
     stream_id = ctx.client.create_isa_assay(
         title=f"{title} - stream",
         study_id=study_id,
@@ -295,7 +323,9 @@ def place_assay(
             linked_sample_type_id=collection_id,
         ),
     )
-    owned = ctx.client.assay_sample_type_ids(assay_id).get(sample_type_title)
+    owned = _types_with_titles(
+        lambda: ctx.client.assay_sample_type_ids(assay_id), sample_type_title
+    ).get(sample_type_title)
     if owned is not None:
         ctx.assay_sample_type[assay_id] = owned
     ctx.assay_protocol[assay_id] = title
@@ -326,6 +356,7 @@ def place_sample(
     values: Mapping[str, Any],
     title: str,
     study_id: str | None = None,
+    assay_id: str | None = None,
     parent_sample_id: str | None = None,
     depth: int = 0,
 ) -> str | None:
@@ -340,11 +371,17 @@ def place_sample(
     - depth 1 (under a Source) -> the Study's Sample Collection type
     - depth 2+ (under a Sample) -> the Sample Type owned by the Assay it names
 
+    A node *nested under an Assay* (``assay_id``) sits outside the chain —
+    profiles without the material levels hang Samples off Assays directly, the
+    shape SEEK itself models. Such a Sample goes in that Assay's own type,
+    linked to it; a declared assay reference still wins, because explicit data
+    beats tree position.
+
     Returns the created SEEK sample id, so the next level down can name it.
     """
     r = ctx.result
-    referenced_assay = referenced_assay_id(ctx, node.entity_type, values)
-    if depth >= _ASSAY_DEPTH:
+    referenced_assay = referenced_assay_id(ctx, node.entity_type, values) or assay_id
+    if depth >= _ASSAY_DEPTH or referenced_assay is not None:
         sample_type_id = (
             ctx.assay_sample_type.get(referenced_assay) if referenced_assay else None
         )
@@ -366,6 +403,10 @@ def place_sample(
             )
         )
         return None
+    if assay_ids:
+        # The post-walk reachability check reads this: a chain is reachable
+        # from the Investigation once any node in it holds an Assay link.
+        ctx.assay_linked_nodes.add(node.id)
 
     data = sample_data(
         values, ctx.text_list_fields_by_entity.get(node.entity_type, frozenset())
@@ -376,7 +417,7 @@ def place_sample(
     if parent_sample_id is not None:
         # The exporter reads this as the sample's input and fails without it.
         data.setdefault(_INPUT_ATTRIBUTE, [parent_sample_id])
-    if depth >= _COLLECTION_DEPTH:
+    if depth >= _COLLECTION_DEPTH or referenced_assay is not None:
         # The exporter rejects a Sample with no protocol. The attribute stays
         # optional on the Sample Type -- a Sample created by other means must not
         # be refused -- but every Sample this sync creates names its step.

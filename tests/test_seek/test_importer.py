@@ -100,13 +100,155 @@ _RESPONSES: dict[str, Any] = {
 }
 
 
+# A second canned instance carrying the ISA material chain the sync builds:
+# Investigation 9 -> Study 11 -> assay stream 30 + Assay 31, whose sample 50 is
+# an assay material naming collection Sample 51 as its input, which names
+# Source 52 as its own. (Shapes captured from a live SEEK 1.18.1.)
+_CHAIN_RESPONSES: dict[str, Any] = {
+    "/investigations/9": {
+        "data": {
+            "id": "9",
+            "attributes": {"title": "Chained Import", "description": "d"},
+            "relationships": {"studies": {"data": [{"id": "11"}]}},
+        }
+    },
+    "/studies/11": {
+        "data": {
+            "id": "11",
+            "attributes": {"title": "chain study", "description": None},
+            "relationships": {"investigation": {"data": {"id": "9"}}},
+        }
+    },
+    "/studies/11/observation_units": {"data": []},
+    "/studies/11/assays": {"data": [{"id": "30"}, {"id": "31"}]},
+    "/assays/30": {
+        "data": {
+            "id": "30",
+            "attributes": {
+                "title": "chain study - stream",
+                "assay_class": {"title": "Assay Stream", "key": "STREAM"},
+            },
+            "relationships": {"samples": {"data": []}},
+        }
+    },
+    "/assays/31": {
+        "data": {
+            "id": "31",
+            "attributes": {
+                "title": "measuring",
+                "assay_class": {"title": "Experimental assay", "key": "EXP"},
+            },
+            "relationships": {"samples": {"data": [{"id": "50"}]}},
+        }
+    },
+    "/samples/50": {
+        "data": {
+            "id": "50",
+            "attributes": {
+                "title": "MAT-1",
+                "attribute_map": {
+                    "Input (Title)": [{"id": 51, "type": "Sample", "title": "SMP-1"}],
+                    "Protocol": "measuring",
+                    "Title": "MAT-1",
+                    "material_name": "MAT-1",
+                },
+            },
+            "relationships": {"sample_type": {"data": {"id": "40"}}},
+        }
+    },
+    "/samples/51": {
+        "data": {
+            "id": "51",
+            "attributes": {
+                "title": "SMP-1",
+                "attribute_map": {
+                    "Input (Title)": [{"id": 52, "type": "Sample", "title": "SRC-1"}],
+                    "Title": "SMP-1",
+                    "sample_name": "SMP-1",
+                    "organism_part": "leaf",
+                },
+            },
+            "relationships": {"sample_type": {"data": {"id": "41"}}},
+        }
+    },
+    "/samples/52": {
+        "data": {
+            "id": "52",
+            "attributes": {
+                "title": "SRC-1",
+                "attribute_map": {
+                    "Title": "SRC-1",
+                    "source_name": "SRC-1",
+                    "organism": "Arabidopsis thaliana",
+                },
+            },
+            "relationships": {"sample_type": {"data": {"id": "42"}}},
+        }
+    },
+    "/sample_types/40": {
+        "data": {
+            "attributes": {
+                "sample_attributes": [
+                    {"title": "Title", "sample_attribute_type": {"title": "String"}},
+                    {
+                        "title": "Input (Title)",
+                        "sample_attribute_type": {"title": "Registered Sample List"},
+                    },
+                    {"title": "Protocol", "sample_attribute_type": {"title": "String"}},
+                    {
+                        "title": "material_name",
+                        "sample_attribute_type": {"title": "String"},
+                    },
+                ]
+            }
+        }
+    },
+    "/sample_types/41": {
+        "data": {
+            "attributes": {
+                "sample_attributes": [
+                    {"title": "Title", "sample_attribute_type": {"title": "String"}},
+                    {
+                        "title": "Input (Title)",
+                        "sample_attribute_type": {"title": "Registered Sample List"},
+                    },
+                    {
+                        "title": "sample_name",
+                        "sample_attribute_type": {"title": "String"},
+                    },
+                    {
+                        "title": "organism_part",
+                        "sample_attribute_type": {"title": "String"},
+                    },
+                ]
+            }
+        }
+    },
+    "/sample_types/42": {
+        "data": {
+            "attributes": {
+                "sample_attributes": [
+                    {"title": "Title", "sample_attribute_type": {"title": "String"}},
+                    {
+                        "title": "source_name",
+                        "sample_attribute_type": {"title": "String"},
+                    },
+                    {"title": "organism", "sample_attribute_type": {"title": "String"}},
+                ]
+            }
+        }
+    },
+}
+
+
 class _FakeSeek:
-    def __init__(self) -> None:
+    def __init__(self, responses: dict[str, Any] | None = None) -> None:
         self.reads: list[str] = []
+        self._responses = _RESPONSES if responses is None else responses
 
     def get(self, path: str) -> Any:
         self.reads.append(path)
-        return _RESPONSES[path]
+        return self._responses[path]
 
 
 def _imported():
@@ -223,3 +365,62 @@ def test_a_server_side_seek_error_still_aborts():
 
     with pytest.raises(SeekApiError):
         import_from_seek(_Boom(), "8")  # type: ignore[arg-type]
+
+
+def _chain_imported():
+    return import_from_seek(_FakeSeek(_CHAIN_RESPONSES), "9")  # type: ignore[arg-type]
+
+
+def test_an_assay_stream_is_not_imported_as_an_assay():
+    # The stream is sync plumbing (every Assay hangs off one); reading it back
+    # as an Assay doubles the assay count on every round trip.
+    entities = _chain_imported().serialize()["entities"]
+    assays = [e["title"] for e in entities if e["_type"] == "Assay"]
+    assert assays == ["measuring"]
+
+
+def test_the_material_chain_reads_back_as_source_sample_material():
+    # The sync writes Source -> Sample -> assay material, each naming its
+    # predecessor in its input attribute. The importer follows those links so
+    # the levels come back as levels, not as three unrelated samples.
+    dataset = _chain_imported()
+    entities = dataset.serialize()["entities"]
+    counts: dict[str, int] = {}
+    for e in entities:
+        counts[e["_type"]] = counts.get(e["_type"], 0) + 1
+    assert counts == {
+        "Investigation": 1,
+        "Study": 1,
+        "Assay": 1,
+        "Source": 1,
+        "Sample": 1,
+        "AssayMaterial": 1,
+    }
+    sample = next(e for e in entities if e["_type"] == "Sample")
+    assert sample["sample_name"] == "SMP-1"
+    assert "Input (Title)" not in sample, "the input link is structure, not data"
+    material = next(e for e in entities if e["_type"] == "AssayMaterial")
+    assert material["material_name"] == "MAT-1"
+
+
+def test_the_imported_chain_is_nested_not_flattened():
+    dataset = _chain_imported()
+
+    def children_types(node_id):
+        return sorted(
+            dataset.get_entity(c.id).entity_type for c in dataset.get_children(node_id)
+        )
+
+    roots = dataset.get_tree()
+    inv = roots[0]
+    (study,) = dataset.get_children(inv.id)
+    assert children_types(study.id) == ["Assay", "Source"]
+    source = next(
+        c
+        for c in dataset.get_children(study.id)
+        if dataset.get_entity(c.id).entity_type == "Source"
+    )
+    (sample,) = dataset.get_children(source.id)
+    assert dataset.get_entity(sample.id).entity_type == "Sample"
+    (material,) = dataset.get_children(sample.id)
+    assert dataset.get_entity(material.id).entity_type == "AssayMaterial"

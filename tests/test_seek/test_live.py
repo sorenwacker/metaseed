@@ -39,7 +39,21 @@ def _seek_client():
 
 
 # Children before parents: SEEK rejects deleting a Study that still has Assays.
-_DELETE_ORDER = ("samples", "data_files", "assays", "studies", "investigations")
+# Assay streams are assays too — leaving them makes the Study, and then the
+# Investigation, refuse deletion (403), and the leftovers poison later runs
+# through the sync's reuse-by-title.
+# SEEK does not delete a Study's Sample Types with the Study — they stay behind
+# as orphans — so the ones the sync created are removed explicitly, last, once
+# no Study or Sample holds onto them.
+_DELETE_ORDER = (
+    ("samples", "samples"),
+    ("data_files", "data_files"),
+    ("assays", "assays"),
+    ("assay_streams", "assays"),
+    ("studies", "studies"),
+    ("investigations", "investigations"),
+    ("sample_types", "sample_types"),
+)
 
 
 class _CreatedInSeek:
@@ -47,24 +61,31 @@ class _CreatedInSeek:
 
     def __init__(self) -> None:
         self._client = None
-        self._ids: dict[str, list[str]] = {kind: [] for kind in _DELETE_ORDER}
+        self._ids: dict[str, list[str]] = {kind: [] for kind, _ in _DELETE_ORDER}
 
     def track(self, client, result) -> None:
         """Register a :class:`SyncResult` for removal after the test."""
         self._client = client
-        for kind in _DELETE_ORDER:
-            self._ids[kind].extend(getattr(result, kind, {}).values())
+        for kind, _ in _DELETE_ORDER:
+            tracked = getattr(result, kind, {})
+            ids = tracked if isinstance(tracked, list) else tracked.values()
+            self._ids[kind].extend(ids)
 
     def remove_all(self) -> list[str]:
         if self._client is None:
             return []
         failures = []
-        for kind in _DELETE_ORDER:
+        for kind, endpoint in _DELETE_ORDER:
             for resource_id in self._ids[kind]:
                 try:
-                    self._client.delete(f"/{kind}/{resource_id}")
+                    self._client.delete(f"/{endpoint}/{resource_id}")
                 except Exception as exc:
-                    failures.append(f"{kind}/{resource_id}: {exc}")
+                    # Already gone is the goal, not a failure: deleting a Study
+                    # cascades its empty Sample Types, so their own delete then
+                    # 404s. They stay tracked for the runs where it does not.
+                    if getattr(exc, "status_code", None) == 404:
+                        continue
+                    failures.append(f"{endpoint}/{resource_id}: {exc}")
         return failures
 
 
@@ -400,18 +421,6 @@ def _walk(client, node):
     return out
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "Unresolved, and not a compliance gap. Run outside pytest, the same "
-        "dataset syncs and GET /investigations/{id}/export_isa returns 200 with "
-        "assays=1, sources=1, samples=2. Inside the test the sync is equally "
-        "correct -- no unlinked materials, the Assay created, its Sample Type "
-        "holding both materials -- yet the exported study carries no assays. "
-        "Cause not identified; suspect timing or per-user filtering inside "
-        "ISAExporter rather than the structure."
-    ),
-)
 def test_a_pushed_dataset_is_exportable_as_isa_json(created_in_seek):
     """SEEK must accept the pushed structure as ISA-JSON, not merely store it.
 
@@ -422,6 +431,12 @@ def test_a_pushed_dataset_is_exportable_as_isa_json(created_in_seek):
     Study owning its two Sample Types, the material chain linking Source ->
     Sample -> assay material with a protocol on each, and every Sample Type
     carrying the ISA Template the exporter reads its level from.
+
+    The export request must also be *authenticated*: SEEK serves the anonymous
+    view to an unauthenticated caller, and ISAExporter drops every assay stream
+    whose samples that user cannot see — 200 OK, no assays, no error. This test
+    once xfailed exactly so, because ``SeekClient._send`` attached the API token
+    only on other code paths.
 
     Needs the profile's ISA Templates installed on the instance -- download them
     from the SEEK page and upload them as an administrator.

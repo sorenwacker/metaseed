@@ -2,7 +2,47 @@
 
 ## [Unreleased]
 
+### Added
+- The SEEK page offers **Download ISA Templates (.json)** for the selected
+  profile and version. The sync's missing-Template error has always pointed at
+  "the SEEK page"; the page now actually has the button. A SEEK administrator
+  uploads the file under *Templates → Populate Templates*, once per profile and
+  version.
+- `SyncResult.sample_types` records the Study-owned Sample Types a push
+  created. SEEK does not delete them with their Study — they stay behind as
+  orphans — so a caller cleaning up after itself needs their ids.
+- The documentation footer discloses that the docs are AI-generated (EU AI Act
+  transparency), gated by `tests/test_docs/test_ai_disclosure.py`.
+
 ### Fixed
+- **A pushed dataset now exports from SEEK as ISA-JSON.** The last gap was not
+  in the structure: `SeekClient._send` attached the API token only on some code
+  paths, and SEEK serves an unauthenticated `export_isa` the anonymous view —
+  `200 OK` with every assay stream silently dropped whose samples the public
+  cannot see. The token now rides on every request the client sends, and the
+  live export check (`test_a_pushed_dataset_is_exportable_as_isa_json`) is a
+  passing test instead of a strict xfail.
+- A Sample nested under an Assay goes in that Assay's own Sample Type, linked
+  to it. It used to land in the Study's Source type with no ISA link, where
+  nothing walking down from the Investigation could reach it. A declared assay
+  reference still wins over tree position.
+- A Sample whose material chain never reaches an Assay link is reported in
+  `SyncResult.unlinked` instead of being counted as placed and said nothing
+  more about. It is still created; the report says why a re-import will not
+  find it.
+- The importer no longer reads assay streams back as Assays (the stream is
+  sync plumbing, and every round trip doubled the assay count), and it follows
+  an assay material's input links back through the ISA chain, so a pushed
+  dataset returns as nested `Source -> Sample -> AssayMaterial` with its field
+  values instead of losing the Study-owned levels entirely.
+- The sync's Sample Type lookups retry briefly when SEEK serves a stale read
+  right after a create (its authorization tables are maintained by background
+  jobs). One stale read used to turn every Source under a new Study into an
+  unlinked sample.
+- The live-test teardown deletes assay streams and Sample Types too. Streams
+  are assays SEEK will not delete a Study over, so every run left its whole
+  tree behind (403), and the leftovers poisoned later runs through the sync's
+  reuse-by-title.
 - The graph embedding guide names the element ids `graph.js` actually reads.
   It listed `graph-spring-length` and `graph-node-distance`, which the script
   never looks up, so a host following the contract got spacing controls that
