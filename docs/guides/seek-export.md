@@ -106,6 +106,13 @@ fragment the profile flattened into `site_*` fields. The `cropxr-phenotyping`
 1.4 and `cropxr-sequencing` 1.3 profiles are written this way; the mechanics
 are in [ISA-JSON compliance](../architecture/seek-isa-compliance.md).
 
+If you have the template files that configured the instance, derive the
+entities from them instead of tagging fields by hand:
+`metaseed seek-import-templates profile.yaml templates/*.json --write`. Every
+entity naming one of the templates gets its columns exactly — types,
+required flags, tags, vocabularies — and the sync creates Sample Types that
+are the template's, column for column.
+
 For such a profile the page reads differently: the preview lists each entity
 with the installed template it is built from, its ISA level and the tag on
 every column, and step 1's button is **Set up Controlled Vocabularies →** —

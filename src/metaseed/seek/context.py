@@ -146,6 +146,11 @@ class SyncContext:
     extended_metadata_attribute_cache: dict[str, dict[str, tuple[str | None, str]]] = (
         dc_field(default_factory=dict)
     )
+    # File URL -> the remote DataFile registered for it, so one file named by
+    # several records is registered once.
+    data_file_by_url: dict[str, str] = dc_field(default_factory=dict)
+    # ISA Template id -> attribute title -> id, fetched once per template.
+    template_attribute_cache: dict[str, dict[str, str]] = dc_field(default_factory=dict)
     # SEEK sample id -> node ids of the samples placed with it as their input.
     # The reachability report follows these as well as the tree, because a
     # referenced chain links siblings the tree does not.

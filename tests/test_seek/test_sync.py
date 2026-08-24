@@ -67,6 +67,17 @@ class _FakeSeek:
         default_factory=dict
     )
 
+    # Instance vocabularies and template attributes the fake "has": a
+    # vocabulary for any title asked for, and attribute ids per template.
+    instance_cvs: dict[str, str] = field(default_factory=dict)
+    template_attributes: dict[str, dict[str, str]] = field(default_factory=dict)
+
+    def find_controlled_vocab_id_by_title(self, title: str) -> str | None:
+        return self.instance_cvs.get(title)
+
+    def template_attribute_ids(self, template_id: str) -> dict[str, str]:
+        return dict(self.template_attributes.get(template_id, {}))
+
     def extended_metadata_type_ids(self) -> dict[str, str]:
         return dict(self.emt_ids)
 

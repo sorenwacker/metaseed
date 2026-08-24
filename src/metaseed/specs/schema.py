@@ -228,6 +228,12 @@ class FieldSpec(BaseModel):
         isa_tag: The ISA tag this field carries into a SEEK Sample Type attribute —
             one of :data:`ISA_TAGS`. Required on every attribute of an ISA-JSON
             compliant Sample Type; see ``docs/architecture/seek-isa-compliance.md``.
+        seek_attribute_type: The SEEK attribute type title the column has, when
+            the field type cannot express it (``ENA custom date``, ``Text``,
+            ``Registered Data file``).
+        seek_controlled_vocab: Title of the Controlled Vocabulary on the target
+            SEEK the column binds, instead of one provisioned from ``enum``.
+        seek_cv_free_text: Whether that vocabulary accepts values outside its terms.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -256,6 +262,15 @@ class FieldSpec(BaseModel):
     label: str | None = None
     tier: Literal["required", "recommended", "optional"] | None = None
     isa_tag: str | None = None
+    # Exact SEEK Sample Type column, for an entity bound to an installed ISA
+    # Template: the SEEK attribute type title when the field type cannot name
+    # it (``ENA custom date``, ``Registered Data file``, ``Text``), the title of
+    # the instance's own Controlled Vocabulary the column binds (the one SEEK
+    # created when the template was populated), and whether that vocabulary
+    # accepts free text. See ``docs/architecture/seek-isa-compliance.md``.
+    seek_attribute_type: str | None = None
+    seek_controlled_vocab: str | None = None
+    seek_cv_free_text: bool | None = None
 
     @field_validator("isa_tag")
     @classmethod

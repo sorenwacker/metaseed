@@ -235,6 +235,22 @@ class SeekClient:
             if (row.get("attributes") or {}).get("title")
         }
 
+    def template_attribute_ids(self, template_id: str) -> dict[str, str]:
+        """An installed ISA Template's attribute titles -> ids.
+
+        The JSON:API serializes a Template without its attributes; the form
+        helper ``POST /templates/{id}/template_attributes`` lists them (id and
+        title only) and answers a token like every other route.
+        """
+        response = self._send(
+            "POST",
+            f"/templates/{template_id}/template_attributes",
+            headers={"Accept": "application/json", "User-Agent": USER_AGENT},
+        )
+        if response.is_error:
+            raise SeekApiError(response) from None
+        return {row["title"]: str(row["id"]) for row in response.json() or []}
+
     def extended_metadata_type_ids(self) -> dict[str, str]:
         """Extended Metadata Type title -> id, for the top-level types.
 

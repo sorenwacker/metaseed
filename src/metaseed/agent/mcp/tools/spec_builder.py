@@ -169,6 +169,9 @@ def _markers(
     label: str | None,
     tier: str | None,
     isa_tag: str | None,
+    seek_attribute_type: str | None,
+    seek_controlled_vocab: str | None,
+    seek_cv_free_text: bool | None,
 ) -> dict[str, Any]:
     """Collect the field markers both field tools accept.
 
@@ -198,6 +201,9 @@ def _markers(
             "label": label,
             "tier": tier,
             "isa_tag": isa_tag,
+            "seek_attribute_type": seek_attribute_type,
+            "seek_controlled_vocab": seek_controlled_vocab,
+            "seek_cv_free_text": seek_cv_free_text,
         }
     )
 
@@ -449,6 +455,9 @@ def register_spec_builder_tools(  # noqa: C901
         label: str | None = None,
         tier: str | None = None,
         isa_tag: str | None = None,
+        seek_attribute_type: str | None = None,
+        seek_controlled_vocab: str | None = None,
+        seek_cv_free_text: bool | None = None,
     ) -> str:
         """Add a field. Nested fields auto-create the parent id and back-reference.
 
@@ -457,7 +466,9 @@ def register_spec_builder_tools(  # noqa: C901
         labels the entity (overriding the positional convention), `owns` marks a
         containment relationship, and `codename`, `ontologies`, `unique_within`,
         `dcat`, `example`, `options`, `unit`, `label` and `tier` carry field
-        metadata. `tier` is one of required/recommended/optional. `isa_tag`
+        metadata. `tier` is one of required/recommended/optional. `seek_attribute_type`,
+        `seek_controlled_vocab` and `seek_cv_free_text` pin the exact SEEK column
+        of an entity bound to an installed ISA Template. `isa_tag`
         names the ISA tag the field carries into a SEEK Sample Type attribute.
         """
         markers = _markers(
@@ -476,6 +487,9 @@ def register_spec_builder_tools(  # noqa: C901
             label=label,
             tier=tier,
             isa_tag=isa_tag,
+            seek_attribute_type=seek_attribute_type,
+            seek_controlled_vocab=seek_controlled_vocab,
+            seek_cv_free_text=seek_cv_free_text,
         )
         marker_error = validate_marker_values(markers)
         if marker_error:
@@ -549,6 +563,9 @@ def register_spec_builder_tools(  # noqa: C901
         label: str | None = None,
         tier: str | None = None,
         isa_tag: str | None = None,
+        seek_attribute_type: str | None = None,
+        seek_controlled_vocab: str | None = None,
+        seek_cv_free_text: bool | None = None,
         clear: list[str] | None = None,
     ) -> str:
         """Update a field in place. Unset arguments keep their current value.
@@ -594,6 +611,9 @@ def register_spec_builder_tools(  # noqa: C901
             label=label,
             tier=tier,
             isa_tag=isa_tag,
+            seek_attribute_type=seek_attribute_type,
+            seek_controlled_vocab=seek_controlled_vocab,
+            seek_cv_free_text=seek_cv_free_text,
         )
         # Checked before the first mutation: the attribute update and the
         # constraint merge are two calls, so a bad `clear` name caught by the

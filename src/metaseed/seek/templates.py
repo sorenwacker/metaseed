@@ -80,10 +80,10 @@ def sample_chain_entities(profile: ProfileSpec) -> list[str]:
     # entity at each Study level, in the profile's own order.
     by_level = entities_by_level(profile)
     if by_level:
+        # Positional: index 0 is always the Source level and 1 the Sample
+        # Collection level, an empty name standing for a level no entity fills.
         return [
-            by_level[level][0]
-            for level in ("source", "sample_collection")
-            if by_level.get(level)
+            by_level.get(level, [""])[0] for level in ("source", "sample_collection")
         ]
 
     def first_sample_child(entity_name: str) -> str | None:
@@ -148,7 +148,7 @@ def _attribute(plan: AttributePlan) -> dict[str, Any]:
     """Render one attribute plan in the template file's vocabulary."""
     attribute: dict[str, Any] = {
         "name": plan.title,
-        "description": "",
+        "description": plan.description,
         "dataType": plan.attribute_type_title,
         "required": plan.required,
         "isaTag": plan.isa_tag,
@@ -159,6 +159,8 @@ def _attribute(plan: AttributePlan) -> dict[str, Any]:
         # A closed vocabulary is inline here, so an enum field needs no
         # separately provisioned Controlled Vocabulary on this route.
         attribute["CVList"] = list(plan.enum)
+    if plan.allow_cv_free_text:
+        attribute["allowCVFreeText"] = True
     return attribute
 
 

@@ -73,6 +73,14 @@ class IsaWriter(Protocol):
         """ISA Template title -> id on this instance."""
         ...
 
+    def template_attribute_ids(self, template_id: str) -> dict[str, str]:
+        """An installed ISA Template's attribute titles -> ids."""
+        ...
+
+    def find_controlled_vocab_id_by_title(self, title: str) -> str | None:
+        """The instance's Controlled Vocabulary with this title, if any."""
+        ...
+
     def extended_metadata_type_ids(self) -> dict[str, str]:
         """Extended Metadata Type title -> id on this instance (top-level types)."""
         ...

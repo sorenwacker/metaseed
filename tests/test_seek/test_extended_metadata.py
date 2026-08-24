@@ -167,18 +167,46 @@ def test_assay_values_land_in_the_assay_type() -> None:
     seek = _seek()
     sync_dataset_to_seek(seek, _dataset(), project_id="1")
     (assay,) = _of_kind(seek, "assay")
-    assert assay["extended_metadata"] == ("22", {"trait": "height"})
+    type_id, data = assay["extended_metadata"]
+    assert type_id == "22"
+    assert data["trait"] == "height"
 
 
-def test_a_reference_typed_attribute_is_reported_not_sent() -> None:
-    # "Registered Data file" holds a SEEK record reference; a URL value would
-    # make SEEK refuse the whole Assay with an HTML 422 naming nothing.
+def test_a_registered_data_file_attribute_is_registered_and_sent_as_its_id() -> None:
+    # "Registered Data file" holds a SEEK DataFile reference; the URL is
+    # registered as a remote data file and the attribute receives its id.
     seek = _seek()
     result = sync_dataset_to_seek(seek, _dataset(), project_id="1")
     assert not result.errors
-    assert any(
-        "instrument_metadata" in msg and "reference" in msg for _, msg in result.notes
-    ), result.notes
+    (file,) = _of_kind(seek, "data_file")
+    assert file["url"] == "https://example.org/camera.json"
+    (assay,) = _of_kind(seek, "assay")
+    assert assay["extended_metadata"][1]["instrument_metadata"] == next(
+        iter(result.data_files.values())
+    )
+
+
+def test_a_reference_typed_attribute_that_is_not_a_file_is_reported_not_sent() -> None:
+    seek = _seek()
+    seek.emt_attributes["22"]["operator"] = (None, "Registered Sample")
+    spec = _spec_with_metadata()
+    spec["entities"]["Assay"]["fields"].append({"name": "operator", "type": "string"})
+    c = MetaseedClient.from_spec(spec)
+    inv = c.create_entity("Investigation", {"identifier": "I1"}, skip_validation=True)
+    study = c.create_entity(
+        "Study", {"study_id": "S1"}, parent_id=inv.id, skip_validation=True
+    )
+    c.create_entity(
+        "Assay",
+        {"identifier": "A1", "trait": "h", "operator": "Sam"},
+        parent_id=study.id,
+        skip_validation=True,
+    )
+    result = sync_dataset_to_seek(seek, c, project_id="1")
+    assert not result.errors
+    assert any("operator" in msg and "reference" in msg for _, msg in result.notes), (
+        result.notes
+    )
     assert not result.skipped
 
 

@@ -122,6 +122,16 @@ class AttributePlan:
     pos: int = 1
     field_name: str | None = None  # the profile field this came from, if any
     enum: tuple[str, ...] = ()
+    description: str = ""
+    # The instance Controlled Vocabulary the column binds (by title), when the
+    # profile names one; an ``enum`` alone binds a provisioned vocabulary.
+    vocabulary: str | None = None
+    allow_cv_free_text: bool = False
+
+    @property
+    def controlled(self) -> bool:
+        """Whether the column is a Controlled Vocabulary attribute."""
+        return bool(self.enum) or self.vocabulary is not None
 
 
 def sample_type_attribute_plans(
@@ -161,9 +171,12 @@ def sample_type_attribute_plans(
                 AttributePlan(
                     title=field.name,
                     attribute_type_title=(
-                        _SEEK_SAMPLE_MULTI_TITLE
-                        if tag == "input"
-                        else attribute_type_title(field)
+                        field.seek_attribute_type
+                        or (
+                            _SEEK_SAMPLE_MULTI_TITLE
+                            if tag == "input"
+                            else attribute_type_title(field)
+                        )
                     ),
                     isa_tag=tag,
                     # SEEK derives a Sample's name from its title attribute and
@@ -174,6 +187,9 @@ def sample_type_attribute_plans(
                     pos=position,
                     field_name=field.name,
                     enum=_enum_of(field),
+                    description=field.description or "",
+                    vocabulary=field.seek_controlled_vocab,
+                    allow_cv_free_text=bool(field.seek_cv_free_text),
                 )
             )
             position += 1
@@ -253,6 +269,7 @@ def sample_type_attributes(
     isa_tag_ids: Mapping[str, str],
     cv_ids: Mapping[str, str] | None = None,
     linked_sample_type_id: str | None = None,
+    template_attribute_ids: Mapping[str, str] | None = None,
 ) -> list[dict[str, Any]]:
     """Render the level's plans as ISA form parameters for a target instance.
 
@@ -265,6 +282,9 @@ def sample_type_attributes(
             :func:`metaseed.seek.provision.execute_provisioning_plan`).
         linked_sample_type_id: The Sample Type this one takes its inputs from.
             Required for every level except ``source``.
+        template_attribute_ids: Attribute title -> id on the installed ISA
+            Template the type is built from, so each column records the
+            template attribute it mirrors, as SEEK's own from-template form does.
 
     Returns:
         Attribute dicts ready for :func:`metaseed.seek.payloads.isa_study_form`
@@ -296,14 +316,18 @@ def sample_type_attributes(
         entity, level=level, linked=linked_sample_type_id is not None
     ):
         vocabulary_id: str | None = None
-        if plan.enum:
+        if plan.controlled:
             try:
                 vocabulary_id = vocabularies[plan.field_name or plan.title]
             except KeyError:
-                raise KeyError(
-                    f"field {plan.title!r} declares an enum but has no provisioned "
-                    "Controlled Vocabulary; run the provisioning step first"
-                ) from None
+                what = (
+                    f"binds the instance vocabulary {plan.vocabulary!r}, which "
+                    "was not found on this SEEK"
+                    if plan.vocabulary
+                    else "declares an enum but has no provisioned Controlled "
+                    "Vocabulary; run the provisioning step first"
+                )
+                raise KeyError(f"field {plan.title!r} {what}") from None
         attributes.append(
             isa_sample_attribute(
                 title=plan.title,
@@ -316,6 +340,8 @@ def sample_type_attributes(
                     linked_sample_type_id if plan.isa_tag == "input" else None
                 ),
                 sample_controlled_vocab_id=vocabulary_id,
+                allow_cv_free_text=plan.allow_cv_free_text,
+                template_attribute_id=(template_attribute_ids or {}).get(plan.title),
             )
         )
     return attributes

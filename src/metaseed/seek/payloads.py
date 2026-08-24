@@ -294,6 +294,7 @@ def isa_sample_attribute(
     linked_sample_type_id: str | int | None = None,
     sample_controlled_vocab_id: str | int | None = None,
     allow_cv_free_text: bool = False,
+    template_attribute_id: str | int | None = None,
 ) -> dict[str, Any]:
     """One Sample Type attribute for an ISA form body.
 
@@ -329,6 +330,10 @@ def isa_sample_attribute(
         # so callers pass one only alongside a CV attribute type.
         attribute["sample_controlled_vocab_id"] = sample_controlled_vocab_id
         attribute["allow_cv_free_text"] = allow_cv_free_text
+    if template_attribute_id is not None:
+        # Recorded the way SEEK's own from-template form records it, so the
+        # column is traceable to the template attribute it mirrors.
+        attribute["template_attribute_id"] = str(template_attribute_id)
     return attribute
 
 

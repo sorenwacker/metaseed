@@ -233,6 +233,49 @@ def _register_type(
         ctx.linked_type_of[type_id] = linked_to
 
 
+REGISTERED_DATA_FILE = "Registered Data file"
+_URL_SCHEMES = ("http://", "https://")
+
+
+def registered_data_file(
+    ctx: SyncContext, node_id: str, value: Any, title: str
+) -> str | None:
+    """The SEEK DataFile id a ``Registered Data file`` column holds for ``value``.
+
+    SEEK stores such a column as a reference to a DataFile record, so a URL is
+    registered as a remote data file (once per URL) and its id is what the
+    column receives. A value that is not a URL cannot be registered; it is
+    reported, not sent. Returns None when nothing can be sent.
+    """
+    if not isinstance(value, str) or not value.startswith(_URL_SCHEMES):
+        ctx.result.notes.append(
+            (
+                node_id,
+                f"{title!r} is a Registered Data file column and {value!r} is "
+                "not a URL SEEK can register — not sent",
+            )
+        )
+        return None
+    if value not in ctx.data_file_by_url:
+        basename = value.rstrip("/").rsplit("/", 1)[-1] or value
+        try:
+            ctx.data_file_by_url[value] = ctx.client.create_data_file(
+                title=basename,
+                project_id=ctx.project_id,
+                url=value,
+                original_filename=basename,
+            )
+        except Exception as exc:
+            # SEEK checks the URL when registering a remote file; one it cannot
+            # reach is a value not sent, not a record not created.
+            ctx.result.notes.append(
+                (node_id, f"{title!r}: SEEK could not register {value!r} — {exc}")
+            )
+            return None
+        ctx.result.data_files[f"{node_id}:{title}"] = ctx.data_file_by_url[value]
+    return ctx.data_file_by_url[value]
+
+
 def _metadata_target(
     attributes_of: Callable[[str], dict[str, tuple[str | None, str]]],
     type_id: str,
@@ -304,39 +347,67 @@ def extended_metadata_for(
     data: dict[str, Any] = {}
     unknown: list[str] = []
     references: list[str] = []
+    metadata_fields = {
+        f.name for f in entity.fields if not f.is_nested() and f.name not in CORE_FIELDS
+    }
     for name, value in values.items():
-        if name.startswith("_") or value in (None, "", [], {}):
-            continue
-        field = next((f for f in entity.fields if f.name == name), None)
         # Identity and description fields are the record itself (its title,
         # its description), not metadata attributes beside it.
-        if field is None or field.is_nested() or name in CORE_FIELDS:
+        if name not in metadata_fields or value in (None, "", [], {}):
             continue
         target = _metadata_target(attributes_of, type_id, groups, name)
         if target is None:
             unknown.append(name)
-        elif not takes_a_value(target[2]):
+            continue
+        nested, attribute, info = target
+        if info[1] == REGISTERED_DATA_FILE:
+            value = registered_data_file(ctx, node.id, value, name)
+            if value is None:
+                continue
+        elif not takes_a_value(info):
             references.append(name)
-        elif target[0] is None:
-            data[target[1]] = value
+            continue
+        if nested is None:
+            data[attribute] = value
         else:
-            data.setdefault(target[0], {})[target[1]] = value
+            data.setdefault(nested, {})[attribute] = value
+    _note_metadata_gaps(ctx, node.id, type_title, unknown, references)
+    return type_id, data
+
+
+def _note_metadata_gaps(
+    ctx: SyncContext,
+    node_id: str,
+    type_title: str,
+    unknown: list[str],
+    references: list[str],
+) -> None:
+    """Report the values an Extended Metadata Type could not take."""
     if unknown:
         ctx.result.notes.append(
             (
-                node.id,
+                node_id,
                 f"{type_title!r} has no attribute for: " + ", ".join(sorted(unknown)),
             )
         )
     if references:
         ctx.result.notes.append(
             (
-                node.id,
+                node_id,
                 f"{type_title!r} holds a reference to a SEEK record, not a value, "
                 "for: " + ", ".join(sorted(references)) + " — not sent",
             )
         )
-    return type_id, data
+
+
+def _template_attributes(ctx: SyncContext, template_id: str | None) -> dict[str, str]:
+    """Attribute title -> id on the template, fetched once per template."""
+    if template_id is None:
+        return {}
+    cache = ctx.template_attribute_cache
+    if template_id not in cache:
+        cache[template_id] = ctx.client.template_attribute_ids(template_id)
+    return cache[template_id]
 
 
 def place_study(
@@ -383,6 +454,8 @@ def place_study(
 
     source_title = f"{title} - Source"
     collection_title = f"{title} - Sample Collection"
+    source_template = template_id_for(ctx, "source", source_entity)
+    collection_template = template_id_for(ctx, "sample_collection", collection_entity)
     study_id = ctx.client.create_isa_study(
         title=title,
         investigation_id=investigation_id,
@@ -392,13 +465,12 @@ def place_study(
             level="source",
             isa_tag_ids=ctx.isa_tag_ids,
             cv_ids=cv_ids_for_entity(ctx.cv_ids, chain_entity_name(ctx, 0)),
+            template_attribute_ids=_template_attributes(ctx, source_template),
         ),
         sharing=ctx.sharing,
         extended_metadata=extended_metadata_for(ctx, node, values),
-        source_template_id=template_id_for(ctx, "source", source_entity),
-        collection_template_id=template_id_for(
-            ctx, "sample_collection", collection_entity
-        ),
+        source_template_id=source_template,
+        collection_template_id=collection_template,
         collection_title=collection_title,
         collection_attributes=sample_type_attributes(
             collection_entity,
@@ -406,6 +478,7 @@ def place_study(
             isa_tag_ids=ctx.isa_tag_ids,
             cv_ids=cv_ids_for_entity(ctx.cv_ids, chain_entity_name(ctx, 1)),
             linked_sample_type_id=ctx.placeholder_type_id,
+            template_attribute_ids=_template_attributes(ctx, collection_template),
         ),
     )
     types = _types_with_titles(
@@ -505,6 +578,7 @@ def _create_assay(
 ) -> tuple[str, str | None]:
     """Create one SEEK Assay in a stream (the Study's by default) with its type."""
     sample_type_title = f"{title} - Sample Type"
+    template = template_id_for(ctx, level, entity)
     assay_id = ctx.client.create_isa_assay(
         title=title,
         study_id=study_id,
@@ -514,13 +588,14 @@ def _create_assay(
         sample_type_title=sample_type_title,
         sharing=ctx.sharing,
         extended_metadata=extended_metadata,
-        sample_type_template_id=template_id_for(ctx, level, entity),
+        sample_type_template_id=template,
         sample_type_attributes=sample_type_attributes(
             entity,
             level=level,
             isa_tag_ids=ctx.isa_tag_ids,
             cv_ids=cv_ids_for_entity(ctx.cv_ids, entity_name),
             linked_sample_type_id=input_type_id,
+            template_attribute_ids=_template_attributes(ctx, template),
         ),
     )
     owned = _types_with_titles(
@@ -730,6 +805,16 @@ def place_sample(
         ctx.text_list_fields_by_entity.get(node.entity_type, frozenset()),
         route_core=not bound,
     )
+    if bound and entity is not None:
+        for field in entity.fields:
+            if field.seek_attribute_type == REGISTERED_DATA_FILE and field.name in data:
+                file_id = registered_data_file(
+                    ctx, node.id, data[field.name], field.name
+                )
+                if file_id is None:
+                    del data[field.name]
+                else:
+                    data[field.name] = file_id
     title_attribute = title_attribute_of(entity) if bound else "Title"
     # SEEK derives a Sample's title from its title attribute and rejects a
     # blank one; fall back to the same non-blank title the ISA levels use.

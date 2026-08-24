@@ -252,6 +252,29 @@ def sync_dataset_to_seek(
     }
     result = SyncResult()
 
+    # A column bound to the instance's own vocabulary (``seek_controlled_vocab``)
+    # resolves that vocabulary by title here, beside the provisioned ones; a
+    # vocabulary the instance lacks is an error, since the column cannot be
+    # created without it.
+    resolved_cv_ids = dict(cv_ids or {})
+    for entity_name, entity in profile.entities.items():
+        for f in entity.fields:
+            if f.is_nested() or not f.seek_controlled_vocab:
+                continue
+            found = client.find_controlled_vocab_id_by_title(f.seek_controlled_vocab)
+            if found is None:
+                result.errors.append(
+                    (
+                        f"vocabulary:{entity_name}.{f.name}",
+                        f"no Controlled Vocabulary titled "
+                        f"{f.seek_controlled_vocab!r} on this SEEK — it is created "
+                        "when the template is populated; install the templates, "
+                        "then re-run",
+                    )
+                )
+                continue
+            resolved_cv_ids[f"{entity_name}.{f.name}"] = found
+
     # Fields whose declared ``reference`` names an Assay-role entity are the
     # only way a material links to its Assay.
     assay_role_entities = {name for name, role in roles.items() if role == "Assay"} | {
@@ -275,7 +298,7 @@ def sync_dataset_to_seek(
         chain_entities=sample_chain_entities(profile),
         assay_reference_fields=assay_reference_fields,
         isa_tag_ids=client.isa_tag_ids(),
-        cv_ids=cv_ids or {},
+        cv_ids=resolved_cv_ids,
         roles=roles,
         values_by_node=values_by_node,
         text_list_fields_by_entity=text_list_fields_by_entity,

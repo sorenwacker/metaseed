@@ -51,6 +51,22 @@
   Extended Metadata Type lacks, or a record-reference attribute) is reported
   under *Values not sent* on the SEEK page, in `SyncResult.notes`. It used to
   be listed as a skipped entity, so the page declared the copy incomplete.
+- **Synced Sample Types are the installed template, column for column**
+  (#261). Fields carry the exact SEEK column where the field type cannot:
+  `seek_attribute_type` (`ENA custom date`, `Text`, `Registered Data file`,
+  `Registered Sample List`), `seek_controlled_vocab` (the instance vocabulary
+  SEEK created when the template was populated, resolved by title at sync
+  time — provisioning makes no copy of it, and an absent one is an error
+  naming the column) and `seek_cv_free_text`; every attribute carries its
+  `template_attribute_id`. `metaseed seek-import-templates profile.yaml
+  templates/*.json --write` derives the template-bound entities from the
+  template files, keeping what only the profile knows; the gate is that the
+  derived entity renders back to the template attribute for attribute.
+- A `Registered Data file` column or Extended Metadata attribute is filled by
+  registering the file: its URL becomes a remote SEEK DataFile (once per URL)
+  and the column receives that record's id, which is what SEEK stores there.
+  A value that is not a URL, or one SEEK cannot reach when registering, is
+  reported under *Values not sent* rather than failing the record.
 - **Load Example** works for profiles installed under the user data dir: the
   loader looks in `<user data dir>/examples/<profile>/<version>/` as well as
   the packaged examples, so a user profile can ship example data beside its

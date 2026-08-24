@@ -182,6 +182,11 @@ def build_provisioning_plan(
             for field in entity.fields:
                 if field.is_nested() or not is_cv_field(field):
                     continue
+                if field.seek_controlled_vocab:
+                    # Bound to the instance's own vocabulary, which populating
+                    # the template created; a provisioned copy would be a second
+                    # vocabulary of the same terms.
+                    continue
                 bound_cv_title = _cv_title(profile, entity_name, field)
                 if bound_cv_title not in cvs:
                     cvs[bound_cv_title] = CvPlan(
