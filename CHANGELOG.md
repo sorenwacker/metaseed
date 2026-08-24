@@ -47,6 +47,10 @@
   stream already takes in front of it. This is how an "assay with data file"
   (input: the study sample) coexists with a material → data file chain under
   one profile Assay.
+- A value left out of a Study or Assay that did reach SEEK (a field the
+  Extended Metadata Type lacks, or a record-reference attribute) is reported
+  under *Values not sent* on the SEEK page, in `SyncResult.notes`. It used to
+  be listed as a skipped entity, so the page declared the copy incomplete.
 - **Load Example** works for profiles installed under the user data dir: the
   loader looks in `<user data dir>/examples/<profile>/<version>/` as well as
   the packaged examples, so a user profile can ship example data beside its

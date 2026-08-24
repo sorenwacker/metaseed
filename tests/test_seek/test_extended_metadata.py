@@ -156,9 +156,11 @@ def test_study_values_land_in_the_type_with_the_nested_group() -> None:
 def test_a_field_the_type_lacks_is_reported_not_dropped_silently() -> None:
     seek = _seek()
     result = sync_dataset_to_seek(seek, _dataset(), project_id="1")
-    assert any("not_in_seek" in msg for _, msg in result.skipped), result.skipped
+    assert any("not_in_seek" in msg for _, msg in result.notes), result.notes
     # The record's own identity fields are its title, not metadata beside it.
-    assert not any("identifier" in msg or "title" in msg for _, msg in result.skipped)
+    assert not any("identifier" in msg or "title" in msg for _, msg in result.notes)
+    # A note, not a skipped entity: the Study itself reached SEEK.
+    assert not result.skipped
 
 
 def test_assay_values_land_in_the_assay_type() -> None:
@@ -175,8 +177,9 @@ def test_a_reference_typed_attribute_is_reported_not_sent() -> None:
     result = sync_dataset_to_seek(seek, _dataset(), project_id="1")
     assert not result.errors
     assert any(
-        "instrument_metadata" in msg and "reference" in msg for _, msg in result.skipped
-    ), result.skipped
+        "instrument_metadata" in msg and "reference" in msg for _, msg in result.notes
+    ), result.notes
+    assert not result.skipped
 
 
 def test_a_missing_type_is_an_error_not_a_silent_drop() -> None:

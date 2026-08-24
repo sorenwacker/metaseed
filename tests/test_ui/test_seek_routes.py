@@ -412,3 +412,42 @@ def test_the_preview_of_a_template_bound_profile_names_its_templates(
     assert "assay - material" in response.text
     assert 'id="seek-provision-label" hx-swap-oob' in response.text
     assert "Set up Controlled Vocabularies" in response.text
+
+
+def test_a_value_left_out_of_a_pushed_record_is_a_note_not_a_missing_entity(
+    make_client,
+):
+    """An attribute the Extended Metadata Type cannot take (a record reference)
+    is left out of a Study or Assay that DID reach SEEK. The page used to count
+    it as an entity that was not uploaded and declare the copy incomplete."""
+    from jinja2 import Environment, FileSystemLoader
+
+    import metaseed.ui.app as appmod
+
+    result = _sync_result(created=8)
+    result.notes = [
+        ("a1", "'X' holds a reference to a SEEK record, not a value, for: f")
+    ]
+    env = Environment(
+        loader=FileSystemLoader(str(appmod.TEMPLATES_DIR)), autoescape=True
+    )
+    html = env.get_template("seek/index.html").render(
+        base_url="",
+        profile="p",
+        version="1.0",
+        profiles=["p"],
+        profile_versions={"p": ["1.0"]},
+        dataset_name="d",
+        exportable_count=0,
+        entity_counts=[],
+        api_key_configured=True,
+        projects=[("1", "P")],
+        seek_url="http://x",
+        provision_result=None,
+        action_error=None,
+        sync_result=result,
+    )
+    assert "not uploaded" not in html
+    assert "did not reach SEEK" not in html
+    assert "notification-success" in html
+    assert "seek-sync-notes" in html and "Values not sent" in html

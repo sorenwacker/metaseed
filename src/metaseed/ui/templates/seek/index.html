@@ -48,6 +48,12 @@
             {% set ecounts = {} %}
             {% for node_id, reason in sync_result.errors %}{% set _ = ecounts.update({reason: ecounts.get(reason, 0) + 1}) %}{% endfor %}
             {% for reason, n in ecounts.items() %}{{ reason }}{% if n > 1 %} (×{{ n }}){% endif %}{% if not loop.last %}; {% endif %}{% endfor %}</div>{% endif %}
+        {# Attribute values left out of a record that WAS pushed -- not a
+           missing entity, so not counted above. #}
+        {% if sync_result.notes %}<div class="muted" data-testid="seek-sync-notes" style="font-size:0.85rem;">Values not sent:
+            {% set ncounts = {} %}
+            {% for node_id, reason in sync_result.notes %}{% set _ = ncounts.update({reason: ncounts.get(reason, 0) + 1}) %}{% endfor %}
+            {% for reason, n in ncounts.items() %}{{ reason }}{% if n > 1 %} (×{{ n }}){% endif %}{% if not loop.last %}; {% endif %}{% endfor %}</div>{% endif %}
     </div>
     {% endif %}
 

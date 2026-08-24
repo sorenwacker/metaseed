@@ -28,6 +28,11 @@ class SyncResult:
     data_files: dict[str, str] = dc_field(default_factory=dict)
     skipped: list[tuple[str, str]] = dc_field(default_factory=list)
     errors: list[tuple[str, str]] = dc_field(default_factory=list)
+    # Attribute-level omissions on a record that WAS pushed: a field the
+    # Extended Metadata Type has no attribute for, or an attribute that holds
+    # a SEEK record reference no value can fill. Distinct from ``skipped``,
+    # which names whole entities that did not reach SEEK.
+    notes: list[tuple[str, str]] = dc_field(default_factory=list)
     # Samples the ISA tree cannot reach. An assay material naming no existing
     # Assay has no Sample Type to go in and is not created; a Sample stored in a
     # Study-owned type whose chain never reaches an Assay link IS created, but

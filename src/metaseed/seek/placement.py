@@ -322,14 +322,14 @@ def extended_metadata_for(
         else:
             data.setdefault(target[0], {})[target[1]] = value
     if unknown:
-        ctx.result.skipped.append(
+        ctx.result.notes.append(
             (
                 node.id,
                 f"{type_title!r} has no attribute for: " + ", ".join(sorted(unknown)),
             )
         )
     if references:
-        ctx.result.skipped.append(
+        ctx.result.notes.append(
             (
                 node.id,
                 f"{type_title!r} holds a reference to a SEEK record, not a value, "
