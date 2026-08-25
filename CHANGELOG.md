@@ -83,6 +83,14 @@
 - The documentation footer discloses that the docs are AI-generated (EU AI Act
   transparency), gated by `tests/test_docs/test_ai_disclosure.py`.
 
+### Removed
+- The in-app HTTP MCP server: the header's MCP button, `/api/mcp/status`,
+  `/api/mcp/start`, `/api/mcp/stop` and the subprocess manager
+  (`metaseed.agent.mcp.manager`) that spawned a server on port 8001. MCP is
+  used over stdio (`metaseed mcp`, configured in the agent); HTTP transport is
+  the hub's. `MCPServerManager`, `MCPServerStatus` and `get_mcp_manager` are no
+  longer importable from `metaseed.agent.mcp`.
+
 ### Fixed
 - **A pushed dataset now exports from SEEK as ISA-JSON.** The last gap was not
   in the structure: `SeekClient._send` attached the API token only on some code

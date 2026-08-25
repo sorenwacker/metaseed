@@ -1,6 +1,6 @@
 """Every showNotification call passes (message, type) — the defined order.
 
-The only definition (mcp.js) takes (message, type). core.js called it as
+The only definition (core.js) takes (message, type). core.js called it as
 (type, message) at seven sites, so toasts displayed the literal word 'error'
 as their text and used the real message as a CSS class. There is no JS test
 harness, so this scan is the gate for the convention.

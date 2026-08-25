@@ -61,8 +61,22 @@ document.addEventListener('htmx:afterRequest', function(e) {
     }
 });
 
-// MCP runs in-process - no WebSocket needed for sync
-// State changes are immediate since UI and MCP share the same state
+function showNotification(message, type) {
+    var container = document.getElementById('notification-container');
+    if (!container) return;
+
+    var notification = document.createElement('div');
+    notification.className = 'notification notification-' + (type || 'info');
+    notification.textContent = message;
+    container.appendChild(notification);
+
+    setTimeout(function() {
+        notification.style.opacity = '0';
+        setTimeout(function() {
+            notification.remove();
+        }, 200);
+    }, 5000);
+}
 
 // Graph polling functions (used by graph.js)
 var graphPollingInterval = null;
