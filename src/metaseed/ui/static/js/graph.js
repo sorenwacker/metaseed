@@ -194,24 +194,69 @@ function getGraphOptions(layout) {
     }
 }
 
+// Where the graph goes when it opens: 'beside' the list (the default on a
+// screen of 1400px or more) or in its 'place'. Remembered per browser.
+function graphDockMode() {
+    var stored = null;
+    try { stored = localStorage.getItem('graphDock'); } catch (e) {}
+    if (stored === 'beside' || stored === 'place') return stored;
+    return window.innerWidth >= 1400 ? 'beside' : 'place';
+}
+
+function applyGraphDock() {
+    var workspace = document.getElementById('workspace');
+    var main = document.getElementById('main');
+    var btn = document.getElementById('graph-dock-btn');
+    var beside = graphDockMode() === 'beside';
+    if (workspace) workspace.classList.toggle('workspace-beside', beside);
+    if (main) main.classList.toggle('hidden', !beside);
+    if (btn) btn.textContent = beside ? 'In place' : 'Beside';
+    if (graphNetwork) graphNetwork.redraw();
+}
+
+function toggleGraphDock() {
+    var next = graphDockMode() === 'beside' ? 'place' : 'beside';
+    try { localStorage.setItem('graphDock', next); } catch (e) {}
+    applyGraphDock();
+    fitGraph();
+}
+
+function openGraph() {
+    var container = document.getElementById('graph-container');
+    if (!container) return;
+    container.classList.remove('hidden');
+    applyGraphDock();
+    loadGraph();
+    startGraphPolling();
+}
+
+function closeGraph() {
+    var container = document.getElementById('graph-container');
+    var workspace = document.getElementById('workspace');
+    var main = document.getElementById('main');
+    if (container) container.classList.add('hidden');
+    if (workspace) workspace.classList.remove('workspace-beside');
+    if (main) main.classList.remove('hidden');
+    stopGraphPolling();
+}
+
 function toggleGraph() {
     var container = document.getElementById('graph-container');
-    var main = document.getElementById('main');
-    var btn = document.getElementById('graph-toggle');
-
+    if (!container) return;
     if (container.classList.contains('hidden')) {
-        container.classList.remove('hidden');
-        main.classList.add('hidden');
-        btn.textContent = 'Show List';
-        loadGraph();
-        startGraphPolling();
+        openGraph();
     } else {
-        container.classList.add('hidden');
-        main.classList.remove('hidden');
-        btn.textContent = 'Show Graph';
-        stopGraphPolling();
+        closeGraph();
     }
 }
+
+// /graph: the graph alone, for a second window or screen.
+document.addEventListener('DOMContentLoaded', function() {
+    if (document.body.getAttribute('data-standalone-graph')) {
+        loadGraph();
+        startGraphPolling();
+    }
+});
 
 function prepareGraphData(data) {
     // Collect unique entity types and assign colors/shapes

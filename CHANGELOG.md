@@ -84,6 +84,22 @@
   transparency), gated by `tests/test_docs/test_ai_disclosure.py`.
 
 ### Changed
+- The profile explorer shows a field's controlled vocabulary: the node lists
+  `[N terms]` beside the field, and the entity panel opens the terms. The
+  Show/Hide labels in compare mode use the profiles' display names, as the
+  selects do.
+- The graph panel has its own bar: **Close**, **Beside / In place** (beside
+  the list is the default from 1400px wide, remembered per browser) and
+  **New window**, which opens the graph alone at `/graph` for a second screen.
+  The Graph button lives in the dataset toolbar the graph used to hide when
+  it took the list's place, so the panel needed its own way back.
+- The dataset toolbar is a row of its own under the dataset title, grouped
+  (validate · graph · DCAT | exports | import | back), instead of squeezing
+  the title beside a long run of buttons.
+- Validate, Graph, DCAT and the adapter exports moved from the global header
+  into the open dataset's toolbar. Every one of them acts on the dataset that
+  is open, so they sat in the header on pages (Settings, Spec Builder, the
+  datasets overview) with nothing to act on.
 - Dependency updates come from **Renovate** on `config:best-practices`
   instead of Dependabot. Dependabot cannot update `uv.lock`, so its PRs left
   the lockfile CI installs from untouched; Renovate regenerates it, pins
@@ -118,7 +134,9 @@
   and a run's cleanup deleted the user's own datasets. Every test now gets a
   private directory (`METASEED_DATASETS_DIR`, set by an autouse fixture that
   also rebinds the dataset factory), gated by
-  `tests/test_tests_never_touch_the_user_datasets.py`.
+  `tests/test_tests_never_touch_the_user_datasets.py`. Datasets tests
+  create are named `test-<what they are>`; the fixture refuses any other
+  name on the write.
 - The SEEK page's inline status blocks (progress, results, errors) are static
   boxes, not toasts: they carried the toast class, which is fixed-position and
   animated, so the polled progress bar slid in as a new toast every second.

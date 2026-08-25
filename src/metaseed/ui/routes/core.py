@@ -182,6 +182,15 @@ def register_core_routes(
             },
         )
 
+    @app.get("/graph", response_class=HTMLResponse)
+    async def graph_window(request: Request) -> HTMLResponse:
+        """The open dataset's graph alone, for a second window or screen."""
+        return templates.TemplateResponse(
+            request,
+            "base.html",
+            {"standalone_graph": True, "base_url": base_url, "export_options": []},
+        )
+
     @app.get("/new-dataset", response_class=HTMLResponse)
     async def new_dataset(request: Request) -> HTMLResponse:
         """Show the new dataset / profile selection screen."""

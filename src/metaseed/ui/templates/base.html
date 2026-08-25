@@ -8,9 +8,9 @@
     <link rel="icon" type="image/png" sizes="128x128" href="/static/images/metaseed-icon-128.png">
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
     <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
-    <link rel="stylesheet" href="/static/css/style.css?v=92">
+    <link rel="stylesheet" href="/static/css/style.css?v=93">
 </head>
-<body hx-headers='{"X-Requested-With": "XMLHttpRequest"}'>
+<body{% if standalone_graph %} data-standalone-graph="1"{% endif %} hx-headers='{"X-Requested-With": "XMLHttpRequest"}'>
     <div class="layout">
         <header class="header">
             <h1 class="header-title">
@@ -23,31 +23,22 @@
                 <a href="{{ base_url }}/settings" class="nav-btn" data-testid="nav-plugins">Plugins</a>
                 <a href="https://sorenwacker.github.io/metaseed/" class="nav-btn" data-testid="nav-docs" target="_blank" rel="noopener">Docs</a>
             </nav>
-            <div class="header-actions">
-                <button id="validate-btn" class="btn btn-header" onclick="validateDataset()" data-testid="btn-validate-dataset" title="Validate all entities">
-                    Validate
-                </button>
-                <button id="graph-toggle" class="btn btn-header" onclick="toggleGraph()" data-testid="btn-graph">
-                    Graph
-                </button>
-                <button id="dcat-btn" class="btn btn-header" onclick="showDcatCard()" data-testid="btn-dcat" title="DCAT catalog card">
-                    DCAT
-                </button>
-                {# Adapter exports the active profile offers, straight from the
-                   plugin registry: a new exporter appears here by declaring
-                   itself, with no template change. #}
-                {% for opt in export_options %}
-                <a href="{{ base_url }}/export/adapter/{{ opt.key }}"
-                   class="btn btn-header"
-                   data-testid="btn-export-{{ opt.key }}"
-                   title="Download {{ opt.label }}" download>
-                    {{ opt.label }}
-                </a>
-                {% endfor %}
-            </div>
         </header>
 
-        <div id="graph-container" class="graph-container hidden">
+        {# The graph and the list share the workspace: the graph replaces the
+           list, or sits beside it (the default on a wide screen), or opens in
+           its own window at /graph. #}
+        <div class="workspace{% if standalone_graph %} workspace-standalone{% endif %}" id="workspace">
+        <div id="graph-container" class="graph-container{% if not standalone_graph %} hidden{% endif %}">
+            <div class="graph-panel-bar">
+                <strong>Graph</strong>
+                <span class="toolbar-end"></span>
+                {% if not standalone_graph %}
+                <button id="graph-dock-btn" class="btn btn-secondary btn-sm" onclick="toggleGraphDock()" data-testid="btn-graph-dock" title="Show the graph beside the list, or in its place">Beside</button>
+                <a href="{{ base_url }}/graph" target="_blank" rel="noopener" class="btn btn-secondary btn-sm" data-testid="btn-graph-window" title="Open the graph in its own window">New window</a>
+                <button class="btn btn-secondary btn-sm" onclick="closeGraph()" data-testid="btn-graph-close" title="Close the graph">Close ×</button>
+                {% endif %}
+            </div>
             <div id="graph-controls" class="graph-controls">
                 <label class="graph-control-label">
                     Spacing
@@ -73,15 +64,17 @@
             <div id="graph-view" class="graph-view"></div>
         </div>
 
-        <main class="main" id="main">
+        <main class="main{% if standalone_graph %} hidden{% endif %}" id="main">
             {% block content %}
             {% if datasets is defined %}
             {% include "datasets_list.html" %}
+            {% elif standalone_graph %}
             {% else %}
             {% include "index.html" %}
             {% endif %}
             {% endblock %}
         </main>
+        </div>
 
         <footer class="footer">
             <span class="footer-version">v{{ app_version }}</span>
@@ -115,11 +108,11 @@
         const BASE_URL = "{{ base_url }}";
     </script>
     <!-- Modular JS files -->
-    <script src="{{ base_url }}/static/js/core.js?v=9"></script>
+    <script src="{{ base_url }}/static/js/core.js?v=10"></script>
     <script src="{{ base_url }}/static/js/validation.js?v=9"></script>
     <script src="{{ base_url }}/static/js/table-edit.js?v=9"></script>
     <script src="{{ base_url }}/static/js/lookup.js?v=10"></script>
-    <script src="{{ base_url }}/static/js/graph.js?v=11"></script>
+    <script src="{{ base_url }}/static/js/graph.js?v=12"></script>
     <script src="{{ base_url }}/static/js/dataset.js?v=9"></script>
 </body>
 </html>

@@ -243,10 +243,10 @@ class TestImportControlIsRendered:
         from metaseed.ui.datasets import save_dataset
 
         state = AppState(profile="pride", version="1.0")
-        save_dataset(state, "blank")
+        save_dataset(state, "test-blank")
         client = TestClient(create_app(state), follow_redirects=True)
 
-        response = client.get("/dataset/blank/edit")
+        response = client.get("/dataset/test-blank/edit")
 
         assert response.status_code == 200
         assert "This dataset has no entities yet" in response.text

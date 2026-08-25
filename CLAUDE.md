@@ -81,6 +81,15 @@ that a passing suite failed to catch (see issue #139 and its follow-ups).
   snapshot guarding the metaseed-hub contract (#68); an ERD relationship-edge
   check (a page edge must name a real nested field whose `items` is the target).
 
+### Tests leave no trace and no confusion
+
+- Every test writes datasets to a private directory (an autouse fixture sets
+  `METASEED_DATASETS_DIR`); a test that touched `~/.local/share/metaseed`
+  once deleted a user's saved datasets while the UI was open.
+- A dataset a test creates is named `test-<what it is>` (`test-with-entities`,
+  `test-to-delete`), never `inv1` or `doe`; the autouse fixture refuses any
+  other name on the write, so the rule cannot erode.
+
 ### Local must match CI
 
 - `make test` and CI must exclude the same markers. CI runs

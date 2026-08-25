@@ -336,13 +336,13 @@ class TestMCPDatasetTools:
             "Study",
             {"unique_id": "STU-1", "investigation_id": "INV-1", "title": "S"},
         )
-        save_out = json.loads(tools["save_dataset"].fn(name="roundtrip"))
+        save_out = json.loads(tools["save_dataset"].fn(name="test-roundtrip"))
         assert save_out["entity_count"] == 2
 
         # Session 2: fresh state, load, then list must still see both entities.
         srv.set_mcp_state(AppState(profile="miappe", version="1.2"))
         srv.get_context().dataset_factory = factory
-        load_out = json.loads(tools["load_dataset"].fn(name="roundtrip"))
+        load_out = json.loads(tools["load_dataset"].fn(name="test-roundtrip"))
         assert load_out["entity_count"] == 2
         list_out = json.loads(tools["list_entities"].fn())
         assert list_out["total"] == 2
@@ -1859,7 +1859,7 @@ class TestMCPStandaloneMode:
         with patch("metaseed.ui.datasets.auto_save"):
             # Create dataset
             result = create_fn.fn(
-                name="my-test-dataset", profile="miappe", version="1.2"
+                name="test-my-dataset", profile="miappe", version="1.2"
             )
             data = json.loads(result)
 
@@ -1869,8 +1869,8 @@ class TestMCPStandaloneMode:
             result = get_info_fn.fn()
             info = json.loads(result)
 
-            assert info["dataset_name"] == "my-test-dataset", (
-                f"Expected 'my-test-dataset' but got {info['dataset_name']}. "
+            assert info["dataset_name"] == "test-my-dataset", (
+                f"Expected 'test-my-dataset' but got {info['dataset_name']}. "
                 "dataset_name should be set after create_dataset."
             )
 
@@ -1997,7 +1997,7 @@ class TestCreateDatasetValidatesBeforeWiping:
 
         with patch("metaseed.ui.datasets.auto_save"):
             assert "error" not in json.loads(
-                create_fn.fn(name="keep-me", profile="miappe", version="1.1")
+                create_fn.fn(name="test-keep-me", profile="miappe", version="1.1")
             )
             assert "error" not in json.loads(
                 entity_fn.fn(entity_type="Investigation", data='{"title": "Precious"}')

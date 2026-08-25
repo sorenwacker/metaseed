@@ -370,11 +370,14 @@
                     document.getElementById('canvas-info').innerHTML =
                         `<strong>${data.statistics.total_entities}</strong> entities`;
 
-                    // Update filter labels with profile names
-                    const baseProfile = profiles[0].split('/')[0];
-                    const compareProfile = profiles[1].split('/')[0];
-                    document.getElementById('base-label').textContent = baseProfile;
-                    document.getElementById('compare-label').textContent = compareProfile;
+                    // Update filter labels with the profiles' display names,
+                    // the names the selects show, not the internal ids.
+                    const selectedName = (selectId, fallback) => {
+                        const option = document.querySelector('#' + selectId + ' option:checked');
+                        return option && option.value ? option.textContent.trim() : fallback;
+                    };
+                    document.getElementById('base-label').textContent = selectedName('base-profile', profiles[0].split('/')[0]);
+                    document.getElementById('compare-label').textContent = selectedName('compare-profile', profiles[1].split('/')[0]);
 
                     // Reset checkboxes
                     document.getElementById('show-base').checked = true;
@@ -504,9 +507,10 @@
                 const req = field.required ? '*' : ' ';
                 const fk = (field.type === 'entity' || field.type === 'list') && field.items ? '→' : ' ';
 
+                const cv = field.vocabulary && field.vocabulary.length ? ` [${field.vocabulary.length} terms]` : '';
                 if (exploreMode) {
                     // Explore mode: no diff indicators (matches spec-builder)
-                    label += `\n${req}${fk} ${field.name}: ${field.type}`;
+                    label += `\n${req}${fk} ${field.name}: ${field.type}${cv}`;
                 } else {
                     // Compare mode: show diff indicators
                     let ind = ' ';
@@ -564,6 +568,8 @@
                             <div class="field-diff-profiles">
                                 ${field.profiles.map(p => `<span class="profile-tag sm">${p.split('/')[0]}</span>`).join('')}
                             </div>
+                            ${field.vocabulary?.length ?
+                                `<details class="field-vocabulary"><summary>controlled vocabulary (${field.vocabulary.length} terms)</summary><ul>${field.vocabulary.map(term => `<li>${term}</li>`).join('')}</ul></details>` : ''}
                             ${field.attributes_changed?.length ?
                                 `<div class="field-diff-changes">Changed: ${field.attributes_changed.join(', ')}</div>` : ''}
                         </div>

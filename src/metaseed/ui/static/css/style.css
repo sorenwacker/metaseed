@@ -5575,8 +5575,8 @@ details.sidebar-section summary:hover {
 
 .entity-overview-header {
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--space-md);
     margin-bottom: var(--space-lg);
     padding-bottom: var(--space-md);
     border-bottom: 1px solid var(--clr-parchment);
@@ -5594,10 +5594,59 @@ details.sidebar-section summary:hover {
     color: var(--clr-ink-light);
 }
 
+/* The dataset toolbar: actions on the open dataset, grouped by separators,
+   the way back at the far end. Wraps on a narrow screen instead of squeezing
+   the title. */
 .entity-overview-actions {
     display: flex;
-    gap: var(--space-sm);
-    flex-shrink: 0;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-xs);
+}
+
+.toolbar-sep {
+    width: 1px;
+    height: 1.4rem;
+    background: var(--clr-parchment);
+    margin: 0 var(--space-xs);
+}
+
+.toolbar-end {
+    margin-left: auto;
+}
+
+/* Graph and list share the workspace. In place (default on a narrow
+   screen) one of them shows; beside (default from 1400px), both. */
+.workspace {
+    display: flex;
+    min-height: 0;
+}
+
+.workspace > .main {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.workspace-beside > .graph-container {
+    flex: 0 0 45%;
+    position: sticky;
+    top: 0;
+    border-left: 1px solid var(--clr-parchment);
+    order: 2;
+}
+
+.workspace-standalone > .graph-container {
+    flex: 1 1 auto;
+    height: 100vh;
+}
+
+.graph-panel-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-lg);
+    background: var(--clr-ivory);
+    border-bottom: 1px solid var(--clr-parchment);
 }
 
 .welcome-actions {
@@ -5728,3 +5777,9 @@ details.sidebar-section summary:hover {
 .seek-status-success { background: var(--clr-success-bg); border-left-color: var(--clr-success); }
 .seek-status-warning { background: var(--clr-warning-bg, #fff7e6); border-left-color: #c60; }
 .seek-status-error { background: var(--clr-error-bg); border-left-color: var(--clr-error); }
+
+
+/* A field's closed vocabulary in the explorer's entity panel. */
+.field-vocabulary { margin-top: 0.25rem; font-size: 0.8rem; }
+.field-vocabulary summary { cursor: pointer; color: var(--clr-ink-light); }
+.field-vocabulary ul { margin: 0.25rem 0 0 1rem; padding: 0; max-height: 12rem; overflow: auto; }

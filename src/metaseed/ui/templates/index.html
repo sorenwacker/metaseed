@@ -6,9 +6,34 @@
             <span class="entity-overview-meta">{{ current_profile }} {{ version }} - {{ tree_nodes|length }} root entities</span>
         </div>
         <div class="entity-overview-actions">
+            {# Everything here acts on the open dataset, so it lives with the
+               dataset rather than in the global header, where it used to sit
+               on pages that have no dataset to act on. #}
+            <button id="validate-btn" class="btn btn-secondary btn-sm" onclick="validateDataset()" data-testid="btn-validate-dataset" title="Validate all entities">
+                Validate
+            </button>
+            <button id="graph-toggle" class="btn btn-secondary btn-sm" onclick="toggleGraph()" data-testid="btn-graph">
+                Graph
+            </button>
+            <button id="dcat-btn" class="btn btn-secondary btn-sm" onclick="showDcatCard()" data-testid="btn-dcat" title="DCAT catalog card">
+                DCAT
+            </button>
+            <span class="toolbar-sep" aria-hidden="true"></span>
+            {# Adapter exports the active profile offers, straight from the
+               plugin registry: a new exporter appears here by declaring
+               itself, with no template change. #}
+            {% for opt in export_options %}
+            <a href="{{ base_url }}/export/adapter/{{ opt.key }}"
+               class="btn btn-secondary btn-sm"
+               data-testid="btn-export-{{ opt.key }}"
+               title="Download {{ opt.label }}" download>
+                {{ opt.label }}
+            </a>
+            {% endfor %}
             <a href="{{ base_url }}/export" class="btn btn-secondary btn-sm" download>
                 Export Excel
             </a>
+            <span class="toolbar-sep" aria-hidden="true"></span>
             <label class="btn btn-secondary btn-sm btn-file">
                 Import
                 <input type="file"
@@ -21,8 +46,8 @@
                        name="file"
                        hidden>
             </label>
-            <a href="{{ base_url }}/" class="btn btn-secondary btn-sm">
-                Back to Datasets
+            <a href="{{ base_url }}/" class="btn btn-secondary btn-sm toolbar-end">
+                ← Datasets
             </a>
         </div>
     </div>

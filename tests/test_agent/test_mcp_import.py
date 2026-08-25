@@ -58,7 +58,7 @@ def test_import_loads_the_record_and_saves_it(import_tool):
 
     with patch("metaseed.pride.import_accession", _pride_client):
         data = json.loads(
-            tool(profile="pride", accession="PXD000001", name="imported-ds")
+            tool(profile="pride", accession="PXD000001", name="test-imported")
         )
 
     assert data.get("status") == "imported", data
@@ -71,7 +71,7 @@ def test_import_loads_the_record_and_saves_it(import_tool):
     (imported,) = state.get_or_create_facade().get_roots()
     assert imported.instance.model_dump()["accession"] == "PXD000001"
 
-    saved = json.loads((datasets_dir / "imported-ds.json").read_text())
+    saved = json.loads((datasets_dir / "test-imported.json").read_text())
     assert saved["profile"] == "pride"
     assert saved["entities"][0]["accession"] == "PXD000001"
 

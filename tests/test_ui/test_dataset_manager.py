@@ -80,11 +80,11 @@ class TestDatasetManager:
 
     def test_save_dataset(self, manager):
         """Should save current state."""
-        result = manager.save_dataset("test")
+        result = manager.save_dataset("test-basic")
 
-        assert result.name == "test"
+        assert result.name == "test-basic"
         assert result.profile == "miappe"
-        assert manager.current_dataset == "test"
+        assert manager.current_dataset == "test-basic"
 
     def test_save_with_entities(self, manager):
         """Should save state with entities."""
@@ -95,7 +95,7 @@ class TestDatasetManager:
         )
         manager._state.add_node("Investigation", inv)
 
-        result = manager.save_dataset("with-entities")
+        result = manager.save_dataset("test-with-entities")
 
         assert result.entity_count == 1
 
@@ -110,16 +110,16 @@ class TestDatasetManager:
     def test_load_dataset(self, manager):
         """Should load dataset into state."""
         # Save first
-        manager.save_dataset("test")
+        manager.save_dataset("test-basic")
 
         # Create a new state/manager to load into
         new_state = AppState(profile="isa")
         new_manager = DatasetManager(manager._repo, new_state)
 
-        result = new_manager.load_dataset("test")
+        result = new_manager.load_dataset("test-basic")
 
-        assert result.name == "test"
-        assert new_manager.current_dataset == "test"
+        assert result.name == "test-basic"
+        assert new_manager.current_dataset == "test-basic"
         assert new_state.profile == "miappe"
 
     def test_load_empty_version_falls_back_to_latest(self, manager):
@@ -150,20 +150,20 @@ class TestDatasetManager:
 
     def test_delete_dataset(self, manager):
         """Should delete dataset."""
-        manager.save_dataset("todelete")
-        assert manager.dataset_exists("todelete")
+        manager.save_dataset("test-to-delete")
+        assert manager.dataset_exists("test-to-delete")
 
-        result = manager.delete_dataset("todelete")
+        result = manager.delete_dataset("test-to-delete")
 
         assert result is True
-        assert not manager.dataset_exists("todelete")
+        assert not manager.dataset_exists("test-to-delete")
 
     def test_delete_current_clears_name(self, manager):
         """Deleting current dataset should clear current_dataset."""
-        manager.save_dataset("current")
-        assert manager.current_dataset == "current"
+        manager.save_dataset("test-current")
+        assert manager.current_dataset == "test-current"
 
-        manager.delete_dataset("current")
+        manager.delete_dataset("test-current")
 
         assert manager.current_dataset is None
 
@@ -174,18 +174,18 @@ class TestDatasetManager:
 
     def test_dataset_exists(self, manager):
         """Should check existence correctly."""
-        assert not manager.dataset_exists("test")
+        assert not manager.dataset_exists("test-basic")
 
-        manager.save_dataset("test")
+        manager.save_dataset("test-basic")
 
-        assert manager.dataset_exists("test")
+        assert manager.dataset_exists("test-basic")
 
     def test_current_dataset_property(self, manager):
         """Should track current dataset."""
         assert manager.current_dataset is None
 
-        manager.save_dataset("first")
-        assert manager.current_dataset == "first"
+        manager.save_dataset("test-first")
+        assert manager.current_dataset == "test-first"
 
         manager.current_dataset = "second"
         assert manager.current_dataset == "second"

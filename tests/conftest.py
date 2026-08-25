@@ -44,6 +44,52 @@ def _private_datasets_dir(tmp_path_factory: pytest.TempPathFactory, monkeypatch)
 
 
 @pytest.fixture(autouse=True)
+def _test_datasets_are_named_for_what_they_are(monkeypatch):
+    """A dataset a test creates is named ``test-<what it is>``.
+
+    Datasets tests made used to be called ``inv1``, ``doe``, ``i``, ``s1`` --
+    indistinguishable from a person's work when they showed up in a datasets
+    directory (which, before the isolation fixture above, was the user's).
+    The gate is on the write itself, so any path -- the UI route, the MCP
+    tool, the repository -- is covered; a name the application chooses for
+    a loaded example (``<profile>-<version>-example``) is exempt.
+    """
+    from metaseed.repositories.filesystem_dataset import FilesystemDatasetRepository
+    from metaseed.ui.dataset_manager import DatasetManager
+
+    original_save = FilesystemDatasetRepository.save
+    original_auto_save = DatasetManager.auto_save
+    autosaving = {"depth": 0}
+
+    def named_save(self, name, data):
+        # The application names an auto-saved dataset after its root entity
+        # and a loaded example after its profile; those are its choices, not
+        # the test's, and are not gated.
+        # A name the repository rejects anyway is its error to raise.
+        if (
+            autosaving["depth"] == 0
+            and self.validate_name(name) is None
+            and not name.startswith("test-")
+            and not name.endswith("-example")
+        ):
+            raise AssertionError(
+                f"a test created a dataset named {name!r}; name it "
+                "'test-<what it is>' so it cannot be mistaken for a person's work"
+            )
+        return original_save(self, name, data)
+
+    def counted_auto_save(self):
+        autosaving["depth"] += 1
+        try:
+            return original_auto_save(self)
+        finally:
+            autosaving["depth"] -= 1
+
+    monkeypatch.setattr(FilesystemDatasetRepository, "save", named_save)
+    monkeypatch.setattr(DatasetManager, "auto_save", counted_auto_save)
+
+
+@pytest.fixture(autouse=True)
 def _block_external_network(
     request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
 ) -> None:

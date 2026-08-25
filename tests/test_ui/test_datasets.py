@@ -169,12 +169,12 @@ class TestSaveDataset:
         )
         state.add_node("Investigation", inv)
 
-        result = save_dataset(state, "with-entities")
+        result = save_dataset(state, "test-with-entities")
 
         assert result["entity_count"] == 1
 
         # Verify content
-        path = temp_datasets_dir / "with-entities.json"
+        path = temp_datasets_dir / "test-with-entities.json"
         data = json.loads(path.read_text())
         assert len(data["entities"]) == 1
         assert data["entities"][0]["_type"] == "Investigation"

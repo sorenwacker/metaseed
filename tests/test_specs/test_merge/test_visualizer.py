@@ -460,3 +460,52 @@ class TestNodeColoring:
 
         assert node["color"]["background"] == "#ffebee"
         assert node["color"]["border"] == "#d32f2f"
+
+
+def test_a_field_with_an_enum_carries_its_vocabulary_into_the_graph() -> None:
+    # The explorer shows a field's controlled vocabulary from this; without the
+    # terms in the graph data there was nowhere in the UI to see them.
+    from metaseed.specs.merge.models import (
+        ComparisonResult,
+        ComparisonStatistics,
+        DiffType,
+        EntityDiff,
+        FieldDiff,
+    )
+    from metaseed.specs.schema import Constraints
+
+    spec = FieldSpec(
+        name="growth_medium",
+        type=FieldType.STRING,
+        constraints=Constraints(enum=["soil", "hydroponic"]),
+    )
+    field = FieldDiff(
+        field_name="growth_medium",
+        diff_type=DiffType.UNCHANGED,
+        profiles={"p/1.0": spec},
+    )
+    entity = EntityDiff(
+        entity_name="Source",
+        diff_type=DiffType.UNCHANGED,
+        profiles={"p/1.0": True},
+        field_diffs=[field],
+    )
+    result = ComparisonResult(
+        profiles=["p/1.0"],
+        profile_specs={},
+        entity_diffs=[entity],
+        statistics=ComparisonStatistics(
+            total_entities=1,
+            common_entities=1,
+            unique_entities=0,
+            modified_entities=0,
+            total_fields=1,
+            common_fields=1,
+            modified_fields=0,
+            conflicting_fields=0,
+        ),
+    )
+    graph = DiffVisualizer().build_diff_graph(result)
+    node = next(n for n in graph["nodes"] if "Source" in n["label"])
+    (growth,) = [f for f in node["data"]["fields"] if f["name"] == "growth_medium"]
+    assert growth["vocabulary"] == ["soil", "hydroponic"]

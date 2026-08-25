@@ -48,13 +48,13 @@ class TestDatasetInfo:
     def test_create(self):
         """Should create DatasetInfo with all fields."""
         info = DatasetInfo(
-            name="test",
+            name="test-basic",
             profile="miappe",
             version="1.2",
             entity_count=5,
             modified="2024-01-01T00:00:00",
         )
-        assert info.name == "test"
+        assert info.name == "test-basic"
         assert info.profile == "miappe"
         assert info.version == "1.2"
         assert info.entity_count == 5
@@ -67,11 +67,11 @@ class TestDatasetData:
     def test_create_with_defaults(self):
         """Should create DatasetData with default values."""
         data = DatasetData(
-            name="test",
+            name="test-basic",
             profile="miappe",
             version="1.2",
         )
-        assert data.name == "test"
+        assert data.name == "test-basic"
         assert data.entities == []
         assert data.modified == ""
 
@@ -79,7 +79,7 @@ class TestDatasetData:
         """Should create DatasetData with entities."""
         entities = [{"_type": "Investigation", "title": "Test"}]
         data = DatasetData(
-            name="test",
+            name="test-basic",
             profile="miappe",
             version="1.2",
             entities=entities,
@@ -107,20 +107,20 @@ class TestFilesystemDatasetRepository:
     def test_save_and_load(self, repo):
         """Should save and load dataset."""
         data = DatasetData(
-            name="test",
+            name="test-basic",
             profile="miappe",
             version="1.2",
             entities=[{"_type": "Investigation", "unique_id": "INV-001"}],
             modified="2024-01-01T00:00:00",
         )
 
-        info = repo.save("test", data)
-        assert info.name == "test"
+        info = repo.save("test-basic", data)
+        assert info.name == "test-basic"
         assert info.profile == "miappe"
         assert info.entity_count == 1
 
-        loaded = repo.load("test")
-        assert loaded.name == "test"
+        loaded = repo.load("test-basic")
+        assert loaded.name == "test-basic"
         assert loaded.profile == "miappe"
         assert len(loaded.entities) == 1
         assert loaded.entities[0]["unique_id"] == "INV-001"
@@ -138,12 +138,12 @@ class TestFilesystemDatasetRepository:
 
     def test_delete(self, repo):
         """Should delete existing dataset."""
-        data = DatasetData(name="todelete", profile="miappe", version="1.2")
-        repo.save("todelete", data)
+        data = DatasetData(name="test-to-delete", profile="miappe", version="1.2")
+        repo.save("test-to-delete", data)
 
-        assert repo.exists("todelete")
-        assert repo.delete("todelete") is True
-        assert not repo.exists("todelete")
+        assert repo.exists("test-to-delete")
+        assert repo.delete("test-to-delete") is True
+        assert not repo.exists("test-to-delete")
 
     def test_delete_nonexistent(self, repo):
         """Should return False for nonexistent."""
@@ -191,28 +191,28 @@ class TestFilesystemDatasetRepository:
 
     def test_exists(self, repo):
         """Should check existence correctly."""
-        assert not repo.exists("test")
+        assert not repo.exists("test-basic")
 
-        data = DatasetData(name="test", profile="miappe", version="1.2")
-        repo.save("test", data)
+        data = DatasetData(name="test-basic", profile="miappe", version="1.2")
+        repo.save("test-basic", data)
 
-        assert repo.exists("test")
+        assert repo.exists("test-basic")
 
     def test_list_sorted_by_modified(self, repo):
         """Should list datasets sorted by modified time."""
         repo.save(
-            "old",
+            "test-old",
             DatasetData(
-                name="old",
+                name="test-old",
                 profile="miappe",
                 version="1.2",
                 modified="2024-01-01T00:00:00",
             ),
         )
         repo.save(
-            "new",
+            "test-new",
             DatasetData(
-                name="new",
+                name="test-new",
                 profile="miappe",
                 version="1.2",
                 modified="2024-12-31T00:00:00",
@@ -221,8 +221,8 @@ class TestFilesystemDatasetRepository:
 
         result = repo.list()
         assert len(result) == 2
-        assert result[0].name == "new"
-        assert result[1].name == "old"
+        assert result[0].name == "test-new"
+        assert result[1].name == "test-old"
 
 
 class TestListedNewestCreatedFirst:
@@ -233,18 +233,18 @@ class TestListedNewestCreatedFirst:
 
         repo = FilesystemDatasetRepository(tmp_path)
         repo.save(
-            "older",
+            "test-older",
             DatasetData(
-                name="older",
+                name="test-older",
                 profile="isa",
                 version="1.0",
                 modified="2026-01-01T00:00:00",
             ),
         )
         repo.save(
-            "newer",
+            "test-newer",
             DatasetData(
-                name="newer",
+                name="test-newer",
                 profile="isa",
                 version="1.0",
                 modified="2026-02-01T00:00:00",
@@ -252,17 +252,17 @@ class TestListedNewestCreatedFirst:
         )
         # Editing the older one later: modified moves, created does not.
         repo.save(
-            "older",
+            "test-older",
             DatasetData(
-                name="older",
+                name="test-older",
                 profile="isa",
                 version="1.0",
                 modified="2026-03-01T00:00:00",
             ),
         )
         listed = repo.list()
-        assert [d.name for d in listed] == ["newer", "older"]
-        older = next(d for d in listed if d.name == "older")
+        assert [d.name for d in listed] == ["test-newer", "test-older"]
+        older = next(d for d in listed if d.name == "test-older")
         assert older.created == "2026-01-01T00:00:00"
         assert older.modified == "2026-03-01T00:00:00"
 
@@ -284,12 +284,12 @@ class TestListedNewestCreatedFirst:
             )
         )
         repo.save(
-            "fresh",
+            "test-fresh",
             DatasetData(
-                name="fresh",
+                name="test-fresh",
                 profile="isa",
                 version="1.0",
                 modified="2026-04-01T00:00:00",
             ),
         )
-        assert [d.name for d in repo.list()] == ["legacy", "fresh"]
+        assert [d.name for d in repo.list()] == ["legacy", "test-fresh"]

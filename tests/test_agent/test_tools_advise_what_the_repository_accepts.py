@@ -82,6 +82,6 @@ def test_relationship_validation_does_not_warn_about_impossible_links() -> None:
 def test_create_dataset_reports_the_root_entity() -> None:
     tool = get_tool(create_server(), "create_dataset")
 
-    answer = json.loads(tool(name="root-probe", profile="isa", version="1.0"))
+    answer = json.loads(tool(name="test-root-probe", profile="isa", version="1.0"))
 
     assert answer.get("root_entity") == "Investigation", answer
