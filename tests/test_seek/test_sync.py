@@ -930,3 +930,20 @@ class TestFreshTypesAreFound:
         result = sync_dataset_to_seek(seek, _dataset(), project_id="1")
         created = {t for types in seek.study_types.values() for t in types.values()}
         assert set(result.sample_types) == created
+
+
+class TestProgress:
+    def test_every_node_is_reported_once_and_the_last_report_is_complete(self) -> None:
+        # A push takes minutes on a real instance; the caller shows progress
+        # from (placed, total), where total is every node of the tree.
+        seen: list[tuple[int, int]] = []
+        sync_dataset_to_seek(
+            _FakeSeek(),
+            _dataset(assays=2),
+            project_id="1",
+            on_progress=lambda placed, total: seen.append((placed, total)),
+        )
+        assert seen, "no progress reported"
+        totals = {t for _, t in seen}
+        assert len(totals) == 1 and seen[-1][0] == seen[-1][1]
+        assert [p for p, _ in seen] == list(range(1, len(seen) + 1))

@@ -113,6 +113,12 @@ entity naming one of the templates gets its columns exactly — types,
 required flags, tags, vocabularies — and the sync creates Sample Types that
 are the template's, column for column.
 
+A CropXR Assay can record its files in one of two forms: material → data file
+(an `assay_materials` list with a `data_files` list), or the condensed
+`assays_with_data_file` list for the one-file-per-material case. Use one form
+per study; each form is its own assay stream in SEEK, and using both records
+half the lineage twice. The example datasets use the split form.
+
 For such a profile the page reads differently: the preview lists each entity
 with the installed template it is built from, its ISA level and the tag on
 every column, and step 1's button is **Set up Controlled Vocabularies →** —
@@ -123,7 +129,11 @@ provisioning makes no profile-named copies of them.
 
 With a dataset loaded, click **Sync to SEEK →**. It pushes the dataset's
 entities in as Investigations, Studies, Assays and Samples, matched to the
-Sample Types provisioned in step 1.
+Sample Types provisioned in step 1. The push runs in the background — every
+entity is a request to SEEK, and a registered data file makes SEEK fetch it —
+so the page shows a progress bar (entities placed of the total) and replaces
+it with the result when the push finishes. Leaving the page does not stop
+the push; coming back shows where it stands.
 
 If this reports *no dataset loaded*, that is why: unlike *Provision*, *Sync*
 acts on the dataset you have open. Load or create one first.

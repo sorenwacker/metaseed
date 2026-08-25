@@ -455,3 +455,72 @@ def test_a_value_left_out_of_a_pushed_record_is_a_note_not_a_missing_entity(
     assert "1 value not sent" in html
     assert "seek-sync-notes" in html and "Values not sent" in html
     assert "color:#c60" in html.split("seek-sync-notes")[1][:80]
+
+
+def test_the_sync_button_lines_up_with_the_project_select(make_client):
+    # Both forms put a labelled select beside a button; the label makes the
+    # field taller than the button, so only bottom alignment puts the button
+    # beside the select. The sync form used to centre, sitting the button
+    # beside the label text instead.
+    client, _settings, _state = make_client()
+    client.post("/entity", data={"_entity_type": "Investigation", "identifier": "I"})
+    html = client.get("/seek").text
+    form = html.split('data-testid="seek-sync-form"')[1][:300]
+    assert "align-items:flex-end" in form
+
+
+def test_sync_runs_in_the_background_and_the_page_polls_for_the_result(
+    make_client, monkeypatch
+):
+    """A push takes minutes; the response must come back at once with a
+    progress bar that polls until the result replaces it."""
+    import threading
+
+    import metaseed.seek.sync as sync_module
+    import metaseed.ui.routes.seek as seek_routes
+    from metaseed.seek.sync import SyncResult
+
+    client, settings, _state = make_client()
+    settings.set_adapter_config("seek", {"url": "http://seek.test", "api_key": "k"})
+    client.post("/entity", data={"_entity_type": "Investigation", "identifier": "I"})
+
+    class _Seek:
+        def default_project_id(self):
+            return "1"
+
+    monkeypatch.setattr(
+        seek_routes, "client_from_settings", lambda _c: _Seek(), raising=False
+    )
+    monkeypatch.setattr("metaseed.seek.client_from_settings", lambda _c: _Seek())
+    monkeypatch.setattr("metaseed.seek.provision.resolve_cv_ids", lambda *_a, **_k: {})
+    release = threading.Event()
+
+    def fake_sync(*_args, on_progress=None, **_kwargs):
+        on_progress(1, 3)
+        release.wait(timeout=5)
+        on_progress(3, 3)
+        result = SyncResult()
+        result.investigations = {"n": "9"}
+        return result
+
+    monkeypatch.setattr(sync_module, "sync_dataset_to_seek", fake_sync)
+
+    started = client.post("/seek/sync", data={"project_id": "1"})
+    assert started.status_code == 200
+    assert 'data-testid="seek-sync-progress"' in started.text
+    assert "/seek/sync/progress" in started.text
+
+    polling = client.get("/seek/sync/progress").text
+    assert 'data-testid="seek-sync-progress"' in polling
+    assert "1 of 3" in polling
+
+    release.set()
+    for _ in range(50):
+        final = client.get("/seek/sync/progress").text
+        if 'data-testid="seek-sync-result"' in final:
+            break
+        import time
+
+        time.sleep(0.05)
+    assert 'data-testid="seek-sync-result"' in final
+    assert "Synced 1 resource" in final

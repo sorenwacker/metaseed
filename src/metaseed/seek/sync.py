@@ -32,7 +32,7 @@ from metaseed.seek.templates import LEVEL_ORDER, sample_chain_entities
 from metaseed.seek.values import base_url, file_fields, profile_of
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Callable, Mapping
 
     from metaseed.api.client import MetaseedClient
     from metaseed.seek.ports import IsaWriter
@@ -198,6 +198,7 @@ def sync_dataset_to_seek(
     project_id: str,
     cv_ids: Mapping[str, str] | None = None,
     sharing: str | None = None,
+    on_progress: Callable[[int, int], None] | None = None,
 ) -> SyncResult:
     """Create ISA-JSON compliant SEEK content from a loaded dataset.
 
@@ -212,6 +213,9 @@ def sync_dataset_to_seek(
             bare keys are accepted for backward compatibility). An enum field
             with no entry here is an error: SEEK rejects a CV attribute with
             no vocabulary.
+        on_progress: Called after each node is placed with ``(placed, total)``
+            — every node of the dataset tree counts once, whatever became of
+            it — so a caller can show progress on a push that takes minutes.
         sharing: The SEEK sharing level to apply -- one of
             :data:`~metaseed.seek.payloads.SHARING_LEVELS`. ``None`` leaves
             SEEK's own default, which is private to the contributor. Note that
@@ -322,6 +326,12 @@ def sync_dataset_to_seek(
         ctx.extended_metadata_type_ids = client.extended_metadata_type_ids()
 
     roots = list(metaseed_client.get_tree())
+
+    def count(node: Any) -> int:
+        return 1 + sum(count(child) for child in node.children)
+
+    ctx.total_nodes = sum(count(root) for root in roots)
+    ctx.on_progress = on_progress
     for root in roots:
         _walk(ctx, root, None, None)
     _report_unreachable(ctx, roots)

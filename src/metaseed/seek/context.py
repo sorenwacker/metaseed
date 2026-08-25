@@ -11,7 +11,7 @@ from dataclasses import field as dc_field
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Callable, Mapping
 
     from metaseed.seek.ports import IsaWriter
     from metaseed.specs.schema import ProfileSpec
@@ -124,6 +124,11 @@ class SyncContext:
     # Study; see ``_placeholder_sample_type_id``.
     placeholder_type_id: str
     result: SyncResult
+    # Called after every node is placed with (placed, total), so a caller can
+    # show progress on a push that takes minutes. None when nobody listens.
+    on_progress: Callable[[int, int], None] | None = None
+    total_nodes: int = 0
+    placed_nodes: int = 0
     # Node ids of Samples pushed with an Assay association. The post-walk
     # reachability check treats a material chain as reachable once any node in
     # it carries one, because SEEK derives Study and Investigation from it.

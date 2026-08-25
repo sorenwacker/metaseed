@@ -128,6 +128,9 @@ def place_node(
             )
     except Exception as exc:  # one bad node must not abort the batch
         r.errors.append((node.id, str(exc)))
+    ctx.placed_nodes += 1
+    if ctx.on_progress is not None:
+        ctx.on_progress(ctx.placed_nodes, ctx.total_nodes)
     return next_investigation, next_study, next_assay, next_sample, next_depth
 
 

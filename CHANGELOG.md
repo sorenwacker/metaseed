@@ -84,11 +84,18 @@
   transparency), gated by `tests/test_docs/test_ai_disclosure.py`.
 
 ### Changed
+- *Sync to SEEK* shows a progress bar. The push runs in a background thread
+  and reports every placed node (`on_progress` on `sync_dataset_to_seek`);
+  the page polls `/seek/sync/progress` each second and the result replaces
+  the bar when the push finishes. A push used to hold the request open for
+  minutes with no sign of life.
 - Saved datasets are listed newest **created** first, and each card shows its
   creation date beside the modification date. A dataset records when it was
   first saved (`created`) and keeps that on every later save; the list used to
   order by last modification, so editing an old dataset moved it to the top.
   A file saved before this was recorded sorts by its modified time.
+- The *Sync to SEEK* button sits beside the project select, not beside its
+  label: the sync form now bottom-aligns like the provisioning form.
 
 ### Removed
 - The in-app HTTP MCP server: the header's MCP button, `/api/mcp/status`,

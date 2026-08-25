@@ -20,8 +20,10 @@ from __future__ import annotations
 import functools
 import json
 import re
+import threading
 from collections import Counter
 from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Any
 
 from fastapi import FastAPI, Form, Request, Response
@@ -37,6 +39,24 @@ def _safe_filename(name: str) -> str:
     """ASCII-slug a dataset name for a Content-Disposition filename (no injection)."""
     slug = re.sub(r"[^A-Za-z0-9._-]+", "-", name).strip("-")
     return slug or "dataset"
+
+
+@dataclass
+class SeekSyncJob:
+    """A SEEK push running in a background thread, as the page sees it."""
+
+    placed: int = 0
+    total: int = 0
+    done: bool = False
+    result: Any | None = None
+    error: str | None = None
+
+    def report(self, placed: int, total: int) -> None:
+        self.placed, self.total = placed, total
+
+    @property
+    def percent(self) -> int:
+        return int(100 * self.placed / self.total) if self.total else 0
 
 
 def register_seek_routes(  # noqa: C901
@@ -158,6 +178,13 @@ def register_seek_routes(  # noqa: C901
             # action, else the loaded dataset's. Falling back to the dataset's
             # profile after every action sent a user who provisioned one profile
             # a page, and a model download, for another.
+            # A push still running shows its progress on a fresh page load too.
+            "sync_job": extra.get("sync_job")
+            or (
+                state.seek_sync
+                if state.seek_sync is not None and not state.seek_sync.done
+                else None
+            ),
             "profile": extra.get("profile") or facade.profile,
             "version": extra.get("version") or facade.version,
             "profiles": profiles,
@@ -180,7 +207,11 @@ def register_seek_routes(  # noqa: C901
             "action_error": None,
         }
         context.update(
-            {k: v for k, v in extra.items() if k not in ("profile", "version")}
+            {
+                k: v
+                for k, v in extra.items()
+                if k not in ("profile", "version", "sync_job")
+            }
         )
         return context
 
@@ -272,7 +303,13 @@ def register_seek_routes(  # noqa: C901
 
     @app.post("/seek/sync", response_class=HTMLResponse)
     async def seek_sync(request: Request, project_id: str = Form("")) -> HTMLResponse:
-        """Push the loaded dataset to SEEK (Investigations/Studies/Assays/Samples)."""
+        """Start pushing the loaded dataset to SEEK; the page then polls for progress.
+
+        A push takes minutes on a real instance (every node is a request, and
+        registering a remote data file makes SEEK fetch it), so it runs in a
+        background thread and the response carries a progress bar that polls
+        ``/seek/sync/progress`` until the result replaces it.
+        """
         if not _enabled(request):
             return HTMLResponse("SEEK plugin is disabled", status_code=404)
 
@@ -282,29 +319,59 @@ def register_seek_routes(  # noqa: C901
         client, error = _seek_client(request)
         if client is None:
             return await _render(request, action_error=error)
+        if state.seek_sync is not None and not state.seek_sync.done:
+            return await _render(request, sync_job=state.seek_sync)
 
-        def work() -> Any:
+        job = SeekSyncJob()
+
+        def work() -> None:
             from metaseed.seek.provision import resolve_cv_ids
             from metaseed.seek.sync import sync_dataset_to_seek
 
-            pid = (
-                project_id or _stored_project_id(request) or client.default_project_id()
-            )
-            profile = _load_profile(state)
-            # Sample Types are created per Assay during the walk (a stream chains
-            # them), so only the Controlled Vocabularies come from provisioning.
-            return sync_dataset_to_seek(
-                client,
-                _facade_client(state),
-                project_id=pid,
-                cv_ids=resolve_cv_ids(client, profile),
-            )
+            try:
+                pid = (
+                    project_id
+                    or _stored_project_id(request)
+                    or client.default_project_id()
+                )
+                profile = _load_profile(state)
+                # Sample Types are created per Assay during the walk (a stream
+                # chains them), so only the Controlled Vocabularies come from
+                # provisioning.
+                job.result = sync_dataset_to_seek(
+                    client,
+                    _facade_client(state),
+                    project_id=pid,
+                    cv_ids=resolve_cv_ids(client, profile),
+                    on_progress=job.report,
+                )
+            except Exception as exc:
+                job.error = f"Sync failed: {exc}"
+            finally:
+                job.done = True
 
-        try:
-            result = await run_in_threadpool(work)
-        except Exception as exc:
-            return await _render(request, action_error=f"Sync failed: {exc}")
-        return await _render(request, sync_result=result)
+        state.seek_sync = job
+        threading.Thread(target=work, name="seek-sync", daemon=True).start()
+        return await _render(request, sync_job=job)
+
+    @app.get("/seek/sync/progress", response_class=HTMLResponse)
+    async def seek_sync_progress(request: Request) -> HTMLResponse:
+        """The progress bar while the sync runs, the result once it is done (HTMX)."""
+        if not _enabled(request):
+            return HTMLResponse("SEEK plugin is disabled", status_code=404)
+        job = get_state().seek_sync
+        if job is None:
+            return HTMLResponse("")
+        return templates.TemplateResponse(
+            request,
+            "seek/_sync_result.html",
+            {
+                "base_url": base_url,
+                "sync_job": job,
+                "sync_result": job.result if job.done else None,
+                "action_error": job.error if job.done else None,
+            },
+        )
 
     @app.get("/seek/isa-rdf")
     async def seek_isa_rdf(request: Request) -> Response:

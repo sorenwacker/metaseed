@@ -132,6 +132,9 @@ class AppState:
     spec_draft: ProfileSpec | None = None
     # Explicit dataset-level catalog metadata (DCAT title/description/publisher/…).
     catalog_metadata: CatalogMetadata | None = None
+    # The SEEK sync running in the background, if any: the page polls it for
+    # progress and, once finished, for the result. See ``ui/routes/seek.py``.
+    seek_sync: Any | None = None
 
     # TreeNode caches for backward compatibility
     _tree_cache: list[TreeNode] = field(default_factory=list)
