@@ -81,6 +81,10 @@ class IsaWriter(Protocol):
         """The instance's Controlled Vocabulary with this title, if any."""
         ...
 
+    def find_data_file_id_by_title(self, title: str, *, project_id: str) -> str | None:
+        """An existing Data File with this title in the project, if any."""
+        ...
+
     def extended_metadata_type_ids(self) -> dict[str, str]:
         """Extended Metadata Type title -> id on this instance (top-level types)."""
         ...

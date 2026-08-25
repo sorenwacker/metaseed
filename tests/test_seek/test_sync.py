@@ -75,6 +75,12 @@ class _FakeSeek:
     def find_controlled_vocab_id_by_title(self, title: str) -> str | None:
         return self.instance_cvs.get(title)
 
+    # Data Files a previous push registered: title -> id.
+    existing_data_files: dict[str, str] = field(default_factory=dict)
+
+    def find_data_file_id_by_title(self, title: str, *, project_id: str) -> str | None:
+        return self.existing_data_files.get(title)
+
     def template_attribute_ids(self, template_id: str) -> dict[str, str]:
         return dict(self.template_attributes.get(template_id, {}))
 
@@ -947,3 +953,24 @@ class TestProgress:
         totals = {t for _, t in seen}
         assert len(totals) == 1 and seen[-1][0] == seen[-1][1]
         assert [p for p, _ in seen] == list(range(1, len(seen) + 1))
+
+
+def test_a_reused_study_without_a_stream_gets_one_back() -> None:
+    # Its assays (and the stream with them) were deleted since the first push;
+    # an assay created outside a stream makes SEEK fail, so the stream is
+    # recreated before the assays are placed.
+    seek = _FakeSeek()
+    seek.existing_investigations = {"My Investigation": "10"}
+    seek.existing_studies = {("Study one", "10"): "11"}
+    seek.study_types["11"] = {
+        "Study one - Source": "12",
+        "Study one - Sample Collection": "13",
+    }
+    result = sync_dataset_to_seek(seek, _dataset(), project_id="1")
+    assert not result.errors, result.errors
+    streams = _of_kind(seek, "stream")
+    assert [s["study_id"] for s in streams] == ["11"]
+    assert all(
+        a["assay_stream_id"] == result.assay_streams["11"]
+        for a in _of_kind(seek, "assay")
+    )

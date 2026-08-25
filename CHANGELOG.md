@@ -106,6 +106,14 @@
   longer importable from `metaseed.agent.mcp`.
 
 ### Fixed
+- **Pushing a dataset again updates what the first push created** (#260).
+  Every re-push used to create a second Investigation: the `/investigations`
+  index carries no project relationship, so the reuse lookup never matched.
+  A title match is now confirmed against the item, and a reused Assay is
+  recorded the way a created one is (identifier, protocol, Sample Types), so
+  the materials of a second push find it, and a data file registered by an
+  earlier push is found by title instead of registered again. A second push
+  of the live test dataset creates nothing and reports everything as reused.
 - **A pushed dataset now exports from SEEK as ISA-JSON.** The last gap was not
   in the structure: `SeekClient._send` attached the API token only on some code
   paths, and SEEK serves an unauthenticated `export_isa` the anonymous view —

@@ -261,6 +261,14 @@ def registered_data_file(
         return None
     if value not in ctx.data_file_by_url:
         basename = value.rstrip("/").rsplit("/", 1)[-1] or value
+        # A previous push registered it already: reuse, as every other record.
+        existing = ctx.client.find_data_file_id_by_title(
+            basename, project_id=ctx.project_id
+        )
+        if existing is not None:
+            ctx.data_file_by_url[value] = existing
+            ctx.result.reused[f"{node_id}:{title}"] = existing
+            return existing
         try:
             ctx.data_file_by_url[value] = ctx.client.create_data_file(
                 title=basename,
@@ -450,9 +458,17 @@ def place_study(
         stream_id = ctx.client.find_assay_id_by_title(
             f"{title} - stream", study_id=existing
         )
-        if stream_id is not None:
-            ctx.study_stream[existing] = stream_id
-            ctx.result.assay_streams[existing] = stream_id
+        if stream_id is None:
+            # A Study whose stream was deleted (its assays with it): an assay
+            # created outside a stream makes SEEK fail with a 500, so the
+            # stream is put back before anything hangs off it.
+            stream_id = ctx.client.create_isa_assay(
+                title=f"{title} - stream",
+                study_id=existing,
+                assay_class_id=ASSAY_CLASS_IDS["STREAM"],
+            )
+        ctx.study_stream[existing] = stream_id
+        ctx.result.assay_streams[existing] = stream_id
         return existing
 
     source_title = f"{title} - Source"
@@ -611,6 +627,84 @@ def _create_assay(
     return assay_id, owned
 
 
+def _reuse_assay(
+    ctx: SyncContext,
+    node: Any,
+    title: str,
+    study_id: str,
+    existing: str,
+    values: Mapping[str, Any],
+) -> None:
+    """Record a previously created Assay the way creating it would have.
+
+    Everything a material needs to find its Assay and its Sample Type on a
+    re-push -- the identifier map, the protocol, the owned type and, for a
+    profile Assay that became several SEEK Assays, each entity's -- used to be
+    recorded only on creation, so a second push placed no materials (#260).
+    """
+    ctx.result.reused[f"assay:{title}"] = existing
+    ctx.assay_protocol[existing] = title
+    for key in ("identifier", "unique_id", "name", "title"):
+        marker = values.get(key)
+        if marker:
+            ctx.assay_id_by_identifier.setdefault(str(marker), existing)
+    collection_id = ctx.study_collection_type.get(study_id)
+    entity_names = assay_level_entities_under(ctx, node)
+    if not entity_names:
+        owned = ctx.client.assay_sample_type_ids(existing).get(f"{title} - Sample Type")
+        if owned is not None:
+            ctx.assay_sample_type[existing] = owned
+            _register_type(ctx, owned, chain_entity(ctx, 2), collection_id)
+        return
+    type_by_entity: dict[str, str] = {}
+    if source_id := ctx.study_source_type.get(study_id):
+        type_by_entity[chain_entity_name(ctx, 0)] = source_id
+    if collection_id is not None:
+        type_by_entity[chain_entity_name(ctx, 1)] = collection_id
+    for chain in _assay_chains(ctx, entity_names):
+        last_type_at: dict[str, str | None] = {"sample_collection": collection_id}
+        for name in chain:
+            entity = ctx.profile.entities[name]
+            level = entity_level(entity) or "assay"
+            template = entity.seek.template if entity.seek else None
+            assay_title = (
+                title if len(entity_names) == 1 else f"{title} ({template or name})"
+            )
+            before = "material" if level == "assay" else "sample_collection"
+            input_type_id = type_by_entity.get(
+                _input_reference(entity) or "",
+                last_type_at.get(before) or collection_id,
+            )
+            assay_id = ctx.client.find_assay_id_by_title(assay_title, study_id=study_id)
+            if assay_id is None:
+                # A member the first push never got to (it failed partway):
+                # created now, in the stream the reused members hang off.
+                assay_id, owned = _create_assay(
+                    ctx,
+                    assay_title,
+                    study_id,
+                    entity,
+                    name,
+                    level,
+                    input_type_id,
+                    None,
+                    stream_id=ctx.study_stream.get(study_id),
+                )
+            else:
+                owned = ctx.client.assay_sample_type_ids(assay_id).get(
+                    f"{assay_title} - Sample Type"
+                )
+                if owned is not None:
+                    ctx.assay_sample_type[assay_id] = owned
+                    ctx.assay_protocol[assay_id] = assay_title
+                    _register_type(ctx, owned, entity, input_type_id)
+            if owned is None:
+                continue
+            ctx.assay_entity_types.setdefault(existing, {})[name] = (assay_id, owned)
+            type_by_entity[name] = owned
+            last_type_at[level] = owned
+
+
 def place_assay(
     ctx: SyncContext, node: Any, title: str, study_id: str, values: Mapping[str, Any]
 ) -> str:
@@ -621,11 +715,14 @@ def place_assay(
     ``ctx.assay_entity_types`` under that id.
     """
     existing = ctx.client.find_assay_id_by_title(title, study_id=study_id)
+    if existing is None:
+        for name in assay_level_entities_under(ctx, node)[:1]:
+            template = ctx.profile.entities[name].seek.template  # type: ignore[union-attr]
+            existing = ctx.client.find_assay_id_by_title(
+                f"{title} ({template or name})", study_id=study_id
+            )
     if existing is not None:
-        ctx.result.reused[f"assay:{title}"] = existing
-        owned = ctx.client.assay_sample_type_ids(existing).get(f"{title} - Sample Type")
-        if owned is not None:
-            ctx.assay_sample_type[existing] = owned
+        _reuse_assay(ctx, node, title, study_id, existing, values)
         return existing
 
     collection_id = ctx.study_collection_type.get(study_id)

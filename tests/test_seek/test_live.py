@@ -463,3 +463,23 @@ def test_a_pushed_dataset_is_exportable_as_isa_json(created_in_seek):
     isa = response.json()
     assert isa.get("studies"), "the exported ISA-JSON carries no studies"
     assert isa["studies"][0].get("assays"), "the exported study carries no assays"
+
+
+def test_pushing_the_same_dataset_twice_updates_instead_of_duplicating(
+    created_in_seek,
+):
+    """The second push must find what the first created (#260).
+
+    Every re-push used to create a second Investigation, because the
+    ``/investigations`` index carries no project relationship and the reuse
+    lookup checked the row alone.
+    """
+    seek = _seek_client()
+    first = _provision_and_sync(seek, _seek_ready_dataset(), created_in_seek)
+    second = _provision_and_sync(seek, _seek_ready_dataset(), created_in_seek)
+    # Node ids differ per dataset instance; the SEEK ids must not.
+    assert set(second.investigations.values()) == set(first.investigations.values())
+    assert set(second.studies.values()) == set(first.studies.values())
+    assert set(second.assays.values()) == set(first.assays.values())
+    assert set(second.samples.values()) == set(first.samples.values())
+    assert second.created_count == 0, "a re-push created something new"

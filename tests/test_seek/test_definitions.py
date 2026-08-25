@@ -280,3 +280,27 @@ def test_a_registered_data_file_column_gets_the_file_registered_and_its_id() -> 
     assert samples["OU-2"]["photo"] == file_id
     assert "photo" not in samples["OU-3"]
     assert any("OU-3" in n or "not a url" in msg for n, msg in result.notes)
+
+
+def test_a_data_file_registered_by_a_previous_push_is_reused() -> None:
+    client = MetaseedClient.from_spec(_profile_spec())
+    inv = client.create_entity(
+        "Investigation", {"identifier": "I"}, skip_validation=True
+    )
+    study = client.create_entity(
+        "Study", {"study_id": "S"}, parent_id=inv.id, skip_validation=True
+    )
+    client.create_entity(
+        "Unit",
+        {"subject_id": "OU-1", "photo": "https://data.example.org/ou-1.jpg"},
+        parent_id=study.id,
+        skip_validation=True,
+    )
+    seek = _FakeSeek()
+    seek.instance_cvs = {"growth_medium": "cv-77"}
+    seek.existing_data_files = {"ou-1.jpg": "df-5"}
+    result = sync_dataset_to_seek(seek, client, project_id="1")
+    assert not _of_kind(seek, "data_file"), "registered again although it exists"
+    (sample,) = _of_kind(seek, "sample")
+    assert sample["data"]["photo"] == "df-5"
+    assert "df-5" in result.reused.values()

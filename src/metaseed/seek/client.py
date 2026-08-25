@@ -551,9 +551,13 @@ class SeekClient:
         Sample Type lookup already used.
         """
         for row in self.get("/investigations").get("data", []):
-            if row["attributes"].get("title") == title and _relates_to_project(
-                row, project_id
-            ):
+            if row["attributes"].get("title") != title:
+                continue
+            # The list view carries no ``projects`` relationship, so a title
+            # match is confirmed against the item, which does (#260).
+            if "relationships" not in row:
+                row = self.get(f"/investigations/{row['id']}").get("data", row)
+            if _relates_to_project(row, project_id):
                 return str(row["id"])
         return None
 
@@ -618,6 +622,20 @@ class SeekClient:
             if project_id is None or _relates_to_project(row, project_id):
                 return str(row["id"])
             detail = self.get(f"/sample_types/{row['id']}").get("data", {})
+            if _relates_to_project(detail, project_id):
+                return str(row["id"])
+        return None
+
+    def find_data_file_id_by_title(self, title: str, *, project_id: str) -> str | None:
+        """An existing Data File titled ``title`` in ``project_id``, if any.
+
+        The list omits the ``projects`` relationship, so a title match is
+        confirmed against the item, as for Sample Types.
+        """
+        for row in self.get("/data_files").get("data", []):
+            if row["attributes"].get("title") != title:
+                continue
+            detail = self.get(f"/data_files/{row['id']}").get("data", {})
             if _relates_to_project(detail, project_id):
                 return str(row["id"])
         return None

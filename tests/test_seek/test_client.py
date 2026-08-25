@@ -382,3 +382,60 @@ def test_every_send_path_carries_the_api_token():
         "GET", "/investigations/1/export_isa", headers={"Accept": "application/json"}
     )
     assert seen == ["Bearer sekrit"]
+
+
+def test_an_investigation_is_found_again_although_the_index_hides_its_project():
+    # ``GET /investigations`` rows carry no ``relationships`` block, so a
+    # project check against the row alone never matched and every re-push
+    # created a second Investigation (#260). A title match is confirmed
+    # against the item, which does carry the project.
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/investigations":
+            return httpx.Response(
+                200,
+                json={
+                    "data": [
+                        {
+                            "id": "7",
+                            "type": "investigations",
+                            "attributes": {"title": "inv"},
+                        },
+                        {
+                            "id": "8",
+                            "type": "investigations",
+                            "attributes": {"title": "inv"},
+                        },
+                    ]
+                },
+            )
+        if request.url.path == "/investigations/7":
+            return httpx.Response(
+                200,
+                json={
+                    "data": {
+                        "id": "7",
+                        "attributes": {"title": "inv"},
+                        "relationships": {"projects": {"data": [{"id": "2"}]}},
+                    }
+                },
+            )
+        if request.url.path == "/investigations/8":
+            return httpx.Response(
+                200,
+                json={
+                    "data": {
+                        "id": "8",
+                        "attributes": {"title": "inv"},
+                        "relationships": {"projects": {"data": [{"id": "1"}]}},
+                    }
+                },
+            )
+        return httpx.Response(404, json={"errors": []})
+
+    client = SeekClient(
+        "http://seek.test",
+        token="t",  # noqa: S106 — a fake for the mock transport
+        http_client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+    assert client.find_investigation_id_by_title("inv", project_id="1") == "8"
+    assert client.find_investigation_id_by_title("inv", project_id="3") is None
