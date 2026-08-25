@@ -223,3 +223,73 @@ class TestFilesystemDatasetRepository:
         assert len(result) == 2
         assert result[0].name == "new"
         assert result[1].name == "old"
+
+
+class TestListedNewestCreatedFirst:
+    """Datasets are listed by creation date, not by last modification."""
+
+    def test_re_saving_an_old_dataset_does_not_move_it_to_the_top(self, tmp_path):
+        from metaseed.repositories.filesystem_dataset import FilesystemDatasetRepository
+
+        repo = FilesystemDatasetRepository(tmp_path)
+        repo.save(
+            "older",
+            DatasetData(
+                name="older",
+                profile="isa",
+                version="1.0",
+                modified="2026-01-01T00:00:00",
+            ),
+        )
+        repo.save(
+            "newer",
+            DatasetData(
+                name="newer",
+                profile="isa",
+                version="1.0",
+                modified="2026-02-01T00:00:00",
+            ),
+        )
+        # Editing the older one later: modified moves, created does not.
+        repo.save(
+            "older",
+            DatasetData(
+                name="older",
+                profile="isa",
+                version="1.0",
+                modified="2026-03-01T00:00:00",
+            ),
+        )
+        listed = repo.list()
+        assert [d.name for d in listed] == ["newer", "older"]
+        older = next(d for d in listed if d.name == "older")
+        assert older.created == "2026-01-01T00:00:00"
+        assert older.modified == "2026-03-01T00:00:00"
+
+    def test_a_file_without_a_creation_time_sorts_by_its_modified_time(self, tmp_path):
+        import json
+
+        from metaseed.repositories.filesystem_dataset import FilesystemDatasetRepository
+
+        repo = FilesystemDatasetRepository(tmp_path)
+        (tmp_path / "legacy.json").write_text(
+            json.dumps(
+                {
+                    "name": "legacy",
+                    "profile": "isa",
+                    "version": "1.0",
+                    "entities": [],
+                    "modified": "2026-05-01T00:00:00",
+                }
+            )
+        )
+        repo.save(
+            "fresh",
+            DatasetData(
+                name="fresh",
+                profile="isa",
+                version="1.0",
+                modified="2026-04-01T00:00:00",
+            ),
+        )
+        assert [d.name for d in repo.list()] == ["legacy", "fresh"]

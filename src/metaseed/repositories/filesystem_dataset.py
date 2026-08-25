@@ -90,7 +90,8 @@ class FilesystemDatasetRepository(DatasetRepository):
         """List all saved datasets.
 
         Returns:
-            List of DatasetInfo summaries, sorted by modified time (most recent first).
+            List of DatasetInfo summaries, newest created first (a file saved
+            before creation time was recorded sorts by its modified time).
         """
         self._ensure_dir()
         datasets = []
@@ -109,12 +110,13 @@ class FilesystemDatasetRepository(DatasetRepository):
                         version=data.get("version", "unknown"),
                         entity_count=entity_count,
                         modified=data.get("modified", str(path.stat().st_mtime)),
+                        created=data.get("created", ""),
                     )
                 )
             except (json.JSONDecodeError, OSError):
                 continue
 
-        datasets.sort(key=lambda d: d.modified, reverse=True)
+        datasets.sort(key=lambda d: d.created or d.modified, reverse=True)
         return datasets
 
     def save(self: Self, name: str, data: DatasetData) -> DatasetInfo:
@@ -138,6 +140,16 @@ class FilesystemDatasetRepository(DatasetRepository):
         path = self._get_path(name)
 
         modified = data.modified or datetime.now(UTC).isoformat()
+        # The first save fixes ``created``; a later save keeps what the file
+        # already records, so re-saving never makes a dataset look new.
+        created = data.created
+        if not created and path.exists():
+            try:
+                with open(path) as f:
+                    created = json.load(f).get("created", "")
+            except (json.JSONDecodeError, OSError):
+                created = ""
+        created = created or modified
 
         file_data: dict[str, Any] = {
             "name": name,
@@ -145,6 +157,7 @@ class FilesystemDatasetRepository(DatasetRepository):
             "version": data.version,
             "entities": data.entities,
             "modified": modified,
+            "created": created,
         }
         if data.catalog_metadata is not None:
             file_data["catalog_metadata"] = asdict(data.catalog_metadata)
@@ -158,6 +171,7 @@ class FilesystemDatasetRepository(DatasetRepository):
             version=data.version,
             entity_count=len(data.entities),
             modified=modified,
+            created=created,
         )
 
     def load(self: Self, name: str) -> DatasetData:
@@ -187,6 +201,7 @@ class FilesystemDatasetRepository(DatasetRepository):
             version=data.get("version", "unknown"),
             entities=data.get("entities", []),
             modified=data.get("modified", ""),
+            created=data.get("created", ""),
             catalog_metadata=(
                 CatalogMetadata(**catalog_metadata) if catalog_metadata else None
             ),

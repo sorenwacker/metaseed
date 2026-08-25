@@ -29,6 +29,9 @@ class DatasetInfo:
     version: str
     entity_count: int
     modified: str
+    # When the dataset was first saved; the listing order. Empty for a file
+    # written before this was recorded, which then sorts by ``modified``.
+    created: str = ""
 
 
 @dataclass
@@ -66,6 +69,7 @@ class DatasetData:
     version: str
     entities: list[dict[str, Any]] = field(default_factory=list)
     modified: str = ""
+    created: str = ""
     catalog_metadata: CatalogMetadata | None = None
 
 

@@ -53,7 +53,7 @@
                     <span class="dataset-card-count">{{ ds.entity_count }} entities</span>
                 </div>
                 <div class="dataset-card-modified">
-                    Modified {{ ds.modified[:10] if ds.modified else 'recently' }}
+                    {% if ds.created %}Created {{ ds.created[:10] }} · {% endif %}Modified {{ ds.modified[:10] if ds.modified else 'recently' }}
                 </div>
             </div>
             <div class="dataset-card-actions" onclick="event.preventDefault(); event.stopPropagation();">

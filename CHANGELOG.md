@@ -83,6 +83,13 @@
 - The documentation footer discloses that the docs are AI-generated (EU AI Act
   transparency), gated by `tests/test_docs/test_ai_disclosure.py`.
 
+### Changed
+- Saved datasets are listed newest **created** first, and each card shows its
+  creation date beside the modification date. A dataset records when it was
+  first saved (`created`) and keeps that on every later save; the list used to
+  order by last modification, so editing an old dataset moved it to the top.
+  A file saved before this was recorded sorts by its modified time.
+
 ### Removed
 - The in-app HTTP MCP server: the header's MCP button, `/api/mcp/status`,
   `/api/mcp/start`, `/api/mcp/stop` and the subprocess manager

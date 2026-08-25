@@ -157,6 +157,7 @@ class DatasetManager:
             version=data.version,
             entity_count=loaded_count,
             modified=data.modified,
+            created=data.created,
         )
 
     def list_datasets(self: Self) -> list[DatasetInfo]:
@@ -210,6 +211,7 @@ class DatasetManager:
             version=data.version,
             entity_count=loaded_count,
             modified=data.modified,
+            created=data.created,
         )
 
     def delete_dataset(self: Self, name: str) -> bool:
