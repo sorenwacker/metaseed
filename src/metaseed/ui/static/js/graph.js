@@ -194,61 +194,82 @@ function getGraphOptions(layout) {
     }
 }
 
-// Where the graph goes when it opens: 'beside' the list (the default on a
-// screen of 1400px or more) or in its 'place'. Remembered per browser.
-function graphDockMode() {
+// Which views are on: the entity list, the graph, or both. At least one
+// stays on; both share the workspace width. Remembered per browser.
+function viewsOn() {
     var stored = null;
-    try { stored = localStorage.getItem('graphDock'); } catch (e) {}
-    if (stored === 'beside' || stored === 'place') return stored;
-    return window.innerWidth >= 1400 ? 'beside' : 'place';
+    try { stored = localStorage.getItem('datasetViews'); } catch (e) {}
+    if (stored === 'list' || stored === 'graph' || stored === 'both') return stored;
+    return 'list';
 }
 
-function applyGraphDock() {
+function applyViews() {
+    var views = viewsOn();
+    var list = views !== 'graph';
+    var graph = views !== 'list';
     var workspace = document.getElementById('workspace');
     var main = document.getElementById('main');
-    var btn = document.getElementById('graph-dock-btn');
-    var beside = graphDockMode() === 'beside';
-    if (workspace) workspace.classList.toggle('workspace-beside', beside);
-    if (main) main.classList.toggle('hidden', !beside);
-    if (btn) btn.textContent = beside ? 'In place' : 'Beside';
-    if (graphNetwork) graphNetwork.redraw();
-}
-
-function toggleGraphDock() {
-    var next = graphDockMode() === 'beside' ? 'place' : 'beside';
-    try { localStorage.setItem('graphDock', next); } catch (e) {}
-    applyGraphDock();
-    fitGraph();
-}
-
-function openGraph() {
     var container = document.getElementById('graph-container');
     if (!container) return;
-    container.classList.remove('hidden');
-    applyGraphDock();
-    loadGraph();
-    startGraphPolling();
+    if (workspace) {
+        workspace.classList.toggle('show-list', list);
+        workspace.classList.toggle('show-graph', graph);
+    }
+    if (main) main.classList.toggle('hidden', !list);
+    container.classList.toggle('hidden', !graph);
+    var listBtn = document.getElementById('view-list-btn');
+    var graphBtn = document.getElementById('view-graph-btn');
+    if (listBtn) listBtn.setAttribute('aria-pressed', String(list));
+    if (graphBtn) graphBtn.setAttribute('aria-pressed', String(graph));
+    if (graph) {
+        loadGraph();
+        startGraphPolling();
+        if (graphNetwork) { graphNetwork.redraw(); fitGraph(); }
+    } else {
+        stopGraphPolling();
+    }
+}
+
+function toggleView(which) {
+    var views = viewsOn();
+    var list = views !== 'graph';
+    var graph = views !== 'list';
+    if (which === 'list') list = !list; else graph = !graph;
+    // Switching the last view off would leave nothing; the other comes on.
+    if (!list && !graph) { if (which === 'list') graph = true; else list = true; }
+    var next = list && graph ? 'both' : (graph ? 'graph' : 'list');
+    try { localStorage.setItem('datasetViews', next); } catch (e) {}
+    applyViews();
 }
 
 function closeGraph() {
-    var container = document.getElementById('graph-container');
-    var workspace = document.getElementById('workspace');
-    var main = document.getElementById('main');
-    if (container) container.classList.add('hidden');
-    if (workspace) workspace.classList.remove('workspace-beside');
-    if (main) main.classList.remove('hidden');
-    stopGraphPolling();
+    if (viewsOn() !== 'list') toggleView('graph');
 }
 
 function toggleGraph() {
+    toggleView('graph');
+}
+
+function fullscreenGraph() {
     var container = document.getElementById('graph-container');
-    if (!container) return;
-    if (container.classList.contains('hidden')) {
-        openGraph();
+    if (!container || !container.requestFullscreen) return;
+    if (document.fullscreenElement) {
+        document.exitFullscreen();
     } else {
-        closeGraph();
+        container.requestFullscreen().then(function() {
+            if (graphNetwork) { graphNetwork.redraw(); fitGraph(); }
+        });
     }
 }
+
+document.addEventListener('fullscreenchange', function() {
+    if (graphNetwork) { graphNetwork.redraw(); fitGraph(); }
+});
+
+// The remembered views come back with the dataset page.
+document.addEventListener('DOMContentLoaded', function() {
+    if (document.getElementById('view-graph-btn')) applyViews();
+});
 
 // /graph: the graph alone, for a second window or screen.
 document.addEventListener('DOMContentLoaded', function() {

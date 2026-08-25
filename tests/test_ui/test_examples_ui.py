@@ -208,22 +208,27 @@ def test_dataset_actions_live_with_the_dataset_not_in_the_global_header():
     client = TestClient(create_app(AppState()))
     for page in ("/new-dataset", "/settings"):
         html = client.get(page).text
-        for button in ("btn-validate-dataset", "btn-graph", "btn-dcat"):
+        for button in (
+            "btn-validate-dataset",
+            "btn-view-list",
+            "btn-view-graph",
+            "btn-dcat",
+        ):
             assert f'data-testid="{button}"' not in html, f"{button} on {page}"
     client.get("/load-example/miappe/1.2")
     html = client.get("/dataset/miappe-1_2-example/edit").text
-    for button in ("btn-validate-dataset", "btn-graph", "btn-dcat", "btn-export-"):
+    for button in ("btn-validate-dataset", "btn-view-graph", "btn-dcat", "btn-export-"):
         assert f'data-testid="{button}' in html, f"{button} missing on the dataset page"
 
 
-def test_the_graph_panel_can_be_closed_docked_or_detached():
-    # The Graph button moved into the dataset toolbar, which the graph hides
-    # when it takes the list's place -- so the panel needs its own way back,
-    # and on a wide screen it can sit beside the list or in its own window.
+def test_the_graph_panel_can_be_closed_shown_fullscreen_or_detached():
+    # The list and the graph are switched on and off independently from the
+    # dataset toolbar; the graph panel itself can close, take the whole
+    # screen, or open in its own window.
     client = TestClient(create_app(AppState()))
     client.get("/load-example/miappe/1.2")
     html = client.get("/dataset/miappe-1_2-example/edit").text
-    for button in ("btn-graph-close", "btn-graph-dock", "btn-graph-window"):
+    for button in ("btn-graph-close", "btn-graph-fullscreen", "btn-graph-window"):
         assert f'data-testid="{button}"' in html, button
     window = client.get("/graph")
     assert window.status_code == 200

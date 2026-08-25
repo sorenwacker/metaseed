@@ -115,11 +115,16 @@ class DiffVisualizer:
             field_type = "?"
             required = False
             items = None
+            # The closed vocabulary a field takes its values from, so the
+            # explorer can show it: the terms are what a user needs to see.
+            vocabulary: list[str] = []
             for spec in fd.profiles.values():
                 if spec is not None:
                     field_type = spec.type.value
                     required = spec.required
                     items = spec.items
+                    if spec.constraints and spec.constraints.enum:
+                        vocabulary = list(spec.constraints.enum)
                     break
 
             # Determine which profiles have this field
@@ -133,6 +138,7 @@ class DiffVisualizer:
                     "type": field_type,
                     "required": required,
                     "items": items,
+                    "vocabulary": vocabulary,
                     "diff_type": fd.diff_type.value,
                     "profiles": field_profiles,
                     "attributes_changed": fd.attributes_changed,

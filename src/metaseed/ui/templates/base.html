@@ -8,7 +8,7 @@
     <link rel="icon" type="image/png" sizes="128x128" href="/static/images/metaseed-icon-128.png">
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
     <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
-    <link rel="stylesheet" href="/static/css/style.css?v=93">
+    <link rel="stylesheet" href="/static/css/style.css?v=94">
 </head>
 <body{% if standalone_graph %} data-standalone-graph="1"{% endif %} hx-headers='{"X-Requested-With": "XMLHttpRequest"}'>
     <div class="layout">
@@ -25,16 +25,17 @@
             </nav>
         </header>
 
-        {# The graph and the list share the workspace: the graph replaces the
-           list, or sits beside it (the default on a wide screen), or opens in
-           its own window at /graph. #}
+        {# The graph and the list share the workspace; each is switched on or
+           off from the dataset toolbar and whatever is on fills the width. The
+           graph can also take the whole screen or open in its own window at
+           /graph. #}
         <div class="workspace{% if standalone_graph %} workspace-standalone{% endif %}" id="workspace">
         <div id="graph-container" class="graph-container{% if not standalone_graph %} hidden{% endif %}">
             <div class="graph-panel-bar">
                 <strong>Graph</strong>
                 <span class="toolbar-end"></span>
                 {% if not standalone_graph %}
-                <button id="graph-dock-btn" class="btn btn-secondary btn-sm" onclick="toggleGraphDock()" data-testid="btn-graph-dock" title="Show the graph beside the list, or in its place">Beside</button>
+                <button class="btn btn-secondary btn-sm" onclick="fullscreenGraph()" data-testid="btn-graph-fullscreen" title="Show the graph on the whole screen (Esc leaves)">Fullscreen</button>
                 <a href="{{ base_url }}/graph" target="_blank" rel="noopener" class="btn btn-secondary btn-sm" data-testid="btn-graph-window" title="Open the graph in its own window">New window</a>
                 <button class="btn btn-secondary btn-sm" onclick="closeGraph()" data-testid="btn-graph-close" title="Close the graph">Close ×</button>
                 {% endif %}
@@ -112,7 +113,7 @@
     <script src="{{ base_url }}/static/js/validation.js?v=9"></script>
     <script src="{{ base_url }}/static/js/table-edit.js?v=9"></script>
     <script src="{{ base_url }}/static/js/lookup.js?v=10"></script>
-    <script src="{{ base_url }}/static/js/graph.js?v=12"></script>
+    <script src="{{ base_url }}/static/js/graph.js?v=13"></script>
     <script src="{{ base_url }}/static/js/dataset.js?v=9"></script>
 </body>
 </html>

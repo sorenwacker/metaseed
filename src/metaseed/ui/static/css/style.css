@@ -5615,24 +5615,53 @@ details.sidebar-section summary:hover {
     margin-left: auto;
 }
 
-/* Graph and list share the workspace. In place (default on a narrow
-   screen) one of them shows; beside (default from 1400px), both. */
+/* Graph and list share the workspace: whichever views are on split the
+   full width between them and nothing overflows it. */
 .workspace {
     display: flex;
     min-height: 0;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
 }
 
 .workspace > .main {
-    flex: 1 1 auto;
+    flex: 1 1 0;
     min-width: 0;
 }
 
-.workspace-beside > .graph-container {
-    flex: 0 0 45%;
+.workspace.show-graph > .graph-container {
+    flex: 1 1 0;
+    min-width: 0;
     position: sticky;
     top: 0;
-    border-left: 1px solid var(--clr-parchment);
     order: 2;
+}
+
+.workspace.show-graph.show-list > .graph-container {
+    border-left: 1px solid var(--clr-parchment);
+}
+
+.graph-container:fullscreen {
+    display: flex;
+    flex-direction: column;
+    background: var(--clr-ivory);
+}
+
+.graph-container:fullscreen .graph-view {
+    flex: 1 1 auto;
+    height: auto;
+}
+
+.view-toggles {
+    display: inline-flex;
+    gap: 2px;
+}
+
+.view-toggle[aria-pressed="true"] {
+    background: var(--clr-ink, #222);
+    color: var(--clr-ivory, #fff);
+    border-color: var(--clr-ink, #222);
 }
 
 .workspace-standalone > .graph-container {

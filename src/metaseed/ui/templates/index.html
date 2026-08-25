@@ -12,9 +12,12 @@
             <button id="validate-btn" class="btn btn-secondary btn-sm" onclick="validateDataset()" data-testid="btn-validate-dataset" title="Validate all entities">
                 Validate
             </button>
-            <button id="graph-toggle" class="btn btn-secondary btn-sm" onclick="toggleGraph()" data-testid="btn-graph">
-                Graph
-            </button>
+            {# The list and the graph are switched on and off independently;
+               whatever is on shares the full width. #}
+            <span class="view-toggles" role="group" aria-label="Views">
+                <button id="view-list-btn" class="btn btn-secondary btn-sm view-toggle" onclick="toggleView('list')" data-testid="btn-view-list" aria-pressed="true" title="Show or hide the entity list">List</button>
+                <button id="view-graph-btn" class="btn btn-secondary btn-sm view-toggle" onclick="toggleView('graph')" data-testid="btn-view-graph" aria-pressed="false" title="Show or hide the graph">Graph</button>
+            </span>
             <button id="dcat-btn" class="btn btn-secondary btn-sm" onclick="showDcatCard()" data-testid="btn-dcat" title="DCAT catalog card">
                 DCAT
             </button>

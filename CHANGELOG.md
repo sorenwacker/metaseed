@@ -3,6 +3,8 @@
 ## [Unreleased]
 
 ### Added
+- **The entity list and the graph are two views a dataset switches on and off independently.** The dataset toolbar has a *List* and a *Graph* toggle (at least one stays on); whatever is on shares the full width, so on a wide screen the table and the graph sit side by side. The graph panel has *Fullscreen* (the graph on the whole screen, Esc leaves), *New window* (`/graph`) and *Close*. The choice is remembered per browser.
+- **The profile explorer shows controlled vocabularies.** A field with an enumerated vocabulary is marked `[N terms]` on the node and lists its terms in the entity panel; *Show/Hide* use the profile's display name.
 - **A profile can describe the ISA chain against templates already installed
   on the SEEK instance** (#256, #257, #258). An entity that names its
   installed ISA Template (`seek.template`) and tags its fields (`isa_tag`,
