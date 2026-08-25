@@ -250,6 +250,35 @@ class TestTheSyncHonoursTheTemplate:
         )[1]
         assert assays[0]["input_sample_type_id"] == collection_type
 
+    def test_a_second_assay_in_the_study_is_its_own_stream(self) -> None:
+        # A stream is a line: SEEK splices any assay whose input type another
+        # assay in the stream already takes in front of it. Two techniques on
+        # the same samples (LC-MS and NMR of one study) would be chained into
+        # one line, so each profile Assay after the first gets its own stream.
+        c = _dataset()
+        study = next(n for n in c.get_tree()[0].children)
+        assay = c.create_entity(
+            "Assay",
+            {"identifier": "A2", "title": "assay two", "trait": "width"},
+            parent_id=study.id,
+            skip_validation=True,
+        )
+        c.create_entity(
+            "Material",
+            {"Input": "OU-1", "experiment_id": "EXP-2", "method": "caliper"},
+            parent_id=assay.id,
+            skip_validation=True,
+        )
+        seek = _FakeSeek()
+        sync_dataset_to_seek(seek, c, project_id="1")
+        streams = {a["title"]: a["assay_stream_id"] for a in _of_kind(seek, "assay")}
+        # (One entity under it, so the SEEK Assay carries the profile title.)
+        assert streams["assay two"] != streams["assay one (CropXR phenotyping assay)"]
+        assert (
+            streams["assay one (CropXR phenotyping data file)"]
+            == streams["assay one (CropXR phenotyping assay)"]
+        )
+
     def test_samples_are_placed_by_level_with_inputs_resolved_by_title(self) -> None:
         seek = _FakeSeek()
         result = sync_dataset_to_seek(seek, _dataset(), project_id="1")

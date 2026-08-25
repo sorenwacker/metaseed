@@ -582,15 +582,21 @@ def place_assay(
         for k, chain in enumerate(_assay_chains(ctx, entity_names)):
             # SEEK splices an assay whose input type another assay in the
             # stream already takes in FRONT of that assay: a stream is a line,
-            # never a branch. Every chain beyond the first is its own stream.
+            # never a branch. The Study's stream carries the first chain placed
+            # in it; every other chain -- a second chain under this Assay, or
+            # another Assay of the same Study -- is its own stream.
             stream_id = ctx.study_stream.get(study_id)
-            if k > 0:
+            if k > 0 or study_id in ctx.study_stream_taken:
+                stream_title = (
+                    f"{title} - {chain[0]} stream" if k > 0 else f"{title} - stream"
+                )
                 stream_id = ctx.client.create_isa_assay(
-                    title=f"{title} - {chain[0]} stream",
+                    title=stream_title,
                     study_id=study_id,
                     assay_class_id=ASSAY_CLASS_IDS["STREAM"],
                 )
                 ctx.result.assay_streams[f"{study_id}/{title}/{chain[0]}"] = stream_id
+            ctx.study_stream_taken.add(study_id)
             last_type_at: dict[str, str | None] = {"sample_collection": collection_id}
             for name in chain:
                 entity = ctx.profile.entities[name]

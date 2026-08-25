@@ -130,6 +130,7 @@
   longer importable from `metaseed.agent.mcp`.
 
 ### Fixed
+- **Two profile Assays in one Study no longer share an assay stream.** SEEK splices assays in a stream into one line, so LC-MS, GC-MS and NMR assays of the same samples were chained after each other; every profile Assay after the first in a Study is now its own stream, as a second chain under one Assay already was.
 - **The test suite no longer touches the user's saved datasets.** Tests that
   saved, listed or deleted datasets through the app used the real
   `~/.local/share/metaseed/datasets`: test datasets appeared in a running UI,

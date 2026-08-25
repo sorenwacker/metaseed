@@ -100,6 +100,9 @@ class SyncContext:
     study_collection_type: dict[str, str]
     # SEEK study id -> its assay stream, which every Assay hangs off.
     study_stream: dict[str, str]
+    # SEEK study ids whose stream already carries a template-bound chain. A
+    # stream is a line, so the next chain in that Study gets its own.
+    study_stream_taken: set[str]
     # SEEK assay id -> the Sample Type that Assay owns, where its Samples go.
     assay_sample_type: dict[str, str]
     # ISA Template title -> id on the target instance. A Sample Type without a

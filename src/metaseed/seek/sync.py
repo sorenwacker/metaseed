@@ -311,6 +311,7 @@ def sync_dataset_to_seek(
         study_source_type={},
         study_collection_type={},
         study_stream={},
+        study_stream_taken=set(),
         assay_sample_type={},
         assay_protocol={},
         assay_id_by_identifier={},
