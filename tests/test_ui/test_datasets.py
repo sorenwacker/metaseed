@@ -1,6 +1,7 @@
 """Tests for dataset persistence."""
 
 import json
+import os
 from unittest.mock import patch
 
 import pytest
@@ -32,11 +33,16 @@ def temp_datasets_dir(tmp_path):
     previous_context = get_context()
     set_context(None)
     try:
+        # The autouse isolation fixture points METASEED_DATASETS_DIR at its own
+        # directory, and the override wins over the default; this fixture's
+        # directory has to be the override too, or files written here are
+        # listed from there.
         with (
             patch(
                 "metaseed.repositories.filesystem_dataset.DEFAULT_DATASETS_DIR",
                 datasets_dir,
             ),
+            patch.dict(os.environ, {"METASEED_DATASETS_DIR": str(datasets_dir)}),
         ):
             yield datasets_dir
     finally:

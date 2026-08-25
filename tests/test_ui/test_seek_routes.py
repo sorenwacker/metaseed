@@ -258,8 +258,8 @@ def test_a_partial_sync_warns_rather_than_reporting_success(make_client):
         sync_result=_sync_result(created=8, skipped=28, errored=9),
     )
     assert "not uploaded" in html
-    assert "notification-warning" in html
-    assert "notification-success" not in html.split("seek-sync-result")[1][:400]
+    assert "seek-status-warning" in html
+    assert "seek-status-success" not in html.split("seek-sync-result")[1][:400]
     assert "37" in html  # 28 skipped + 9 errored
 
 
@@ -288,7 +288,7 @@ def test_a_complete_sync_still_reads_as_success(make_client):
         sync_result=_sync_result(created=8, skipped=0, errored=0),
     )
     # The success banner, not the warning one.
-    assert "notification-success" in html
+    assert "seek-status-success" in html
     assert "notification-warning" not in html
     assert "not uploaded" not in html
 
@@ -449,7 +449,7 @@ def test_a_value_left_out_of_a_pushed_record_is_a_note_not_a_missing_entity(
     )
     assert "not uploaded" not in html
     assert "did not reach SEEK" not in html
-    assert "notification-success" in html
+    assert "seek-status-success" in html
     # Still counted in the headline, and coloured as a warning: a real
     # omission in the copy, even though the record itself is there.
     assert "1 value not sent" in html
@@ -509,6 +509,11 @@ def test_sync_runs_in_the_background_and_the_page_polls_for_the_result(
     assert started.status_code == 200
     assert 'data-testid="seek-sync-progress"' in started.text
     assert "/seek/sync/progress" in started.text
+    # Inline, not a toast: a .notification is fixed and animated, and a polled
+    # progress bar re-animated as a new toast every second.
+    assert (
+        'class="notification"' not in started.text.split("seek-sync-progress")[0][-200:]
+    )
 
     polling = client.get("/seek/sync/progress").text
     assert 'data-testid="seek-sync-progress"' in polling

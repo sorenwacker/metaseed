@@ -20,6 +20,30 @@ _LOOPBACK = {"127.0.0.1", "::1", "localhost", ""}
 
 
 @pytest.fixture(autouse=True)
+def _private_datasets_dir(tmp_path_factory: pytest.TempPathFactory, monkeypatch):
+    """Every test saves and deletes datasets in a directory of its own.
+
+    The dataset repository honours ``METASEED_DATASETS_DIR``; without it, tests
+    that save, list or delete datasets through the app operated on the user's
+    real ``~/.local/share/metaseed/datasets`` -- test datasets appeared in the
+    running UI, and one run's cleanup deleted the user's own saved datasets.
+    Selenium tests start the server as a subprocess, which inherits this
+    environment, so they are covered too.
+    """
+    monkeypatch.setenv(
+        "METASEED_DATASETS_DIR", str(tmp_path_factory.mktemp("datasets"))
+    )
+    # The dataset factory is a session-wide binding whose repository resolves
+    # the directory when it is created; a binding left by an earlier test
+    # would keep pointing at that test's directory.
+    from metaseed.ui.datasets import set_factory
+
+    set_factory(None)
+    yield
+    set_factory(None)
+
+
+@pytest.fixture(autouse=True)
 def _block_external_network(
     request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
 ) -> None:

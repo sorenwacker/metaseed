@@ -11,11 +11,11 @@
     </p>
 
     {% if action_error %}
-    <div class="notification notification-error" data-testid="seek-action-error"
+    <div class="seek-status seek-status-error" data-testid="seek-action-error"
          style="{{ box }} color:#b00;">{{ action_error }}</div>
     {% endif %}
     {% if provision_result %}
-    <div class="notification notification-success" data-testid="seek-provision-result" style="{{ box }}">
+    <div class="seek-status seek-status-success" data-testid="seek-provision-result" style="{{ box }}">
         <strong>Model set up{% if provisioned_profile %} ({{ provisioned_profile }}){% endif %}.</strong>
         Created {{ provision_result.created|length }}, reused {{ provision_result.reused|length }}.
         {% if provision_result.created %}<div class="muted" style="font-size:0.85rem;">Created:
@@ -29,7 +29,7 @@
     {% include "seek/_sync_result.html" %}
 
     {% if not api_key_configured %}
-    <div class="notification" data-testid="seek-needs-key" style="{{ box }}">
+    <div class="seek-status" data-testid="seek-needs-key" style="{{ box }}">
         Set your SEEK <strong>URL and API key</strong> on the
         <a href="{{ base_url }}/settings">Plugins</a> page. The buttons below stay disabled until
         you do, because provisioning and syncing both write to SEEK.

@@ -6,7 +6,7 @@
    once with a count, rather than repeating it per node. #}
 {% macro reasons(items) %}{% set counts = {} %}{% for node_id, reason in items %}{% set _ = counts.update({reason: counts.get(reason, 0) + 1}) %}{% endfor %}{% for reason, n in counts.items() %}{{ reason }}{% if n > 1 %} (×{{ n }}){% endif %}{% if not loop.last %}; {% endif %}{% endfor %}{% endmacro %}
 {% if sync_job is defined and sync_job and not sync_job.done %}
-<div class="notification" data-testid="seek-sync-progress" style="{{ box }}"
+<div class="seek-status" data-testid="seek-sync-progress" style="{{ box }}"
      hx-get="{{ base_url }}/seek/sync/progress" hx-trigger="every 1s" hx-swap="outerHTML">
     <strong>Syncing to SEEK…</strong>
     <div class="muted" style="font-size:0.85rem; margin:0.3rem 0;">
@@ -15,13 +15,13 @@
     <progress value="{{ sync_job.placed }}" max="{{ sync_job.total or 1 }}" style="width:100%;"></progress>
 </div>
 {% elif action_error is defined and action_error and sync_job is defined and sync_job %}
-<div class="notification notification-error" data-testid="seek-sync-error" style="{{ box }}">{{ action_error }}</div>
+<div class="seek-status seek-status-error" data-testid="seek-sync-error" style="{{ box }}">{{ action_error }}</div>
 {% endif %}
 {% if sync_result is defined and sync_result %}
 {% set not_uploaded = sync_result.skipped|length + sync_result.errors|length %}
 {% set not_sent = sync_result.notes|length %}
-<div class="notification {{ 'notification-warning' if not_uploaded else 'notification-success' }}"
-     data-testid="seek-sync-result" style="{{ box }}{% if not_uploaded %} border-color:#c60;{% endif %}">
+<div class="seek-status {{ 'seek-status-warning' if not_uploaded else 'seek-status-success' }}"
+     data-testid="seek-sync-result">
     <strong>Synced {{ sync_result.synced_count }} resource{{ "" if sync_result.synced_count == 1 else "s" }} to SEEK{% if not_uploaded %}, but {{ not_uploaded }} entit{{ "y was" if not_uploaded == 1 else "ies were" }} not uploaded{% endif %}{% if not_sent %}, {{ not_sent }} value{{ "" if not_sent == 1 else "s" }} not sent{% endif %}.</strong>
     <div class="muted" style="font-size:0.85rem;">
         {{ sync_result.investigations|length }} investigation(s),

@@ -5713,3 +5713,18 @@ details.sidebar-section summary:hover {
     width: 20rem;
     max-width: 100%;
 }
+
+
+/* Inline status blocks on the SEEK page: the same colour semantics as the
+   toasts, but static in the page flow. A toast (.notification) is fixed and
+   animated, which made a polled progress bar re-animate every second. */
+.seek-status {
+    border: 1px solid var(--border, #ddd);
+    border-left: 4px solid var(--clr-muted, #999);
+    border-radius: var(--radius-md, 6px);
+    padding: 0.9rem 1rem;
+    margin: 1rem 0;
+}
+.seek-status-success { background: var(--clr-success-bg); border-left-color: var(--clr-success); }
+.seek-status-warning { background: var(--clr-warning-bg, #fff7e6); border-left-color: #c60; }
+.seek-status-error { background: var(--clr-error-bg); border-left-color: var(--clr-error); }

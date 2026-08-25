@@ -106,6 +106,16 @@
   longer importable from `metaseed.agent.mcp`.
 
 ### Fixed
+- **The test suite no longer touches the user's saved datasets.** Tests that
+  saved, listed or deleted datasets through the app used the real
+  `~/.local/share/metaseed/datasets`: test datasets appeared in a running UI,
+  and a run's cleanup deleted the user's own datasets. Every test now gets a
+  private directory (`METASEED_DATASETS_DIR`, set by an autouse fixture that
+  also rebinds the dataset factory), gated by
+  `tests/test_tests_never_touch_the_user_datasets.py`.
+- The SEEK page's inline status blocks (progress, results, errors) are static
+  boxes, not toasts: they carried the toast class, which is fixed-position and
+  animated, so the polled progress bar slid in as a new toast every second.
 - **Pushing a dataset again updates what the first push created** (#260).
   Every re-push used to create a second Investigation: the `/investigations`
   index carries no project relationship, so the reuse lookup never matched.
