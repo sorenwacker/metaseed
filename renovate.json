@@ -1,0 +1,17 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:best-practices", "schedule:weekly"],
+  "timezone": "Europe/Amsterdam",
+  "lockFileMaintenance": {"enabled": true, "extends": ["schedule:weekly"]},
+  "packageRules": [
+    {
+      "description": "One reviewable PR per ecosystem per week, as before.",
+      "matchManagers": ["pep621", "uv"],
+      "groupName": "python dependencies"
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "groupName": "github actions"
+    }
+  ]
+}

@@ -84,6 +84,12 @@
   transparency), gated by `tests/test_docs/test_ai_disclosure.py`.
 
 ### Changed
+- Dependency updates come from **Renovate** on `config:best-practices`
+  instead of Dependabot. Dependabot cannot update `uv.lock`, so its PRs left
+  the lockfile CI installs from untouched; Renovate regenerates it, pins
+  Actions to digests, runs weekly lock-file maintenance, and groups Python
+  and Actions updates into one PR each, as before. Security alerts are
+  unaffected (a repository setting, not the updates config).
 - *Sync to SEEK* shows a progress bar. The push runs in a background thread
   and reports every placed node (`on_progress` on `sync_dataset_to_seek`);
   the page polls `/seek/sync/progress` each second and the result replaces
