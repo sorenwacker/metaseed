@@ -78,3 +78,21 @@ def test_adapter_config_drops_script_url_schemes(tmp_path):
     for evil in ("javascript:alert(1)", "JavaScript:alert(1)", "data:text/html,x"):
         s.set_adapter_config("seek", {"url": evil})
         assert Settings(path).get_adapter_config("seek")["url"] == "http://ok:3001"
+
+
+def test_settings_are_written_readable_only_by_their_owner(tmp_path):
+    """The file holds a SEEK API key and a hub access token in plain text.
+
+    At the default mode every account on the machine can read them, which on a
+    shared workstation hands over both services.
+    """
+    import stat
+
+    settings = Settings(tmp_path / "settings.json")
+    settings.set_adapter_config(
+        "hub", {"url": "https://hub.test", "token": "msh_secret"}
+    )
+    mode = stat.S_IMODE((tmp_path / "settings.json").stat().st_mode)
+    assert mode == 0o600, (
+        f"settings.json is {oct(mode)}; a credential file must be 0600"
+    )

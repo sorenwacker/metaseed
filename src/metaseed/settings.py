@@ -8,6 +8,7 @@ its default (enabled when its pip extra is installed).
 
 from __future__ import annotations
 
+import contextlib
 import json
 from typing import TYPE_CHECKING, Any
 
@@ -60,6 +61,12 @@ class Settings:
         tmp.write_text(
             json.dumps(self._data, indent=2, sort_keys=True), encoding="utf-8"
         )
+        # This file holds credentials -- a SEEK API key, a hub access token --
+        # and the default mode leaves it readable by every account on the
+        # machine. Set before the rename so there is no window in which the
+        # live file is world-readable.
+        with contextlib.suppress(OSError):  # a filesystem without modes
+            tmp.chmod(0o600)
         tmp.replace(self._path)
 
     def adapter_enabled(self, key: str) -> bool:

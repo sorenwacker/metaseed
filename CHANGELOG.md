@@ -142,6 +142,10 @@
   longer importable from `metaseed.agent.mcp`.
 
 ### Fixed
+- **`settings.json` is written readable only by its owner.** It holds a SEEK
+  API key and now a hub access token in plain text, and the default mode let
+  every account on the machine read them. Existing files are tightened on the
+  next write; tighten one now with `chmod 600`.
 - **A hub too old for the exchange is told apart from a wrong URL.** The
   deployed hub answers 404 for `/api/me` while being a perfectly real hub, and
   the check said "not a metaseed-hub. Give the hub's base URL" — sending the
