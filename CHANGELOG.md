@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## v0.43.0 (260826)
+
 ### Added
 - **The CLI reaches everything the MCP server and the web interface reach** (#263).
   Ten new command groups — `dataset`, `entity`, `profile`, `ontology`, `extract`,
