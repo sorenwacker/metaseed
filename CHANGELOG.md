@@ -142,6 +142,11 @@
   longer importable from `metaseed.agent.mcp`.
 
 ### Fixed
+- **A hub too old for the exchange is told apart from a wrong URL.** The
+  deployed hub answers 404 for `/api/me` while being a perfectly real hub, and
+  the check said "not a metaseed-hub. Give the hub's base URL" — sending the
+  reader after a URL that was right. It now reads `/api/health`, which every
+  hub answers, and names the version that needs updating.
 - **A hub dataset whose name the local store cannot hold no longer breaks the
   pull listing.** A name with a space is not one a dataset file can have, and
   asking the repository about one raised instead of answering; the listing now

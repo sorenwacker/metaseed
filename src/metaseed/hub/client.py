@@ -87,6 +87,15 @@ class HubClient:
             raise HubApiError(response.status_code, str(detail))
         return response
 
+    def health(self) -> dict[str, Any]:
+        """What the hub says about itself, including the version it runs.
+
+        Answered by every hub, old or new, and without a token -- which is how
+        a failure elsewhere can be told apart from "this is not a hub".
+        """
+        data: dict[str, Any] = self._request("GET", "/health").json()
+        return data
+
     def me(self) -> dict[str, str]:
         """The account and tenant the token acts in."""
         data: dict[str, str] = self._request("GET", "/me").json()

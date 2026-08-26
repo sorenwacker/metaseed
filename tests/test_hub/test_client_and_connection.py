@@ -131,7 +131,29 @@ class TestTheConnectionCheck:
         assert not check.ok
         assert "rejected the token" in check.message
 
+    def test_a_hub_too_old_for_the_endpoint_is_told_apart_from_a_wrong_url(
+        self,
+    ) -> None:
+        # The deployed hub answered 404 for /api/me while being a perfectly
+        # real hub; "check the URL" would have sent the user the wrong way.
+        def handler(request: httpx.Request) -> httpx.Response:
+            if request.url.path.endswith("/health"):
+                return httpx.Response(
+                    200, json={"status": "healthy", "version": "0.40.0"}
+                )
+            return httpx.Response(404, text="Not Found")
+
+        check = check_connection(
+            {"url": "https://hub.test", "token": "msh_x"},
+            http_client=httpx.Client(transport=httpx.MockTransport(handler)),
+        )
+        assert not check.ok
+        assert "0.40.0" in check.message
+        assert "updated" in check.message
+        assert "base URL" not in check.message
+
     def test_a_host_that_is_not_a_hub_is_said_so(self) -> None:
+        # Nothing answers /api/health either, so there is nothing to update.
         transport = httpx.MockTransport(lambda _r: httpx.Response(404, text="nope"))
         check = check_connection(
             {"url": "https://example.org", "token": "msh_x"},
