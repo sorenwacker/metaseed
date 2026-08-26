@@ -9,7 +9,7 @@
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
     <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
     <script src="{{ base_url }}/static/js/erd-common.js?v=1"></script>
-    <link rel="stylesheet" href="{{ base_url }}/static/css/style.css?v=59">
+    <link rel="stylesheet" href="{{ base_url }}/static/css/style.css?v=95">
 </head>
 <body hx-headers='{"X-Requested-With": "XMLHttpRequest"}'>
     <div class="layout layout-fixed">
@@ -48,6 +48,15 @@
                             </div>
                         </div>
 
+                        {% if hub_enabled %}
+                        <div class="form-section">
+                            <label class="form-label">Metaseed Hub</label>
+                            <button type="button" class="btn btn-secondary btn-sm" style="width: 100%;"
+                                    hx-get="{{ base_url }}/hub/profiles" hx-target="#hub-panel" hx-swap="innerHTML"
+                                    data-testid="btn-hub-profiles">Push / pull profiles</button>
+                            <div id="hub-panel" class="hub-panel"></div>
+                        </div>
+                        {% endif %}
                         <div class="form-section">
                             <label class="form-label">Compare Against <span style="font-weight: normal; color: #888;">(optional)</span></label>
                             <div class="profile-selector">

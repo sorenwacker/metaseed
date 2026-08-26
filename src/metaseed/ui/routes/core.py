@@ -16,6 +16,7 @@ from metaseed.profiles import ProfileFactory
 from metaseed.specs.loader import SpecLoader, SpecLoadError
 
 from ..dataset_manager import resolve_dataset_manager
+from .hub import hub_configured
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -123,12 +124,15 @@ def register_core_routes(
                         "version": d.version,
                         "entity_count": d.entity_count,
                         "modified": d.modified,
+                        "created": d.created,
+                        "hub": d.hub,
                     }
                     for d in datasets
                 ],
                 "current_dataset": manager.current_dataset,
                 "tree_nodes": [],
                 "base_url": base_url,
+                "hub_enabled": hub_configured(request.app.state.settings),
             },
         )
 

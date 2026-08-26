@@ -32,6 +32,9 @@ class DatasetInfo:
     # When the dataset was first saved; the listing order. Empty for a file
     # written before this was recorded, which then sorts by ``modified``.
     created: str = ""
+    hub: dict[str, str] | None = None
+    """Where the dataset last went to or came from: a metaseed-hub URL,
+    account, direction (push/pull) and time; None when it never travelled."""
 
 
 @dataclass
@@ -71,6 +74,8 @@ class DatasetData:
     modified: str = ""
     created: str = ""
     catalog_metadata: CatalogMetadata | None = None
+    hub: dict[str, str] | None = None
+    """Hub provenance, as on :class:`DatasetInfo`."""
 
 
 def validate_dataset_name(name: str) -> str | None:

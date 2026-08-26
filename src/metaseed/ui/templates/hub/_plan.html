@@ -1,0 +1,14 @@
+{# What a push would change on the hub, per entity type and per entity. #}
+<table class="hub-plan" data-testid="hub-plan">
+    <thead><tr><th>Entity type</th><th>Here</th><th>On hub</th></tr></thead>
+    <tbody>
+    {% for type, pair in plan.counts.items() %}
+        <tr><td>{{ type }}</td><td>{{ pair[0] }}</td><td>{{ pair[1] }}</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+<ul class="hub-plan-entities">
+    {% for key in plan.added %}<li class="hub-plan-added">+ {{ key }}</li>{% endfor %}
+    {% for key in plan.changed %}<li class="hub-plan-changed">~ {{ key }}</li>{% endfor %}
+    {% for key in plan.removed %}<li class="hub-plan-removed">− {{ key }} (on hub only; would be removed)</li>{% endfor %}
+</ul>

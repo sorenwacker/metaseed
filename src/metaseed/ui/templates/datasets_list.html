@@ -12,6 +12,16 @@
                     data-testid="btn-new-dataset">
                 + New Dataset
             </button>
+            {% if hub_enabled %}
+            <button class="btn btn-secondary"
+                    hx-get="{{ base_url }}/hub/datasets/pull"
+                    hx-target="#hub-panel"
+                    hx-swap="innerHTML"
+                    data-testid="btn-hub-pull"
+                    title="List your datasets on the hub and pull one">
+                Pull from hub
+            </button>
+            {% endif %}
             <label class="btn btn-secondary btn-file">
                 Import
                 <input type="file"
@@ -26,6 +36,9 @@
             </label>
         </div>
     </div>
+
+    {# Hub actions render their outcome here, below the header. #}
+    <div id="hub-panel" class="hub-panel"></div>
 
     {% if datasets %}
     <div class="datasets-filter">
@@ -54,9 +67,22 @@
                 </div>
                 <div class="dataset-card-modified">
                     {% if ds.created %}Created {{ ds.created[:10] }} · {% endif %}Modified {{ ds.modified[:10] if ds.modified else 'recently' }}
+                    {% if ds.hub %}· {{ 'Pushed to' if ds.hub.direction == 'push' else 'Pulled from' }} {{ ds.hub.hub }} {{ ds.hub.at[:10] }}{% endif %}
                 </div>
             </div>
             <div class="dataset-card-actions" onclick="event.preventDefault(); event.stopPropagation();">
+                {% if hub_enabled %}
+                <button class="btn-icon"
+                        hx-get="{{ base_url }}/hub/datasets/{{ ds.name }}/push"
+                        hx-target="#hub-panel"
+                        hx-swap="innerHTML"
+                        data-testid="btn-hub-push-{{ ds.name }}"
+                        title="Push to hub">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 19V5M5 12l7-7 7 7"/>
+                    </svg>
+                </button>
+                {% endif %}
                 <button class="btn-icon btn-icon-danger"
                         hx-delete="{{ base_url }}/api/datasets/{{ ds.name }}"
                         hx-confirm="Delete dataset '{{ ds.name }}'?"

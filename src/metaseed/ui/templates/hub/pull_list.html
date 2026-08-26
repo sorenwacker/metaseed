@@ -1,0 +1,33 @@
+{# The caller's hub datasets, each with where a pull lands. #}
+<div class="hub-status hub-status-ok" data-testid="hub-pull-list">
+    <p>Your datasets on {{ hub_url }}:</p>
+    {% if rows %}
+    <table class="hub-plan">
+        <thead><tr><th>Name</th><th>Profile</th><th>Entities</th><th>Pull would</th><th></th></tr></thead>
+        <tbody>
+        {% for record, target in rows %}
+        <tr data-testid="hub-pull-row-{{ record.name }}">
+            <td>{{ record.name }}</td>
+            <td>{{ record.profile }} {{ record.version }}</td>
+            <td>{{ record.entity_count }}</td>
+            <td>
+                {% if target.kind == 'new' %}save it as <code>{{ target.name }}</code>
+                {% elif target.kind == 'identical' %}change nothing (identical here)
+                {% else %}save it beside the differing local one as <code>{{ target.name }}</code>{% endif %}
+            </td>
+            <td>
+                {% if target.kind != 'identical' %}
+                <button class="btn btn-secondary btn-sm"
+                        hx-post="{{ base_url }}/hub/datasets/pull/{{ record.id }}"
+                        hx-target="#hub-panel" hx-swap="innerHTML"
+                        data-testid="btn-hub-pull-{{ record.name }}">Pull</button>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>None yet.</p>
+    {% endif %}
+</div>

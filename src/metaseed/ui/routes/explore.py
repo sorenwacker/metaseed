@@ -14,6 +14,7 @@ from metaseed.specs.merge import (
     MarkdownReportGenerator,
     compare,
 )
+from metaseed.ui.routes.hub import hub_configured
 from metaseed.ui.spec_provider import SpecProvider
 from metaseed.ui.state import AppState
 
@@ -83,6 +84,7 @@ def register_explore_routes(  # noqa: C901
                 "profile_versions": profile_versions,
                 "profile_display_names": profile_display_names,
                 "base_url": base_url,
+                "hub_enabled": hub_configured(request.app.state.settings),
             },
         )
 

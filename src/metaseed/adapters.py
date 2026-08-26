@@ -315,6 +315,19 @@ ADAPTERS: tuple[AdapterInfo, ...] = (
         action_path="/seek",
         check_ref="metaseed.seek.connection:check_connection",
     ),
+    AdapterInfo(
+        key="hub",
+        name="Metaseed Hub",
+        description="Push datasets and profiles to a metaseed-hub, and pull them back.",
+        direction="push",
+        extra="hub",
+        requires=("httpx",),
+        config_fields=(
+            ConfigField("url", "Hub URL", placeholder="https://hub.example.org"),
+            ConfigField("token", "Access token", secret=True, placeholder="msh_..."),
+        ),
+        check_ref="metaseed.hub.connection:check_connection",
+    ),
 )
 
 _BY_KEY: dict[str, AdapterInfo] = {a.key: a for a in ADAPTERS}

@@ -77,6 +77,7 @@ nav:
       - Ontology Lookup: guides/ontology-lookup.md
       - Profile Comparison: guides/spec-merge.md
       - Publishing to SEEK: guides/seek-export.md
+      - Pushing and pulling with metaseed-hub: guides/hub-sync.md
       - Authoring a SEEK-ready profile: guides/seek-ready-profiles.md
       - Embedding the entity graph: guides/embedding-the-graph.md
       - Logging: guides/logging.md

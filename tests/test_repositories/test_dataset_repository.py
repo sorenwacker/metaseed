@@ -293,3 +293,27 @@ class TestListedNewestCreatedFirst:
             ),
         )
         assert [d.name for d in repo.list()] == ["legacy", "test-fresh"]
+
+
+def test_hub_provenance_travels_with_the_dataset(tmp_path):
+    # Where a dataset went or came from is shown on the overview; it has to
+    # survive save -> list -> load, and stay absent for a dataset that never
+    # travelled.
+    repo = FilesystemDatasetRepository(tmp_path)
+    stamp = {
+        "hub": "https://hub.test",
+        "account": "me@example.org",
+        "direction": "push",
+        "at": "2026-08-26T10:00:00+00:00",
+    }
+    repo.save(
+        "test-travelled",
+        DatasetData(name="test-travelled", profile="isa", version="1.0", hub=stamp),
+    )
+    repo.save(
+        "test-stayed", DatasetData(name="test-stayed", profile="isa", version="1.0")
+    )
+    assert repo.load("test-travelled").hub == stamp
+    assert repo.load("test-stayed").hub is None
+    by_name = {d.name: d.hub for d in repo.list()}
+    assert by_name == {"test-travelled": stamp, "test-stayed": None}

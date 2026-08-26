@@ -264,3 +264,13 @@ def test_the_wildcard_is_not_implemented_as_always_true() -> None:
 
     assert scoped.applies_to("isa")
     assert not scoped.applies_to("miappe")
+
+
+def test_the_hub_adapter_is_a_checked_push_target_with_url_and_token():
+    # The Plugins page renders what is declared here: two fields and a check.
+    info = adapters.get_adapter("hub")
+    assert info.direction == "push"
+    assert [f.key for f in info.config_fields] == ["url", "token"]
+    assert next(f for f in info.config_fields if f.key == "token").secret
+    assert info.check_ref == "metaseed.hub.connection:check_connection"
+    assert info.resolve_check().__name__ == "check_connection"

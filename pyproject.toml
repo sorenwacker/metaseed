@@ -73,6 +73,9 @@ docs = [
 dcat = [
     "rdflib>=7.0,<8",
 ]
+hub = [
+    "httpx>=0.27,<1",
+]
 ena = [
     "httpx>=0.27,<1",
 ]

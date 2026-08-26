@@ -5796,7 +5796,8 @@ details.sidebar-section summary:hover {
 /* Inline status blocks on the SEEK page: the same colour semantics as the
    toasts, but static in the page flow. A toast (.notification) is fixed and
    animated, which made a polled progress bar re-animate every second. */
-.seek-status {
+.seek-status,
+.hub-status {
     border: 1px solid var(--border, #ddd);
     border-left: 4px solid var(--clr-muted, #999);
     border-radius: var(--radius-md, 6px);
@@ -5812,3 +5813,16 @@ details.sidebar-section summary:hover {
 .field-vocabulary { margin-top: 0.25rem; font-size: 0.8rem; }
 .field-vocabulary summary { cursor: pointer; color: var(--clr-ink-light); }
 .field-vocabulary ul { margin: 0.25rem 0 0 1rem; padding: 0; max-height: 12rem; overflow: auto; }
+
+/* Hub push/pull outcomes */
+.hub-panel:empty { display: none; }
+.hub-panel { margin: var(--space-md) 0; }
+.hub-status-ok { border-left: 3px solid var(--clr-success, #2e7d32); }
+.hub-status-warn { border-left: 3px solid var(--clr-warning, #b26a00); }
+.hub-status-error { border-left: 3px solid var(--clr-error, #b00020); }
+.hub-plan { border-collapse: collapse; margin: var(--space-sm) 0; font-size: 0.9em; }
+.hub-plan th, .hub-plan td { padding: 2px var(--space-sm); text-align: left; border-bottom: 1px solid var(--clr-parchment); }
+.hub-plan-entities { list-style: none; padding: 0; margin: var(--space-sm) 0; font-family: monospace; font-size: 0.85em; }
+.hub-plan-added { color: var(--clr-success, #2e7d32); }
+.hub-plan-changed { color: var(--clr-warning, #b26a00); }
+.hub-plan-removed { color: var(--clr-error, #b00020); }

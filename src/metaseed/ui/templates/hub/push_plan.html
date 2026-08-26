@@ -1,0 +1,19 @@
+{# The plan for pushing one dataset; nothing has been sent yet. #}
+<div class="hub-status hub-status-{{ 'ok' if plan.kind != 'differs' else 'warn' }}" data-testid="hub-push-plan-{{ plan.kind }}">
+    {% if plan.kind == 'create' %}
+    <p>{{ hub_url }} has no dataset named <strong>{{ name }}</strong>; pushing creates it with {{ plan.added|length }} entities.</p>
+    {% elif plan.kind == 'identical' %}
+    <p><strong>{{ name }}</strong> on {{ hub_url }} is identical to the local dataset. Nothing to send.</p>
+    {% else %}
+    <p><strong>{{ name }}</strong> on {{ hub_url }} differs from the local dataset. Nothing is changed until you choose to replace it.</p>
+    {% include "hub/_plan.html" %}
+    {% endif %}
+    {% if plan.kind != 'identical' %}
+    <form hx-post="{{ base_url }}/hub/datasets/{{ name }}/push" hx-target="#hub-panel" hx-swap="innerHTML">
+        {% if plan.kind == 'differs' %}<input type="hidden" name="replace" value="1">{% endif %}
+        <button type="submit" class="btn {{ 'btn-danger' if plan.kind == 'differs' else 'btn-primary' }} btn-sm" data-testid="btn-hub-push-confirm">
+            {{ 'Replace on hub' if plan.kind == 'differs' else 'Push' }}
+        </button>
+    </form>
+    {% endif %}
+</div>

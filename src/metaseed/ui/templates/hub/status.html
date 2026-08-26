@@ -1,0 +1,13 @@
+{# One outcome of a hub action: a message, and for a refused push the differences. #}
+<div class="hub-status {% if error %}hub-status-error{% elif ok %}hub-status-ok{% else %}hub-status-warn{% endif %}"
+     data-testid="hub-status-{{ 'error' if error else ('ok' if ok else 'warn') }}"
+     {% if refresh %}hx-on::load="setTimeout(function(){ window.location.reload(); }, 1200)"{% endif %}>
+    <p>{{ error or message }}</p>
+    {% if plan %}
+    {% include "hub/_plan.html" %}
+    <form hx-post="{{ base_url }}/hub/datasets/{{ name }}/push" hx-target="#hub-panel" hx-swap="innerHTML">
+        <input type="hidden" name="replace" value="1">
+        <button type="submit" class="btn btn-danger btn-sm" data-testid="btn-hub-replace">Replace on hub</button>
+    </form>
+    {% endif %}
+</div>

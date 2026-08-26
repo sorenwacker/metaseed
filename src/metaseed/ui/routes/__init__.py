@@ -26,6 +26,7 @@ from .dcat import register_dcat_routes
 from .examples import register_example_routes
 from .explore import register_explore_routes
 from .forms import register_form_routes
+from .hub import register_hub_routes
 from .import_export import register_export_routes, register_import_routes
 from .nested import register_nested_routes
 from .seek import register_seek_routes
@@ -43,6 +44,7 @@ __all__ = [
     "register_explore_routes",
     "register_export_routes",
     "register_form_routes",
+    "register_hub_routes",
     "register_import_routes",
     "register_nested_routes",
     "register_seek_routes",

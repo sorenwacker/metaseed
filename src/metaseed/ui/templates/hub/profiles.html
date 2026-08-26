@@ -1,0 +1,51 @@
+{# User-local profiles to push, and the hub's published specifications to pull. #}
+<div class="hub-status hub-status-ok" data-testid="hub-profiles">
+    <h4>Your profiles</h4>
+    {% if local %}
+    <table class="hub-plan">
+        <thead><tr><th>Profile</th><th>On {{ hub_url }}</th><th></th></tr></thead>
+        <tbody>
+        {% for ref, on_hub in local %}
+        <tr data-testid="hub-local-profile-{{ ref.name }}-{{ ref.version }}">
+            <td>{{ ref.name }} {{ ref.version }}</td>
+            <td>{{ {'identical': 'published, identical', 'differs': 'published with different content'}.get(on_hub, 'not published') }}</td>
+            <td>
+                {% if on_hub != 'identical' %}
+                <button class="btn btn-secondary btn-sm"
+                        hx-post="{{ base_url }}/hub/profiles/{{ ref.name }}/{{ ref.version }}/push"
+                        hx-target="#hub-panel" hx-swap="innerHTML"
+                        data-testid="btn-hub-push-profile-{{ ref.name }}-{{ ref.version }}">Push to hub</button>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No user-local profiles; built-in profiles are on every hub already.</p>
+    {% endif %}
+    <h4>Published on the hub</h4>
+    {% if remote %}
+    <table class="hub-plan">
+        <thead><tr><th>Specification</th><th>Here</th><th></th></tr></thead>
+        <tbody>
+        {% for spec, target in remote %}
+        <tr data-testid="hub-remote-profile-{{ spec.name }}-{{ spec.version }}">
+            <td>{{ spec.name }} {{ spec.version }}{% if spec.description %} — {{ spec.description }}{% endif %}</td>
+            <td>{{ {'new': 'not here', 'identical': 'identical', 'differs': 'different content'}[target.kind] }}</td>
+            <td>
+                {% if target.kind == 'new' %}
+                <button class="btn btn-secondary btn-sm"
+                        hx-post="{{ base_url }}/hub/profiles/{{ spec.name }}/{{ spec.version }}/pull"
+                        hx-target="#hub-panel" hx-swap="innerHTML"
+                        data-testid="btn-hub-pull-profile-{{ spec.name }}-{{ spec.version }}">Pull</button>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>Nothing published yet.</p>
+    {% endif %}
+</div>

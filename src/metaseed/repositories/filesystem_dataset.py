@@ -111,6 +111,7 @@ class FilesystemDatasetRepository(DatasetRepository):
                         entity_count=entity_count,
                         modified=data.get("modified", str(path.stat().st_mtime)),
                         created=data.get("created", ""),
+                        hub=data.get("hub"),
                     )
                 )
             except (json.JSONDecodeError, OSError):
@@ -161,6 +162,8 @@ class FilesystemDatasetRepository(DatasetRepository):
         }
         if data.catalog_metadata is not None:
             file_data["catalog_metadata"] = asdict(data.catalog_metadata)
+        if data.hub is not None:
+            file_data["hub"] = data.hub
 
         with open(path, "w") as f:
             json.dump(file_data, f, indent=2, default=str)
@@ -172,6 +175,7 @@ class FilesystemDatasetRepository(DatasetRepository):
             entity_count=len(data.entities),
             modified=modified,
             created=created,
+            hub=data.hub,
         )
 
     def load(self: Self, name: str) -> DatasetData:
@@ -205,6 +209,7 @@ class FilesystemDatasetRepository(DatasetRepository):
             catalog_metadata=(
                 CatalogMetadata(**catalog_metadata) if catalog_metadata else None
             ),
+            hub=data.get("hub"),
         )
 
     def delete(self: Self, name: str) -> bool:

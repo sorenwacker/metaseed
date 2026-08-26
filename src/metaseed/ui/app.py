@@ -28,6 +28,7 @@ from .routes import (
     register_explore_routes,
     register_export_routes,
     register_form_routes,
+    register_hub_routes,
     register_import_routes,
     register_nested_routes,
     register_seek_routes,
@@ -171,6 +172,7 @@ def create_app(
     register_explore_routes(app, templates, get_state, base_url=base_url)
     register_settings_routes(app, templates, get_state, base_url=base_url)
     register_seek_routes(app, templates, get_state, base_url=base_url)
+    register_hub_routes(app, templates, get_state, base_url=base_url)
 
     from .routes.dcat import register_dcat_routes
 
