@@ -242,6 +242,19 @@ class TermRouter:
                 left_out.append(_capabilities_of(source).name)
         return left_out
 
+    def list_ontologies_sync(self, limit: int = 50) -> list[dict[str, Any]]:
+        """The ontologies the first source that can list them offers.
+
+        Raises:
+            LookupError: If no configured source can list ontologies.
+        """
+        for source in self.sources:
+            lister = getattr(source, "list_ontologies_sync", None)
+            if lister is not None:
+                listed: list[dict[str, Any]] = lister(limit=limit)
+                return listed
+        raise LookupError("No configured term source can list ontologies")
+
     def capabilities(self) -> SourceCapabilities:
         """What the router as a whole can do.
 

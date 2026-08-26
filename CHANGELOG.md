@@ -3,6 +3,17 @@
 ## [Unreleased]
 
 ### Added
+- **The CLI reaches everything the MCP server and the web interface reach** (#263).
+  Ten new command groups — `dataset`, `entity`, `profile`, `ontology`, `extract`,
+  `spec`, `seek`, `hub`, `plugin`, `dcat` — each delegating to the same library
+  functions the routes and the tools call. A dataset command names the dataset it
+  acts on, loads it, changes it and writes it back, since a terminal has no
+  editing session; a specification draft is a file for the same reason. Output is
+  JSON, so a script reads what a person reads. The 15 existing flat commands are
+  unchanged. *Capability parity* in the documentation records which command,
+  tool and route serve each capability, and `tests/test_capability_parity.py`
+  fails when an MCP tool or a state-changing route arrives without a command, or
+  when the table names one that does not exist.
 - **Datasets and profiles push to a metaseed-hub and pull back** (#262). *Settings → Plugins → Metaseed Hub* takes the hub URL and a personal access token; the check names the account and tenant. On the datasets overview every dataset has *Push to hub* — a plan first (create, identical, or what differs), sent only when confirmed, a differing hub dataset replaced only when chosen — and *Pull from hub* lists your hub datasets; a pulled one that differs from a local dataset of the same name lands beside it as `<name>-hub`. The explorer's *Push / pull profiles* publishes a user-local profile on the hub under its version-bump gate and pulls published specifications into the user specs directory, never over a differing local one. Each dataset records where it last went or came from. See *Pushing and pulling with metaseed-hub*.
 - **The entity list and the graph are two views a dataset switches on and off independently.** The dataset toolbar has a *List* and a *Graph* toggle (at least one stays on); whatever is on shares the full width, so on a wide screen the table and the graph sit side by side. The graph panel has *Fullscreen* (the graph on the whole screen, Esc leaves), *New window* (`/graph`) and *Close*. The choice is remembered per browser.
 - **The profile explorer shows controlled vocabularies.** A field with an enumerated vocabulary is marked `[N terms]` on the node and lists its terms in the entity panel; *Show/Hide* use the profile's display name.
@@ -131,6 +142,16 @@
   longer importable from `metaseed.agent.mcp`.
 
 ### Fixed
+- **A hub dataset whose name the local store cannot hold no longer breaks the
+  pull listing.** A name with a space is not one a dataset file can have, and
+  asking the repository about one raised instead of answering; the listing now
+  asks through `local_counterpart`, which reports no counterpart for a name that
+  could never be stored.
+- **Tests no longer inherit each other's generated models.** Models are cached
+  globally by `profile:version:name` so validation can resolve nested entities;
+  two tests building the same profile name from different specs handed each
+  other the wrong model, and the second saw "Extra inputs are not permitted" for
+  a field its own spec defines. The registry is cleared between tests.
 - **Two profile Assays in one Study no longer share an assay stream.** SEEK splices assays in a stream into one line, so LC-MS, GC-MS and NMR assays of the same samples were chained after each other; every profile Assay after the first in a Study is now its own stream, as a second chain under one Assay already was.
 - **The test suite no longer touches the user's saved datasets.** Tests that
   saved, listed or deleted datasets through the app used the real

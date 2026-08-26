@@ -20,6 +20,25 @@ _LOOPBACK = {"127.0.0.1", "::1", "localhost", ""}
 
 
 @pytest.fixture(autouse=True)
+def _models_are_not_shared_between_tests():
+    """Each test generates its own models rather than inheriting them.
+
+    Models are cached globally by ``profile:version:name`` so validation can
+    resolve a nested entity at deserialization time. Two tests that build the
+    same profile name from different specs therefore hand each other the wrong
+    model, and the second one sees "Extra inputs are not permitted" for a
+    field its own spec defines. Clearing the registry between tests keeps that
+    a property of one test rather than of the order they ran in.
+    """
+    from metaseed.models.factory import get_global_context
+
+    context = get_global_context()
+    context._models.clear()
+    yield
+    context._models.clear()
+
+
+@pytest.fixture(autouse=True)
 def _private_datasets_dir(tmp_path_factory: pytest.TempPathFactory, monkeypatch):
     """Every test saves and deletes datasets in a directory of its own.
 

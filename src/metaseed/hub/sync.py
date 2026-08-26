@@ -241,6 +241,29 @@ def dataset_pull_target(record: HubRecord, local: DatasetData | None) -> PullTar
     return PullTarget("beside", f"{record.name}{PULLED_BESIDE_SUFFIX}")
 
 
+def local_counterpart(store: Any, name: str) -> DatasetData | None:
+    """The local dataset a hub record would meet, if there can be one.
+
+    A hub name need not be a name this store can hold -- it may carry a space
+    or a separator -- and asking the store about one of those raises rather
+    than answering (deliberately: that check is what stops a crafted name
+    escaping the datasets directory). A listing compares many names, so it
+    asks here: an impossible name simply has no local counterpart.
+
+    Args:
+        store: The dataset repository.
+        name: The hub record's name.
+
+    Returns:
+        The stored dataset of that name, or None when there is none -- or when
+        the name is not one this store could ever hold.
+    """
+    if store.validate_name(name):
+        return None
+    loaded: DatasetData | None = store.load(name) if store.exists(name) else None
+    return loaded
+
+
 def list_hub_datasets(hub: HubApi) -> list[HubRecord]:
     """The caller's hub datasets, for the pull list."""
     tenant_id = hub.me()["tenant_id"]

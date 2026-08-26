@@ -70,6 +70,7 @@ nav:
       - Overview: specification/index.md
       - System Specification: specification/system-specification.md
       - Public API Contract: specification/api-contract.md
+      - Capability Parity: specification/capability-parity.md
       - Specification Language: api/schema-specs.md
   - Guides:
       - Connecting an MCP client: guides/mcp-setup.md

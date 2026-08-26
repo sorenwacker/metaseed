@@ -466,6 +466,53 @@ class OntologyService:
 
         return term
 
+    def list_ontologies_sync(self: Self, limit: int = 50) -> list[dict[str, Any]]:
+        """The ontologies this service holds, newest listing each call.
+
+        Answers "what can I search in?" — the question a person asks before a
+        search, and the one the MCP server's ``list_ontologies`` tool answers.
+        It lives here because this adapter is the only place allowed to speak
+        OLS4, so the CLI and the agent ask the same service the same way.
+
+        Args:
+            limit: How many to return, 1..500.
+
+        Returns:
+            One dictionary per ontology: ``id``, ``title``, ``description``.
+
+        Raises:
+            TermSourceUnavailableError: If the service does not answer. The
+                caller reports "not checked", never a failure of the data.
+        """
+        from metaseed.services.term_check import TermSourceUnavailableError
+
+        self._rate_limiter.acquire_sync()
+        try:
+            with httpx.Client(
+                timeout=DEFAULT_TIMEOUT, headers=DEFAULT_HEADERS
+            ) as client:
+                response = client.get(
+                    f"{self.base_url}/ontologies",
+                    params={"size": min(max(1, limit), 500)},
+                )
+                response.raise_for_status()
+                payload = response.json()
+        except (httpx.HTTPStatusError, httpx.RequestError) as exc:
+            raise TermSourceUnavailableError(
+                f"{self.base_url} did not answer: {exc}"
+            ) from exc
+        listed = []
+        for entry in payload.get("_embedded", {}).get("ontologies", []):
+            config = entry.get("config", {})
+            listed.append(
+                {
+                    "id": entry.get("ontologyId"),
+                    "title": config.get("title"),
+                    "description": config.get("description"),
+                }
+            )
+        return listed
+
     def capabilities(self: Self) -> SourceCapabilities:
         """What OLS4 is, as this adapter sees it.
 

@@ -11,6 +11,75 @@ uv sync
 uv run metaseed --help
 ```
 
+## Command groups
+
+Everything the MCP server and the web interface can do is reachable here too;
+[Capability parity](../specification/capability-parity.md) records which command
+serves which capability, and a test fails when the three surfaces drift apart.
+
+| Group | What it covers |
+|---|---|
+| `metaseed dataset` | The saved datasets: list, show, create, delete, import, export, validate |
+| `metaseed entity` | The entities inside one dataset: list, show, tree, create, update, delete, bulk-update, batch-create |
+| `metaseed profile` | What a profile defines: schema, relationships, fields, required, field |
+| `metaseed ontology` | Terms: search, term, suggest, list, validate |
+| `metaseed extract` | Reading metadata out of files: parse, analyze, run, validate, export |
+| `metaseed spec` | Authoring a profile: create, clone, import, status, preview, validate, save, and the entity/field/rule editing commands |
+| `metaseed seek` | FAIRDOM-SEEK: check, preview, provision, sync, isa-rdf, isa-templates, model-ttl, import-templates |
+| `metaseed hub` | metaseed-hub: check, list, push-dataset, pull-dataset, profiles, push-profile, pull-profile |
+| `metaseed plugin` | The optional adapters: list, enable, disable, config, check |
+| `metaseed dcat` | Catalogue records: show, set |
+
+Each group prints its own help: `metaseed dataset --help`.
+
+### How a dataset command works
+
+The web interface and the MCP server act on one editing session; the command
+line has none, so every command names the dataset it acts on, loads it, changes
+it and writes it back:
+
+```bash
+metaseed dataset create test-drought --profile isa --version 1.0
+metaseed entity create test-drought Investigation --set identifier=I1 --set title="Drought trial"
+metaseed entity list test-drought
+metaseed dataset validate test-drought
+```
+
+`--set name=value` is repeatable, and a value that parses as JSON is kept as
+JSON, so `--set comments='[{"name":"a","value":"b"}]'` sets a list.
+
+Output is JSON, so a script reads what a person reads:
+
+```bash
+metaseed dataset list | jq '.[].name'
+```
+
+### Authoring a specification
+
+A draft is a file rather than a session:
+
+```bash
+metaseed spec create draft.yaml --name my-profile --version 1.0
+metaseed spec add-entity draft.yaml Study
+metaseed spec add-field draft.yaml Study identifier --type string --set required=true --set is_identifier=true
+metaseed spec set-root draft.yaml Study
+metaseed spec validate draft.yaml
+metaseed spec save draft.yaml
+```
+
+### Pushing to a hub
+
+```bash
+metaseed plugin config hub --set url=https://hub.example.org --set token=msh_...
+metaseed hub check
+metaseed hub push-dataset test-drought --plan   # what would happen
+metaseed hub push-dataset test-drought          # do it
+metaseed hub list
+```
+
+A hub dataset of the same name that differs is not replaced unless `--replace`
+is given, and a pulled dataset never overwrites a differing local one.
+
 ## Commands
 
 ### version

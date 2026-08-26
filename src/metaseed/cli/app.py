@@ -16,8 +16,18 @@ except ImportError:
     __version__ = "0.0.0+unknown"
 
 # Import commands from submodules
+from metaseed.cli.commands.datasets import app as dataset_app
+from metaseed.cli.commands.dcat import app as dcat_app
+from metaseed.cli.commands.entities import app as entity_app
 from metaseed.cli.commands.example import export_example
+from metaseed.cli.commands.extract import app as extract_app
+from metaseed.cli.commands.hub import app as hub_app
 from metaseed.cli.commands.merge import compare_profiles, merge_profiles
+from metaseed.cli.commands.ontology import app as ontology_app
+from metaseed.cli.commands.plugins import app as plugin_app
+from metaseed.cli.commands.profile_info import app as profile_app
+from metaseed.cli.commands.seek import app as seek_app
+from metaseed.cli.commands.spec import app as spec_app
 from metaseed.cli.output import CheckOutput, ExitCode, echo_error, echo_success
 from metaseed.logging import configure_logging
 from metaseed.models import get_model
@@ -393,6 +403,21 @@ app.command(name="example")(export_example)
 app.command(name="compare")(compare_profiles)
 app.command(name="merge")(merge_profiles)
 
+# Grouped commands. Everything the MCP server and the web interface can do is
+# reachable here too; docs/specification/capability-parity.md records which
+# command serves which capability and tests/test_capability_parity.py holds
+# the three surfaces to it.
+app.add_typer(dataset_app, name="dataset")
+app.add_typer(entity_app, name="entity")
+app.add_typer(profile_app, name="profile")
+app.add_typer(ontology_app, name="ontology")
+app.add_typer(extract_app, name="extract")
+app.add_typer(spec_app, name="spec")
+app.add_typer(seek_app, name="seek")
+app.add_typer(hub_app, name="hub")
+app.add_typer(plugin_app, name="plugin")
+app.add_typer(dcat_app, name="dcat")
+
 
 @app.command(name="mcp")
 def mcp_server(
@@ -486,6 +511,10 @@ def migrate_spec_versions(
         raise typer.Exit(ExitCode.VALIDATION_ERROR)
 
 
+# Also `metaseed seek import-templates`: the grouped name is the one the
+# parity table lists, and the flat one keeps working for anything that already
+# calls it.
+@seek_app.command(name="import-templates")
 @app.command(name="seek-import-templates")
 def seek_import_templates(
     profile: Annotated[Path, typer.Argument(help="Profile YAML to update")],

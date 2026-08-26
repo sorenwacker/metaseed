@@ -145,7 +145,11 @@ def register_hub_routes(  # noqa: C901
     @app.get("/hub/datasets/pull", response_class=HTMLResponse)
     async def pull_list(request: Request) -> HTMLResponse:
         """The caller's hub datasets, each with where a pull would land."""
-        from metaseed.hub.sync import dataset_pull_target, list_hub_datasets
+        from metaseed.hub.sync import (
+            dataset_pull_target,
+            list_hub_datasets,
+            local_counterpart,
+        )
 
         hub, error = _hub(request)
         if hub is None:
@@ -155,12 +159,15 @@ def register_hub_routes(  # noqa: C901
             records = list_hub_datasets(hub)
         except Exception as exc:
             return _status(request, error=_failure(exc, hub))
-        rows = []
-        for record in records:
-            local = None
-            if manager.dataset_exists(record.name):
-                local = manager.repository.load(record.name)
-            rows.append((record, dataset_pull_target(record, local)))
+        rows = [
+            (
+                record,
+                dataset_pull_target(
+                    record, local_counterpart(manager.repository, record.name)
+                ),
+            )
+            for record in records
+        ]
         return templates.TemplateResponse(
             request,
             "hub/pull_list.html",
@@ -170,7 +177,12 @@ def register_hub_routes(  # noqa: C901
     @app.post("/hub/datasets/pull/{dataset_id}", response_class=HTMLResponse)
     async def pull_dataset_now(request: Request, dataset_id: str) -> HTMLResponse:
         """Pull one hub dataset; a differing local one is kept and the copy lands beside it."""
-        from metaseed.hub.sync import HubRecord, dataset_pull_target, provenance
+        from metaseed.hub.sync import (
+            HubRecord,
+            dataset_pull_target,
+            local_counterpart,
+            provenance,
+        )
 
         hub, error = _hub(request)
         if hub is None:
@@ -180,12 +192,9 @@ def register_hub_routes(  # noqa: C901
             record = HubRecord.from_row(hub.get_dataset(dataset_id))
         except Exception as exc:
             return _status(request, error=_failure(exc, hub))
-        local = (
-            manager.repository.load(record.name)
-            if manager.dataset_exists(record.name)
-            else None
+        target = dataset_pull_target(
+            record, local_counterpart(manager.repository, record.name)
         )
-        target = dataset_pull_target(record, local)
         if target.kind == "identical":
             return _status(
                 request, ok=True, message=f"{record.name!r} is already here, unchanged."
