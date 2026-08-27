@@ -6,6 +6,8 @@ differences between profile specifications.
 
 from typing import Any, Self
 
+from metaseed.specs.schema import FieldSpec, ValidationRuleSpec
+
 from .models import ComparisonResult, DiffType, EntityDiff
 
 
@@ -59,7 +61,7 @@ class DiffVisualizer:
                 continue
 
             # Create entity node (fields are included in the node data, not as separate nodes)
-            entity_node = self._create_entity_node(entity_diff, comparison.profiles)
+            entity_node = self._create_entity_node(entity_diff, comparison)
             nodes.append(entity_node)
             entity_node_ids[entity_diff.entity_name.lower()] = entity_node["id"]
 
@@ -74,16 +76,22 @@ class DiffVisualizer:
             "edges": edges,
             "legend": self._create_legend(),
             "statistics": self._create_statistics_summary(comparison),
+            # Every rule of every profile, so the page can list the ones that
+            # span entities; each entity node also carries its own.
+            "rules": {
+                pid: [_rule_details(rule) for rule in spec.validation_rules]
+                for pid, spec in comparison.profile_specs.items()
+            },
         }
 
     def _create_entity_node(
-        self: Self, entity_diff: EntityDiff, profiles: list[str]
+        self: Self, entity_diff: EntityDiff, comparison: ComparisonResult
     ) -> dict[str, Any]:
         """Create a vis.js node for an entity.
 
         Args:
             entity_diff: Entity difference data.
-            profiles: List of profile identifiers.
+            comparison: The comparison, for the profiles and their rules.
 
         Returns:
             Node dictionary for vis.js.
@@ -93,7 +101,7 @@ class DiffVisualizer:
 
         # Build presence info
         presence = []
-        for profile_id in profiles:
+        for profile_id in comparison.profiles:
             present = entity_diff.profiles.get(profile_id, False)
             presence.append(f"{'Y' if present else 'N'}")
 
@@ -118,6 +126,7 @@ class DiffVisualizer:
             # The closed vocabulary a field takes its values from, so the
             # explorer can show it: the terms are what a user needs to see.
             vocabulary: list[str] = []
+            details: dict[str, Any] = {}
             for spec in fd.profiles.values():
                 if spec is not None:
                     field_type = spec.type.value
@@ -125,6 +134,7 @@ class DiffVisualizer:
                     items = spec.items
                     if spec.constraints and spec.constraints.enum:
                         vocabulary = list(spec.constraints.enum)
+                    details = _field_details(spec)
                     break
 
             # Determine which profiles have this field
@@ -139,6 +149,7 @@ class DiffVisualizer:
                     "required": required,
                     "items": items,
                     "vocabulary": vocabulary,
+                    "details": details,
                     "diff_type": fd.diff_type.value,
                     "profiles": field_profiles,
                     "attributes_changed": fd.attributes_changed,
@@ -161,6 +172,8 @@ class DiffVisualizer:
                 "field_count": len(entity_diff.field_diffs),
                 "conflict_count": len(entity_diff.conflicting_fields),
                 "fields": fields_data,
+                **_entity_details(comparison, entity_diff.entity_name),
+                "rules": _rules_for(comparison, entity_diff.entity_name),
             },
         }
 
@@ -337,3 +350,65 @@ class DiffVisualizer:
         """
         self._node_id_counter += 1
         return self._node_id_counter
+
+
+# The headline attributes the graph shows on the node itself; everything else a
+# field has set is a detail the panel lists.
+_HEADLINE_FIELD_ATTRIBUTES = frozenset({"name", "type", "required", "items"})
+
+
+def _field_details(spec: FieldSpec) -> dict[str, Any]:
+    """Every attribute a field has set, beyond the headline ones.
+
+    An attribute left at its default is absent, so a plain string field shows
+    nothing and a vocabulary-bound identifier shows what makes it one. The
+    enumerated vocabulary is carried separately (``vocabulary``) and is not
+    repeated here.
+    """
+    dumped = spec.model_dump(exclude_none=True, exclude=set(_HEADLINE_FIELD_ATTRIBUTES))
+    details: dict[str, Any] = {}
+    for key, value in dumped.items():
+        if value in (False, "", [], {}):
+            continue
+        if key == "constraints":
+            constraints = {
+                k: v for k, v in value.items() if v is not None and k != "enum"
+            }
+            if constraints:
+                details["constraints"] = constraints
+            continue
+        details[key] = value
+    return details
+
+
+def _rule_details(rule: ValidationRuleSpec) -> dict[str, Any]:
+    """A validation rule with only the parameters it sets."""
+    return {
+        k: v for k, v in rule.model_dump(exclude_none=True).items() if v not in ("", [])
+    }
+
+
+def _entity_details(comparison: ComparisonResult, entity_name: str) -> dict[str, Any]:
+    """The entity's own description and term, from the first profile that has it."""
+    for spec in comparison.profile_specs.values():
+        entity = spec.entities.get(entity_name)
+        if entity is not None:
+            return {
+                "description": entity.description,
+                "ontology_term": entity.ontology_term,
+            }
+    return {"description": None, "ontology_term": None}
+
+
+def _rules_for(comparison: ComparisonResult, entity_name: str) -> list[dict[str, Any]]:
+    """The rules that apply to ``entity_name``: named in ``applies_to``, or ``all``."""
+    found: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for spec in comparison.profile_specs.values():
+        for rule in spec.validation_rules:
+            applies = rule.applies_to
+            targets = [applies] if isinstance(applies, str) else list(applies or [])
+            if ("all" in targets or entity_name in targets) and rule.name not in seen:
+                seen.add(rule.name)
+                found.append(_rule_details(rule))
+    return found

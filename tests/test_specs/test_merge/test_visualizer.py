@@ -509,3 +509,111 @@ def test_a_field_with_an_enum_carries_its_vocabulary_into_the_graph() -> None:
     node = next(n for n in graph["nodes"] if "Source" in n["label"])
     (growth,) = [f for f in node["data"]["fields"] if f["name"] == "growth_medium"]
     assert growth["vocabulary"] == ["soil", "hydroponic"]
+
+
+def _single_profile_result(spec_yaml: dict) -> "ComparisonResult":
+    """A one-profile comparison, the explorer's 'explore only' mode.
+
+    The comparator loads profiles by name through a loader; handing it one
+    that answers with this spec keeps the test off the filesystem.
+    """
+    from metaseed.specs.merge.comparator import SpecComparator
+    from metaseed.specs.schema import ProfileSpec
+
+    spec = ProfileSpec.model_validate(spec_yaml)
+
+    class _Loader:
+        def load_profile(self, version=None, profile=None, **_kw):
+            return spec
+
+        def list_versions(self, *_a, **_k):
+            return [spec.version]
+
+    return SpecComparator(loader=_Loader()).compare([("p", "1.0")])
+
+
+_RICH_PROFILE = {
+    "spec_version": "0.1",
+    "version": "1.0",
+    "name": "p",
+    "display_name": "P",
+    "description": "A profile with details.",
+    "root_entity": "Study",
+    "entities": {
+        "Study": {
+            "description": "A study is a unit of work.",
+            "ontology_term": "OBI:0000066",
+            "fields": [
+                {
+                    "name": "identifier",
+                    "type": "string",
+                    "required": True,
+                    "is_identifier": True,
+                    "description": "The study's id.",
+                    "constraints": {"pattern": "^S-[0-9]+$", "max_length": 12},
+                    "isa_tag": "sample",
+                    "seek_attribute_type": "String",
+                },
+                {"name": "title", "type": "string", "unit": None},
+            ],
+        }
+    },
+    "validation_rules": [
+        {
+            "name": "study_has_title",
+            "description": "A study needs a title.",
+            "type": "required",
+            "applies_to": ["Study"],
+            "field": "title",
+            "message": "Give the study a title.",
+        },
+        {
+            "name": "everything_has_an_id",
+            "description": "Every entity carries an identifier.",
+            "type": "required",
+            "applies_to": "all",
+            "field": "identifier",
+        },
+    ],
+}
+
+
+def test_a_field_carries_every_attribute_it_has_set_into_the_graph() -> None:
+    # The explorer showed a field as name and type only; description,
+    # constraints, markers and SEEK columns were invisible from the UI.
+    graph = DiffVisualizer().build_diff_graph(_single_profile_result(_RICH_PROFILE))
+    node = next(n for n in graph["nodes"] if n["data"].get("name") == "Study")
+    ident = next(f for f in node["data"]["fields"] if f["name"] == "identifier")
+    details = ident["details"]
+    assert details["description"] == "The study's id."
+    assert details["is_identifier"] is True
+    assert details["constraints"] == {"pattern": "^S-[0-9]+$", "max_length": 12}
+    assert details["isa_tag"] == "sample"
+    assert details["seek_attribute_type"] == "String"
+    title = next(f for f in node["data"]["fields"] if f["name"] == "title")
+    assert title["details"] == {}, "an attribute that is not set is not shown as set"
+
+
+def test_an_entity_carries_its_description_and_term() -> None:
+    graph = DiffVisualizer().build_diff_graph(_single_profile_result(_RICH_PROFILE))
+    node = next(n for n in graph["nodes"] if n["data"].get("name") == "Study")
+    assert node["data"]["description"] == "A study is a unit of work."
+    assert node["data"]["ontology_term"] == "OBI:0000066"
+
+
+def test_validation_rules_reach_the_graph_and_each_entity_gets_its_own() -> None:
+    graph = DiffVisualizer().build_diff_graph(_single_profile_result(_RICH_PROFILE))
+    assert [r["name"] for r in graph["rules"]["p/1.0"]] == [
+        "study_has_title",
+        "everything_has_an_id",
+    ]
+    node = next(n for n in graph["nodes"] if n["data"].get("name") == "Study")
+    # Both apply: one names the entity, the other says "all".
+    assert [r["name"] for r in node["data"]["rules"]] == [
+        "study_has_title",
+        "everything_has_an_id",
+    ]
+    named = node["data"]["rules"][0]
+    assert named["message"] == "Give the study a title."
+    assert named["field"] == "title"
+    assert "pattern" not in named, "unset parameters are not listed"

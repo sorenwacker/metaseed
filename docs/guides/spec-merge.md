@@ -54,6 +54,14 @@ The comparison displays an interactive entity-relationship diagram:
 | `!` | Field conflict (incompatible differences) |
 | `*` | Required field |
 
+**Entity panel:**
+
+Clicking an entity opens a panel with everything the profile says about it: the entity's description and ontology term, and for every field its type, whether it is required, its description, ontology term, constraints (pattern, length, range, item counts), controlled vocabulary, unit, example, identifier/label markers, tier, and any SEEK or ISA markers (`isa_tag`, `seek_attribute_type`, `seek_controlled_vocab`). A field shows only the attributes it has set, so a plain string field is one line and a vocabulary-bound identifier is several.
+
+**Validation rules:**
+
+The panel lists the validation rules that apply to the entity — those whose `applies_to` names it or is `all` — with the rule's name, type, description and its parameters (field, condition, pattern, bounds, reference, message). The sidebar's *Validation rules* section lists every rule of the base profile, so cross-entity rules are visible without opening each entity.
+
 ### Export Reports
 
 After comparing, export the results:

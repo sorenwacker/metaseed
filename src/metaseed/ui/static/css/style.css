@@ -5826,3 +5826,16 @@ details.sidebar-section summary:hover {
 .hub-plan-added { color: var(--clr-success, #2e7d32); }
 .hub-plan-changed { color: var(--clr-warning, #b26a00); }
 .hub-plan-removed { color: var(--clr-error, #b00020); }
+
+/* Explorer: field details and validation rules */
+.entity-about p { margin: 0 0 var(--space-xs); }
+.entity-about .term { font-size: 0.85em; }
+.field-details { margin: 2px 0 var(--space-xs); font-size: 0.85em; }
+.field-detail { display: flex; gap: var(--space-xs); }
+.field-detail-key { color: var(--clr-ink-muted, #666); min-width: 9em; }
+.rules-list, .rule-item { font-size: 0.9em; }
+.rule-item { padding: var(--space-xs) 0; border-bottom: 1px solid var(--clr-parchment); }
+.rule-description { margin: 2px 0; }
+.rule-meta { color: var(--clr-ink-muted, #666); font-size: 0.9em; }
+.rule-param { font-family: monospace; }
+.rule-message { font-style: italic; }
