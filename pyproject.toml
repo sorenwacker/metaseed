@@ -9,21 +9,35 @@ authors = [{ name = "Sören Wacker" }]
 keywords = [
     "metadata",
     "fair-data",
-    "ontology",
+    "research-data",
     "miappe",
     "isa-tab",
     "darwin-core",
     "dissco",
     "ena",
+    "pride",
+    "metabolights",
+    "fairdom-seek",
+    "dcat",
+    "ontology",
     "phenotyping",
+    "pydantic",
+    "mcp",
 ]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
 ]
 
 dependencies = [
@@ -94,8 +108,10 @@ seek = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/sorenwacker/metaseed"
+Homepage = "https://sorenwacker.github.io/metaseed/"
+Documentation = "https://sorenwacker.github.io/metaseed/"
 Repository = "https://github.com/sorenwacker/metaseed"
+Changelog = "https://github.com/sorenwacker/metaseed/blob/main/CHANGELOG.md"
 Issues = "https://github.com/sorenwacker/metaseed/issues"
 
 [project.scripts]

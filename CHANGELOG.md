@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### Changed
+- **The README says what the package does and ships, and a test holds it to
+  that.** The profile table carries each profile's `--profile` key, versions
+  and counts, checked against the loader; the integrations table names every
+  adapter; the Python example runs against the real client (it had used
+  `result.is_valid`, an attribute the API does not have); relative links must
+  resolve. Package metadata on PyPI gains keywords, classifiers, and the
+  documentation and changelog URLs.
+
 ## v0.45.0 (260827)
 
 ### Fixed

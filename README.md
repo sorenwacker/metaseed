@@ -4,128 +4,147 @@
 
 [![CI](https://github.com/sorenwacker/metaseed/actions/workflows/ci.yml/badge.svg)](https://github.com/sorenwacker/metaseed/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/sorenwacker/metaseed/graph/badge.svg)](https://codecov.io/gh/sorenwacker/metaseed)
+[![PyPI](https://img.shields.io/pypi/v/metaseed.svg)](https://pypi.org/project/metaseed/)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-Schema-driven metadata management from YAML specifications.
+Metaseed creates, edits, and validates scientific metadata against a standard, from a YAML specification of that standard.
 
-[Documentation](https://sorenwacker.github.io/metaseed/) | [Introduction Slides](https://sorenwacker.github.io/metaseed/slides/)
+[Documentation](https://sorenwacker.github.io/metaseed/) · [Introduction slides](https://sorenwacker.github.io/metaseed/slides/) · [Changelog](CHANGELOG.md)
 
-## What is Metaseed?
+## What it does
 
-A **schema-driven metadata management system** that:
+A metadata standard such as MIAPPE or ISA is written as a *profile*: a YAML file that names the entity types, their fields, the parent–child hierarchy, and the validation rules. From that file, Metaseed:
 
-- Defines entity schemas in human-readable YAML
-- Generates Pydantic models dynamically at runtime
-- Validates with composable rules
-- Supports multiple metadata standards (MIAPPE, ISA, Darwin Core, ...)
-- Exports a dataset as a DCAT catalog card (JSON-LD / Turtle) for data portals and FAIR assessment
+- Generates Pydantic models for every entity type at runtime.
+- Validates a dataset with composable rules: required fields, patterns, ranges, uniqueness, referential integrity, and conditions.
+- Serializes datasets to JSON, YAML, and Excel, and back.
+- Exports to the formats repositories take: ISA-Tab, ENA XML, PRIDE `submission.px` with SDRF, DCAT, and SEEK's ISA RDF.
+- Pushes a dataset into a running FAIRDOM-SEEK instance, or to a shared [metaseed-hub](https://github.com/sorenwacker/metaseed-hub).
 
-```
-YAML specs → Pydantic models → Validation → Serialization
-```
+You work with it from a command line, a web interface, a Python API, or an MCP server for an AI agent. All four reach the same library functions, and a test fails when one of them falls behind the others.
 
-## Installation
+## Install
 
-Requires Python 3.11+
+Metaseed requires Python 3.11 or later.
 
 ```bash
-# Install from GitHub
-uv tool install git+https://github.com/sorenwacker/metaseed.git
-
-# Or for development
-git clone https://github.com/sorenwacker/metaseed.git
-cd metaseed
-uv sync --extra dev
+uv tool install metaseed
 ```
 
-## Supported Profiles
+To include an integration, name its extra. For example, `metaseed[seek,dcat]` adds the FAIRDOM-SEEK and DCAT adapters; `metaseed[hub]` adds the hub client. The **Plugins** page in the web interface lists which extras are installed.
 
-Counts are for the latest version of each profile.
+For development:
 
-| Profile | Versions | Entities | Fields | Domain |
-|---------|----------|----------|--------|--------|
-| MIAPPE | 1.1, 1.2 | 14 | 163 | Plant phenotyping |
-| MIAPPE-HTP | 1.0 | 28 | 137 | High-throughput plant phenotyping |
-| ISA | 1.0 | 22 | 139 | Life science |
-| Darwin Core | 1.0 | 10 | 189 | Biodiversity |
-| DiSSCo | 0.4 | 16 | 261 | Digital specimens |
-| ENA | 1.0 | 11 | 109 | Nucleotide archive |
-| MetaboLights | 1.0 | 13 | 71 | Metabolomics |
-| PRIDE | 1.0 | 9 | 61 | Proteomics |
-| SEEK | 1.0 | 24 | 229 | Systems biology (the FAIRDOM-SEEK data model) |
-| SEEK-ready template | 1.0, 2.0 | 4 | 26 | Minimal ISA shape for SEEK upload |
+```bash
+git clone https://github.com/sorenwacker/metaseed.git
+cd metaseed
+make setup
+```
 
-User-defined profiles supported in `~/.local/share/metaseed/specs/`
+## Profiles
+
+The package ships these profiles. Counts refer to each profile's latest version.
+
+| Profile | `--profile` | Versions | Entities | Fields | Domain |
+|---------|-------------|----------|----------|--------|--------|
+| MIAPPE | `miappe` | 1.1, 1.2 | 14 | 163 | Plant phenotyping |
+| MIAPPE-HTP | `miappe-htp` | 1.0 | 28 | 137 | High-throughput plant phenotyping |
+| ISA | `isa` | 1.0 | 22 | 139 | Life science investigations |
+| Darwin Core | `darwin-core` | 1.0 | 10 | 189 | Biodiversity |
+| DiSSCo | `dissco` | 0.4 | 16 | 261 | Digital specimens |
+| ENA | `ena` | 1.0 | 11 | 109 | Nucleotide archive submissions |
+| MetaboLights | `metabolights` | 1.0 | 13 | 71 | Metabolomics |
+| PRIDE | `pride` | 1.0, 2.0 | 9 | 61 | Proteomics |
+| SEEK | `seek` | 1.0 | 24 | 229 | The FAIRDOM-SEEK data model |
+| SEEK-ready template | `seek-ready-template` | 1.0, 2.0, 3.0 | 6 | 33 | Minimal ISA shape for a SEEK upload |
+
+Profiles you write yourself go under `~/.local/share/metaseed/specs/`. The web interface's spec builder and the `metaseed spec` commands author them; the explorer compares them; `metaseed merge` combines them.
 
 ## Integrations
 
-Adapters connect a dataset to an external service or format. They are separate from profiles: a profile is a metadata
-standard, an adapter is a route in or out.
+An adapter is a route in or out of a dataset. A profile is a standard; an adapter is a service or file format. Each adapter is a pip extra of the same name.
 
 | Adapter | Direction | What it does |
 |---------|-----------|--------------|
-| FAIRDOM-SEEK | export | Push ISA content over the JSON:API, or export SEEK-importable ISA RDF ([guide](docs/guides/seek-export.md)) |
-| DCAT | export | Export a dataset's catalogue record as DCAT (JSON-LD / Turtle) |
-| ENA | import | Import public metadata for a European Nucleotide Archive accession |
-| PRIDE | both | Import a PRIDE Archive proteomics project; export `submission.px` + SDRF |
-| MetaboLights | import | Import a MetaboLights metabolomics study document |
-| BrAPI | import | Import a BrAPI v2 plant-breeding server's studies into the `miappe` profile |
+| FAIRDOM-SEEK | push, export | Creates Sample Types and Extended Metadata on a SEEK instance and pushes a dataset as ISA content; exports SEEK-importable ISA RDF ([guide](docs/guides/seek-export.md)) |
+| Metaseed Hub | push, pull | Pushes datasets and profiles to a metaseed-hub and pulls them back, never overwriting without being asked ([guide](docs/guides/hub-sync.md)) |
+| DCAT | export | Exports a dataset's catalogue record as DCAT, in JSON-LD and Turtle |
+| ENA | import, export | Imports the metadata of a European Nucleotide Archive accession; exports ENA XML |
+| PRIDE | import, export | Imports a PRIDE Archive project; exports `submission.px` and SDRF |
+| MetaboLights | import | Imports a MetaboLights study document |
+| BrAPI | import | Imports a BrAPI v2 server's studies into the MIAPPE profile |
 
-## Modi Operandi
+## Use it
 
-Metaseed operates in **four modes**:
+### Command line
 
-| Mode | Interface | Use Case |
-|------|-----------|----------|
-| CLI | `metaseed` | Script automation |
-| Web UI | Browser | Visual editing |
-| REST API | HTTP | System integration |
-| Python API | Library | Programmatic access |
-| MCP Server | AI | Claude integration |
-
-### CLI Mode
+The CLI is grouped by what you act on. Every group prints its own help, for example `metaseed dataset --help`.
 
 ```bash
-# List entities in a profile
-metaseed entities miappe 1.2
-
-# Generate entity template
-metaseed template miappe 1.2 Investigation
-
-# Validate a dataset
-metaseed validate dataset.yaml --profile miappe --version 1.2
-
-# Start web UI
-metaseed ui
-
-# Start MCP server (for Claude Desktop)
-metaseed mcp --transport stdio
+metaseed profiles                                  # the profiles and their versions
+metaseed profile schema --profile miappe -v 1.2    # entity types and fields
+metaseed dataset create test-drought --profile miappe -v 1.2
+metaseed entity create test-drought Investigation --set unique_id=INV001 --set title="Drought trial"
+metaseed dataset validate test-drought
+metaseed dataset export test-drought --format dcat -o out/
+metaseed ui                                        # the web interface
+metaseed mcp --transport stdio                     # the MCP server, for Claude Desktop
 ```
 
-### Python API
+Output is JSON, so a script reads what a person reads. The [CLI reference](docs/api/cli.md) lists every command; [Capability parity](docs/specification/capability-parity.md) records which command, MCP tool, and web route serve each capability.
+
+### Python
 
 ```python
 from metaseed import MetaseedClient
 
 client = MetaseedClient("miappe", "1.2")
 
-# Create root entity
-inv = client.create_entity("Investigation", {
-    "unique_id": "INV001",
-    "title": "Drought Tolerance Study",
-    "description": "Multi-year field trial..."
-})
+investigation = client.create_entity(
+    "Investigation",
+    {"unique_id": "INV001", "title": "Drought tolerance trial"},
+)
+client.create_entity(
+    "Study",
+    {"unique_id": "STU001", "title": "Field trial 2024", "start_date": "2024-03-01"},
+    parent_id=investigation.id,
+)
 
-# Create child with parent linkage
-study = client.create_entity("Study", {
-    "unique_id": "STU001",
-    "title": "Field Trial 2024",
-    "start_date": "2024-03-01"
-}, parent_id=inv.id)
-
-# Validate entire dataset
 result = client.validate()
-print(f"Valid: {result.is_valid}, Errors: {len(result.errors)}")
+print(result.valid, [issue.message for issue in result.issues])
 ```
+
+The [Python API reference](docs/api/client.md) covers the client; the [public API contract](docs/specification/api-contract.md) lists what is stable.
+
+### Web interface
+
+`metaseed ui` serves the datasets overview, entity forms and tables, validation, the graph view, the profile explorer, the spec builder, and the Plugins page for the adapters.
+
+### MCP server
+
+`metaseed mcp` exposes the same capabilities as tools for an AI agent: profile discovery, dataset and entity editing, extraction from source files, validation, ontology lookup, and specification authoring. See the [MCP setup guide](docs/guides/mcp-setup.md).
+
+## Validation
+
+Rules are part of the profile, in YAML:
+
+```yaml
+validation_rules:
+  - name: study_unique_within_investigation
+    type: uniqueness
+    applies_to: [Study]
+    field: unique_id
+    unique_within: parent
+
+  - name: observation_unit_names_a_study
+    type: referential_integrity
+    applies_to: [ObservationUnit]
+    field: study_id
+    reference: Study.unique_id
+```
+
+Rule types cover required fields, patterns, numeric and date ranges, coordinate pairs, uniqueness within a parent or globally, referential integrity, and conditions.
 
 ## Architecture
 
@@ -134,22 +153,21 @@ graph LR
     subgraph interfaces["Interfaces"]
         direction RL
         CLI["CLI"]
-        UI["Web UI"]
-        API["REST API"]
-        MCP["MCP Server"]
+        UI["Web interface"]
+        MCP["MCP server"]
     end
 
     subgraph core["Core"]
         Client["MetaseedClient"]
         Facade["ProfileFacade"]
-        Factory["Model Factory"]
-        Validators["Validation Engine"]
+        Factory["Model factory"]
+        Validators["Validation engine"]
     end
 
-    subgraph data["Data Layer"]
-        Specs["YAML Specs"]
-        Repo["Entity Storage"]
-        Storage["JSON/YAML Files"]
+    subgraph data["Data"]
+        Specs["YAML profiles"]
+        Repo["Entity repository"]
+        Storage["JSON and YAML files"]
     end
 
     interfaces --> Client
@@ -161,77 +179,24 @@ graph LR
     Repo --> Storage
 ```
 
-## Validation
-
-Composable validation rules defined in YAML:
-
-- Required field checking
-- Pattern matching (regex)
-- Range validation (min/max)
-- Date range validation
-- Coordinate pair validation
-- Uniqueness constraints (within parent or global)
-- Referential integrity (foreign keys)
-- Conditional rules
-
-```yaml
-validation:
-  - type: uniqueness
-    entity: Study
-    field: unique_id
-    scope: parent
-
-  - type: referential_integrity
-    entity: ObservationUnit
-    field: study_id
-    references:
-      entity: Study
-      field: unique_id
-```
-
-## MCP Integration
-
-Model Context Protocol enables AI-assisted metadata extraction with Claude.
-
-**Tool categories:**
-- Profile Discovery — `list_profiles`, `get_profile_schema`
-- File Extraction — `parse_source_file`, `extract_entities`
-- Entity CRUD — `create_entity`, `update_entity`, `delete_entity`
-- Validation — `validate_entity`, `validate_dataset`
-- Ontology — `search_ontology`, `suggest_ontology_term`
-
-## Technology Stack
-
-| Layer | Technologies |
-|-------|-------------|
-| Core | Python 3.11+, Pydantic 2.0+ |
-| Interfaces | FastAPI, Typer, HTMX, Jinja2 |
-| Data | PyYAML, openpyxl |
-| Agent | mcp, FastMCP |
-| Dev | uv, pytest, ruff, pre-commit |
+The [architecture overview](docs/architecture/overview.md) describes each layer.
 
 ## Development
 
 ```bash
-make setup    # Install dependencies + pre-commit hooks
-make dev      # Start development server
-make test     # Run tests
-make lint     # Run linter
-make docs     # Serve documentation locally
+make setup    # dependencies and pre-commit hooks
+make dev      # the web interface with reload
+make test     # the test suite
+make lint     # ruff and mypy
+make docs     # the documentation site with reload
 ```
+
+The project follows document-driven and test-driven development: a change starts in `docs/`, gets a test, then an implementation. Rules are enforced by tests rather than by review; the [contributing guide](docs/development/contributing.md) lists them.
 
 ## Data sources and attribution
 
-Ontology term lookup and validation use the [EMBL-EBI Ontology Lookup Service
-(OLS4)](https://www.ebi.ac.uk/ols4/). Term data is retrieved from the public OLS4
-API and remains the property of the respective source ontologies. Use of OLS is
-subject to the [EMBL-EBI Terms of Use](https://www.ebi.ac.uk/about/terms-of-use/).
-
-Metaseed is a considerate API client: it caches results, rate-limits requests, and
-identifies itself with a descriptive `User-Agent`. For bulk or high-volume term
-resolution, prefer downloading the source ontologies or running a local OLS
-instance rather than the public API.
+Ontology lookup and validation use the [EMBL-EBI Ontology Lookup Service (OLS4)](https://www.ebi.ac.uk/ols4/). Term data comes from the public OLS4 API and stays the property of the source ontologies; use of OLS is subject to the [EMBL-EBI terms of use](https://www.ebi.ac.uk/about/terms-of-use/). Metaseed caches results, limits its request rate, and identifies itself with a descriptive `User-Agent`. For bulk term resolution, download the source ontologies or run a local OLS instance instead of using the public API.
 
 ## License
 
-MIT
+[MIT](LICENSE)
