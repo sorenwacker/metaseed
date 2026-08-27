@@ -7,6 +7,7 @@ Includes WebSocket endpoint for real-time updates.
 from __future__ import annotations
 
 import contextlib
+import logging
 from typing import TYPE_CHECKING
 
 from fastapi import Body, Query, WebSocket, WebSocketDisconnect
@@ -15,6 +16,8 @@ from fastapi.responses import JSONResponse
 from ..dataset_manager import resolve_dataset_manager
 from ..helpers import collect_entities_by_type, get_reference_fields
 from ..websocket import manager
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -207,8 +210,16 @@ def register_api_routes(  # noqa: C901
                 }
             )
 
-        except Exception as e:
-            return JSONResponse(status_code=500, content={"error": str(e)})
+        except Exception:
+            # The cause goes to the log; the client gets that it failed, not
+            # the exception's text, which can name paths and internals.
+            logger.exception("Graph could not be built")
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "error": "The graph could not be built. The server log has the cause."
+                },
+            )
 
     @app.get("/api/datasets")
     async def list_datasets_api() -> JSONResponse:

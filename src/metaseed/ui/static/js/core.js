@@ -22,7 +22,7 @@ document.addEventListener('click', function(e) {
 document.addEventListener('change', function(e) {
     if (e.target.id === 'profile-select') {
         var profile = e.target.value;
-        window.location.href = '/profile/' + profile;
+        window.location.href = '/profile/' + encodeURIComponent(profile);
     }
 });
 

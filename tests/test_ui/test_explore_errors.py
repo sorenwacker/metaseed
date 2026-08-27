@@ -61,3 +61,31 @@ def test_the_explorer_page_has_a_place_for_validation_rules_and_the_graph_carrie
     node = next(n for n in graph["nodes"] if n["data"].get("name") == "Investigation")
     assert "rules" in node["data"]
     assert all("details" in f for f in node["data"]["fields"])
+
+
+def test_a_bad_profile_name_in_a_report_request_comes_back_as_text_not_markup():
+    # The 400 quotes what the caller sent. As HTML that was a reflected script;
+    # as text the browser shows it and runs nothing.
+    from fastapi.testclient import TestClient
+
+    from metaseed.ui.app import create_app
+    from metaseed.ui.state import AppState
+
+    client = TestClient(create_app(AppState()))
+    response = client.get("/explore/report/markdown/<img src=x onerror=alert(1)>")
+    assert response.status_code == 400
+    assert response.headers["content-type"].startswith("text/plain")
+    assert "onerror" in response.text, "the caller still sees what was refused"
+
+
+def test_a_profile_pick_and_a_page_label_do_not_build_markup_from_values():
+    # The select value goes into a URL; the profile key goes into innerHTML.
+    # Both are encoded on the way, and this keeps them so.
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[2] / "src" / "metaseed" / "ui"
+    core = (root / "static" / "js" / "core.js").read_text()
+    assert "'/profile/' + encodeURIComponent(profile)" in core
+    explore = (root / "templates" / "explore" / "index.html").read_text()
+    assert "${escapeHtml(profiles[0])}" in explore
+    assert "${profiles[0]}" not in explore

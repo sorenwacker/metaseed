@@ -8,6 +8,7 @@ from __future__ import annotations
 import copy
 from pathlib import Path
 from typing import TYPE_CHECKING
+from urllib.parse import quote
 
 import yaml
 from fastapi import HTTPException
@@ -147,5 +148,6 @@ def register_example_routes(
         set_current_dataset_name(state, dataset_name)
 
         return RedirectResponse(
-            url=f"{base_url}/dataset/{dataset_name}/edit", status_code=303
+            url=f"{base_url}/dataset/{quote(dataset_name, safe='')}/edit",
+            status_code=303,
         )

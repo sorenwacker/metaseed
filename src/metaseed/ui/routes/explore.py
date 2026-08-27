@@ -3,7 +3,7 @@
 from collections.abc import Callable, Sequence
 
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, Response
 from fastapi.templating import Jinja2Templates
 
 from metaseed.specs.loader import SpecLoadError
@@ -169,7 +169,7 @@ def register_explore_routes(  # noqa: C901
             return JSONResponse({"error": str(e)}, status_code=400)
 
     @app.get("/explore/report/{format_type}/{profiles:path}")
-    async def get_report(format_type: str, profiles: str) -> HTMLResponse:
+    async def get_report(format_type: str, profiles: str) -> Response:
         """Get comparison report in specified format.
 
         Args:
@@ -180,7 +180,9 @@ def register_explore_routes(  # noqa: C901
 
         profile_tuples, parse_error = _parse_profile_specs(profile_specs)
         if parse_error:
-            return HTMLResponse(content=f"Error: {parse_error}", status_code=400)
+            # The message quotes what the caller sent; as text it cannot be
+            # rendered as markup.
+            return PlainTextResponse(content=f"Error: {parse_error}", status_code=400)
 
         try:
             result = compare(profile_tuples)
@@ -198,4 +200,4 @@ def register_explore_routes(  # noqa: C901
             return HTMLResponse(content=content, media_type=media_type)
 
         except (ValueError, SpecLoadError) as e:
-            return HTMLResponse(content=f"Error: {e}", status_code=400)
+            return PlainTextResponse(content=f"Error: {e}", status_code=400)

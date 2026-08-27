@@ -2,7 +2,16 @@
 
 ## [Unreleased]
 
+## v0.45.0 (260827)
+
 ### Fixed
+- **A refused explorer request answers as text, not HTML.** The 400 quoting a
+  profile name the caller sent was rendered as markup, a reflected script in a
+  local page; it is plain text now. A failed graph build answers with a fixed
+  message and the cause in the log rather than the exception's text; the
+  profile picker encodes the profile into its URL; the explorer builds its
+  label without interpolating markup. CodeQL scanning is on for the
+  repository, with the extended query suite.
 - **A logged value cannot forge a second log record.** `OneLineFormatter`
   keeps every record on one line, so a request value carrying a line break
   (a dataset name, a field value) no longer starts a line that reads as an

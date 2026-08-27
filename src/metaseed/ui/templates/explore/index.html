@@ -376,7 +376,7 @@
                     document.getElementById('compare-legend').style.display = 'none';
                     document.getElementById('explore-legend').style.display = 'flex';
                     document.getElementById('canvas-info').innerHTML =
-                        `Exploring <strong>${profiles[0]}</strong> - ${data.statistics.total_entities} entities, ${data.statistics.total_fields} fields`;
+                        `Exploring <strong>${escapeHtml(profiles[0])}</strong> - ${data.statistics.total_entities} entities, ${data.statistics.total_fields} fields`;
                 } else {
                     // Compare mode: show profile filters and compare legend
                     document.getElementById('filter-section').style.display = 'block';
