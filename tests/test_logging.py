@@ -113,3 +113,23 @@ class TestModuleLoggers:
         from metaseed.specs import loader
 
         assert hasattr(loader, "logger")
+
+
+def test_a_value_with_a_line_break_cannot_forge_a_second_record(capsys):
+    """A request value logged verbatim used to start a new line -- a fake
+    entry with whatever level and text the sender chose."""
+    import io
+    import logging
+
+    from metaseed.logging import OneLineFormatter, configure_logging
+
+    stream = io.StringIO()
+    configure_logging(level=logging.INFO, stream=stream, cli_mode=True)
+    logging.getLogger("metaseed.test").info(
+        "loaded %s", "test-name\nERROR: forged entry\rmore"
+    )
+    lines = [line for line in stream.getvalue().splitlines() if line]
+    assert len(lines) == 1, lines
+    assert "forged entry" in lines[0] and "\n" not in lines[0]
+    handler = logging.getLogger("metaseed").handlers[0]
+    assert isinstance(handler.formatter, OneLineFormatter)

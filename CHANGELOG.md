@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+### Fixed
+- **A logged value cannot forge a second log record.** `OneLineFormatter`
+  keeps every record on one line, so a request value carrying a line break
+  (a dataset name, a field value) no longer starts a line that reads as an
+  entry of its own; `configure_logging` uses it. CodeQL's log-injection
+  findings are addressed here, in the one place every record passes.
+- **Every GitHub Action the workflows use is pinned to a commit**, as
+  `config:best-practices` asks; a moving tag can be re-pointed by whoever
+  controls it.
+
 ## v0.44.0 (260827)
 
 ### Added

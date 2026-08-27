@@ -31,6 +31,21 @@ DEFAULT_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 CLI_FORMAT = "%(levelname)s: %(message)s"
 
 
+class OneLineFormatter(logging.Formatter):
+    """A formatter that keeps each record on one line.
+
+    Log messages carry values that came from a request -- a dataset name, a
+    field value, an accession -- and a value holding a line break would start
+    a second line that reads as a record of its own: a forged entry. Stripping
+    the breaks here, in the one place every record passes, covers every call
+    site at once rather than depending on each one remembering to.
+    """
+
+    def format(self, record: logging.LogRecord) -> str:
+        text = super().format(record)
+        return text.replace("\r", " ").replace("\n", " ")
+
+
 def configure_logging(
     level: str | int | None = None,
     format_string: str | None = None,
@@ -70,9 +85,9 @@ def configure_logging(
     handler.setLevel(level)
 
     if cli_mode:
-        formatter = logging.Formatter(format_string)
+        formatter: logging.Formatter = OneLineFormatter(format_string)
     else:
-        formatter = logging.Formatter(format_string, datefmt=DEFAULT_DATE_FORMAT)
+        formatter = OneLineFormatter(format_string, datefmt=DEFAULT_DATE_FORMAT)
 
     handler.setFormatter(formatter)
     root_logger.addHandler(handler)
