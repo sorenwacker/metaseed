@@ -201,28 +201,34 @@ def profiles() -> None:
         _fail(exc, hub)
         return
     specs_dir = _specs_dir()
-    by_ref = {(s["name"], s["version"]): s.get("content_hash") for s in published}
+    # Your own entry per name and version: a publication outranks a draft.
+    by_ref: dict[tuple[str, str], dict[str, Any]] = {}
+    for s in published:
+        if not s.get("mine", False):
+            continue
+        key = (s["name"], s["version"])
+        if key not in by_ref or s.get("visibility") == "published":
+            by_ref[key] = s
     emit(
         {
             "local": [
                 {
                     "name": ref.name,
                     "version": ref.version,
-                    "on_hub": (
-                        "identical"
-                        if by_ref.get((ref.name, ref.version))
-                        == local_hash(specs_dir, ref)
-                        else "differs"
-                        if (ref.name, ref.version) in by_ref
-                        else "not published"
+                    "on_hub": _held_state(
+                        by_ref.get((ref.name, ref.version)), local_hash(specs_dir, ref)
                     ),
                 }
                 for ref in local_profiles(specs_dir)
             ],
-            "published": [
+            # What the hub holds: your drafts and every published
+            # specification, each saying which it is.
+            "on_hub": [
                 {
                     "name": s["name"],
                     "version": s["version"],
+                    "visibility": s.get("visibility", "published"),
+                    "mine": bool(s.get("mine", False)),
                     "here": profile_pull_target(
                         specs_dir,
                         ProfileRef(s["name"], s["version"]),
@@ -233,6 +239,15 @@ def profiles() -> None:
             ],
         }
     )
+
+
+def _held_state(held: dict[str, Any] | None, digest: str | None) -> str:
+    """What your account holds for a local profile: draft, published, or nothing."""
+    if held is None:
+        return "not on the hub"
+    same = held.get("content_hash") == digest
+    kind = held.get("visibility", "published")
+    return f"{kind}{'' if same else ', different content'}"
 
 
 def _specs_dir() -> Any:

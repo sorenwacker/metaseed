@@ -250,6 +250,22 @@ class TestHubCommands:
         )
         assert result.exit_code == 2, "nothing published: nothing to withdraw"
 
+    def test_profiles_says_draft_or_published_for_each_entry(
+        self, hub: _FakeHub, tmp_path: Any, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # The listing used to call everything on the hub "published" -- the
+        # one state the first version knew -- which is how a private draft
+        # and a public specification looked the same.
+        hub.specs[("test-local-profile", "1.0")] = "draft"
+        hub.specs[("test-other", "2.0")] = "published"
+        monkeypatch.setattr(hub_commands, "_specs_dir", lambda: tmp_path / "specs")
+        result = runner.invoke(app, ["hub", "profiles"])
+        assert result.exit_code == 0, result.output
+        listed = {
+            (s["name"], s["visibility"]) for s in json.loads(result.stdout)["on_hub"]
+        }
+        assert listed == {("test-local-profile", "draft"), ("test-other", "published")}
+
 
 class TestPluginCommands:
     def test_list_reports_every_adapter(self) -> None:
