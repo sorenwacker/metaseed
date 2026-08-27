@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 
-## v0.43.0 (260826)
+## v0.44.0 (260827)
 
 ### Added
 - **The explorer shows everything a profile says.** Clicking an entity now
@@ -10,6 +10,29 @@
   (description, constraints, unit, example, identifier/label markers, tier,
   ISA and SEEK markers) and the validation rules that apply to it; the sidebar
   lists every rule of the base profile. A field shows only what it has set.
+
+### Fixed
+- **A profile pushed to the hub is a private draft, not a publication.** The
+  hub's *published* means visible to every user, and the first release of the
+  push published straight away — putting an author's profile in front of
+  everyone without them choosing it. A push now lands as your draft (a revised
+  push updates it); *Publish* asks explicitly and confirms; *Unpublish*
+  withdraws one you published. Needs metaseed-hub 0.42 or later.
+- **`settings.json` is written readable only by its owner.** It holds a SEEK
+  API key and now a hub access token in plain text, and the default mode let
+  every account on the machine read them. Existing files are tightened on the
+  next write; tighten one now with `chmod 600`.
+- **A hub too old for the exchange is told apart from a wrong URL.** The
+  deployed hub answers 404 for `/api/me` while being a perfectly real hub, and
+  the check said "not a metaseed-hub. Give the hub's base URL" — sending the
+  reader after a URL that was right. It now reads `/api/health`, which every
+  hub answers, and names the version that needs updating.
+- **`metaseed hub profiles` says draft or published for each entry** instead of
+  calling everything on the hub published.
+
+## v0.43.0 (260826)
+
+### Added
 - **The CLI reaches everything the MCP server and the web interface reach** (#263).
   Ten new command groups — `dataset`, `entity`, `profile`, `ontology`, `extract`,
   `spec`, `seek`, `hub`, `plugin`, `dcat` — each delegating to the same library
@@ -149,21 +172,6 @@
   longer importable from `metaseed.agent.mcp`.
 
 ### Fixed
-- **A profile pushed to the hub is a private draft, not a publication.** The
-  hub's *published* means visible to every user, and the first release of the
-  push published straight away — putting an author's profile in front of
-  everyone without them choosing it. A push now lands as your draft (a revised
-  push updates it); *Publish* asks explicitly and confirms; *Unpublish*
-  withdraws one you published. Needs metaseed-hub 0.42 or later.
-- **`settings.json` is written readable only by its owner.** It holds a SEEK
-  API key and now a hub access token in plain text, and the default mode let
-  every account on the machine read them. Existing files are tightened on the
-  next write; tighten one now with `chmod 600`.
-- **A hub too old for the exchange is told apart from a wrong URL.** The
-  deployed hub answers 404 for `/api/me` while being a perfectly real hub, and
-  the check said "not a metaseed-hub. Give the hub's base URL" — sending the
-  reader after a URL that was right. It now reads `/api/health`, which every
-  hub answers, and names the version that needs updating.
 - **A hub dataset whose name the local store cannot hold no longer breaks the
   pull listing.** A name with a space is not one a dataset file can have, and
   asking the repository about one raised instead of answering; the listing now
