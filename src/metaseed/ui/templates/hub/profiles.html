@@ -1,20 +1,43 @@
-{# User-local profiles to push, and the hub's published specifications to pull. #}
+{# User-local profiles to push, and what the hub holds. A push is a private draft
+   unless publishing is chosen: on the hub, published means visible to everyone. #}
 <div class="hub-status hub-status-ok" data-testid="hub-profiles">
     <h4>Your profiles</h4>
     {% if local %}
     <table class="hub-plan">
-        <thead><tr><th>Profile</th><th>On {{ hub_url }}</th><th></th></tr></thead>
+        <thead><tr><th>Profile</th><th>In your account on {{ hub_url }}</th><th></th></tr></thead>
         <tbody>
-        {% for ref, on_hub in local %}
+        {% for row in local %}
+        {% set ref = row.ref %}
         <tr data-testid="hub-local-profile-{{ ref.name }}-{{ ref.version }}">
             <td>{{ ref.name }} {{ ref.version }}</td>
-            <td>{{ {'identical': 'published, identical', 'differs': 'published with different content'}.get(on_hub, 'not published') }}</td>
-            <td>
-                {% if on_hub != 'identical' %}
-                <button class="btn btn-secondary btn-sm"
-                        hx-post="{{ base_url }}/hub/profiles/{{ ref.name }}/{{ ref.version }}/push"
-                        hx-target="#hub-panel" hx-swap="innerHTML"
-                        data-testid="btn-hub-push-profile-{{ ref.name }}-{{ ref.version }}">Push to hub</button>
+            <td data-testid="hub-local-state-{{ ref.name }}-{{ ref.version }}">
+                {% if row.visibility == 'published' %}published{% if not row.same %}, with different content{% endif %}
+                {% elif row.visibility == 'draft' %}your draft{% if not row.same %}, older than this{% endif %}
+                {% else %}not on the hub{% endif %}
+            </td>
+            <td class="hub-row-actions">
+                {% if row.visibility != 'published' and not (row.visibility == 'draft' and row.same) %}
+                <form hx-post="{{ base_url }}/hub/profiles/{{ ref.name }}/{{ ref.version }}/push" hx-target="#hub-panel" hx-swap="innerHTML" style="display:inline">
+                    <button type="submit" class="btn btn-secondary btn-sm"
+                            data-testid="btn-hub-push-profile-{{ ref.name }}-{{ ref.version }}"
+                            title="Push as a private draft only you see">Push as draft</button>
+                </form>
+                {% endif %}
+                {% if not (row.visibility == 'published' and row.same) %}
+                <form hx-post="{{ base_url }}/hub/profiles/{{ ref.name }}/{{ ref.version }}/push" hx-target="#hub-panel" hx-swap="innerHTML" style="display:inline"
+                      hx-confirm="Publish {{ ref.name }} {{ ref.version }}? It becomes visible to every user of the hub.">
+                    <input type="hidden" name="publish" value="1">
+                    <button type="submit" class="btn btn-secondary btn-sm"
+                            data-testid="btn-hub-publish-profile-{{ ref.name }}-{{ ref.version }}"
+                            title="Publish for every hub user">Publish</button>
+                </form>
+                {% endif %}
+                {% if row.visibility == 'published' %}
+                <form hx-post="{{ base_url }}/hub/profiles/{{ ref.name }}/{{ ref.version }}/unpublish" hx-target="#hub-panel" hx-swap="innerHTML" style="display:inline">
+                    <button type="submit" class="btn btn-secondary btn-sm"
+                            data-testid="btn-hub-unpublish-profile-{{ ref.name }}-{{ ref.version }}"
+                            title="Withdraw it to a private draft">Unpublish</button>
+                </form>
                 {% endif %}
             </td>
         </tr>
@@ -24,14 +47,15 @@
     {% else %}
     <p>No user-local profiles; built-in profiles are on every hub already.</p>
     {% endif %}
-    <h4>Published on the hub</h4>
+    <h4>On the hub</h4>
     {% if remote %}
     <table class="hub-plan">
-        <thead><tr><th>Specification</th><th>Here</th><th></th></tr></thead>
+        <thead><tr><th>Specification</th><th>Visibility</th><th>Here</th><th></th></tr></thead>
         <tbody>
         {% for spec, target in remote %}
         <tr data-testid="hub-remote-profile-{{ spec.name }}-{{ spec.version }}">
             <td>{{ spec.name }} {{ spec.version }}{% if spec.description %} — {{ spec.description }}{% endif %}</td>
+            <td>{{ 'your draft' if spec.visibility == 'draft' else ('published by you' if spec.mine else 'published') }}</td>
             <td>{{ {'new': 'not here', 'identical': 'identical', 'differs': 'different content'}[target.kind] }}</td>
             <td>
                 {% if target.kind == 'new' %}
@@ -46,6 +70,6 @@
         </tbody>
     </table>
     {% else %}
-    <p>Nothing published yet.</p>
+    <p>Nothing on the hub yet.</p>
     {% endif %}
 </div>

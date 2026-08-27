@@ -151,13 +151,29 @@ class HubClient:
         """One published specification as its YAML document."""
         return self._request("GET", f"/specs/{name}/{version}").text
 
-    def publish_spec(self, yaml_text: str) -> tuple[dict[str, Any], bool]:
-        """Publish a profile document.
+    def push_spec(
+        self, yaml_text: str, *, publish: bool = False
+    ) -> tuple[dict[str, Any], bool]:
+        """Push a profile document: the caller's private draft, or a publication.
+
+        Args:
+            yaml_text: The profile as the YAML document metaseed keeps on disk.
+            publish: Publish it for every hub user instead of keeping it as a
+                draft only the caller sees.
 
         Returns:
-            The published row and whether it was created now (False when the
-            same content was already published at that name and version).
+            The resulting row (with ``visibility``) and whether it was created
+            now (False when the account already held exactly this content).
         """
-        response = self._request("POST", "/specs", json={"yaml": yaml_text})
+        response = self._request(
+            "POST", "/specs", json={"yaml": yaml_text, "publish": publish}
+        )
         row: dict[str, Any] = response.json()
         return row, response.status_code == 201
+
+    def unpublish_spec(self, spec_id: str) -> dict[str, Any]:
+        """Withdraw a published specification back to a private draft."""
+        row: dict[str, Any] = self._request(
+            "POST", f"/specs/{spec_id}/unpublish"
+        ).json()
+        return row

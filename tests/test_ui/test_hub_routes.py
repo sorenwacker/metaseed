@@ -49,7 +49,7 @@ class _FakeHub:
 
     def __init__(self) -> None:
         self.datasets: list[dict[str, Any]] = []
-        self.specs: dict[tuple[str, str], str] = {}
+        self.specs: dict[tuple[str, str], tuple[str, str, str]] = {}
         self.refuse_spec: str | None = None
 
     def me(self) -> dict[str, str]:
@@ -79,37 +79,56 @@ class _FakeHub:
         return row
 
     def list_specs(self) -> list[dict[str, Any]]:
-        from metaseed.hub.profiles import ProfileRef, local_hash
-
-        rows = []
-        for name, version in self.specs:
-            rows.append(
-                {
-                    "id": "s",
-                    "name": name,
-                    "version": version,
-                    "description": None,
-                    "tenant_id": "t1",
-                    "content_hash": local_hash(self._dir, ProfileRef(name, version))
-                    if hasattr(self, "_dir")
-                    else "h",
-                }
-            )
-        return rows
+        return [
+            {
+                "id": f"{vis[0]}-{n}-{v}",
+                "name": n,
+                "version": v,
+                "description": None,
+                "tenant_id": "t1",
+                "content_hash": h,
+                "visibility": vis,
+                "mine": True,
+            }
+            for (n, v), (vis, h, _text) in self.specs.items()
+        ]
 
     def get_spec(self, name: str, version: str) -> str:
-        return self.specs[(name, version)]
+        return self.specs[(name, version)][2]
 
-    def publish_spec(self, yaml_text: str) -> tuple[dict[str, Any], bool]:
+    def push_spec(
+        self, yaml_text: str, *, publish: bool = False
+    ) -> tuple[dict[str, Any], bool]:
         if self.refuse_spec:
             raise HubApiError(409, self.refuse_spec)
-        created = ("test-local-profile", "1.0") not in self.specs
-        self.specs[("test-local-profile", "1.0")] = yaml_text
+        import yaml
+
+        from metaseed.specs import content_hash
+        from metaseed.specs.schema import ProfileSpec
+
+        spec = ProfileSpec.model_validate(yaml.safe_load(yaml_text))
+        key = (spec.name, spec.version)
+        vis = "published" if publish else "draft"
+        created = key not in self.specs or self.specs[key][0] != vis
+        self.specs[key] = (vis, content_hash(spec), yaml_text)
         return {
-            "name": "test-local-profile",
-            "version": "1.0",
-            "content_hash": "abcdef123456789",
+            "id": f"{vis[0]}-{spec.name}-{spec.version}",
+            "name": spec.name,
+            "version": spec.version,
+            "content_hash": content_hash(spec),
+            "visibility": vis,
+            "mine": True,
         }, created
+
+    def unpublish_spec(self, spec_id: str) -> dict[str, Any]:
+        key = next(
+            k
+            for k, (vis, _h, _t) in self.specs.items()
+            if f"{vis[0]}-{k[0]}-{k[1]}" == spec_id
+        )
+        _vis, h, text = self.specs[key]
+        self.specs[key] = ("draft", h, text)
+        return {"id": spec_id, "visibility": "draft"}
 
 
 @pytest.fixture
@@ -218,22 +237,48 @@ def test_a_pull_lands_beside_a_differing_local_dataset(client, hub) -> None:
     assert manager.repository.load("test-drought-hub").hub["direction"] == "pull"
 
 
-def test_a_user_local_profile_is_pushed_and_a_hub_one_pulled(
+def test_a_pushed_profile_is_a_private_draft_and_publishing_is_a_separate_click(
     client, hub, tmp_path: Path
 ) -> None:
     web, _manager = client
     local = tmp_path / "specs" / "test-local-profile" / "1.0" / "profile.yaml"
     local.parent.mkdir(parents=True)
     local.write_text(PROFILE)
-    panel = web.get("/hub/profiles")
-    assert 'data-testid="btn-hub-push-profile-test-local-profile-1.0"' in panel.text
+    panel = web.get("/hub/profiles").text
+    assert 'data-testid="btn-hub-push-profile-test-local-profile-1.0"' in panel
+    assert 'data-testid="btn-hub-publish-profile-test-local-profile-1.0"' in panel
+    assert "not on the hub" in panel
     pushed = web.post("/hub/profiles/test-local-profile/1.0/push")
-    assert "Published test-local-profile 1.0" in pushed.text
-    hub.specs[("test-remote", "2.0")] = PROFILE.replace(
-        "test-local-profile", "test-remote"
-    ).replace("'1.0'", "'2.0'")
-    panel = web.get("/hub/profiles")
-    assert 'data-testid="btn-hub-pull-profile-test-remote-2.0"' in panel.text
+    assert "as your private draft" in pushed.text
+    assert hub.specs[("test-local-profile", "1.0")][0] == "draft", (
+        "a push publishes nothing"
+    )
+    panel = web.get("/hub/profiles").text
+    assert "your draft" in panel
+    assert 'data-testid="btn-hub-unpublish-profile-test-local-profile-1.0"' not in panel
+    published = web.post(
+        "/hub/profiles/test-local-profile/1.0/push", data={"publish": "1"}
+    )
+    assert "for every hub user" in published.text
+    assert hub.specs[("test-local-profile", "1.0")][0] == "published"
+    panel = web.get("/hub/profiles").text
+    assert 'data-testid="btn-hub-unpublish-profile-test-local-profile-1.0"' in panel
+    withdrawn = web.post("/hub/profiles/test-local-profile/1.0/unpublish")
+    assert "private draft again" in withdrawn.text
+    assert hub.specs[("test-local-profile", "1.0")][0] == "draft"
+
+
+def test_a_hub_profile_that_is_not_here_can_be_pulled(
+    client, hub, tmp_path: Path
+) -> None:
+    web, _manager = client
+    hub.specs[("test-remote", "2.0")] = (
+        "published",
+        "h",
+        PROFILE.replace("test-local-profile", "test-remote").replace("'1.0'", "'2.0'"),
+    )
+    panel = web.get("/hub/profiles").text
+    assert 'data-testid="btn-hub-pull-profile-test-remote-2.0"' in panel
     pulled = web.post("/hub/profiles/test-remote/2.0/pull")
     assert "Pulled test-remote 2.0" in pulled.text
     assert (tmp_path / "specs" / "test-remote" / "2.0" / "profile.yaml").exists()

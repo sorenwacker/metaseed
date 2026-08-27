@@ -232,18 +232,27 @@ def register_hub_routes(  # noqa: C901
         except Exception as exc:
             return _status(request, error=_failure(exc, hub))
         specs_dir = user_specs_dir()
-        local: list[tuple[ProfileRef, str | None]] = []
+        local: list[dict[str, Any]] = []
         for ref in local_profiles(specs_dir):
             digest = local_hash(specs_dir, ref)
-            on_hub = next(
-                (
-                    "identical" if s.get("content_hash") == digest else "differs"
-                    for s in published
-                    if (s["name"], s["version"]) == (ref.name, ref.version)
-                ),
-                None,
+            # What the caller's own account holds for this name and version:
+            # their publication, else their draft, else nothing.
+            mine = [
+                s
+                for s in published
+                if (s["name"], s["version"]) == (ref.name, ref.version)
+                and s.get("mine", True)
+            ]
+            held = next(
+                (s for s in mine if s.get("visibility") == "published"), None
+            ) or next(iter(mine), None)
+            local.append(
+                {
+                    "ref": ref,
+                    "visibility": held.get("visibility") if held else None,
+                    "same": bool(held and held.get("content_hash") == digest),
+                }
             )
-            local.append((ref, on_hub))
         remote = [
             (
                 s,
@@ -268,9 +277,9 @@ def register_hub_routes(  # noqa: C901
 
     @app.post("/hub/profiles/{name}/{version}/push", response_class=HTMLResponse)
     async def push_profile_now(
-        request: Request, name: str, version: str
+        request: Request, name: str, version: str, publish: str = Form("")
     ) -> HTMLResponse:
-        """Publish a user-local profile on the hub."""
+        """Push a user-local profile: a private draft, or published on request."""
         from metaseed.hub.client import HubApiError
         from metaseed.hub.profiles import ProfileRef, push_profile
 
@@ -278,18 +287,52 @@ def register_hub_routes(  # noqa: C901
         if hub is None:
             return _status(request, error=error)
         try:
-            outcome = push_profile(hub, user_specs_dir(), ProfileRef(name, version))
+            outcome = push_profile(
+                hub, user_specs_dir(), ProfileRef(name, version), publish=publish == "1"
+            )
         except FileNotFoundError as exc:
             return _status(request, error=str(exc))
         except HubApiError as exc:
             return _status(request, error=f"The hub refused: {exc.detail}")
         except Exception as exc:
             return _status(request, error=_failure(exc, hub))
-        verb = "Published" if outcome.kind == "published" else "Already published"
+        messages = {
+            "draft": f"Pushed {name} {version} to {hub.url} as your private draft",
+            "published": f"Published {name} {version} on {hub.url} for every hub user",
+            "identical": f"{name} {version} is already published on {hub.url}, unchanged",
+        }
         return _status(
             request,
             ok=True,
-            message=f"{verb} {name} {version} on {hub.url} (content hash {outcome.content_hash[:12]}).",
+            message=f"{messages[outcome.kind]} (content hash {outcome.content_hash[:12]}).",
+        )
+
+    @app.post("/hub/profiles/{name}/{version}/unpublish", response_class=HTMLResponse)
+    async def unpublish_profile_now(
+        request: Request, name: str, version: str
+    ) -> HTMLResponse:
+        """Withdraw the caller's published profile back to a private draft."""
+        from metaseed.hub.client import HubApiError
+        from metaseed.hub.profiles import ProfileRef, unpublish_profile
+
+        hub, error = _hub(request)
+        if hub is None:
+            return _status(request, error=error)
+        try:
+            withdrawn = unpublish_profile(hub, ProfileRef(name, version))
+        except HubApiError as exc:
+            return _status(request, error=f"The hub refused: {exc.detail}")
+        except Exception as exc:
+            return _status(request, error=_failure(exc, hub))
+        if not withdrawn:
+            return _status(
+                request,
+                error=f"{name} {version} is not published from your account on {hub.url}.",
+            )
+        return _status(
+            request,
+            ok=True,
+            message=f"Withdrew {name} {version} on {hub.url}; it is your private draft again.",
         )
 
     @app.post("/hub/profiles/{name}/{version}/pull", response_class=HTMLResponse)

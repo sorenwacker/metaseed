@@ -40,13 +40,13 @@ Each pushed or pulled dataset records where it came from and when in its own met
 
 ### Push
 
-On the profile explorer, **Push / pull profiles** (in the sidebar) lists your user-local profiles (those under your data directory, not the built-in ones), each with **Push to hub**. The profile is sent as YAML and appears on the hub as a **published specification** at the same name and version, so hub datasets can be built against it and pushed datasets can refer to it. The hub applies its version-bump gate: a name and version already published are not replaced; bump the version locally and push again. The push reports the content hash the hub stored, which matches the local profile's.
+On the profile explorer, **Push / pull profiles** (in the sidebar) lists your user-local profiles (those under your data directory, not the built-in ones), each with **Push as draft** and **Publish**. A push lands in *your* account as a **private draft** — only you see it, and pushing a revised profile updates it. **Publish** (asked for explicitly, with a confirmation) makes it a **published specification** visible to every user of the hub, so their datasets can be built against it; the hub applies its version-bump gate, so a name and version already published are not replaced — bump the version locally and publish again. A profile you published shows **Unpublish**, which withdraws it to a private draft (the hub refuses while datasets are built on it). The push reports the content hash the hub stored, which matches the local profile's.
 
 A profile the hub's own metaseed version cannot read is refused with HTTP 422 naming the field it did not expect — a template-bound profile (one carrying `seek_attribute_type` or `seek_controlled_vocab`) pushed to a hub running an older metaseed does exactly this. The hub has to be running a metaseed release that knows those fields; the message names which field, so the cause is not a guess.
 
 ### Pull
 
-The same panel lists the hub's published specifications, each with **Pull**. Pulling one saves it under your data directory as `<name>/<version>/profile.yaml`. A profile at that name and version already present locally is not replaced: the page shows whether the two are identical or differ, and a differing one has to be removed or renamed locally before it can be pulled.
+The same panel lists what the hub holds — your drafts and every published specification, each marked — with **Pull** on those not here. Pulling one saves it under your data directory as `<name>/<version>/profile.yaml`. A profile at that name and version already present locally is not replaced: the page shows whether the two are identical or differ, and a differing one has to be removed or renamed locally before it can be pulled.
 
 ## What the hub exposes for this
 
@@ -58,6 +58,7 @@ The hub's REST API (`/api`, bearer token) carries the exchange:
 | `GET /api/datasets`, `GET /api/datasets/{id}` | Pull list and pull |
 | `POST /api/datasets`, `PATCH /api/datasets/{id}` | Push (create, replace) |
 | `GET /api/specs`, `GET /api/specs/{name}/{version}` | Pull list and pull |
-| `POST /api/specs` | Push (publish; refused when the version exists) |
+| `POST /api/specs` | Push as a draft; `publish: true` publishes (refused when the version exists) |
+| `POST /api/specs/{id}/unpublish` | Withdraw a published profile to a draft |
 
 Everything else — comparison, the `-hub` suffix, provenance — happens in metaseed. Automatic two-way synchronisation (detecting changes on both sides and proposing the direction) is not part of this; push and pull are explicit.

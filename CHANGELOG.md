@@ -5,6 +5,11 @@
 ## v0.43.0 (260826)
 
 ### Added
+- **The explorer shows everything a profile says.** Clicking an entity now
+  lists its description and ontology term, every attribute each field has set
+  (description, constraints, unit, example, identifier/label markers, tier,
+  ISA and SEEK markers) and the validation rules that apply to it; the sidebar
+  lists every rule of the base profile. A field shows only what it has set.
 - **The CLI reaches everything the MCP server and the web interface reach** (#263).
   Ten new command groups — `dataset`, `entity`, `profile`, `ontology`, `extract`,
   `spec`, `seek`, `hub`, `plugin`, `dcat` — each delegating to the same library
@@ -144,6 +149,12 @@
   longer importable from `metaseed.agent.mcp`.
 
 ### Fixed
+- **A profile pushed to the hub is a private draft, not a publication.** The
+  hub's *published* means visible to every user, and the first release of the
+  push published straight away — putting an author's profile in front of
+  everyone without them choosing it. A push now lands as your draft (a revised
+  push updates it); *Publish* asks explicitly and confirms; *Unpublish*
+  withdraws one you published. Needs metaseed-hub 0.42 or later.
 - **`settings.json` is written readable only by its owner.** It holds a SEEK
   API key and now a hub access token in plain text, and the default mode let
   every account on the machine read them. Existing files are tightened on the

@@ -61,25 +61,38 @@ class _FakeHub:
     def list_specs(self) -> list[dict[str, Any]]:
         return [
             {
-                "id": "s",
+                "id": f"{vis[0]}-{n}-{v}",
                 "name": n,
                 "version": v,
                 "description": None,
                 "tenant_id": "t1",
                 "content_hash": "h",
+                "visibility": vis,
+                "mine": True,
             }
-            for (n, v) in self.specs
+            for (n, v), vis in self.specs.items()
         ]
 
     def get_spec(self, name: str, version: str) -> str:
-        return self.specs[(name, version)]
+        return "name: x\n"
 
-    def publish_spec(self, yaml_text: str) -> tuple[dict[str, Any], bool]:
+    def push_spec(
+        self, yaml_text: str, *, publish: bool = False
+    ) -> tuple[dict[str, Any], bool]:
+        vis = "published" if publish else "draft"
+        self.specs[("test-local-profile", "1.0")] = vis
         return {
-            "name": "test-x",
+            "id": f"{vis[0]}-test-local-profile-1.0",
+            "name": "test-local-profile",
             "version": "1.0",
-            "content_hash": "abcdef123456",
+            "content_hash": "abcdef123456789",
+            "visibility": vis,
+            "mine": True,
         }, True
+
+    def unpublish_spec(self, spec_id: str) -> dict[str, Any]:
+        self.specs[("test-local-profile", "1.0")] = "draft"
+        return {"id": spec_id, "visibility": "draft"}
 
 
 @pytest.fixture
@@ -206,6 +219,36 @@ class TestHubCommands:
             hub_commands.Settings = original  # type: ignore[misc]
         assert result.exit_code == 3
         assert "Plugins" in result.output or "plugin config" in result.output
+
+    def test_push_profile_is_a_draft_unless_publish_is_asked(
+        self, hub: _FakeHub, tmp_path: Any, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        local = tmp_path / "specs" / "test-local-profile" / "1.0" / "profile.yaml"
+        local.parent.mkdir(parents=True)
+        local.write_text(
+            "spec_version: '0.1'\nversion: '1.0'\nname: test-local-profile\nroot_entity: S\nentities: {S: {fields: []}}\n"
+        )
+        monkeypatch.setattr(hub_commands, "_specs_dir", lambda: tmp_path / "specs")
+        result = runner.invoke(
+            app, ["hub", "push-profile", "test-local-profile", "1.0"]
+        )
+        assert result.exit_code == 0, result.output
+        assert "private draft" in result.output
+        assert hub.specs[("test-local-profile", "1.0")] == "draft"
+        result = runner.invoke(
+            app, ["hub", "push-profile", "test-local-profile", "1.0", "--publish"]
+        )
+        assert "every hub user" in result.output
+        assert hub.specs[("test-local-profile", "1.0")] == "published"
+        result = runner.invoke(
+            app, ["hub", "unpublish-profile", "test-local-profile", "1.0"]
+        )
+        assert result.exit_code == 0, result.output
+        assert hub.specs[("test-local-profile", "1.0")] == "draft"
+        result = runner.invoke(
+            app, ["hub", "unpublish-profile", "test-local-profile", "1.0"]
+        )
+        assert result.exit_code == 2, "nothing published: nothing to withdraw"
 
 
 class TestPluginCommands:

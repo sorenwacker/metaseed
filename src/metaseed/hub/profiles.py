@@ -27,7 +27,11 @@ class HubSpecApi(Protocol):
 
     def get_spec(self, name: str, version: str) -> str: ...
 
-    def publish_spec(self, yaml_text: str) -> tuple[dict[str, Any], bool]: ...
+    def push_spec(
+        self, yaml_text: str, *, publish: bool = False
+    ) -> tuple[dict[str, Any], bool]: ...
+
+    def unpublish_spec(self, spec_id: str) -> dict[str, Any]: ...
 
 
 @dataclass(frozen=True)
@@ -69,14 +73,22 @@ def local_hash(specs_dir: Path, ref: ProfileRef) -> str | None:
 @dataclass(frozen=True)
 class ProfilePushOutcome:
     kind: str
-    """``published`` (new on the hub) or ``identical`` (already there)."""
+    """``draft`` (the caller's private draft, created or updated),
+    ``published`` (new for every hub user), or ``identical`` (the hub
+    already held exactly this publication)."""
     content_hash: str
+    visibility: str
+    """``draft`` or ``published``: what the hub holds after the push."""
 
 
 def push_profile(
-    hub: HubSpecApi, specs_dir: Path, ref: ProfileRef
+    hub: HubSpecApi, specs_dir: Path, ref: ProfileRef, *, publish: bool = False
 ) -> ProfilePushOutcome:
-    """Publish the local profile on the hub.
+    """Push the local profile to the hub.
+
+    By default it lands as the caller's private draft: on the hub, *published*
+    means visible to everyone, which is not a decision a push makes on its
+    own. ``publish`` asks for that explicitly.
 
     Raises:
         FileNotFoundError: If no such user-local profile exists.
@@ -88,10 +100,33 @@ def push_profile(
         raise FileNotFoundError(
             f"No user-local profile {ref.name} {ref.version} at {path}"
         )
-    row, created = hub.publish_spec(path.read_text())
-    return ProfilePushOutcome(
-        "published" if created else "identical", str(row.get("content_hash") or "")
+    row, created = hub.push_spec(path.read_text(), publish=publish)
+    visibility = str(row.get("visibility") or ("published" if publish else "draft"))
+    kind = "identical" if (visibility == "published" and not created) else visibility
+    return ProfilePushOutcome(kind, str(row.get("content_hash") or ""), visibility)
+
+
+def unpublish_profile(hub: HubSpecApi, ref: ProfileRef) -> bool:
+    """Withdraw the caller's published ``ref`` to a private draft.
+
+    Returns:
+        False when the caller's account holds no published specification of
+        that name and version; True once withdrawn.
+    """
+    mine = next(
+        (
+            s
+            for s in hub.list_specs()
+            if (s["name"], s["version"]) == (ref.name, ref.version)
+            and s.get("visibility") == "published"
+            and s.get("mine")
+        ),
+        None,
     )
+    if mine is None:
+        return False
+    hub.unpublish_spec(str(mine["id"]))
+    return True
 
 
 @dataclass(frozen=True)

@@ -70,24 +70,38 @@ def test_dataset_calls_use_the_hubs_shapes() -> None:
     ]
 
 
-def test_publishing_a_spec_reports_whether_it_was_new() -> None:
+def test_a_pushed_spec_is_sent_as_a_draft_unless_publishing_is_asked_for() -> None:
+    bodies = []
+
     def handler(request: httpx.Request) -> httpx.Response:
-        if request.method == "POST":
+        if request.method == "POST" and request.url.path == "/api/specs":
+            bodies.append(json.loads(request.content))
             return httpx.Response(
-                200, json={"name": "p", "version": "1.0", "content_hash": "h"}
+                201,
+                json={
+                    "name": "p",
+                    "version": "1.0",
+                    "content_hash": "h",
+                    "visibility": "draft",
+                },
             )
+        if request.url.path.endswith("/unpublish"):
+            return httpx.Response(200, json={"id": "s1", "visibility": "draft"})
         return httpx.Response(200, text="name: p\n")
 
     hub = _hub(handler)
-    row, created = hub.publish_spec("name: p\n")
-    assert (row["content_hash"], created) == ("h", False)
+    row, created = hub.push_spec("name: p\n")
+    assert (row["visibility"], created) == ("draft", True)
+    hub.push_spec("name: p\n", publish=True)
+    assert [b["publish"] for b in bodies] == [False, True]
+    assert hub.unpublish_spec("s1")["visibility"] == "draft"
     assert hub.get_spec("p", "1.0") == "name: p\n"
 
 
 def test_an_error_status_becomes_a_hub_api_error_with_the_detail() -> None:
     hub = _hub(lambda _r: httpx.Response(409, json={"detail": "bump the version"}))
     with pytest.raises(HubApiError) as excinfo:
-        hub.publish_spec("x: 1")
+        hub.push_spec("x: 1", publish=True)
     assert excinfo.value.status_code == 409
     assert excinfo.value.detail == "bump the version"
 

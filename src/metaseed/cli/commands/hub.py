@@ -245,15 +245,21 @@ def _specs_dir() -> Any:
 def push_profile(
     name: Annotated[str, typer.Argument(help="Profile name")],
     version: Annotated[str, typer.Argument(help="Profile version")],
+    publish: Annotated[
+        bool,
+        typer.Option(
+            "--publish", help="Publish for every hub user, not just as your draft"
+        ),
+    ] = False,
 ) -> None:
-    """Publish one of your profiles on the hub."""
+    """Push one of your profiles to the hub, as a private draft unless --publish."""
     from metaseed.hub.client import HubApiError
     from metaseed.hub.profiles import ProfileRef
     from metaseed.hub.profiles import push_profile as push
 
     hub = client()
     try:
-        outcome = push(hub, _specs_dir(), ProfileRef(name, version))
+        outcome = push(hub, _specs_dir(), ProfileRef(name, version), publish=publish)
     except FileNotFoundError as exc:
         echo_error(str(exc))
         raise typer.Exit(ExitCode.INPUT_ERROR) from exc
@@ -263,9 +269,40 @@ def push_profile(
     except Exception as exc:
         _fail(exc, hub)
         return
-    verb = "Published" if outcome.kind == "published" else "Already published"
+    messages = {
+        "draft": f"Pushed {name} {version} to {hub.url} as your private draft",
+        "published": f"Published {name} {version} on {hub.url} for every hub user",
+        "identical": f"{name} {version} is already published on {hub.url}, unchanged",
+    }
     echo_success(
-        f"{verb} {name} {version} on {hub.url} (content hash {outcome.content_hash[:12]})."
+        f"{messages[outcome.kind]} (content hash {outcome.content_hash[:12]})."
+    )
+
+
+@app.command("unpublish-profile")
+def unpublish_profile(
+    name: Annotated[str, typer.Argument(help="Profile name")],
+    version: Annotated[str, typer.Argument(help="Profile version")],
+) -> None:
+    """Withdraw a profile you published back to a private draft."""
+    from metaseed.hub.client import HubApiError
+    from metaseed.hub.profiles import ProfileRef
+    from metaseed.hub.profiles import unpublish_profile as withdraw
+
+    hub = client()
+    try:
+        withdrawn = withdraw(hub, ProfileRef(name, version))
+    except HubApiError as exc:
+        echo_error(f"The hub refused it: {exc.detail}")
+        raise typer.Exit(ExitCode.VALIDATION_ERROR) from exc
+    except Exception as exc:
+        _fail(exc, hub)
+        return
+    if not withdrawn:
+        echo_error(f"{name} {version} is not published from your account on {hub.url}.")
+        raise typer.Exit(ExitCode.INPUT_ERROR)
+    echo_success(
+        f"Withdrew {name} {version} on {hub.url}; it is your private draft again."
     )
 
 
