@@ -3,29 +3,16 @@
 from __future__ import annotations
 
 import socket
-from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 from urllib.parse import urlsplit
 
 import httpx
 
+from metaseed.connection import PROBE_TIMEOUT, ConnectionCheck
 from metaseed.hub.client import HubApiError, HubClient, client_from_settings
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
-
-PROBE_TIMEOUT = 5.0
-
-
-@dataclass(frozen=True)
-class ConnectionCheck:
-    """Outcome of one connection check, in the shape the Plugins page renders."""
-
-    ok: bool
-    message: str
-    """One sentence: the account and tenant, or the cause of failure."""
-    projects: list[tuple[str, str]] = field(default_factory=list)
-    """Always empty: a hub token acts in one tenant, there is nothing to choose."""
 
 
 def describe_failure(exc: Exception, url: str) -> str:

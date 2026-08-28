@@ -12,30 +12,16 @@ than a shared "check the URL and the key".
 from __future__ import annotations
 
 import socket
-from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 from urllib.parse import urlsplit
 
 import httpx
 
+from metaseed.connection import PROBE_TIMEOUT, ConnectionCheck
 from metaseed.seek.client import SeekApiError, client_from_settings
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
-
-#: Bound on the probe: a misconfigured host must not stall a settings page.
-PROBE_TIMEOUT = 5.0
-
-
-@dataclass(frozen=True)
-class ConnectionCheck:
-    """Outcome of one connection check."""
-
-    ok: bool
-    message: str
-    """One sentence for the user: the project count, or the cause of failure."""
-    projects: list[tuple[str, str]] = field(default_factory=list)
-    """``(id, title)`` of the projects the key can see; empty on failure."""
 
 
 def describe_failure(exc: Exception, url: str) -> str:
