@@ -97,3 +97,9 @@ metaseed/
 ## Exception Handling
 
 Exceptions API consumers must catch inherit from `MetaseedError` in `api/errors.py`; modules below the API define their own exceptions locally, and the API layer translates them at its boundary. See [Exceptions](../architecture/exceptions.md) for details.
+
+## Where Renovate runs
+
+Renovate runs from this repository's own workflow, `.github/workflows/renovate.yml`: weekly (early Monday, UTC) and on demand from the Actions tab (**Renovate > Run workflow**), reading `renovate.json`. The hosted Mend app is installed but has never run on this repository; a workflow here has a visible log and needs nothing enabled elsewhere.
+
+The workflow needs one secret, `RENOVATE_TOKEN`: a fine-grained personal access token for this repository with read and write access to *Contents*, *Pull requests*, *Issues*, and *Workflows*. It can't use the workflow's own `GITHUB_TOKEN`, because pull requests opened with that token trigger no other workflows — the CI gate would never run on an update and nothing could auto-merge. If the hosted app starts running as well, disable one of the two, or every update arrives twice.

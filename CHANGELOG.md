@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Changed
+- Renovate runs from `.github/workflows/renovate.yml`, weekly and on demand, instead of relying on the hosted app, which never ran on this repository. It needs a `RENOVATE_TOKEN` secret; see *Where Renovate runs* in the contributing guide.
 - **The README says what the package does and ships, and a test holds it to
   that.** The profile table carries each profile's `--profile` key, versions
   and counts, checked against the loader; the integrations table names every
