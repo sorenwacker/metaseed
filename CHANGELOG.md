@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## v0.46.0 (260828)
+
 ### Changed
 - **The explorer shows what the builder shows.** A nested field names the entity it holds, an entity shows its SEEK mapping, and the sidebar shows the profile's own metadata. The panel is one script metaseed serves (`explore-panel.js`), so the hub renders the same panel.
 - Renovate runs from `.github/workflows/renovate.yml`, weekly and on demand, instead of relying on the hosted app, which never ran on this repository. It needs a `RENOVATE_TOKEN` secret; see *Where Renovate runs* in the contributing guide.
