@@ -10,6 +10,7 @@ from fastapi.templating import Jinja2Templates
 
 from metaseed import adapters
 from metaseed.settings import Settings
+from metaseed.ui.routes.hub import hub_configured
 from metaseed.ui.state import AppState
 
 
@@ -63,7 +64,13 @@ def register_settings_routes(
         settings = _settings(request)
         rows = [_row(settings, info) for info in adapters.ADAPTERS]
         return templates.TemplateResponse(
-            request, "settings/index.html", {"adapters": rows, "base_url": base_url}
+            request,
+            "settings/index.html",
+            {
+                "adapters": rows,
+                "base_url": base_url,
+                "hub_enabled": hub_configured(settings),
+            },
         )
 
     @app.post("/settings/adapters/{key}/toggle", response_class=HTMLResponse)

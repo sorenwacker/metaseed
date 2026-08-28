@@ -12,5 +12,13 @@
         {% include "partials/adapter_toggle.html" %}
         {% endfor %}
     </div>
+    {% if hub_enabled %}
+    <h3 style="margin-top: 1.5rem;">Profiles on the hub</h3>
+    <p class="muted">Push a profile of your own to the hub as a private draft, publish it, or pull a published specification.</p>
+    <button type="button" class="btn btn-secondary btn-sm"
+            hx-get="{{ base_url }}/hub/profiles" hx-target="#hub-panel" hx-swap="innerHTML"
+            data-testid="btn-hub-profiles">Push / pull profiles</button>
+    <div id="hub-panel" class="hub-panel"></div>
+    {% endif %}
 </div>
 {% endblock %}

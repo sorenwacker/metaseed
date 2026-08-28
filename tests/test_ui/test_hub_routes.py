@@ -295,3 +295,11 @@ def test_the_hubs_refusal_of_a_profile_is_shown(client, hub, tmp_path: Path) -> 
     response = web.post("/hub/profiles/test-local-profile/1.0/push")
     assert 'data-testid="hub-status-error"' in response.text
     assert "different content" in response.text
+
+
+def test_profile_push_and_pull_live_on_the_plugins_page_not_the_explorer(
+    client,
+) -> None:
+    web, _manager = client
+    assert 'data-testid="btn-hub-profiles"' in web.get("/settings").text
+    assert 'data-testid="btn-hub-profiles"' not in web.get("/explore").text
