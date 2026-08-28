@@ -55,9 +55,17 @@ def test_the_explorer_page_has_a_place_for_validation_rules_and_the_graph_carrie
     client = TestClient(create_app(AppState()))
     page = client.get("/explore/").text
     assert 'data-testid="explore-rules"' in page
-    assert "renderRule(" in page and "renderFieldDetails(" in page
+    assert 'data-testid="explore-profile"' in page
+    # The panel lives in one script metaseed serves, so the hub's explorer
+    # renders the same panel rather than its own lesser copy.
+    assert "/static/js/explore-panel.js" in page
+    assert "function selectEntity" not in page, "the page must not carry its own panel"
+    script = client.get("/static/js/explore-panel.js")
+    assert script.status_code == 200
+    for name in ("renderEntityPanel", "renderRules", "renderProfileMeta", "renderSeek"):
+        assert f"function {name}" in script.text
     graph = client.get("/explore/graph/isa/1.0").json()
-    assert "rules" in graph
+    assert "rules" in graph and "profiles_meta" in graph
     node = next(n for n in graph["nodes"] if n["data"].get("name") == "Investigation")
     assert "rules" in node["data"]
     assert all("details" in f for f in node["data"]["fields"])

@@ -543,6 +543,7 @@ _RICH_PROFILE = {
         "Study": {
             "description": "A study is a unit of work.",
             "ontology_term": "OBI:0000066",
+            "seek": {"role": "Study", "extended_metadata": "CropXR study"},
             "fields": [
                 {
                     "name": "identifier",
@@ -617,3 +618,20 @@ def test_validation_rules_reach_the_graph_and_each_entity_gets_its_own() -> None
     assert named["message"] == "Give the study a title."
     assert named["field"] == "title"
     assert "pattern" not in named, "unset parameters are not listed"
+
+
+def test_the_entity_carries_its_seek_mapping_and_the_graph_the_profile_metadata() -> (
+    None
+):
+    # The builder's profile form and the entity's SEEK block had no place in
+    # the explorer; a person had to open the builder to see either.
+    graph = DiffVisualizer().build_diff_graph(_single_profile_result(_RICH_PROFILE))
+    node = next(n for n in graph["nodes"] if n["data"].get("name") == "Study")
+    assert node["data"]["seek"] == {
+        "role": "Study",
+        "extended_metadata": "CropXR study",
+    }
+    meta = graph["profiles_meta"]["p/1.0"]
+    assert meta["display_name"] == "P"
+    assert meta["description"] == "A profile with details."
+    assert meta["root_entity"] == "Study"

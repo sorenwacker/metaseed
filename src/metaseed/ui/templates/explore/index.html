@@ -9,6 +9,7 @@
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
     <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
     <script src="{{ base_url }}/static/js/erd-common.js?v=1"></script>
+    <script src="{{ base_url }}/static/js/explore-panel.js?v=1"></script>
     <link rel="stylesheet" href="{{ base_url }}/static/css/style.css?v=96">
 </head>
 <body hx-headers='{"X-Requested-With": "XMLHttpRequest"}'>
@@ -70,6 +71,11 @@
                                     <option value="">Version</option>
                                 </select>
                             </div>
+                        </div>
+
+                        <div class="form-section" id="profile-section" style="display:none" data-testid="explore-profile">
+                            <label class="form-label">Profile</label>
+                            <div id="profile-meta" class="field-details"></div>
                         </div>
 
                         <div class="form-section" id="rules-section" style="display:none" data-testid="explore-rules">
@@ -365,7 +371,8 @@
 
                 comparisonData = data;
                 originalGraphData = data.graph;
-                renderRules(data.graph.rules || {});
+                renderRules(data.graph.rules || {}, profiles[0]);
+                renderProfileMeta(data.graph.profiles_meta || {}, profiles[0]);
                 hiddenEntities.clear();
                 initERD(data.graph);
                 document.getElementById('export-section').style.display = 'block';
@@ -545,121 +552,8 @@
         // Entity Selection / Editor Panel
         // =============================================================================
 
-        function escapeHtml(value) {
-            return String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-        }
-
-        // The attributes a field has set beyond name/type/required: shown as
-        // name: value rows, so a plain field is one line and a bound one several.
-        function renderFieldDetails(details) {
-            const rows = Object.entries(details).map(([key, value]) => {
-                const shown = (value !== null && typeof value === 'object')
-                    ? Object.entries(value).map(([k, v]) => `${k}=${escapeHtml(v)}`).join(', ')
-                    : escapeHtml(value);
-                return `<div class="field-detail"><span class="field-detail-key">${escapeHtml(key)}</span> ${shown}</div>`;
-            });
-            return rows.length ? `<div class="field-details">${rows.join('')}</div>` : '';
-        }
-
-        // A validation rule: its name, what it checks, and the parameters it sets.
-        function renderRule(rule) {
-            const skip = new Set(['name', 'description', 'type', 'applies_to', 'message']);
-            const params = Object.entries(rule).filter(([k]) => !skip.has(k))
-                .map(([k, v]) => `<span class="rule-param">${escapeHtml(k)}=${escapeHtml(Array.isArray(v) ? v.join(', ') : v)}</span>`).join(' ');
-            const applies = Array.isArray(rule.applies_to) ? rule.applies_to.join(', ') : (rule.applies_to || 'all');
-            return `<div class="rule-item" data-testid="rule-${escapeHtml(rule.name)}">
-                <div class="rule-header"><strong>${escapeHtml(rule.name)}</strong> <code>${escapeHtml(rule.type || '')}</code></div>
-                ${rule.description ? `<div class="rule-description">${escapeHtml(rule.description)}</div>` : ''}
-                <div class="rule-meta">applies to ${escapeHtml(applies)}${params ? ' · ' + params : ''}</div>
-                ${rule.message ? `<div class="rule-message">"${escapeHtml(rule.message)}"</div>` : ''}
-            </div>`;
-        }
-
-        // The sidebar's list of every rule of the base profile.
-        function renderRules(rulesByProfile) {
-            const section = document.getElementById('rules-section');
-            const list = document.getElementById('rules-list');
-            const count = document.getElementById('rules-count');
-            const base = currentProfiles && currentProfiles.length ? currentProfiles[0] : null;
-            const rules = (base && rulesByProfile[base]) || Object.values(rulesByProfile)[0] || [];
-            if (!rules.length) { section.style.display = 'none'; list.innerHTML = ''; return; }
-            count.textContent = `(${rules.length})`;
-            list.innerHTML = rules.map(renderRule).join('');
-            section.style.display = '';
-        }
-
-        function selectEntity(nodeId) {
-            const node = ERD.getNodes().get(nodeId);
-            if (!node) return;
-
-            document.getElementById('editor-title').textContent = node.data.name;
-
-            const fields = node.data.fields || [];
-            let html = '';
-            if (node.data.description || node.data.ontology_term) {
-                html += `<div class="form-section entity-about" data-testid="entity-about">
-                    ${node.data.description ? `<p>${escapeHtml(node.data.description)}</p>` : ''}
-                    ${node.data.ontology_term ? `<code class="term">${escapeHtml(node.data.ontology_term)}</code>` : ''}
-                </div>`;
-            }
-            html += `
-                <div class="form-section">
-                    <label class="form-label">Status</label>
-                    <span class="diff-badge ${node.data.diff_type}">${node.data.diff_type}</span>
-                </div>
-                <div class="form-section">
-                    <label class="form-label">Present In</label>
-                    <div class="profile-tags">
-                        ${Object.entries(node.data.profiles || {})
-                            .filter(([_, present]) => present)
-                            .map(([p, _]) => `<span class="profile-tag">${p}</span>`)
-                            .join('')}
-                    </div>
-                </div>
-            `;
-
-            if (fields.length > 0) {
-                html += `<div class="form-section">
-                    <label class="form-label">Fields (${fields.length})</label>
-                    <div class="field-diff-list">`;
-
-                fields.forEach(field => {
-                    html += `
-                        <div class="field-diff-item ${field.diff_type}">
-                            <div class="field-diff-header">
-                                <span>${field.required ? '*' : ''}${field.name}</span>
-                                <code>${field.type}</code>
-                            </div>
-                            <div class="field-diff-profiles">
-                                ${field.profiles.map(p => `<span class="profile-tag sm">${p.split('/')[0]}</span>`).join('')}
-                            </div>
-                            ${renderFieldDetails(field.details || {})}
-                            ${field.vocabulary?.length ?
-                                `<details class="field-vocabulary"><summary>controlled vocabulary (${field.vocabulary.length} terms)</summary><ul>${field.vocabulary.map(term => `<li>${escapeHtml(term)}</li>`).join('')}</ul></details>` : ''}
-                            ${field.attributes_changed?.length ?
-                                `<div class="field-diff-changes">Changed: ${field.attributes_changed.join(', ')}</div>` : ''}
-                        </div>
-                    `;
-                });
-
-                html += '</div></div>';
-            }
-
-            const rules = node.data.rules || [];
-            if (rules.length) {
-                html += `<div class="form-section" data-testid="entity-rules">
-                    <label class="form-label">Validation rules (${rules.length})</label>
-                    ${rules.map(renderRule).join('')}
-                </div>`;
-            }
-
-            document.getElementById('editor-content').innerHTML = html;
-            document.getElementById('editor-panel').classList.add('open');
-        }
-
-        function closeEditorPanel() {
-            document.getElementById('editor-panel').classList.remove('open');
-        }
+        // The entity panel, the rules list and the profile block come from
+        // explore-panel.js, shared with every host that renders this page.
 
         // =============================================================================
         // Export (graph controls provided by erd-common.js)

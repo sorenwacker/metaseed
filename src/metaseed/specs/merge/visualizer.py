@@ -82,6 +82,18 @@ class DiffVisualizer:
                 pid: [_rule_details(rule) for rule in spec.validation_rules]
                 for pid, spec in comparison.profile_specs.items()
             },
+            # What the profile says about itself -- the builder's profile form.
+            "profiles_meta": {
+                pid: {
+                    "name": spec.name,
+                    "version": spec.version,
+                    "display_name": spec.display_name,
+                    "description": spec.description,
+                    "ontology": spec.ontology,
+                    "root_entity": spec.root_entity,
+                }
+                for pid, spec in comparison.profile_specs.items()
+            },
         }
 
     def _create_entity_node(
@@ -173,6 +185,7 @@ class DiffVisualizer:
                 "conflict_count": len(entity_diff.conflicting_fields),
                 "fields": fields_data,
                 **_entity_details(comparison, entity_diff.entity_name),
+                "seek": _seek_for(comparison, entity_diff.entity_name),
                 "rules": _rules_for(comparison, entity_diff.entity_name),
             },
         }
@@ -412,3 +425,14 @@ def _rules_for(comparison: ComparisonResult, entity_name: str) -> list[dict[str,
                 seen.add(rule.name)
                 found.append(_rule_details(rule))
     return found
+
+
+def _seek_for(comparison: ComparisonResult, entity_name: str) -> dict[str, Any]:
+    """The entity's SEEK mapping, with only what it sets; empty when none."""
+    for spec in comparison.profile_specs.values():
+        entity = spec.entities.get(entity_name)
+        if entity is not None and entity.seek is not None:
+            return {
+                k: v for k, v in entity.seek.model_dump(exclude_none=True).items() if v
+            }
+    return {}
