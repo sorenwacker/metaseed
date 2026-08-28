@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## v0.47.0 (260828)
+
+### Added
+- **Cross-entity rules are drawn on the explorer graph.** A rule that references another entity (`reference: Study.identifier`) is a dashed amber edge from the entity it applies to toward the one it references, labelled with the rule's name; the legend lists it as *Rule*.
+
 ### Changed
 - Profile push and pull moved from the explorer's sidebar to **Settings > Plugins**, next to the hub configuration. The explorer reads profiles; it doesn't move them.
 - The explorer's profile block reads as a title, a subtitle and a paragraph; the key/value grid had squeezed the description into a column a few words wide.
