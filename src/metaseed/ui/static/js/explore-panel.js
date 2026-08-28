@@ -53,21 +53,23 @@ function renderRules(rulesByProfile, baseProfile) {
 }
 
 // The sidebar's block about the profile itself: what the builder's profile
-// form holds -- display name, description, ontology, root entity.
+// form holds. Laid out as a heading, a subtitle and a paragraph -- a key/value
+// grid squeezed the description into a column a few words wide.
 function renderProfileMeta(metaByProfile, baseProfile) {
     const section = document.getElementById('profile-section');
     const target = document.getElementById('profile-meta');
     if (!section || !target) return;
     const meta = (baseProfile && metaByProfile[baseProfile]) || Object.values(metaByProfile || {})[0];
     if (!meta) { section.style.display = 'none'; target.innerHTML = ''; return; }
-    const rows = [
-        ['name', `${meta.name} ${meta.version}`],
-        ['display name', meta.display_name],
-        ['description', meta.description],
-        ['ontology', meta.ontology],
-        ['root entity', meta.root_entity],
-    ].filter(([, v]) => v);
-    target.innerHTML = rows.map(([k, v]) => `<div class="field-detail"><span class="field-detail-key">${escapeHtml(k)}</span> ${escapeHtml(v)}</div>`).join('');
+    const facts = [
+        meta.root_entity ? `root entity <code>${escapeHtml(meta.root_entity)}</code>` : '',
+        meta.ontology ? `ontology <code>${escapeHtml(meta.ontology)}</code>` : '',
+    ].filter(Boolean).join(' · ');
+    target.innerHTML = `
+        <div class="profile-title">${escapeHtml(meta.display_name || meta.name)}</div>
+        <div class="profile-subtitle"><code>${escapeHtml(meta.name)}</code> ${escapeHtml(meta.version)}</div>
+        ${meta.description ? `<p class="profile-description">${escapeHtml(meta.description)}</p>` : ''}
+        ${facts ? `<div class="profile-facts">${facts}</div>` : ''}`;
     section.style.display = '';
 }
 

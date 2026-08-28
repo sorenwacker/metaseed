@@ -10,6 +10,8 @@ from metaseed.specs.schema import FieldSpec, ValidationRuleSpec
 
 from .models import ComparisonResult, DiffType, EntityDiff
 
+RULE_EDGE_COLOR = "#b26a00"
+
 
 class DiffVisualizer:
     """Generates visualization data for profile diffs.
@@ -70,6 +72,7 @@ class DiffVisualizer:
             comparison.entity_diffs, entity_node_ids, comparison.profiles
         )
         edges.extend(entity_edges)
+        edges.extend(_rule_edges(comparison, entity_node_ids))
 
         return {
             "nodes": nodes,
@@ -399,6 +402,55 @@ def _rule_details(rule: ValidationRuleSpec) -> dict[str, Any]:
     return {
         k: v for k, v in rule.model_dump(exclude_none=True).items() if v not in ("", [])
     }
+
+
+def _rule_edges(
+    comparison: ComparisonResult, entity_node_ids: dict[str, int]
+) -> list[dict[str, Any]]:
+    """One dashed edge per rule that references another entity.
+
+    A rule such as ``reference: Study.identifier`` on ``Sample`` is a relation
+    between two entities, so the graph draws it, from each entity the rule
+    applies to toward the entity it references. Rules without a reference, or
+    whose entities are not on the graph, draw nothing.
+    """
+    edges: list[dict[str, Any]] = []
+    seen: set[tuple[int, int, str]] = set()
+    for spec in comparison.profile_specs.values():
+        for rule in spec.validation_rules:
+            if not rule.reference or "." not in rule.reference:
+                continue
+            target, _, target_field = rule.reference.partition(".")
+            to_id = entity_node_ids.get(target.lower())
+            applies = rule.applies_to
+            sources = [applies] if isinstance(applies, str) else list(applies or [])
+            for source in sources:
+                from_id = entity_node_ids.get(source.lower())
+                if (
+                    from_id is None
+                    or to_id is None
+                    or (from_id, to_id, rule.name) in seen
+                ):
+                    continue
+                seen.add((from_id, to_id, rule.name))
+                edges.append(
+                    {
+                        "from": from_id,
+                        "to": to_id,
+                        "arrows": "to",
+                        "color": {"color": RULE_EDGE_COLOR},
+                        "width": 1,
+                        "label": rule.name,
+                        "font": {"size": 8, "color": RULE_EDGE_COLOR},
+                        "title": (
+                            f"Rule {rule.name} ({rule.type}): {source}.{rule.field or '?'}"
+                            f" must match {target}.{target_field}"
+                        ),
+                        "dashes": True,
+                        "rule": rule.name,
+                    }
+                )
+    return edges
 
 
 def _entity_details(comparison: ComparisonResult, entity_name: str) -> dict[str, Any]:

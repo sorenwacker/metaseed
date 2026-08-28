@@ -635,3 +635,63 @@ def test_the_entity_carries_its_seek_mapping_and_the_graph_the_profile_metadata(
     assert meta["display_name"] == "P"
     assert meta["description"] == "A profile with details."
     assert meta["root_entity"] == "Study"
+
+
+_LINKED_PROFILE = {
+    "spec_version": "0.1",
+    "version": "1.0",
+    "name": "linked",
+    "display_name": "Linked",
+    "description": "Two entities and a rule between them.",
+    "root_entity": "Study",
+    "entities": {
+        "Study": {
+            "description": "A study.",
+            "fields": [
+                {
+                    "name": "identifier",
+                    "type": "string",
+                    "required": True,
+                    "is_identifier": True,
+                },
+            ],
+        },
+        "Sample": {
+            "description": "A sample.",
+            "fields": [
+                {
+                    "name": "identifier",
+                    "type": "string",
+                    "required": True,
+                    "is_identifier": True,
+                },
+                {"name": "study_id", "type": "string"},
+            ],
+        },
+    },
+    "validation_rules": [
+        {
+            "name": "sample_names_a_study",
+            "description": "A sample's study_id must be an existing study.",
+            "type": "referential_integrity",
+            "applies_to": ["Sample"],
+            "field": "study_id",
+            "reference": "Study.identifier",
+        }
+    ],
+}
+
+
+def test_a_rule_between_two_entities_is_an_edge_on_the_graph() -> None:
+    # "Where can we see the inter-node rules?" -- in the lists, but a rule that
+    # references another entity is a relationship, and the graph is where
+    # relationships are read.
+    graph = DiffVisualizer().build_diff_graph(_single_profile_result(_LINKED_PROFILE))
+    ids = {n["data"]["name"]: n["id"] for n in graph["nodes"] if n["data"].get("name")}
+    rule_edges = [e for e in graph["edges"] if e.get("rule")]
+    assert len(rule_edges) == 1
+    edge = rule_edges[0]
+    assert (edge["from"], edge["to"]) == (ids["Sample"], ids["Study"])
+    assert edge["label"] == "sample_names_a_study"
+    assert edge["dashes"] is True
+    assert "study_id" in edge["title"] and "Study.identifier" in edge["title"]

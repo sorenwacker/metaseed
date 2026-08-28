@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed
+- Profile push and pull moved from the explorer's sidebar to **Settings > Plugins**, next to the hub configuration. The explorer reads profiles; it doesn't move them.
+- The explorer's profile block reads as a title, a subtitle and a paragraph; the key/value grid had squeezed the description into a column a few words wide.
+
 ## v0.46.0 (260828)
 
 ### Changed

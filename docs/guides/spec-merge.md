@@ -60,7 +60,7 @@ Clicking an entity opens a panel with everything the profile says about it: the 
 
 **Validation rules:**
 
-The panel lists the validation rules that apply to the entity — those whose `applies_to` names it or is `all` — with the rule's name, type, description and its parameters (field, condition, pattern, bounds, reference, message). The sidebar's *Validation rules* section lists every rule of the base profile, so cross-entity rules are visible without opening each entity, and its *Profile* section shows what the builder's profile form holds: display name, description, ontology, and root entity.
+The panel lists the validation rules that apply to the entity — those whose `applies_to` names it or is `all` — with the rule's name, type, description and its parameters (field, condition, pattern, bounds, reference, message). A rule that references another entity (`reference: Study.identifier`) is also drawn on the graph, as a dashed amber edge from the entity it applies to toward the entity it references, labelled with the rule's name; hovering it shows the field and the target. The sidebar's *Validation rules* section lists every rule of the base profile, so cross-entity rules are visible without opening each entity, and its *Profile* section shows what the builder's profile form holds: display name, description, ontology, and root entity.
 
 The panel is one script, `static/js/explore-panel.js`, that metaseed serves; metaseed-hub renders the same panel from it rather than keeping a copy.
 
