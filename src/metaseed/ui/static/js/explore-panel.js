@@ -27,15 +27,18 @@ function renderFieldDetails(details) {
 
 // A validation rule: its name, what it checks, and the parameters it sets.
 function renderRule(rule) {
+    // Class names are the panel's own (explore-rule-*): the hub's spec builder
+    // styles a `.rule-item` of its own as a one-line flex row, and sharing the
+    // name squeezed these cards into columns a few words wide.
     const skip = new Set(['name', 'description', 'type', 'applies_to', 'message']);
     const params = Object.entries(rule).filter(([k]) => !skip.has(k))
-        .map(([k, v]) => `<span class="rule-param">${escapeHtml(k)}=${escapeHtml(Array.isArray(v) ? v.join(', ') : v)}</span>`).join(' ');
+        .map(([k, v]) => `<span class="explore-rule-param">${escapeHtml(k)}=${escapeHtml(Array.isArray(v) ? v.join(', ') : v)}</span>`).join(' ');
     const applies = Array.isArray(rule.applies_to) ? rule.applies_to.join(', ') : (rule.applies_to || 'all');
-    return `<div class="rule-item" data-testid="rule-${escapeHtml(rule.name)}">
-        <div class="rule-header"><strong>${escapeHtml(rule.name)}</strong> <code>${escapeHtml(rule.type || '')}</code></div>
-        ${rule.description ? `<div class="rule-description">${escapeHtml(rule.description)}</div>` : ''}
-        <div class="rule-meta">applies to ${escapeHtml(applies)}${params ? ' · ' + params : ''}</div>
-        ${rule.message ? `<div class="rule-message">"${escapeHtml(rule.message)}"</div>` : ''}
+    return `<div class="explore-rule" data-testid="rule-${escapeHtml(rule.name)}">
+        <div class="explore-rule-header"><strong>${escapeHtml(rule.name)}</strong> <code>${escapeHtml(rule.type || '')}</code></div>
+        ${rule.description ? `<div class="explore-rule-description">${escapeHtml(rule.description)}</div>` : ''}
+        <div class="explore-rule-meta"><span class="explore-rule-param">applies to ${escapeHtml(applies)}</span>${params ? ' ' + params : ''}</div>
+        ${rule.message ? `<div class="explore-rule-message">"${escapeHtml(rule.message)}"</div>` : ''}
     </div>`;
 }
 

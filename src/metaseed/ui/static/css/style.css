@@ -5855,11 +5855,26 @@ details.sidebar-section summary:hover {
 .field-details { margin: 2px 0 var(--space-xs); font-size: 0.85em; }
 .field-detail { display: flex; gap: var(--space-xs); }
 .field-detail-key { color: var(--clr-ink-muted, #666); min-width: 9em; }
-.rules-list, .rule-item { font-size: 0.9em; }
-.rule-item { padding: var(--space-xs) 0; border-bottom: 1px solid var(--clr-parchment); }
-.rule-description { margin: 2px 0; }
-.rule-meta { color: var(--clr-ink-muted, #666); font-size: 0.9em; }
-.rule-param { font-family: monospace; }
+.rules-list { font-size: 0.85rem; }
+.explore-rule {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: var(--space-xs) 0 var(--space-sm);
+    border-bottom: 1px solid var(--clr-parchment);
+}
+.explore-rule-header { display: flex; align-items: baseline; gap: var(--space-xs); flex-wrap: wrap; }
+.explore-rule-header code { font-size: 0.75rem; color: var(--clr-ink-muted, #666); }
+.explore-rule-description { color: var(--clr-ink); }
+.explore-rule-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px var(--space-sm);
+    color: var(--clr-ink-muted, #666);
+    font-size: 0.8em;
+}
+.explore-rule-param { font-family: monospace; overflow-wrap: anywhere; }
+.explore-rule-message { font-style: italic; color: var(--clr-ink-muted, #666); }
 .rule-message { font-style: italic; }
 
 /* Explorer: the profile block reads as a heading, a subtitle and a paragraph */

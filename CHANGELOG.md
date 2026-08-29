@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Fixed
+- The explorer's rule cards stack name, description and parameters again. Their class names collided with the hub's spec-builder rule list, whose one-line row layout squeezed each card into columns a few words wide; the panel's classes are its own now (`explore-rule-*`).
+
 ## v0.47.0 (260828)
 
 ### Added
