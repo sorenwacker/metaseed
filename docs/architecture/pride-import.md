@@ -87,15 +87,43 @@ both = to_pride_bundle(client)       # {"submission.px": ..., "sdrf.tsv": ...}
 
 `to_pride_submission` renders a `pride` dataset as the PRIDE px-submission
 `submission.px` file: `MTD` metadata lines (project title, submitters, species,
-instruments, modifications) and one `FME` entry per referenced file.
+instruments, modifications, and the publication's `pubmed_id`/`doi`) and one
+`FME` entry per referenced file.
+
+The file is **line-based**: one record per line, and the format has no
+continuation syntax. A value containing a newline would therefore split into a
+second line that is not a valid record, so whitespace inside a value is
+collapsed to single spaces before it is written. Descriptions and abstracts
+routinely contain newlines, so this is the ordinary case rather than an edge
+one.
 
 `to_pride_sdrf` renders the [SDRF-Proteomics](https://github.com/bigbio/proteomics-sample-metadata)
-sample-to-data table: one row per `(sample, data file)` pair, with a `source
-name` column, `characteristics[...]` columns (organism, organism part, cell
-type, disease, plus any sample custom attributes), `assay name`, `technology
-type`, and `comment[...]` columns (data file, instrument). Files link to samples
-via `DataFile.sample_refs`; missing values render as `not available`. Returns
-`{}` when the dataset has no samples.
+sample-to-data table: one row per `(sample, data file)` pair. The columns follow
+the order the specification sets out — sample metadata, then data-file metadata
+— and every column the specification marks REQUIRED is present:
+
+| Column | Source |
+| --- | --- |
+| `source name` | `Sample.name` |
+| `characteristics[organism]`, `[organism part]`, `[cell type]`, `[disease]` | the Sample, plus any custom attributes |
+| `characteristics[biological replicate]` | `1` — the value the specification gives when there are no replicates |
+| `assay name`, `technology type` | derived per row |
+| `comment[proteomics data acquisition method]` | not modelled → `not available` |
+| `comment[label]` | not modelled → `not available` |
+| `comment[instrument]` | `Instrument.name` |
+| `comment[cleavage agent details]` | not modelled → `not available` |
+| `comment[fraction identifier]` | `1` — the specification's value for unfractionated |
+| `comment[technical replicate]` | `1` — the specification's value for no replicates |
+| `comment[data file]` | `DataFile.filename` |
+
+A column the profile does not model is written as `not available`, which the
+specification names as the value for a mandatory column whose content is
+unknown. Omitting the column instead would fail validation, so the column is
+always present. No `factor value[...]` column is written: the profile models no
+study variable, and naming one would invent the experiment's design.
+
+Files link to samples via `DataFile.sample_refs`. Returns `{}` when the dataset
+has no samples.
 
 `to_pride_bundle` returns both documents in one mapping. A ProteomeXchange
 submission needs the `submission.px` and its SDRF table together, so this is the
