@@ -2,14 +2,12 @@ spec_version: '0.6'
 version: '3.0'
 name: seek-ready-template
 display_name: SEEK-ready template (ISA)
-description: 'An ISA-shaped template whose datasets upload to FAIRDOM-SEEK as ISA-JSON compliant content.
-  Every entity maps to a SEEK/ISA role and nothing sits outside that hierarchy. There is no ObservationUnit
-  level -- the SEEK export synthesises one per sample. Breaking change from 2.0: the material chain SEEK''s
-  ISA-JSON exporter walks is now explicit. A Source yields Samples, a Sample yields the AssayMaterials
-  measured from it, and each level''s input is its parent. 2.0 had a single Sample level under Assay,
-  so an assay material had no predecessor to name and the export failed. An AssayMaterial names the Assay
-  that measured it by reference, because an Assay measures materials from many Samples and containment
-  cannot express that.'
+description: 'An ISA-shaped template whose datasets upload to FAIRDOM-SEEK as ISA-JSON compliant content. Every entity maps
+  to a SEEK/ISA role and nothing sits outside that hierarchy. There is no ObservationUnit level -- the SEEK export synthesises
+  one per sample. Breaking change from 2.0: the material chain SEEK''s ISA-JSON exporter walks is now explicit. A Source yields
+  Samples, a Sample yields the AssayMaterials measured from it, and each level''s input is its parent. 2.0 had a single Sample
+  level under Assay, so an assay material had no predecessor to name and the export failed. An AssayMaterial names the Assay
+  that measured it by reference, because an Assay measures materials from many Samples and containment cannot express that.'
 ontology: OBI
 root_entity: Investigation
 validation_rules: []
@@ -86,8 +84,8 @@ entities:
     - name: sources
       type: list
       required: false
-      description: Source materials the study started from. Each becomes a Sample of the study's Source
-        Sample Type, the head of the ISA material chain.
+      description: Source materials the study started from. Each becomes a Sample of the study's Source Sample Type, the head
+        of the ISA material chain.
       items: Source
     - name: assays
       type: list
@@ -97,9 +95,8 @@ entities:
     seek:
       role: Study
   Assay:
-    description: A measurement performed on materials. The materials it measured name it by reference
-      (AssayMaterial.assay) rather than nesting under it, because they descend from the Samples they were
-      derived from.
+    description: A measurement performed on materials. The materials it measured name it by reference (AssayMaterial.assay)
+      rather than nesting under it, because they descend from the Samples they were derived from.
     fields:
     - name: identifier
       type: string
@@ -125,9 +122,33 @@ entities:
       description: Instrument or platform.
     seek:
       role: Assay
+  Source:
+    description: A source material the study started from -- the head of the ISA material chain.
+    fields:
+    - name: source_name
+      type: string
+      required: true
+      description: Unique source name.
+      is_identifier: true
+      is_label: true
+    - name: organism
+      type: string
+      required: false
+      description: Source organism (e.g. an NCBI taxon name).
+    - name: provider
+      type: string
+      required: false
+      description: Who or what supplied the source material.
+    - name: samples
+      type: list
+      required: false
+      description: Samples collected from this source. Each names this Source as its input.
+      items: Sample
+    seek:
+      role: Sample
   Sample:
-    description: A sample collected from a Source. Nests under the Source it was derived from, which is
-      what SEEK's ISA-JSON exporter reads as the sample's input.
+    description: A sample collected from a Source. Nests under the Source it was derived from, which is what SEEK's ISA-JSON
+      exporter reads as the sample's input.
     fields:
     - name: sample_name
       type: string
@@ -154,33 +175,9 @@ entities:
       items: AssayMaterial
     seek:
       role: Sample
-  Source:
-    description: A source material the study started from -- the head of the ISA material chain.
-    fields:
-    - name: source_name
-      type: string
-      required: true
-      description: Unique source name.
-      is_identifier: true
-      is_label: true
-    - name: organism
-      type: string
-      required: false
-      description: Source organism (e.g. an NCBI taxon name).
-    - name: provider
-      type: string
-      required: false
-      description: Who or what supplied the source material.
-    - name: samples
-      type: list
-      required: false
-      description: Samples collected from this source. Each names this Source as its input.
-      items: Sample
-    seek:
-      role: Sample
   AssayMaterial:
-    description: A material or data file produced by measuring a Sample -- the tail of the ISA material
-      chain. Names the Assay that measured it by reference.
+    description: A material or data file produced by measuring a Sample -- the tail of the ISA material chain. Names the Assay
+      that measured it by reference.
     fields:
     - name: material_name
       type: string

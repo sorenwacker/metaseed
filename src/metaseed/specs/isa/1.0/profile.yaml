@@ -3,8 +3,8 @@ version: '1.0'
 name: isa
 display_name: ISA
 description: Investigation-Study-Assay framework. General purpose for life science experiments.
-root_entity: Investigation
 ontology: isaterms
+root_entity: Investigation
 validation_rules:
 - name: identifier_pattern
   description: Identifiers must be alphanumeric with underscores/hyphens
@@ -96,35 +96,35 @@ validation_rules:
 entities:
   Investigation:
     ontology_term: isaterms:investigation
-    description: 'An investigation maintains metadata about the project context and links to one or more studies. There can
-      only be one Investigation in an ISA descriptor.
-
-      '
+    description: |
+      An investigation maintains metadata about the project context and links to one or more studies. There can only be one Investigation in an ISA descriptor.
     fields:
     - name: identifier
-      dcat: dct:identifier
       type: string
       required: true
       description: A locally unique identifier or an accession number provided by a repository
       ontology_term: isaterms:identifier
+      constraints:
+        pattern: ^[A-Za-z0-9_-]+$
+      dcat: dct:identifier
     - name: title
-      dcat: dct:title
       type: string
       required: true
       description: A concise name given to the investigation
       ontology_term: isaterms:title
+      dcat: dct:title
     - name: description
-      dcat: dct:description
       type: string
       required: false
       description: A textual description of the investigation
       ontology_term: isaterms:description
+      dcat: dct:description
     - name: submission_date
-      dcat: dct:issued
       type: date
       required: false
       description: Date on which the investigation was reported to the repository (ISO8601)
       ontology_term: isaterms:submission_date
+      dcat: dct:issued
     - name: public_release_date
       type: date
       required: false
@@ -135,53 +135,53 @@ entities:
       required: false
       description: The filename of the investigation file (i_*.txt)
     - name: ontology_source_references
-      owns: true
       type: list
-      items: OntologySource
       required: false
       description: Ontology sources referenced by OntologyAnnotations in this descriptor
-    - name: publications
+      items: OntologySource
       owns: true
-      dcat: dct:relation
+    - name: publications
       type: list
-      items: Publication
       required: false
       description: Publications associated with the investigation
-    - name: contacts
+      items: Publication
+      dcat: dct:relation
       owns: true
-      dcat: dcat:contactPoint
+    - name: contacts
       type: list
-      items: Person
       required: false
       description: People/contacts associated with the investigation
-    - name: studies
+      items: Person
+      dcat: dcat:contactPoint
       owns: true
+    - name: studies
       type: list
-      items: Study
       required: false
       description: Studies contained in this investigation
+      items: Study
+      owns: true
     - name: comments
       type: list
-      items: Comment
       required: false
       description: Comments associated with the investigation
+      items: Comment
   Study:
     ontology_term: isaterms:study
-    description: 'Study is the central unit, containing information on the subject under study, its characteristics and any
-      treatments applied.
-
-      '
+    description: |
+      Study is the central unit, containing information on the subject under study, its characteristics and any treatments applied.
     fields:
     - name: identifier
       type: string
       required: true
       description: A unique identifier or accession number
       ontology_term: isaterms:identifier
+      constraints:
+        pattern: ^[A-Za-z0-9_-]+$
     - name: investigation_id
       type: string
       required: true
-      reference: Investigation.identifier
       description: Reference to the parent Investigation
+      reference: Investigation.identifier
     - name: title
       type: string
       required: true
@@ -208,150 +208,150 @@ entities:
       description: The name of the Study file (s_*.txt)
     - name: design_descriptors
       type: list
-      items: OntologyAnnotation
       required: false
       description: Classifications of the study based on overall experimental design
       ontology_term: isaterms:study_design
+      items: OntologyAnnotation
     - name: publications
-      owns: true
       type: list
-      items: Publication
       required: false
       description: Publications associated with the study
-    - name: contacts
+      items: Publication
       owns: true
+    - name: contacts
       type: list
-      items: Person
       required: false
       description: People/contacts associated with the study
-    - name: factors
+      items: Person
       owns: true
+    - name: factors
       type: list
-      items: StudyFactor
       required: false
       description: Independent variables manipulated by the experimentalist
       ontology_term: isaterms:factor
-    - name: protocols
+      items: StudyFactor
       owns: true
+    - name: protocols
       type: list
-      items: Protocol
       required: false
       description: Protocols used within the study
-    - name: assays
+      items: Protocol
       owns: true
+    - name: assays
       type: list
-      items: Assay
       required: false
       description: Assays (measurements) performed in the study
-    - name: sources
+      items: Assay
       owns: true
+    - name: sources
       type: list
-      items: Source
       required: false
       description: Source materials in the study (all sources must be declared here)
-    - name: samples
+      items: Source
       owns: true
+    - name: samples
       type: list
-      items: Sample
       required: false
       description: Sample materials in the study (all samples must be declared here)
-    - name: other_materials
+      items: Sample
       owns: true
+    - name: other_materials
       type: list
-      items: Extract
       required: false
       description: Other materials (extracts, labeled extracts) in the study
-    - name: process_sequence
+      items: Extract
       owns: true
+    - name: process_sequence
       type: list
-      items: Process
       required: false
       description: Processes representing the experimental graph at study level
+      items: Process
+      owns: true
     - name: characteristic_categories
       type: list
-      items: OntologyAnnotation
       required: false
       description: Characteristic categories used in the study
+      items: OntologyAnnotation
     - name: unit_categories
       type: list
-      items: OntologyAnnotation
       required: false
       description: Unit categories used in the study
+      items: OntologyAnnotation
     - name: comments
       type: list
-      items: Comment
       required: false
       description: Comments associated with the study
+      items: Comment
   Assay:
     ontology_term: isaterms:assay
-    description: 'An Assay represents a test performed on material taken from a subject or on a whole initial subject, producing
-      qualitative or quantitative measurements.
-
-      '
+    description: |
+      An Assay represents a test performed on material taken from a subject or on a whole initial subject, producing qualitative or quantitative measurements.
     fields:
     - name: filename
       type: string
       required: true
       description: The name of the Assay file (a_*.txt)
+      constraints:
+        pattern: ^a_.*\.txt$
     - name: study_id
       type: string
       required: true
-      reference: Study.identifier
       description: Reference to the parent Study
+      reference: Study.identifier
     - name: measurement_type
       type: entity
-      items: OntologyAnnotation
       required: false
       description: What is being measured (e.g., gene expression, protein identification)
       ontology_term: isaterms:measurement
+      items: OntologyAnnotation
     - name: technology_type
       type: entity
-      items: OntologyAnnotation
       required: false
       description: Technology used to perform the measurement
       ontology_term: isaterms:technology
+      items: OntologyAnnotation
     - name: technology_platform
       type: string
       required: false
       description: Manufacturer and platform name (e.g., Bruker AVANCE)
     - name: samples
       type: list
-      items: string
       required: false
       description: Sample name references (samples declared at study level)
+      items: string
     - name: data_files
-      owns: true
       type: list
-      items: DataFile
       required: false
       description: Data files generated by the assay
-    - name: other_materials
+      items: DataFile
       owns: true
+    - name: other_materials
       type: list
-      items: OtherMaterial
       required: false
       description: Other materials (Extracts, Labeled Extracts) in the assay
-    - name: process_sequence
+      items: OtherMaterial
       owns: true
+    - name: process_sequence
       type: list
-      items: Process
       required: false
       description: Processes representing the experimental graph at assay level
+      items: Process
+      owns: true
     - name: characteristic_categories
       type: list
-      items: OntologyAnnotation
       required: false
       description: Characteristic categories used in the assay
+      items: OntologyAnnotation
     - name: unit_categories
       type: list
-      items: OntologyAnnotation
       required: false
       description: Unit categories used in the assay
+      items: OntologyAnnotation
     - name: comments
       type: list
-      items: Comment
       required: false
       description: Comments associated with the assay
+      items: Comment
   Person:
     ontology_term: isaterms:person
     description: A person/contact that can be attributed to an Investigation or Study
@@ -376,6 +376,8 @@ entities:
       required: false
       description: The email address of the person
       ontology_term: isaterms:email
+      constraints:
+        pattern: ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$
     - name: phone
       type: string
       required: false
@@ -397,24 +399,24 @@ entities:
       ontology_term: isaterms:affiliation
     - name: roles
       type: list
-      items: OntologyAnnotation
       required: false
       description: Role(s) performed by this person
+      items: OntologyAnnotation
     - name: comments
       type: list
-      items: Comment
       required: false
       description: Comments associated with the person
+      items: Comment
     - name: investigation_id
       type: string
       required: false
-      reference: Investigation.identifier
       description: Reference to parent Investigation (for investigation contacts)
+      reference: Investigation.identifier
     - name: study_id
       type: string
       required: false
-      reference: Study.identifier
       description: Reference to parent Study (for study contacts)
+      reference: Study.identifier
   Publication:
     ontology_term: isaterms:publication
     description: A publication associated with an investigation or study
@@ -424,11 +426,15 @@ entities:
       required: false
       description: The PubMed ID of the publication
       ontology_term: isaterms:pubmed_identifier
+      constraints:
+        pattern: ^[0-9]+$
     - name: doi
       type: string
       required: false
       description: A Digital Object Identifier (DOI) for the publication
       ontology_term: isaterms:doi
+      constraints:
+        pattern: ^10\.[0-9]{4,}/.*$
     - name: author_list
       type: string
       required: false
@@ -441,174 +447,15 @@ entities:
       ontology_term: isaterms:title
     - name: status
       type: entity
-      items: OntologyAnnotation
       required: false
       description: Publication status (submitted, in preparation, published)
       ontology_term: isaterms:publication_status
+      items: OntologyAnnotation
     - name: comments
       type: list
-      items: Comment
       required: false
       description: Comments associated with the publication
-  Protocol:
-    ontology_term: isaterms:protocol
-    description: An experimental Protocol used in the study
-    fields:
-    - name: study_id
-      type: string
-      required: true
-      reference: Study.identifier
-      description: Reference to the parent Study
-    - name: name
-      is_label: true
-      type: string
-      required: true
-      description: The name of the protocol
-      ontology_term: isaterms:name
-    - name: protocol_type
-      type: entity
-      items: OntologyAnnotation
-      required: false
-      description: Term to classify the protocol
-    - name: description
-      type: string
-      required: false
-      description: A free-text description of the protocol
-      ontology_term: isaterms:description
-    - name: uri
-      type: uri
-      required: false
-      description: URI pointer to protocol resources
-    - name: version
-      type: string
-      required: false
-      description: Identifier for the version to ensure protocol tracking
-    - name: parameters
-      owns: true
-      type: list
-      items: ProtocolParameter
-      required: false
-      description: Parameters required to execute the protocol
-      ontology_term: isaterms:protocol_parameter
-    - name: components
-      type: list
-      items: OntologyAnnotation
-      required: false
-      description: Protocol components (instruments, software, reagents)
-    - name: comments
-      type: list
       items: Comment
-      required: false
-      description: Comments associated with the protocol
-  ProtocolParameter:
-    ontology_term: isaterms:protocol_parameter
-    description: A parameter used in a protocol
-    fields:
-    - name: parameter_name
-      type: entity
-      items: OntologyAnnotation
-      required: true
-      description: The name of the protocol parameter
-      ontology_term: isaterms:parameter
-    - name: comments
-      type: list
-      items: Comment
-      required: false
-      description: Comments associated with the parameter
-  Source:
-    ontology_term: isaterms:source
-    description: Represents a Source material in an experimental graph
-    fields:
-    - name: study_id
-      type: string
-      required: true
-      reference: Study.identifier
-      description: Reference to the parent Study
-    - name: name
-      is_label: true
-      type: string
-      required: true
-      description: A name/reference for the source material
-      ontology_term: isaterms:name
-    - name: characteristics
-      owns: true
-      type: list
-      items: Characteristic
-      required: false
-      description: Characteristics used to qualify the material properties
-      ontology_term: isaterms:characteristic
-    - name: comments
-      type: list
-      items: Comment
-      required: false
-      description: Comments associated with the source
-  Sample:
-    ontology_term: isaterms:sample
-    description: Represents a Sample material in an experimental graph
-    fields:
-    - name: study_id
-      type: string
-      required: true
-      reference: Study.identifier
-      description: Reference to the parent Study
-    - name: name
-      is_label: true
-      type: string
-      required: true
-      description: A name/reference for the sample material
-      ontology_term: isaterms:name
-    - name: characteristics
-      owns: true
-      type: list
-      items: Characteristic
-      required: false
-      description: Characteristics used to qualify the material properties
-      ontology_term: isaterms:characteristic
-    - name: factor_values
-      owns: true
-      type: list
-      items: FactorValue
-      required: false
-      description: Factor values qualifying the material in terms of study factors
-      ontology_term: isaterms:factor_value
-    - name: derives_from
-      owns: true
-      type: list
-      items: Source
-      required: false
-      description: Reference to source material(s) the sample derives from
-    - name: comments
-      type: list
-      items: Comment
-      required: false
-      description: Comments associated with the sample
-  Extract:
-    ontology_term: isaterms:extract
-    description: Represents an Extract material in an experimental graph
-    fields:
-    - name: name
-      type: string
-      required: true
-      description: A name/reference for the extract material
-      ontology_term: isaterms:name
-    - name: characteristics
-      owns: true
-      type: list
-      items: Characteristic
-      required: false
-      description: Characteristics used to qualify the material properties
-      ontology_term: isaterms:characteristic
-    - name: derives_from
-      owns: true
-      type: list
-      items: Sample
-      required: false
-      description: Reference to sample material(s) the extract derives from
-    - name: comments
-      type: list
-      items: Comment
-      required: false
-      description: Comments associated with the extract
   LabeledExtract:
     ontology_term: isaterms:labeled_extract
     description: Represents a Labeled Extract material in an experimental graph
@@ -620,34 +467,59 @@ entities:
       ontology_term: isaterms:name
     - name: label
       type: entity
-      items: OntologyAnnotation
       required: false
       description: The label applied to the extract
       ontology_term: isaterms:label
+      items: OntologyAnnotation
     - name: characteristics
-      owns: true
       type: list
-      items: Characteristic
       required: false
       description: Characteristics used to qualify the material properties
       ontology_term: isaterms:characteristic
-    - name: derives_from
+      items: Characteristic
       owns: true
+    - name: derives_from
       type: list
-      items: Extract
       required: false
       description: Reference to extract material(s) the labeled extract derives from
+      items: Extract
+      owns: true
     - name: comments
       type: list
-      items: Comment
       required: false
       description: Comments associated with the labeled extract
+      items: Comment
+  Extract:
+    ontology_term: isaterms:extract
+    description: Represents an Extract material in an experimental graph
+    fields:
+    - name: name
+      type: string
+      required: true
+      description: A name/reference for the extract material
+      ontology_term: isaterms:name
+    - name: characteristics
+      type: list
+      required: false
+      description: Characteristics used to qualify the material properties
+      ontology_term: isaterms:characteristic
+      items: Characteristic
+      owns: true
+    - name: derives_from
+      type: list
+      required: false
+      description: Reference to sample material(s) the extract derives from
+      items: Sample
+      owns: true
+    - name: comments
+      type: list
+      required: false
+      description: Comments associated with the extract
+      items: Comment
   OtherMaterial:
     ontology_term: isaterms:material
-    description: 'Represents a material node in ISA that is neither a Source nor a Sample. Used for Extract and Labeled Extract
-      materials at the assay level.
-
-      '
+    description: |
+      Represents a material node in ISA that is neither a Source nor a Sample. Used for Extract and Labeled Extract materials at the assay level.
     fields:
     - name: name
       type: string
@@ -663,131 +535,22 @@ entities:
         - Extract Name
         - Labeled Extract Name
     - name: characteristics
-      owns: true
       type: list
-      items: Characteristic
       required: false
       description: Characteristics used to qualify the material properties
       ontology_term: isaterms:characteristic
+      items: Characteristic
+      owns: true
     - name: derives_from
       type: list
-      items: string
       required: false
       description: References to parent materials (samples or other materials)
+      items: string
     - name: comments
       type: list
-      items: Comment
       required: false
       description: Comments associated with the material
-  StudyFactor:
-    ontology_term: isaterms:factor
-    description: 'A Study Factor corresponds to an independent variable manipulated by the experimentalist with the intention
-      to affect biological systems in a way that can be measured by an assay.
-
-      '
-    fields:
-    - name: study_id
-      type: string
-      required: true
-      reference: Study.identifier
-      description: Reference to the parent Study
-    - name: name
-      is_label: true
-      type: string
-      required: true
-      description: Study factor name
-      ontology_term: isaterms:name
-    - name: factor_type
-      type: entity
-      items: OntologyAnnotation
-      required: false
-      description: An ontology annotation of the study factor type
-    - name: comments
-      type: list
       items: Comment
-      required: false
-      description: Comments associated with the factor
-  FactorValue:
-    ontology_term: isaterms:factor_value
-    description: A FactorValue represents the value instance of a StudyFactor
-    fields:
-    - name: factor_name
-      owns: true
-      type: entity
-      items: StudyFactor
-      required: false
-      description: Reference to the relevant StudyFactor
-    - name: value
-      is_identifier: true
-      is_label: true
-      type: string
-      required: false
-      description: The value of the factor (can be numeric or ontology term)
-    - name: unit
-      type: entity
-      items: OntologyAnnotation
-      required: false
-      description: Unit qualifier for numeric values
-      ontology_term: isaterms:unit
-    - name: comments
-      type: list
-      items: Comment
-      required: false
-      description: Comments associated with the factor value
-  Characteristic:
-    ontology_term: isaterms:characteristic
-    description: A characteristic used to qualify material properties
-    fields:
-    - name: category
-      type: entity
-      items: OntologyAnnotation
-      required: true
-      description: The characteristic category
-    - name: value
-      is_identifier: true
-      is_label: true
-      type: string
-      required: false
-      description: The characteristic value
-      ontology_term: isaterms:characteristic_value
-    - name: unit
-      type: entity
-      items: OntologyAnnotation
-      required: false
-      description: Unit for numeric values
-      ontology_term: isaterms:unit
-    - name: comments
-      type: list
-      items: Comment
-      required: false
-      description: Comments associated with the characteristic
-  ParameterValue:
-    ontology_term: isaterms:parameter_value
-    description: A parameter value used in a process
-    fields:
-    - name: category
-      owns: true
-      type: entity
-      items: ProtocolParameter
-      required: true
-      description: Reference to the protocol parameter
-    - name: value
-      is_identifier: true
-      is_label: true
-      type: string
-      required: false
-      description: The parameter value
-    - name: unit
-      type: entity
-      items: OntologyAnnotation
-      required: false
-      description: Unit for numeric values
-      ontology_term: isaterms:unit
-    - name: comments
-      type: list
-      items: Comment
-      required: false
-      description: Comments associated with the parameter value
   Process:
     ontology_term: isaterms:process
     description: A process in the experimental graph
@@ -799,12 +562,12 @@ entities:
       ontology_term: isaterms:name
       is_identifier: true
     - name: executes_protocol
-      owns: true
       type: entity
-      items: Protocol
       required: false
       description: Reference to the protocol being executed
+      items: Protocol
       reference: Protocol.name
+      owns: true
     - name: performer
       type: string
       required: false
@@ -816,32 +579,122 @@ entities:
       description: Date the process was performed
       ontology_term: isaterms:date
     - name: parameter_values
-      owns: true
       type: list
-      items: ParameterValue
       required: false
       description: Parameter values for this process instance
+      items: ParameterValue
+      owns: true
     - name: inputs
-      owns: true
       type: list
-      items: MaterialRef
       required: false
-      description: 'Input materials for this process (sources, samples, or other materials).
-
-        '
+      description: |
+        Input materials for this process (sources, samples, or other materials).
+      items: MaterialRef
+      owns: true
     - name: outputs
-      owns: true
       type: list
-      items: MaterialRef
       required: false
-      description: 'Output materials from this process (samples, extracts, or data files).
-
-        '
+      description: |
+        Output materials from this process (samples, extracts, or data files).
+      items: MaterialRef
+      owns: true
     - name: comments
       type: list
-      items: Comment
       required: false
       description: Comments associated with the process
+      items: Comment
+  Protocol:
+    ontology_term: isaterms:protocol
+    description: An experimental Protocol used in the study
+    fields:
+    - name: study_id
+      type: string
+      required: true
+      description: Reference to the parent Study
+      reference: Study.identifier
+    - name: name
+      type: string
+      required: true
+      description: The name of the protocol
+      ontology_term: isaterms:name
+      is_label: true
+    - name: protocol_type
+      type: entity
+      required: false
+      description: Term to classify the protocol
+      items: OntologyAnnotation
+    - name: description
+      type: string
+      required: false
+      description: A free-text description of the protocol
+      ontology_term: isaterms:description
+    - name: uri
+      type: uri
+      required: false
+      description: URI pointer to protocol resources
+    - name: version
+      type: string
+      required: false
+      description: Identifier for the version to ensure protocol tracking
+    - name: parameters
+      type: list
+      required: false
+      description: Parameters required to execute the protocol
+      ontology_term: isaterms:protocol_parameter
+      items: ProtocolParameter
+      owns: true
+    - name: components
+      type: list
+      required: false
+      description: Protocol components (instruments, software, reagents)
+      items: OntologyAnnotation
+    - name: comments
+      type: list
+      required: false
+      description: Comments associated with the protocol
+      items: Comment
+  ParameterValue:
+    ontology_term: isaterms:parameter_value
+    description: A parameter value used in a process
+    fields:
+    - name: category
+      type: entity
+      required: true
+      description: Reference to the protocol parameter
+      items: ProtocolParameter
+      owns: true
+    - name: value
+      type: string
+      required: false
+      description: The parameter value
+      is_identifier: true
+      is_label: true
+    - name: unit
+      type: entity
+      required: false
+      description: Unit for numeric values
+      ontology_term: isaterms:unit
+      items: OntologyAnnotation
+    - name: comments
+      type: list
+      required: false
+      description: Comments associated with the parameter value
+      items: Comment
+  ProtocolParameter:
+    ontology_term: isaterms:protocol_parameter
+    description: A parameter used in a protocol
+    fields:
+    - name: parameter_name
+      type: entity
+      required: true
+      description: The name of the protocol parameter
+      ontology_term: isaterms:parameter
+      items: OntologyAnnotation
+    - name: comments
+      type: list
+      required: false
+      description: Comments associated with the parameter
+      items: Comment
   MaterialRef:
     ontology_term: isaterms:material
     description: Reference to a material (Source, Sample, Extract, etc.) in a process
@@ -861,33 +714,180 @@ entities:
     - name: assay_id
       type: string
       required: true
-      reference: Assay.filename
       description: Reference to the parent Assay
+      reference: Assay.filename
     - name: filename
-      is_label: true
       type: string
       required: true
       description: A name/reference for the data file
+      is_label: true
     - name: label
       type: string
       required: false
       description: The data file type label (e.g., Raw Data File, Derived Data File)
     - name: generated_from
-      owns: true
       type: list
-      items: Sample
       required: false
       description: References to samples the file was generated from
+      items: Sample
+      owns: true
     - name: derives_from
       type: list
-      items: string
       required: false
       description: Reference to labeled extract(s) the data file derives from
+      items: string
     - name: comments
       type: list
-      items: Comment
       required: false
       description: Comments associated with the data file
+      items: Comment
+  Sample:
+    ontology_term: isaterms:sample
+    description: Represents a Sample material in an experimental graph
+    fields:
+    - name: study_id
+      type: string
+      required: true
+      description: Reference to the parent Study
+      reference: Study.identifier
+    - name: name
+      type: string
+      required: true
+      description: A name/reference for the sample material
+      ontology_term: isaterms:name
+      is_label: true
+    - name: characteristics
+      type: list
+      required: false
+      description: Characteristics used to qualify the material properties
+      ontology_term: isaterms:characteristic
+      items: Characteristic
+      owns: true
+    - name: factor_values
+      type: list
+      required: false
+      description: Factor values qualifying the material in terms of study factors
+      ontology_term: isaterms:factor_value
+      items: FactorValue
+      owns: true
+    - name: derives_from
+      type: list
+      required: false
+      description: Reference to source material(s) the sample derives from
+      items: Source
+      owns: true
+    - name: comments
+      type: list
+      required: false
+      description: Comments associated with the sample
+      items: Comment
+  Source:
+    ontology_term: isaterms:source
+    description: Represents a Source material in an experimental graph
+    fields:
+    - name: study_id
+      type: string
+      required: true
+      description: Reference to the parent Study
+      reference: Study.identifier
+    - name: name
+      type: string
+      required: true
+      description: A name/reference for the source material
+      ontology_term: isaterms:name
+      is_label: true
+    - name: characteristics
+      type: list
+      required: false
+      description: Characteristics used to qualify the material properties
+      ontology_term: isaterms:characteristic
+      items: Characteristic
+      owns: true
+    - name: comments
+      type: list
+      required: false
+      description: Comments associated with the source
+      items: Comment
+  FactorValue:
+    ontology_term: isaterms:factor_value
+    description: A FactorValue represents the value instance of a StudyFactor
+    fields:
+    - name: factor_name
+      type: entity
+      required: false
+      description: Reference to the relevant StudyFactor
+      items: StudyFactor
+      owns: true
+    - name: value
+      type: string
+      required: false
+      description: The value of the factor (can be numeric or ontology term)
+      is_identifier: true
+      is_label: true
+    - name: unit
+      type: entity
+      required: false
+      description: Unit qualifier for numeric values
+      ontology_term: isaterms:unit
+      items: OntologyAnnotation
+    - name: comments
+      type: list
+      required: false
+      description: Comments associated with the factor value
+      items: Comment
+  StudyFactor:
+    ontology_term: isaterms:factor
+    description: |
+      A Study Factor corresponds to an independent variable manipulated by the experimentalist with the intention to affect biological systems in a way that can be measured by an assay.
+    fields:
+    - name: study_id
+      type: string
+      required: true
+      description: Reference to the parent Study
+      reference: Study.identifier
+    - name: name
+      type: string
+      required: true
+      description: Study factor name
+      ontology_term: isaterms:name
+      is_label: true
+    - name: factor_type
+      type: entity
+      required: false
+      description: An ontology annotation of the study factor type
+      items: OntologyAnnotation
+    - name: comments
+      type: list
+      required: false
+      description: Comments associated with the factor
+      items: Comment
+  Characteristic:
+    ontology_term: isaterms:characteristic
+    description: A characteristic used to qualify material properties
+    fields:
+    - name: category
+      type: entity
+      required: true
+      description: The characteristic category
+      items: OntologyAnnotation
+    - name: value
+      type: string
+      required: false
+      description: The characteristic value
+      ontology_term: isaterms:characteristic_value
+      is_identifier: true
+      is_label: true
+    - name: unit
+      type: entity
+      required: false
+      description: Unit for numeric values
+      ontology_term: isaterms:unit
+      items: OntologyAnnotation
+    - name: comments
+      type: list
+      required: false
+      description: Comments associated with the characteristic
+      items: Comment
   OntologyAnnotation:
     ontology_term: isaterms:information
     description: An ontology annotation
@@ -898,18 +898,18 @@ entities:
       description: A term taken from an ontology or controlled vocabulary
     - name: term_source
       type: entity
-      items: OntologySource
       required: false
       description: Reference to the OntologySource the term is derived from
+      items: OntologySource
     - name: term_accession
       type: ontology_term
       required: false
       description: A URI or resource-specific identifier for the term
     - name: comments
       type: list
-      items: Comment
       required: false
       description: Comments associated with the annotation
+      items: Comment
   OntologySource:
     ontology_term: isaterms:information
     description: Reference to an ontology source
@@ -934,9 +934,9 @@ entities:
       ontology_term: isaterms:description
     - name: comments
       type: list
-      items: Comment
       required: false
       description: Comments associated with the ontology source
+      items: Comment
   Comment:
     ontology_term: isaterms:comment
     description: An explanatory information entity

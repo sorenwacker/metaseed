@@ -25,6 +25,7 @@ import yaml
 from pydantic import ValidationError
 
 from metaseed.paths import get_builtin_specs_dir, get_user_specs_dir
+from metaseed.specs.ordering import entity_order, is_in_containment_order
 from metaseed.specs.predicates import profile_predicate_issues
 from metaseed.specs.schema import Constraints, EntitySpec, FieldType, ProfileSpec
 from metaseed.specs.versioning import SUPPORTED_SPEC_VERSION
@@ -262,6 +263,18 @@ class SpecLoader:
             # record it failed to catch is the defect class it guards against.
             raise SpecLoadError(
                 f"Invalid profile {profile_path}: " + "; ".join(predicate_problems)
+            )
+
+        if not is_in_containment_order(loaded_profile):
+            # The hierarchy is carried by the nesting fields, so the profile
+            # still loads; but a reader that trusts declaration order (the Excel
+            # export's sheet order, the graph legend) gets the root last. Saving
+            # the spec rewrites the entities root-first.
+            logger.warning(
+                "Profile %s declares its entities out of containment order; "
+                "save the spec to rewrite them root-first (expected: %s)",
+                cache_key,
+                " > ".join(entity_order(loaded_profile)),
             )
 
         self._profile_cache[cache_key] = loaded_profile
