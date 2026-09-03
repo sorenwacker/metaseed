@@ -57,10 +57,40 @@ docs = to_ena_xml(client)        # {"study.xml": ..., "sample.xml": ..., ...}
 ```
 
 `to_ena_xml` renders an `ena`-profile dataset as the ENA/SRA submission
-documents — `STUDY_SET`, `SAMPLE_SET`, `EXPERIMENT_SET`, `RUN_SET`. It is pure
-and dependency-free (stdlib `xml.etree`); data files are *referenced* in
-`RUN > DATA_BLOCK > FILES`, never uploaded (submission/auth is out of scope). So
-`import_accession` and `to_ena_xml` round-trip through the same profile.
+documents. It is pure and dependency-free (stdlib `xml.etree`); data files are
+*referenced* in `RUN > DATA_BLOCK > FILES`, never uploaded (transferring the
+files and authenticating to Webin are out of scope).
+
+| Document | ENA set | Built from |
+| --- | --- | --- |
+| `study.xml` | `STUDY_SET` | Study, with `STUDY_LINKS` from its ProjectLinks |
+| `sample.xml` | `SAMPLE_SET` | Sample, with `SAMPLE_ATTRIBUTES` from its SampleAttributes |
+| `experiment.xml` | `EXPERIMENT_SET` | Experiment, with `EXPERIMENT_ATTRIBUTES` |
+| `run.xml` | `RUN_SET` | Run, its Files, and `RUN_ATTRIBUTES` |
+| `analysis.xml` | `ANALYSIS_SET` | Analysis, its Files, and `ANALYSIS_ATTRIBUTES` |
+| `submission.xml` | `SUBMISSION` | One `ADD` action per document above, plus `HOLD` when the study sets a release date |
+
+Only documents with content are emitted.
+
+**Every entity the profile defines is exported.** The attribute objects
+(`SampleAttribute`, `ExperimentAttribute`, `RunAttribute`, `AnalysisAttribute`)
+each carry a `tag`, a `value` and an optional `units`, and become the
+`TAG`/`VALUE`/`UNITS` of an attribute under the object that owns them. This
+matters beyond fidelity: ENA registers samples against a *checklist*, and a
+checklist's mandatory fields (collection date, geographic location, and so on)
+are carried as sample attributes — a `SAMPLE_SET` without them is rejected. An
+exporter that drops them produces a file that looks complete and cannot be
+submitted, which is why `tests/test_ena/test_export_loses_nothing.py` fails if
+any entity type present in a dataset does not reach the XML.
+
+Attributes are found through the containment the profile declares
+(`Sample.sample_attributes`, `Run.run_attributes`, …), so the exporter walks the
+entity tree rather than grouping a flat entity list by type — a flat grouping
+cannot say which sample an attribute belongs to. `File` is nested under both
+`Run` and `Analysis`, so a file follows its parent.
+
+`import_accession` and `to_ena_xml` therefore round-trip through the same
+profile: what the importer builds, the exporter emits.
 
 ## Testing
 
