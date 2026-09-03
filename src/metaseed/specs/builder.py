@@ -656,10 +656,25 @@ class SpecBuilder:
     # Output
     # ------------------------------------------------------------------
     def to_yaml(self: Self) -> str:
-        """Serialize the spec to a YAML document."""
+        """Serialize the spec to a YAML document.
+
+        Entities are written in containment order (root first), so a spec is
+        saved in the hierarchy it describes rather than in whichever order it
+        was edited -- the root cause of a downstream reader (Excel export, graph
+        legend) getting the root last.
+        """
+        from metaseed.specs.ordering import entity_order
+
         data = self._spec.model_dump(
             exclude_none=True, exclude_defaults=False, mode="json"
         )
+        entities = data.get("entities")
+        if isinstance(entities, dict):
+            data["entities"] = {
+                name: entities[name]
+                for name in entity_order(self._spec)
+                if name in entities
+            }
 
         class _SpecDumper(yaml.Dumper):  # type: ignore[misc]  # yaml.Dumper is untyped
             pass

@@ -20,6 +20,7 @@ from metaseed.facade.store import EntityStore
 from metaseed.models import get_model
 from metaseed.models.factory import create_model_from_spec, set_model_context
 from metaseed.specs.loader import SpecLoader
+from metaseed.specs.ordering import containment_order
 from metaseed.specs.schema import ProfileSpec
 
 __all__ = ["ProfileFacade"]
@@ -192,6 +193,18 @@ class ProfileFacade:
                 version=self._version,
                 store_callback=self._store_entity,
             )
+
+        # Present entities in a topologically valid order -- every container
+        # before the types it contains -- so every consumer of ``entities``
+        # (the Excel export's sheets, the graph legend) sees a parent before its
+        # children. A profile already declared that way is unchanged; one that
+        # is not (a spec saved with its root last) is corrected here at runtime.
+        children_of = {
+            name: list(helper.nested_fields.values())
+            for name, helper in self._entities.items()
+        }
+        ordered = containment_order(list(self._entities), children_of)
+        self._entities = {name: self._entities[name] for name in ordered}
 
     # ========================================================================
     # Instance Storage Methods (delegated to EntityStore)

@@ -1,9 +1,14 @@
+spec_version: '0.1'
 version: '1.0'
 name: seek
 display_name: SEEK
-description: The full data model FAIRDOM-SEEK can represent, built on JERM (Just Enough Results Model) — it extends ISA with Projects, computational models, workflows, SOPs and further asset types. Use it to explore and visualize what a SEEK instance can store. It is a reference model, not an upload target — only its ISA core (Investigation, Study, Assay, Sample) syncs and its Project root does not, so a dataset built on it would upload only in part. To build metadata you will publish to a SEEK instance, start from the seek-ready-template profile instead.
-root_entity: Project
+description: The full data model FAIRDOM-SEEK can represent, built on JERM (Just Enough Results Model) — it extends ISA with
+  Projects, computational models, workflows, SOPs and further asset types. Use it to explore and visualize what a SEEK instance
+  can store. It is a reference model, not an upload target — only its ISA core (Investigation, Study, Assay, Sample) syncs
+  and its Project root does not, so a dataset built on it would upload only in part. To build metadata you will publish to
+  a SEEK instance, start from the seek-ready-template profile instead.
 ontology: jerm
+root_entity: Project
 validation_rules:
 - name: identifier_pattern
   description: Identifiers must be alphanumeric with underscores/hyphens
@@ -53,13 +58,16 @@ validation_rules:
 entities:
   Project:
     ontology_term: jerm:Project
-    description: A project is an organizational container that groups related investigations, people, and assets. Projects are the top-level container in SEEK.
+    description: A project is an organizational container that groups related investigations, people, and assets. Projects
+      are the top-level container in SEEK.
     fields:
     - name: identifier
       type: string
       required: true
       description: A unique identifier for the project
       ontology_term: jerm:identifier
+      constraints:
+        pattern: ^[A-Za-z0-9_-]+$
     - name: title
       type: string
       required: true
@@ -88,19 +96,19 @@ entities:
       description: Project end date
     - name: members
       type: list
-      items: Person
       required: false
       description: People involved in the project
+      items: Person
     - name: institutions
       type: list
-      items: Institution
       required: false
       description: Institutions involved in the project
+      items: Institution
     - name: investigations
       type: list
-      items: Investigation
       required: false
       description: Investigations within this project
+      items: Investigation
     - name: default_license
       type: string
       required: false
@@ -136,18 +144,21 @@ entities:
       description: Institution website URL
   Investigation:
     ontology_term: jerm:Investigation
-    description: An investigation maintains metadata about the project context and links to one or more studies. Represents the highest level of experimental context.
+    description: An investigation maintains metadata about the project context and links to one or more studies. Represents
+      the highest level of experimental context.
     fields:
     - name: identifier
       type: string
       required: true
       description: A locally unique identifier
       ontology_term: jerm:identifier
+      constraints:
+        pattern: ^[A-Za-z0-9_-]+$
     - name: project_id
       type: string
       required: true
-      reference: Project.identifier
       description: Reference to the parent Project
+      reference: Project.identifier
     - name: title
       type: string
       required: true
@@ -168,19 +179,19 @@ entities:
       description: External web page for the investigation
     - name: studies
       type: list
-      items: Study
       required: false
       description: Studies within this investigation
+      items: Study
     - name: publications
       type: list
-      items: Publication
       required: false
       description: Publications associated with the investigation
+      items: Publication
     - name: creators
       type: list
-      items: Person
       required: false
       description: People who created this investigation
+      items: Person
     - name: created_at
       type: date
       required: false
@@ -198,11 +209,13 @@ entities:
       required: true
       description: A unique identifier for the study
       ontology_term: jerm:identifier
+      constraints:
+        pattern: ^[A-Za-z0-9_-]+$
     - name: investigation_id
       type: string
       required: true
-      reference: Investigation.identifier
       description: Reference to the parent Investigation
+      reference: Investigation.identifier
     - name: title
       type: string
       required: true
@@ -219,29 +232,29 @@ entities:
       description: The persistent SEEK identifier URL
     - name: person_responsible
       type: entity
-      items: Person
       required: false
       description: The person responsible for the study
+      items: Person
     - name: experimentalists
       type: list
-      items: Person
       required: false
       description: Other scientists involved in the study
+      items: Person
     - name: assays
       type: list
-      items: Assay
       required: false
       description: Assays performed in the study
+      items: Assay
     - name: publications
       type: list
-      items: Publication
       required: false
       description: Publications associated with the study
+      items: Publication
     - name: creators
       type: list
-      items: Person
       required: false
       description: People who created this study entry
+      items: Person
     - name: created_at
       type: date
       required: false
@@ -252,18 +265,21 @@ entities:
       description: Date the study was last updated
   Assay:
     ontology_term: jerm:Assay
-    description: An assay is the application of a process (SOP) that converts input material into new material or data. Each assay must belong to one study.
+    description: An assay is the application of a process (SOP) that converts input material into new material or data. Each
+      assay must belong to one study.
     fields:
     - name: identifier
       type: string
       required: true
       description: A unique identifier for the assay
       ontology_term: jerm:identifier
+      constraints:
+        pattern: ^[A-Za-z0-9_-]+$
     - name: study_id
       type: string
       required: true
-      reference: Study.identifier
       description: Reference to the parent Study
+      reference: Study.identifier
     - name: title
       type: string
       required: true
@@ -288,24 +304,24 @@ entities:
         - MODEL
     - name: assay_type
       type: entity
-      items: OntologyAnnotation
       required: true
       description: The type of assay from controlled vocabulary
+      items: OntologyAnnotation
     - name: technology_type
       type: entity
-      items: OntologyAnnotation
       required: false
       description: Technology used to perform the assay
+      items: OntologyAnnotation
     - name: organism
       type: entity
-      items: Organism
       required: false
       description: The organism being studied
+      items: Organism
     - name: strain
       type: entity
-      items: Strain
       required: false
       description: The strain being studied
+      items: Strain
     - name: tissue_and_cell_type
       type: string
       required: false
@@ -316,34 +332,34 @@ entities:
       description: Growth methodology (batch, fed-batch, continuous)
     - name: samples
       type: list
-      items: Sample
       required: false
       description: Samples used in this assay
+      items: Sample
     - name: data_files
       type: list
-      items: DataFile
       required: false
       description: Data files produced by this assay
+      items: DataFile
     - name: sops
       type: list
-      items: SOP
       required: false
       description: Standard operating procedures used
+      items: SOP
     - name: models
       type: list
-      items: Model
       required: false
       description: Models associated with this assay
+      items: Model
     - name: documents
       type: list
-      items: Document
       required: false
       description: Documents associated with this assay
+      items: Document
     - name: creators
       type: list
-      items: Person
       required: false
       description: People who created this assay entry
+      items: Person
     - name: created_at
       type: date
       required: false
@@ -352,15 +368,110 @@ entities:
       type: date
       required: false
       description: Date the assay was last updated
+  Model:
+    ontology_term: jerm:Model
+    description: A computational or mathematical model. Can be SBML, CellML, MATLAB, or other formats.
+    fields:
+    - name: identifier
+      type: string
+      required: true
+      description: A unique identifier for the model
+      ontology_term: jerm:identifier
+      constraints:
+        pattern: ^[A-Za-z0-9_-]+$
+    - name: title
+      type: string
+      required: true
+      description: Name for the model
+      ontology_term: jerm:title
+    - name: description
+      type: string
+      required: true
+      description: Description of what the model represents
+      ontology_term: jerm:description
+    - name: seek_id
+      type: uri
+      required: false
+      description: The persistent SEEK identifier URL
+    - name: filename
+      type: string
+      required: false
+      description: Original filename or archive name
+    - name: model_type
+      type: entity
+      required: false
+      description: Type of mathematical model (ODE, algebraic, etc.)
+      items: OntologyAnnotation
+    - name: model_format
+      type: string
+      required: true
+      description: Technical format (SBML, CellML, MATLAB, etc.)
+      constraints:
+        pattern: ^(SBML|CellML|BioPAX|MATLAB|Python|R|Other)$
+        enum:
+        - SBML
+        - CellML
+        - BioPAX
+        - MATLAB
+        - Python
+        - R
+        - Other
+    - name: environment
+      type: string
+      required: false
+      description: Simulation environment (COPASI, VCell, etc.)
+    - name: environment_url
+      type: uri
+      required: false
+      description: URL to the simulation environment
+    - name: organism
+      type: entity
+      required: false
+      description: Organism the model represents
+      items: Organism
+    - name: assay_id
+      type: string
+      required: false
+      description: Reference to associated Assay
+      reference: Assay.identifier
+    - name: linked_data_files
+      type: list
+      required: false
+      description: Data files used for construction/validation
+      items: DataFile
+    - name: version
+      type: integer
+      required: false
+      description: Version number of the model
+    - name: license
+      type: string
+      required: false
+      description: License for the model
+    - name: creators
+      type: list
+      required: false
+      description: People who created this model
+      items: Person
+    - name: created_at
+      type: date
+      required: false
+      description: Date the model was uploaded
+    - name: updated_at
+      type: date
+      required: false
+      description: Date the model was last updated
   DataFile:
     ontology_term: jerm:DataFile
-    description: A data file containing experimental data. Can be raw data, processed data, calibration information, or any other relevant file.
+    description: A data file containing experimental data. Can be raw data, processed data, calibration information, or any
+      other relevant file.
     fields:
     - name: identifier
       type: string
       required: true
       description: A unique identifier for the data file
       ontology_term: jerm:identifier
+      constraints:
+        pattern: ^[A-Za-z0-9_-]+$
     - name: title
       type: string
       required: true
@@ -389,19 +500,19 @@ entities:
       description: File format description
     - name: data_type
       type: entity
-      items: OntologyAnnotation
       required: false
       description: Type of data contained
+      items: OntologyAnnotation
     - name: factors_studied
       type: list
-      items: Factor
       required: false
       description: Experimental factors studied
+      items: Factor
     - name: measured_item
       type: entity
-      items: OntologyAnnotation
       required: false
       description: What was measured
+      items: OntologyAnnotation
     - name: units
       type: string
       required: false
@@ -409,8 +520,8 @@ entities:
     - name: assay_id
       type: string
       required: false
-      reference: Assay.identifier
       description: Reference to the parent Assay
+      reference: Assay.identifier
     - name: version
       type: integer
       required: false
@@ -421,9 +532,9 @@ entities:
       description: License for the data file
     - name: creators
       type: list
-      items: Person
       required: false
       description: People who created this data file
+      items: Person
     - name: created_at
       type: date
       required: false
@@ -432,104 +543,18 @@ entities:
       type: date
       required: false
       description: Date the data file was last updated
-  Model:
-    ontology_term: jerm:Model
-    description: A computational or mathematical model. Can be SBML, CellML, MATLAB, or other formats.
-    fields:
-    - name: identifier
-      type: string
-      required: true
-      description: A unique identifier for the model
-      ontology_term: jerm:identifier
-    - name: title
-      type: string
-      required: true
-      description: Name for the model
-      ontology_term: jerm:title
-    - name: description
-      type: string
-      required: true
-      description: Description of what the model represents
-      ontology_term: jerm:description
-    - name: seek_id
-      type: uri
-      required: false
-      description: The persistent SEEK identifier URL
-    - name: filename
-      type: string
-      required: false
-      description: Original filename or archive name
-    - name: model_type
-      type: entity
-      items: OntologyAnnotation
-      required: false
-      description: Type of mathematical model (ODE, algebraic, etc.)
-    - name: model_format
-      type: string
-      required: true
-      description: Technical format (SBML, CellML, MATLAB, etc.)
-      constraints:
-        enum:
-        - SBML
-        - CellML
-        - BioPAX
-        - MATLAB
-        - Python
-        - R
-        - Other
-    - name: environment
-      type: string
-      required: false
-      description: Simulation environment (COPASI, VCell, etc.)
-    - name: environment_url
-      type: uri
-      required: false
-      description: URL to the simulation environment
-    - name: organism
-      type: entity
-      items: Organism
-      required: false
-      description: Organism the model represents
-    - name: assay_id
-      type: string
-      required: false
-      reference: Assay.identifier
-      description: Reference to associated Assay
-    - name: linked_data_files
-      type: list
-      items: DataFile
-      required: false
-      description: Data files used for construction/validation
-    - name: version
-      type: integer
-      required: false
-      description: Version number of the model
-    - name: license
-      type: string
-      required: false
-      description: License for the model
-    - name: creators
-      type: list
-      items: Person
-      required: false
-      description: People who created this model
-    - name: created_at
-      type: date
-      required: false
-      description: Date the model was uploaded
-    - name: updated_at
-      type: date
-      required: false
-      description: Date the model was last updated
   SOP:
     ontology_term: jerm:SOP
-    description: Standard Operating Procedure. Describes how an assay is performed and can be associated with data files and models.
+    description: Standard Operating Procedure. Describes how an assay is performed and can be associated with data files and
+      models.
     fields:
     - name: identifier
       type: string
       required: true
       description: A unique identifier for the SOP
       ontology_term: jerm:identifier
+      constraints:
+        pattern: ^[A-Za-z0-9_-]+$
     - name: title
       type: string
       required: true
@@ -550,9 +575,9 @@ entities:
       description: Original filename
     - name: sop_type
       type: entity
-      items: OntologyAnnotation
       required: false
       description: Type of SOP from controlled vocabulary
+      items: OntologyAnnotation
     - name: experimental_conditions
       type: string
       required: false
@@ -564,8 +589,8 @@ entities:
     - name: assay_id
       type: string
       required: false
-      reference: Assay.identifier
       description: Reference to associated Assay
+      reference: Assay.identifier
     - name: version
       type: integer
       required: false
@@ -576,9 +601,9 @@ entities:
       description: License for the SOP
     - name: creators
       type: list
-      items: Person
       required: false
       description: People who created this SOP
+      items: Person
     - name: created_at
       type: date
       required: false
@@ -596,6 +621,8 @@ entities:
       required: true
       description: A unique identifier for the sample
       ontology_term: jerm:identifier
+      constraints:
+        pattern: ^[A-Za-z0-9_-]+$
     - name: title
       type: string
       required: true
@@ -612,19 +639,19 @@ entities:
       description: The persistent SEEK identifier URL
     - name: sample_type
       type: entity
-      items: SampleType
       required: false
       description: The type of sample
+      items: SampleType
     - name: organism
       type: entity
-      items: Organism
       required: false
       description: Organism the sample is from
+      items: Organism
     - name: strain
       type: entity
-      items: Strain
       required: false
       description: Strain of the organism
+      items: Strain
     - name: genotype
       type: string
       required: false
@@ -655,19 +682,19 @@ entities:
       description: Date the sample was collected
     - name: attributes
       type: list
-      items: SampleAttribute
       required: false
       description: Additional sample attributes
+      items: SampleAttribute
     - name: derived_from
       type: list
-      items: Sample
       required: false
       description: Parent samples this sample derives from
+      items: Sample
     - name: creators
       type: list
-      items: Person
       required: false
       description: People who created this sample entry
+      items: Person
     - name: created_at
       type: date
       required: false
@@ -687,9 +714,9 @@ entities:
       description: Description of the sample type
     - name: attribute_definitions
       type: list
-      items: SampleAttributeDefinition
       required: false
       description: Attribute definitions for this sample type
+      items: SampleAttributeDefinition
   SampleAttributeDefinition:
     ontology_term: jerm:SampleAttributeDefinition
     description: Definition of a sample attribute
@@ -739,6 +766,8 @@ entities:
       required: true
       description: A unique identifier (e.g., NCBI taxonomy ID)
       ontology_term: jerm:identifier
+      constraints:
+        pattern: ^[A-Za-z0-9_-]+$
     - name: title
       type: string
       required: true
@@ -761,6 +790,8 @@ entities:
       required: true
       description: A unique identifier for the strain
       ontology_term: jerm:identifier
+      constraints:
+        pattern: ^[A-Za-z0-9_-]+$
     - name: title
       type: string
       required: true
@@ -769,8 +800,8 @@ entities:
     - name: organism_id
       type: string
       required: true
-      reference: Organism.identifier
       description: Reference to the parent Organism
+      reference: Organism.identifier
     - name: synonym
       type: string
       required: false
@@ -804,6 +835,8 @@ entities:
       required: true
       description: A unique identifier
       ontology_term: jerm:identifier
+      constraints:
+        pattern: ^[A-Za-z0-9_-]+$
     - name: title
       type: string
       required: true
@@ -814,16 +847,20 @@ entities:
       required: false
       description: PubMed ID
       ontology_term: jerm:pubmed_id
+      constraints:
+        pattern: ^[0-9]+$
     - name: doi
       type: string
       required: false
       description: Digital Object Identifier
       ontology_term: jerm:doi
+      constraints:
+        pattern: ^10\.[0-9]{4,}/.*$
     - name: authors
       type: list
-      items: Person
       required: false
       description: Authors of the publication
+      items: Person
     - name: author_list
       type: string
       required: false
@@ -852,57 +889,6 @@ entities:
       type: string
       required: false
       description: Type of publication (journal, conference, book, etc.)
-  Person:
-    ontology_term: jerm:Person
-    description: A person or contact
-    fields:
-    - name: identifier
-      type: string
-      required: true
-      description: A unique identifier for the person
-      ontology_term: jerm:identifier
-    - name: first_name
-      type: string
-      required: true
-      description: First name
-      ontology_term: jerm:first_name
-    - name: last_name
-      type: string
-      required: true
-      description: Last name
-      ontology_term: jerm:last_name
-    - name: email
-      type: string
-      required: false
-      description: Email address
-      ontology_term: jerm:email
-    - name: orcid
-      type: string
-      required: false
-      description: ORCID identifier
-    - name: phone
-      type: string
-      required: false
-      description: Phone number
-    - name: affiliation
-      type: string
-      required: false
-      description: Organization affiliation
-      ontology_term: jerm:affiliation
-    - name: institution_id
-      type: string
-      required: false
-      reference: Institution.title
-      description: Reference to Institution
-    - name: web_page
-      type: uri
-      required: false
-      description: Personal website
-    - name: roles
-      type: list
-      items: string
-      required: false
-      description: Roles in the project
   Document:
     ontology_term: jerm:Document
     description: A document associated with research (reports, specifications, etc.)
@@ -912,6 +898,8 @@ entities:
       required: true
       description: A unique identifier
       ontology_term: jerm:identifier
+      constraints:
+        pattern: ^[A-Za-z0-9_-]+$
     - name: title
       type: string
       required: true
@@ -940,9 +928,9 @@ entities:
       description: License for the document
     - name: creators
       type: list
-      items: Person
       required: false
       description: People who created this document
+      items: Person
     - name: created_at
       type: date
       required: false
@@ -956,6 +944,8 @@ entities:
       required: true
       description: A unique identifier
       ontology_term: jerm:identifier
+      constraints:
+        pattern: ^[A-Za-z0-9_-]+$
     - name: title
       type: string
       required: true
@@ -976,9 +966,9 @@ entities:
       description: Original filename
     - name: event
       type: entity
-      items: Event
       required: false
       description: Event where presented
+      items: Event
     - name: version
       type: integer
       required: false
@@ -989,9 +979,9 @@ entities:
       description: License for the presentation
     - name: creators
       type: list
-      items: Person
       required: false
       description: People who created this presentation
+      items: Person
     - name: created_at
       type: date
       required: false
@@ -1005,6 +995,8 @@ entities:
       required: true
       description: A unique identifier
       ontology_term: jerm:identifier
+      constraints:
+        pattern: ^[A-Za-z0-9_-]+$
     - name: title
       type: string
       required: true
@@ -1048,6 +1040,8 @@ entities:
       required: true
       description: A unique identifier
       ontology_term: jerm:identifier
+      constraints:
+        pattern: ^[A-Za-z0-9_-]+$
     - name: title
       type: string
       required: true
@@ -1080,9 +1074,9 @@ entities:
       description: License for the workflow
     - name: creators
       type: list
-      items: Person
       required: false
       description: People who created this workflow
+      items: Person
     - name: created_at
       type: date
       required: false
@@ -1096,6 +1090,8 @@ entities:
       required: true
       description: A unique identifier
       ontology_term: jerm:identifier
+      constraints:
+        pattern: ^[A-Za-z0-9_-]+$
     - name: title
       type: string
       required: true
@@ -1112,18 +1108,75 @@ entities:
       description: The persistent SEEK identifier URL
     - name: items
       type: list
-      items: CollectionItem
       required: false
       description: Items in the collection
+      items: CollectionItem
     - name: creators
       type: list
-      items: Person
       required: false
       description: People who created this collection
+      items: Person
     - name: created_at
       type: date
       required: false
       description: Date the collection was created
+  Person:
+    ontology_term: jerm:Person
+    description: A person or contact
+    fields:
+    - name: identifier
+      type: string
+      required: true
+      description: A unique identifier for the person
+      ontology_term: jerm:identifier
+      constraints:
+        pattern: ^[A-Za-z0-9_-]+$
+    - name: first_name
+      type: string
+      required: true
+      description: First name
+      ontology_term: jerm:first_name
+    - name: last_name
+      type: string
+      required: true
+      description: Last name
+      ontology_term: jerm:last_name
+    - name: email
+      type: string
+      required: false
+      description: Email address
+      ontology_term: jerm:email
+      constraints:
+        pattern: ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$
+    - name: orcid
+      type: string
+      required: false
+      description: ORCID identifier
+      constraints:
+        pattern: ^[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X]$
+    - name: phone
+      type: string
+      required: false
+      description: Phone number
+    - name: affiliation
+      type: string
+      required: false
+      description: Organization affiliation
+      ontology_term: jerm:affiliation
+    - name: institution_id
+      type: string
+      required: false
+      description: Reference to Institution
+      reference: Institution.title
+    - name: web_page
+      type: uri
+      required: false
+      description: Personal website
+    - name: roles
+      type: list
+      required: false
+      description: Roles in the project
+      items: string
   CollectionItem:
     ontology_term: jerm:CollectionItem
     description: An item in a collection
@@ -1150,18 +1203,18 @@ entities:
     fields:
     - name: factor_type
       type: entity
-      items: OntologyAnnotation
       required: true
       description: Type of factor from controlled vocabulary
+      items: OntologyAnnotation
     - name: factor_value
       type: string
       required: false
       description: Value of the factor
     - name: unit
       type: entity
-      items: OntologyAnnotation
       required: false
       description: Unit of measurement
+      items: OntologyAnnotation
   OntologyAnnotation:
     ontology_term: jerm:OntologyAnnotation
     description: An ontology annotation for controlled vocabulary terms
