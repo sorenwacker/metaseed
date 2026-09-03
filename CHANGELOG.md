@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## v0.49.0 (260903)
+
+### Fixed
+- The Excel export shows a parent's real child count in its nested-field column (a Study's `sources`, `observation_units`, `assays`), not `0`. Children are their own rows linked by `_parent`, so the parent's embedded list is empty in the flat serialization; the cell now counts the rows that name each parent.
+- Entity types are presented in containment order — every container before the types it contains — so the Excel export's sheets and the graph legend read root-first rather than in the profile's authoring order. A spec saved with its root last is corrected, `to_yaml` saves the order, and the loader warns when a source spec is out of order.
+
 ### Fixed
 - The SEEK sync places a grouped field flat when the Extended Metadata Type has no nested type for its group. SEEK's FAIR-DS TTL import builds only flat types, so an EMT set up that way carries `site_latitude`/`site_country` directly rather than in a nested `location`; the sync now sends them flat instead of reporting "no attribute for site_*".
 
