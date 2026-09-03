@@ -19,6 +19,7 @@ from metaseed.seek.fairds import (
 
 JERM = Namespace("http://jermontology.org/ontology/JERMOntology#")
 SCHEMA = Namespace("http://schema.org/")
+FAIR = Namespace("http://fairbydesign.nl/ontology/")
 
 
 def _dataset() -> MetaseedClient:
@@ -280,6 +281,10 @@ def test_model_rdf_carries_a_skeleton_instance_per_isa_level():
     # every non-core field is carried by the instance filling that role
     assert (stu, SCHEMA.growth_facility, None) in graph
     assert (assay, SCHEMA.platform, None) in graph
+    # Each level is named for the model (name + version) so SEEK titles the
+    # Extended Metadata Type "FDS <Level> - p 1.0" instead of a random UUID.
+    assert (stu, FAIR.packageName, Literal("p 1.0")) in graph
+    assert (assay, FAIR.packageName, Literal("p 1.0")) in graph
     assert (inv, SCHEMA.growth_facility, None) not in graph
     # the empty positional levels carry no non-core predicate, so SEEK makes no
     # Extended Metadata Type for them

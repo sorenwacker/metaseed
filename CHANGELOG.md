@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Fixed
+- The SEEK Extended Metadata TTL names each ISA level with the model's name and version (`fair:packageName`), so SEEK titles the Extended Metadata Types `FDS Study - <name> <version>` rather than `FDS Study - <random uuid>`, stable across re-uploads.
 - The SEEK Extended Metadata model TTL now chains all five FAIR-DS levels (Investigation → Study → ObservationUnit → Sample → Assay). SEEK's FAIR-DS reader reaches an Assay only through `observation_units → samples → assays`; the model skeleton linked Study straight to Assay, so uploading the TTL created no Extended Metadata Types (SEEK reported "no new EMTs"). SEEK's own reader now finds the Study and Assay candidates.
 
 ### Fixed

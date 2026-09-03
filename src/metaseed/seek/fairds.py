@@ -176,6 +176,11 @@ def _emit_skeleton_instances(graph: Graph, profile: ProfileSpec) -> None:
         graph.add((uri, SCHEMA.identifier, Literal(identity)))
         graph.add((uri, SCHEMA.title, Literal(identity)))
         graph.add((uri, SCHEMA.name, Literal(identity)))
+        # SEEK titles an Extended Metadata Type "FDS <Level> - <packageName>",
+        # falling back to a random UUID when packageName is absent. Name it for
+        # the model so the title reads e.g. "FDS Study - cropxr-phenotyping 1.2"
+        # and stays stable across re-uploads instead of a fresh UUID each time.
+        graph.add((uri, FAIR.packageName, Literal(f"{profile.name} {profile.version}")))
         if parent is not None:
             graph.add((parent, JERM.hasPart, uri))
         filler = by_level.get(level)
