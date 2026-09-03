@@ -136,7 +136,19 @@ def to_fair_data_station_model_rdf(profile: ProfileSpec) -> str:
 
 
 #: The ISA levels SEEK derives Extended Metadata Types for, top down.
-_EXTENDED_METADATA_LEVELS = ("Investigation", "Study", "Assay")
+# SEEK's FAIR-DS reader walks the hierarchy positionally --
+# Investigation -> Study -> ObservationUnit -> Sample -> Assay -- and reaches an
+# Assay only through ``observation_units -> samples -> assays``. The model
+# skeleton chains all five so SEEK can navigate to the Assay level; a level no
+# profile entity fills is emitted empty, keeping the chain intact without adding
+# an Extended Metadata Type (an empty level carries no non-core predicates).
+_EXTENDED_METADATA_LEVELS = (
+    "Investigation",
+    "Study",
+    "ObservationUnit",
+    "Sample",
+    "Assay",
+)
 
 
 def _emit_skeleton_instances(graph: Graph, profile: ProfileSpec) -> None:

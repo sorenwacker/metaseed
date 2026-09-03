@@ -259,7 +259,21 @@ def test_model_rdf_carries_a_skeleton_instance_per_isa_level():
     stu = next(graph.subjects(RDF.type, JERM.Study))
     assay = next(graph.subjects(RDF.type, JERM.Assay))
     assert (inv, JERM.hasPart, stu) in graph
-    assert (stu, JERM.hasPart, assay) in graph
+
+    # SEEK's FAIR-DS reader reaches an Assay positionally, through
+    # Study -> ObservationUnit -> Sample -> Assay, so the skeleton chains those
+    # levels rather than linking Study straight to Assay. Walk the chain and
+    # confirm it ends at the Assay -- otherwise SEEK builds no Assay Extended
+    # Metadata Type (the bug this encodes: it reported "no new EMTs").
+    def _child(node):
+        return next(graph.objects(node, JERM.hasPart), None)
+
+    obs = _child(stu)
+    sample = _child(obs)
+    assert (obs, RDF.type, JERM.ObservationUnit) in graph
+    assert (sample, RDF.type, JERM.Sample) in graph
+    assert _child(sample) == assay, "the Assay must be reachable via obs-unit -> sample"
+
     for node in (inv, stu, assay):
         assert (node, SCHEMA.identifier, None) in graph
         assert (node, SCHEMA.title, None) in graph
@@ -267,5 +281,8 @@ def test_model_rdf_carries_a_skeleton_instance_per_isa_level():
     assert (stu, SCHEMA.growth_facility, None) in graph
     assert (assay, SCHEMA.platform, None) in graph
     assert (inv, SCHEMA.growth_facility, None) not in graph
+    # the empty positional levels carry no non-core predicate, so SEEK makes no
+    # Extended Metadata Type for them
+    assert (obs, SCHEMA.growth_facility, None) not in graph
     # and the property definitions are still there for the attribute metadata
     assert (SCHEMA.platform, SCHEMA.valueRequired, Literal(True)) in graph

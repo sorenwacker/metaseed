@@ -3,6 +3,9 @@
 ## [Unreleased]
 
 ### Fixed
+- The SEEK Extended Metadata model TTL now chains all five FAIR-DS levels (Investigation → Study → ObservationUnit → Sample → Assay). SEEK's FAIR-DS reader reaches an Assay only through `observation_units → samples → assays`; the model skeleton linked Study straight to Assay, so uploading the TTL created no Extended Metadata Types (SEEK reported "no new EMTs"). SEEK's own reader now finds the Study and Assay candidates.
+
+### Fixed
 - The dataset graph redraws when an inline table cell changes, not only on a content swap. A cell edit posts with `hx-swap="none"` and fires no `htmx:afterSwap`, so a change to the field a node is labelled by only reached the graph on the next swap or a reload; graph.js now also refreshes on the `entityChanged` trigger.
 
 ## v0.48.0 (260829)
