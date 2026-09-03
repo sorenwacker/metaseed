@@ -116,7 +116,28 @@ def extended_metadata_for(
     type_title = config.extended_metadata
     if not type_title:
         return None
-    type_id = ctx.extended_metadata_type_ids.get(type_title)
+    # An Extended Metadata Type may reach SEEK two ways with two titles: created
+    # from a JSON file under the profile's own name, or created by uploading the
+    # model TTL, which SEEK titles "FDS <Level> - <profile> <version>". Accept
+    # either, so the documented TTL admin flow works without renaming.
+    from metaseed.seek.roles import entity_jerm_class, fair_ds_extended_metadata_title
+
+    level = entity_jerm_class(node.entity_type, config.role, entity.ontology_term)
+    candidate_titles = [type_title]
+    if level:
+        candidate_titles.append(
+            fair_ds_extended_metadata_title(
+                level, ctx.profile.name, ctx.profile.version
+            )
+        )
+    type_id = next(
+        (
+            ctx.extended_metadata_type_ids[t]
+            for t in candidate_titles
+            if t in ctx.extended_metadata_type_ids
+        ),
+        None,
+    )
     if type_id is None:
         ctx.result.errors.append(
             (

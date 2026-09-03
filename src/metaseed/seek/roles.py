@@ -178,3 +178,25 @@ def sample_role_entities(profile: ProfileSpec) -> set[str]:
         if entity_jerm_class(name, role, entity.ontology_term) == SAMPLE_CLASS:
             result.add(name)
     return result
+
+
+def fair_ds_package_name(name: str, version: str) -> str:
+    """The FAIR Data Station package name metaseed stamps on each ISA level.
+
+    SEEK titles a FAIR-DS-imported Extended Metadata Type after this package
+    name, so it names the model: ``"<profile name> <version>"``.
+    """
+    return f"{name} {version}"
+
+
+def fair_ds_extended_metadata_title(jerm_level: str, name: str, version: str) -> str:
+    """The title SEEK gives a FAIR-DS-imported Extended Metadata Type for a level.
+
+    SEEK builds it as ``"FDS <humanized supported_type> - <packageName>"``; the
+    supported type is the JERM level (Investigation, Study, Assay), which
+    humanizes to itself. The sync looks Extended Metadata Types up by this title
+    so a type created by uploading the model TTL is found without a manual
+    rename -- the whole reason the sync and the TTL must derive it from one
+    place. See ``tests/test_seek/test_extended_metadata_title_agrees.py``.
+    """
+    return f"FDS {jerm_level} - {fair_ds_package_name(name, version)}"

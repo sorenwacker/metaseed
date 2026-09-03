@@ -48,6 +48,7 @@ from metaseed.seek.naming import property_uri
 from metaseed.seek.roles import JERM_CLASSES as _JERM
 from metaseed.seek.roles import (
     entity_jerm_class,
+    fair_ds_package_name,
     role_from_annotation,
     unmapped_entities,
 )
@@ -180,7 +181,13 @@ def _emit_skeleton_instances(graph: Graph, profile: ProfileSpec) -> None:
         # falling back to a random UUID when packageName is absent. Name it for
         # the model so the title reads e.g. "FDS Study - cropxr-phenotyping 1.2"
         # and stays stable across re-uploads instead of a fresh UUID each time.
-        graph.add((uri, FAIR.packageName, Literal(f"{profile.name} {profile.version}")))
+        graph.add(
+            (
+                uri,
+                FAIR.packageName,
+                Literal(fair_ds_package_name(profile.name, profile.version)),
+            )
+        )
         if parent is not None:
             graph.add((parent, JERM.hasPart, uri))
         filler = by_level.get(level)

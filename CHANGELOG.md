@@ -3,6 +3,9 @@
 ## [Unreleased]
 
 ### Fixed
+- The SEEK sync now finds an Extended Metadata Type created by uploading the model TTL. SEEK titles such a type `FDS <Level> - <profile> <version>`, but the sync looked it up only by the profile's declared name, so a push reported "no Extended Metadata Type titled ..." and the Study/Assay metadata did not attach. Both sides derive the title from one shared function now, gated by a test so they cannot drift.
+
+### Fixed
 - The SEEK Extended Metadata TTL names each ISA level with the model's name and version (`fair:packageName`), so SEEK titles the Extended Metadata Types `FDS Study - <name> <version>` rather than `FDS Study - <random uuid>`, stable across re-uploads.
 - The SEEK Extended Metadata model TTL now chains all five FAIR-DS levels (Investigation → Study → ObservationUnit → Sample → Assay). SEEK's FAIR-DS reader reaches an Assay only through `observation_units → samples → assays`; the model skeleton linked Study straight to Assay, so uploading the TTL created no Extended Metadata Types (SEEK reported "no new EMTs"). SEEK's own reader now finds the Study and Assay candidates.
 
