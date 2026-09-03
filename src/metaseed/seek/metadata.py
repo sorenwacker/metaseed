@@ -92,6 +92,13 @@ def _metadata_target(
         nested = attributes_of(nested_type) if nested_type is not None else {}
         if inner in nested:
             return nested_attribute, inner, nested[inner]
+        # No nested type to place it in -- SEEK's FAIR Data Station TTL import
+        # builds only flat Extended Metadata Types, so a type set up that way
+        # carries the grouped fields under their full names (``site_latitude``)
+        # rather than in a nested ``location``. Fall back to the flat attribute
+        # so those setups still receive the value.
+        if name in attributes:
+            return None, name, attributes[name]
         return None
     if name in attributes:
         return None, name, attributes[name]

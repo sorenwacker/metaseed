@@ -153,6 +153,30 @@ def test_study_values_land_in_the_type_with_the_nested_group() -> None:
     }
 
 
+def test_grouped_fields_fall_back_to_flat_when_the_type_has_no_nested_group() -> None:
+    """SEEK's FAIR-DS TTL import builds only flat Extended Metadata Types, so a
+    type set up that way carries ``site_latitude``/``site_country`` directly, not
+    a nested ``location``. The sync must place the grouped fields flat there
+    rather than reporting them missing (the "no attribute for site_*" failure)."""
+    seek = _seek()
+    # A flat type, as the model-TTL upload produces: no nested "location", the
+    # grouped fields present under their full names.
+    seek.emt_attributes["19"] = {
+        "study_id": (None, "String"),
+        "study_start_date": (None, "String"),
+        "site_latitude": (None, "String"),
+        "site_country": (None, "String"),
+    }
+    result = sync_dataset_to_seek(seek, _dataset(), project_id="1")
+    assert not result.errors, result.errors
+    (study,) = _of_kind(seek, "study")
+    _type_id, data = study["extended_metadata"]
+    assert data.get("site_latitude") == "51.98"
+    assert data.get("site_country") == "Netherlands"
+    assert "location" not in data
+    assert not any("site_" in msg for _, msg in result.notes), result.notes
+
+
 def test_a_field_the_type_lacks_is_reported_not_dropped_silently() -> None:
     seek = _seek()
     result = sync_dataset_to_seek(seek, _dataset(), project_id="1")

@@ -3,6 +3,9 @@
 ## [Unreleased]
 
 ### Fixed
+- The SEEK sync places a grouped field flat when the Extended Metadata Type has no nested type for its group. SEEK's FAIR-DS TTL import builds only flat types, so an EMT set up that way carries `site_latitude`/`site_country` directly rather than in a nested `location`; the sync now sends them flat instead of reporting "no attribute for site_*".
+
+### Fixed
 - The SEEK sync now finds an Extended Metadata Type created by uploading the model TTL. SEEK titles such a type `FDS <Level> - <profile> <version>`, but the sync looked it up only by the profile's declared name, so a push reported "no Extended Metadata Type titled ..." and the Study/Assay metadata did not attach. Both sides derive the title from one shared function now, gated by a test so they cannot drift.
 
 ### Fixed
