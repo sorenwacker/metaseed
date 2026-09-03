@@ -14,7 +14,13 @@ from rdflib import RDF, Graph, Namespace
 
 from metaseed.seek.fairds import to_fair_data_station_model_rdf
 from metaseed.seek.roles import fair_ds_extended_metadata_title
-from metaseed.specs.loader import SpecLoader
+from metaseed.specs.schema import (
+    EntityDefSpec,
+    FieldSpec,
+    FieldType,
+    ProfileSpec,
+    SeekEntityConfig,
+)
 
 JERM = Namespace("http://jermontology.org/ontology/JERMOntology#")
 SCHEMA = Namespace("http://schema.org/")
@@ -35,8 +41,46 @@ def _seek_title_from_ttl(ttl: str, jerm_level: str) -> str:
     return f"FDS {jerm_level} - {package}"
 
 
+def _seek_role_profile() -> ProfileSpec:
+    """A minimal profile whose Study and Assay carry SEEK roles.
+
+    Built in memory rather than loaded from a template-bound profile, so the
+    gate does not depend on a profile that only exists under a user's data dir
+    (the ``builtin_specs`` hazard) and runs the same on CI as locally.
+    """
+    return ProfileSpec(
+        name="fds-title-demo",
+        version="1.2",
+        root_entity="Investigation",
+        entities={
+            "Investigation": EntityDefSpec(
+                seek=SeekEntityConfig(role="Investigation"),
+                fields=[
+                    FieldSpec(name="title", type=FieldType.STRING),
+                    FieldSpec(name="studies", type=FieldType.LIST, items="Study"),
+                ],
+            ),
+            "Study": EntityDefSpec(
+                seek=SeekEntityConfig(role="Study"),
+                fields=[
+                    FieldSpec(name="title", type=FieldType.STRING),
+                    FieldSpec(name="growth_facility", type=FieldType.STRING),
+                    FieldSpec(name="assays", type=FieldType.LIST, items="Assay"),
+                ],
+            ),
+            "Assay": EntityDefSpec(
+                seek=SeekEntityConfig(role="Assay"),
+                fields=[
+                    FieldSpec(name="title", type=FieldType.STRING),
+                    FieldSpec(name="platform", type=FieldType.STRING, required=True),
+                ],
+            ),
+        },
+    )
+
+
 def test_the_sync_lookup_title_matches_what_seek_creates_from_the_ttl() -> None:
-    profile = SpecLoader().load_profile(version="1.2", profile="cropxr-phenotyping")
+    profile = _seek_role_profile()
     ttl = to_fair_data_station_model_rdf(profile)
     for level in ("Study", "Assay"):
         seek_title = _seek_title_from_ttl(ttl, level)
