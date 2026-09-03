@@ -183,6 +183,18 @@ def build_workbook_from_facade(facade: Any) -> Workbook:
     """
     entities_by_type = collect_rows_by_type(facade)
 
+    # Children live on their own sheet, linked by ``_parent``; a parent's own
+    # copy of its nested list is emptied by the flat serialization. So count the
+    # children that name each parent, keyed by (child type, parent identifier) --
+    # reading the emptied list instead reported 0 for every parent.
+    child_counts: dict[tuple[str, str], int] = {}
+    for child_type, child_rows in entities_by_type.items():
+        for child_row in child_rows:
+            parent_id = child_row.get("_parent")
+            if parent_id:
+                key = (child_type, str(parent_id))
+                child_counts[key] = child_counts.get(key, 0) + 1
+
     wb = Workbook()
     wb.remove(wb.active)
 
@@ -198,7 +210,7 @@ def build_workbook_from_facade(facade: Any) -> Workbook:
 
         ws = wb.create_sheet(entity_type)
         sheets[entity_type] = ws
-        nested_fields = set(helper.nested_fields.keys())
+        nested_types = helper.nested_fields  # field name -> contained entity type
         columns = [*helper.all_fields, "_parent"]
         columns_by_entity[entity_type] = columns
         fields_by_entity[entity_type] = _field_specs(facade, entity_type)
@@ -207,10 +219,13 @@ def build_workbook_from_facade(facade: Any) -> Workbook:
 
         entities = entities_by_type.get(entity_type, [])
         for row_offset, entity_data in enumerate(entities, start=2):
+            parent_id = _identifier_of(facade, entity_type, entity_data)
             for col_offset, col in enumerate(columns, start=1):
-                value = _format_cell_value(
-                    entity_data.get(col, ""), col in nested_fields
-                )
+                if col in nested_types:
+                    # How many children of this type hang from this row.
+                    value: object = child_counts.get((nested_types[col], parent_id), 0)
+                else:
+                    value = _format_cell_value(entity_data.get(col, ""), False)
                 value = _escape_formula(value)
                 cell = ws.cell(
                     row=row_offset,
