@@ -92,10 +92,19 @@ def _contact_by_role(contacts: list[dict[str, Any]], role: str) -> dict[str, Any
 
 
 def _mtd(key: str, value: Any) -> str | None:
-    """Build an ``MTD`` line, or ``None`` when ``value`` is empty."""
+    """Build an ``MTD`` line, or ``None`` when ``value`` is empty.
+
+    Whitespace inside the value is collapsed to single spaces. The file is
+    line-based and tab-separated with no continuation syntax, so a newline would
+    split the record into a line that is not a valid one, and a tab would invent
+    a column. An abstract containing either is ordinary, not exotic.
+    """
     if value in (None, "", [], {}):
         return None
-    return f"MTD\t{key}\t{value}"
+    text = " ".join(str(value).split())
+    if not text:
+        return None
+    return f"MTD\t{key}\t{text}"
 
 
 def _metadata_lines(dataset: dict[str, Any]) -> list[str]:
@@ -135,6 +144,11 @@ def _metadata_lines(dataset: dict[str, Any]) -> list[str]:
         candidates.append(_mtd("instrument", instrument.get("name")))
     for modification in dataset.get("modifications") or []:
         candidates.append(_mtd("modification", modification.get("name")))
+    # A dataset's publication was held on the Dataset and never written, so a
+    # published submission lost its own citation.
+    for publication in dataset.get("publications") or []:
+        candidates.append(_mtd("pubmed_id", publication.get("pubmed_id")))
+        candidates.append(_mtd("doi", publication.get("doi")))
 
     return [line for line in candidates if line is not None]
 
@@ -159,6 +173,21 @@ def _file_lines(dataset: dict[str, Any]) -> list[str]:
 _NA = "not available"
 # Fixed technology-type term for MS proteomics (PSI-MS wording used by SDRF).
 _TECHNOLOGY_TYPE = "proteomic profiling by mass spectrometry"
+# The value SDRF-Proteomics gives for one measurement of one sample, unfractionated.
+_ONE = "1"
+#: Data-file columns SDRF marks REQUIRED, in the order its own example lays them
+#: out. The profile models the instrument and the file name; for the rest it has
+#: no field, and the specification's answer to a mandatory column with an unknown
+#: value is ``not available`` -- dropping the column instead fails validation.
+_REQUIRED_FILE_COLUMNS: tuple[str, ...] = (
+    "comment[proteomics data acquisition method]",
+    "comment[label]",
+    "comment[instrument]",
+    "comment[cleavage agent details]",
+    "comment[fraction identifier]",
+    "comment[technical replicate]",
+    "comment[data file]",
+)
 
 
 def _characteristic_columns(samples: list[dict[str, Any]]) -> list[str]:
@@ -235,10 +264,14 @@ def to_pride_sdrf(client: MetaseedClient) -> dict[str, str]:
     instrument = str(instruments[0].get("name")) if instruments else _NA
 
     char_cols = _characteristic_columns(samples)
+    # Sample metadata first, then data-file metadata: the column order the
+    # specification sets out.
     header = (
         ["source name"]
         + [f"characteristics[{c}]" for c in char_cols]
-        + ["assay name", "technology type", "comment[data file]", "comment[instrument]"]
+        + ["characteristics[biological replicate]"]
+        + ["assay name", "technology type"]
+        + list(_REQUIRED_FILE_COLUMNS)
     )
 
     rows = [header]
@@ -255,14 +288,22 @@ def to_pride_sdrf(client: MetaseedClient) -> dict[str, str]:
                 if data_file and data_file.get("filename")
                 else _NA
             )
+            file_values = {
+                "comment[instrument]": instrument,
+                "comment[data file]": data_name,
+                # One acquisition of one sample, unfractionated: the values the
+                # specification names when nothing is replicated or fractionated.
+                "comment[fraction identifier]": _ONE,
+                "comment[technical replicate]": _ONE,
+            }
             rows.append(
                 [
                     str(sample.get("name") or _NA),
                     *chars,
+                    _ONE,
                     f"run {assay_index}",
                     _TECHNOLOGY_TYPE,
-                    data_name,
-                    instrument,
+                    *(file_values.get(c, _NA) for c in _REQUIRED_FILE_COLUMNS),
                 ]
             )
 
