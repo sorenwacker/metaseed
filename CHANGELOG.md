@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Fixed
+- **The ENA export no longer drops most of the dataset.** It handled five of the profile's eleven entity types, so exporting the shipped example silently lost 55 of its 89 entities: every `SampleAttribute`, `ExperimentAttribute`, `RunAttribute` and `AnalysisAttribute`, both `ProjectLink`s, and the `Analysis`. Sample attributes are where an ENA checklist's mandatory fields live, so the `SAMPLE_SET` could not have been submitted. Attributes now become `TAG`/`VALUE`/`UNITS` under the object that owns them (read from the entity tree, since a flat grouping by type cannot say which sample an attribute belongs to), `ProjectLink`s become `STUDY_LINKS`, and an `Analysis` becomes `analysis.xml`.
+- The ENA export writes `submission.xml`, the `SUBMISSION` naming an `ADD` action per document. Webin acts on it; the content documents alone do nothing. No `HOLD` is written — the profile models no release date, and a default would either publish early or embargo silently.
+- An ENA experiment with no `design_description` produced XML that ENA's `SRA.experiment` schema rejects: `DESIGN_DESCRIPTION` is mandatory and must be `DESIGN`'s first child, but it was omitted when empty, leaving `SAMPLE_DESCRIPTOR` in first position. Five of the six experiments in the shipped example were affected. Every emitted document also carries an XML declaration, and all six now validate against ENA's official SRA schemas.
+
 ## v0.49.0 (260903)
 
 ### Fixed

@@ -21,7 +21,16 @@ def _dataset():
 def test_export_produces_well_formed_submission_documents():
     docs = to_ena_xml(_dataset())
 
-    assert set(docs) == {"study.xml", "sample.xml", "experiment.xml", "run.xml"}
+    # submission.xml always accompanies the content documents: Webin acts on the
+    # SUBMISSION, and the rest do nothing without it. This fixture has no
+    # Analysis, so no analysis.xml.
+    assert set(docs) == {
+        "study.xml",
+        "sample.xml",
+        "experiment.xml",
+        "run.xml",
+        "submission.xml",
+    }
     # every document must be parseable XML
     roots = {name: ET.fromstring(xml) for name, xml in docs.items()}
     assert roots["study.xml"].tag == "STUDY_SET"
@@ -84,8 +93,12 @@ def test_ena_export_validates_against_official_sra_xsd():
     for doc, xsd in [
         ("study.xml", "SRA.study.xsd"),
         ("sample.xml", "SRA.sample.xsd"),
+        ("experiment.xml", "SRA.experiment.xsd"),
         ("run.xml", "SRA.run.xsd"),
+        ("submission.xml", "SRA.submission.xsd"),
     ]:
+        if doc not in docs:
+            continue
         schema = xmlschema.XMLSchema(base + xsd, base_url=base)
         schema.validate(docs[doc])  # raises XMLSchemaValidationError if invalid
 
@@ -101,19 +114,30 @@ class TestTagNamesAreAlwaysWellFormed:
     """
 
     def test_a_spaced_platform_still_parses(self):
-        import xml.etree.ElementTree as ET
+        from metaseed import MetaseedClient
 
-        from metaseed.ena.export import _experiment_set
-
-        xml = _experiment_set(
-            [
-                {
-                    "alias": "E1",
-                    "platform": "Illumina HiSeq",
-                    "library_layout": "paired end",
-                }
-            ]
+        client = MetaseedClient("ena", "1.0")
+        study = client.create_entity(
+            "Study", {"alias": "S1", "title": "t"}, skip_validation=True
+        )
+        client.create_entity(
+            "Experiment",
+            {
+                "alias": "E1",
+                "platform": "Illumina HiSeq",
+                "library_layout": "paired end",
+            },
+            parent_id=study.id,
+            skip_validation=True,
         )
 
-        parsed = ET.fromstring(xml)
-        assert parsed is not None
+        parsed = ET.fromstring(to_ena_xml(client)["experiment.xml"])
+
+        # The spaced draft value became one well-formed element name.
+        assert parsed.find("EXPERIMENT/PLATFORM/ILLUMINA_HISEQ") is not None
+        assert (
+            parsed.find(
+                "EXPERIMENT/DESIGN/LIBRARY_DESCRIPTOR/LIBRARY_LAYOUT/PAIRED_END"
+            )
+            is not None
+        )
