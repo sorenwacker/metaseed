@@ -724,15 +724,24 @@ document.addEventListener('DOMContentLoaded', function() {
 window.renderGraphData = renderGraphData;
 window.loadGraph = loadGraph;
 
-// Refresh graph after entity operations (if graph is visible)
-document.addEventListener('htmx:afterSwap', function(e) {
+// Refresh the graph after an entity operation, if the graph is visible.
+// Debounced so a burst of swaps redraws once.
+function scheduleGraphRefresh() {
     var graphContainer = document.getElementById('graph-container');
-    if (graphContainer && !graphContainer.classList.contains('hidden')) {
-        if (window.graphRefreshTimeout) {
-            clearTimeout(window.graphRefreshTimeout);
-        }
-        window.graphRefreshTimeout = setTimeout(function() {
-            loadGraph();
-        }, 100);
+    if (!graphContainer || graphContainer.classList.contains('hidden')) return;
+    if (window.graphRefreshTimeout) {
+        clearTimeout(window.graphRefreshTimeout);
     }
-});
+    window.graphRefreshTimeout = setTimeout(function() {
+        loadGraph();
+    }, 100);
+}
+
+// A content swap (add row, delete, open an entity) redraws the graph.
+document.addEventListener('htmx:afterSwap', scheduleGraphRefresh);
+
+// An inline cell edit posts with hx-swap="none" and so fires no afterSwap; it
+// signals its change with the entityChanged trigger instead. Without this a
+// change to the field a node is labelled by only reached the graph on the next
+// swap or a full reload.
+document.addEventListener('entityChanged', scheduleGraphRefresh);

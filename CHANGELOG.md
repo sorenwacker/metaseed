@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Fixed
+- The dataset graph redraws when an inline table cell changes, not only on a content swap. A cell edit posts with `hx-swap="none"` and fires no `htmx:afterSwap`, so a change to the field a node is labelled by only reached the graph on the next swap or a reload; graph.js now also refreshes on the `entityChanged` trigger.
+
 ## v0.48.0 (260829)
 
 ### Fixed

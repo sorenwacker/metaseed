@@ -44,3 +44,14 @@ def test_the_guide_lists_the_ids_the_script_looks_up() -> None:
 def test_the_required_element_is_documented() -> None:
     """`graph-view` is the one element without which nothing draws."""
     assert "graph-view" in _documented_ids()
+
+
+def test_the_graph_refreshes_on_an_inline_cell_edit() -> None:
+    """A cell edit posts with hx-swap="none" and fires only the entityChanged
+    trigger, no htmx:afterSwap. graph.js must listen to entityChanged as well,
+    or a change to a node's label field only reached the graph on reload."""
+    script = _SCRIPT.read_text()
+    assert "addEventListener('entityChanged'" in script, (
+        "graph.js refreshes only on htmx:afterSwap; an inline cell edit (hx-swap="
+        '"none") never triggers that, so a label-field change did not redraw the graph'
+    )
