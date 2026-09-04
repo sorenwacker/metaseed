@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Added
+- **ENA Webin credentials can be stored and checked.** The `ena` adapter declares a `webin_username` and a secret `webin_password`, so the Plugins page offers them like any other adapter's settings, and a connection check answers whether they authenticate before a submission is attempted. The check runs against ENA's **test** service — the account is the same one production uses, so a token from the test service proves the credentials while confirming a password never touches the live archive. An outage is reported as an outage rather than as a rejected password.
+
 ### Fixed
 - **The ISA-Tab investigation file carries every label its sections define.** ISA-Tab states each section "MUST contain the following labels" and the specification's own reference file writes them all, many empty; the writer emitted a subset. Every ontology term now travels as its triplet (the term, `Term Accession Number`, `Term Source REF` — in that order for the investigation file, and source-then-accession for a table file), and the study, protocol, assay, factor, publication and contact sections gained the labels they were missing, including `Study Submission Date`, `Study Public Release Date`, `Study Protocol URI` and the person's mid initials, phone, fax and address.
 - A protocol's parameters reached no output. `ProtocolParameter` entities are now written to `Study Protocol Parameters Name` against the protocol that owns them, semicolon-separated, so the record of what a protocol was run with survives the export.
