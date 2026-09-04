@@ -167,6 +167,15 @@ ADAPTERS: tuple[AdapterInfo, ...] = (
         direction="import",
         extra="ena",
         requires=("httpx",),
+        # Submitting to ENA needs a Webin account. The credentials are stored so
+        # the connection check can answer whether they work -- checked against
+        # ENA's test service, so confirming a password never reaches the live
+        # archive.
+        config_fields=(
+            ConfigField("webin_username", "Webin username", placeholder="Webin-12345"),
+            ConfigField("webin_password", "Webin password", secret=True),
+        ),
+        check_ref="metaseed.ena.connection:check_connection",
         actions=(
             Action("export", "ena", "ENA XML", "metaseed.ena.export:to_ena_xml"),
             Action(
