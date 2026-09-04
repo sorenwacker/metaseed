@@ -84,15 +84,66 @@ def assay_filename(assay: dict[str, Any]) -> str:
     return f"a_{_slug(str(ident))}.txt"
 
 
-def _ontology_source_section() -> list[str]:
-    """Emit the ONTOLOGY SOURCE REFERENCE section (declared but unpopulated)."""
+def _term_source(accession: Any) -> str:
+    """The ontology an accession comes from, or ``""`` when it names none.
+
+    ISA-Tab pairs every accession with the ``Term Source REF`` naming the
+    ontology it belongs to, and a reader resolves the accession through that
+    source. No ISA-shaped profile stores the source as its own field, but an
+    accession states it: ``PATO:0000461`` and the OBO PURL
+    ``http://purl.obolibrary.org/obo/OBI_0500020`` both name their ontology in
+    the identifier. Reading it back is what lets the export declare the sources
+    it actually uses rather than shipping an empty section.
+    """
+    if accession in (None, ""):
+        return ""
+    tail = str(accession).rstrip("/").rsplit("/", 1)[-1]
+    for separator in (":", "_"):
+        prefix, found, rest = tail.partition(separator)
+        if found and rest and prefix.isalpha():
+            return prefix.upper()
+    return ""
+
+
+def _ontology_source_section(sources: list[str]) -> list[str]:
+    """Emit ONTOLOGY SOURCE REFERENCE, declaring the sources the export uses.
+
+    A ``Term Source REF`` elsewhere in the archive SHOULD match a name declared
+    here, so the section lists every ontology the exported accessions name. The
+    file, version and description are left blank: the profile records the
+    accession, not the ontology's release.
+    """
     return [
         "ONTOLOGY SOURCE REFERENCE",
-        _line("Term Source Name", []),
-        _line("Term Source File", []),
-        _line("Term Source Version", []),
-        _line("Term Source Description", []),
+        _line("Term Source Name", list(sources)),
+        _line("Term Source File", ["" for _ in sources]),
+        _line("Term Source Version", ["" for _ in sources]),
+        _line("Term Source Description", ["" for _ in sources]),
     ]
+
+
+def _annotated(label: str, values: list[Any], accessions: list[Any]) -> list[str]:
+    """A term row followed by its ``Term Accession Number``/``Term Source REF``.
+
+    ISA-Tab represents an ontology annotation as three rows, and the
+    investigation file orders them term, accession, source (a table file orders
+    its columns the other way round -- source, then accession). The two
+    qualifying rows are written even when nothing fills them: the specification
+    requires the labels, and a reader that finds a term without them cannot tell
+    an un-annotated value from a missing one.
+    """
+    return [
+        _line(label, values),
+        _line(
+            f"{label} Term Accession Number", [_term_source_free(a) for a in accessions]
+        ),
+        _line(f"{label} Term Source REF", [_term_source(a) for a in accessions]),
+    ]
+
+
+def _term_source_free(accession: Any) -> str:
+    """The accession itself, as written."""
+    return "" if accession in (None, "") else str(accession)
 
 
 def _publication_section(
@@ -105,7 +156,11 @@ def _publication_section(
         _line(f"{prefix} Publication DOI", [p.get("doi") for p in pubs]),
         _line(f"{prefix} Publication Author List", [p.get("authors") for p in pubs]),
         _line(f"{prefix} Publication Title", [p.get("title") for p in pubs]),
-        _line(f"{prefix} Publication Status", [p.get("status") for p in pubs]),
+        *_annotated(
+            f"{prefix} Publication Status",
+            [p.get("status") for p in pubs],
+            [p.get("status_term_accession") for p in pubs],
+        ),
     ]
 
 
@@ -117,9 +172,17 @@ def _contacts_section(
         header,
         _line(f"{prefix} Person Last Name", [p.get("last_name") for p in people]),
         _line(f"{prefix} Person First Name", [p.get("first_name") for p in people]),
+        _line(f"{prefix} Person Mid Initials", [p.get("mid_initials") for p in people]),
         _line(f"{prefix} Person Email", [p.get("email") for p in people]),
+        _line(f"{prefix} Person Phone", [p.get("phone") for p in people]),
+        _line(f"{prefix} Person Fax", [p.get("fax") for p in people]),
+        _line(f"{prefix} Person Address", [p.get("address") for p in people]),
         _line(f"{prefix} Person Affiliation", [p.get("affiliation") for p in people]),
-        _line(f"{prefix} Person Roles", [p.get("roles") for p in people]),
+        *_annotated(
+            f"{prefix} Person Roles",
+            [p.get("roles") for p in people],
+            [p.get("roles_term_accession") for p in people],
+        ),
     ]
 
 
@@ -145,45 +208,118 @@ def _study_sections(
     protocols: list[dict[str, Any]],
     publications: list[dict[str, Any]],
     people: list[dict[str, Any]],
+    parameters_by_protocol: dict[str, list[dict[str, Any]]],
 ) -> list[str]:
     """Emit the per-study labeled sections of the investigation file."""
+    descriptors = study.get("study_design_descriptors") or []
     lines = [
         "STUDY",
         _line("Study Identifier", [study.get("identifier")]),
         _line("Study Title", [study.get("title")]),
         _line("Study Description", [study.get("description")]),
+        _line("Study Submission Date", [study.get("submission_date")]),
+        _line("Study Public Release Date", [study.get("public_release_date")]),
         # Consumers locate the study table through this field; without it the
         # emitted s_*.txt files are orphans and the archive is incomplete.
         _line("Study File Name", [study_filename(study)]),
         "STUDY DESIGN DESCRIPTORS",
-        _line("Study Design Type", study.get("study_design_descriptors") or []),
+        *_annotated("Study Design Type", descriptors, ["" for _ in descriptors]),
     ]
     lines += _publication_section("STUDY PUBLICATIONS", "Study", publications)
     lines += [
         "STUDY FACTORS",
         _line("Study Factor Name", [f.get("name") for f in factors]),
-        _line("Study Factor Type", [f.get("factor_type") for f in factors]),
+        *_annotated(
+            "Study Factor Type",
+            [f.get("factor_type") for f in factors],
+            [f.get("factor_type_term_accession") for f in factors],
+        ),
         "STUDY ASSAYS",
-        _line(
+        _line("Study Assay File Name", [assay_filename(a) for a in assays]),
+        *_annotated(
             "Study Assay Measurement Type",
             [a.get("measurement_type") for a in assays],
+            [a.get("measurement_type_term_accession") for a in assays],
         ),
-        _line(
+        *_annotated(
             "Study Assay Technology Type",
             [a.get("technology_type") for a in assays],
+            [a.get("technology_type_term_accession") for a in assays],
         ),
         _line(
             "Study Assay Technology Platform",
             [a.get("technology_platform") for a in assays],
         ),
-        _line("Study Assay File Name", [assay_filename(a) for a in assays]),
         "STUDY PROTOCOLS",
         _line("Study Protocol Name", [p.get("name") for p in protocols]),
-        _line("Study Protocol Type", [p.get("protocol_type") for p in protocols]),
+        *_annotated(
+            "Study Protocol Type",
+            [p.get("protocol_type") for p in protocols],
+            [p.get("protocol_type_term_accession") for p in protocols],
+        ),
         _line("Study Protocol Description", [p.get("description") for p in protocols]),
+        _line("Study Protocol URI", [p.get("uri") for p in protocols]),
+        _line("Study Protocol Version", [p.get("version") for p in protocols]),
+        # A protocol's parameters are its own entities; ISA-Tab packs each
+        # protocol's into one semicolon-separated cell. Dropping them lost the
+        # only record of what the protocol was run with.
+        *_annotated(
+            "Study Protocol Parameters Name",
+            [
+                _joined(parameters_by_protocol.get(str(p.get("_node_id")), []), "name")
+                for p in protocols
+            ],
+            ["" for _ in protocols],
+        ),
+        _line("Study Protocol Components Name", ["" for _ in protocols]),
+        *_annotated(
+            "Study Protocol Components Type",
+            ["" for _ in protocols],
+            ["" for _ in protocols],
+        ),
     ]
     lines += _contacts_section("STUDY CONTACTS", "Study", people)
     return lines
+
+
+def _joined(items: list[dict[str, Any]], field: str) -> str:
+    """The ``field`` of each item, semicolon-separated as ISA-Tab packs them."""
+    return ";".join(str(item.get(field, "")) for item in items)
+
+
+def _sources_used(by_type: dict[str, list[dict[str, Any]]]) -> list[str]:
+    """Every ontology named by an accession in the dataset, first-seen order."""
+    seen: list[str] = []
+    for entity_type in ("Sample", "Characteristic", "FactorValue"):
+        for entity in by_type.get(entity_type, []):
+            term = entity.get("organism_term")
+            accessions = [entity.get("term_accession")]
+            if isinstance(term, dict):
+                accessions.append(term.get("term_accession"))
+            for accession in accessions:
+                source = _term_source(accession)
+                if source and source not in seen:
+                    seen.append(source)
+    return seen
+
+
+#: The protocol type ISA-Tab requires the study table's ``Protocol REF`` to name.
+_SAMPLE_COLLECTION = "sample collection"
+
+
+def sample_collection_protocol(protocols: list[dict[str, Any]]) -> str:
+    """The name of the study's sample-collection protocol, or ``""``.
+
+    ISA-Tab links a Source to a Sample through a process named in a
+    ``Protocol REF`` column, and that protocol MUST be of type ``sample
+    collection``. Matching on the declared type rather than position keeps the
+    reference honest when a study declares several protocols.
+    """
+    for protocol in protocols:
+        for field in ("protocol_type", "name"):
+            if _SAMPLE_COLLECTION in str(protocol.get(field, "")).lower():
+                return str(protocol.get("name") or "")
+    return ""
 
 
 #: What each qualifier kind is named by, and which field carries its name.
@@ -252,6 +388,7 @@ def _sample_qualifiers(
 def _study_file(
     samples: list[dict[str, Any]],
     children_by_sample: dict[str, list[dict[str, Any]]] | None = None,
+    protocol_ref: str = "",
 ) -> str:
     """Build a study (``s_*.txt``) file: header row plus one row per Sample.
 
@@ -277,7 +414,10 @@ def _study_file(
             mapping[col] = (value, accession)
         per_sample.append(mapping)
 
-    header = ["Source Name", "Sample Name"]
+    # ISA-Tab links the Source to the Sample through a process, named in a
+    # Protocol REF column between them; without it the two materials are not
+    # connected and the table states no provenance.
+    header = ["Source Name", "Protocol REF", "Sample Name"]
     for kind, category in columns:
         header.append(f"{kind}[{category}]")
         if has_accession[(kind, category)]:
@@ -286,12 +426,15 @@ def _study_file(
     rows = [TAB.join(header)]
     for sample, mapping in zip(samples, per_sample, strict=True):
         name = sample.get("name") or ""
-        cells = [str(name), str(name)]
+        cells = [str(name), protocol_ref, str(name)]
         for col in columns:
             value, accession = mapping.get(col, ("", ""))
             cells.append(value)
             if has_accession[col]:
-                cells += ["", accession]
+                # The source the accession names, not a blank: the column was
+                # always written empty, so a reader had an accession it could
+                # not resolve to an ontology.
+                cells += [_term_source(accession), accession]
         rows.append(TAB.join(cells))
     return "\n".join(rows) + "\n"
 
@@ -382,7 +525,16 @@ def to_isatab(client: MetaseedClient) -> dict[str, str]:
     def of(items: list[dict[str, Any]], study_id: str | None) -> list[dict[str, Any]]:
         return [e for e in items if owner.get(str(e.get("_node_id"))) == study_id]
 
-    lines = _ontology_source_section()
+    # A ProtocolParameter belongs to the Protocol it hangs from, so its values
+    # reach that protocol's column rather than every protocol's.
+    parents = _direct_parent_map(client)
+    parameters_by_protocol: dict[str, list[dict[str, Any]]] = {}
+    for parameter in by_type.get("ProtocolParameter", []):
+        protocol_id = parents.get(str(parameter.get("_node_id")))
+        if protocol_id:
+            parameters_by_protocol.setdefault(protocol_id, []).append(parameter)
+
+    lines = _ontology_source_section(_sources_used(by_type))
     investigation = investigations[0] if investigations else {}
     lines += _investigation_section(investigation)
     lines += _publication_section(
@@ -401,6 +553,7 @@ def to_isatab(client: MetaseedClient) -> dict[str, str]:
             of(protocols, sid),
             of(publications, sid),
             of(people, sid),
+            parameters_by_protocol,
         )
 
     documents: dict[str, str] = {"i_Investigation.txt": "\n".join(lines) + "\n"}
@@ -417,7 +570,9 @@ def to_isatab(client: MetaseedClient) -> dict[str, str]:
 
     for study in studies:
         documents[study_filename(study)] = _study_file(
-            of(samples, study.get("_node_id")), children_by_sample
+            of(samples, study.get("_node_id")),
+            children_by_sample,
+            sample_collection_protocol(of(protocols, study.get("_node_id"))),
         )
     for assay in assays:
         assay_id = str(assay.get("_node_id"))
