@@ -92,6 +92,33 @@ cannot say which sample an attribute belongs to. `File` is nested under both
 `import_accession` and `to_ena_xml` therefore round-trip through the same
 profile: what the importer builds, the exporter emits.
 
+## Webin credentials
+
+Submitting to ENA needs a Webin account, so the `ena` adapter declares two
+settings — `webin_username` (the `Webin-NNNNN` account) and `webin_password`,
+marked secret so the Plugins page masks it. They are stored by the shared
+settings layer, in `settings.json` written with owner-only permissions.
+
+```python
+from metaseed.ena.connection import check_connection
+
+check_connection({"webin_username": "Webin-12345", "webin_password": "..."})
+# ConnectionCheck(ok=True, message="ENA accepted Webin-12345 on the test service.")
+```
+
+The check posts the credentials to ENA's Webin authentication endpoint, which
+returns a token for a valid account and `401` for anything else. It uses ENA's
+**test** service: the account is the same one production uses, so a token from
+the test service proves the credentials, and confirming a password never
+touches the live archive. A submission chooses its service separately and
+deliberately.
+
+An outage is reported as an outage rather than as a rejected password — someone
+else's downtime must not read as a wrong credential.
+
+Storing credentials on a **hub** is a different problem, because a hub holds
+other people's: there they are encrypted at rest rather than kept in a file.
+
 ## Testing
 
 The mapper is tested from a recorded `read_run` fixture; the client is tested
