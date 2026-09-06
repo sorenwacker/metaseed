@@ -32,7 +32,7 @@ def test_read_run_builds_the_request_and_parses_rows():
     assert len(rows) == 2
     assert "result=read_run" in captured["url"]
     assert "accession=PRJEB10000" in captured["url"]
-    assert "study_accession" in captured["url"]  # fields are requested
+    assert "fields=all" in captured["url"]  # every column ENA publishes
     assert "metaseed" in captured["user_agent"]  # EBI etiquette
 
 
