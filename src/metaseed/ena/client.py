@@ -1,8 +1,10 @@
 """HTTP client for the ENA Portal API.
 
 Fetches run-level metadata for an accession from the ENA Portal ``filereport``
-endpoint. Requires ``httpx`` (the ``metaseed[ena]`` extra). An ``httpx.Client``
-can be injected for hermetic testing.
+endpoint, asking for every column ENA publishes (``fields=all``) so one request
+carries the study, sample, experiment, run and file metadata. Requires ``httpx``
+(the ``metaseed[ena]`` extra). An ``httpx.Client`` can be injected for hermetic
+testing.
 """
 
 from __future__ import annotations
@@ -19,7 +21,6 @@ except (
     ) from exc
 
 from metaseed._http import request_json
-from metaseed.ena.mapper import READ_RUN_FIELDS
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -54,6 +55,10 @@ class EnaClient:
     def read_run(self, accession: str) -> list[dict[str, Any]]:
         """Return ENA ``read_run`` metadata rows for an accession.
 
+        Asks for ``fields=all``, so each row carries every column ENA publishes
+        for the run rather than a chosen subset. A column the ``ena`` profile
+        does not declare a field for still reaches the dataset, as an attribute.
+
         Args:
             accession: Any ENA accession resolvable to runs (study, sample,
                 experiment, or run).
@@ -64,7 +69,7 @@ class EnaClient:
         params: Mapping[str, str] = {
             "accession": accession,
             "result": "read_run",
-            "fields": ",".join(READ_RUN_FIELDS),
+            "fields": "all",  # every column ENA publishes for the run
             "format": "json",
             "limit": "0",  # no row cap
         }
