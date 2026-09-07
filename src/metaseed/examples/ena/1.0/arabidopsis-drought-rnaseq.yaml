@@ -191,7 +191,7 @@ experiments:
     runs:
       - alias: ERR-COL0-0H-REP1
         experiment_ref: ERX-COL0-0H-REP1
-        run_date: "2024-04-01"
+        run_date: 2024-04-01
         run_center: Plant Genomics Sequencing Facility
         files:
           - filename: COL0_0H_REP1_R1.fastq.gz
@@ -230,7 +230,7 @@ experiments:
     runs:
       - alias: ERR-COL0-0H-REP2
         experiment_ref: ERX-COL0-0H-REP2
-        run_date: "2024-04-01"
+        run_date: 2024-04-01
         files:
           - filename: COL0_0H_REP2_R1.fastq.gz
             filetype: fastq
@@ -266,7 +266,7 @@ experiments:
     runs:
       - alias: ERR-COL0-24H-REP1
         experiment_ref: ERX-COL0-24H-REP1
-        run_date: "2024-04-01"
+        run_date: 2024-04-01
         files:
           - filename: COL0_24H_REP1_R1.fastq.gz
             filetype: fastq
@@ -302,7 +302,7 @@ experiments:
     runs:
       - alias: ERR-COL0-72H-REP1
         experiment_ref: ERX-COL0-72H-REP1
-        run_date: "2024-04-01"
+        run_date: 2024-04-01
         files:
           - filename: COL0_72H_REP1_R1.fastq.gz
             filetype: fastq
@@ -338,7 +338,7 @@ experiments:
     runs:
       - alias: ERR-LER-0H-REP1
         experiment_ref: ERX-LER-0H-REP1
-        run_date: "2024-04-02"
+        run_date: 2024-04-02
         files:
           - filename: LER_0H_REP1_R1.fastq.gz
             filetype: fastq
@@ -374,7 +374,7 @@ experiments:
     runs:
       - alias: ERR-LER-72H-REP1
         experiment_ref: ERX-LER-72H-REP1
-        run_date: "2024-04-02"
+        run_date: 2024-04-02
         files:
           - filename: LER_72H_REP1_R1.fastq.gz
             filetype: fastq

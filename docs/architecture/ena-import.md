@@ -60,6 +60,16 @@ schema does not list is passed through unchanged rather than replaced by a
 guess, and one that cannot be read at all is left unset for `validate()` to
 report.
 
+The Portal reports every column as a string, so the six declared fields the
+profile does not type as a string are coerced on the way in: `taxon_id` and
+`insert_size` to integer, `insert_size_stddev` and the two `lat_lon` components
+to float, `environmental_sample` to boolean, and `run_date` to a date. ENA
+writes a run date either as `YYYY-MM-DD` or with a time part
+(`2010-02-01T00:00:00`); both are read, and the time is dropped because the
+profile declares a date. A value that cannot be read is left unset rather than
+written in the wrong type — a string in a date field survives the mapper but
+fails on export, where the SRA schema types the element.
+
 ### What one request cannot reach
 
 - **Analyses.** Assemblies and variant calls are a different Portal result

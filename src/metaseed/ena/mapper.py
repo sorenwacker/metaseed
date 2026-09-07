@@ -25,6 +25,7 @@ record that omits a field; call :meth:`MetaseedClient.validate` to report gaps.
 
 from __future__ import annotations
 
+import datetime as dt
 from itertools import zip_longest
 from typing import TYPE_CHECKING, Any
 
@@ -350,6 +351,22 @@ def _bool(value: Any) -> bool | None:
     return None
 
 
+def _date(value: Any) -> dt.date | None:
+    """Coerce an ENA date to ``date``, else None.
+
+    The Portal writes a run date either as ``YYYY-MM-DD`` or with a time part
+    (``2010-02-01T00:00:00``). Both are read; the time is dropped because the
+    profile declares a date. An unreadable value returns None rather than
+    leaving ENA's string in a date field, where it would pass the mapper and
+    fail at export against the SRA schema.
+    """
+    text = str(value).strip()
+    try:
+        return dt.datetime.fromisoformat(text).date()
+    except ValueError:
+        return None
+
+
 # Declared fields whose type is not a string.
 FIELD_COERCERS: Mapping[str, Any] = {
     "taxon_id": _int,
@@ -358,6 +375,7 @@ FIELD_COERCERS: Mapping[str, Any] = {
     "lat_lon_latitude": _float,
     "lat_lon_longitude": _float,
     "environmental_sample": _bool,
+    "run_date": _date,
 }
 
 

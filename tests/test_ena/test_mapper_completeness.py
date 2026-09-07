@@ -47,6 +47,7 @@ TYPED_COLUMN_VALUES = {
     "environmental_sample": "True",
     "nominal_length": "300",
     "nominal_sdev": "50.0",
+    "run_date": "2024-04-01",
 }
 
 
