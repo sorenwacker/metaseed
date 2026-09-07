@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.50.1 (260907)
+
+### Fixed
+- **The `mcp` bound admits only 1.x again, so a fresh install runs.** The bound had been widened to `<3`, which resolves to mcp 2.x on a clean environment; 2.x renamed `FastMCP` to `MCPServer` and removed `mcp.server.fastmcp`, so `metaseed.agent.mcp.server` raised `ModuleNotFoundError` on import and took `metaseed ui` down with it. Every test stayed green because the lockfile pinned 1.x — the resolver drift a lockfile cannot show. v0.50.0 was never published: the release's clean-environment smoke test caught this and skipped the publish step. Raising the bound again means migrating to the 2.x API first.
+
 ## v0.50.0 (260907)
 
 ### Fixed
