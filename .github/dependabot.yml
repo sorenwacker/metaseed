@@ -1,0 +1,65 @@
+# One update bot. Renovate was configured here but Dependabot was the bot
+# actually opening pull requests, so the grouping written down was never the
+# grouping in use and eleven ungrouped PRs accumulated over three months --
+# including a high-severity cryptography fix that sat for one. See
+# metaseed-hub#145.
+version: 2
+
+updates:
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:00"
+      timezone: "Europe/Amsterdam"
+    open-pull-requests-limit: 5
+    groups:
+      python-dependencies:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    ignore:
+      # A major bump of a package whose API this code imports directly is a
+      # migration, not an update, and in a PR list it looks like any other bump.
+      # mcp 2.x renamed FastMCP and removed mcp.server.fastmcp, which broke every
+      # fresh install while the locked suite stayed green; it reached main and
+      # failed the v0.50.0 release. These majors are done deliberately, by hand.
+      #
+      # Deliberately NOT a blanket major ignore: Dependabot's ignore rules
+      # suppress security updates too, and cryptography 49 -> 50 was itself a
+      # major that closed a high-severity advisory. Only the packages this code
+      # calls directly are listed, so a transitive security bump still arrives.
+      - dependency-name: "mcp"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "pydantic"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "pydantic-settings"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "fastapi"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "typer"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "uvicorn"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "pyyaml"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "jinja2"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "python-multipart"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "openpyxl"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "httpx"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:00"
+      timezone: "Europe/Amsterdam"
+    open-pull-requests-limit: 5
+    groups:
+      github-actions:
+        patterns: ["*"]
