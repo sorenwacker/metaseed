@@ -12,6 +12,11 @@ survive the round trip.
 Nested list fields (a parent's embedded children) are skipped on import: the
 children arrive as rows on their own sheet, and the export flattens the list to
 a count that means nothing on the way back.
+
+A workbook written for someone to fill in carries ``<unique_id>``-style prompts
+where the values belong. Those are skipped too: storing the prompt would leave a
+Study titled ``<title>``, which is worse than one with no title because nothing
+downstream can tell it is missing.
 """
 
 from __future__ import annotations
@@ -30,6 +35,29 @@ if TYPE_CHECKING:
 
 #: The column carrying the parent's identifier, written by the export.
 PARENT_COLUMN = "_parent"
+
+
+def _is_placeholder(value: str) -> bool:
+    """Whether a cell holds a template's prompt rather than a value.
+
+    The brackets have to wrap the whole cell and nothing else inside may be
+    bracketed, so ``<title>`` is a prompt while markup like ``<em>x</em>`` and
+    prose like ``a < b`` remain data.
+
+    Args:
+        value: The cell's text.
+
+    Returns:
+        True if the cell is a prompt and should not be stored.
+    """
+    text = value.strip()
+    return (
+        len(text) > 2
+        and text.startswith("<")
+        and text.endswith(">")
+        and "<" not in text[1:-1]
+        and ">" not in text[1:-1]
+    )
 
 
 def _unescape_formula(value: str) -> str:
@@ -105,6 +133,10 @@ def workbook_to_payload(
                 if cell is None or cell == "" or not column:
                     continue
                 value = _unescape_formula(str(cell))
+                if _is_placeholder(value):
+                    # An unedited template row leaves `data` at just its
+                    # `_type`, which the row-level check below drops.
+                    continue
                 if column == PARENT_COLUMN:
                     data["_parent_unique_id"] = value
                 elif column in scalar_lists:

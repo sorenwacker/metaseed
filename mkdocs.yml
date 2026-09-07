@@ -124,6 +124,7 @@ nav:
       - PRIDE Import: architecture/pride-import.md
       - MetaboLights Import: architecture/metabolights-import.md
       - ISA-Tab Export: architecture/isatab-export.md
+      - Excel Round-Trip: architecture/excel-round-trip.md
   - API Reference:
       - MetaseedClient: api/client.md
       - CLI: api/cli.md
