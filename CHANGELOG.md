@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## v0.50.0 (260907)
 
 ### Fixed
 - **A dataset loaded from a nested document keeps the types its profile declares.** `DocumentLoader` stored every entity with validation skipped, so a value arrived as whatever its serialization could express and stayed that way: YAML quotes a date and the Excel export writes every cell as text on purpose, so `run_date` sat in a date field as the string `'2024-04-01'` and `taxon_id` as `'3702'`. That is the format of every shipped example and of every YAML the exporter writes. Nothing failed, because pydantic serializes the string anyway and only warns, which is why it survived; it surfaced at export, where a string in a date field is rejected by the receiving schema. The loader now validates first and falls back to the unvalidated path only when pydantic refuses, so an incomplete draft and a value that is not the declared type are still stored exactly as written, and `validate()` still reports both.
