@@ -20,6 +20,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Protocol
 
+from pydantic import ValidationError
+
 if TYPE_CHECKING:
     from pathlib import Path
 
@@ -65,6 +67,38 @@ def is_serialized(entities: list[Any]) -> bool:
     return any(isinstance(e, dict) and "_type" in e for e in entities)
 
 
+def _add_coercing(
+    sink: EntitySink,
+    entity_type: str,
+    data: dict[str, Any],
+    parent_id: str | None = None,
+) -> EntityNode:
+    """Store one entity, applying the profile's declared types where it can.
+
+    A nested document carries whatever its serialization could express: YAML
+    quotes a date, and a workbook writes every cell as text on purpose, so a
+    field the profile declares a date or an integer arrives as a string. Storing
+    it unvalidated kept that string in the typed field. Nothing failed, because
+    pydantic serializes it anyway and only warns -- it surfaced later, at export,
+    where a string in a date field is rejected by the receiving schema.
+
+    Validation is attempted first, so a well-formed entity gains the coercion the
+    profile already describes. Anything pydantic rejects falls back to the
+    unvalidated path this loader has always used: a document may hold an
+    incomplete entity, which the UI persists on purpose, and a value a person
+    typed that is not the declared type is still their input. Neither may cost
+    them the record, and ``validate()`` continues to report both.
+    """
+    try:
+        return sink.add_entity(
+            entity_type, data, parent_id=parent_id, skip_validation=False
+        )
+    except ValidationError:
+        return sink.add_entity(
+            entity_type, data, parent_id=parent_id, skip_validation=True
+        )
+
+
 class DocumentLoader:
     """Loads a nested document into an :class:`EntitySink`.
 
@@ -105,7 +139,7 @@ class DocumentLoader:
         if root_type is None:
             return 0
         stored, embedded = self._split_embedded(document, root_type)
-        node = self.sink.add_entity(root_type, stored, skip_validation=True)
+        node = _add_coercing(self.sink, root_type, stored)
         return 1 + self._load_children(embedded, node.id)
 
     def _split_embedded(
@@ -169,9 +203,7 @@ class DocumentLoader:
         loaded = 0
         for child_type, item in embedded:
             stored, nested = self._split_embedded(item, child_type)
-            child = self.sink.add_entity(
-                child_type, stored, parent_id=parent_id, skip_validation=True
-            )
+            child = _add_coercing(self.sink, child_type, stored, parent_id=parent_id)
             loaded += 1 + self._load_children(nested, child.id)
         return loaded
 

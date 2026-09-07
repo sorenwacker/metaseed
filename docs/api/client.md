@@ -116,6 +116,25 @@ This is useful for web forms where:
 - Fields are filled in over multiple sessions
 - Validation warnings are shown but don't block saving
 
+Loading a nested document (`load_nested`, `load_yaml`, and so the shipped
+examples and every YAML the exporter writes) is permissive in the same way, but
+it validates first and only falls back when pydantic refuses. A well-formed
+entity therefore gets the profile's declared types: `taxon_id: "3702"` is stored
+as the integer `3702`, and a quoted `run_date` as a `date`. This matters because
+a serialization cannot carry the type — YAML quotes a date, and the Excel export
+writes every cell as text on purpose, since Excel otherwise reads gene names as
+dates and strips leading zeros from identifiers.
+
+What pydantic refuses is stored as written, exactly as before:
+
+- an entity missing a required field, because the UI persists a draft on purpose
+- a value that is not the declared type, because `n/a` in an integer field is
+  what a person typed, and replacing it with nothing to satisfy a schema would
+  delete their input
+
+`validate()` reports both, so nothing is hidden and no entity is dropped. The
+difference is only that a value which *can* be read as its declared type now is.
+
 ### Read
 
 ```python
