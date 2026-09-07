@@ -1,17 +1,45 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:best-practices", "schedule:weekly"],
+  "extends": [
+    "config:best-practices",
+    "schedule:weekly"
+  ],
   "timezone": "Europe/Amsterdam",
-  "lockFileMaintenance": {"enabled": true, "extends": ["schedule:weekly"]},
+  "lockFileMaintenance": {
+    "enabled": true,
+    "extends": [
+      "schedule:weekly"
+    ]
+  },
   "packageRules": [
     {
       "description": "One reviewable PR per ecosystem per week, as before.",
-      "matchManagers": ["pep621", "uv"],
+      "matchManagers": [
+        "pep621",
+        "uv"
+      ],
       "groupName": "python dependencies"
     },
     {
-      "matchManagers": ["github-actions"],
+      "matchManagers": [
+        "github-actions"
+      ],
       "groupName": "github actions"
+    },
+    {
+      "description": "A major bump of a Python dependency is a migration, not an update. Every runtime dependency here is imported directly, so a new major can remove the API the code calls -- mcp 2.x renamed FastMCP and removed mcp.server.fastmcp, which broke every fresh install while the locked test suite stayed green. Held for explicit approval and kept out of the weekly group so it cannot be merged as routine.",
+      "matchManagers": [
+        "pep621",
+        "uv"
+      ],
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "groupName": "major dependency migrations",
+      "dependencyDashboardApproval": true,
+      "addLabels": [
+        "migration"
+      ]
     }
   ]
 }
