@@ -41,6 +41,12 @@ jobs:
       - name: Set up Python
         run: uv python install 3.12
 
+      - name: Check the lockfile matches pyproject.toml
+        # `uv sync` without --frozen relocks silently, so a bound edited in
+        # pyproject.toml and never committed to uv.lock leaves main drifted and
+        # the build green. Dependabot's mcp bump did exactly that.
+        run: uv lock --check
+
       - name: Install dependencies
         # dcat (rdflib) is needed so mypy sees real types for dcat/serialize.py;
         # the other extras are just httpx, already pulled in by dev.
