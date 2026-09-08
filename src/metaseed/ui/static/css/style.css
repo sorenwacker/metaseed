@@ -6,7 +6,25 @@
 /* ============================================
    FONTS & VARIABLES
    ============================================ */
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;1,9..144,400&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap');
+/* Both faces are served from this application rather than fetched from Google.
+   The import this replaces was blocked wherever a Content-Security-Policy with
+   `style-src 'self'` applies -- the hub serves this stylesheet under exactly
+   such a policy -- so it produced a console error and no fonts. Relative URLs,
+   because this stylesheet is mounted under different prefixes depending on the
+   application serving it. */
+@font-face {
+    font-family: 'Fraunces';
+    src: url('../fonts/fraunces-variable.woff2') format('woff2-variations');
+    font-weight: 100 900;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'DM Sans';
+    src: url('../fonts/dm-sans-variable.woff2') format('woff2-variations');
+    font-weight: 100 1000;
+    font-display: swap;
+}
 
 :root {
     /* Botanical palette */

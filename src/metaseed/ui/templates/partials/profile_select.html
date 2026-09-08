@@ -4,7 +4,7 @@
 
     <div class="dataset-name-input">
         <label for="new-dataset-name" class="form-label">Dataset Name <span class="required">*</span></label>
-        <input type="text" id="new-dataset-name" class="form-input" placeholder="e.g., wheat-drought-2024" data-testid="new-dataset-name" required>
+        <input type="text" id="new-dataset-name" name="dataset" class="form-input" placeholder="e.g., wheat-drought-2024" data-testid="new-dataset-name" required>
         <p class="form-hint">Use lowercase letters, numbers, and hyphens.</p>
     </div>
 
@@ -22,7 +22,7 @@
                             hx-get="/form/{{ profile.root_entity }}?profile={{ profile.name }}&version={{ version }}"
                             hx-target="#main"
                             hx-swap="innerHTML"
-                            hx-vals="js:{dataset: document.getElementById('new-dataset-name')?.value || ''}"
+                            hx-include="#new-dataset-name"
                             onclick="return validateDatasetName()"
                             data-testid="profile-{{ profile.name }}-v{{ version }}">
                         v{{ version }}{% if version == profile.latest_version %} (latest){% endif %}
