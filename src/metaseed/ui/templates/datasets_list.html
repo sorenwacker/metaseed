@@ -107,7 +107,18 @@
             </svg>
         </div>
         <h3>No datasets yet</h3>
-        <p>Create a new dataset to start managing your metadata.</p>
+        <p>
+            A dataset is metadata recorded against a standard &mdash; MIAPPE, ISA,
+            Darwin Core, ENA &mdash; or against one you write yourself. Use
+            <strong>+ New Dataset</strong> above to pick one and start.
+        </p>
+        <p class="datasets-empty-more">
+            Not sure which standard fits? Compare them in the
+            <a href="{{ base_url }}/explore/">Explorer</a>, or
+            <a href="{{ base_url }}/spec-builder">build your own</a> when none does.
+            <a href="{{ base_url }}/settings">Plugins</a> adds the rest: importing a
+            record from a public archive, and exporting to one.
+        </p>
     </div>
     {% endif %}
 </div>
