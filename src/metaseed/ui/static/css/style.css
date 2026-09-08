@@ -5584,8 +5584,20 @@ details.sidebar-section summary:hover {
 }
 
 .datasets-empty p {
-    margin: 0;
+    margin: 0 auto;
     font-size: 0.95rem;
+    /* Centred text across the full page width is unreadable once the copy runs
+       to more than a line. */
+    max-width: 56ch;
+}
+
+/* Where to go when no standard is the obvious one: comparing them, or writing
+   one. Quieter than the description, since the primary action is the New
+   Dataset button in the header above. */
+.datasets-empty .datasets-empty-more {
+    margin-top: var(--space-md);
+    font-size: 0.875rem;
+    line-height: 1.6;
 }
 
 /* Entity Overview (Dataset Edit Page) */
