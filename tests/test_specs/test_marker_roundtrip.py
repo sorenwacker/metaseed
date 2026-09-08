@@ -22,11 +22,28 @@ _MARKER_CHURN = (
 
 
 def _all_profile_versions() -> list[tuple[str, str]]:
-    loader = SpecLoader()
+    """Every profile the library ships, as (profile, version) pairs.
+
+    Read from the built-in directory rather than through ``list_profiles``,
+    which also returns the user's own specifications. Parametrisation happens at
+    collection time, before the fixture that redirects the data directory, so
+    going through the loader made the test set depend on which profiles the
+    developer happened to have installed: locally it covered their cropxr
+    profiles and on CI it did not, and the cases it invented for them then
+    failed because the fixture had redirected the directory out from under them.
+
+    What this test asserts -- that markers do not perturb a spec -- is a promise
+    about the specs the library ships. A person's own specification is not the
+    library's to guarantee, and cannot be, since it is not here to check.
+    """
+    from metaseed.paths import get_builtin_specs_dir
+
+    builtin = get_builtin_specs_dir()
     pairs: list[tuple[str, str]] = []
-    for profile in loader.list_profiles():
-        for version in SpecLoader(profile=profile).list_versions(profile):
-            pairs.append((profile, version))
+    for profile_dir in sorted(p for p in builtin.iterdir() if p.is_dir()):
+        for version_dir in sorted(v for v in profile_dir.iterdir() if v.is_dir()):
+            if (version_dir / "profile.yaml").exists():
+                pairs.append((profile_dir.name, version_dir.name))
     return pairs
 
 

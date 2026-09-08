@@ -40,7 +40,7 @@ def _models_are_not_shared_between_tests():
 
 @pytest.fixture(autouse=True)
 def _private_datasets_dir(tmp_path_factory: pytest.TempPathFactory, monkeypatch):
-    """Every test saves and deletes datasets in a directory of its own.
+    """Every test saves and deletes datasets and specifications of its own.
 
     The dataset repository honours ``METASEED_DATASETS_DIR``; without it, tests
     that save, list or delete datasets through the app operated on the user's
@@ -48,10 +48,21 @@ def _private_datasets_dir(tmp_path_factory: pytest.TempPathFactory, monkeypatch)
     running UI, and one run's cleanup deleted the user's own saved datasets.
     Selenium tests start the server as a subprocess, which inherits this
     environment, so they are covered too.
+
+    Specifications needed the same isolation and did not have it: a test that
+    saved or published one wrote into ``~/.local/share/metaseed/specs``, and the
+    fixture then appeared in ``metaseed profiles`` as a profile the user had
+    authored, in the same directory as the ones they depend on. They resolve
+    under ``XDG_DATA_HOME``, so redirecting that covers them.
     """
     monkeypatch.setenv(
         "METASEED_DATASETS_DIR", str(tmp_path_factory.mktemp("datasets"))
     )
+    # Specifications resolve under XDG_DATA_HOME rather than an override of
+    # their own, so redirecting that isolates them -- and anything else the data
+    # directory grows -- without inventing a second knob. A test that sets
+    # XDG_DATA_HOME itself still wins, because its monkeypatch runs later.
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path_factory.mktemp("data-home")))
     # The dataset factory is a session-wide binding whose repository resolves
     # the directory when it is created; a binding left by an earlier test
     # would keep pointing at that test's directory.
