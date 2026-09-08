@@ -87,6 +87,34 @@ function renderSeek(seek) {
     return `<div class="form-section" data-testid="entity-seek"><label class="form-label">SEEK mapping</label><div class="field-details">${rows.join('')}</div></div>`;
 }
 
+/* A glyph per diff state, so the state survives without colour.
+ *
+ * Roughly one man in twelve cannot separate the green and the red, which is
+ * exactly the common/removed distinction this panel leans on. The glyph is the
+ * primary signal and the colour reinforces it.
+ */
+const DIFF_GLYPHS = {
+    unchanged: '=',
+    added: '+',
+    removed: '\u2212',
+    modified: '~',
+    conflict: '!'
+};
+
+const DIFF_LABELS = {
+    unchanged: 'in both, identical',
+    added: 'only in the second',
+    removed: 'only in the first',
+    modified: 'in both, differing',
+    conflict: 'the two disagree'
+};
+
+function renderDiffGlyph(diffType) {
+    const glyph = DIFF_GLYPHS[diffType];
+    if (!glyph) return '';
+    return `<span class="diff-glyph" title="${escapeHtml(DIFF_LABELS[diffType] || diffType)}">${glyph}</span>`;
+}
+
 function renderFieldRow(field) {
     const target = field.items ? ` → <code>${escapeHtml(field.items)}</code>` : '';
     const profiles = (field.profiles || []).map(p => `<span class="profile-tag sm">${escapeHtml(p.split('/')[0])}</span>`).join('');
@@ -97,7 +125,7 @@ function renderFieldRow(field) {
         ? `<div class="field-diff-changes">Changed: ${escapeHtml(field.attributes_changed.join(', '))}</div>` : '';
     return `<div class="field-diff-item ${escapeHtml(field.diff_type || '')}" data-testid="field-${escapeHtml(field.name)}">
         <div class="field-diff-header">
-            <span>${field.required ? '*' : ''}${escapeHtml(field.name)}</span>
+            <span>${renderDiffGlyph(field.diff_type)}${field.required ? '*' : ''}${escapeHtml(field.name)}</span>
             <code>${escapeHtml(field.type)}</code>${target}
         </div>
         <div class="field-diff-profiles">${profiles}</div>

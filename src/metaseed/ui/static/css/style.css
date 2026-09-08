@@ -2932,6 +2932,20 @@ body::before {
     padding: var(--space-md);
 }
 
+/* The compare action and what follows it stay in view while the pickers and the
+   rules list above scroll. `bottom: 0` sticks to the foot of the scrolling
+   sidebar; the background stops content showing through as it passes behind. */
+.sidebar-actions-pinned {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    margin-top: var(--space-md);
+    padding-top: var(--space-sm);
+    padding-bottom: var(--space-xs);
+    background: var(--clr-paper);
+    border-top: 1px solid var(--clr-parchment);
+}
+
 /* Prevent form inputs from overflowing sidebar */
 .sidebar-content .form-input {
     max-width: 100%;
@@ -3413,6 +3427,8 @@ body::before {
     border-left: 1px solid var(--clr-parchment);
     display: flex;
     flex-direction: column;
+    /* Nothing may paint outside the panel; the content scrolls inside it. */
+    overflow: hidden;
     transform: translateX(100%);
     transition: transform var(--transition-med);
     box-shadow: -4px 0 20px rgba(0, 0, 0, 0.1);
@@ -3458,6 +3474,11 @@ body::before {
 
 .editor-panel-content {
     flex: 1;
+    /* A flex item will not shrink below its content without this, so
+       `overflow-y` never engaged: a long panel -- an entity with 43 fields and
+       14 validation rules -- ran past the foot of the panel and was cut off
+       rather than scrolling. */
+    min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
     padding: var(--space-lg);
@@ -4728,11 +4749,15 @@ details.sidebar-section summary:hover {
     text-transform: uppercase;
 }
 
-.diff-badge.unchanged { background: #e0e0e0; color: #333; }
-.diff-badge.added { background: #c8e6c9; color: #1b5e20; }
+/* Green means the two specifications agree, which is what a comparison is asked
+   first. Added and removed are then a hue apart rather than the usual green
+   against red, and conflict is its own colour: it was a second red, all but
+   indistinguishable from removed while meaning something quite different. */
+.diff-badge.unchanged { background: #c8e6c9; color: #1b5e20; }
+.diff-badge.added { background: #bbdefb; color: #0d47a1; }
 .diff-badge.removed { background: #ffcdd2; color: #b71c1c; }
 .diff-badge.modified { background: #fff3e0; color: #e65100; }
-.diff-badge.conflict { background: #ffebee; color: #b71c1c; }
+.diff-badge.conflict { background: #e1bee7; color: #4a148c; }
 
 /* Filter toggles */
 .filter-toggles {
@@ -4794,10 +4819,27 @@ details.sidebar-section summary:hover {
     border-left: 3px solid #9e9e9e;
 }
 
-.field-diff-item.added { border-left-color: #4caf50; background: #f1f8e9; }
+.field-diff-item.unchanged { border-left-color: #4caf50; background: #f4faf5; }
+.field-diff-item.added { border-left-color: #1e88e5; background: #f2f7fd; }
 .field-diff-item.removed { border-left-color: #f44336; background: #ffebee; }
 .field-diff-item.modified { border-left-color: #ff9800; background: #fff8e1; }
-.field-diff-item.conflict { border-left-color: #d32f2f; background: #ffebee; }
+.field-diff-item.conflict { border-left-color: #8e24aa; background: #f8f2fa; }
+
+/* The state, said without colour. Monospace so the glyphs line up down the
+   list and the names start at the same column. */
+.diff-glyph {
+    display: inline-block;
+    width: 1.1em;
+    font-family: monospace;
+    font-weight: 700;
+    color: var(--clr-ink-light);
+}
+
+.field-diff-item.unchanged .diff-glyph { color: #2e7d32; }
+.field-diff-item.added .diff-glyph { color: #1565c0; }
+.field-diff-item.removed .diff-glyph { color: #c62828; }
+.field-diff-item.modified .diff-glyph { color: #ef6c00; }
+.field-diff-item.conflict .diff-glyph { color: #6a1b9a; }
 
 .field-diff-header {
     display: flex;
@@ -4811,11 +4853,18 @@ details.sidebar-section summary:hover {
 .field-diff-changes { margin-top: var(--space-xs); font-size: 0.75rem; color: #e65100; font-style: italic; }
 
 /* Legend dots for merge comparison */
-.legend-dot.unchanged { background: #fff; border-color: #9e9e9e; }
-.legend-dot.added { background: #e8f5e9; border-color: #4caf50; }
-.legend-dot.removed { background: #ffcdd2; border-color: #f44336; }
-.legend-dot.modified { background: #fff8e1; border-color: #ff9800; }
-.legend-dot.conflict { background: #ffebee; border-color: #d32f2f; }
+/* Same five colours the panel uses, so the legend explains what is on screen.
+   Common was white with a grey ring while the panel painted it grey and green
+   went to Added, which is how the legend came to say one thing and the canvas
+   another. */
+/* A legend dot is a colour sample, so it takes the saturated colour rather than
+   the pale tint the rows use -- at this size a tint is indistinguishable from
+   white, which is how "Common" came to look like no colour at all. */
+.legend-dot.unchanged { background: #4caf50; border-color: #2e7d32; }
+.legend-dot.added { background: #1e88e5; border-color: #1565c0; }
+.legend-dot.removed { background: #f44336; border-color: #c62828; }
+.legend-dot.modified { background: #ff9800; border-color: #ef6c00; }
+.legend-dot.conflict { background: #8e24aa; border-color: #6a1b9a; }
 
 /* ============================================
    PROFILE SELECT

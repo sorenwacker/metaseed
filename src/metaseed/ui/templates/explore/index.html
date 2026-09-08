@@ -74,6 +74,10 @@
                             <div id="rules-list" class="rules-list"></div>
                         </div>
 
+                        <!-- Pinned to the foot of the sidebar: the profile pickers and
+                             the rules list above can run long, and these are what a
+                             person came to press. -->
+                        <div class="sidebar-actions-pinned">
                         <div class="form-section">
                             <button type="button" class="btn btn-primary" onclick="runComparison()" id="compare-btn" style="width: 100%;">
                                 Explore
@@ -106,6 +110,7 @@
                                 </label>
                             </div>
                         </div>
+                        </div>
                 </div>
             </aside>
 
@@ -129,10 +134,12 @@
                     <span class="legend-item"><span class="legend-dot added"></span> Added</span>
                     <span class="legend-item"><span class="legend-dot removed"></span> Removed</span>
                     <span class="legend-item"><span class="legend-dot modified"></span> Modified</span>
-                    <span class="legend-item" style="margin-left: 12px;"><code>+</code> Field added</span>
-                    <span class="legend-item"><code>-</code> Field removed</span>
+                    <span class="legend-item"><span class="legend-dot conflict"></span> Conflict</span>
+                    <span class="legend-item" style="margin-left: 12px;"><code>=</code> Field common</span>
+                    <span class="legend-item"><code>+</code> Field added</span>
+                    <span class="legend-item"><code>&minus;</code> Field removed</span>
                     <span class="legend-item"><code>~</code> Field modified</span>
-                    <span class="legend-item"><code>!</code> Conflict</span>
+                    <span class="legend-item"><code>!</code> Field conflict</span>
                     <span class="legend-item"><code>*</code> Required</span>
                 </div>
                 <div class="canvas-legend" id="explore-legend" style="display: none;">
