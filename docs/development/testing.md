@@ -35,6 +35,50 @@ tests/
 └── test_version.py
 ```
 
+## A test never touches the user's own data
+
+The suite runs on the machine a person also uses metaseed on, so anything it
+writes to a default location lands in their real work. Two directories are
+therefore redirected for every test by an autouse fixture in `tests/conftest.py`:
+
+| Directory | Redirected by | Default it must never reach |
+| --- | --- | --- |
+| Datasets | `METASEED_DATASETS_DIR` | `~/.local/share/metaseed/datasets` |
+| Specifications | `XDG_DATA_HOME` | `~/.local/share/metaseed/specs` |
+
+Specifications resolve under the data directory rather than through an override
+of their own, so redirecting `XDG_DATA_HOME` covers them and anything else that
+directory grows. A test that sets `XDG_DATA_HOME` itself still wins, because its
+own `monkeypatch` runs after the fixture.
+
+Both were learned rather than designed. A test that saved through the app wrote
+into the real datasets directory, and one run's cleanup deleted a person's own
+datasets while the UI was open. Specifications then repeated it more quietly:
+tests that saved or published one left `selenium-test` and `selenium-user-test`
+in the user's real specs directory, where `metaseed profiles` lists them beside
+the profiles their work depends on, indistinguishable from something they wrote.
+
+`tests/test_tests_never_touch_the_user_datasets.py` holds both to it: it
+resolves each directory the way the application does and fails if the answer is,
+or sits under, the user's real one. A new store that reads or writes user data
+needs its redirection set in the fixture and a case added there — a directory
+with no gate is the one that quietly fills up with fixtures.
+
+## A test's own inputs come from the repository
+
+Parametrisation runs at collection time, before any fixture, so a test that
+enumerates profiles through `SpecLoader.list_profiles` builds its case list from
+whatever the developer happens to have installed. `test_marker_roundtrip.py` did
+exactly that: locally it generated cases for the maintainer's own cropxr
+profiles and on CI it did not, so the two runs were not testing the same thing.
+
+Enumerate from `get_builtin_specs_dir()` instead. What such a test asserts is a
+promise about what the library ships; a person's own specification is not the
+library's to guarantee, and cannot be, since it is not there to check.
+
+Selenium tests start the server as a subprocess, which inherits the environment,
+so they are covered by the same fixture rather than needing their own.
+
 ## Unit Tests
 
 Unit tests cover individual components in isolation:
