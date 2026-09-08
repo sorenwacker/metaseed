@@ -1,3 +1,4 @@
+{% from "partials/header.html" import header with context %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -12,17 +13,7 @@
 </head>
 <body{% if standalone_graph %} data-standalone-graph="1"{% endif %}>
     <div class="layout">
-        <header class="header">
-            {# A link home, as the hub's is, rather than an <h1>: this is the same
-               logo on every page, so it is navigation and not the page's heading. #}
-            <a href="{{ base_url }}/" class="header-title">
-                <img src="{{ base_url }}/static/images/metaseed-logo-light.svg" alt="Metaseed" class="header-logo">
-            </a>
-            <nav class="header-nav">
-                {% set nav_active = 'datasets' %}
-                {% include "partials/global_nav.html" %}
-            </nav>
-        </header>
+        {{ header('datasets') }}
 
         {# The graph and the list share the workspace; each is switched on or
            off from the dataset toolbar and whatever is on fills the width. The

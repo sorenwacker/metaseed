@@ -1,0 +1,29 @@
+{# The application's header, defined once and used by every page.
+
+   Four templates each carried their own copy: the logo was an <h1> on three of
+   them and a link on the fourth, one had a stray nested anchor, and the
+   navigation had drifted so that Plugins appeared only on the dataset list.
+
+   Pages that need more in the bar -- a breadcrumb, a toolbar -- call it and
+   put that content in the body:
+
+       {% from "partials/header.html" import header with context %}
+       {% call header('explorer') %}
+           <div class="header-actions">...</div>
+       {% endcall %}
+
+   Pages that need nothing extra call it plainly: {{ header('datasets') }} #}
+{% macro header(active) %}
+<header class="header">
+    {# A link home rather than a heading: the same logo on every page is
+       navigation, not the page's title. #}
+    <a href="{{ base_url }}/" class="header-title">
+        <img src="{{ base_url }}/static/images/metaseed-logo-light.svg" alt="Metaseed" class="header-logo">
+    </a>
+    <nav class="header-nav">
+        {% set nav_active = active %}
+        {% include "partials/global_nav.html" %}
+    </nav>
+    {% if caller %}{{ caller() }}{% endif %}
+</header>
+{% endmacro %}

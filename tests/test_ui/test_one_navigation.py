@@ -1,4 +1,4 @@
-"""Every page shows the same navigation.
+"""Every page shows the same header.
 
 Four templates each carried their own copy of the header links and all four had
 drifted: Plugins appeared only on the dataset list, Docs was missing from the
@@ -58,4 +58,25 @@ def test_no_template_writes_its_own_navigation() -> None:
         "these write their own header links, which is how Plugins came to appear "
         f"on one page and not the others: {offenders}. Include "
         "partials/global_nav.html instead."
+    )
+
+
+def test_only_the_partial_defines_the_header() -> None:
+    """The bar itself, not only the links inside it.
+
+    Four templates each opened their own `<header class="header">`: the logo was
+    an `<h1>` on three and a link on the fourth, one held a nested anchor, and
+    the navigation had drifted. A page adds a breadcrumb or a toolbar by calling
+    the macro, not by writing the bar again.
+    """
+    header_partial = TEMPLATES / "partials" / "header.html"
+    offenders = [
+        str(path.relative_to(TEMPLATES))
+        for path in sorted(TEMPLATES.rglob("*.html"))
+        if path != header_partial and '<header class="header">' in path.read_text()
+    ]
+
+    assert not offenders, (
+        f"these define the header themselves: {offenders}. Call the macro in "
+        "partials/header.html instead."
     )
