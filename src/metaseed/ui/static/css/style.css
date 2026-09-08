@@ -2932,18 +2932,14 @@ body::before {
     padding: var(--space-md);
 }
 
-/* The compare action and what follows it stay in view while the pickers and the
-   rules list above scroll. `bottom: 0` sticks to the foot of the scrolling
-   sidebar; the background stops content showing through as it passes behind. */
-.sidebar-actions-pinned {
-    position: sticky;
-    bottom: 0;
-    z-index: 1;
-    margin-top: var(--space-md);
-    padding-top: var(--space-sm);
-    padding-bottom: var(--space-xs);
-    background: var(--clr-paper);
-    border-top: 1px solid var(--clr-parchment);
+/* The compare action, the export buttons and the filters, kept together and
+   above the rules list. Pinning them to the foot of the sidebar was the wrong
+   answer: it made a long rules list push them down rather than keeping them
+   where they are looked for. */
+.sidebar-actions {
+    margin-bottom: var(--space-md);
+    padding-bottom: var(--space-sm);
+    border-bottom: 1px solid var(--clr-parchment);
 }
 
 /* Prevent form inputs from overflowing sidebar */

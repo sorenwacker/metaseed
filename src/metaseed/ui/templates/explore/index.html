@@ -64,20 +64,12 @@
                             </div>
                         </div>
 
-                        <div class="form-section" id="profile-section" style="display:none" data-testid="explore-profile">
-                            <label class="form-label">Profile</label>
-                            <div id="profile-meta" class="field-details"></div>
-                        </div>
-
-                        <div class="form-section" id="rules-section" style="display:none" data-testid="explore-rules">
-                            <label class="form-label">Validation rules <span id="rules-count"></span></label>
-                            <div id="rules-list" class="rules-list"></div>
-                        </div>
-
-                        <!-- Pinned to the foot of the sidebar: the profile pickers and
-                             the rules list above can run long, and these are what a
-                             person came to press. -->
-                        <div class="sidebar-actions-pinned">
+                        <!-- Kept above everything that varies in length: the profile's
+                             own description runs to a paragraph and the rules list to
+                             dozens of entries, and both pushed the controls off the
+                             screen. What a person presses comes first; what they read
+                             follows. -->
+                        <div class="sidebar-actions">
                         <div class="form-section">
                             <button type="button" class="btn btn-primary" onclick="runComparison()" id="compare-btn" style="width: 100%;">
                                 Explore
@@ -110,6 +102,16 @@
                                 </label>
                             </div>
                         </div>
+                        </div>
+
+                        <div class="form-section" id="profile-section" style="display:none" data-testid="explore-profile">
+                            <label class="form-label">Profile</label>
+                            <div id="profile-meta" class="field-details"></div>
+                        </div>
+
+                        <div class="form-section" id="rules-section" style="display:none" data-testid="explore-rules">
+                            <label class="form-label">Validation rules <span id="rules-count"></span></label>
+                            <div id="rules-list" class="rules-list"></div>
                         </div>
                 </div>
             </aside>
