@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.50.2 (260908)
+
+### Fixed
+- **Every htmx request failed wherever a strict Content-Security-Policy applies, so no form did anything.** `hx-headers` sat on `<body>` in four templates, and htmx evaluates that value with `new Function`, which `script-src` without `'unsafe-eval'` forbids — the request raised `EvalError` and was abandoned before it was sent. The hub serves these templates under exactly such a policy, where users could not create entities. The header set was `X-Requested-With`, which nothing here reads, so it is removed rather than reimplemented.
+- A button in the profile picker carried `hx-vals="js:..."`, evaluated the same way and failing the same way. The dataset name is read with `hx-include` from the input itself now.
+- The stylesheet imported DM Sans and Fraunces from Google Fonts, which `style-src 'self'` blocks, so the typography fell back silently and every visitor's address was disclosed to a third party on each page load. Both faces are served from this package now, under the SIL Open Font License.
+- `tests/test_ui/test_templates_need_no_eval.py` fails on a template attribute htmx evaluates, on a stylesheet importing a webfont from another origin, and — recorded as a known gap — on a script loaded from another origin.
+
 ## v0.50.1 (260907)
 
 ### Fixed
