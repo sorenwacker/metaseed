@@ -10,7 +10,7 @@
 
 Metaseed creates, edits, and validates scientific metadata against a standard, from a YAML specification of that standard.
 
-[Documentation](https://sorenwacker.github.io/metaseed/) · [Introduction slides](https://sorenwacker.github.io/metaseed/slides/) · [Changelog](CHANGELOG.md)
+[Documentation](https://sorenwacker.github.io/metaseed/) · [Introduction slides](https://sorenwacker.github.io/metaseed/slides/) · [Try it hosted](https://metaseed.ewi.tudelft.nl/hub/) · [Changelog](CHANGELOG.md)
 
 ## What it does
 
