@@ -126,7 +126,7 @@
                    class="form-input"
                    placeholder="field_name"
                    required
-                   pattern="[a-z_][a-z0-9_-]*">
+                   pattern="[a-z_][a-z0-9_\-]*">
             <select name="field_type" class="form-input">
                 {% for ft in field_types %}
                 <option value="{{ ft }}">{{ ft }}</option>
