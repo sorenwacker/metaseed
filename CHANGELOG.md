@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.51.0 (260908)
+
+### Fixed
+- **A `pattern` attribute with a literal hyphen in a character class broke the page around it.** Browsers compile `pattern` with the RegExp `v` flag, where `-` must be escaped; `[a-z_][a-z0-9_-]*` is valid in Python and rejected there. Reading `scrollHeight` forces the browser to compute validity, so `autoResizeTextarea` raised and every statement after it in that handler was skipped — a malformed form field taking unrelated behaviour down with it.
+- The specification panel scrolls instead of running past the foot of the panel. An entity with 43 fields and 14 validation rules was cut off: the content area is a flex item with `overflow-y: auto` but no `min-height: 0`, so it could not shrink below its content and the overflow never engaged.
+- Tests no longer write into the user's own specifications. `~/.local/share/metaseed/specs` had no override, so a test that saved or published one left its fixture there, listed by `metaseed profiles` beside the profiles a person depends on. Datasets gained this protection after a test run deleted someone's work; specifications never did.
+- `test_marker_roundtrip` enumerates the profiles this package ships rather than every profile the developer happens to have installed. Parametrisation runs before any fixture, so the case list differed between a laptop and CI and the two were not testing the same thing.
+
+### Changed
+- **The header and its navigation are defined once.** Four templates each carried a copy and all four had drifted: Plugins appeared only on the dataset list, Docs was missing from the builder's start page, the logo was an `<h1>` on three pages and a link on the fourth, and "Builder" pointed at two different routes. A page adds a breadcrumb or a toolbar by calling the macro; tests fail if one writes its own again.
+- **Green means the two specifications agree.** The comparison painted green on *added* and grey on *unchanged*, so a reader looking for "these match" found the opposite of what the legend promised. Added is blue now, conflict is purple rather than a second red indistinguishable from removed, and every state carries a glyph — `=` `+` `−` `~` `!` — so the distinction survives for the roughly one man in twelve who cannot separate green from red.
+- The explorer's compare controls stay above the profile description and the rules list, both of which run long and pushed them off the screen.
+- The empty dataset list says what a dataset is recorded against, and offers the Explorer and the Builder rather than a sentence and nothing else.
+- The documentation uses the application's palette and typefaces, served from the site rather than fetched from Google — which disclosed every reader's address to a third party on each page load.
+
 ## v0.50.2 (260908)
 
 ### Fixed
