@@ -4,14 +4,10 @@
 
 # Metaseed
 
-<div class="grid cards" markdown>
-
 - **Try it without installing** — [the hub](https://metaseed.ewi.tudelft.nl/hub/), a hosted metaseed you sign into
 - **Install it** — [`metaseed` on PyPI](https://pypi.org/project/metaseed/) · `pip install metaseed`
 - **Source** — [metaseed](https://github.com/sorenwacker/metaseed) · [metaseed-hub](https://github.com/sorenwacker/metaseed-hub)
 - **The hub's documentation** — [how the hosted version works](https://sorenwacker.github.io/metaseed-hub/)
-
-</div>
 
 
 Metaseed provides tools for creating, editing, and validating experimental metadata across scientific standards — MIAPPE (plant phenotyping), ISA, Darwin Core, DiSSCo, ENA, JERM, PRIDE, and MetaboLights.
