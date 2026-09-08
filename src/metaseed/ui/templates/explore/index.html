@@ -64,16 +64,12 @@
                             </div>
                         </div>
 
-                        <div class="form-section" id="profile-section" style="display:none" data-testid="explore-profile">
-                            <label class="form-label">Profile</label>
-                            <div id="profile-meta" class="field-details"></div>
-                        </div>
-
-                        <div class="form-section" id="rules-section" style="display:none" data-testid="explore-rules">
-                            <label class="form-label">Validation rules <span id="rules-count"></span></label>
-                            <div id="rules-list" class="rules-list"></div>
-                        </div>
-
+                        <!-- Kept above everything that varies in length: the profile's
+                             own description runs to a paragraph and the rules list to
+                             dozens of entries, and both pushed the controls off the
+                             screen. What a person presses comes first; what they read
+                             follows. -->
+                        <div class="sidebar-actions">
                         <div class="form-section">
                             <button type="button" class="btn btn-primary" onclick="runComparison()" id="compare-btn" style="width: 100%;">
                                 Explore
@@ -106,6 +102,17 @@
                                 </label>
                             </div>
                         </div>
+                        </div>
+
+                        <div class="form-section" id="profile-section" style="display:none" data-testid="explore-profile">
+                            <label class="form-label">Profile</label>
+                            <div id="profile-meta" class="field-details"></div>
+                        </div>
+
+                        <div class="form-section" id="rules-section" style="display:none" data-testid="explore-rules">
+                            <label class="form-label">Validation rules <span id="rules-count"></span></label>
+                            <div id="rules-list" class="rules-list"></div>
+                        </div>
                 </div>
             </aside>
 
@@ -129,10 +136,12 @@
                     <span class="legend-item"><span class="legend-dot added"></span> Added</span>
                     <span class="legend-item"><span class="legend-dot removed"></span> Removed</span>
                     <span class="legend-item"><span class="legend-dot modified"></span> Modified</span>
-                    <span class="legend-item" style="margin-left: 12px;"><code>+</code> Field added</span>
-                    <span class="legend-item"><code>-</code> Field removed</span>
+                    <span class="legend-item"><span class="legend-dot conflict"></span> Conflict</span>
+                    <span class="legend-item" style="margin-left: 12px;"><code>=</code> Field common</span>
+                    <span class="legend-item"><code>+</code> Field added</span>
+                    <span class="legend-item"><code>&minus;</code> Field removed</span>
                     <span class="legend-item"><code>~</code> Field modified</span>
-                    <span class="legend-item"><code>!</code> Conflict</span>
+                    <span class="legend-item"><code>!</code> Field conflict</span>
                     <span class="legend-item"><code>*</code> Required</span>
                 </div>
                 <div class="canvas-legend" id="explore-legend" style="display: none;">
