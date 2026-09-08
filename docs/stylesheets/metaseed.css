@@ -1,13 +1,14 @@
 /* The documentation in the application's own style.
 
-   Material ships a named palette and Google's fonts; metaseed uses a forest
-   green with Fraunces and DM Sans, self-hosted. Left alone the docs read as a
-   different product from the application they describe, which is a poor
-   impression when the two are meant to be one thing.
+   Material's palette takes named colours and none of them is metaseed's forest
+   green, so the docs read as a different product from the application they
+   describe. A named palette sets these variables on `[data-md-color-primary=...]`,
+   which outranks `:root` -- so the palette is `custom` in mkdocs.yml and the
+   values are given against the same attribute here, where they win.
 
    Values come from `src/metaseed/ui/static/css/style.css`; the font files are
-   the same ones the application serves, copied here so the docs need no third
-   party either. */
+   the ones the application serves, copied here so the docs need no third party
+   either. */
 
 @font-face {
     font-family: 'Fraunces';
@@ -24,19 +25,27 @@
 }
 
 :root {
-    /* --clr-forest, --clr-forest-light, --clr-moss */
-    --md-primary-fg-color: #1a3a2f;
-    --md-primary-fg-color--light: #2d5a4a;
-    --md-primary-fg-color--dark: #12261f;
-    --md-accent-fg-color: #4a7c59;
-    --md-accent-fg-color--transparent: rgba(74, 124, 89, 0.1);
-
     --md-text-font: 'DM Sans', system-ui, -apple-system, sans-serif;
     --md-code-font: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
-[data-md-color-scheme="default"] {
-    /* --clr-paper, --clr-ink */
+/* --clr-forest, --clr-forest-light, --clr-moss */
+[data-md-color-primary=custom] {
+    --md-primary-fg-color: #1a3a2f;
+    --md-primary-fg-color--light: #2d5a4a;
+    --md-primary-fg-color--dark: #12261f;
+    --md-primary-bg-color: #faf8f5;
+    --md-primary-bg-color--light: #ebe6df;
+}
+
+[data-md-color-accent=custom] {
+    --md-accent-fg-color: #4a7c59;
+    --md-accent-fg-color--transparent: rgba(74, 124, 89, 0.1);
+    --md-accent-bg-color: #faf8f5;
+}
+
+[data-md-color-scheme=default] {
+    /* --clr-paper, --clr-ink, --clr-parchment */
     --md-default-bg-color: #f5f2ed;
     --md-typeset-color: #2c3e35;
     --md-typeset-a-color: #2d5a4a;
@@ -47,31 +56,33 @@
 .md-typeset h1,
 .md-typeset h2,
 .md-typeset h3,
-.md-typeset h4 {
-    font-family: 'Fraunces', Georgia, serif;
-    font-weight: 600;
-    color: #1a3a2f;
-}
-
-/* The site name in the header, likewise. */
+.md-typeset h4,
 .md-header__topic .md-ellipsis {
     font-family: 'Fraunces', Georgia, serif;
     font-weight: 600;
 }
 
+.md-typeset h1,
+.md-typeset h2,
+.md-typeset h3 {
+    color: #1a3a2f;
+}
+
 /* Dark mode keeps the hues and lifts them: the forest is too dark to read a
    header against, and the paper ground would defeat the point. */
-[data-md-color-scheme="slate"] {
+[data-md-color-scheme=slate][data-md-color-primary=custom] {
     --md-primary-fg-color: #2d5a4a;
     --md-primary-fg-color--light: #4a7c59;
     --md-primary-fg-color--dark: #1a3a2f;
+}
+
+[data-md-color-scheme=slate][data-md-color-accent=custom] {
     --md-accent-fg-color: #87a878;
     --md-accent-fg-color--transparent: rgba(135, 168, 120, 0.15);
 }
 
-[data-md-color-scheme="slate"] .md-typeset h1,
-[data-md-color-scheme="slate"] .md-typeset h2,
-[data-md-color-scheme="slate"] .md-typeset h3,
-[data-md-color-scheme="slate"] .md-typeset h4 {
+[data-md-color-scheme=slate] .md-typeset h1,
+[data-md-color-scheme=slate] .md-typeset h2,
+[data-md-color-scheme=slate] .md-typeset h3 {
     color: #87a878;
 }
