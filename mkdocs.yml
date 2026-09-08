@@ -19,6 +19,9 @@ exclude_docs: |
 
 theme:
   name: material
+  # The typefaces are served from this site, so Google's copies are not
+  # fetched: no third party sees a reader, and the docs match the application.
+  font: false
   logo: images/metaseed-icon.svg
   favicon: images/metaseed-icon.svg
   palette:
@@ -38,6 +41,9 @@ theme:
     - navigation.tabs
     - navigation.sections
     - content.code.copy
+
+extra_css:
+  - stylesheets/metaseed.css
 
 plugins:
   - search
