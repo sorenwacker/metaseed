@@ -150,17 +150,20 @@ body::before {
 /* ============================================
    HEADER
    ============================================ */
+/* Proportions taken from the hub's header, so the two applications read as one
+   product: a fixed bar rather than one that grows with its contents, and a
+   wider gap between the logo and the navigation. */
 .header {
     background: var(--clr-forest);
-    padding: var(--space-md) var(--space-xl);
+    padding: 0 var(--space-xl);
     display: flex;
     align-items: center;
-    gap: var(--space-md);
+    gap: var(--space-lg);
     position: sticky;
     top: 0;
     z-index: 100;
     box-shadow: 0 2px 16px rgba(26, 58, 47, 0.2);
-    min-height: var(--header-height);
+    height: 56px;
     box-sizing: border-box;
 }
 

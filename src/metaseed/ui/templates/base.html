@@ -13,9 +13,11 @@
 <body{% if standalone_graph %} data-standalone-graph="1"{% endif %}>
     <div class="layout">
         <header class="header">
-            <h1 class="header-title">
+            {# A link home, as the hub's is, rather than an <h1>: this is the same
+               logo on every page, so it is navigation and not the page's heading. #}
+            <a href="{{ base_url }}/" class="header-title">
                 <img src="{{ base_url }}/static/images/metaseed-logo-light.svg" alt="Metaseed" class="header-logo">
-            </h1>
+            </a>
             <nav class="header-nav">
                 {% set nav_active = 'datasets' %}
                 {% include "partials/global_nav.html" %}
