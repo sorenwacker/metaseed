@@ -147,3 +147,5 @@ nav:
       - Contributing: development/contributing.md
       - Testing: development/testing.md
       - Testing Best Practices: development/testing-best-practices.md
+  # The sibling site, on every page rather than only the landing page.
+  - Metaseed Hub: https://sorenwacker.github.io/metaseed-hub/
