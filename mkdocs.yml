@@ -41,7 +41,9 @@ theme:
         icon: material/brightness-4
         name: Switch to light mode
   features:
-    - navigation.tabs
+    # No tab bar: the hub has eleven top level sections and the bar cannot
+    # show them at any ordinary width -- the last entry simply vanished.
+    # The sidebar is vertical and scrolls, so nothing is hidden.
     - navigation.sections
     - content.code.copy
     # `edit_uri` alone renders nothing; this is what puts the pencil on a page.
