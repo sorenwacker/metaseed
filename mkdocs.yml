@@ -1,5 +1,8 @@
 site_name: Metaseed
 site_description: A schema-driven toolbox for creating, editing, and validating scientific metadata across standards (MIAPPE, ISA, Darwin Core, DiSSCo, ENA, JERM) from YAML specifications
+repo_url: https://github.com/sorenwacker/metaseed
+repo_name: sorenwacker/metaseed
+edit_uri: edit/main/docs/
 
 # Rendered in the footer of every page. AI-generated content must be disclosed
 # as such (EU AI Act transparency); tests/test_docs/test_ai_disclosure.py gates
@@ -41,6 +44,8 @@ theme:
     - navigation.tabs
     - navigation.sections
     - content.code.copy
+    # `edit_uri` alone renders nothing; this is what puts the pencil on a page.
+    - content.action.edit
 
 extra_css:
   - stylesheets/metaseed.css
