@@ -20,13 +20,18 @@ class DiffVisualizer:
     colors and styling.
     """
 
-    # Color scheme for diff types
+    # Green means the two specifications agree, which is what a comparison is
+    # asked first. Added and removed are a hue apart rather than green against
+    # red, and conflict is purple rather than a second red. The border is the
+    # saturated colour the stylesheet's legend dot shows; a test holds them equal
+    # because the legend once said green was Common while the canvas painted
+    # green on Added.
     COLORS = {
-        DiffType.UNCHANGED: {"background": "#e0e0e0", "border": "#9e9e9e"},
-        DiffType.ADDED: {"background": "#c8e6c9", "border": "#4caf50"},
+        DiffType.UNCHANGED: {"background": "#c8e6c9", "border": "#4caf50"},
+        DiffType.ADDED: {"background": "#bbdefb", "border": "#1e88e5"},
         DiffType.REMOVED: {"background": "#ffcdd2", "border": "#f44336"},
         DiffType.MODIFIED: {"background": "#fff3e0", "border": "#ff9800"},
-        DiffType.CONFLICT: {"background": "#ffebee", "border": "#d32f2f"},
+        DiffType.CONFLICT: {"background": "#e1bee7", "border": "#8e24aa"},
     }
 
     # Shape for entities
@@ -269,19 +274,15 @@ class DiffVisualizer:
                 in_base = base_profile in profiles if base_profile else False
                 in_others = any(p in profiles for p in all_profile_ids[1:])
 
-                # Determine color based on base-relative presence
+                # An edge takes the border colour of the state it is in.
                 if in_base and in_others:
-                    # Edge in both base and compare - unchanged (gray)
-                    color = "#666666"
+                    color = self.COLORS[DiffType.UNCHANGED]["border"]
                 elif in_base and not in_others:
-                    # Edge only in base - removed (red)
-                    color = "#f44336"
+                    color = self.COLORS[DiffType.REMOVED]["border"]
                 elif not in_base and in_others:
-                    # Edge only in compare - added (green)
-                    color = "#4caf50"
+                    color = self.COLORS[DiffType.ADDED]["border"]
                 else:
-                    # Shouldn't happen, but default to gray
-                    color = "#666666"
+                    color = self.COLORS[DiffType.UNCHANGED]["border"]
 
             edges.append(
                 {

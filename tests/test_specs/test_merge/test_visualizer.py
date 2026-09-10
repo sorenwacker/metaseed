@@ -58,8 +58,8 @@ class TestEdgeColoring:
             ),
         )
 
-    def test_edge_in_both_profiles_is_gray(self, visualizer: DiffVisualizer) -> None:
-        """Edge present in both base and compare profile should be gray."""
+    def test_edge_in_both_profiles_is_green(self, visualizer: DiffVisualizer) -> None:
+        """Edge present in both base and compare profile should be green."""
         # Create two entities: Parent and Child
         # Both profiles have Parent.children -> Child relationship
         base_profile = "base/1.0"
@@ -113,8 +113,8 @@ class TestEdgeColoring:
         )
 
         assert edge is not None, "Edge from Parent to Child should exist"
-        assert edge["color"]["color"] == "#666666", (
-            "Edge in both profiles should be gray"
+        assert edge["color"]["color"] == "#4caf50", (
+            "Edge in both profiles should be green: the two agree"
         )
 
     def test_edge_only_in_base_is_red(self, visualizer: DiffVisualizer) -> None:
@@ -173,8 +173,8 @@ class TestEdgeColoring:
             "Edge only in base should be red (removed)"
         )
 
-    def test_edge_only_in_compare_is_green(self, visualizer: DiffVisualizer) -> None:
-        """Edge present only in compare profile should be green (added)."""
+    def test_edge_only_in_compare_is_blue(self, visualizer: DiffVisualizer) -> None:
+        """Edge present only in compare profile should be blue (added)."""
         base_profile = "base/1.0"
         compare_profile = "compare/1.0"
 
@@ -225,11 +225,11 @@ class TestEdgeColoring:
         )
 
         assert edge is not None, "Edge from Parent to Child should exist"
-        assert edge["color"]["color"] == "#4caf50", (
-            "Edge only in compare should be green (added)"
+        assert edge["color"]["color"] == "#1e88e5", (
+            "Edge only in compare should be blue (added)"
         )
 
-    def test_edge_to_added_entity_is_green(self, visualizer: DiffVisualizer) -> None:
+    def test_edge_to_added_entity_is_blue(self, visualizer: DiffVisualizer) -> None:
         """Edge to an entity that only exists in compare should be green."""
         base_profile = "base/1.0"
         compare_profile = "compare/1.0"
@@ -280,7 +280,7 @@ class TestEdgeColoring:
         )
 
         assert edge is not None, "Edge from Parent to Child should exist"
-        assert edge["color"]["color"] == "#4caf50", (
+        assert edge["color"]["color"] == "#1e88e5", (
             "Edge to added entity should be green"
         )
 
@@ -361,8 +361,8 @@ class TestNodeColoring:
             statistics=ComparisonStatistics(),
         )
 
-    def test_unchanged_entity_is_gray(self, visualizer: DiffVisualizer) -> None:
-        """Entity in both profiles should be gray."""
+    def test_unchanged_entity_is_green(self, visualizer: DiffVisualizer) -> None:
+        """Entity in both profiles should be green: green means the two agree."""
         entity_diff = EntityDiff(
             entity_name="TestEntity",
             diff_type=DiffType.UNCHANGED,
@@ -378,11 +378,11 @@ class TestNodeColoring:
         graph = visualizer.build_diff_graph(comparison)
         node = graph["nodes"][0]
 
-        assert node["color"]["background"] == "#e0e0e0"
-        assert node["color"]["border"] == "#9e9e9e"
+        assert node["color"]["background"] == "#c8e6c9"
+        assert node["color"]["border"] == "#4caf50"
 
-    def test_added_entity_is_green(self, visualizer: DiffVisualizer) -> None:
-        """Entity only in compare profile should be green."""
+    def test_added_entity_is_blue(self, visualizer: DiffVisualizer) -> None:
+        """Entity only in compare profile should be blue."""
         entity_diff = EntityDiff(
             entity_name="TestEntity",
             diff_type=DiffType.ADDED,
@@ -398,8 +398,8 @@ class TestNodeColoring:
         graph = visualizer.build_diff_graph(comparison)
         node = graph["nodes"][0]
 
-        assert node["color"]["background"] == "#c8e6c9"
-        assert node["color"]["border"] == "#4caf50"
+        assert node["color"]["background"] == "#bbdefb"
+        assert node["color"]["border"] == "#1e88e5"
 
     def test_removed_entity_is_red(self, visualizer: DiffVisualizer) -> None:
         """Entity only in base profile should be red."""
@@ -441,8 +441,8 @@ class TestNodeColoring:
         assert node["color"]["background"] == "#fff3e0"
         assert node["color"]["border"] == "#ff9800"
 
-    def test_conflict_entity_is_dark_red(self, visualizer: DiffVisualizer) -> None:
-        """Entity with conflicts should be dark red."""
+    def test_conflict_entity_is_purple(self, visualizer: DiffVisualizer) -> None:
+        """Entity with conflicts should be purple, not a second red."""
         entity_diff = EntityDiff(
             entity_name="TestEntity",
             diff_type=DiffType.CONFLICT,
@@ -458,8 +458,8 @@ class TestNodeColoring:
         graph = visualizer.build_diff_graph(comparison)
         node = graph["nodes"][0]
 
-        assert node["color"]["background"] == "#ffebee"
-        assert node["color"]["border"] == "#d32f2f"
+        assert node["color"]["background"] == "#e1bee7"
+        assert node["color"]["border"] == "#8e24aa"
 
 
 def test_a_field_with_an_enum_carries_its_vocabulary_into_the_graph() -> None:
@@ -695,3 +695,23 @@ def test_a_rule_between_two_entities_is_an_edge_on_the_graph() -> None:
     assert edge["label"] == "sample_names_a_study"
     assert edge["dashes"] is True
     assert "study_id" in edge["title"] and "Study.identifier" in edge["title"]
+
+
+def test_the_legend_dots_and_the_canvas_use_the_same_colours() -> None:
+    # The 0.51.0 release restyled the legend and the panel to "green means the
+    # two agree" and left the canvas on the old scheme, so the legend said green
+    # was Common while the graph painted green on Added. The stylesheet's legend
+    # dot is the saturated colour and the node border is the same colour, so the
+    # two are held equal here.
+    import re
+
+    from metaseed.ui.app import STATIC_DIR
+
+    css = (STATIC_DIR / "css" / "style.css").read_text()
+    for diff_type in DiffType:
+        state = diff_type.value
+        match = re.search(
+            rf"\.legend-dot\.{state}\s*{{\s*background:\s*(#[0-9a-f]{{6}})", css
+        )
+        assert match, f"no legend dot for {state}"
+        assert match.group(1) == DiffVisualizer.COLORS[diff_type]["border"], state

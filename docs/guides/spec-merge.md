@@ -19,10 +19,13 @@ metaseed ui
 
 The first profile selected is treated as the **base/reference**. Differences are shown relative to this base:
 
-- **Added** (green): Elements in the compare profile but not in the base
+- **Unchanged** (green): Elements identical in both profiles
+- **Added** (blue): Elements in the compare profile but not in the base
 - **Removed** (red): Elements in the base profile but not in compare
 - **Modified** (amber): Elements in both but with different attributes
-- **Unchanged** (gray): Elements identical in both profiles
+- **Conflict** (purple): Elements in both with incompatible attributes
+
+Green means the two profiles agree, which is the first thing a comparison is asked. Added and removed are a hue apart rather than green against red, and every state also carries a glyph (`=` `+` `-` `~` `!`) so the distinction does not depend on colour vision. The canvas, the legend and the entity panel use the same five colours.
 
 ### ERD Visualization
 
@@ -32,17 +35,19 @@ The comparison displays an interactive entity-relationship diagram:
 
 | Color | Meaning |
 |-------|---------|
-| Gray | Entity exists in both profiles (unchanged) |
-| Green | Entity only in compare profile (added) |
+| Green | Entity exists in both profiles (unchanged) |
+| Blue | Entity only in compare profile (added) |
 | Red | Entity only in base profile (removed) |
 | Amber | Entity in both but fields differ (modified) |
+| Purple | Entity in both with incompatible field attributes (conflict) |
 
 **Edge Colors:**
 
 | Color | Meaning |
 |-------|---------|
-| Gray | Relationship exists in both profiles |
-| Green | Relationship only in one profile |
+| Green | Relationship exists in both profiles |
+| Blue | Relationship only in the compare profile (added) |
+| Red | Relationship only in the base profile (removed) |
 
 **Field Indicators:**
 

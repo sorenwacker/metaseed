@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.51.1 (260910)
+
+### Fixed
+- **The comparison canvas uses the colours the legend explains.** 0.51.0 restyled the legend and the entity panel so that green means the two profiles agree, but the graph's nodes and edges kept the old scheme: grey for common, green for added, a second red for conflict. Common is green on the canvas now, added is blue, conflict is purple, and a test holds the legend dots and the node colours equal so the two cannot drift again.
+- The explorer and the builder asked for older stylesheet versions than the rest of the application, so a browser that had cached them kept the old badge colours. A test now holds every template to one version.
+
 ## v0.51.0 (260908)
 
 ### Fixed
