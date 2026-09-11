@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -56,6 +58,21 @@ def test_config_saves_and_masks_secret(client):
     assert "http://localhost:3001" in response.text
     assert "s3cret" not in response.text
     assert "configured — leave blank to keep" in response.text
+
+
+def test_a_stored_secret_shows_stars_in_its_empty_field(client):
+    # Without an indicator an empty password field looks unset whether a key is
+    # stored or not; the stars say one is, while the value stays off the page.
+    stars = re.compile(r'data-testid="config-seek-api_key"\s+placeholder="\*{8}"')
+    assert not stars.search(client.get("/settings").text)
+
+    client.post(
+        "/settings/adapters/seek/config",
+        data={"url": "http://localhost:3001", "api_key": "s3cret"},
+    )
+    page = client.get("/settings").text
+    assert stars.search(page)
+    assert "s3cret" not in page
 
 
 def test_config_unknown_adapter_is_404(client):
