@@ -1502,6 +1502,10 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+all = [
+    { name = "httpx" },
+    { name = "rdflib" },
+]
 brapi = [
     { name = "httpx" },
 ]
@@ -1564,6 +1568,7 @@ dev = [
 requires-dist = [
     { name = "fastapi", specifier = ">=0.110,<1" },
     { name = "httpx", specifier = ">=0.27,<1" },
+    { name = "httpx", marker = "extra == 'all'", specifier = ">=0.27,<1" },
     { name = "httpx", marker = "extra == 'brapi'", specifier = ">=0.27,<1" },
     { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.27,<1" },
     { name = "httpx", marker = "extra == 'ena'", specifier = ">=0.27,<1" },
@@ -1589,6 +1594,7 @@ requires-dist = [
     { name = "pytest-xdist", marker = "extra == 'dev'", specifier = ">=3.5" },
     { name = "python-multipart", specifier = ">=0.0.9,<1" },
     { name = "pyyaml", specifier = ">=6.0,<7" },
+    { name = "rdflib", marker = "extra == 'all'", specifier = ">=7.0,<8" },
     { name = "rdflib", marker = "extra == 'dcat'", specifier = ">=7.0,<8" },
     { name = "rdflib", marker = "extra == 'seek'", specifier = ">=7.0,<8" },
     { name = "regex", specifier = ">=2024.5.15,<2027" },
@@ -1598,7 +1604,7 @@ requires-dist = [
     { name = "uvicorn", specifier = ">=0.29,<1" },
     { name = "xmlschema", marker = "extra == 'dev'", specifier = ">=3.0,<5" },
 ]
-provides-extras = ["brapi", "dcat", "dev", "docs", "ena", "hub", "metabolights", "pride", "seek"]
+provides-extras = ["all", "brapi", "dcat", "dev", "docs", "ena", "hub", "metabolights", "pride", "seek"]
 
 [package.metadata.requires-dev]
 dev = [
