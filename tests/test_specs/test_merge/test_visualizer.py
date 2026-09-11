@@ -715,3 +715,128 @@ def test_the_legend_dots_and_the_canvas_use_the_same_colours() -> None:
         )
         assert match, f"no legend dot for {state}"
         assert match.group(1) == DiffVisualizer.COLORS[diff_type]["border"], state
+
+
+def _two_profile_graph(diff_type: DiffType, profiles: dict[str, bool]) -> dict:
+    from metaseed.specs.merge.models import ComparisonStatistics
+
+    comparison = ComparisonResult(
+        profiles=["base/1.0", "compare/1.0"],
+        profile_specs={},
+        entity_diffs=[
+            EntityDiff(
+                entity_name="Thing",
+                diff_type=diff_type,
+                profiles=profiles,
+                field_diffs=[],
+            )
+        ],
+        statistics=ComparisonStatistics(),
+    )
+    return DiffVisualizer().build_diff_graph(comparison)
+
+
+def test_a_node_carries_its_complete_styling_so_the_page_needs_no_colour_table() -> (
+    None
+):
+    # The page once kept its own table of colours per diff state and painted
+    # nodes from that, which is how the canvas stayed on the old scheme after
+    # the legend changed. Every state a vis.js node can be in is styled here.
+    node = _two_profile_graph(DiffType.ADDED, {"base/1.0": False, "compare/1.0": True})[
+        "nodes"
+    ][0]
+    colour = DiffVisualizer.COLORS[DiffType.ADDED]
+    assert node["color"]["background"] == colour["background"]
+    assert node["color"]["border"] == colour["border"]
+    assert node["color"]["highlight"] == {
+        "background": colour["background"],
+        "border": colour["border"],
+    }
+    assert node["color"]["hover"] == {
+        "background": colour["background"],
+        "border": colour["border"],
+    }
+    assert node["font"]["color"] == colour["font"]
+
+
+def test_every_diff_state_has_a_font_colour() -> None:
+    for diff_type in DiffType:
+        assert DiffVisualizer.COLORS[diff_type]["font"].startswith("#"), diff_type
+
+
+def test_an_explored_profile_draws_its_nodes_in_the_builder_style() -> None:
+    # One profile is not a comparison; the builder's white box with a moss
+    # border is what the explore legend promises.
+    from metaseed.specs.merge.models import ComparisonStatistics
+    from metaseed.specs.merge.visualizer import EXPLORE_NODE_COLOR
+
+    comparison = ComparisonResult(
+        profiles=["only/1.0"],
+        profile_specs={},
+        entity_diffs=[
+            EntityDiff(
+                entity_name="Thing",
+                diff_type=DiffType.UNCHANGED,
+                profiles={"only/1.0": True},
+                field_diffs=[],
+            )
+        ],
+        statistics=ComparisonStatistics(),
+    )
+    node = DiffVisualizer().build_diff_graph(comparison)["nodes"][0]
+    assert node["color"]["background"] == "#ffffff"
+    assert node["color"]["border"] == EXPLORE_NODE_COLOR["border"]
+    assert node["font"]["color"] == EXPLORE_NODE_COLOR["font"]
+
+
+def _edge_between(
+    base_has: bool, compare_has: bool, profiles: list[str] | None = None
+) -> dict:
+    from metaseed.specs.merge.models import ComparisonStatistics, FieldDiff
+
+    profiles = profiles or ["base/1.0", "compare/1.0"]
+    field = FieldSpec(name="children", type=FieldType("list"), items="Child")
+    present = {
+        pid: (field if has else None)
+        for pid, has in zip(profiles, [base_has, compare_has], strict=False)
+    }
+    comparison = ComparisonResult(
+        profiles=profiles,
+        profile_specs={},
+        entity_diffs=[
+            EntityDiff(
+                entity_name="Parent",
+                diff_type=DiffType.MODIFIED,
+                profiles=dict.fromkeys(profiles, True),
+                field_diffs=[
+                    FieldDiff(
+                        field_name="children",
+                        diff_type=DiffType.MODIFIED,
+                        profiles=present,
+                    )
+                ],
+            ),
+            EntityDiff(
+                entity_name="Child",
+                diff_type=DiffType.UNCHANGED,
+                profiles=dict.fromkeys(profiles, True),
+                field_diffs=[],
+            ),
+        ],
+        statistics=ComparisonStatistics(),
+    )
+    graph = DiffVisualizer().build_diff_graph(comparison)
+    return next(e for e in graph["edges"] if e["label"] == "children")
+
+
+def test_an_edge_names_its_state_so_the_page_filters_by_state_not_by_colour() -> None:
+    # The filter checkboxes once matched edges by hex colour; when green moved
+    # from Added to Common they hid the wrong edges.
+    assert _edge_between(True, True)["diff_type"] == "unchanged"
+    assert _edge_between(True, False)["diff_type"] == "removed"
+    assert _edge_between(False, True)["diff_type"] == "added"
+
+
+def test_an_explored_profile_names_its_edges_nested_or_reference() -> None:
+    edge = _edge_between(True, True, profiles=["only/1.0"])
+    assert edge["diff_type"] == "nested"

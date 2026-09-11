@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.51.2 (260911)
+
+### Fixed
+- **The explorer canvas now shows the colours the server decides.** 0.51.1 changed the visualizer, but the page kept its own table of colours per diff state and painted nodes from that, so common entities stayed white while the edges between them turned green, and the filter checkboxes, which matched edges by hex colour, hid the wrong edges once green meant common. Every node now arrives with its complete vis.js styling and font colour, every edge with a `diff_type`, and one shared script, `explore-graph.js`, draws and filters what it is sent. Tests hold the template free of colour tables and the script free of colour literals.
+
 ## v0.51.1 (260910)
 
 ### Fixed

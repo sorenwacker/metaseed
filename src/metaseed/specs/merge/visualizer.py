@@ -12,6 +12,17 @@ from .models import ComparisonResult, DiffType, EntityDiff
 
 RULE_EDGE_COLOR = "#b26a00"
 
+# One explored profile is not a comparison: its nodes take the builder's white
+# box with a moss border, which is what the explore legend promises.
+EXPLORE_NODE_COLOR = {
+    "background": "#ffffff",
+    "border": "#4a7c59",
+    "font": "#2c3e35",
+    "highlight": {"background": "#87a878", "border": "#4a7c59"},
+    "hover": {"background": "#f5f2ed", "border": "#4a7c59"},
+}
+EXPLORE_EDGE_COLOR = {"nested": "#4a7c59", "reference": "#7c4a6b"}
+
 
 class DiffVisualizer:
     """Generates visualization data for profile diffs.
@@ -26,12 +37,34 @@ class DiffVisualizer:
     # saturated colour the stylesheet's legend dot shows; a test holds them equal
     # because the legend once said green was Common while the canvas painted
     # green on Added.
+    # The font is the dark shade the stylesheet's badge text uses. The page
+    # draws exactly what it is sent and keeps no colour table of its own.
     COLORS = {
-        DiffType.UNCHANGED: {"background": "#c8e6c9", "border": "#4caf50"},
-        DiffType.ADDED: {"background": "#bbdefb", "border": "#1e88e5"},
-        DiffType.REMOVED: {"background": "#ffcdd2", "border": "#f44336"},
-        DiffType.MODIFIED: {"background": "#fff3e0", "border": "#ff9800"},
-        DiffType.CONFLICT: {"background": "#e1bee7", "border": "#8e24aa"},
+        DiffType.UNCHANGED: {
+            "background": "#c8e6c9",
+            "border": "#4caf50",
+            "font": "#1b5e20",
+        },
+        DiffType.ADDED: {
+            "background": "#bbdefb",
+            "border": "#1e88e5",
+            "font": "#0d47a1",
+        },
+        DiffType.REMOVED: {
+            "background": "#ffcdd2",
+            "border": "#f44336",
+            "font": "#b71c1c",
+        },
+        DiffType.MODIFIED: {
+            "background": "#fff3e0",
+            "border": "#ff9800",
+            "font": "#e65100",
+        },
+        DiffType.CONFLICT: {
+            "background": "#e1bee7",
+            "border": "#8e24aa",
+            "font": "#4a148c",
+        },
     }
 
     # Shape for entities
@@ -117,7 +150,9 @@ class DiffVisualizer:
             Node dictionary for vis.js.
         """
         node_id = self._next_id()
-        colors = self.COLORS[entity_diff.diff_type]
+        style = _node_style(
+            entity_diff.diff_type, explore=len(comparison.profiles) == 1
+        )
 
         # Build presence info
         presence = []
@@ -180,8 +215,13 @@ class DiffVisualizer:
             "id": node_id,
             "label": entity_diff.entity_name,
             "shape": self.ENTITY_SHAPE,
-            "color": colors,
-            "font": {"bold": True},
+            "color": {
+                "background": style["background"],
+                "border": style["border"],
+                "highlight": style["highlight"],
+                "hover": style["hover"],
+            },
+            "font": {"bold": True, "color": style["font"]},
             "title": "<br>".join(title_lines),
             "borderWidth": 3 if entity_diff.has_conflicts else 2,
             "data": {
@@ -198,7 +238,7 @@ class DiffVisualizer:
             },
         }
 
-    def _create_entity_edges(  # noqa: C901
+    def _create_entity_edges(
         self: Self,
         entity_diffs: list[EntityDiff],
         entity_node_ids: dict[str, int],
@@ -267,28 +307,21 @@ class DiffVisualizer:
 
         for (from_id, to_id, label, is_reference), profiles in edge_profiles.items():
             if is_explore_mode:
-                # Explore mode: use spec-builder colors
-                # Green for nested, different color for reference
-                color = "#7c4a6b" if is_reference else "#4a7c59"
+                state = "reference" if is_reference else "nested"
+                color = EXPLORE_EDGE_COLOR[state]
             else:
                 in_base = base_profile in profiles if base_profile else False
                 in_others = any(p in profiles for p in all_profile_ids[1:])
-
-                # An edge takes the border colour of the state it is in.
-                if in_base and in_others:
-                    color = self.COLORS[DiffType.UNCHANGED]["border"]
-                elif in_base and not in_others:
-                    color = self.COLORS[DiffType.REMOVED]["border"]
-                elif not in_base and in_others:
-                    color = self.COLORS[DiffType.ADDED]["border"]
-                else:
-                    color = self.COLORS[DiffType.UNCHANGED]["border"]
+                diff_type = _edge_state(in_base, in_others)
+                state = diff_type.value
+                color = self.COLORS[diff_type]["border"]
 
             edges.append(
                 {
                     "from": from_id,
                     "to": to_id,
                     "arrows": "to",
+                    "diff_type": state,
                     "color": {"color": color},
                     "width": 2,
                     "label": label,
@@ -367,6 +400,24 @@ class DiffVisualizer:
         """
         self._node_id_counter += 1
         return self._node_id_counter
+
+
+def _edge_state(in_base: bool, in_others: bool) -> DiffType:
+    """The state of a relationship, relative to the base profile."""
+    if in_base and not in_others:
+        return DiffType.REMOVED
+    if in_others and not in_base:
+        return DiffType.ADDED
+    return DiffType.UNCHANGED
+
+
+def _node_style(diff_type: DiffType, explore: bool) -> dict[str, Any]:
+    """Everything vis.js needs to paint a node in every state it can be in."""
+    if explore:
+        return EXPLORE_NODE_COLOR
+    colour = DiffVisualizer.COLORS[diff_type]
+    tint = {"background": colour["background"], "border": colour["border"]}
+    return {**colour, "highlight": tint, "hover": tint}
 
 
 # The headline attributes the graph shows on the node itself; everything else a

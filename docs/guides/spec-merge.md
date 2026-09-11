@@ -27,6 +27,8 @@ The first profile selected is treated as the **base/reference**. Differences are
 
 Green means the two profiles agree, which is the first thing a comparison is asked. Added and removed are a hue apart rather than green against red, and every state also carries a glyph (`=` `+` `-` `~` `!`) so the distinction does not depend on colour vision. The canvas, the legend and the entity panel use the same five colours.
 
+The server decides every colour. Each node in the graph data carries its complete vis.js colour (background, border, highlight, hover) and font colour, and each edge carries its colour and a `diff_type` (`unchanged`, `added` or `removed`; `nested` or `reference` when a single profile is explored). The page draws what it is sent and filters edges by `diff_type`; it keeps no colour table of its own, so a host that renders the graph cannot drift from the legend. When one profile is explored, nodes take the builder's white-and-moss style.
+
 ### ERD Visualization
 
 The comparison displays an interactive entity-relationship diagram:
@@ -135,8 +137,8 @@ visualizer = DiffVisualizer()
 graph_data = visualizer.build_diff_graph(result)
 
 # graph_data contains:
-# - nodes: Entity nodes with diff colors and field data
-# - edges: Relationships with colors based on profile presence
+# - nodes: Entity nodes with their vis.js colours, font colour and field data
+# - edges: Relationships with their colour and diff_type
 # - legend: Color legend for diff types
 # - statistics: Summary statistics
 ```
