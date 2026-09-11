@@ -94,6 +94,8 @@ extras and MUST import without pulling in the web framework:
 | `metaseed[metabolights]` | MetaboLights import/export |
 | `metaseed[seek]` | FAIRDOM-SEEK provisioning/export |
 | `metaseed[dcat]` | DCAT catalog export |
+| `metaseed[hub]` | metaseed-hub push/pull client |
+| `metaseed[all]` | Every adapter extra above; excludes `docs` and `dev` |
 | `metaseed[docs]`, `metaseed[dev]` | Documentation and development tooling |
 
 Importing an adapter without its extra MUST fail with a clear message naming the
