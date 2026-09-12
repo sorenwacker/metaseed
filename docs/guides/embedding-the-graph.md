@@ -44,6 +44,12 @@ When the page contains `graph-view` at load time, the script draws once on `DOMC
 
 It stays out of the way of applications that manage this themselves: set `window.METASEED_GRAPH_AUTOLOAD = false` before loading the script to suppress the automatic draw, then call `loadGraph()` or `renderGraphData()` when ready. Metaseed's own UI reveals the graph through htmx rather than on load, and refreshes it after entity operations.
 
+## While the graph is not visible
+
+The graph does no work while it cannot be seen. When `graph-container` is hidden or the browser tab is in the background, the script stops polling `/api/graph` and stops the layout simulation. When the graph becomes visible again it fetches once, resumes polling every 2 s, and resumes the simulation if it was running. A colour-scheme change redraws only a visible graph.
+
+`graphIsVisible()` reports that state, and `pauseGraph()` and `resumeGraph()` apply it. A host driving its own visibility — a tab strip, an accordion — calls them when its own container shows or hides.
+
 ## What the host still owns
 
-Styling beyond the canvas background, when the graph becomes visible, and how often it refreshes. The script redraws on `htmx:afterSwap` when `graph-container` is visible and on a colour-scheme change; a host without htmx simply never triggers the former.
+Styling beyond the canvas background, when the graph becomes visible, and how often it refreshes. While a visible graph is open, the script polls `/api/graph` every 2 s so that changes made outside the browser (an MCP agent editing the dataset) appear. It also redraws on `htmx:afterSwap` when `graph-container` is visible and on a colour-scheme change; a host without htmx simply never triggers the former.
