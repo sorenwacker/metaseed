@@ -203,6 +203,44 @@ function viewsOn() {
     return 'list';
 }
 
+// Whether the graph is worth spending anything on: one answer for both ways it
+// can be out of sight, because two checks are how one comes to disagree with
+// the other. Documented in docs/guides/embedding-the-graph.md.
+function graphIsVisible() {
+    var container = document.getElementById('graph-container');
+    if (container && container.classList.contains('hidden')) return false;
+    return document.visibilityState !== 'hidden';
+}
+
+// Stop everything a graph nobody can see would otherwise keep doing: the poll
+// that makes the server reload the dataset from disk, and the force simulation
+// that keeps computing positions for a canvas that is not on screen.
+function pauseGraph() {
+    stopGraphPolling();
+    if (graphNetwork) {
+        graphNetwork.stopSimulation();
+    }
+}
+
+// Coming back: one refresh for whatever changed while away, then the poll, and
+// the simulation only if the user had not frozen it.
+function resumeGraph() {
+    if (!graphIsVisible()) return;
+    loadGraph();
+    startGraphPolling();
+    if (graphNetwork && currentGraphLayout === 'physics' && graphPhysicsRunning) {
+        graphNetwork.startSimulation();
+    }
+}
+
+document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState === 'hidden') {
+        pauseGraph();
+    } else {
+        resumeGraph();
+    }
+});
+
 function applyViews() {
     var views = viewsOn();
     var list = views !== 'graph';
@@ -226,7 +264,7 @@ function applyViews() {
         startGraphPolling();
         if (graphNetwork) { graphNetwork.redraw(); fitGraph(); }
     } else {
-        stopGraphPolling();
+        pauseGraph();
     }
 }
 
@@ -698,7 +736,7 @@ function fitGraph() {
 // Watch for theme changes
 if (window.matchMedia) {
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() {
-        if (graphNetwork && graphData) {
+        if (graphNetwork && graphData && graphIsVisible()) {
             document.getElementById('graph-view').style.background = GRAPH_THEME.background;
             loadGraph();
         }
@@ -723,6 +761,11 @@ document.addEventListener('DOMContentLoaded', function() {
 // points findable, and survives a future move into a module.
 window.renderGraphData = renderGraphData;
 window.loadGraph = loadGraph;
+// A host that shows and hides the graph itself — a tab strip, an accordion —
+// applies the same resting behaviour through these.
+window.graphIsVisible = graphIsVisible;
+window.pauseGraph = pauseGraph;
+window.resumeGraph = resumeGraph;
 
 // Refresh the graph after an entity operation, if the graph is visible.
 // Debounced so a burst of swaps redraws once.

@@ -87,8 +87,9 @@ function startGraphPolling() {
     if (graphPollingInterval) return;
 
     graphPollingInterval = setInterval(function() {
-        var graphContainer = document.getElementById('graph-container');
-        if (graphContainer && !graphContainer.classList.contains('hidden')) {
+        // graphIsVisible() covers the closed panel and the background tab
+        // alike; checking the panel here is how a hidden tab kept polling.
+        if (graphIsVisible()) {
             loadGraph();
         }
     }, 2000);
