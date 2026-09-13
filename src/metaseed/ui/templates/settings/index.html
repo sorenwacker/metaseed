@@ -3,9 +3,10 @@
 <div class="settings-page" style="padding: 1.5rem; max-width: 920px;">
     <h2>Plugins</h2>
     <p class="muted">
-        Optional integration adapters. Each ships as a pip extra
-        (<code>pip install 'metaseed[&lt;name&gt;]'</code>); availability reflects
-        whether that extra is installed. Toggle to enable an adapter in this instance.
+        Optional integration adapters. Install all of them with
+        <code>uv tool install 'metaseed[all]'</code>, or name individual extras.
+        An adapter is available when the libraries it needs are installed; toggle
+        it to enable it in this instance.
     </p>
     <div id="adapter-list" class="adapter-list">
         {% for row in adapters %}

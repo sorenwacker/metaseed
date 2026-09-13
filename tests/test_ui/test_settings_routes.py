@@ -24,6 +24,19 @@ def test_settings_page_lists_all_adapters(client):
         assert f"adapter-{key}" in response.text
 
 
+def test_an_uninstalled_adapter_names_the_install_of_every_integration(
+    client, monkeypatch
+):
+    # `pip install` into a uv tool environment does not reach it, and a user who
+    # guessed `[all]` before it existed got no extras and one warning.
+    from metaseed import adapters
+
+    monkeypatch.setattr(adapters, "is_available", lambda info: info.key != "dcat")
+    page = client.get("/settings").text
+    assert "uv tool install 'metaseed[all]'" in page
+    assert "pip install" not in page
+
+
 def test_toggle_disables_then_reenables(client):
     # seek is enabled by default (httpx present); toggle it off, then on.
     off = client.post("/settings/adapters/seek/toggle")

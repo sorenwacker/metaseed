@@ -45,9 +45,23 @@ def _shipped_requirements() -> dict[str, list[str]]:
     return groups
 
 
+def _requirement_name(requirement: str) -> str:
+    return re.split(r"[<>=!~\[;\s]", requirement, maxsplit=1)[0]
+
+
+def _names_this_package(requirement: str) -> bool:
+    # An extra that points back at metaseed (`all`) resolves to the version
+    # being installed, so a bound on it would mean nothing.
+    return _requirement_name(requirement) == _config()["project"]["name"]
+
+
 def test_every_shipped_requirement_is_bounded_below_the_next_major() -> None:
     unbounded = {
-        group: [r for r in requirements if not _UPPER_BOUND.search(r)]
+        group: [
+            r
+            for r in requirements
+            if not _UPPER_BOUND.search(r) and not _names_this_package(r)
+        ]
         for group, requirements in _shipped_requirements().items()
     }
     offenders = {group: rs for group, rs in unbounded.items() if rs}
@@ -70,3 +84,23 @@ def test_httpx_is_declared_where_it_is_imported() -> None:
         "httpx is imported by agent/mcp/tools/ontology.py at module level but "
         "reaches the environment only through mcp's own pin"
     )
+
+
+def test_the_all_extra_installs_every_adapter() -> None:
+    """`metaseed[all]` must name each adapter's extra, including ones added later.
+
+    Before it existed, `uv tool install 'metaseed[all]'` installed no extras and
+    printed only a warning, so SEEK and DCAT showed as unavailable.
+    """
+    from metaseed import adapters
+
+    requirements = _config()["project"]["optional-dependencies"].get("all", [])
+    named: set[str] = set()
+    for requirement in requirements:
+        if _names_this_package(requirement):
+            listed = requirement.partition("[")[2].partition("]")[0]
+            named |= {extra.strip() for extra in listed.split(",")}
+    missing = {info.extra for info in adapters.ADAPTERS} - named
+
+    assert requirements, "pyproject declares no `all` extra"
+    assert not missing, f"`all` does not install the adapter extras {sorted(missing)}"

@@ -7,7 +7,7 @@
             <span class="badge" style="font-size:0.75rem; opacity:0.7;">{{ row.info.direction }}</span>
             <div class="muted" style="font-size:0.9rem;">{{ row.info.description }}</div>
             {% if not row.available %}
-            <div class="muted" style="font-size:0.8rem;">Not installed — <code>pip install 'metaseed[{{ row.info.extra }}]'</code></div>
+            <div class="muted" style="font-size:0.8rem;">Not installed — <code>uv tool install 'metaseed[all]'</code></div>
             {% elif row.enabled and row.info.action_path %}
             <div style="font-size:0.85rem;"><a href="{{ base_url }}{{ row.info.action_path }}"
                 data-testid="link-{{ row.info.key }}-action">Open “{{ row.info.name }}” →</a></div>

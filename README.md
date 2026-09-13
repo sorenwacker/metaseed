@@ -32,7 +32,7 @@ Metaseed requires Python 3.11 or later.
 uv tool install metaseed
 ```
 
-To include an integration, name its extra. For example, `metaseed[seek,dcat]` adds the FAIRDOM-SEEK and DCAT adapters; `metaseed[hub]` adds the hub client. The **Plugins** page in the web interface lists which extras are installed.
+To include every integration, install `metaseed[all]`. To pick individual integrations, name their extras: for example, `metaseed[seek,dcat]` adds the FAIRDOM-SEEK and DCAT adapters. The **Plugins** page in the web interface lists which adapters are available.
 
 For development:
 
