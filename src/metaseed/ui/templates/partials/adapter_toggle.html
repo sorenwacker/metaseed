@@ -54,7 +54,7 @@
             <input name="{{ field.key }}"
                    type="{{ 'password' if field.secret else 'text' }}"
                    data-testid="config-{{ row.info.key }}-{{ field.key }}"
-                   placeholder="{{ field.placeholder }}"
+                   placeholder="{{ '********' if field.secret and row.config.get(field.key) else field.placeholder }}"
                    autocomplete="off"
                    value="{{ '' if field.secret else row.config.get(field.key, '') }}">
         </label>

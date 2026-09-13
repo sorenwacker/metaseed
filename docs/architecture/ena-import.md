@@ -162,7 +162,7 @@ profile: what the importer builds, the exporter emits.
 
 Submitting to ENA needs a Webin account, so the `ena` adapter declares two
 settings — `webin_username` (the `Webin-NNNNN` account) and `webin_password`,
-marked secret so the Plugins page masks it. They are stored by the shared
+marked secret: the Plugins page never sends a stored secret to the browser, shows `********` in its empty field to say one is stored, and keeps it when the field is left blank. They are stored by the shared
 settings layer, in `settings.json` written with owner-only permissions.
 
 ```python
