@@ -7,7 +7,10 @@ to handle common operations like finding parent references and deriving labels.
 from __future__ import annotations
 
 import copy
+import datetime
 from typing import TYPE_CHECKING, Any, cast
+
+from pydantic import AnyUrl
 
 if TYPE_CHECKING:
     from metaseed.facade import EntityHelper
@@ -72,13 +75,21 @@ def get_identifier_from_instance(
     return get_identifier(data, helper)
 
 
-def _is_scalar(value: Any) -> bool:
-    """True when a value can stand on its own as a display label.
+def _label_text(value: Any) -> str | None:
+    """The text of a value that can stand on its own as a display label.
 
-    Nested entities (dicts, Pydantic models) and collections stringify into
-    unreadable dumps, so they are never used as a label.
+    Validation turns ``uri``, ``date`` and ``datetime`` values into URL and
+    date objects; they label as their text, so an entity labels the same
+    before and after it is validated. Nested entities (dicts, Pydantic models)
+    and collections stringify into unreadable dumps and give no label.
     """
-    return isinstance(value, (str, int, float, bool))
+    if isinstance(value, (str, int, float, bool)):
+        return str(value)
+    if isinstance(value, datetime.date):  # also covers datetime.datetime
+        return value.isoformat()
+    if isinstance(value, AnyUrl):
+        return str(value)
+    return None
 
 
 def derive_label(entity_type: str, data: dict[str, Any], spec: Any = None) -> str:
@@ -98,25 +109,31 @@ def derive_label(entity_type: str, data: dict[str, Any], spec: Any = None) -> st
         Derived label string.
     """
     if spec and hasattr(spec, "fields") and spec.fields:
-        label_field = next(
-            (f.name for f in spec.fields if getattr(f, "is_label", None)),
-            spec.fields[0].name,
+        declared = next(
+            (f.name for f in spec.fields if getattr(f, "is_label", None)), None
         )
+        label_field = declared or spec.fields[0].name
         value = data.get(label_field)
+        # A declared list (e.g. one name per language) labels by its first
+        # entry; an undeclared first field that is a list is not a label.
+        if declared and isinstance(value, list) and value:
+            value = value[0]
         if value:
-            if _is_scalar(value):
-                return str(value)[:50]
+            text = _label_text(value)
+            if text is not None:
+                return text[:50]
             # The chosen field holds a nested entity (e.g. isa
             # ProtocolParameter's entity-typed ``parameter_name``); stringifying
             # it yields a dict dump, not a label. Fall through to the first
-            # scalar instead, skipping references — they identify the parent,
-            # not this entity.
+            # single value instead, skipping references — they identify the
+            # parent, not this entity.
             for f in spec.fields:
                 if getattr(f, "reference", None) or f.name == label_field:
                     continue
                 candidate = data.get(f.name)
-                if candidate and _is_scalar(candidate):
-                    return str(candidate)[:50]
+                text = _label_text(candidate) if candidate else None
+                if text is not None:
+                    return text[:50]
 
     return f"New {entity_type}"
 
