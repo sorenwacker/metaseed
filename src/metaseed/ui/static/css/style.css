@@ -817,12 +817,26 @@ body::before {
     gap: var(--space-sm);
 }
 
+/* A table cell, not a flex box: `display: flex` takes the cell out of table
+   layout, so it stopped at its own content height and left the rest of a tall
+   row empty beneath the buttons. */
 .row-actions {
-    display: flex;
-    gap: var(--space-xs);
-    justify-content: center;
+    vertical-align: middle;
+    text-align: center;
+    white-space: nowrap;
     padding: var(--space-xs) !important;
     background: var(--clr-paper);
+}
+
+.row-actions .btn,
+.row-actions .btn-icon {
+    vertical-align: middle;
+}
+
+.row-actions .btn + .btn,
+.row-actions .btn + .btn-icon,
+.row-actions .btn-icon + .btn-icon {
+    margin-left: var(--space-xs);
 }
 
 /* ============================================
@@ -2300,6 +2314,9 @@ body::before {
 .inline-data-table td {
     padding: var(--space-xs) var(--space-sm);
     font-size: 0.875rem;
+    /* Below this a column is unreadable rather than merely narrow: a squeezed
+       column wrapped "Example University Medical Centre" one word per line. */
+    min-width: 10ch;
 }
 
 .inline-data-table thead th {
@@ -2316,6 +2333,29 @@ body::before {
 .inline-data-table .row-actions .btn {
     padding: 0.25rem 0.5rem;
     font-size: 0.75rem;
+}
+
+/* A row is as tall as its longest value: one 70-character note turned every
+   row into a seven-line block, while a narrow column wrapped a name into a
+   vertical ribbon. Two lines, then ellipsis; the value stays editable in full
+   once the cell is clicked. */
+.inline-data-table .cell-display {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+}
+
+/* The actions stay reachable when the table is wider than the card and has to
+   be scrolled sideways. */
+.inline-data-table th:last-child,
+.inline-data-table td.row-actions {
+    position: sticky;
+    right: 0;
+    z-index: 2;
+    background: var(--clr-paper);
 }
 
 /* ============================================
