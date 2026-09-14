@@ -59,7 +59,10 @@ must not be reimplemented:
 `workbook_to_payload` produces payloads; `import_payload` installs them, the
 same call the JSON import uses, so both formats load through one path. The tree
 comes from `_parent_unique_id`, which the loader resolves against the entities
-it has already created.
+it has already created — only among those whose type can hold the child
+(`EntityHelper.child_fields`). An identifier value can belong to records of
+several types, so a lookup by value alone could attach a child to the wrong
+record ([ADR 006](decisions/006-relationships-are-recorded-edges.md)).
 
 Installing into an *existing* dataset rather than replacing one is not yet the
 library's: the hub still does that itself, in `add_entities_in_order`, together

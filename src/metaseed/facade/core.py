@@ -261,16 +261,20 @@ class ProfileFacade:
         """
         return self._store.get_entity(node_id)
 
-    def get_entity_by_ref(self: Self, ref_value: str) -> EntityNode | None:
+    def get_entity_by_ref(
+        self: Self, ref_value: str, entity_type: str | None = None
+    ) -> EntityNode | None:
         """Get an entity node by its reference value (alias/unique_id).
 
         Args:
             ref_value: The alias or unique_id to look up.
+            entity_type: The type the record must have. An identifier value
+                can belong to records of several types (ADR 006).
 
         Returns:
             EntityNode if found, None otherwise.
         """
-        return self._store.get_entity_by_ref(ref_value)
+        return self._store.get_entity_by_ref(ref_value, entity_type)
 
     def update_entity(
         self: Self,
