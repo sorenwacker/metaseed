@@ -58,6 +58,10 @@ class EntityStore:
         """
         self._instances: dict[str, EntityNode] = {}
         self._index: dict[str, str] = {}  # identifier value -> node_id
+        # (entity type, identifier value) -> node_id. A value alone may name
+        # records of several types; a lookup that knows the type must not
+        # cross it (ADR 006).
+        self._typed_index: dict[tuple[str, str], str] = {}
         self._get_helper = helper_getter
         self._create_instance_callback = instance_creator
 
@@ -147,9 +151,25 @@ class EntityStore:
         for id_field in self._get_identifier_fields(entity_type):
             id_value = data.get(id_field)
             if id_value:
-                self._index[str(id_value)] = node.id
+                self._index_identifier(entity_type, str(id_value), node.id)
 
         return node
+
+    def _index_identifier(
+        self: Self, entity_type: str, value: str, node_id: str
+    ) -> None:
+        """Make ``node_id`` resolvable by ``value``, with and without its type."""
+        self._index[value] = node_id
+        self._typed_index[(entity_type, value)] = node_id
+
+    def _unindex_identifier(
+        self: Self, entity_type: str, value: str, node_id: str
+    ) -> None:
+        """Drop ``value``'s entries where they still point at ``node_id``."""
+        if self._index.get(value) == node_id:
+            del self._index[value]
+        if self._typed_index.get((entity_type, value)) == node_id:
+            del self._typed_index[(entity_type, value)]
 
     def _resolve_parent(
         self: Self,
@@ -173,9 +193,20 @@ class EntityStore:
         except (KeyError, AttributeError):
             return None
 
-        for field_name in helper.reference_fields:
+        references = helper.reference_fields
+        for field_name in references:
             ref_value = data.get(field_name)
-            if ref_value and str(ref_value) in self._index:
+            if not ref_value:
+                continue
+            target = references[field_name] if isinstance(references, dict) else None
+            if target is not None:
+                # The reference names its target type; a record of another
+                # type that shares the value is not its parent (ADR 006).
+                node_id = self._typed_index.get((target[0], str(ref_value)))
+                if node_id:
+                    return node_id
+                continue
+            if str(ref_value) in self._index:
                 return self._index[str(ref_value)]
 
         return None
@@ -259,16 +290,25 @@ class EntityStore:
         """
         return self._instances.get(node_id)
 
-    def get_entity_by_ref(self: Self, ref_value: str) -> EntityNode | None:
+    def get_entity_by_ref(
+        self: Self, ref_value: str, entity_type: str | None = None
+    ) -> EntityNode | None:
         """Get an entity node by its reference value (alias/unique_id).
 
         Args:
             ref_value: The alias or unique_id to look up.
+            entity_type: The type the record must have. An identifier value
+                can belong to records of several types; without a type the
+                most recently indexed record carrying the value is returned.
 
         Returns:
             EntityNode if found, None otherwise.
         """
-        node_id = self._index.get(ref_value)
+        node_id = (
+            self._typed_index.get((entity_type, ref_value))
+            if entity_type
+            else self._index.get(ref_value)
+        )
         if node_id:
             return self._instances.get(node_id)
         return None
@@ -301,9 +341,8 @@ class EntityStore:
         )
         for id_field in id_fields_to_check:
             old_value = old_data.get(id_field)
-            if old_value and str(old_value) in self._index:
-                if self._index[str(old_value)] == node_id:
-                    del self._index[str(old_value)]
+            if old_value:
+                self._unindex_identifier(node.entity_type, str(old_value), node_id)
 
         # Create new instance
         node.instance = self._create_instance(node.entity_type, data, skip_validation)
@@ -312,7 +351,7 @@ class EntityStore:
         for id_field in id_fields_to_check:
             new_value = data.get(id_field)
             if new_value:
-                self._index[str(new_value)] = node_id
+                self._index_identifier(node.entity_type, str(new_value), node_id)
 
         return node
 
@@ -337,12 +376,8 @@ class EntityStore:
                 data = n.instance.model_dump()
                 for id_field in self._get_identifier_fields(n.entity_type):
                     id_value = data.get(id_field)
-                    if (
-                        id_value
-                        and str(id_value) in self._index
-                        and self._index[str(id_value)] == n.id
-                    ):
-                        del self._index[str(id_value)]
+                    if id_value:
+                        self._unindex_identifier(n.entity_type, str(id_value), n.id)
             self._instances.pop(n.id, None)
 
         # Remove from parent's children list
@@ -510,7 +545,8 @@ class EntityStore:
         """
         self.clear()
 
-        id_to_node: dict[str, EntityNode] = {}
+        # identifier value -> every node carrying it; linking chooses by type
+        id_to_node: dict[str, list[EntityNode]] = {}
         old_id_to_node: dict[str, EntityNode] = {}
         nodes_with_parent: list[tuple[EntityNode, str, bool]] = []
 
@@ -520,7 +556,7 @@ class EntityStore:
             if result:
                 node, id_to_node_entry, old_id_entry, parent_entry = result
                 if id_to_node_entry:
-                    id_to_node[id_to_node_entry] = node
+                    id_to_node.setdefault(id_to_node_entry, []).append(node)
                 if old_id_entry:
                     old_id_to_node[old_id_entry] = node
                 if parent_entry:
@@ -635,7 +671,7 @@ class EntityStore:
             for id_field in self._get_identifier_fields(entity_type):
                 id_value = fields.get(id_field)
                 if id_value:
-                    self._index[str(id_value)] = node.id
+                    self._index_identifier(entity_type, str(id_value), node.id)
 
             parent_entry = None
             if parent_unique_id:
@@ -662,23 +698,54 @@ class EntityStore:
             )
             return None
 
+    def _container_of(
+        self: Self, child: EntityNode, candidates: list[EntityNode]
+    ) -> EntityNode | None:
+        """The candidate whose type can hold ``child``, else the last one indexed.
+
+        A stored parent reference is an identifier value, and a value can
+        belong to records of several types (ADR 006).
+        """
+        for candidate in candidates:
+            try:
+                helper = self._get_helper(candidate.entity_type)
+            except (KeyError, AttributeError):
+                continue
+            if child.entity_type in helper.child_fields.values():
+                return candidate
+        return candidates[-1] if candidates else None
+
+    @staticmethod
+    def _of_type(
+        candidates: list[EntityNode], entity_type: str | None
+    ) -> EntityNode | None:
+        """The candidate of ``entity_type``; any candidate when no type is known."""
+        if entity_type is None:
+            return candidates[-1] if candidates else None
+        for candidate in candidates:
+            if candidate.entity_type == entity_type:
+                return candidate
+        return None
+
     def _link_by_stored_refs(
         self: Self,
         nodes_with_parent: list[tuple[EntityNode, str, bool]],
-        id_to_node: dict[str, EntityNode],
+        id_to_node: dict[str, list[EntityNode]],
         old_id_to_node: dict[str, EntityNode],
     ) -> None:
         """Link nodes to parents by stored _parent_unique_id or _parent_id."""
         for node, parent_ref, is_unique_id in nodes_with_parent:
             parent_node = (
-                id_to_node.get(parent_ref)
+                self._container_of(node, id_to_node.get(parent_ref, []))
                 if is_unique_id
                 else old_id_to_node.get(parent_ref)
             )
             if parent_node:
                 link_child(parent_node, node)
 
-    def _link_by_nested_arrays(self: Self, id_to_node: dict[str, EntityNode]) -> None:
+    def _link_by_nested_arrays(
+        self: Self, id_to_node: dict[str, list[EntityNode]]
+    ) -> None:
         """Link children via parent's nested array fields.
 
         Every node is examined as a potential PARENT here — a mid-level node
@@ -695,7 +762,8 @@ class EntityStore:
 
             node_data = node.instance.model_dump() if node.instance else {}
 
-            for field_name in helper.nested_fields:
+            nested = helper.nested_fields
+            for field_name in nested:
                 value = node_data.get(field_name)
                 if value in (None, "", [], {}):
                     continue
@@ -707,12 +775,14 @@ class EntityStore:
                 child_ids = value if isinstance(value, list) else [value]
 
                 for child_id in child_ids:
-                    child_node = id_to_node.get(str(child_id))
+                    child_node = self._of_type(
+                        id_to_node.get(str(child_id), []), nested[field_name]
+                    )
                     if child_node and child_node.parent_id is None:
                         link_child(node, child_node)
 
     def _link_by_reference_fields(
-        self: Self, id_to_node: dict[str, EntityNode]
+        self: Self, id_to_node: dict[str, list[EntityNode]]
     ) -> None:
         """Link orphan nodes to parents via reference fields.
 
@@ -737,12 +807,19 @@ class EntityStore:
 
             node_data = node.instance.model_dump() if node.instance else {}
 
-            for field_name in helper.reference_fields:
+            references = helper.reference_fields
+            for field_name in references:
                 ref_value = node_data.get(field_name)
                 if not ref_value:
                     continue
 
-                parent_node = id_to_node.get(str(ref_value))
+                target = (
+                    references[field_name] if isinstance(references, dict) else None
+                )
+                parent_node = self._of_type(
+                    id_to_node.get(str(ref_value), []),
+                    target[0] if target else None,
+                )
                 if parent_node is None or parent_node.id == node.id:
                     continue
                 if self._would_cycle(node, parent_node):
@@ -782,3 +859,4 @@ class EntityStore:
         """Clear all stored entity instances."""
         self._instances.clear()
         self._index.clear()
+        self._typed_index.clear()
