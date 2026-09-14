@@ -102,6 +102,27 @@ def test_example_link_only_shown_when_example_exists() -> None:
         )
 
 
+def test_the_picker_says_what_to_do_when_a_standard_is_missing() -> None:
+    # The picker lists what ships and said nothing about the rest, leaving a
+    # reader whose standard is absent with no way to ask for it.
+    client = TestClient(create_app(AppState()))
+    html = client.get("/new-dataset").text
+
+    assert 'data-testid="missing-profile-note"' in html
+    assert "https://github.com/sorenwacker/metaseed/issues" in html
+
+
+def test_the_note_comes_before_the_standards_it_qualifies() -> None:
+    # Below the list the note sat 1500px down: the reader who needs it is the
+    # one who stopped scrolling before reaching it.
+    client = TestClient(create_app(AppState()))
+    html = client.get("/new-dataset").text
+
+    assert html.index('data-testid="missing-profile-note"') < html.index(
+        'class="profile-options"'
+    ), "the note must be readable without scrolling every standard"
+
+
 def test_versions_listed_newest_first() -> None:
     # miappe ships 1.1 and 1.2; the newer version must appear first in the picker.
     client = TestClient(create_app(AppState()))
