@@ -427,6 +427,8 @@ required/recommended/optional.
 `list` is `list[Any]` — the `items` type does not enter the annotation; `entity`
 maps to `Any`, not a generated nested model.
 
+In the web form, a `list` whose `items` is a value type — any type in the table above except `list` and `entity` — is edited as a text box holding one value per line, and each line is submitted as one item. A `list` or `entity` whose `items` names an entity is edited through that entity's child table.
+
 ### Ontology Term Fields
 
 Fields with `type: ontology_term` enable OLS4 (Ontology Lookup Service) integration in the UI. Use the optional `ontologies` field to scope lookups to specific ontologies:

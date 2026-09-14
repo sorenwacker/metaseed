@@ -96,7 +96,7 @@
     </div>
 
     {% elif field.type == 'list' %}
-        {% if field['items'] and field['items'] not in ['string', 'int', 'float', 'bool'] %}
+        {% if field.nested %}
             {% if is_edit %}
             <button type="button"
                     class="btn nested-field-btn"

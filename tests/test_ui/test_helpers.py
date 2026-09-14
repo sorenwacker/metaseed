@@ -153,6 +153,31 @@ class TestCollectFormValues:
         values = collect_form_values(form_data, helper)
         assert values["tags"] == ["tag1", "tag2", "tag3"]
 
+    @pytest.mark.parametrize(
+        ("items", "text", "expected"),
+        [
+            (
+                "uri",
+                "https://example.org/a\n\nhttps://example.org/b\n",
+                ["https://example.org/a", "https://example.org/b"],
+            ),
+            ("date", "2024-01-01\n2024-02-01", ["2024-01-01", "2024-02-01"]),
+        ],
+    )
+    def test_a_list_of_any_value_type_is_split_per_line(self, items, text, expected):
+        """A list of IRIs or dates arrives from the same one-per-line text box as a
+        list of strings; submitting it as one string failed validation."""
+        helper = MagicMock()
+        helper.all_fields = ["values"]
+        helper.field_info.return_value = {
+            "type": "list",
+            "items": items,
+            "required": False,
+        }
+
+        values = collect_form_values({"values": text}, helper)
+        assert values["values"] == expected
+
 
 class TestFormatValidationErrors:
     """Tests for format_validation_errors function."""
