@@ -256,7 +256,7 @@ The UI supports deep nesting of entities. When viewing a table of nested entitie
 ### Behavior
 
 1. **Click row to edit**: Clicking a table row opens a form for editing that nested entity
-2. **Breadcrumb navigation**: A breadcrumb trail shows the navigation path (e.g., "Investigation > studies > Study[0]")
+2. **Breadcrumb navigation**: A breadcrumb trail shows the navigation path (e.g., "Investigation > studies > Study[0]"). An entity opened directly for editing — from the graph, a link, or a table row — shows the same path, built from its containment chain: each ancestor and the field it sits in, every ancestor a link, so the parent is reachable without returning to the entity list
 3. **Deep nesting**: Nested entities can contain their own nested entities (e.g., Study > biological_materials > BiologicalMaterial)
 4. **Save & Back**: Saves changes and returns to the parent table view
 5. **Cancel**: Returns to parent without saving

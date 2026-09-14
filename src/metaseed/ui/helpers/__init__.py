@@ -41,6 +41,7 @@ from metaseed.ui.helpers.entity_helpers import (
 
 # Re-export from navigation_helpers
 from metaseed.ui.helpers.navigation_helpers import (
+    build_ancestor_breadcrumb,
     build_breadcrumb,
     error_response,
     get_parent_id_fields,
@@ -67,6 +68,7 @@ from metaseed.ui.helpers.validation import (
 __all__ = [
     "FormContext",
     "ValidationResult",
+    "build_ancestor_breadcrumb",
     "build_breadcrumb",
     "build_inline_tables",
     "collect_entities_by_type",
