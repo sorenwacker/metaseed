@@ -393,6 +393,8 @@ reference (e.g. isa `Source` would label by its parent `study_id`). Marking one
 field `is_identifier: true` and/or one field `is_label: true` overrides the
 convention. At most one field per entity may set each marker (enforced at load).
 
+The label is the text of the label field's value. Values that validation turns into typed objects — `uri`, `date` and `datetime` fields — are converted to text, so an entity labels the same before and after it is validated. A field declared `is_label` whose type is `list` contributes its first entry, which lets an entity with repeatable names (one per language) label by name. When the declared field is empty the label is `New <Entity>`; when its value is a nested entity the label comes from the first non-reference field holding a single value.
+
 Both markers are set from the web field editor and from the MCP
 [`spec_add_field` / `spec_update_field`](spec-builder-mcp.md#fields) tools, and are
 read whatever the spec's `spec_version` says. When an entity declares no
