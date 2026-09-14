@@ -50,10 +50,10 @@ nested = ctx.get_nested_fields()
 
 | Function | Purpose |
 |----------|---------|
-| `collect_form_values(form_data, helper)` | Extract typed values from form submission |
+| `collect_form_values(form_data, helper)` | Extract typed values from form submission; a `list` of any value type is split into one item per line |
 | `filter_fields(fields, ...)` | Filter field list by required/nested criteria |
 | `get_field_data(helper)` | Get field metadata for template rendering |
-| `is_nested_field(field)` | Check if field dict represents nested entity |
+| `is_nested_field(field)` | Check if field dict represents nested entity: `entity`, or `list` whose `items` is not a value type in `PRIMITIVE_TYPES` |
 | `format_validation_errors(e)` | Convert ValidationError to user-friendly messages |
 
 ## entity_helpers

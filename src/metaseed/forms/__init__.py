@@ -148,6 +148,10 @@ def get_field_data(
         for key in ("example", "options", "unit", "label", "tier"):
             if key in info:
                 field_data[key] = info[key]
+        # Renderers branch on this instead of keeping their own list of value
+        # types: a template's copy omitted `uri`, so a list of IRIs rendered as
+        # a nested entity list.
+        field_data["nested"] = is_nested_field(field_data)
         fields.append(field_data)
     return fields
 
@@ -196,7 +200,7 @@ def collect_form_values(form_data: dict[str, Any], helper: Any) -> dict[str, Any
                 continue
         elif field_type == "boolean":
             value = value.lower() in ("true", "1", "yes", "on")
-        elif field_type == "list" and info.get("items") == "string":
+        elif field_type == "list" and info.get("items") in PRIMITIVE_TYPES:
             value = [line.strip() for line in str(value).split("\n") if line.strip()]
 
         values[field_name] = value
