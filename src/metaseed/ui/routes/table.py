@@ -13,6 +13,8 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from starlette.requests import Request
 
+from metaseed.facade.linking import holds_exactly_one
+
 from ..helpers import (
     build_breadcrumb,
     error_response,
@@ -30,6 +32,26 @@ if TYPE_CHECKING:
     from fastapi import FastAPI
 
     from ..state import AppState
+
+
+def _refuse_a_second_entity(
+    facade: Any, parent_entity_type: str, field_name: str, items: list[Any]
+) -> None:
+    """Refuse a row for a field that already holds its one entity (ADR 006).
+
+    The table hides "+ Add" once such a field has a row; a request that arrives
+    anyway must not add a second.
+
+    Raises:
+        HTTPException: 409 when ``field_name`` holds exactly one entity and
+            already has a row.
+    """
+    parent_helper = getattr(facade, parent_entity_type, None)
+    if parent_helper and items and holds_exactly_one(parent_helper, field_name):
+        raise HTTPException(
+            status_code=409,
+            detail=f"{parent_entity_type}.{field_name} holds exactly one entity",
+        )
 
 
 def register_table_routes(  # noqa: C901
@@ -129,6 +151,7 @@ def register_table_routes(  # noqa: C901
                 status_code=404,
                 detail=f"'{field_name}' is not a nested field of {parent_entity_type}",
             )
+        _refuse_a_second_entity(facade, parent_entity_type, field_name, items)
         col_info = get_table_column_info(facade, entity_type)
 
         reference_fields = (

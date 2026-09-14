@@ -30,6 +30,7 @@ __all__ = [
     "NO_CHANGE",
     "choose_parent_field",
     "field_naming_child",
+    "holds_exactly_one",
     "link_child",
     "linked_reference_value",
     "unlink_child",
@@ -45,6 +46,15 @@ class _NoChange:
 
 
 NO_CHANGE: Any = _NoChange()
+
+
+def holds_exactly_one(parent_helper: EntityHelper, field: str) -> bool:
+    """Whether ``field`` holds exactly one child (``type: entity``).
+
+    The shape rule's question, asked by the UI too: a form must not offer, and
+    a route must not add, a second entity to such a field (ADR 006).
+    """
+    return field in parent_helper.single_entity_fields
 
 
 def choose_parent_field(

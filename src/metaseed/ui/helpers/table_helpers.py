@@ -122,6 +122,8 @@ def build_inline_tables(
         }
     """
     # Import here to avoid circular imports
+    from metaseed.facade.linking import holds_exactly_one
+
     from .navigation_helpers import get_parent_id_fields, get_reference_fields
 
     helper = getattr(facade, entity_type, None)
@@ -168,6 +170,10 @@ def build_inline_tables(
             "reference_fields": ref_fields,
             "parent_id_fields": parent_id_fields,
             "nested_entity_type": nested_type,
+            # The table is the only place the field appears (ADR 006), so it
+            # carries whether the field is required and holds exactly one.
+            "required": field_name in helper.required_fields,
+            "single": holds_exactly_one(helper, field_name),
         }
 
     return inline_tables

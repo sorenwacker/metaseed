@@ -14,9 +14,14 @@
     <div class="inline-table-header">
         <div class="inline-table-title" data-testid="inline-table-toggle-{{ field_name }}">
             <span class="inline-table-icon">&#9660;</span>
-            <h4>{{ field_name|replace('_', ' ')|title }}</h4>
+            <h4>{{ field_name|replace('_', ' ')|title }}{% if table_data.required %}<span class="required" data-testid="inline-table-required-{{ field_name }}">*</span>{% endif %}</h4>
+            {% if table_data.single %}
+            <span class="inline-table-count" data-testid="inline-table-single-{{ field_name }}">({{ table_data.nested_entity_type }}, exactly one)</span>
+            {% else %}
             <span class="inline-table-count">({{ rows|length }} items)</span>
+            {% endif %}
         </div>
+        {% if not (table_data.single and rows|length) %}
         <button type="button" class="btn btn-sm btn-primary"
                 hx-post="/table/{{ parent_entity_type }}/{{ field_name }}/row"
                 hx-target="#inline-table-body-{{ field_name }}"
@@ -24,6 +29,7 @@
                 data-testid="inline-add-row-{{ field_name }}">
             + Add
         </button>
+        {% endif %}
     </div>
     <div class="inline-table-content">
         <table class="data-table inline-data-table"

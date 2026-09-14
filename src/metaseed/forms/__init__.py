@@ -22,6 +22,7 @@ __all__ = [
     "collect_form_values",
     "field_errors_from_validation",
     "filter_fields",
+    "form_field_groups",
     "format_validation_errors",
     "get_field_data",
     "is_nested_field",
@@ -63,16 +64,16 @@ class FormContext:
         return get_field_data(self.helper) if self.helper else []
 
     def get_required_fields(self) -> list[dict[str, Any]]:
-        """Get required fields only."""
-        return filter_fields(self.get_fields(), required=True)
+        """Get required fields that do not hold entities."""
+        return form_field_groups(self.get_fields())["required_fields"]
 
     def get_optional_fields(self) -> list[dict[str, Any]]:
-        """Get optional non-nested fields."""
-        return filter_fields(self.get_fields(), required=False, exclude_nested=True)
+        """Get optional fields that do not hold entities."""
+        return form_field_groups(self.get_fields())["optional_fields"]
 
     def get_nested_fields(self) -> list[dict[str, Any]]:
-        """Get nested entity fields only."""
-        return filter_fields(self.get_fields(), nested_only=True)
+        """Get fields that hold entities, required or not."""
+        return form_field_groups(self.get_fields())["nested_fields"]
 
 
 def filter_fields(
@@ -101,6 +102,30 @@ def filter_fields(
     if nested_only:
         result = [f for f in result if is_nested_field(f)]
     return result
+
+
+def form_field_groups(
+    fields: list[dict[str, Any]],
+) -> dict[str, list[dict[str, Any]]]:
+    """Split fields into the form's sections, each field in exactly one.
+
+    A field holding entities -- a list of entities or a single entity -- is
+    listed only among ``nested_fields`` and rendered as its table, required or
+    not (ADR 006). Required entity fields used to be listed among the required
+    fields as well, so a required ``publisher`` appeared twice.
+
+    Args:
+        fields: Field dicts from :func:`get_field_data`.
+
+    Returns:
+        ``required_fields``, ``optional_fields`` and ``nested_fields``, keyed
+        as the form templates expect them.
+    """
+    return {
+        "required_fields": filter_fields(fields, required=True, exclude_nested=True),
+        "optional_fields": filter_fields(fields, required=False, exclude_nested=True),
+        "nested_fields": filter_fields(fields, nested_only=True),
+    }
 
 
 def get_field_data(
