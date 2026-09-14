@@ -35,6 +35,24 @@ if TYPE_CHECKING:
     from ..state import AppState
 
 
+def _form_text(form_data: Any, key: str) -> str | None:
+    """A non-empty text value from submitted form data, else None."""
+    value = form_data.get(key)
+    return value if isinstance(value, str) and value else None
+
+
+def _created_message(
+    entity_type: str, label: str, warning: str | None
+) -> tuple[str, str]:
+    """The notification text and type after creating an entity."""
+    if warning:
+        return (
+            f"Saved draft {entity_type}: {label} (incomplete — {warning})",
+            "warning",
+        )
+    return f"Created {entity_type}: {label}", "success"
+
+
 def register_entity_crud_routes(
     app: FastAPI,
     templates: Jinja2Templates,
@@ -60,15 +78,13 @@ def register_entity_crud_routes(
 
         form_data = await request.form()
         entity_type_raw = form_data.get("_entity_type")
-        parent_id_raw = form_data.get("_parent_id")
+        parent_id = _form_text(form_data, "_parent_id")
+        parent_field = _form_text(form_data, "_parent_field")
 
         if not entity_type_raw or not isinstance(entity_type_raw, str):
             return error_response(request, templates, "Entity type is required")
 
         entity_type: str = entity_type_raw
-        parent_id: str | None = (
-            parent_id_raw if isinstance(parent_id_raw, str) else None
-        )
 
         try:
             helper = getattr(facade, entity_type)
@@ -98,12 +114,17 @@ def register_entity_crud_routes(
             warning = format_validation_errors(e)
             field_errors = field_errors_from_validation(e)
 
-        node = state.add_node(
-            entity_type,
-            instance,
-            parent_id=parent_id,
-            skip_validation=warning is not None,
-        )
+        try:
+            node = state.add_node(
+                entity_type,
+                instance,
+                parent_id=parent_id,
+                skip_validation=warning is not None,
+                parent_field=parent_field,
+            )
+        except ValueError as e:
+            # An ambiguous or wrong parent field (ADR 006).
+            return error_response(request, templates, str(e))
         state.editing_node_id = node.id
         state.current_nested_items = extract_nested_items(instance, helper)
 
@@ -114,14 +135,7 @@ def register_entity_crud_routes(
         # repository and write through a private default.
         auto_save(state, getattr(request.app.state, "dataset_factory", None))
 
-        if warning:
-            message = (
-                f"Saved draft {entity_type}: {node.label} (incomplete — {warning})"
-            )
-            message_type = "warning"
-        else:
-            message = f"Created {entity_type}: {node.label}"
-            message_type = "success"
+        message, message_type = _created_message(entity_type, node.label, warning)
 
         return render_entity_form(
             request,
@@ -357,7 +371,7 @@ def render_entity_form(
     if state and node_id and node_id in state.nodes_by_id:
         node_label = state.nodes_by_id[node_id].label
 
-    child_entity_types = list(helper.child_fields.values())
+    child_entity_fields = list(helper.child_fields.items())
 
     from .import_export import export_options_for_profile
 
@@ -384,7 +398,7 @@ def render_entity_form(
                 {"type": message_type, "message": message} if message else None
             ),
             "inline_tables": ctx.inline_tables,
-            "child_entity_types": child_entity_types,
+            "child_entity_fields": child_entity_fields,
             "field_errors": field_errors or {},
             "export_options": export_options,
         },

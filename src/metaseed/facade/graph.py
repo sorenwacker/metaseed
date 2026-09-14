@@ -51,6 +51,7 @@ def get_tree(
             "label": label,
             "has_children": bool(node.children),
             "children": [node_to_dict(c) for c in node.children],
+            "parent_field": node.parent_field,
         }
 
     return [node_to_dict(r) for r in roots]

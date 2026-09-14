@@ -27,12 +27,14 @@ class EntityNode:
         entity_type: Type of entity (e.g., "Study", "Sample").
         instance: The Pydantic model instance.
         parent_id: ID of parent node, derived from reference fields.
+        parent_field: The parent field that holds this node (ADR 006).
     """
 
     id: str
     entity_type: str
     instance: Any
     parent_id: str | None = None
+    parent_field: str | None = None
     children: list[EntityNode] = field(default_factory=list)
 
     @property

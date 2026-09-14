@@ -80,6 +80,8 @@ class EntityNode:
         label: Display label for the node.
         has_children: Whether this node has children.
         children: List of child nodes (lazy-loaded in some contexts).
+        parent_field: The parent field that holds this node (ADR 006), or
+            None for a root or a node linked only by its own reference field.
     """
 
     id: str
@@ -87,6 +89,7 @@ class EntityNode:
     label: str
     has_children: bool = False
     children: list[EntityNode] = field(default_factory=list)
+    parent_field: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Convert node to dictionary for serialization.
@@ -99,5 +102,6 @@ class EntityNode:
             "entity_type": self.entity_type,
             "label": self.label,
             "has_children": self.has_children,
+            "parent_field": self.parent_field,
             "children": [c.to_dict() for c in self.children],
         }

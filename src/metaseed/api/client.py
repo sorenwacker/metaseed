@@ -538,6 +538,7 @@ class MetaseedClient(SerializationMixin, ValidationMixin):
             label=node.label,
             has_children=bool(node.children),
             children=[self._convert_to_entity_node(c) for c in node.children],
+            parent_field=node.parent_field,
         )
 
     def _dict_to_node(self: Self, d: dict[str, Any]) -> EntityNode:
@@ -548,6 +549,7 @@ class MetaseedClient(SerializationMixin, ValidationMixin):
             label=d["label"],
             has_children=d.get("has_children", False),
             children=[self._dict_to_node(c) for c in d.get("children", [])],
+            parent_field=d.get("parent_field"),
         )
 
     def __repr__(self: Self) -> str:

@@ -127,10 +127,10 @@ def _decides_which_field_references_a_child(source: str) -> bool:
 def test_the_field_selection_rule_has_one_home() -> None:
     """ADR 005's other decision — which parent field carries the reference.
 
-    `linking.target_reference_field` states it once: the FIRST declared nested
-    field whose target names the child's type. It was re-derived in four other
-    places, one of them by dict inversion, which takes the last match and so
-    already disagreed. The original gate scanned for one string
+    `linking.choose_parent_field` states it once, and the child records the
+    answer as `parent_field` (ADR 006). It was re-derived in four other places,
+    one of them by dict inversion, which takes the last match and so already
+    disagreed. The original gate scanned for one string
     (`single_entity_fields`) and could not see any of them.
     """
     offenders = []
@@ -144,5 +144,6 @@ def test_the_field_selection_rule_has_one_home() -> None:
     assert not offenders, (
         "which parent field references a child type is decided outside "
         f"facade/linking.py in: {offenders}. Call "
-        "`linking.target_reference_field` instead (ADR 005)."
+        "`linking.choose_parent_field` or read the child's recorded "
+        "`parent_field` instead (ADR 006)."
     )

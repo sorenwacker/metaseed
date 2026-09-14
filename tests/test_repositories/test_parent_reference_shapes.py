@@ -24,6 +24,7 @@ def test_an_entity_typed_reference_stays_scalar() -> None:
         child_data={"name": "Dr. One"},
         child_type="Person",
         child_id="node-1",
+        parent_field="person_responsible",
     )
 
     assert field == "person_responsible"
@@ -42,6 +43,7 @@ def test_a_second_child_does_not_stack_onto_an_exactly_one_field() -> None:
             child_data={"name": name},
             child_type="Person",
             child_id=node,
+            parent_field="person_responsible",
         )
         if node == "n1":
             first_ref = parent_data["person_responsible"]

@@ -44,8 +44,9 @@ class EntitySink(Protocol):
         node_id: str | None = ...,
         parent_id: str | None = ...,
         skip_validation: bool = ...,
+        parent_field: str | None = ...,
     ) -> EntityNode:
-        """Store one entity, optionally under a parent."""
+        """Store one entity, optionally under a parent in a named field."""
         ...
 
     def get_helper(self, entity_type: str) -> EntityHelper | None:
@@ -72,6 +73,7 @@ def _add_coercing(
     entity_type: str,
     data: dict[str, Any],
     parent_id: str | None = None,
+    parent_field: str | None = None,
 ) -> EntityNode:
     """Store one entity, applying the profile's declared types where it can.
 
@@ -91,11 +93,19 @@ def _add_coercing(
     """
     try:
         return sink.add_entity(
-            entity_type, data, parent_id=parent_id, skip_validation=False
+            entity_type,
+            data,
+            parent_id=parent_id,
+            skip_validation=False,
+            parent_field=parent_field,
         )
     except ValidationError:
         return sink.add_entity(
-            entity_type, data, parent_id=parent_id, skip_validation=True
+            entity_type,
+            data,
+            parent_id=parent_id,
+            skip_validation=True,
+            parent_field=parent_field,
         )
 
 
@@ -144,7 +154,7 @@ class DocumentLoader:
 
     def _split_embedded(
         self, data: dict[str, Any], entity_type: str
-    ) -> tuple[dict[str, Any], list[tuple[str, dict[str, Any]]]]:
+    ) -> tuple[dict[str, Any], list[tuple[str, dict[str, Any], str]]]:
         """Separate an entity's own data from the children embedded in it.
 
         A child that is materialised as its own node must not also remain
@@ -158,8 +168,10 @@ class DocumentLoader:
         one. That is a reference, and it is kept.
 
         Returns:
-            The data to store for this entity, and the (child type, data)
-            pairs to load beneath it.
+            The data to store for this entity, and the (child type, data,
+            field) triples to load beneath it. The field is recorded on the
+            child, so a parent holding one type in several fields keeps each
+            child where the document put it (ADR 006).
         """
         helper = self.sink.get_helper(entity_type)
         if helper is None:
@@ -172,7 +184,7 @@ class DocumentLoader:
         )
 
         stored = dict(data)
-        embedded: list[tuple[str, dict[str, Any]]] = []
+        embedded: list[tuple[str, dict[str, Any], str]] = []
         for field_name, child_type in child_fields.items():
             raw = data.get(field_name)
             items = [raw] if isinstance(raw, dict) else raw
@@ -184,7 +196,7 @@ class DocumentLoader:
             objects = [item for item in items if isinstance(item, dict)]
             if not objects:
                 continue
-            embedded.extend((child_type, item) for item in objects)
+            embedded.extend((child_type, item, field_name) for item in objects)
 
             named = [item for item in items if not isinstance(item, dict)]
             if isinstance(raw, dict):
@@ -197,13 +209,19 @@ class DocumentLoader:
         return stored, embedded
 
     def _load_children(
-        self, embedded: list[tuple[str, dict[str, Any]]], parent_id: str
+        self, embedded: list[tuple[str, dict[str, Any], str]], parent_id: str
     ) -> int:
         """Add each embedded child under ``parent_id``, recursively."""
         loaded = 0
-        for child_type, item in embedded:
+        for child_type, item, field_name in embedded:
             stored, nested = self._split_embedded(item, child_type)
-            child = _add_coercing(self.sink, child_type, stored, parent_id=parent_id)
+            child = _add_coercing(
+                self.sink,
+                child_type,
+                stored,
+                parent_id=parent_id,
+                parent_field=field_name,
+            )
             loaded += 1 + self._load_children(nested, child.id)
         return loaded
 

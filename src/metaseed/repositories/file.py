@@ -14,7 +14,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Self
 
-from metaseed.facade.linking import link_child, unlink_child
+from metaseed.facade.linking import choose_parent_field, link_child, unlink_child
 from metaseed.repositories.base import EntityData, EntityRepository
 from metaseed.repositories.helpers import (
     derive_label,
@@ -188,9 +188,18 @@ class FileEntityRepository(EntityRepository):
                     k: v
                     for k, v in raw.items()
                     if not k.startswith("_")
-                    and k not in ("id", "entity_type", "label", "parent_id", "children")
+                    and k
+                    not in (
+                        "id",
+                        "entity_type",
+                        "label",
+                        "parent_id",
+                        "parent_field",
+                        "children",
+                    )
                 },
                 parent_id=raw.get("parent_id") or raw.get("_parent_id"),
+                parent_field=raw.get("parent_field") or raw.get("_parent_field"),
             )
 
             # Derive label if not present
@@ -268,6 +277,7 @@ class FileEntityRepository(EntityRepository):
                 "entity_type": entity.entity_type,
                 "label": entity.label,
                 "parent_id": entity.parent_id,
+                "parent_field": entity.parent_field,
                 **entity.data,
             }
             entities_data.append(entity_dict)
@@ -322,6 +332,7 @@ class FileEntityRepository(EntityRepository):
         entity_type: str,
         data: dict[str, Any],
         parent_id: str | None = None,
+        parent_field: str | None = None,
     ) -> EntityData:
         """Create a new entity."""
         facade = self._get_facade()
@@ -341,6 +352,7 @@ class FileEntityRepository(EntityRepository):
 
         # Validate parent
         parent = None
+        chosen_field: str | None = None
         if parent_id:
             parent = self._entities.get(parent_id)
             if not parent:
@@ -356,6 +368,10 @@ class FileEntityRepository(EntityRepository):
                         f"{entity_type}. Valid child types: "
                         f"{valid_child_types or 'none'}"
                     )
+                # Decided before anything is stored (ADR 006).
+                chosen_field = choose_parent_field(
+                    parent_helper, entity_type, parent_field
+                )
 
             # Auto-fill child's reference to parent
             ref_field = find_parent_ref_field(helper, parent.entity_type)
@@ -378,13 +394,14 @@ class FileEntityRepository(EntityRepository):
             label=derive_label(entity_type, validated_data, spec=helper._spec),
             data=validated_data,
             parent_id=parent_id,
+            parent_field=chosen_field,
         )
 
         # Add to structures
         self._entities[entity.id] = entity
 
         if parent:
-            link_child(parent, entity)
+            link_child(parent, entity, chosen_field)
             # Update parent's nested reference
             update_parent_reference(
                 facade,
@@ -393,6 +410,7 @@ class FileEntityRepository(EntityRepository):
                 entity.data,
                 entity.entity_type,
                 entity.id,
+                parent_field=chosen_field,
             )
         else:
             self._tree.append(entity)
