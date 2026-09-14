@@ -1,0 +1,14 @@
+{# How any one field is drawn — the single decision, used by every section.
+
+   A containment field is its child table (ADR 006): the same partial, whether
+   the field sits among the required fields, the optional ones, or under
+   Related Entities. Everything else is a form control. Deciding this per
+   section is what once drew a required containment field twice: an unlabelled
+   "(1 item)" button near the top and its real table far below. #}
+{% set table_data = inline_tables.get(field.name, {}) if is_edit and inline_tables else {} %}
+{% if table_data %}
+{% set child_type = table_data.nested_entity_type or field.items %}
+{% include "partials/inline_table.html" %}
+{% else %}
+{% include "partials/field.html" %}
+{% endif %}

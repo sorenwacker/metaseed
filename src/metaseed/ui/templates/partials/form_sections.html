@@ -4,7 +4,7 @@
 <div class="form-section">
     <h3 class="form-section-title">Required Fields</h3>
     {% for field in required_fields %}
-    {% include "partials/field.html" %}
+    {% include "partials/field_or_table.html" %}
     {% endfor %}
 </div>
 {% endif %}
@@ -24,24 +24,23 @@
                oninput="const q=this.value.toLowerCase(); this.closest('.collapsible-content').querySelectorAll('.form-group').forEach(g=>{g.style.display = g.textContent.toLowerCase().includes(q) ? '' : 'none';});">
         {% endif %}
         {% for field in optional_fields %}
-        {% include "partials/field.html" %}
+        {% include "partials/field_or_table.html" %}
         {% endfor %}
     </div>
 </div>
 {% endif %}
 
+{# Nested fields the sections above already drew: a field listed among the
+   required or optional fields is rendered there, in its own place, and must
+   not be drawn a second time under this heading. #}
+{% set shown_names = (required_fields | map(attribute='name') | list) + (optional_fields | map(attribute='name') | list) %}
+{% set remaining_nested = nested_fields | rejectattr('name', 'in', shown_names) | list %}
 {% if is_edit and inline_tables %}
 <div class="form-section">
     <h3 class="form-section-title">Related Entities</h3>
-    {# Render tables for spec-defined nested fields #}
-    {% for field in nested_fields %}
-    {% set table_data = inline_tables.get(field.name, {}) %}
-    {% set child_type = table_data.nested_entity_type if table_data else field.items %}
-    {% if table_data %}
-    {% include "partials/inline_table.html" with context %}
-    {% else %}
-    {% include "partials/field.html" %}
-    {% endif %}
+    {# Whatever is left, drawn by the same partial as everywhere else #}
+    {% for field in remaining_nested %}
+    {% include "partials/field_or_table.html" %}
     {% endfor %}
 
     {# Render tables for reference-linked children (not in nested_fields) #}

@@ -42,7 +42,7 @@ A serialized entity records `_parent_field` beside `_parent_unique_id`. Reading 
 
 ### UI
 
-- A containment field is rendered once, as its child table under Related Entities; it no longer also appears as a "(1 item)" / "(not set)" button among the fields.
+- A containment field is rendered once, as its child table, by the one partial that draws such a table. It appears in the field's own place when the field is listed among the required or optional fields, and under Related Entities otherwise. It no longer also appears as a "(1 item)" / "(not set)" button among the fields: a required containment field was listed twice, as an unlabelled button near the top and as its table far below.
 - A reference field is rendered as a picker of existing entities of the target type, with an action to create one.
 - "Add child entity" names the field ("+ publisher (Agent)"), not only the type.
 
