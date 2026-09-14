@@ -101,6 +101,7 @@ class MemoryEntityRepository(EntityRepository):
         entity_type: str,
         data: dict[str, Any],
         parent_id: str | None = None,
+        parent_field: str | None = None,
     ) -> EntityData:
         """Create an entity in the wrapped state."""
         facade = self._state.get_or_create_facade()
@@ -147,9 +148,12 @@ class MemoryEntityRepository(EntityRepository):
         data = normalize_reference_fields(data, helper, facade)
 
         instance = helper.create(**data)
-        node = self._state.add_node(entity_type, instance, parent_id=parent_id)
+        # The store chooses the parent field and rejects an ambiguous one
+        # (ADR 006); the child is then named in the field it recorded.
+        node = self._state.add_node(
+            entity_type, instance, parent_id=parent_id, parent_field=parent_field
+        )
 
-        # Update parent's reference field
         if parent:
             self._update_parent_ref(facade, parent, node)
 
@@ -235,6 +239,7 @@ class MemoryEntityRepository(EntityRepository):
             label=node.label,
             data=data,
             parent_id=node.parent_id,
+            parent_field=node.parent_field,
             children=[self._node_to_entity(c) for c in node.children]
             if include_children
             else [],
@@ -271,7 +276,7 @@ class MemoryEntityRepository(EntityRepository):
         parent_node: EntityTreeNode,
         child_node: EntityTreeNode,
     ) -> None:
-        """Update parent's reference field to include child."""
+        """Name the child in the parent field it recorded."""
         parent_data = {}
         if parent_node.instance and hasattr(parent_node.instance, "model_dump"):
             parent_data = parent_node.instance.model_dump(
@@ -289,6 +294,7 @@ class MemoryEntityRepository(EntityRepository):
             child_data,
             child_node.entity_type,
             child_node.id,
+            parent_field=child_node.parent_field,
         )
 
         if updated_field:

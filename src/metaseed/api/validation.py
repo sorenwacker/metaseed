@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING, Any, Self
 from metaseed.api.base import InstanceDataMixin
 from metaseed.api.errors import EntityNotFoundError
 from metaseed.api.schema import ValidationIssue, ValidationResult
-from metaseed.facade.linking import target_reference_field
 
 if TYPE_CHECKING:
     from metaseed.facade import ProfileFacade
@@ -34,8 +33,8 @@ class ValidationMixin(InstanceDataMixin):
         A child is matched to a field by entity type. When a parent nests the
         same type in more than one field, all such children land in the first
         of those fields; no shipped cardinality rule targets an
-        ambiguously-typed field, and per-child validation is unaffected. Which
-        field a child truly belongs to is not recorded today (see issue #137).
+        ambiguously-typed field, and per-child validation is unaffected. Each
+        child now goes into the field it was recorded in (ADR 006).
 
         Args:
             node: The entity node whose data to reconstruct.
@@ -52,9 +51,8 @@ class ValidationMixin(InstanceDataMixin):
             return data
 
         for child in node.children:
-            # Which field carries a child of this type is linking.py's to say
-            # (ADR 005); deriving it here was a second home for the rule.
-            target_field = target_reference_field(helper, child.entity_type)
+            # The field the child was recorded in (ADR 006).
+            target_field = child.parent_field
             if target_field is None:
                 continue
             child_data = self._get_instance_data(child.instance)

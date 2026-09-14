@@ -41,6 +41,7 @@ class TreeNode:
     label: str
     children: list[TreeNode] = field(default_factory=list)
     parent_id: str | None = None
+    parent_field: str | None = None
 
     @classmethod
     def from_entity_node(
@@ -67,6 +68,7 @@ class TreeNode:
             instance=entity_node.instance,
             label=label,
             parent_id=entity_node.parent_id,
+            parent_field=entity_node.parent_field,
         )
 
         # Recursively convert children
@@ -264,6 +266,7 @@ class AppState:
         parent_id: str | None = None,
         node_id: str | None = None,
         skip_validation: bool = False,
+        parent_field: str | None = None,
     ) -> TreeNode:
         """Add a new node to the tree.
 
@@ -279,6 +282,8 @@ class AppState:
             skip_validation: If True, skip Pydantic validation when the facade
                 rebuilds the instance. Required to persist an incomplete draft;
                 without it the facade re-validates the dumped data and rejects it.
+            parent_field: The parent field the node goes into; required when
+                the parent holds the node's type in several fields (ADR 006).
         """
         facade = self.get_or_create_facade()
 
@@ -297,6 +302,7 @@ class AppState:
             node_id=node_id,
             parent_id=parent_id,
             skip_validation=skip_validation,
+            parent_field=parent_field,
         )
 
         # Create TreeNode wrapper for backward compatibility
@@ -312,6 +318,7 @@ class AppState:
             instance=entity_node.instance,
             label=label,
             parent_id=entity_node.parent_id,
+            parent_field=entity_node.parent_field,
         )
 
         # Update cached TreeNode structures for backward compatibility
@@ -374,6 +381,7 @@ class AppState:
             instance=entity_node.instance,
             label=label,
             parent_id=entity_node.parent_id,
+            parent_field=entity_node.parent_field,
         )
 
     def delete_node(self: Self, node_id: str) -> bool:

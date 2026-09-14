@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any
 from pydantic import ValidationError
 
 from metaseed.agent.mcp.ui_session import ui_datasets
-from metaseed.facade.linking import target_reference_field
+from metaseed.facade.linking import choose_parent_field
 from metaseed.utils.json import DateAwareEncoder
 
 if TYPE_CHECKING:
@@ -281,13 +281,16 @@ def _find_parent_from_references(
                 if data.get(target_field) == ref_value:
                     # Found the parent! Also find which field on parent holds children of this type
                     parent_helper = getattr(facade, target_entity_type, None)
-                    # ADR 005: linking.py owns which field references a child
-                    # of a given type. Deriving it here was a second home.
-                    parent_field = (
-                        target_reference_field(parent_helper, entity_type)
-                        if parent_helper
-                        else None
-                    )
+                    # The parent's field for this child type, when it has
+                    # exactly one; linking.py decides (ADR 006).
+                    parent_field = None
+                    if parent_helper:
+                        try:
+                            parent_field = choose_parent_field(
+                                parent_helper, entity_type
+                            )
+                        except ValueError:
+                            parent_field = None
                     return entity_id, parent_field
 
     except Exception:  # noqa: S110
@@ -464,6 +467,7 @@ def register_entity_tools(  # noqa: C901
         data: str,
         parent_id: str | None = None,
         expected_dataset: str | None = None,
+        parent_field: str | None = None,
     ) -> str:
         """Create a new entity in the current dataset.
 
@@ -482,6 +486,9 @@ def register_entity_tools(  # noqa: C901
             data: JSON string of field values from source (no assumptions).
             parent_id: Parent entity ID. Must be a valid parent type per schema.
                       If not provided, auto-detects from reference fields.
+            parent_field: Parent field the entity goes into. Required when the
+                      parent holds this entity type in several fields (e.g. a
+                      catalogue's creator and publisher); the error lists them.
             expected_dataset: Optional safety check - if provided, operation fails
                              if current dataset name doesn't match.
 
@@ -513,7 +520,9 @@ def register_entity_tools(  # noqa: C901
                     parent_id = auto_detected_parent
 
             # Service.create_entity handles adding to parent's nested array
-            result = service.create_entity(entity_type, entity_data, parent_id)
+            result = service.create_entity(
+                entity_type, entity_data, parent_id, parent_field
+            )
 
             # Add dataset info to response
             result["_dataset"] = _get_current_dataset_info(current_state())
@@ -523,17 +532,9 @@ def register_entity_tools(  # noqa: C901
             if hints:
                 result["hints"] = hints
 
-            # Add linked_via_field info if parent was specified
-            if parent_id:
-                parent = service.get_entity(parent_id)
-                if parent:
-                    # Find which field on parent references this entity type
-                    facade = current_state().get_or_create_facade()
-                    parent_helper = getattr(facade, parent["entity_type"], None)
-                    if parent_helper:
-                        linked_via = target_reference_field(parent_helper, entity_type)
-                        if linked_via is not None:
-                            result["linked_via_field"] = linked_via
+            # The parent field the entity was recorded in (ADR 006)
+            if result.get("parent_field"):
+                result["linked_via_field"] = result["parent_field"]
 
             # Auto-save to persist changes
             _auto_save_dataset(resolve_context())
@@ -709,6 +710,8 @@ def register_entity_tools(  # noqa: C901
                 - entity_type: Entity type (e.g., "Investigation", "Study")
                 - data: Field values explicitly from source (no assumptions)
                 - parent_id: Parent entity ID (must be valid parent type)
+                - parent_field: Parent field the entity goes into; required when
+                  the parent holds this entity type in several fields
             expected_dataset: Optional safety check - if provided, operation fails
                              if current dataset name doesn't match.
 
@@ -734,6 +737,7 @@ def register_entity_tools(  # noqa: C901
                 entity_type = spec.get("entity_type")
                 data = spec.get("data", {})
                 parent_id = spec.get("parent_id")
+                parent_field = spec.get("parent_field")
 
                 if not entity_type:
                     results.append(
@@ -752,7 +756,9 @@ def register_entity_tools(  # noqa: C901
                     data = _auto_fill_reference_fields(
                         current_state(), entity_type, data, service
                     )
-                    result = service.create_entity(entity_type, data, parent_id)
+                    result = service.create_entity(
+                        entity_type, data, parent_id, parent_field
+                    )
                     created = {
                         "index": idx,
                         "status": "created",

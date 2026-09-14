@@ -273,10 +273,9 @@ class TestReferenceLinkedChildren:
 
         # Get Run's TreeNode
         run_tree_node = state.nodes_by_id[run_node.id]
-        run_helper = facade.Run
 
         # extract_nested_from_tree should find the File
-        tree_items = extract_nested_from_tree(run_tree_node, run_helper, facade)
+        tree_items = extract_nested_from_tree(run_tree_node, facade)
 
         # Files should be found (Run doesn't have "files" in nested_fields, but File.run_ref -> Run)
         assert "files" in tree_items, (

@@ -104,6 +104,7 @@ class EntityService:
         entity_type: str,
         data: dict[str, Any],
         parent_id: str | None = None,
+        parent_field: str | None = None,
     ) -> dict[str, Any]:
         """Create a new entity.
 
@@ -111,6 +112,7 @@ class EntityService:
             entity_type: Type of entity to create.
             data: Entity field data.
             parent_id: Optional parent entity ID.
+            parent_field: The parent field the entity goes into (ADR 006).
 
         Returns:
             Created entity info.
@@ -118,7 +120,7 @@ class EntityService:
         Raises:
             ValueError: If entity type unknown or parent not found.
         """
-        entity = self._repo.create_entity(entity_type, data, parent_id)
+        entity = self._repo.create_entity(entity_type, data, parent_id, parent_field)
 
         result = {
             "status": "created",
@@ -129,6 +131,8 @@ class EntityService:
 
         if parent_id:
             result["parent_id"] = parent_id
+            if entity.parent_field:
+                result["parent_field"] = entity.parent_field
             parent = self._repo.get_entity(parent_id)
             if parent:
                 result["parent_type"] = parent.entity_type

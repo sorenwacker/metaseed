@@ -427,6 +427,7 @@ node.entity_type    # Type name
 node.label          # Display label
 node.has_children   # Boolean
 node.children       # List of child EntityNodes
+node.parent_field   # Parent field holding this node (ADR 006), or None
 node.to_dict()      # Convert to dictionary
 ```
 

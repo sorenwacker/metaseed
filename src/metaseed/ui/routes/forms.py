@@ -124,7 +124,10 @@ def register_form_routes(  # noqa: C901
 
     @app.get("/form/child/{parent_id}/{child_entity_type}", response_class=HTMLResponse)
     async def new_child_entity_form(
-        request: Request, parent_id: str, child_entity_type: str
+        request: Request,
+        parent_id: str,
+        child_entity_type: str,
+        parent_field: str | None = None,
     ) -> HTMLResponse:
         """Render a form for creating a child entity linked to a parent."""
         state = get_state()
@@ -163,6 +166,7 @@ def register_form_routes(  # noqa: C901
                 "is_edit": False,
                 "node_id": None,
                 "parent_id": parent_id,
+                "parent_field": parent_field,
                 "parent_label": f"{parent_node.entity_type}: {parent_node.label}",
                 "description": helper.description,
                 "ontology_term": helper.ontology_term,
@@ -219,7 +223,7 @@ def register_form_routes(  # noqa: C901
 
         inline_tables = build_inline_tables(state, facade, entity_type)
 
-        child_entity_types = list(helper.child_fields.values())
+        child_entity_fields = list(helper.child_fields.items())
 
         return templates.TemplateResponse(
             request,
@@ -239,6 +243,6 @@ def register_form_routes(  # noqa: C901
                 "values": values,
                 "auto_fields": auto_fields,
                 "inline_tables": inline_tables,
-                "child_entity_types": child_entity_types,
+                "child_entity_fields": child_entity_fields,
             },
         )

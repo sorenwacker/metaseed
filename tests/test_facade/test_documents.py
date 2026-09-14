@@ -40,6 +40,7 @@ class _Sink:
         node_id: str | None = None,
         parent_id: str | None = None,
         skip_validation: bool = False,
+        parent_field: str | None = None,
     ) -> _Node:
         self.added.append((entity_type, parent_id, data))
         return _Node(id=f"n{len(self.added)}")

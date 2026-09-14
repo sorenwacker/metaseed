@@ -101,6 +101,7 @@
         {% endif %}
         {% if parent_id %}
         <input type="hidden" name="_parent_id" value="{{ parent_id }}">
+        <input type="hidden" name="_parent_field" value="{{ parent_field or '' }}">
         {% endif %}
 
         {% include "partials/form_sections.html" %}

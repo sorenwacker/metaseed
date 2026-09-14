@@ -8,8 +8,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from metaseed.facade.linking import target_reference_field
-
 if TYPE_CHECKING:
     from metaseed.facade import ProfileFacade
     from metaseed.ui.state import AppState
@@ -107,7 +105,7 @@ def extract_nested_items(instance: Any, helper: Any) -> dict[str, list[dict[str,
 
 
 def extract_nested_from_tree(
-    node: Any, helper: Any, facade: Any = None
+    node: Any, facade: Any = None
 ) -> dict[str, list[dict[str, Any]]]:
     """Extract nested items from tree children.
 
@@ -116,12 +114,11 @@ def extract_nested_from_tree(
     This function reconstructs the nested items from the tree structure.
 
     Children are matched by:
-    1. Nested array fields (e.g., Study.samples -> Sample)
+    1. The parent field the child records (e.g., Study.samples -> Sample)
     2. Reference fields pointing to this entity (e.g., File.run_ref -> Run)
 
     Args:
         node: TreeNode with potential children.
-        helper: EntityHelper with nested_fields mapping.
         facade: Optional ProfileFacade to find children via reference fields.
 
     Returns:
@@ -132,15 +129,9 @@ def extract_nested_from_tree(
     if not node.children:
         return result
 
-    # Which field carries a child of a given type is linking.py's decision
-    # (ADR 005). Inverting the mapping here took the LAST matching field where
-    # linking.py takes the first, so a parent with two nested fields of one
-    # type grouped its children under the wrong table.
-    type_to_field = {
-        child_type: field
-        for child_type in set(helper.nested_fields.values())
-        if (field := target_reference_field(helper, child_type)) is not None
-    }
+    # A child held in a parent field carries that field (ADR 006). Only a child
+    # linked through its own reference field needs a grouping key here.
+    type_to_field: dict[str, str] = {}
 
     # Also find children via reference fields (e.g., File.run_ref -> Run)
     # These use a synthetic field name based on entity type (e.g., "files" for File)
@@ -148,8 +139,8 @@ def extract_nested_from_tree(
         parent_type = node.entity_type
 
         for child in node.children:
-            if child.entity_type in type_to_field:
-                continue  # Already handled by nested array
+            if getattr(child, "parent_field", None):
+                continue  # Held in a recorded parent field
 
             # Check if child has a reference field pointing to this parent —
             # through the public reference_fields property (the same one
@@ -167,7 +158,9 @@ def extract_nested_from_tree(
                         break
 
     for child in node.children:
-        field_name = type_to_field.get(child.entity_type)
+        field_name = getattr(child, "parent_field", None) or type_to_field.get(
+            child.entity_type
+        )
         if not field_name:
             continue
 
@@ -212,7 +205,7 @@ def get_nested_items_for_edit(
             result[field_name] = [item for item in items if isinstance(item, dict)]
 
     # Then, add items from tree children (includes reference-linked children if facade provided)
-    tree_items = extract_nested_from_tree(node, helper, facade)
+    tree_items = extract_nested_from_tree(node, facade)
     for field_name, items in tree_items.items():
         if field_name not in result:
             result[field_name] = []

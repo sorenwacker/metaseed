@@ -23,8 +23,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from metaseed.facade.linking import target_reference_field
-
 if TYPE_CHECKING:
     from metaseed.api.client import MetaseedClient
 
@@ -54,20 +52,13 @@ def _dataset_with_children(client: MetaseedClient) -> dict[str, Any] | None:
         for key, value in datasets[0].items()
     }
 
-    try:
-        helper = client.facade.get_helper("Dataset")
-    except (KeyError, AttributeError):
-        helper = None
-    if helper is None:
-        return dataset
-
     by_node = {str(entity.get("_node_id")): entity for entity in entities}
 
     def descend(node: Any) -> None:
         for child in node.children:
             entity = by_node.get(str(child.id))
-            # ADR 005: linking.py decides which field references a child type.
-            target = target_reference_field(helper, child.entity_type)
+            # The field the child was recorded in (ADR 006).
+            target = getattr(child, "parent_field", None)
             if entity is not None and target is not None:
                 existing = dataset.get(target)
                 if isinstance(existing, list):

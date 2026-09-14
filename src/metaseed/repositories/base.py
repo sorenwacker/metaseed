@@ -26,6 +26,7 @@ class EntityTreeNode(Protocol):
         label: Human-readable label derived from the instance.
         instance: The entity instance (a generated Pydantic model).
         parent_id: Identifier of the parent node, or None for a root.
+        parent_field: The parent field that holds the node (ADR 006), or None.
     """
 
     id: str
@@ -33,6 +34,7 @@ class EntityTreeNode(Protocol):
     label: str
     instance: Any
     parent_id: str | None
+    parent_field: str | None
 
     @property
     def children(self) -> Sequence["EntityTreeNode"]:
@@ -73,7 +75,12 @@ class EntityTreeState(Protocol):
         ...
 
     def add_node(
-        self, entity_type: str, instance: Any, parent_id: str | None = None
+        self,
+        entity_type: str,
+        instance: Any,
+        parent_id: str | None = None,
+        *,
+        parent_field: str | None = None,
     ) -> EntityTreeNode:
         """Add an entity to the tree and return the node created for it."""
         ...
@@ -101,6 +108,7 @@ class EntityData:
     label: str
     data: dict[str, Any]
     parent_id: str | None = None
+    parent_field: str | None = None
     children: list["EntityData"] = field(default_factory=list)
 
 
@@ -145,6 +153,7 @@ class EntityRepository(ABC):
         entity_type: str,
         data: dict[str, Any],
         parent_id: str | None = None,
+        parent_field: str | None = None,
     ) -> EntityData:
         """Create a new entity.
 
@@ -152,6 +161,8 @@ class EntityRepository(ABC):
             entity_type: Type of entity (e.g., "Investigation", "Study").
             data: Entity field data as a dictionary.
             parent_id: Optional parent entity ID for hierarchy.
+            parent_field: The parent field the entity goes into; required
+                when the parent holds this type in several fields (ADR 006).
 
         Returns:
             Created EntityData with assigned ID.

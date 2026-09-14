@@ -217,6 +217,7 @@ class ProfileFacade:
         node_id: str | None = None,
         parent_id: str | None = None,
         skip_validation: bool = False,
+        parent_field: str | None = None,
     ) -> EntityNode:
         """Add an entity instance and auto-link to parent via reference fields.
 
@@ -233,6 +234,8 @@ class ProfileFacade:
                       attempts to resolve parent via reference fields.
             skip_validation: If True, skip Pydantic validation. Use for
                 progressive editing where entities are saved with incomplete data.
+            parent_field: The parent field the entity goes into. Required when
+                the parent holds this entity type in several fields (ADR 006).
 
         Returns:
             The created EntityNode.
@@ -247,7 +250,7 @@ class ProfileFacade:
             >>> # Sample is auto-linked to Study via study_ref
         """
         return self._store.add_entity(
-            entity_type, data, node_id, parent_id, skip_validation
+            entity_type, data, node_id, parent_id, skip_validation, parent_field
         )
 
     def get_entity(self: Self, node_id: str) -> EntityNode | None:

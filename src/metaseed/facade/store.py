@@ -93,6 +93,7 @@ class EntityStore:
         node_id: str | None = None,
         parent_id: str | None = None,
         skip_validation: bool = False,
+        parent_field: str | None = None,
     ) -> EntityNode:
         """Add an entity instance and auto-link to parent via reference fields.
 
@@ -109,12 +110,15 @@ class EntityStore:
                       attempts to resolve parent via reference fields.
             skip_validation: If True, skip Pydantic validation. Use for
                 progressive editing where entities are saved with incomplete data.
+            parent_field: The parent field the entity goes into, recorded on the
+                node. Required when the parent holds the type in several fields.
 
         Returns:
             The created EntityNode.
 
         Raises:
             AttributeError: If entity_type is not found in this profile.
+            ValueError: If ``parent_field`` is ambiguous or does not hold the type.
 
         Example:
             >>> store.add_entity("Study", {"alias": "s1", "title": "My Study"})
@@ -124,6 +128,13 @@ class EntityStore:
         # When created under an explicit parent, fill the child's parent-reference
         # field (e.g. investigation_id) from the parent so the caller need not
         # repeat it -- otherwise a required reference fails validation below.
+        # Decide the parent field before anything is stored: an ambiguous or
+        # wrong field must not leave a half-linked node behind (ADR 006).
+        chosen_field = (
+            self._choose_parent_field(parent_id, entity_type, parent_field)
+            if parent_id is not None
+            else None
+        )
         if parent_id is not None:
             data = self._fill_parent_reference(entity_type, data, parent_id)
 
@@ -145,7 +156,7 @@ class EntityStore:
 
         # Link to parent's children list if parent exists
         if resolved_parent_id and resolved_parent_id in self._instances:
-            link_child(self._instances[resolved_parent_id], node)
+            link_child(self._instances[resolved_parent_id], node, chosen_field)
 
         # Index by every identifier field (common + entity-specific) for lookups
         for id_field in self._get_identifier_fields(entity_type):
@@ -154,6 +165,66 @@ class EntityStore:
                 self._index_identifier(entity_type, str(id_value), node.id)
 
         return node
+
+    def _choose_parent_field(
+        self: Self, parent_id: str, child_type: str, requested: str | None
+    ) -> str | None:
+        """The field of ``parent_id`` a new ``child_type`` goes into (ADR 006)."""
+        from metaseed.facade.linking import choose_parent_field
+
+        parent = self._instances.get(parent_id)
+        if parent is None:
+            return None
+        try:
+            helper = self._get_helper(parent.entity_type)
+        except (KeyError, AttributeError):
+            return None
+        return choose_parent_field(helper, child_type, requested)
+
+    def _child_refs(self: Self, child: EntityNode) -> set[str]:
+        """Every identifier value a parent field may use to name ``child``."""
+        data = child.instance.model_dump(mode="json") if child.instance else {}
+        refs = {
+            str(v)
+            for f in self._get_identifier_fields(child.entity_type)
+            if (v := data.get(f)) not in (None, "")
+        }
+        return refs or {child.id}
+
+    def _recover_parent_field(
+        self: Self, parent: EntityNode, child: EntityNode
+    ) -> None:
+        """Fill ``child.parent_field`` for data saved before it was recorded."""
+        from metaseed.facade.linking import field_naming_child
+
+        if child.parent_field is not None or parent.instance is None:
+            return
+        try:
+            helper = self._get_helper(parent.entity_type)
+        except (KeyError, AttributeError):
+            return
+        child.parent_field = field_naming_child(
+            helper,
+            parent.instance.model_dump(mode="json"),
+            child.entity_type,
+            self._child_refs(child),
+        )
+        if child.parent_field is None:
+            candidates = sorted(
+                name
+                for name, target in helper.child_fields.items()
+                if target == child.entity_type
+            )
+            if len(candidates) > 1:
+                logger.warning(
+                    "%s %s is under %s but no field names it; it belongs to one "
+                    "of %s. Name it in the parent field or re-save with "
+                    "_parent_field.",
+                    child.entity_type,
+                    child.id,
+                    parent.entity_type,
+                    ", ".join(candidates),
+                )
 
     def _index_identifier(
         self: Self, entity_type: str, value: str, node_id: str
@@ -406,11 +477,7 @@ class EntityStore:
         child is a duplicate record rather than a reference, and the loader no
         longer produces one — see ``DocumentLoader._split_embedded``.
         """
-        from metaseed.facade.linking import (
-            NO_CHANGE,
-            target_reference_field,
-            unlinked_reference_value,
-        )
+        from metaseed.facade.linking import NO_CHANGE, unlinked_reference_value
 
         if parent.instance is None or child.instance is None:
             return
@@ -419,7 +486,7 @@ class EntityStore:
         except (KeyError, AttributeError):
             return
 
-        target_field = target_reference_field(helper, child.entity_type)
+        target_field = child.parent_field
         if target_field is None:
             return
 
@@ -501,6 +568,8 @@ class EntityStore:
                 # the drafts the UI persists. Without this the child had no
                 # parent reference at all and was orphaned on reload.
                 data["_parent_id"] = parent_node_id
+            if node.parent_field:
+                data["_parent_field"] = node.parent_field
             entities.append(data)
 
             # The identifier value children reference. Consult the entity's own
@@ -660,6 +729,7 @@ class EntityStore:
                 entity_type=entity_type,
                 instance=instance,
                 parent_id=None,
+                parent_field=entity_data.get("_parent_field"),
             )
             self._instances[node.id] = node
 
@@ -742,6 +812,7 @@ class EntityStore:
             )
             if parent_node:
                 link_child(parent_node, node)
+                self._recover_parent_field(parent_node, node)
 
     def _link_by_nested_arrays(
         self: Self, id_to_node: dict[str, list[EntityNode]]
@@ -779,7 +850,7 @@ class EntityStore:
                         id_to_node.get(str(child_id), []), nested[field_name]
                     )
                     if child_node and child_node.parent_id is None:
-                        link_child(node, child_node)
+                        link_child(node, child_node, field_name)
 
     def _link_by_reference_fields(
         self: Self, id_to_node: dict[str, list[EntityNode]]
@@ -832,6 +903,7 @@ class EntityStore:
                     )
                     continue
                 link_child(parent_node, node)
+                self._recover_parent_field(parent_node, node)
                 break
 
     def _would_cycle(self: Self, node: EntityNode, parent: EntityNode) -> bool:

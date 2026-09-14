@@ -261,6 +261,7 @@ FilesystemDatasetRepository stores datasets as JSON:
     {
       "_type": "Study",
       "_parent_unique_id": "INV-001",
+      "_parent_field": "studies",
       "unique_id": "STU-001",
       "title": "Study One",
       "investigation_id": "INV-001"
@@ -268,6 +269,8 @@ FilesystemDatasetRepository stores datasets as JSON:
   ]
 }
 ```
+
+`_parent_field` names the parent field that holds the entity. A parent can hold one entity type in several fields — a DCAT catalogue's `creator` and `publisher` are both Agents — so the type alone does not say which ([ADR 006](decisions/006-relationships-are-recorded-edges.md)). A file written before `_parent_field` existed is read by taking the parent field whose value names the entity; when no field names it and the parent has exactly one field of that type, that field is used. An entity that matches neither stays under its parent without a field, and loading logs a warning naming the candidate fields.
 
 ## Design Principles
 

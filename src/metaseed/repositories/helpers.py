@@ -128,11 +128,12 @@ def update_parent_reference(
     child_data: dict[str, Any],
     child_type: str,
     child_id: str,
+    parent_field: str | None = None,
 ) -> str | None:
     """Update parent's reference field to include child.
 
-    Finds the nested field on parent that references child's type
-    and adds the child's identifier to that field.
+    Adds the child's identifier to ``parent_field``, or to the parent's single
+    field for the child's type when no field is named (ADR 006).
 
     Args:
         facade: ProfileFacade instance.
@@ -141,21 +142,25 @@ def update_parent_reference(
         child_data: Child entity data.
         child_type: Child entity type name.
         child_id: Child's node ID (fallback if no identifier).
+        parent_field: The parent field the child goes into.
 
     Returns:
         Name of updated field, or None if no matching field found.
+
+    Raises:
+        ValueError: If the field is ambiguous or does not hold the child's type.
     """
     from metaseed.facade.linking import (
         NO_CHANGE,
+        choose_parent_field,
         linked_reference_value,
-        target_reference_field,
     )
 
     parent_helper = getattr(facade, parent_type, None)
     if not parent_helper:
         return None
 
-    target_field = target_reference_field(parent_helper, child_type)
+    target_field = choose_parent_field(parent_helper, child_type, parent_field)
     if not target_field:
         return None
 
@@ -181,6 +186,7 @@ def remove_parent_reference(
     child_data: dict[str, Any],
     child_type: str,
     child_id: str,
+    parent_field: str | None = None,
 ) -> str | None:
     """Undo :func:`update_parent_reference` when the child is deleted.
 
@@ -193,7 +199,7 @@ def remove_parent_reference(
     """
     from metaseed.facade.linking import (
         NO_CHANGE,
-        target_reference_field,
+        field_naming_child,
         unlinked_reference_value,
     )
 
@@ -201,12 +207,14 @@ def remove_parent_reference(
     if not parent_helper:
         return None
 
-    target_field = target_reference_field(parent_helper, child_type)
-    if not target_field:
-        return None
-
     child_helper = getattr(facade, child_type, None)
     child_ref = get_identifier(child_data, child_helper) or child_id
+
+    target_field = parent_field or field_naming_child(
+        parent_helper, parent_data, child_type, {str(child_ref)}
+    )
+    if not target_field:
+        return None
 
     new_value = unlinked_reference_value(
         parent_helper, target_field, parent_data.get(target_field), {child_ref}
