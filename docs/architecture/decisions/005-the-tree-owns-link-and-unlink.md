@@ -4,7 +4,7 @@ Date: 260814
 
 ## Status
 
-Accepted
+Accepted. Its first-match rule (`target_reference_field`) is superseded by [ADR 006](006-relationships-are-recorded-edges.md).
 
 ## Context
 
