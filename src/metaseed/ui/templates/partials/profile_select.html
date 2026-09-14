@@ -1,6 +1,12 @@
 <div class="card">
     <h2 class="card-title">New Dataset</h2>
     <p class="card-subtitle">Name your dataset and choose which metadata standard to use.</p>
+    {# Above the list, not below it: below, the note sat 1500px down and the
+       reader who stopped scrolling never saw it. #}
+    <p class="form-hint" data-testid="missing-profile-note">
+        Can't find the standard you need?
+        <a href="https://github.com/sorenwacker/metaseed/issues" target="_blank" rel="noopener">Let us know</a>.
+    </p>
 
     <div class="dataset-name-input">
         <label for="new-dataset-name" class="form-label">Dataset Name <span class="required">*</span></label>
@@ -41,11 +47,4 @@
         </div>
         {% endfor %}
     </div>
-
-    {# The list is what ships; a reader whose standard is absent had nothing to
-       act on, so say where to ask for it. #}
-    <p class="form-hint" data-testid="missing-profile-note">
-        Can't find the standard you need?
-        <a href="https://github.com/sorenwacker/metaseed/issues" target="_blank" rel="noopener">Let us know</a>.
-    </p>
 </div>
