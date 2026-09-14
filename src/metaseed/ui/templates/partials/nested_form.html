@@ -24,9 +24,18 @@
     <div class="notification notification-error mb-4">{{ error_message }}</div>
     {% endif %}
 
-    <h2 class="card-title">
-        Edit {{ entity_type }}
-    </h2>
+    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <h2 class="card-title">
+            Edit {{ entity_type }}
+        </h2>
+        <button type="button" class="btn btn-secondary btn-sm"
+                hx-get="/table/{{ parent_entity_type }}/{{ field_name }}"
+                hx-target="#main"
+                hx-swap="innerHTML"
+                data-testid="btn-back">
+            Back
+        </button>
+    </div>
     {% if description %}
     <p class="card-subtitle">{{ description }}</p>
     {% endif %}

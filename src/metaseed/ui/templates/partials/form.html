@@ -18,6 +18,14 @@
             {% if is_edit %}Edit{% else %}New{% endif %} {{ entity_type }}
         </h2>
         <div style="display: flex; gap: 0.5rem;">
+            <button type="button" class="btn btn-secondary btn-sm"
+                    hx-get="/"
+                    hx-target="#main"
+                    hx-swap="innerHTML"
+                    hx-select="#main > *"
+                    data-testid="btn-back">
+                Back
+            </button>
             {% if is_edit %}
             <a href="/export" class="btn btn-secondary btn-sm" data-testid="btn-export" download>
                 Export All
