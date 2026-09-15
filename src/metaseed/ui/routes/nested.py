@@ -16,7 +16,7 @@ from starlette.requests import Request
 from ..helpers import (
     build_breadcrumb,
     build_inline_tables,
-    filter_fields,
+    form_field_groups,
     format_table_rows,
     get_field_data,
     get_items_store,
@@ -160,11 +160,7 @@ def register_nested_routes(  # noqa: C901
                 "row_idx": idx,
                 "description": nested_helper.description if nested_helper else "",
                 "ontology_term": nested_helper.ontology_term if nested_helper else "",
-                "required_fields": filter_fields(fields, required=True),
-                "optional_fields": filter_fields(
-                    fields, required=False, exclude_nested=True
-                ),
-                "nested_fields": filter_fields(fields, nested_only=True),
+                **form_field_groups(fields),
                 "values": values,
                 "auto_fields": set(),
                 "editing_node_id": state.editing_node_id,
@@ -270,11 +266,7 @@ def register_nested_routes(  # noqa: C901
                 "row_idx": idx,
                 "description": nested_helper.description if nested_helper else "",
                 "ontology_term": nested_helper.ontology_term if nested_helper else "",
-                "required_fields": filter_fields(fields, required=True),
-                "optional_fields": filter_fields(
-                    fields, required=False, exclude_nested=True
-                ),
-                "nested_fields": filter_fields(fields, nested_only=True),
+                **form_field_groups(fields),
                 "values": values,
                 "auto_fields": set(),
                 "editing_node_id": state.editing_node_id,

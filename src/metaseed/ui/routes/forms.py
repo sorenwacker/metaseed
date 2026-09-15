@@ -17,7 +17,7 @@ from metaseed.profiles import ProfileFactory
 
 from ..helpers import (
     build_inline_tables,
-    filter_fields,
+    form_field_groups,
     get_field_data,
     get_nested_items_for_edit,
 )
@@ -109,11 +109,7 @@ def register_form_routes(  # noqa: C901
                 "node_id": None,
                 "description": helper.description,
                 "ontology_term": helper.ontology_term,
-                "required_fields": filter_fields(fields, required=True),
-                "optional_fields": filter_fields(
-                    fields, required=False, exclude_nested=True
-                ),
-                "nested_fields": filter_fields(fields, nested_only=True),
+                **form_field_groups(fields),
                 "values": auto_values,
                 "auto_fields": set(auto_values.keys()),
                 "current_profile": state.profile,
@@ -170,11 +166,7 @@ def register_form_routes(  # noqa: C901
                 "parent_label": f"{parent_node.entity_type}: {parent_node.label}",
                 "description": helper.description,
                 "ontology_term": helper.ontology_term,
-                "required_fields": filter_fields(fields, required=True),
-                "optional_fields": filter_fields(
-                    fields, required=False, exclude_nested=True
-                ),
-                "nested_fields": filter_fields(fields, nested_only=True),
+                **form_field_groups(fields),
                 "values": auto_values,
                 "auto_fields": auto_fields,
             },
@@ -235,11 +227,7 @@ def register_form_routes(  # noqa: C901
                 "node_label": node.label,
                 "description": helper.description,
                 "ontology_term": helper.ontology_term,
-                "required_fields": filter_fields(fields, required=True),
-                "optional_fields": filter_fields(
-                    fields, required=False, exclude_nested=True
-                ),
-                "nested_fields": filter_fields(fields, nested_only=True),
+                **form_field_groups(fields),
                 "values": values,
                 "auto_fields": auto_fields,
                 "inline_tables": inline_tables,

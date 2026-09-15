@@ -34,11 +34,13 @@ ctx = FormContext(
     node_id="abc123",  # None for create forms
 )
 
-# Access field categories
-required = ctx.get_required_fields()
-optional = ctx.get_optional_fields()
-nested = ctx.get_nested_fields()
+# Access field categories; each field is in exactly one
+required = ctx.get_required_fields()  # required, not holding entities
+optional = ctx.get_optional_fields()  # optional, not holding entities
+nested = ctx.get_nested_fields()      # holding entities, required or not
 ```
+
+A field that holds entities, a list of entities or a single entity, is rendered once: as its table under Related Entities, whose header marks the field required and a single-entity field as holding exactly one. A single-entity table offers no second row, and the add-row route refuses one ([ADR 006](decisions/006-relationships-are-recorded-edges.md)).
 
 | Property | Description |
 |----------|-------------|
@@ -51,7 +53,8 @@ nested = ctx.get_nested_fields()
 | Function | Purpose |
 |----------|---------|
 | `collect_form_values(form_data, helper)` | Extract typed values from form submission; a `list` of any value type is split into one item per line |
-| `filter_fields(fields, ...)` | Filter field list by required/nested criteria |
+| `form_field_groups(fields)` | Split fields into `required_fields`, `optional_fields` and `nested_fields`, each field in one; the form routes use only this |
+| `filter_fields(fields, ...)` | Filter field list by required/nested criteria (in `metaseed.forms`) |
 | `get_field_data(helper)` | Get field metadata for template rendering |
 | `is_nested_field(field)` | Check if field dict represents nested entity: `entity`, or `list` whose `items` is not a value type in `PRIMITIVE_TYPES` |
 | `format_validation_errors(e)` | Convert ValidationError to user-friendly messages |
