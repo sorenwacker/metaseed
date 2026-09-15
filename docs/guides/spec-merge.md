@@ -61,6 +61,24 @@ The comparison displays an interactive entity-relationship diagram:
 | `!` | Field conflict (incompatible differences) |
 | `*` | Required field |
 
+**Both sides of a change:**
+
+A field whose type, required marker or nested target differs is drawn on one line, carrying the old value and the new one separated by an arrow:
+
+```
+~  protocol: string, optional → required
+~  parameter_accession_number: ontology_term → string
+~→ observations: list, Observation → ObservationUnit
+```
+
+The marker is `~`, which the legend already explains as modified, so `-` and `+` keep meaning only removed and added. Drawing a change the way git does — the old version on a `-` line above the new one on a `+` line — misreads here: those two glyphs are the legend's, not a diff's, so a field that merely became required looked like one field removed and another added, and every changed field cost two lines of node height.
+
+A field can also be modified for a reason the line does not carry — a reworded description, another ontology term, a tightened constraint. Those keep the bare `~` line; the entity panel names those attributes under the field.
+
+A removed field keeps its `-` line and an added field its `+` line, each showing the version held by the profile that has it. The removed field's line is what the field was before it was dropped, and the panel spells out that the compare profile does not have it.
+
+Each node carries every profile's version of each field (`sides` in the graph payload, ordered as the profiles were selected), not the first one found; the entity panel lists both sides under the field, with the changed attributes named.
+
 **Entity panel:**
 
 Clicking an entity opens a panel with everything the profile says about it: the entity's description and ontology term, its SEEK mapping when the profile declares one (role, template, extended metadata), and for every field its nested target (the entity a `list` or `entity` field holds), its type, whether it is required, its description, ontology term, constraints (pattern, length, range, item counts), controlled vocabulary, unit, example, identifier/label markers, tier, and any SEEK or ISA markers (`isa_tag`, `seek_attribute_type`, `seek_controlled_vocab`). A field shows only the attributes it has set, so a plain string field is one line and a vocabulary-bound identifier is several.

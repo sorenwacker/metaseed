@@ -123,6 +123,20 @@ function renderFieldRow(field) {
         : '';
     const changed = field.attributes_changed && field.attributes_changed.length
         ? `<div class="field-diff-changes">Changed: ${escapeHtml(field.attributes_changed.join(', '))}</div>` : '';
+    // Naming the changed attributes says what moved but not where from or to.
+    // Both profiles' versions of the field, base first, answer that.
+    const sides = field.sides || [];
+    const twoSided = sides.length === 2 && field.diff_type && field.diff_type !== 'unchanged'
+        ? `<div class="field-diff-sides">${sides.map((side, index) => {
+            const mark = index === 0 ? '-' : '+';
+            const cls = index === 0 ? 'base' : 'compare';
+            if (!side.present) {
+                return `<div class="field-side absent"><code>${mark}</code> <em>not in ${escapeHtml(side.profile)}</em></div>`;
+            }
+            const target = side.items ? ` &rarr; <code>${escapeHtml(side.items)}</code>` : '';
+            const req = side.required ? '<span class="required">*</span>' : '';
+            return `<div class="field-side ${cls}"><code>${mark}</code> <code>${escapeHtml(side.type)}</code>${req}${target}</div>`;
+        }).join('')}</div>` : '';
     return `<div class="field-diff-item ${escapeHtml(field.diff_type || '')}" data-testid="field-${escapeHtml(field.name)}">
         <div class="field-diff-header">
             <span>${renderDiffGlyph(field.diff_type)}${field.required ? '*' : ''}${escapeHtml(field.name)}</span>
@@ -132,6 +146,7 @@ function renderFieldRow(field) {
         ${renderFieldDetails(field.details)}
         ${vocabulary}
         ${changed}
+        ${twoSided}
     </div>`;
 }
 

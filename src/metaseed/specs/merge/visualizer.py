@@ -197,6 +197,28 @@ class DiffVisualizer:
                 pid for pid, spec in fd.profiles.items() if spec is not None
             ]
 
+            # Every profile's version of the field, in the order the profiles
+            # were selected. The headline values above stop at the first
+            # profile that has the field, which is enough to name a field but
+            # not to diff one: a field that changed type arrived as a single
+            # type with a "~" beside it, saying that something changed but
+            # never what it changed from. With both versions the explorer
+            # draws the base as the "-" line and the compare as the "+" one,
+            # and a removed field shows the version it had rather than owing
+            # its old values to the base happening to come first.
+            sides = []
+            for profile_id in comparison.profiles:
+                side_spec = fd.profiles.get(profile_id)
+                sides.append(
+                    {
+                        "profile": profile_id,
+                        "present": side_spec is not None,
+                        "type": side_spec.type.value if side_spec else None,
+                        "required": side_spec.required if side_spec else False,
+                        "items": side_spec.items if side_spec else None,
+                    }
+                )
+
             fields_data.append(
                 {
                     "name": fd.field_name,
@@ -208,6 +230,7 @@ class DiffVisualizer:
                     "diff_type": fd.diff_type.value,
                     "profiles": field_profiles,
                     "attributes_changed": fd.attributes_changed,
+                    "sides": sides,
                 }
             )
 
