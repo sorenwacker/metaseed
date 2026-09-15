@@ -16,6 +16,7 @@ from starlette.requests import Request
 from metaseed.profiles import ProfileFactory
 
 from ..helpers import (
+    build_ancestor_breadcrumb,
     build_inline_tables,
     form_field_groups,
     get_field_data,
@@ -225,6 +226,9 @@ def register_form_routes(  # noqa: C901
                 "is_edit": True,
                 "node_id": node_id,
                 "node_label": node.label,
+                # The chain the node itself records, since nested_edit_stack is
+                # cleared above and cannot say where this entity sits.
+                "breadcrumb": build_ancestor_breadcrumb(state, node),
                 "description": helper.description,
                 "ontology_term": helper.ontology_term,
                 **form_field_groups(fields),

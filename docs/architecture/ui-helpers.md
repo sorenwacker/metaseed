@@ -126,6 +126,7 @@ Handles breadcrumb building and reference field resolution.
 | Function | Purpose |
 |----------|---------|
 | `build_breadcrumb(state)` | Build breadcrumb navigation from nested edit stack |
+| `build_ancestor_breadcrumb(state, node)` | Build breadcrumb from a node's containment chain (`parent_id` and `parent_field`, ADR 006), so an entity opened directly for editing still shows its ancestors and the field it sits in |
 | `error_response(request, templates, message)` | Create error response with notification template |
 | `get_reference_fields(profile, version, entity_type)` | Get all reference fields for an entity type |
 | `get_parent_id_fields(reference_fields, parent_type)` | Get fields that reference the parent entity |

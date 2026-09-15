@@ -8,8 +8,26 @@
                hx-swap="innerHTML"
                hx-select="#main > *">Entities</a>
         </span>
+        {# The node's own containment chain, so a child opened directly can be
+           left upwards rather than only back to the entity list. #}
+        {% if breadcrumb %}
+        {% for item in breadcrumb %}
+        <span class="breadcrumb-sep">&gt;</span>
+        {% if item.url %}
+        <span class="breadcrumb-item">
+            <a href="#"
+               hx-get="{{ item.url }}"
+               hx-target="#main"
+               hx-swap="innerHTML">{{ item.label }}</a>
+        </span>
+        {% else %}
+        <span class="breadcrumb-item{% if loop.last %} active{% endif %}">{{ item.label }}</span>
+        {% endif %}
+        {% endfor %}
+        {% else %}
         <span class="breadcrumb-sep">&gt;</span>
         <span class="breadcrumb-item active">{{ entity_type }}{% if node_label %}: {{ node_label }}{% endif %}</span>
+        {% endif %}
     </nav>
     {% endif %}
 

@@ -191,7 +191,61 @@ def build_breadcrumb(state: AppState) -> list[dict[str, Any]]:
     return breadcrumb
 
 
+def build_ancestor_breadcrumb(state: AppState, node: Any) -> list[dict[str, Any]]:
+    """Build a breadcrumb from a node's own containment chain.
+
+    :func:`build_breadcrumb` reads the nested edit stack, which is empty when an
+    entity is opened directly — from the graph, a link, or a table row. The
+    chain recorded on the node itself (``parent_id`` and ``parent_field``,
+    ADR 006) is what makes the parent reachable there.
+
+    Args:
+        state: UI state holding the nodes by id.
+        node: The node being edited.
+
+    Returns:
+        Entries root-first: each ancestor as a link, the field it holds the next
+        entry in as a plain label, and the edited node itself without a link. A
+        field is a label rather than a link because a single-``entity`` field
+        has no table view to open.
+    """
+    chain: list[Any] = []
+    seen: set[str] = set()
+    current: Any = node
+    while current is not None:
+        if current.id in seen:  # a cycle would otherwise loop forever
+            break
+        seen.add(current.id)
+        chain.append(current)
+        parent_id = getattr(current, "parent_id", None)
+        current = state.nodes_by_id.get(parent_id) if parent_id else None
+
+    breadcrumb: list[dict[str, Any]] = []
+    for depth, ancestor in enumerate(reversed(chain)):
+        label = ancestor.entity_type
+        if ancestor.label:
+            label = f"{ancestor.entity_type}: {ancestor.label}"
+        is_edited = ancestor.id == node.id
+        breadcrumb.append(
+            {
+                "label": label,
+                "entity_type": ancestor.entity_type,
+                "url": None
+                if is_edited
+                else f"/form/{ancestor.entity_type}/{ancestor.id}",
+            }
+        )
+        # The field lives on the child, naming where the parent holds it.
+        child = chain[len(chain) - depth - 2] if depth + 2 <= len(chain) else None
+        field = getattr(child, "parent_field", None) if child else None
+        if field:
+            breadcrumb.append({"label": field, "entity_type": None, "url": None})
+
+    return breadcrumb
+
+
 __all__ = [
+    "build_ancestor_breadcrumb",
     "build_breadcrumb",
     "error_response",
     "get_parent_id_fields",
