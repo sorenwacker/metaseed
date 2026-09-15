@@ -1,5 +1,29 @@
 # Changelog
 
+## v0.52.0 (260915)
+
+### Added
+- **`metaseed[all]` installs every integration.** The extra did not exist, so `uv tool install 'metaseed[all]'` resolved to the bare package and the Plugins page listed adapters that could never load. A test fails if an adapter is added without joining the extra.
+- **A reader whose standard is not listed is told where to ask.** The picker showed only what ships, with nothing to say about the rest. The note sits above the list: below it, it stood 1500px down and a reader who stopped scrolling never saw it.
+- **A nested entity's edit form shows its ancestors.** The way up from a child was back to the entity list and down again; the breadcrumb now names each parent, and one builder serves both places so the two cannot word the same trail differently.
+- **A stored secret shows stars in its empty field.** An API key that is saved is never sent back to the page, so a configured integration looked exactly like an unconfigured one.
+
+### Fixed
+- **A child records the field it belongs to (ADR 006 step 2).** The parent field was inferred from the child's type, so a parent holding one type in two fields — `publisher` and `creator`, both Agent — filed every child under whichever field the type matched first. Relationships are recorded edges now: the child stores `parent_field`, and linking writes the child's reference into that field.
+- **An identifier resolves within its own entity type (ADR 006).** Records were keyed by IRI across types, so a record sharing another's IRI took that record's place, and its children with it, on reload.
+- **An entity field is rendered once, as its table (ADR 006 step 3).** A required containment field appeared twice — an unlabelled button among the fields and its table far below.
+- **Lists of IRIs, dates and other values are edited as values.** The form treated every list that was not of strings as child entities, so a list of URIs offered a child-entity table instead of a text field.
+- **Entities are labelled by uri, date and list values.** A validated `PeriodOfTime` or `QualityCertificate` displayed as `New <Entity>` because only string labels were rendered.
+- **The graph rests while it cannot be seen.** An open panel polled the server every 2 seconds and kept simulating from a background tab.
+- **A changed field in the explorer diff shows what it changed from.** The visualizer read each field's type, required marker and nested target from whichever profile answered first and stopped there, so both sides of a change collapsed to one and a removed field kept its old values only because the base profile happened to come first. Every profile's version now travels, a change renders as `~ protocol: string, optional → required`, and removed and added fields keep their `-` and `+` lines showing the version the profile that has them holds.
+
+### Changed
+- **The form and its tables use the width they are given.** Fields flowed at their own width and a nineteen-column table crushed every value to an ellipsis. Fields grow into a grid, cells hold a readable range, dates and datetimes get the browser's own pickers in both the form and the table cell, and a long table keeps its actions column visible instead of cutting it off first.
+- **A table row can be read at a glance.** One long value made every cell in the row seven lines tall.
+- **The builder's actions sit beside the spec they act on**, in the secondary header with the entity count.
+- Documentation records that relationships are stored edges, not inferred from types (ADR 006).
+- Gates hold the explore control order and the explorer script versions, both of which shipped once without one: the control order was lost in the hub's copy, and a script edit stayed invisible in a browser that had the page cached.
+
 ## v0.51.2 (260911)
 
 ### Fixed
