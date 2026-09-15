@@ -131,6 +131,41 @@ def get_parent_id_fields(
     return parent_id_fields
 
 
+def short_label(value: str) -> str:
+    """The readable end of a label.
+
+    An identifier is often the entity's IRI, and a trail of them wraps over two
+    lines saying almost nothing: every crumb starts "https://example.org/". The
+    last meaningful segment identifies it; the full value stays in the title.
+    """
+    text = str(value).strip().rstrip("/")
+    if "://" not in text:
+        return text
+    tail = text.rsplit("/", 1)[-1]
+    return tail or text
+
+
+def crumb_label(entity_type: str, label: str | None) -> str:
+    """How every crumb naming an entity reads: ``Type: what it is``.
+
+    One rule for both builders. The edit form said "Catalog: <iri>" while the
+    nested pages said "<iri>" alone, so the same trail read differently
+    depending on which page drew it.
+    """
+    if not label:
+        return entity_type
+    return f"{entity_type}: {short_label(label)}"
+
+
+def names_the_same_thing(field: str, entity_type: str) -> bool:
+    """Whether a field crumb only repeats the type of the crumb after it.
+
+    ``dataset > Dataset: …`` says it twice; ``contact_point > Kind: …`` does
+    not, and there the field is the only thing that says which field it is.
+    """
+    return field.replace("_", "").lower() == entity_type.replace("_", "").lower()
+
+
 def build_breadcrumb(state: AppState) -> list[dict[str, Any]]:
     """Build breadcrumb navigation from nested edit stack."""
     breadcrumb: list[dict[str, Any]] = []
@@ -141,7 +176,7 @@ def build_breadcrumb(state: AppState) -> list[dict[str, Any]]:
         if node:
             breadcrumb.append(
                 {
-                    "label": node.label or node.entity_type,
+                    "label": crumb_label(node.entity_type, node.label),
                     "entity_type": node.entity_type,
                     "url": f"/form/{node.entity_type}/{node.id}",
                 }
@@ -182,7 +217,12 @@ def build_breadcrumb(state: AppState) -> list[dict[str, Any]]:
 
         breadcrumb.append(
             {
-                "label": item_label,
+                # Through the same rule as every other crumb: this loop built
+                # its own label, so a nested page said "STUDY-001" where the
+                # edit form said "Study: STUDY-001" for the same entity.
+                "label": crumb_label(ctx.entity_type, item_label)
+                if item_label != f"{ctx.entity_type} {ctx.row_idx + 1}"
+                else item_label,
                 "entity_type": ctx.entity_type,
                 "url": url,
             }
@@ -222,9 +262,7 @@ def build_ancestor_breadcrumb(state: AppState, node: Any) -> list[dict[str, Any]
 
     breadcrumb: list[dict[str, Any]] = []
     for depth, ancestor in enumerate(reversed(chain)):
-        label = ancestor.entity_type
-        if ancestor.label:
-            label = f"{ancestor.entity_type}: {ancestor.label}"
+        label = crumb_label(ancestor.entity_type, ancestor.label)
         is_edited = ancestor.id == node.id
         breadcrumb.append(
             {
@@ -237,6 +275,12 @@ def build_ancestor_breadcrumb(state: AppState, node: Any) -> list[dict[str, Any]
         )
         # The field lives on the child, naming where the parent holds it.
         child = chain[len(chain) - depth - 2] if depth + 2 <= len(chain) else None
+        # A field crumb that only repeats the type of the crumb after it says
+        # the same thing twice: "dataset > Dataset: ...".
+        if child is not None and names_the_same_thing(
+            getattr(child, "parent_field", "") or "", child.entity_type
+        ):
+            continue
         field = getattr(child, "parent_field", None) if child else None
         if field:
             breadcrumb.append({"label": field, "entity_type": None, "url": None})

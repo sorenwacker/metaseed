@@ -25,38 +25,6 @@
                 <span class="unsaved-indicator" title="Unsaved changes">*</span>
                 {% endif %}
             </div>
-            <div class="header-actions">
-                {% if template_source %}
-                <span class="template-badge">
-                    Cloned from {{ template_source[0] }} v{{ template_source[1] }}
-                </span>
-                {% endif %}
-                <button id="sidebar-toggle-btn" class="btn btn-header" onclick="toggleSidebar()" title="Hide sidebar (Ctrl+B)">
-                    Sidebar
-                </button>
-                <button class="btn btn-header" onclick="autoLayout()">
-                    Layout
-                </button>
-                <button class="btn btn-header"
-                        hx-get="/spec-builder/preview"
-                        hx-target="#preview-content"
-                        hx-swap="innerHTML"
-                        onclick="showPreview()">
-                    Preview
-                </button>
-                <span class="header-divider"></span>
-                <a href="/spec-builder/export" class="btn btn-header" download>
-                    Export
-                </a>
-                <button class="btn btn-header btn-save" onclick="saveSpec()">
-                    Save
-                </button>
-                <span class="header-divider"></span>
-                <a href="/spec-builder/reset" class="btn btn-header"
-                   onclick="return confirm('Start a new spec? Unsaved changes will be lost.')">
-                    New Spec
-                </a>
-            </div>
         {% endcall %}
 
         <div class="erd-layout">
@@ -123,7 +91,41 @@
                 <div class="erd-canvas-toolbar">
                     <span class="canvas-info">
                         <strong>{{ spec.entities|length }}</strong> entities
+                        {% if template_source %}
+                        <span class="template-badge">
+                            Cloned from {{ template_source[0] }} v{{ template_source[1] }}
+                        </span>
+                        {% endif %}
                     </span>
+                    {# What acts on this spec belongs with the spec, not in the
+                       header shared with every other page. #}
+                    <div class="canvas-controls spec-actions">
+                        <button id="sidebar-toggle-btn" class="btn btn-sm btn-secondary" onclick="toggleSidebar()" title="Hide sidebar (Ctrl+B)">
+                            Sidebar
+                        </button>
+                        <button class="btn btn-sm btn-secondary" onclick="autoLayout()">
+                            Layout
+                        </button>
+                        <button class="btn btn-sm btn-secondary"
+                                hx-get="/spec-builder/preview"
+                                hx-target="#preview-content"
+                                hx-swap="innerHTML"
+                                onclick="showPreview()">
+                            Preview
+                        </button>
+                        <span class="toolbar-divider"></span>
+                        <a href="/spec-builder/export" class="btn btn-sm btn-secondary" download>
+                            Export
+                        </a>
+                        <button class="btn btn-sm btn-primary" onclick="saveSpec()">
+                            Save
+                        </button>
+                        <span class="toolbar-divider"></span>
+                        <a href="/spec-builder/reset" class="btn btn-sm btn-secondary"
+                           onclick="return confirm('Start a new spec? Unsaved changes will be lost.')">
+                            New Spec
+                        </a>
+                    </div>
                     <div class="canvas-controls">
                         <button class="btn btn-sm btn-secondary" onclick="zoomIn()">+</button>
                         <button class="btn btn-sm btn-secondary" onclick="zoomOut()">-</button>

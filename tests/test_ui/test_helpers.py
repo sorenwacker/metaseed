@@ -417,7 +417,9 @@ class TestBuildBreadcrumb:
         breadcrumb = build_breadcrumb(state)
 
         assert len(breadcrumb) == 1
-        assert breadcrumb[0]["label"] == "INV-001"  # First field is unique_id
+        # A crumb names the type and the thing. It read "INV-001" here while
+        # the edit form read "Investigation: INV-001" for the same entity.
+        assert breadcrumb[0]["label"] == "Investigation: INV-001"
         assert breadcrumb[0]["entity_type"] == "Investigation"
 
     def test_breadcrumb_with_nested_context(self):
@@ -447,8 +449,9 @@ class TestBuildBreadcrumb:
         breadcrumb = build_breadcrumb(state)
 
         assert len(breadcrumb) == 2
-        assert breadcrumb[0]["label"] == "INV-001"  # First field is unique_id
-        assert breadcrumb[1]["label"] == "STUDY-001"  # First field is unique_id
+        # Every crumb reads the same way, whichever builder drew it.
+        assert breadcrumb[0]["label"] == "Investigation: INV-001"
+        assert breadcrumb[1]["label"] == "Study: STUDY-001"
 
     def test_breadcrumb_missing_node(self):
         """Breadcrumb handles missing node gracefully."""
