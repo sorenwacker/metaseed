@@ -63,9 +63,28 @@ def test_a_long_value_does_not_make_the_whole_row_tall() -> None:
 def test_a_column_cannot_collapse_into_a_ribbon() -> None:
     declarations = _rule(".inline-data-table th,\n.inline-data-table td")
 
-    assert "min-width" in declarations, (
-        "a squeezed column wrapped a name one word per line"
+    assert "min-width: 18ch" in declarations, (
+        "nineteen columns squeezed into the card left every value as "
+        "'http://publi…'; a column needs enough width to say something"
     )
+
+
+def test_a_wide_table_takes_the_width_it_needs() -> None:
+    """Nineteen columns are not made to fit the card: the card scrolls."""
+    declarations = _rule(".inline-data-table")
+
+    assert "width: max-content" in declarations
+    assert "min-width: 100%" in declarations, (
+        "a narrow table should still fill its card"
+    )
+
+
+def test_editing_a_cell_fills_it() -> None:
+    """The input took the browser's default twenty characters, so editing a
+    wide column meant typing into a small box floating inside it."""
+    declarations = _rule(".editable-cell.editing .cell-input")
+
+    assert "width: 100%" in declarations
 
 
 def test_the_actions_stay_reachable_when_the_table_scrolls() -> None:
