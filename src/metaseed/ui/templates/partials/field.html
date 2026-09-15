@@ -51,14 +51,26 @@
     </div>
 
     {% elif field.type == 'date' %}
-    <input type="text"
+    {# The browser's own date control: a text box with a regex told the reader
+       the format only after they had got it wrong. #}
+    <input type="date"
            id="field-{{ field.name }}"
            name="{{ field.name }}"
            class="form-input"
-           value="{{ value }}"
-           pattern="\d{4}-\d{2}-\d{2}"
-           placeholder="YYYY-MM-DD"
-           title="Date format: YYYY-MM-DD (e.g., 2024-03-15)"
+           value="{{ value|string|replace(' ', 'T')|truncate(10, true, '') }}"
+           {% if field.required %}required{% endif %}
+           data-testid="input-{{ field.name|replace('_', '-') }}">
+
+    {% elif field.type == 'datetime' %}
+    {# datetime had no branch at all and fell through to a plain text box, so a
+       spec's datetime field was typed by hand. datetime-local wants
+       YYYY-MM-DDTHH:MM while a stored value reads "2025-01-15 09:00:00+00:00":
+       take the date and the hour and minute, which is what the control holds. #}
+    <input type="datetime-local"
+           id="field-{{ field.name }}"
+           name="{{ field.name }}"
+           class="form-input"
+           value="{{ value|string|replace(' ', 'T')|truncate(16, true, '') }}"
            {% if field.required %}required{% endif %}
            data-testid="input-{{ field.name|replace('_', '-') }}">
 

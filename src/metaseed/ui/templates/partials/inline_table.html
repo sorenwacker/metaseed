@@ -57,10 +57,15 @@
                         {% set show_lookup = ref_info and not is_parent_id %}
                         <span class="cell-display" data-testid="cell-display-{{ field_name }}-{{ row._idx }}-{{ col }}">{{ row.get(col, '')|display }}</span>
                         <div class="cell-input-wrapper{% if show_lookup %} has-lookup{% endif %}">
-                            <input type="text"
+                            {# A table cell gets the same control as the field
+                               it holds: a date column was a text box here
+                               while the form gave it a picker, so one value
+                               was typed in one place and chosen in the other. #}
+                            {% set cell_value = row.get(col, '')|display %}
+                            <input type="{% if col_type == 'date' %}date{% elif col_type == 'datetime' %}datetime-local{% else %}text{% endif %}"
                                    class="form-input cell-input{% if show_lookup %} lookup-input{% endif %}"
                                    name="{{ col }}"
-                                   value="{{ row.get(col, '')|display }}"
+                                   value="{% if col_type == 'date' %}{{ cell_value|string|replace(' ', 'T')|truncate(10, true, '') }}{% elif col_type == 'datetime' %}{{ cell_value|string|replace(' ', 'T')|truncate(16, true, '') }}{% else %}{{ cell_value }}{% endif %}"
                                    {% if is_parent_id %}
                                    readonly
                                    title="Auto-filled from parent"
@@ -70,10 +75,6 @@
                                    autocomplete="off"
                                    placeholder="Tab for options"
                                    title="Press Tab to see available {{ ref_info.target_entity }} values"
-                                   {% endif %}
-                                   {% if col_type == 'date' %}
-                                   pattern="\d{4}-\d{2}-\d{2}"
-                                   placeholder="YYYY-MM-DD"
                                    {% endif %}
                                    hx-post="/table/{{ parent_entity_type }}/{{ field_name }}/row/{{ row._idx }}/cell"
                                    hx-trigger="change"
