@@ -85,11 +85,24 @@ function sidesDiffer(base, compare) {
         || base.items !== compare.items;
 }
 
-/** One side of a changed field, prefixed the way a diff line is. */
-function fieldSideLine(prefix, name, side) {
-    const req = side.required ? '*' : ' ';
-    const fk = (side.type === 'entity' || side.type === 'list') && side.items ? '→' : ' ';
-    return `\n${prefix}${req}${fk} ${name}: ${side.type}`;
+/** A changed field on one line, carrying the old value and the new one.
+ *
+ * Not the base version on a `-` line above the compare version on a `+` line:
+ * the legend gives those two glyphs to removed and added fields, so a field
+ * that merely became required read as one field removed and another added,
+ * and every change cost two lines of node height.
+ */
+function fieldChangeLine(name, base, compare) {
+    const req = compare.required ? '*' : ' ';
+    const fk = (compare.type === 'entity' || compare.type === 'list') && compare.items ? '→' : ' ';
+    const parts = [base.type === compare.type ? compare.type : `${base.type} → ${compare.type}`];
+    if (base.required !== compare.required) {
+        parts.push(`${base.required ? 'required' : 'optional'} → ${compare.required ? 'required' : 'optional'}`);
+    }
+    if (base.items !== compare.items) {
+        parts.push(`${base.items || 'none'} → ${compare.items || 'none'}`);
+    }
+    return `\n~${req}${fk} ${name}: ${parts.join(', ')}`;
 }
 
 function buildNodeLabel(name, fields, exploreMode) {
@@ -115,8 +128,7 @@ function buildNodeLabel(name, fields, exploreMode) {
         const changed = field.diff_type === 'conflict' || field.diff_type === 'modified';
         if (changed && sides.length === 2 && sides[0].present && sides[1].present
             && sidesDiffer(sides[0], sides[1])) {
-            label += fieldSideLine('-', field.name, sides[0]);
-            label += fieldSideLine('+', field.name, sides[1]);
+            label += fieldChangeLine(field.name, sides[0], sides[1]);
             return;
         }
         let ind = ' ';
