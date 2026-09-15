@@ -1,7 +1,10 @@
 {# Shared form sections for required, optional, and nested fields #}
 
 {% if required_fields %}
-<div class="form-section">
+{# field-grid lays these fields out in columns that fill the width. The class is
+   this form's own: form-section is shared with the explorer's panel and the
+   spec builder's fieldsets, which stack their controls and must keep doing so. #}
+<div class="form-section field-grid">
     <h3 class="form-section-title">Required Fields</h3>
     {% for field in required_fields %}
     {% include "partials/field.html" %}

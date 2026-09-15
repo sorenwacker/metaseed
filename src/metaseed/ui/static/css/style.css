@@ -518,12 +518,43 @@ body::before {
     border-radius: 2px;
 }
 
+/* Fields fill the width they are given. As inline-block at a 220px minimum
+   they flowed at their own width: a row of three left a gap wide enough for a
+   fourth, and a long URI was truncated in a narrow box while the space beside
+   it sat empty. The grid gives every field an equal column and lets a column
+   grow with the window. */
+.field-grid,
+.collapsible-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));
+    gap: var(--space-md) var(--space-xl);
+    align-items: start;
+}
+
+/* Anything that is not a field spans the whole row: the section heading, the
+   filter, and a child table, which has its own width and must not be squeezed
+   into one column. */
+.field-grid > h3,
+.field-grid > .inline-table-section,
+.field-grid > .add-child-section,
+.collapsible-content > .optional-filter,
+.collapsible-content > .inline-table-section {
+    grid-column: 1 / -1;
+}
+
 .form-group {
-    display: inline-block;
-    vertical-align: top;
-    margin-right: var(--space-xl);
+    min-width: 0;
     margin-bottom: var(--space-md);
-    min-width: 220px;
+}
+
+.form-group .form-input,
+.form-group .form-textarea {
+    width: 100%;
+}
+
+/* A value is usually one line; the box no longer reserves five. */
+.form-group .form-textarea {
+    min-height: 4.5rem;
 }
 
 .form-label {
@@ -541,7 +572,10 @@ body::before {
 
 .form-input {
     width: 100%;
-    max-width: 380px;
+    /* No fixed cap: the column decides the width now, so a long URI uses the
+       space its field was given instead of stopping at 380px with the rest of
+       the row empty. */
+    max-width: 100%;
     padding: var(--space-sm) var(--space-md);
     border: 1px solid var(--clr-parchment);
     border-radius: var(--radius-md);
@@ -1630,6 +1664,15 @@ body::before {
 
 .editable-cell.editing .cell-input {
     display: block;
+    /* Fill the cell. Without a width the browser gives a text input its
+       default twenty characters, so editing a wide column meant typing into a
+       small box floating in the middle of it. */
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.editable-cell.editing .cell-input-wrapper {
+    width: 100%;
 }
 
 .editable-cell.editing {
@@ -2308,15 +2351,21 @@ body::before {
 .inline-data-table {
     margin: 0;
     border-radius: 0;
+    /* A table with nineteen columns is not made to fit the card: squeezed to
+       its width every value became "http://publi…". It takes the width it
+       needs and the card scrolls sideways, with the actions column pinned. */
+    width: max-content;
+    min-width: 100%;
 }
 
 .inline-data-table th,
 .inline-data-table td {
     padding: var(--space-xs) var(--space-sm);
     font-size: 0.875rem;
-    /* Below this a column is unreadable rather than merely narrow: a squeezed
-       column wrapped "Example University Medical Centre" one word per line. */
-    min-width: 10ch;
+    /* Enough for a readable fragment of a URI rather than a few characters and
+       an ellipsis; below this a column says nothing at all. */
+    min-width: 18ch;
+    max-width: 32ch;
 }
 
 .inline-data-table thead th {
@@ -2346,6 +2395,11 @@ body::before {
     -webkit-box-orient: vertical;
     overflow: hidden;
     overflow-wrap: anywhere;
+    /* The clamp alone decides the height: it stops at exactly two lines. A
+       max-height here measured the content box while the cell also has 7.5px
+       of padding, so the second line was cut through the middle of its
+       letters -- worse than the sliver it was meant to remove. */
+    line-height: 1.4;
 }
 
 /* The actions stay reachable when the table is wider than the card and has to
