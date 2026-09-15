@@ -52,7 +52,10 @@ function buildNodeConfig(node, exploreMode) {
     const fields = node.data.fields || [];
     const diffType = node.data.diff_type || 'unchanged';
     const label = buildNodeLabel(node.label, fields, exploreMode);
-    const nodeHeight = LAYOUT.nodeBaseHeight + fields.length * LAYOUT.fieldHeight;
+    // Sized by the lines actually drawn, not by the field count: a changed
+    // field occupies two lines (its base version and its compare version),
+    // so counting fields draws the box shorter than its own label.
+    const nodeHeight = LAYOUT.nodeBaseHeight + label.split('\n').length * LAYOUT.fieldHeight;
 
     return {
         id: node.id,
@@ -69,6 +72,26 @@ function buildNodeConfig(node, exploreMode) {
     };
 }
 
+/** Whether the two versions differ in what a field line actually shows.
+ *
+ * A field counts as modified for reasons a line does not carry -- a reworded
+ * description, a different ontology term, a tightened constraint. Drawing
+ * "- title: string" above "+ title: string" claims a change the reader cannot
+ * see and doubles the node's height to say nothing.
+ */
+function sidesDiffer(base, compare) {
+    return base.type !== compare.type
+        || base.required !== compare.required
+        || base.items !== compare.items;
+}
+
+/** One side of a changed field, prefixed the way a diff line is. */
+function fieldSideLine(prefix, name, side) {
+    const req = side.required ? '*' : ' ';
+    const fk = (side.type === 'entity' || side.type === 'list') && side.items ? '→' : ' ';
+    return `\n${prefix}${req}${fk} ${name}: ${side.type}`;
+}
+
 function buildNodeLabel(name, fields, exploreMode) {
     let label = `<b>${name}</b>\n────────────────`;
 
@@ -82,6 +105,18 @@ function buildNodeLabel(name, fields, exploreMode) {
         const cv = field.vocabulary && field.vocabulary.length ? ` [${field.vocabulary.length} terms]` : '';
         if (exploreMode) {
             label += `\n${req}${fk} ${field.name}: ${field.type}${cv}`;
+            return;
+        }
+        // A field both profiles have but disagree on is read the way a diff
+        // is read: the base version, then the compare version. Each line
+        // carries its own profile's type, required marker and nested target,
+        // so becoming required or repointing to another entity is visible.
+        const sides = field.sides || [];
+        const changed = field.diff_type === 'conflict' || field.diff_type === 'modified';
+        if (changed && sides.length === 2 && sides[0].present && sides[1].present
+            && sidesDiffer(sides[0], sides[1])) {
+            label += fieldSideLine('-', field.name, sides[0]);
+            label += fieldSideLine('+', field.name, sides[1]);
             return;
         }
         let ind = ' ';

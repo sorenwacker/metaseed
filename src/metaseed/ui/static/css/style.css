@@ -4945,6 +4945,15 @@ details.sidebar-section summary:hover {
 .field-diff-profiles { margin-top: var(--space-xs); }
 .field-diff-changes { margin-top: var(--space-xs); font-size: 0.75rem; color: #e65100; font-style: italic; }
 
+/* Both profiles' versions of a changed field, read as a diff: base then
+   compare. The attribute names alone said that something changed without
+   saying what it changed from. */
+.field-diff-sides { margin-top: var(--space-xs); font-size: 0.75rem; font-family: var(--font-mono, monospace); }
+.field-side { padding: 1px 0; }
+.field-side.base { color: #c62828; }
+.field-side.compare { color: #1565c0; }
+.field-side.absent { color: var(--clr-ink-light); }
+
 /* Legend dots for merge comparison */
 /* Same five colours the panel uses, so the legend explains what is on screen.
    Common was white with a grey ring while the panel painted it grey and green
