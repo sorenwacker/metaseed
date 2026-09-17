@@ -36,6 +36,34 @@ Three columns are structural rather than data:
 Scalar list fields are joined into one cell, and a cell whose text would make
 Excel evaluate a formula is prefixed with a quote.
 
+### Column headings explain themselves
+
+Hovering over a heading shows a note built from the field's specification, in this order, leaving out any line the field does not define:
+
+- The description.
+- Required or optional, the type in words, the unit, and an example, on one line. The type is one of: text, whole number, decimal number, date (YYYY-MM-DD), date and time, web address, ontology term, yes/no, or a list of values separated by commas. A field that holds other entities has no type in the note.
+- **Pattern**: the regular expression a value must match.
+- **Length**: the minimum and maximum number of characters.
+- **Range**: the minimum and maximum value.
+- **Number of values**: the minimum and maximum, for list fields.
+- **Allowed values**: the first 10, then "and N more, see the dropdown".
+- **Ontologies** the term may come from, or **Terms under** the term it must descend from.
+- **Must match**: the entity and field a value refers to, for example `Study.unique_id`.
+- **Unique**: within the parent, or across the dataset.
+- **Rules**: the description of every profile-level validation rule that applies to the entity and names the field, whether as its `field`, in its `condition`, in its `when` or `require`, or as a start, end, latitude or longitude field.
+
+A constraint can be declared on the field or in a profile-level rule; the note shows it once either way. The note grows with its content. It is a comment rather than a row, because the import reads every row below the heading as data.
+
+The note on `start_date` of a MIAPPE 1.2 Study:
+
+```text
+Start date/time. Format: ISO 8601.
+
+Optional · Date and time
+Pattern: ^[0-9]{4}-[0-9]{2}-[0-9]{2}$
+Rules: End date must not be before start date; Dates must be ISO 8601 format (YYYY-MM-DD)
+```
+
 ## What the import does
 
 `workbook_to_payload` reverses each of those, and the reversal is the part that

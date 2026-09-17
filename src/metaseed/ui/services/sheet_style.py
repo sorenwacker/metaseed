@@ -19,12 +19,15 @@ documentation.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
 from openpyxl.comments import Comment
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.table import Table, TableStyleInfo
+
+from metaseed.ui.services.heading_note import NOTE_WIDTH, heading_note, note_height
 
 if TYPE_CHECKING:
     from openpyxl.worksheet.worksheet import Worksheet
@@ -75,6 +78,7 @@ def style_sheet(
     columns: list[str],
     fields: dict[str, Any],
     row_count: int,
+    rules: Sequence[Any] = (),
 ) -> None:
     """Lay out one entity sheet: headings, widths, wrapping, frozen panes.
 
@@ -86,6 +90,8 @@ def style_sheet(
             description.
         row_count: How many data rows were written, for sizing the columns to
             what is actually in them.
+        rules: The profile's validation rules that apply to this entity, for
+            the constraints and rule descriptions in each heading's note.
     """
     for index, column in enumerate(columns, start=1):
         letter = get_column_letter(index)
@@ -100,11 +106,13 @@ def style_sheet(
         cell.fill = HEADER_FILL
         cell.alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
 
-        note = _description(column, field)
+        note = heading_note(column, field, rules)
         if note:
             # A comment, not a second row: the import reads everything below the
             # heading as data.
-            cell.comment = Comment(note, "metaseed", width=320, height=160)
+            cell.comment = Comment(
+                note, "metaseed", width=NOTE_WIDTH, height=note_height(note)
+            )
 
         ws.column_dimensions[letter].width = _width(ws, index, column, row_count)
 
@@ -132,41 +140,6 @@ def style_sheet(
                 cell.font = SYSTEM_FONT
 
     _make_table(ws, columns, last_row)
-
-
-def _description(column: str, field: Any) -> str:
-    """What to tell someone hovering over this heading.
-
-    The specification's own description, plus the facts that decide what may go
-    in the cell: whether it is required, its unit, and an example.
-    """
-    if column == "_parent":
-        return (
-            "Structure, not metadata: which row of the parent sheet this row "
-            "belongs to, named by that row's identifier.\n\n"
-            "Written by the export — leave the existing values alone. If you "
-            "add a row, choose its parent from the dropdown, or the row will "
-            "have nothing to attach to on import."
-        )
-    if field is None:
-        return ""
-
-    parts: list[str] = []
-    description = (getattr(field, "description", "") or "").strip()
-    if description:
-        parts.append(description)
-
-    facts: list[str] = []
-    facts.append("Required" if getattr(field, "required", False) else "Optional")
-    unit = getattr(field, "unit", None)
-    if unit:
-        facts.append(f"Unit: {unit}")
-    example = getattr(field, "example", None)
-    if example:
-        facts.append(f"Example: {example}")
-    parts.append(" · ".join(facts))
-
-    return "\n\n".join(parts)
 
 
 def _width(ws: Worksheet, index: int, column: str, row_count: int) -> float:
