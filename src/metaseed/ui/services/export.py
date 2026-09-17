@@ -195,6 +195,8 @@ def build_workbook_from_facade(facade: Any) -> Workbook:
                 key = (child_type, str(parent_id))
                 child_counts[key] = child_counts.get(key, 0) + 1
 
+    spec = _load_spec(facade)
+
     wb = Workbook()
     wb.remove(wb.active)
 
@@ -213,7 +215,7 @@ def build_workbook_from_facade(facade: Any) -> Workbook:
         nested_types = helper.nested_fields  # field name -> contained entity type
         columns = [*helper.all_fields, "_parent"]
         columns_by_entity[entity_type] = columns
-        fields_by_entity[entity_type] = _field_specs(facade, entity_type)
+        fields_by_entity[entity_type] = _field_specs(spec, entity_type)
 
         ws.append(columns)
 
@@ -238,7 +240,13 @@ def build_workbook_from_facade(facade: Any) -> Workbook:
                 # trip byte for byte.
                 cell.number_format = "@"
 
-        style_sheet(ws, columns, fields_by_entity[entity_type], len(entities))
+        style_sheet(
+            ws,
+            columns,
+            fields_by_entity[entity_type],
+            len(entities),
+            _rules_for(spec, entity_type),
+        )
 
     # A column the specification controls becomes a dropdown, and the terms are
     # written into a hidden sheet with what they came from. See
@@ -259,21 +267,38 @@ def build_workbook(state: AppState) -> Workbook:
     return build_workbook_from_facade(state.get_or_create_facade())
 
 
-def _field_specs(facade: Any, entity_type: str) -> dict[str, Any]:
-    """Field name -> its :class:`FieldSpec` for one entity, or empty if unknown.
+def _load_spec(facade: Any) -> Any:
+    """The dataset's :class:`ProfileSpec`, or ``None`` when it cannot be loaded.
 
     A workbook must still export when the specification cannot be loaded, just
-    without the dropdowns and descriptions that come from it.
+    without the dropdowns, notes and rules that come from it.
     """
     from metaseed.specs.loader import SpecLoader
 
     try:
-        spec = SpecLoader().load_profile(facade.version, facade.profile)
+        return SpecLoader().load_profile(facade.version, facade.profile)
     except Exception:
-        return {}
-    entity = spec.entities.get(entity_type)
+        return None
+
+
+def _field_specs(spec: Any, entity_type: str) -> dict[str, Any]:
+    """Field name -> its :class:`FieldSpec` for one entity, or empty if unknown."""
+    entity = spec.entities.get(entity_type) if spec is not None else None
     fields = getattr(entity, "fields", None)
     return {field.name: field for field in fields} if fields else {}
+
+
+def _rules_for(spec: Any, entity_type: str) -> list[Any]:
+    """The profile's validation rules that apply to one entity."""
+    from metaseed.specs.schema import applies_to_entity
+
+    if spec is None:
+        return []
+    return [
+        rule
+        for rule in spec.validation_rules
+        if applies_to_entity(rule.applies_to, entity_type)
+    ]
 
 
 def export_to_bytes(state: AppState) -> BytesIO:
