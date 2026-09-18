@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.53.0 (260918)
+
+### Added
+- **An exported Excel column heading says what a valid value is.** A person filling in a sheet learned a column's pattern, range and rules only from the validation report after import. Hovering over a heading now shows a note built from the field's specification: the description, required or optional, the type in words, unit and example, then pattern, length, range, number of values, allowed values, ontologies, the field a value must match, uniqueness, and every profile-level rule that names the field. A constraint declared both on the field and in a rule is shown once. The note is a comment rather than a row, because the import reads every row below the heading as data.
+
 ## v0.52.0 (260915)
 
 ### Added
