@@ -21,11 +21,12 @@ One sheet per entity type, a header row of field names, and every data cell
 written as text — Excel otherwise reinterprets gene names as dates and strips
 leading zeros from identifiers.
 
-Three columns are structural rather than data:
+Some columns are structural rather than data:
 
 - **`_parent`** carries the parent's identifier. No profile declares a
   `parent_ref` field, so without this column the tree would not survive the
   round trip.
+- **`_parent_field`** names the field of the parent that holds the row, written as `Type.field`, for example `Study.persons`. It is written only on the sheet of an entity type that more than one field can hold. See [Adding a row](#adding-a-row).
 - **A containment column per nested field** (`studies` on Investigation,
   `observation_units` on Study) holds *how many* children of that type hang from
   the row. The children themselves are rows on their own sheet, so the column is
@@ -35,6 +36,17 @@ Three columns are structural rather than data:
 
 Scalar list fields are joined into one cell, and a cell whose text would make
 Excel evaluate a formula is prefixed with a quote.
+
+### Adding a row
+
+The export fills `_parent` and `_parent_field` for every row it writes. A person adding a row fills them by choosing from dropdowns, and what the dropdowns offer depends on how many fields of the profile can hold the entity type. A field that can hold it is a *holder*, written `Type.field`.
+
+- **One holder.** A MIAPPE Study is held only by `Investigation.studies`. The sheet has `_parent` alone, and its dropdown lists the identifier column of the Investigation sheet.
+- **Several holders.** A MIAPPE Person is held by `Investigation.contacts` and by `Study.persons`; a DCAT Agent is held by one catalogue as both `creator` and `publisher`. An identifier cannot say which is meant, so the sheet also has `_parent_field`, whose dropdown lists the holders. The person chooses the holder first, and the `_parent` dropdown then lists the identifier column of that holder's sheet. While `_parent_field` is empty, `_parent` offers nothing.
+
+Both dropdowns read the sheets as they are, down to row 5000, so a parent row added in the same edit can be chosen for a new child. They warn rather than refuse, as every dropdown in the workbook does, because a value pasted from elsewhere may be right.
+
+A row whose `_parent` is empty is attached only if one of its reference fields names a record, which is how a Darwin Core Event under `parentEventID` finds its place. Otherwise it is imported as an entity with no parent.
 
 ### Column headings explain themselves
 
@@ -76,6 +88,7 @@ must not be reimplemented:
 - **Scalar lists are split** on the separator the export joined them with.
 - **Formula-escaped cells are unescaped**, or a round trip changes the data.
 - **`_parent` becomes `_parent_unique_id`**, which the loader resolves.
+- **`_parent_field` becomes `_parent_type` and `_parent_field`**: `Study.persons` is read as parent type `Study` and field `persons`. A value that is not a holder of the row's entity type is reported with its sheet and row, and the row is imported without it. A workbook without the column imports as before.
 - **Placeholder rows** — the `<field>` cells a downloaded template carries — are
   not entities and are skipped.
 - **A workbook matching no entity type is refused**, because the usual cause is
@@ -92,12 +105,14 @@ it has already created — only among those whose type can hold the child
 several types, so a lookup by value alone could attach a child to the wrong
 record ([ADR 006](decisions/006-relationships-are-recorded-edges.md)).
 
+When a payload states `_parent_type`, the loader takes the record of that type among those sharing the identifier, and `_parent_field` files the child in that field. Without them the loader takes the first record whose type can hold the child, and a parent that holds the type in one field needs no field named. A parent that holds the type in several fields and is given no `_parent_field` cannot be resolved: the child is attached to the parent with no field recorded and a warning is logged, as for a JSON payload.
+
 Installing into an *existing* dataset rather than replacing one is not yet the
 library's: the hub still does that itself, in `add_entities_in_order`, together
 with the placement rules it needs — a breadth-first containment order so a
 parent precedes the types it contains, `_parent` matched against the declared
 identifier field only, and a message per row that could not be placed as
-written. That is a remaining fork, and moving it here is the next step. Until
+written. It reads `_parent_type` and `_parent_field` the same way the loader does. That is a remaining fork, and moving it here is the next step. Until
 then it is named rather than left to be discovered.
 
 ## Why the parsing is the library's
