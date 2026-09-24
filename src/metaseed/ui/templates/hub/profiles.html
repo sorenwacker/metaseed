@@ -1,5 +1,6 @@
-{# User-local profiles to push, and what the hub holds. A push is a private draft
-   unless publishing is chosen: on the hub, published means visible to everyone. #}
+{# User-local profiles to push, and what the hub holds. A push is a private
+   draft unless publishing is chosen; publishing asks who for: every hub user,
+   or one of the collaborations the hub says this token may name. #}
 <div class="hub-status hub-status-ok" data-testid="hub-profiles">
     <h4>Your profiles</h4>
     {% if local %}
@@ -25,11 +26,26 @@
                 {% endif %}
                 {% if not (row.visibility == 'published' and row.same) %}
                 <form hx-post="{{ base_url }}/hub/profiles/{{ ref.name }}/{{ ref.version }}/push" hx-target="#hub-panel" hx-swap="innerHTML" style="display:inline"
-                      hx-confirm="Publish {{ ref.name }} {{ ref.version }}? It becomes visible to every user of the hub.">
+                      hx-confirm="Publish {{ ref.name }} {{ ref.version }}? A published profile cannot be edited in place; Unpublish brings it back as a draft.">
                     <input type="hidden" name="publish" value="1">
+                    {% if collaborations %}
+                    <label class="sr-only" for="audience-{{ ref.name }}-{{ ref.version }}">Publish to</label>
+                    <select name="audience" class="form-control form-control-sm"
+                            id="audience-{{ ref.name }}-{{ ref.version }}"
+                            data-testid="hub-audience-{{ ref.name }}-{{ ref.version }}"
+                            title="Who will be able to see it">
+                        <option value="">Everyone on the hub</option>
+                        {% for collaboration in collaborations %}
+                        <option value="{{ collaboration.urn }}">{{ collaboration.name }}</option>
+                        {% for group in collaboration.groups %}
+                        <option value="{{ collaboration.urn }}:{{ group }}">&nbsp;&nbsp;{{ collaboration.name }} &rsaquo; {{ group }}</option>
+                        {% endfor %}
+                        {% endfor %}
+                    </select>
+                    {% endif %}
                     <button type="submit" class="btn btn-secondary btn-sm"
                             data-testid="btn-hub-publish-profile-{{ ref.name }}-{{ ref.version }}"
-                            title="Publish for every hub user">Publish</button>
+                            title="Release it">Publish</button>
                 </form>
                 {% endif %}
                 {% if row.visibility == 'published' %}

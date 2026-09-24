@@ -96,10 +96,19 @@ class HubClient:
         data: dict[str, Any] = self._request("GET", "/health").json()
         return data
 
-    def me(self) -> dict[str, str]:
+    def me(self) -> dict[str, Any]:
         """The account and tenant the token acts in."""
-        data: dict[str, str] = self._request("GET", "/me").json()
+        data: dict[str, Any] = self._request("GET", "/me").json()
         return data
+
+    def collaborations(self) -> list[dict[str, Any]]:
+        """The collaborations a publish from this token may be addressed to.
+
+        Empty when the hub predates collaborations, when the identity provider
+        reported none at the last sign-in, or when that record has gone stale.
+        """
+        found = self.me().get("collaborations") or []
+        return [c for c in found if isinstance(c, dict)]
 
     def list_datasets(self, tenant_id: str) -> list[dict[str, Any]]:
         """The caller's datasets in ``tenant_id``."""
@@ -152,22 +161,28 @@ class HubClient:
         return self._request("GET", f"/specs/{name}/{version}").text
 
     def push_spec(
-        self, yaml_text: str, *, publish: bool = False
+        self, yaml_text: str, *, publish: bool = False, audience: str | None = None
     ) -> tuple[dict[str, Any], bool]:
         """Push a profile document: the caller's private draft, or a publication.
 
         Args:
             yaml_text: The profile as the YAML document metaseed keeps on disk.
-            publish: Publish it for every hub user instead of keeping it as a
-                draft only the caller sees.
+            publish: Publish it instead of keeping it as a draft only the
+                caller sees.
+            audience: With ``publish``, the SRAM collaboration or group URN to
+                publish it to; ``None`` reaches every user of the hub. The
+                URNs the token may name are those :meth:`collaborations`
+                reports.
 
         Returns:
-            The resulting row (with ``visibility``) and whether it was created
-            now (False when the account already held exactly this content).
+            The resulting row (with ``visibility`` and ``audience``) and
+            whether it was created now (False when the account already held
+            exactly this content).
         """
-        response = self._request(
-            "POST", "/specs", json={"yaml": yaml_text, "publish": publish}
-        )
+        body: dict[str, Any] = {"yaml": yaml_text, "publish": publish}
+        if audience is not None:
+            body["audience"] = audience
+        response = self._request("POST", "/specs", json=body)
         row: dict[str, Any] = response.json()
         return row, response.status_code == 201
 
