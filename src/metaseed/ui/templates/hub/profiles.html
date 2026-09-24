@@ -34,12 +34,11 @@
                             id="audience-{{ ref.name }}-{{ ref.version }}"
                             data-testid="hub-audience-{{ ref.name }}-{{ ref.version }}"
                             title="Who will be able to see it">
+                        {# A release belongs to the collaboration, so its
+                           groups are not offered; the hub refuses them. #}
                         <option value="">Everyone on the hub</option>
                         {% for collaboration in collaborations %}
                         <option value="{{ collaboration.urn }}">{{ collaboration.name }}</option>
-                        {% for group in collaboration.groups %}
-                        <option value="{{ collaboration.urn }}:{{ group }}">&nbsp;&nbsp;{{ collaboration.name }} &rsaquo; {{ group }}</option>
-                        {% endfor %}
                         {% endfor %}
                     </select>
                     {% endif %}

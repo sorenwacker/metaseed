@@ -122,3 +122,31 @@ def test_the_profiles_panel_offers_the_collaborations() -> None:
 
     assert 'name="audience"' in panel
     assert "collaborations" in panel
+
+
+# --- a collaboration, never one of its groups -------------------------------
+
+
+def test_the_panel_offers_collaborations_without_their_groups() -> None:
+    """The hub refuses a group URN for a publish: a release belongs to the
+    collaboration. Offering one here would produce a refusal at the far end."""
+    from pathlib import Path
+
+    panel = Path("src/metaseed/ui/templates/hub/profiles.html").read_text()
+
+    picker = panel[panel.index('name="audience"') :]
+    picker = picker[: picker.index("</select>")]
+    assert "collaboration.urn" in picker
+    assert "collaboration.groups" not in picker
+
+
+def test_the_cli_names_a_collaboration_not_a_group() -> None:
+    from metaseed.cli.commands.hub import _audience_or_exit
+
+    class _Hub:
+        def collaborations(self):
+            return [{"urn": CROPXR, "name": "cropxr", "groups": ["phenotyping"]}]
+
+    assert _audience_or_exit(_Hub(), "cropxr") == CROPXR
+    with pytest.raises(ValueError, match="group"):
+        _audience_or_exit(_Hub(), "tudelft:cropxr:phenotyping")
