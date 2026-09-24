@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.54.0 (260924)
 
 ### Added
 - **A profile can be published to one collaboration** rather than to every user of the hub. `metaseed hub push-profile <name> <version> --publish --to <collaboration>` names the audience, `metaseed hub collaborations` lists what may be named, and the **Profiles on the hub** panel offers the same choice beside **Publish**. Naming an audience without publishing is refused: a draft is private and is shared rather than published. Against a hub that does not support it no choice is offered and a publish reaches everyone, as before.
