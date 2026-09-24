@@ -262,10 +262,19 @@ def push_profile(
     version: Annotated[str, typer.Argument(help="Profile version")],
     publish: Annotated[
         bool,
-        typer.Option(
-            "--publish", help="Publish for every hub user, not just as your draft"
-        ),
+        typer.Option("--publish", help="Release it, rather than keeping your draft"),
     ] = False,
+    to: Annotated[
+        str,
+        typer.Option(
+            "--to",
+            help=(
+                "With --publish, the collaboration to release it to "
+                "(a SRAM URN, or a name as `metaseed hub collaborations` lists it). "
+                "Left out, it reaches every hub user."
+            ),
+        ),
+    ] = "",
 ) -> None:
     """Push one of your profiles to the hub, as a private draft unless --publish."""
     from metaseed.hub.client import HubApiError
@@ -274,7 +283,17 @@ def push_profile(
 
     hub = client()
     try:
-        outcome = push(hub, _specs_dir(), ProfileRef(name, version), publish=publish)
+        audience = _audience_or_exit(hub, to) if to else None
+        outcome = push(
+            hub,
+            _specs_dir(),
+            ProfileRef(name, version),
+            publish=publish,
+            audience=audience,
+        )
+    except ValueError as exc:
+        echo_error(str(exc))
+        raise typer.Exit(ExitCode.INPUT_ERROR) from exc
     except FileNotFoundError as exc:
         echo_error(str(exc))
         raise typer.Exit(ExitCode.INPUT_ERROR) from exc
@@ -284,13 +303,71 @@ def push_profile(
     except Exception as exc:
         _fail(exc, hub)
         return
+    where = (
+        f"for {_short(outcome.audience)}" if outcome.audience else "for every hub user"
+    )
     messages = {
         "draft": f"Pushed {name} {version} to {hub.url} as your private draft",
-        "published": f"Published {name} {version} on {hub.url} for every hub user",
+        "published": f"Published {name} {version} on {hub.url} {where}",
         "identical": f"{name} {version} is already published on {hub.url}, unchanged",
     }
     echo_success(
         f"{messages[outcome.kind]} (content hash {outcome.content_hash[:12]})."
+    )
+
+
+SRAM_GROUP_PREFIX = "urn:mace:surf.nl:sram:group:"
+
+
+def _short(urn: str | None) -> str:
+    """A collaboration URN as a person names it, without the fixed prefix."""
+    if not urn:
+        return "everyone"
+    return urn.removeprefix(SRAM_GROUP_PREFIX)
+
+
+def _audience_or_exit(hub: Any, wanted: str) -> str:
+    """The URN ``wanted`` names, refusing anything the hub will not accept.
+
+    Accepts a full URN or the short form the listing shows, so nobody has to
+    paste a URN by hand. Resolved against what the hub reports rather than
+    constructed here: the hub decides what the token may publish to, and
+    guessing a URN produces a 403 that names nothing useful.
+    """
+    offered = hub.collaborations()
+    if not offered:
+        raise ValueError(
+            "Your hub account is in no collaboration, as of your last sign-in "
+            "there, so there is none to publish to. Publish without --to to "
+            "reach every hub user."
+        )
+    for entry in offered:
+        urns = [entry["urn"], *(f"{entry['urn']}:{g}" for g in entry.get("groups", []))]
+        for urn in urns:
+            if wanted in (urn, _short(urn), entry.get("name")):
+                return str(urn)
+    names = ", ".join(sorted(_short(e["urn"]) for e in offered))
+    raise ValueError(f"You are not in {wanted!r}. You can publish to: {names}.")
+
+
+@app.command("collaborations")
+def list_collaborations() -> None:
+    """List the collaborations you may publish a profile to."""
+    hub = client()
+    try:
+        offered = hub.collaborations()
+    except Exception as exc:
+        _fail(exc, hub)
+        return
+    emit(
+        [
+            {
+                "collaboration": _short(entry["urn"]),
+                "urn": entry["urn"],
+                "your_groups": ", ".join(entry.get("groups", [])),
+            }
+            for entry in offered
+        ]
     )
 
 

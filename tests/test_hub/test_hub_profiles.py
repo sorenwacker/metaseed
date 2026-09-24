@@ -78,7 +78,7 @@ class _FakeHub:
         return (self.drafts.get((name, version)) or self.published[(name, version)])[1]
 
     def push_spec(
-        self, yaml_text: str, *, publish: bool = False
+        self, yaml_text: str, *, publish: bool = False, audience: str | None = None
     ) -> tuple[dict[str, Any], bool]:
         if self.refuse:
             raise HubApiError(409, self.refuse)
@@ -101,6 +101,7 @@ class _FakeHub:
             "version": spec.version,
             "content_hash": digest,
             "visibility": "published" if publish else "draft",
+            "audience": audience if publish else None,
             "mine": True,
         }, created
 

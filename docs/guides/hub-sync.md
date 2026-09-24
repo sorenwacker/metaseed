@@ -40,7 +40,7 @@ Each pushed or pulled dataset records where it came from and when in its own met
 
 ### Push
 
-On **Settings > Plugins**, under **Profiles on the hub**, **Push / pull profiles** lists your user-local profiles (those under your data directory, not the built-in ones), each with **Push as draft** and **Publish**. A push lands in *your* account as a **private draft** — only you see it. The hub keeps one draft per name and version, as your specs directory does: pushing the same version again updates that draft, and pushing another version adds a draft beside it. **Publish** (asked for explicitly, with a confirmation) makes it a **published specification** visible to every user of the hub, so their datasets can be built against it; the hub applies its version-bump gate, so a name and version already published are not replaced — bump the version locally and publish again. A profile you published shows **Unpublish**, which withdraws it to a private draft (the hub refuses while datasets are built on it). The push reports the content hash the hub stored, which matches the local profile's.
+On **Settings > Plugins**, under **Profiles on the hub**, **Push / pull profiles** lists your user-local profiles (those under your data directory, not the built-in ones), each with **Push as draft** and **Publish**. A push lands in *your* account as a **private draft** — only you see it. The hub keeps one draft per name and version, as your specs directory does: pushing the same version again updates that draft, and pushing another version adds a draft beside it. **Publish** (asked for explicitly, with a confirmation) releases it, and asks who for: **Everyone on the hub**, or one of the collaborations the hub reports for your account. A profile published to a collaboration is a release like any other, immutable and version-gated, and its members can build datasets against it, but for everyone else it does not appear at all. The choice is offered only when the hub knows of a collaboration for you; the hub applies its version-bump gate, so a name and version already published are not replaced — bump the version locally and publish again. A profile you published shows **Unpublish**, which withdraws it to a private draft (the hub refuses while datasets are built on it). The push reports the content hash the hub stored, which matches the local profile's.
 
 A profile the hub's own metaseed version cannot read is refused with HTTP 422 naming the field it did not expect — a template-bound profile (one carrying `seek_attribute_type` or `seek_controlled_vocab`) pushed to a hub running an older metaseed does exactly this. The hub has to be running a metaseed release that knows those fields; the message names which field, so the cause is not a guess.
 
@@ -54,7 +54,7 @@ The hub's REST API (`/api`, bearer token) carries the exchange:
 
 | Call | Used for |
 |------|----------|
-| `GET /api/me` | Connection check: the account and tenant the token acts as |
+| `GET /api/me` | Connection check: the account and tenant the token acts as, and the collaborations a publish may name |
 | `GET /api/datasets`, `GET /api/datasets/{id}` | Pull list and pull |
 | `POST /api/datasets`, `PATCH /api/datasets/{id}` | Push (create, replace) |
 | `GET /api/specs`, `GET /api/specs/{name}/{version}` | Pull list and pull |

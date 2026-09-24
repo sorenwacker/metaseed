@@ -104,8 +104,9 @@ Read-only `GET` routes are views of a capability rather than capabilities of the
 | List datasets on the hub | `hub list` | — | `GET /hub/datasets/pull` |
 | Push a dataset | `hub push-dataset` | — | `GET /hub/datasets/{name}/push`, `POST /hub/datasets/{name}/push` |
 | Pull a dataset | `hub pull-dataset` | — | `POST /hub/datasets/pull/{dataset_id}` |
+| List the collaborations a publish may name | `hub collaborations` | — | offered in the profiles panel |
 | List profiles on both sides | `hub profiles` | — | `GET /hub/profiles` |
-| Push a profile (private draft, or published on request) | `hub push-profile` | — | `POST /hub/profiles/{name}/{version}/push` |
+| Push a profile (private draft, or published to everyone or one collaboration) | `hub push-profile` | — | `POST /hub/profiles/{name}/{version}/push` |
 | Withdraw a published profile to a draft | `hub unpublish-profile` | — | `POST /hub/profiles/{name}/{version}/unpublish` |
 | Fetch a published profile | `hub pull-profile` | — | `POST /hub/profiles/{name}/{version}/pull` |
 | **Plugins** | | | |

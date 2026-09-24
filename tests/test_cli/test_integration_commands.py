@@ -77,7 +77,7 @@ class _FakeHub:
         return "name: x\n"
 
     def push_spec(
-        self, yaml_text: str, *, publish: bool = False
+        self, yaml_text: str, *, publish: bool = False, audience: str | None = None
     ) -> tuple[dict[str, Any], bool]:
         vis = "published" if publish else "draft"
         self.specs[("test-local-profile", "1.0")] = vis

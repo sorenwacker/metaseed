@@ -26,7 +26,7 @@ serves which capability, and a test fails when the three surfaces drift apart.
 | `metaseed extract` | Reading metadata out of files: parse, analyze, run, validate, export |
 | `metaseed spec` | Authoring a profile: create, clone, import, status, preview, validate, save, and the entity/field/rule editing commands |
 | `metaseed seek` | FAIRDOM-SEEK: check, preview, provision, sync, isa-rdf, isa-templates, model-ttl, import-templates |
-| `metaseed hub` | metaseed-hub: check, list, push-dataset, pull-dataset, profiles, push-profile, pull-profile |
+| `metaseed hub` | metaseed-hub: check, list, collaborations, push-dataset, pull-dataset, profiles, push-profile, pull-profile |
 | `metaseed plugin` | The optional adapters: list, enable, disable, config, check |
 | `metaseed dcat` | Catalogue records: show, set |
 

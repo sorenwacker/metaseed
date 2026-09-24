@@ -52,6 +52,9 @@ class _FakeHub:
         self.specs: dict[tuple[str, str], tuple[str, str, str]] = {}
         self.refuse_spec: str | None = None
 
+    def collaborations(self) -> list[dict[str, Any]]:
+        return getattr(self, "offered_collaborations", [])
+
     def me(self) -> dict[str, str]:
         return {
             "email": "me@example.org",
@@ -97,7 +100,7 @@ class _FakeHub:
         return self.specs[(name, version)][2]
 
     def push_spec(
-        self, yaml_text: str, *, publish: bool = False
+        self, yaml_text: str, *, publish: bool = False, audience: str | None = None
     ) -> tuple[dict[str, Any], bool]:
         if self.refuse_spec:
             raise HubApiError(409, self.refuse_spec)
@@ -117,6 +120,7 @@ class _FakeHub:
             "version": spec.version,
             "content_hash": content_hash(spec),
             "visibility": vis,
+            "audience": audience if publish else None,
             "mine": True,
         }, created
 

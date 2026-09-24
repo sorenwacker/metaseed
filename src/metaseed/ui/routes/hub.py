@@ -264,6 +264,12 @@ def register_hub_routes(  # noqa: C901
             )
             for s in published
         ]
+        # A panel cannot offer an audience it has no way to obtain, and a hub
+        # that predates collaborations reports none, which hides the control.
+        try:
+            collaborations = hub.collaborations()
+        except Exception:
+            collaborations = []
         return templates.TemplateResponse(
             request,
             "hub/profiles.html",
@@ -271,15 +277,20 @@ def register_hub_routes(  # noqa: C901
                 "base_url": base_url,
                 "local": local,
                 "remote": remote,
+                "collaborations": collaborations,
                 "hub_url": hub.url,
             },
         )
 
     @app.post("/hub/profiles/{name}/{version}/push", response_class=HTMLResponse)
     async def push_profile_now(
-        request: Request, name: str, version: str, publish: str = Form("")
+        request: Request,
+        name: str,
+        version: str,
+        publish: str = Form(""),
+        audience: str = Form(""),
     ) -> HTMLResponse:
-        """Push a user-local profile: a private draft, or published on request."""
+        """Push a user-local profile: a draft, or a release to a chosen audience."""
         from metaseed.hub.client import HubApiError
         from metaseed.hub.profiles import ProfileRef, push_profile
 
@@ -288,17 +299,28 @@ def register_hub_routes(  # noqa: C901
             return _status(request, error=error)
         try:
             outcome = push_profile(
-                hub, user_specs_dir(), ProfileRef(name, version), publish=publish == "1"
+                hub,
+                user_specs_dir(),
+                ProfileRef(name, version),
+                publish=publish == "1",
+                audience=audience or None,
             )
+        except ValueError as exc:
+            return _status(request, error=str(exc))
         except FileNotFoundError as exc:
             return _status(request, error=str(exc))
         except HubApiError as exc:
             return _status(request, error=f"The hub refused: {exc.detail}")
         except Exception as exc:
             return _status(request, error=_failure(exc, hub))
+        prefix = "urn:mace:surf.nl:sram:group:"
+        reached = outcome.audience or ""
+        where = (
+            f"for {reached.removeprefix(prefix)}" if reached else "for every hub user"
+        )
         messages = {
             "draft": f"Pushed {name} {version} to {hub.url} as your private draft",
-            "published": f"Published {name} {version} on {hub.url} for every hub user",
+            "published": f"Published {name} {version} on {hub.url} {where}",
             "identical": f"{name} {version} is already published on {hub.url}, unchanged",
         }
         return _status(
