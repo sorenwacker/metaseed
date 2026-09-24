@@ -333,6 +333,9 @@ def _audience_or_exit(hub: Any, wanted: str) -> str:
     paste a URN by hand. Resolved against what the hub reports rather than
     constructed here: the hub decides what the token may publish to, and
     guessing a URN produces a 403 that names nothing useful.
+
+    A release belongs to the collaboration, so one of its groups is refused
+    here rather than sent and refused by the hub.
     """
     offered = hub.collaborations()
     if not offered:
@@ -342,10 +345,16 @@ def _audience_or_exit(hub: Any, wanted: str) -> str:
             "reach every hub user."
         )
     for entry in offered:
-        urns = [entry["urn"], *(f"{entry['urn']}:{g}" for g in entry.get("groups", []))]
-        for urn in urns:
-            if wanted in (urn, _short(urn), entry.get("name")):
-                return str(urn)
+        if wanted in (entry["urn"], _short(entry["urn"]), entry.get("name")):
+            return str(entry["urn"])
+        for group in entry.get("groups", []):
+            group_urn = f"{entry['urn']}:{group}"
+            if wanted in (group_urn, _short(group_urn)):
+                raise ValueError(
+                    f"{_short(group_urn)} is a group. A profile is published to a "
+                    f"collaboration or to the whole hub; publish to "
+                    f"{_short(entry['urn'])} instead, or share it with the group."
+                )
     names = ", ".join(sorted(_short(e["urn"]) for e in offered))
     raise ValueError(f"You are not in {wanted!r}. You can publish to: {names}.")
 
