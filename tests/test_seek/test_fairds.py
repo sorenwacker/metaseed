@@ -7,6 +7,8 @@ manually against a live instance).
 
 from __future__ import annotations
 
+import copy
+
 from rdflib import RDF, RDFS, Graph, Literal, Namespace
 
 from metaseed import MetaseedClient
@@ -138,7 +140,8 @@ def test_entity_seek_role_overrides_jerm_type(monkeypatch):
     real = SpecLoader.load_profile
 
     def patched(self, version, profile=None, **kw):
-        spec = real(self, version, profile, **kw)
+        # A copy: the loaded profile is shared by every loader in the process.
+        spec = copy.deepcopy(real(self, version, profile, **kw))
         spec.entities["Investigation"].seek = SeekEntityConfig(role="Study")
         return spec
 
@@ -162,7 +165,8 @@ def test_exportable_entity_types_is_role_aware(monkeypatch):
     real = SpecLoader.load_profile
 
     def patched(self, version, profile=None, **kw):
-        spec = real(self, version, profile, **kw)
+        # A copy: the loaded profile is shared by every loader in the process.
+        spec = copy.deepcopy(real(self, version, profile, **kw))
         spec.entities["Sampling"] = EntityDefSpec(seek=SeekEntityConfig(role="Sample"))
         return spec
 
