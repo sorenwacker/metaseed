@@ -1138,6 +1138,14 @@ User-created specs are saved to:
 - Linux/macOS: `~/.local/share/metaseed/specs/`
 - Windows: `%LOCALAPPDATA%/metaseed/specs/`
 
+A user spec takes precedence over a built-in spec with the same profile name and version.
+
+### Loading and caching
+
+`SpecLoader` parses a `profile.yaml` once per process. The parsed `ProfileSpec` is held in a cache shared by every `SpecLoader` instance and keyed by the file's path, modification time and size; editing or replacing the file invalidates its entry on the next load. Validation builds a loader for each nested entity it checks, so without the shared cache a dataset of N records re-parses the profile about N times, which for a large profile costs seconds per record (#311). Parsing uses libyaml's `CSafeLoader` when PyYAML was built with libyaml, and the pure-Python `SafeLoader` otherwise; both accept the same YAML.
+
+The cached `ProfileSpec` is the same object for every caller. Code that edits a loaded spec must work on a copy (`copy.deepcopy`), as the spec builder does when it clones a profile.
+
 ## Best Practices
 
 1. **Use descriptive names**: Field names should clearly indicate their purpose.

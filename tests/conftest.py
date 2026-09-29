@@ -38,6 +38,35 @@ def _models_are_not_shared_between_tests():
     context._models.clear()
 
 
+@pytest.fixture(autouse=True, scope="session")
+def _loaded_profiles_are_not_modified():
+    """No test may edit a profile the loader returned.
+
+    Every ``SpecLoader`` in a process shares one parsed ``ProfileSpec`` per file
+    (#311), so a test that renames or extends a loaded profile changes it for
+    every later test that loads the same file, and those fail only in a full
+    run. At the end of the session each cached profile is compared with a fresh
+    parse of its file; a difference fails the run. To find the test, run with a
+    hook that checks after each test.
+    """
+    yield
+    from pathlib import Path
+
+    from metaseed.specs import loader
+
+    for (path, mtime_ns, size), cached in loader._PROFILE_CACHE.items():
+        stat = Path(path).stat() if Path(path).exists() else None
+        if stat is None or (stat.st_mtime_ns, stat.st_size) != (mtime_ns, size):
+            continue  # the file itself changed; the entry is simply stale
+        fresh = loader._parse_profile_file(Path(path), path)
+        if fresh is not None and fresh.content_hash != cached.content_hash:
+            pytest.fail(
+                f"A test modified the shared loaded profile {path}; "
+                "work on copy.deepcopy(...) instead",
+                pytrace=False,
+            )
+
+
 @pytest.fixture(autouse=True)
 def _private_datasets_dir(tmp_path_factory: pytest.TempPathFactory, monkeypatch):
     """Every test saves and deletes datasets and specifications of its own.
