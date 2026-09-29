@@ -37,7 +37,8 @@ inv = Investigation(
 | `boolean` | `bool` |
 | `date` | `datetime.date` |
 | `datetime` | `datetime.datetime` |
-| `uri` | `pydantic.HttpUrl` |
+| `uri` | `pydantic.AnyUrl` |
+| `ontology_term` | `str` |
 | `list` | `list[T]` |
 | `entity` | nested model |
 
@@ -53,6 +54,8 @@ YAML spec constraints are mapped to Pydantic field constraints:
 | `minimum` | `ge` |
 | `maximum` | `le` |
 | `enum` | `Literal` type |
+
+A `pattern` on a `uri` field is the exception: Pydantic cannot apply a regex to `AnyUrl`, so the factory omits it and the validation engine enforces it on the value as written (see [Schema Specs](../api/schema-specs.md#constraints-by-field-type)).
 
 Cross-field validation (date ranges, conditional fields) is handled by separate validators.
 
