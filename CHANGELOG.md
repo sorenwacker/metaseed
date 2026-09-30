@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- **`validate()` reports a reference to a record that does not exist.** `MetaseedClient.validate()` ran only the per-entity checks, so an observation unit naming a study absent from the dataset, or two records sharing an identifier the profile declares unique, went unreported -- through the CLI's `dataset validate`, the hub's web panel and its MCP `validate_dataset` alike -- while `metaseed check` on the same data reported both. `validate()` now runs the same dataset-level passes as `check` (reference integrity, declared uniqueness, reference cycles) over the same nested records, also for a client built from a supplied specification, and a test holds the two to the same issues. Every issue carries `entity_id`. A dataset that validated clean before may now report issues it always had.
+
 ## v0.54.0 (260924)
 
 ### Added
