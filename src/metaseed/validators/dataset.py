@@ -189,6 +189,7 @@ class DatasetValidator:
         profile: str | None = None,
         version: str | None = None,
         term_source: TermSource | None = None,
+        profile_spec: Any = None,
     ) -> None:
         """Initialize the dataset validator.
 
@@ -199,8 +200,17 @@ class DatasetValidator:
                 application's configured sources, which for OLS means a network
                 request per term — so a caller that must not do I/O, or that
                 wants a particular vocabulary, supplies its own.
+            profile_spec: The :class:`ProfileSpec` to enforce, when the caller
+                already holds it. Given this, nothing is resolved by name --
+                the only way a client composed with a supplied spec
+                (``MetaseedClient.from_spec``) can have its references checked,
+                since no profile of that name exists on disk.
         """
         self._term_source = term_source
+        self._profile_spec = profile_spec
+        if profile_spec is not None:
+            profile = profile or str(getattr(profile_spec, "name", "") or "supplied")
+            version = version or str(getattr(profile_spec, "version", "") or "0")
         factory = ProfileFactory()
 
         if profile is None:
@@ -235,6 +245,35 @@ class DatasetValidator:
             rules_from_profile(self._load_profile_spec())
         )
 
+    def _entity_spec(self: Self, entity_type: str) -> Any:
+        """The spec of ``entity_type``, from the supplied profile or the loader.
+
+        Raises:
+            SpecLoadError: If neither describes the entity.
+        """
+        if self._profile_spec is not None:
+            try:
+                return self._profile_spec.get_entity(entity_type)
+            except KeyError:
+                raise SpecLoadError(f"Entity not found: {entity_type}") from None
+        return self._loader.load_entity(entity_type, self.version)
+
+    def _entity_names(self: Self) -> list[str]:
+        """Every entity the enforced profile defines."""
+        if self._profile_spec is not None:
+            return list(self._profile_spec.list_entities())
+        return list(self._loader.list_entities(self.version))
+
+    def _engine_for(self: Self, entity_type: str) -> Any:
+        """The rule engine for ``entity_type``, built from what this validator enforces."""
+        if self._profile_spec is not None:
+            from metaseed.validators.engine import build_engine_for_entity
+
+            return build_engine_for_entity(
+                entity_type, self._entity_spec(entity_type), self._profile_spec
+            )
+        return create_engine_for_entity(entity_type, self.version, self.profile)
+
     def _load_profile_spec(self: Self) -> Any:
         """The profile this validator enforces, or ``None`` if it will not load.
 
@@ -242,6 +281,8 @@ class DatasetValidator:
         to enforce, which the callers already treat as "no rules" rather than
         as an error about the data.
         """
+        if self._profile_spec is not None:
+            return self._profile_spec
         try:
             return self._loader.load_profile(version=self.version, profile=self.profile)
         except SpecLoadError:
@@ -272,13 +313,13 @@ class DatasetValidator:
     def _load_reference_fields(self: Self) -> None:
         """Load reference field definitions from specs."""
         try:
-            entities = self._loader.list_entities(self.version)
+            entities = self._entity_names()
         except SpecLoadError:
             return
 
         for entity_name in entities:
             try:
-                spec = self._loader.load_entity(entity_name, self.version)
+                spec = self._entity_spec(entity_name)
                 refs = []
                 for f in spec.fields:
                     if f.reference:
@@ -324,7 +365,7 @@ class DatasetValidator:
             True if the profile defines the entity, False otherwise.
         """
         try:
-            self._loader.load_entity(entity_type, self.version)
+            self._entity_spec(entity_type)
         except SpecLoadError:
             return False
         return True
@@ -337,10 +378,7 @@ class DatasetValidator:
             if the profile cannot be loaded. Profile-agnostic - no entity name
             is hardcoded.
         """
-        try:
-            spec = self._loader.load_profile(version=self.version, profile=self.profile)
-        except SpecLoadError:
-            return None
+        spec = self._load_profile_spec()
         return spec.root_entity.lower() if spec and spec.root_entity else None
 
     def _traverse_entity_tree(
@@ -361,7 +399,7 @@ class DatasetValidator:
         visitor(data, entity_type, path)
 
         try:
-            spec = self._loader.load_entity(entity_type, self.version)
+            spec = self._entity_spec(entity_type)
         except SpecLoadError:
             return
 
@@ -484,6 +522,7 @@ class DatasetValidator:
                                         "its own ancestor"
                                     ),
                                     rule="reference_self",
+                                    entity_id=d.get("_node_id"),
                                 )
                             )
                             continue
@@ -506,6 +545,7 @@ class DatasetValidator:
                                 f"Reference not found: {declared.target} '{ref_value}'"
                             ),
                             rule="reference_integrity",
+                            entity_id=d.get("_node_id"),
                         )
                     )
 
@@ -594,7 +634,7 @@ class DatasetValidator:
 
         def validate_node(d: dict[str, Any], etype: str, p: str) -> None:
             try:
-                engine = create_engine_for_entity(etype, self.version, self.profile)
+                engine = self._engine_for(etype)
                 for error in engine.validate(d):
                     field_path = f"{p}.{error.field}" if p else error.field
                     errors.append(
@@ -615,7 +655,7 @@ class DatasetValidator:
             # Pydantic constraint validation (types/patterns/ranges/enums), so the
             # dataset path enforces the same constraints as the single-entity path.
             try:
-                spec = SpecLoader(profile=self.profile).load_entity(etype, self.version)
+                spec = self._entity_spec(etype)
             except (FileNotFoundError, KeyError, ValueError, SpecLoadError):
                 return
             for error in _pydantic_constraint_errors(d, spec):
@@ -684,6 +724,46 @@ class DatasetValidator:
             counts[etype] = counts.get(etype, 0) + 1
 
         self._traverse_entity_tree(data, entity_type, count_node)
+
+    def validate_records(
+        self: Self, records: list[tuple[dict[str, Any], str]]
+    ) -> DatasetValidationResult:
+        """The dataset-level passes over in-memory records.
+
+        What per-entity validation cannot see: reference integrity, declared
+        uniqueness and reference cycles need every record first. ``validate()``
+        on a client runs the per-entity checks itself and calls this for the
+        rest, so ``validate()`` and ``check`` are one validator
+        (docs/specification/system-specification.md).
+
+        Args:
+            records: ``(data, entity_type)`` per root record, with children
+                nested in the fields that hold them, as ``check`` reads them
+                from a file. A ``_node_id`` in a record is carried onto its
+                errors as ``entity_id``.
+
+        Returns:
+            The errors of those passes across all records, and the unchecked
+            external references as warnings.
+        """
+        result = DatasetValidationResult()
+        self._registry = IdRegistry()
+        self._unchecked = {}
+        self._self_referencing = {}
+        for data, entity_type in records:
+            self._collect_ids(data, entity_type)
+        seen: set[tuple[str, str, str]] = set()
+        for index, (data, entity_type) in enumerate(records):
+            result.errors.extend(self._validate_references(data, entity_type))
+            result.errors.extend(
+                self._validate_uniqueness(
+                    data, entity_type, seen, scope_prefix=f"{index}:"
+                )
+            )
+            self._count_entities(data, entity_type, result.entity_counts)
+        result.errors.extend(self._reference_cycles())
+        result.warnings.extend(self._unchecked_references())
+        return result
 
     def validate_file(self: Self, path: Path) -> DatasetValidationResult:
         """Validate a single file.

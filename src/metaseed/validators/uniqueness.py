@@ -164,7 +164,10 @@ class UniquenessChecker:
                         )
                     errors.append(
                         ValidationError(
-                            field=field_path, message=msg, rule="uniqueness"
+                            field=field_path,
+                            message=msg,
+                            rule="uniqueness",
+                            entity_id=d.get("_node_id"),
                         )
                     )
                 else:
@@ -195,6 +198,7 @@ class UniquenessChecker:
                     field=f"{path}.{rule.field}" if path else rule.field,
                     message=f"{rule.name}: {exc}",
                     rule="uniqueness",
+                    entity_id=record.get("_node_id"),
                 )
             )
             return False
