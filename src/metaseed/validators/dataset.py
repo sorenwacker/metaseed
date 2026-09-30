@@ -469,8 +469,16 @@ class DatasetValidator:
 
         ``unique_id`` is kept unconditionally, so profiles that do use it are
         unaffected whether or not anything references them.
+
+        The entity's own identifier (``is_identifier``) is registered too: a
+        reference naming only the entity -- ``reference: Source``, the form
+        template-bound profiles use for their ``Input`` lists -- names that
+        field, and without it every such value was reported as not found.
         """
         fields = {"unique_id"}
+        identifier = self._identifier_fields.get(entity_type)
+        if identifier:
+            fields.add(identifier)
         for targets in self._reference_fields.values():
             for declared in targets:
                 target_entity, _, target_field = declared.target.partition(".")
