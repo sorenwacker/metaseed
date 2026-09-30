@@ -84,6 +84,8 @@ Validation has two layers, and both run before a dataset is considered valid.
    (uniqueness, coordinate pairs, conditional requirements, reference integrity)
    run over the assembled dataset.
 
+There is one validator. `MetaseedClient.validate()` and `metaseed check` (`DatasetValidator`) run the same checks over the same records: both layers per entity, then the dataset-level passes — reference integrity, declared uniqueness and reference cycles — with the identifier registry built from every record first, so a reference to a record anywhere in the dataset resolves. `DatasetValidator.validate_records` is that dataset-level pass over in-memory records, and `validate()` calls it; a client composed with a supplied spec (`from_spec`) hands that spec to the validator, which then resolves nothing by name. A test holds the two paths to the same issues on the same data (`tests/test_validators/test_one_validator.py`); `validate()` used to run only the per-entity checks, so a reference to a record that does not exist went unreported through every consumer built on it. Every issue `validate()` reports carries `entity_id`, the node it belongs to, for the dataset-level passes as for the per-entity ones. Ontology terms are the one difference: `check` consults the configured term sources, which may need a network, and `validate()` does not; terms are checked by `ontology validate` / `validate_ontology_terms`.
+
 Validation reports results as structured issues rather than exceptions:
 
 ```python
