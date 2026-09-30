@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- **A hub dataset stored as a tree is read with its entities.** The hub client read only the flat `entities` form, so every dataset saved in the hub's web interface -- stored as a tree -- was listed by `metaseed hub list` with 0 entities and pulled down empty; a push plan against it saw an empty remote. The tree is flattened into the entities metaseed works with (`_type`, `_node_id`, `_parent_id`, `_parent_field`), the form its own loader reads.
+
 ## v0.55.1 (260930)
 
 ### Fixed
