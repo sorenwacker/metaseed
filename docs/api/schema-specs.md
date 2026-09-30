@@ -671,6 +671,8 @@ Use `reference` for any entity-to-entity link:
 
 This validates that the referenced entity exists and enables auto-linking.
 
+`Entity.field` names the field of the target that the value must match. A `reference` naming only the entity — `reference: Source` — means the target's identifier field, the one it marks `is_identifier`; a value must match that field of a record in the dataset. Template-bound profiles use this form for their `Input` lists, which name predecessor samples by title. Both forms are checked the same way, by `metaseed check` and by `validate()` alike.
+
 #### References that resolve outside the dataset
 
 By default a reference means *the target is a record in this dataset*, and a value with no match is reported as `Reference not found`. Many identifiers are not like that. Darwin Core's `acceptedNameUsageID` and `parentNameUsageID` name a taxon in GBIF's backbone or Catalogue of Life; `occurrenceID` can name a museum catalogue record; DiSSCo and ENA both carry accessions minted elsewhere. Declaring such a field with a plain `reference` would report correct data as broken, which is why those fields were left undeclared and unchecked instead.

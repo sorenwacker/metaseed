@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- **A reference that names only an entity resolves against that entity's identifier.** `reference: Source` -- the form template-bound profiles such as CropXR use for their `Input` lists, whose values are predecessors' titles -- was checked against `unique_id` values only, so every such value was reported as `Reference not found`: 88 false reports on the CropXR phenotyping example. The dataset validator now registers each entity's `is_identifier` field as well; `Entity.field` targets are unchanged.
+
 ## v0.55.0 (260930)
 
 ### Fixed
