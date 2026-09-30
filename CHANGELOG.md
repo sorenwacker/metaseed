@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.55.2 (260930)
 
 ### Fixed
 - **A reference naming only an entity is drawn and offered like any other.** `EntityHelper.reference_fields` kept only `Entity.field` references, so a field declared `reference: Source` -- every `Input` list of the CropXR profiles -- was invisible to the dataset graph (no edge from an observation unit to its source, from an assay material to its unit, from a data file to its material) and to the editor's reference pickers. It now resolves to the target's identifier field.
