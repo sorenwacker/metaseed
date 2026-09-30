@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Fixed
+- **A reference naming only an entity is drawn and offered like any other.** `EntityHelper.reference_fields` kept only `Entity.field` references, so a field declared `reference: Source` -- every `Input` list of the CropXR profiles -- was invisible to the dataset graph (no edge from an observation unit to its source, from an assay material to its unit, from a data file to its material) and to the editor's reference pickers. It now resolves to the target's identifier field.
 - **A hub dataset stored as a tree is read with its entities.** The hub client read only the flat `entities` form, so every dataset saved in the hub's web interface -- stored as a tree -- was listed by `metaseed hub list` with 0 entities and pulled down empty; a push plan against it saw an empty remote. The tree is flattened into the entities metaseed works with (`_type`, `_node_id`, `_parent_id`, `_parent_field`), the form its own loader reads.
 
 ## v0.55.1 (260930)

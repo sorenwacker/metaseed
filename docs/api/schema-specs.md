@@ -671,7 +671,7 @@ Use `reference` for any entity-to-entity link:
 
 This validates that the referenced entity exists and enables auto-linking.
 
-`Entity.field` names the field of the target that the value must match. A `reference` naming only the entity — `reference: Source` — means the target's identifier field, the one it marks `is_identifier`; a value must match that field of a record in the dataset. Template-bound profiles use this form for their `Input` lists, which name predecessor samples by title. Both forms are checked the same way, by `metaseed check` and by `validate()` alike.
+`Entity.field` names the field of the target that the value must match. A `reference` naming only the entity — `reference: Source` — means the target's identifier field, the one it marks `is_identifier`; a value must match that field of a record in the dataset. Template-bound profiles use this form for their `Input` lists, which name predecessor samples by title. Both forms are read the same way everywhere a reference is: checked by `metaseed check` and `validate()`, drawn by the dataset graph as a dashed edge per value, and offered by the editor's reference pickers as the target's identifier values.
 
 #### References that resolve outside the dataset
 
