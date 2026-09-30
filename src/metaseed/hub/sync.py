@@ -47,6 +47,38 @@ class HubApi(Protocol):
     ) -> dict[str, Any]: ...
 
 
+def _entities_of(data: dict[str, Any]) -> list[dict[str, Any]]:
+    """The entities a stored hub payload holds, in the flat form metaseed works with.
+
+    The hub stores a dataset saved in its web interface as a tree; one pushed
+    from here may still hold the flat list. Reading only the list made every
+    tree-form dataset look empty: listed with 0 entities, pulled down empty,
+    and a push plan against it saw nothing to keep.
+    """
+    if data.get("entities"):
+        return list(data["entities"])
+    return _flatten_tree(list(data.get("tree") or []))
+
+
+def _flatten_tree(
+    nodes: list[dict[str, Any]], parent_id: str | None = None
+) -> list[dict[str, Any]]:
+    """Tree nodes as flat entities, parent links by node id, the way the loader reads them."""
+    flat: list[dict[str, Any]] = []
+    for node in nodes:
+        entity = dict(node.get("data") or {})
+        entity["_type"] = node.get("entity_type")
+        if node.get("id"):
+            entity["_node_id"] = node["id"]
+        if parent_id:
+            entity["_parent_id"] = parent_id
+        if node.get("parent_field"):
+            entity["_parent_field"] = node["parent_field"]
+        flat.append(entity)
+        flat.extend(_flatten_tree(list(node.get("children") or []), node.get("id")))
+    return flat
+
+
 @dataclass(frozen=True)
 class HubRecord:
     """A hub dataset as the pull list shows it."""
@@ -65,7 +97,7 @@ class HubRecord:
             name=row["name"],
             profile=row["profile"],
             version=row["version"],
-            entities=list((row.get("data") or {}).get("entities") or []),
+            entities=_entities_of(row.get("data") or {}),
         )
 
     @property
