@@ -23,6 +23,8 @@ On the datasets overview every dataset has **Push to hub**. Pushing creates a hu
 - identical content: nothing is sent, and the page says so;
 - different content: the page shows what differs (entity counts per type, the entities that would be added, changed or removed) and offers **Replace on hub**. Nothing changes until that is pressed.
 
+The hub stores every dataset in its own tree form; a dataset pushed as a flat list is stored that way too. Pulling, listing and planning a push read that tree as the flat entities metaseed works with, so a dataset saved in the hub's web interface counts and pulls with all its entities. `metaseed hub list` reported 0 entities for such datasets and a pull brought them down empty.
+
 A push needs the dataset's profile to exist on the hub: a built-in profile always does, a user-local profile has to be pushed first (below). The hub refuses a dataset it cannot load under its profile (HTTP 422), and the page shows the hub's message.
 
 ### Pull
