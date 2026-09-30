@@ -13,6 +13,7 @@ from fastapi.templating import Jinja2Templates
 from starlette.requests import Request
 
 from metaseed.specs.loader import SpecLoader, SpecLoadError
+from metaseed.specs.schema import identifying_field
 
 if TYPE_CHECKING:
     from metaseed.ui.state import AppState
@@ -83,6 +84,15 @@ def get_reference_fields(
                         "target_entity": parts[0],
                         "target_field": parts[1],
                     }
+                elif len(parts) == 1:
+                    # An entity alone names its identifier field (schema-specs.md).
+                    target = spec.entities.get(parts[0])
+                    identifier = identifying_field(target.fields) if target else None
+                    if identifier is not None:
+                        reference_fields[field.name] = {
+                            "target_entity": parts[0],
+                            "target_field": identifier.name,
+                        }
 
     # Also check validation rules (for backwards compatibility)
     for rule in spec.validation_rules:

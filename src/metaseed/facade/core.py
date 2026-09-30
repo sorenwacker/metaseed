@@ -192,6 +192,7 @@ class ProfileFacade:
                 profile=self._profile,
                 version=self._version,
                 store_callback=self._store_entity,
+                identifier_of=self._identifier_field_of,
             )
 
         # Present entities in a topologically valid order -- every container
@@ -509,6 +510,20 @@ class ProfileFacade:
     # ========================================================================
     # Properties
     # ========================================================================
+
+    def _identifier_field_of(self: Self, entity_name: str) -> str | None:
+        """The identifier field of ``entity_name``, for references naming only an entity.
+
+        Resolved when asked, not when helpers are built, so the order entities
+        are declared in does not matter.
+        """
+        helper = self._entities.get(entity_name)
+        if helper is None:
+            lowered = entity_name.lower()
+            helper = next(
+                (h for n, h in self._entities.items() if n.lower() == lowered), None
+            )
+        return helper.identifier_field if helper else None
 
     @property
     def profile_spec(self: Self) -> Any:

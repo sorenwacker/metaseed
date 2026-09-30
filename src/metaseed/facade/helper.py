@@ -65,6 +65,7 @@ class EntityHelper:
         profile: str,
         version: str,
         store_callback: Callable[[str, dict[str, Any]], Any] | None = None,
+        identifier_of: Callable[[str], str | None] | None = None,
     ) -> None:
         """Initialize the entity helper.
 
@@ -75,6 +76,9 @@ class EntityHelper:
             profile: Profile name (e.g., "miappe", "isa").
             version: Profile version (e.g., "1.1").
             store_callback: Optional callback to store created entities.
+            identifier_of: Resolves another entity's identifier field by name,
+                for a ``reference`` that names only the entity. The facade
+                supplies it; without one such a reference has no target field.
         """
         self._name = entity_name
         self._spec = spec
@@ -82,6 +86,7 @@ class EntityHelper:
         self._profile = profile
         self._version = version
         self._store_callback = store_callback
+        self._identifier_of = identifier_of
         # Set dynamic docstring for Jupyter ? support
         self.__doc__ = self._build_docstring()
 
@@ -219,14 +224,22 @@ class EntityHelper:
         Returns {field_name: (target_entity, target_field)}.
         Example: {"sample_ref": ("Sample", "alias")}
 
-        Uses the `reference` field in specs (format: "Entity.field").
+        Uses the `reference` field in specs: ``Entity.field``, or ``Entity``
+        alone, which names that entity's identifier field -- the form
+        template-bound profiles use for their ``Input`` lists. The bare form
+        was dropped here, so the graph drew no edge for it and the pickers
+        did not offer its targets.
         """
         refs = {}
         for f in self._spec.fields:
-            if f.reference:
-                parts = f.reference.split(".", 1)
-                if len(parts) == 2:
-                    refs[f.name] = (parts[0], parts[1])
+            if not f.reference:
+                continue
+            parts = f.reference.split(".", 1)
+            if len(parts) == 2:
+                refs[f.name] = (parts[0], parts[1])
+            else:
+                target = self._identifier_of(parts[0]) if self._identifier_of else None
+                refs[f.name] = (parts[0], target or "")
         return refs
 
     @property
