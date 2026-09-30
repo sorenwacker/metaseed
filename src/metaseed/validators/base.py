@@ -90,12 +90,16 @@ class ValidationError:
         kind: Whether this says a supplied value is wrong, or that something is
             missing. Defaults to :attr:`Kind.VALUE` — the stricter reading, so
             a rule that has not been classified is never quietly downgraded.
+        entity_id: The record the error belongs to, when the caller identified
+            its records (a ``_node_id`` in the data); None for a file-based
+            check, where ``field`` carries the path instead.
     """
 
     field: str
     message: str
     rule: str
     kind: Kind = Kind.VALUE
+    entity_id: str | None = None
 
     @property
     def blocks(self: Self) -> bool:

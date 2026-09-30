@@ -64,6 +64,35 @@ class ValidationMixin(InstanceDataMixin):
                 data[target_field] = child_data
         return data
 
+    def _nested_document(self: Self, node: Any) -> dict[str, Any]:
+        """A node's data with its whole subtree embedded, each record naming its node.
+
+        The document ``check`` reads from a file, built from the store: children
+        sit in the fields that hold them (ADR 006) at every depth, and every
+        record carries ``_node_id`` so the dataset-level passes can say which
+        node an error belongs to. Built once per root for those passes;
+        :meth:`_data_with_children` stays one level deep for the per-entity ones.
+
+        Args:
+            node: The root of the subtree.
+
+        Returns:
+            The nested JSON document.
+        """
+        data = self._get_instance_data(node.instance)
+        data["_node_id"] = node.id
+        for child in node.children:
+            target_field = child.parent_field
+            if target_field is None:
+                continue
+            child_data = self._nested_document(child)
+            existing = data.get(target_field)
+            if isinstance(existing, list):
+                existing.append(child_data)
+            else:
+                data[target_field] = child_data
+        return data
+
     def _supplied_specs(self: Self, entity_type: str) -> dict[str, Any]:
         """The specs this client was composed with, for the validator to use.
 
@@ -122,8 +151,40 @@ class ValidationMixin(InstanceDataMixin):
             for child in node.children:
                 validate_node(child)
 
-        for root in self._facade.get_roots():
+        roots = self._facade.get_roots()
+        for root in roots:
             validate_node(root)
+
+        # The dataset-level passes -- reference integrity, declared uniqueness,
+        # reference cycles -- need every record before judging one, so they are
+        # the dataset validator's, run over the same nested documents ``check``
+        # reads from a file. Skipped here, a reference to a record that does not
+        # exist went unreported through every consumer built on validate().
+        if roots:
+            from metaseed.utils.text import to_snake_case
+            from metaseed.validators import DatasetValidator
+
+            validator = DatasetValidator(
+                self._facade.profile,
+                self._facade.version,
+                profile_spec=self._facade.profile_spec,
+            )
+            records = [
+                (self._nested_document(root), to_snake_case(root.entity_type))
+                for root in roots
+            ]
+            for err in validator.validate_records(records).errors:
+                all_issues.append(
+                    ValidationIssue(
+                        # Bare name, as every other issue: the record is named
+                        # by entity_id, not encoded into the field path.
+                        field=err.field.rsplit(".", 1)[-1],
+                        message=err.message,
+                        rule=err.rule,
+                        entity_id=err.entity_id,
+                        kind=err.kind.value,
+                    )
+                )
 
         if all_issues:
             return ValidationResult.failure(all_issues)
