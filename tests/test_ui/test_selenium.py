@@ -1030,8 +1030,11 @@ class TestAutoPopulatedFields:
             "miappe_version field should have form-input-readonly class"
         )
 
-    def test_date_format_iso8601(self, browser):
-        """Verify date fields use ISO 8601 format (YYYY-MM-DD)."""
+    def test_date_fields_use_the_browsers_date_control(self, browser):
+        """A date field is the browser's own date control, which takes and
+        shows a date in the reader's locale and submits ISO 8601. It used to be
+        a text box with a regex, which told the reader the format only after
+        they had got it wrong (the template says why)."""
         browser.get(BASE_URL)
         time.sleep(CLICK_DELAY)
 
@@ -1040,24 +1043,15 @@ class TestAutoPopulatedFields:
         # Expand optional fields to see date fields
         expand_optional_fields(browser)
 
-        # Find a date input
         date_input = browser.find_element(
             By.CSS_SELECTOR, "[data-testid='input-submission-date']"
         )
 
-        # Verify it uses text type with pattern
-        assert date_input.get_attribute("type") == "text", (
-            "Date field should be type='text' for consistent formatting"
+        assert date_input.get_attribute("type") == "date", (
+            "Date field should be the browser's date control"
         )
-
-        pattern = date_input.get_attribute("pattern")
-        assert pattern == r"\d{4}-\d{2}-\d{2}", (
-            f"Date field should have ISO 8601 pattern, got: {pattern}"
-        )
-
-        placeholder = date_input.get_attribute("placeholder")
-        assert placeholder == "YYYY-MM-DD", (
-            f"Date field placeholder should be 'YYYY-MM-DD', got: {placeholder}"
+        assert not date_input.get_attribute("pattern"), (
+            "the date control carries no regex; the browser enforces the format"
         )
 
     @pytest.mark.skip(
@@ -1106,12 +1100,12 @@ class TestAutoPopulatedFields:
             "arguments[0].dispatchEvent(new Event('input', {bubbles: true}));",
             lat_input,
         )
-        time.sleep(0.5)
-
-        # Verify the input has the 'invalid' class (red background)
-        classes = lat_input.get_attribute("class")
-        assert "invalid" in classes, (
-            f"Invalid latitude should be highlighted. Classes: {classes}"
+        # Wait for the class, not a fixed delay: on a slow runner the input
+        # event had not been handled 0.5 s later and the assertion read the
+        # classes too early.
+        WebDriverWait(browser, 5).until(
+            lambda d: "invalid" in (lat_input.get_attribute("class") or ""),
+            "Invalid latitude should be highlighted",
         )
 
         # Now enter a valid latitude
@@ -1121,12 +1115,9 @@ class TestAutoPopulatedFields:
             "arguments[0].dispatchEvent(new Event('input', {bubbles: true}));",
             lat_input,
         )
-        time.sleep(0.5)
-
-        # Verify the 'invalid' class is removed
-        classes = lat_input.get_attribute("class")
-        assert "invalid" not in classes, (
-            f"Valid latitude should not be highlighted. Classes: {classes}"
+        WebDriverWait(browser, 5).until(
+            lambda d: "invalid" not in (lat_input.get_attribute("class") or ""),
+            "A valid latitude should not stay highlighted",
         )
 
 
