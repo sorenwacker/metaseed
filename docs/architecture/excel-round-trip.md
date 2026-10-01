@@ -19,7 +19,7 @@ import_payload(state, payload)
 
 One sheet per entity type, a header row of field names, and every data cell
 written as text — Excel otherwise reinterprets gene names as dates and strips
-leading zeros from identifiers.
+leading zeros from identifiers. `_format_cell_value` in `ui/services/export.py` produces that text for every value, numbers and booleans included, and the write loop stores what it returns with a text number format; the guarantee has that one home and a unit test (`tests/test_ui/test_export_service.py`).
 
 Some columns are structural rather than data:
 
