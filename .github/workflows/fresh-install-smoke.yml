@@ -1,0 +1,60 @@
+name: Fresh-install smoke
+
+# The one definition of the fresh-install smoke test, called by release.yml
+# before publishing and by smoke.yml weekly and on dependency changes (#286).
+#
+# The locked test suite cannot see a bound that resolves to a breaking release:
+# `uv tool install metaseed` resolves dependencies fresh, and mcp 2.0.0 once
+# satisfied an unbounded `mcp>=1.0.0`, removed mcp.server.fastmcp, and crashed
+# every fresh install of v0.21.0 on `metaseed ui` while the suites stayed green.
+# This job does what a user does: builds the wheel from this commit, installs it
+# with a fresh resolution and all feature extras, and runs the entry points and
+# the imports users hit first.
+
+on:
+  workflow_call:
+
+jobs:
+  fresh-install-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0  # hatch-vcs derives the version from the history
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a # v4
+
+      - name: Build the wheel from this commit
+        run: uv build
+
+      - name: Install the wheel with a fresh dependency resolution
+        run: |
+          WHEEL=$(ls dist/*.whl)
+          uv venv --python 3.12 smoke
+          uv pip install --python smoke "metaseed[dcat,ena,brapi,pride] @ file://$PWD/$WHEEL"
+
+      - name: Smoke-test the entry point and every import users hit first
+        run: |
+          smoke/bin/metaseed --help
+          smoke/bin/metaseed version
+          smoke/bin/metaseed profiles
+          smoke/bin/python -c "from metaseed.ui import run_ui"
+          smoke/bin/python -c "from metaseed.agent.mcp.server import create_server; create_server()"
+          smoke/bin/python -c "from metaseed import MetaseedClient; MetaseedClient('miappe', '1.1')"
+
+      - name: Boot the web UI and probe it
+        run: |
+          smoke/bin/metaseed ui --port 8899 &
+          UI_PID=$!
+          for i in $(seq 1 20); do
+            sleep 1
+            if curl -sf http://127.0.0.1:8899/ >/dev/null; then
+              echo "UI answered"
+              kill $UI_PID
+              exit 0
+            fi
+          done
+          kill $UI_PID || true
+          echo "UI never answered" >&2
+          exit 1

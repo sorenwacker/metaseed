@@ -1,0 +1,22 @@
+name: Smoke
+
+# The fresh-install smoke test, before release day (#286). It used to run only
+# on a version tag, so a dependency bound that resolves to a breaking release
+# was found when the tag was pushed: the tag then existed with no release
+# behind it. Now it runs on every pull request that changes the dependency
+# declarations or the lock, and weekly, since a new upstream release can break
+# an unchanged bound.
+
+on:
+  pull_request:
+    paths:
+      - pyproject.toml
+      - uv.lock
+  schedule:
+    # Weekly, early Monday (UTC), before the week's work builds on the bounds.
+    - cron: "0 4 * * 1"
+  workflow_dispatch:
+
+jobs:
+  fresh-install-smoke:
+    uses: ./.github/workflows/fresh-install-smoke.yml
