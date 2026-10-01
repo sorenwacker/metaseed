@@ -336,7 +336,12 @@ ADAPTERS: tuple[AdapterInfo, ...] = (
         requires=("httpx",),
         config_fields=(
             ConfigField("url", "Hub URL", placeholder="https://hub.example.org"),
-            ConfigField("token", "Access token", secret=True, placeholder="msh_..."),
+            ConfigField(
+                "token",
+                "Access token",
+                secret=True,
+                placeholder="SRAM application token or hub token",
+            ),
         ),
         check_ref="metaseed.hub.connection:check_connection",
     ),
