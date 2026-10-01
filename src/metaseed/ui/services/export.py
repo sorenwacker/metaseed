@@ -41,33 +41,38 @@ def _escape_formula(value: object) -> object:
     return value
 
 
-def _format_cell_value(value: object, is_nested_field: bool) -> object:
-    """Format a value for Excel cell.
+def _format_cell_value(value: object, is_nested_field: bool) -> str:
+    """The text an Excel cell holds for a value.
+
+    Every data cell is text: Excel otherwise reinterprets what it recognises,
+    turning gene names into dates and stripping leading zeros from
+    identifiers, and a metadata value must survive the round trip byte for
+    byte. The guarantee lives here, in the one function the write loop calls,
+    rather than in a ``str()`` at the write site (#276).
 
     Args:
         value: The value to format.
-        is_nested_field: Whether this field contains nested entities.
+        is_nested_field: Whether this field contains nested entities, in which
+            case the cell holds how many.
 
     Returns:
-        Formatted value suitable for Excel.
+        The cell's text; empty for None and for an empty value.
     """
     if is_nested_field:
         if isinstance(value, list):
-            return len(value)
-        if value:
-            return 1
-        return 0
+            return str(len(value))
+        return "1" if value else "0"
     if isinstance(value, list):
         if value and not isinstance(value[0], dict):
             return ", ".join(str(v) for v in value)
         # An empty scalar list must export as an empty cell: "0" would fail
         # list validation on reimport and silently drop the whole entity.
-        return len(value) if value else ""
+        return str(len(value)) if value else ""
     if isinstance(value, dict):
         return "[object]"
-    if not isinstance(value, str | int | float | bool | type(None)):
-        return str(value)
-    return value
+    if value is None:
+        return ""
+    return str(value)
 
 
 def _stated_values(data: dict[str, Any]) -> dict[str, str]:
@@ -225,19 +230,16 @@ def build_workbook_from_facade(facade: Any) -> Workbook:
             for col_offset, col in enumerate(columns, start=1):
                 if col in nested_types:
                     # How many children of this type hang from this row.
-                    value: object = child_counts.get((nested_types[col], parent_id), 0)
+                    text = _format_cell_value(
+                        child_counts.get((nested_types[col], parent_id), 0), False
+                    )
                 else:
-                    value = _format_cell_value(entity_data.get(col, ""), False)
-                value = _escape_formula(value)
+                    text = _format_cell_value(entity_data.get(col, ""), False)
                 cell = ws.cell(
-                    row=row_offset,
-                    column=col_offset,
-                    value=str(value) if value != "" else "",
+                    row=row_offset, column=col_offset, value=_escape_formula(text)
                 )
-                # Every data cell is text. Excel otherwise reinterprets what it
-                # recognises -- gene names become dates, identifiers lose their
-                # leading zeros -- and a metadata value must survive the round
-                # trip byte for byte.
+                # Stored as text as well as written as text: the number format
+                # keeps Excel from reinterpreting the cell when it is edited.
                 cell.number_format = "@"
 
         style_sheet(

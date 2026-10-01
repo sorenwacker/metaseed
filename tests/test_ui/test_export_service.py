@@ -111,3 +111,50 @@ class TestEveryCellIsText:
             for cell in row:
                 if cell.value not in (None, ""):
                     assert isinstance(cell.value, str), (cell.coordinate, cell.value)
+
+
+class TestEveryCellValueIsTextByConstruction:
+    """The text guarantee lives in ``_format_cell_value`` (#276).
+
+    It used to return ``int``, ``float`` and ``bool`` untouched, and the only
+    thing between a typed value and a native Excel number was a ``str()`` at
+    the write site. Now the function returns the cell's text and the write
+    site passes it through, so the guarantee has one home and a unit test.
+    """
+
+    @pytest.mark.parametrize(
+        ("value", "text"),
+        [
+            (3, "3"),
+            (1.5, "1.5"),
+            (True, "True"),
+            ("0042", "0042"),
+            (None, ""),
+            ("", ""),
+            (["a", "b"], "a, b"),
+            ({"k": 1}, "[object]"),
+        ],
+    )
+    def test_the_formatter_returns_text(self, value, text):
+        from metaseed.ui.services.export import _format_cell_value
+
+        result = _format_cell_value(value, False)
+        assert result == text
+        assert isinstance(result, str)
+
+    def test_a_nested_count_is_text_too(self):
+        from metaseed.ui.services.export import _format_cell_value
+
+        assert _format_cell_value([{"a": 1}, {"b": 2}], True) == "2"
+        assert _format_cell_value([], True) == "0"
+        assert _format_cell_value([], False) == ""
+
+    def test_the_write_site_does_not_stringify(self):
+        """If the write loop needed its own ``str()``, the formatter would not
+        be the guarantee."""
+        import inspect
+
+        from metaseed.ui.services import export
+
+        source = inspect.getsource(export.build_workbook_from_facade)
+        assert "str(value)" not in source
