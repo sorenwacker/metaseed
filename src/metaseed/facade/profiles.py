@@ -11,18 +11,6 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from metaseed.facade.core import ProfileFacade
 
-__all__ = [
-    "darwin_core",
-    "dissco",
-    "ena",
-    "isa",
-    "metabolights",
-    "miappe",
-    "miappe_htp",
-    "pride",
-    "rembi",
-]
-
 
 def miappe(version: str | None = None) -> ProfileFacade:
     """Get MIAPPE profile facade.
