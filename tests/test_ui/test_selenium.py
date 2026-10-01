@@ -1030,8 +1030,11 @@ class TestAutoPopulatedFields:
             "miappe_version field should have form-input-readonly class"
         )
 
-    def test_date_format_iso8601(self, browser):
-        """Verify date fields use ISO 8601 format (YYYY-MM-DD)."""
+    def test_date_fields_use_the_browsers_date_control(self, browser):
+        """A date field is the browser's own date control, which takes and
+        shows a date in the reader's locale and submits ISO 8601. It used to be
+        a text box with a regex, which told the reader the format only after
+        they had got it wrong (the template says why)."""
         browser.get(BASE_URL)
         time.sleep(CLICK_DELAY)
 
@@ -1040,29 +1043,17 @@ class TestAutoPopulatedFields:
         # Expand optional fields to see date fields
         expand_optional_fields(browser)
 
-        # Find a date input
         date_input = browser.find_element(
             By.CSS_SELECTOR, "[data-testid='input-submission-date']"
         )
 
-        # Verify it uses text type with pattern
-        assert date_input.get_attribute("type") == "text", (
-            "Date field should be type='text' for consistent formatting"
+        assert date_input.get_attribute("type") == "date", (
+            "Date field should be the browser's date control"
+        )
+        assert not date_input.get_attribute("pattern"), (
+            "the date control carries no regex; the browser enforces the format"
         )
 
-        pattern = date_input.get_attribute("pattern")
-        assert pattern == r"\d{4}-\d{2}-\d{2}", (
-            f"Date field should have ISO 8601 pattern, got: {pattern}"
-        )
-
-        placeholder = date_input.get_attribute("placeholder")
-        assert placeholder == "YYYY-MM-DD", (
-            f"Date field placeholder should be 'YYYY-MM-DD', got: {placeholder}"
-        )
-
-    @pytest.mark.skip(
-        reason="Client-side validation highlighting not implemented for inline tables"
-    )
     def test_table_cell_invalid_latitude_highlighted(self, browser):
         """Verify invalid latitude values get highlighted in table cells."""
         browser.get(BASE_URL)
