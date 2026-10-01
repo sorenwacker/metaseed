@@ -58,8 +58,8 @@ repos:
         pass_filenames: false
         always_run: true
       - id: pytest
-        name: run tests before push
-        entry: uv run python -m pytest -x -q --tb=short -n auto -m "not network and not selenium"
+        name: run the core tests before push (full suite on a tag or METASEED_PUSH_FULL=1)
+        entry: uv run python scripts/pre_push_tests.py
         language: system
         stages: [pre-push]
         pass_filenames: false
