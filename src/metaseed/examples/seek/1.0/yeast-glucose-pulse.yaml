@@ -1,0 +1,253 @@
+# SEEK (JERM) 1.0 example: a project with one investigation, one study and one
+# assay, its samples, data file, SOP and model, as a SEEK instance holds them.
+# Fictional project; names, mailboxes and identifiers are placeholders.
+
+identifier: PRJ-YEAST-GLUCOSE-PULSE
+title: Yeast glucose pulse response
+description: Transcript and metabolite response of Saccharomyces cerevisiae to a glucose pulse in chemostat culture.
+web_page: https://seek.example.org/projects/1
+start_date: "2024-01-01"
+end_date: "2025-12-31"
+default_license: CC-BY-4.0
+default_policy: visible to project members
+
+members:
+  - identifier: PER-MIRA-EXAMPLE
+    first_name: Mira
+    last_name: Example
+    email: m.example@example.org
+    orcid: "0000-0002-0000-0001"
+    affiliation: Example Institute of Systems Biology
+    institution_id: Example Institute of Systems Biology
+    roles:
+      - project administrator
+      - principal investigator
+  - identifier: PER-TOMAS-PLACEHOLDER
+    first_name: Tomas
+    last_name: Placeholder
+    email: t.placeholder@example.org
+    affiliation: Example Institute of Systems Biology
+    institution_id: Example Institute of Systems Biology
+    roles:
+      - experimentalist
+
+institutions:
+  - title: Example Institute of Systems Biology
+    country: Netherlands
+    city: Delft
+    address: Example Street 1, 2600 AA Delft
+    web_page: https://institute.example.org
+
+investigations:
+  - identifier: INV-GLUCOSE-PULSE
+    project_id: PRJ-YEAST-GLUCOSE-PULSE
+    title: Glucose pulse in glucose-limited chemostats
+    description: How a sudden glucose excess rewires central carbon metabolism within minutes.
+    web_page: https://seek.example.org/investigations/1
+    created_at: "2024-02-01"
+    updated_at: "2024-06-15"
+    creators:
+      - identifier: PER-MIRA-EXAMPLE
+        first_name: Mira
+        last_name: Example
+    publications:
+      - identifier: PUB-GLUCOSE-PULSE-2024
+        title: Minute-scale metabolic rewiring of yeast after a glucose pulse
+        doi: "10.1234/example.2024.002"
+        pubmed_id: "40000002"
+        author_list: Example M, Placeholder T
+        journal: Example Journal of Systems Biology
+        publication_date: "2024-11-01"
+        publication_type: journal article
+        authors:
+          - identifier: PER-MIRA-EXAMPLE
+            first_name: Mira
+            last_name: Example
+          - identifier: PER-TOMAS-PLACEHOLDER
+            first_name: Tomas
+            last_name: Placeholder
+    studies:
+      - identifier: STU-PULSE-TIMECOURSE
+        investigation_id: INV-GLUCOSE-PULSE
+        title: Time course after a 1 g/L glucose pulse
+        description: Samples taken at 0, 30, 60, 120 and 300 seconds after the pulse.
+        created_at: "2024-02-10"
+        updated_at: "2024-06-15"
+        person_responsible:
+          identifier: PER-MIRA-EXAMPLE
+          first_name: Mira
+          last_name: Example
+        experimentalists:
+          - identifier: PER-TOMAS-PLACEHOLDER
+            first_name: Tomas
+            last_name: Placeholder
+        creators:
+          - identifier: PER-MIRA-EXAMPLE
+            first_name: Mira
+            last_name: Example
+        publications:
+          - identifier: PUB-PULSE-PROTOCOL-2023
+            title: Rapid sampling of chemostat cultures for intracellular metabolites
+            doi: "10.1234/example.2023.007"
+            publication_type: journal article
+        assays:
+          - identifier: ASY-PULSE-METABOLITES
+            study_id: STU-PULSE-TIMECOURSE
+            title: Intracellular metabolite concentrations
+            description: Quenched samples analysed by LC-MS/MS against isotope-labelled standards.
+            assay_class: EXP
+            assay_type:
+              term: metabolomics
+              term_uri: http://jermontology.org/ontology/JERMOntology#Metabolomics
+              ontology_name: JERM
+            technology_type:
+              term: mass spectrometry
+              term_uri: http://jermontology.org/ontology/JERMOntology#Mass_spectrometry
+              ontology_name: JERM
+            organism:
+              identifier: ORG-SCEREVISIAE
+              title: Saccharomyces cerevisiae
+              ncbi_id: 4932
+            strain:
+              identifier: STR-CEN-PK113-7D
+              title: CEN.PK113-7D
+              organism_id: ORG-SCEREVISIAE
+              provider_name: Example strain collection
+              genotype: MATa MAL2-8c SUC2
+            tissue_and_cell_type: whole cell
+            culture_growth_type: aerobic glucose-limited chemostat, D = 0.1 per hour
+            created_at: "2024-03-01"
+            updated_at: "2024-06-15"
+            creators:
+              - identifier: PER-TOMAS-PLACEHOLDER
+                first_name: Tomas
+                last_name: Placeholder
+            samples:
+              - identifier: SMP-PULSE-T0
+                title: Steady state, before the pulse
+                description: Sampled immediately before the glucose addition.
+                sample_type:
+                  title: Chemostat sample
+                  description: One quenched broth sample from a chemostat run.
+                  attribute_definitions:
+                    - title: time after pulse
+                      sample_attribute_type: Integer
+                      required: true
+                      unit: second
+                    - title: dilution rate
+                      sample_attribute_type: Float
+                      unit: per hour
+                organism:
+                  identifier: ORG-SCEREVISIAE
+                  title: Saccharomyces cerevisiae
+                  ncbi_id: 4932
+                strain:
+                  identifier: STR-CEN-PK113-7D
+                  title: CEN.PK113-7D
+                  organism_id: ORG-SCEREVISIAE
+                treatment: none
+                collection_date: "2024-03-12"
+                attributes:
+                  - attribute_name: time after pulse
+                    value: "0"
+                    unit: second
+                  - attribute_name: dilution rate
+                    value: "0.1"
+                    unit: per hour
+              - identifier: SMP-PULSE-T60
+                title: 60 seconds after the pulse
+                treatment: 1 g/L glucose pulse
+                collection_date: "2024-03-12"
+                attributes:
+                  - attribute_name: time after pulse
+                    value: "60"
+                    unit: second
+                derived_from:
+                  - identifier: SMP-PULSE-T0
+                    title: Steady state, before the pulse
+            data_files:
+              - identifier: DF-PULSE-CONCENTRATIONS
+                title: Intracellular metabolite concentrations, time course
+                description: One row per sample, one column per metabolite, in micromol per gram dry weight.
+                filename: pulse_metabolites.xlsx
+                content_type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+                file_format: xlsx
+                data_type:
+                  term: metabolite concentration
+                  ontology_name: JERM
+                measured_item:
+                  term: intracellular metabolite
+                  ontology_name: JERM
+                units: micromol per gram dry weight
+                assay_id: ASY-PULSE-METABOLITES
+                version: 1
+                license: CC-BY-4.0
+                created_at: "2024-04-02"
+                creators:
+                  - identifier: PER-TOMAS-PLACEHOLDER
+                    first_name: Tomas
+                    last_name: Placeholder
+                factors_studied:
+                  - factor_type:
+                      term: time
+                      ontology_name: JERM
+                    factor_value: 0 to 300
+                    unit:
+                      term: second
+                      ontology_name: UO
+            sops:
+              - identifier: SOP-RAPID-SAMPLING
+                title: Rapid sampling and cold methanol quenching
+                description: Broth is sprayed into -40 C methanol within 0.5 seconds of leaving the vessel.
+                filename: rapid_sampling.pdf
+                sop_type:
+                  term: sampling protocol
+                  ontology_name: JERM
+                experimental_conditions: 30 C, pH 5.0, aerobic
+                assay_id: ASY-PULSE-METABOLITES
+                version: 2
+                license: CC-BY-4.0
+                created_at: "2024-02-20"
+                creators:
+                  - identifier: PER-TOMAS-PLACEHOLDER
+                    first_name: Tomas
+                    last_name: Placeholder
+            models:
+              - identifier: MOD-GLYCOLYSIS-KINETIC
+                title: Kinetic model of yeast glycolysis
+                description: Ordinary differential equations fitted to the pulse time course.
+                filename: glycolysis.xml
+                model_type:
+                  term: ordinary differential equations
+                  ontology_name: JERM
+                model_format: SBML
+                environment: COPASI
+                environment_url: https://copasi.org
+                organism:
+                  identifier: ORG-SCEREVISIAE
+                  title: Saccharomyces cerevisiae
+                  ncbi_id: 4932
+                assay_id: ASY-PULSE-METABOLITES
+                version: 1
+                license: CC-BY-4.0
+                created_at: "2024-05-10"
+                creators:
+                  - identifier: PER-MIRA-EXAMPLE
+                    first_name: Mira
+                    last_name: Example
+                linked_data_files:
+                  - identifier: DF-PULSE-CONCENTRATIONS
+                    title: Intracellular metabolite concentrations, time course
+                    description: The fitted data.
+            documents:
+              - identifier: DOC-PULSE-LABBOOK
+                title: Pulse experiment lab notebook extract
+                description: Scanned pages covering the three pulse runs.
+                filename: pulse_labbook.pdf
+                version: 1
+                license: CC-BY-4.0
+                created_at: "2024-03-15"
+                creators:
+                  - identifier: PER-TOMAS-PLACEHOLDER
+                    first_name: Tomas
+                    last_name: Placeholder

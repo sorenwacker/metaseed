@@ -1,0 +1,62 @@
+# SEEK-ready template 3.0 example: source -> sample -> assay material lineage,
+# each material naming the assay that measured it.
+# Fictional study; identifiers are placeholders.
+
+identifier: INV-BARLEY-N-2024
+title: Barley nitrogen response field trial
+description: Grain yield and leaf nitrogen of two barley cultivars at three nitrogen rates.
+submission_date: "2024-09-01"
+public_release_date: "2025-09-01"
+
+studies:
+  - identifier: STU-BARLEY-N-2024-FIELD
+    title: Field trial, three nitrogen rates
+    description: Randomised complete block design with four blocks.
+    study_design_type: randomised complete block design
+    start_date: "2024-03-15"
+    end_date: "2024-08-10"
+    experimental_site: Example research farm, plot B4
+    country: Netherlands
+    sources:
+      - source_name: plant-block1-plot1
+        organism: Hordeum vulgare
+        provider: Example seed bank, accession EX-A
+        samples:
+          - sample_name: barley-leaf-block1-plot1
+            organism: Hordeum vulgare
+            organism_part: flag leaf
+            collection_date: "2024-06-20"
+            assay_materials:
+              - material_name: leaf-extract-block1-plot1
+                assay: ASY-LEAF-NITROGEN
+                measurement_value: "3.1 percent N"
+          - sample_name: barley-grain-block1-plot1
+            organism: Hordeum vulgare
+            organism_part: grain
+            collection_date: "2024-08-10"
+            assay_materials:
+              - material_name: grain-lot-block1-plot1
+                assay: ASY-GRAIN-YIELD
+                measurement_value: "6.8 t/ha"
+      - source_name: plant-block1-plot2
+        organism: Hordeum vulgare
+        provider: Example seed bank, accession EX-B
+        samples:
+          - sample_name: barley-leaf-block1-plot2
+            organism: Hordeum vulgare
+            organism_part: flag leaf
+            collection_date: "2024-06-20"
+            assay_materials:
+              - material_name: leaf-extract-block1-plot2
+                assay: ASY-LEAF-NITROGEN
+                measurement_value: "2.7 percent N"
+    assays:
+      - identifier: ASY-LEAF-NITROGEN
+        title: Leaf nitrogen content
+        measurement_type: elemental analysis
+        technology_type: Dumas combustion
+        technology_platform: Example CN analyser
+      - identifier: ASY-GRAIN-YIELD
+        title: Grain yield per plot
+        measurement_type: yield
+        technology_type: plot combine weighing
