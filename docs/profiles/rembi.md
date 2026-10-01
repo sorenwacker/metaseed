@@ -1,6 +1,6 @@
 # REMBI v1.5
 
-The `rembi` profile is the Recommended Metadata for Biological Images, version 1.5, as the [BioImage Archive](https://www.ebi.ac.uk/bioimage-archive/) implements it for a submission. A **`Study`** is the root: what was imaged and why, who did it, how it is licensed and funded. The study owns its biosamples, specimens and image acquisitions, and optionally the image correlation, image analysis and annotation modules. A **`StudyComponent`** associates one biosample, one specimen and one image acquisition by title, as a BioImage Archive submission does, and lists the image files that belong to that combination.
+The `rembi` profile is the Recommended Metadata for Biological Images, version 1.5, as the [BioImage Archive](https://www.ebi.ac.uk/bioimage-archive/) implements it for a submission. A **`Study`** is the root: what was imaged and why, who did it, how it is licensed and funded. The study owns its biosamples, specimens and image acquisitions, and optionally the image correlation, image analysis and annotation modules. A **`StudyComponent`** associates one biosample, one specimen and one image acquisition by title, as a BioImage Archive submission does, states the REMBI version it follows, and lists the image files that belong to that combination. An **`Annotation`** may name its own authors and carry per-file metadata (**`FileLevelMetadata`**: which image a file annotates, what kind of annotation it holds, how it was derived).
 
 Every entity below the study names its study in `study_id`, and a study component names the biosample, specimen and acquisition it combines by their `title`. The imaging method is a term of the Biological Imaging Methods Ontology (FBbi); the organism is an NCBI Taxonomy identifier.
 
@@ -11,7 +11,7 @@ Every entity below the study names its study in `study_id`, and a study componen
 | **Study** | Study, Author, Publication, Link, GrantReference |
 | **What was imaged** | Biosample, Specimen |
 | **How it was imaged** | ImageAcquisition, ImageCorrelation |
-| **What was done with the images** | ImageAnalysis, Annotation |
+| **What was done with the images** | ImageAnalysis, Annotation, FileLevelMetadata |
 | **The files** | StudyComponent, ImageFile |
 
 ## Entity-Relationship Diagram
@@ -88,6 +88,7 @@ erDiagram
         string study_id
         string name
         string description
+        string rembi_version
         string biosample
         string specimen
         string image_acquisition
@@ -97,6 +98,13 @@ erDiagram
         string file_name
         string file_location
         string file_format
+    }
+    FileLevelMetadata {
+        string annotation_title
+        string annotation_id
+        string source_image_id
+        string transformations
+        datetime annotation_creation_time
     }
 
     Study ||--o{ Author : authors
@@ -111,6 +119,8 @@ erDiagram
     Study ||--o{ Annotation : annotations
     Study ||--o{ StudyComponent : study_components
     StudyComponent ||--o{ ImageFile : files
+    Annotation ||--o{ Author : authors
+    Annotation ||--o{ FileLevelMetadata : file_metadata
     StudyComponent }o--|| Biosample : biosample
     StudyComponent }o--|| Specimen : specimen
     StudyComponent }o--|| ImageAcquisition : image_acquisition
@@ -149,7 +159,7 @@ study = r.Study(
          "image_acquisition_parameters": "20x detection objective, 2 um z step, one volume per 10 minutes."}
     ],
     study_components=[
-        {"study_id": "S-BIAD-EXAMPLE-1", "name": "Heart time lapse",
+        {"study_id": "S-BIAD-EXAMPLE-1", "name": "Heart time lapse", "rembi_version": "1.5",
          "description": "The time-lapse volumes of every embryo.",
          "biosample": "Zebrafish embryo heart", "specimen": "Agarose-mounted live embryo",
          "image_acquisition": "Light-sheet time lapse"}

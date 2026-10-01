@@ -30,8 +30,28 @@ def test_the_profile_is_built_in_with_study_as_its_root() -> None:
         "Biosample",
         "Specimen",
         "ImageAcquisition",
+        "FileLevelMetadata",
     } <= set(spec.entities)
     assert spec.entities["ImageAcquisition"].fields[2].name == "imaging_method"
+
+
+def test_the_profile_follows_the_rembi_model_reference() -> None:
+    """The three parts a field-by-field comparison with the BioImage Archive's
+    model reference found missing: the version on every component, the
+    annotation's own authors, and per-file annotation metadata."""
+    spec = builtin_only_loader().load_profile("1.5", "rembi")
+    component = {f.name: f for f in spec.entities["StudyComponent"].fields}
+    assert component["rembi_version"].required
+    annotation = {f.name: f for f in spec.entities["Annotation"].fields}
+    assert annotation["authors"].items == "Author"
+    assert annotation["file_metadata"].items == "FileLevelMetadata"
+    file_level = {f.name: f for f in spec.entities["FileLevelMetadata"].fields}
+    assert {
+        "annotation_id",
+        "source_image_id",
+        "annotation_type",
+        "transformations",
+    } <= set(file_level)
 
 
 def test_the_accessor_opens_the_profile() -> None:

@@ -56,7 +56,7 @@ The package ships these profiles. Counts refer to each profile's latest version.
 | ENA | `ena` | 1.0 | 12 | 113 | Nucleotide archive submissions |
 | MetaboLights | `metabolights` | 1.0 | 13 | 71 | Metabolomics |
 | PRIDE | `pride` | 1.0, 2.0 | 9 | 61 | Proteomics |
-| REMBI | `rembi` | 1.5 | 13 | 91 | Biological imaging |
+| REMBI | `rembi` | 1.5 | 14 | 101 | Biological imaging |
 | Health-RI core | `health-ri-core` | 2.0 | 13 | 156 | Health data catalogues (DCAT-AP) |
 | SEEK | `seek` | 1.0 | 24 | 229 | The FAIRDOM-SEEK data model |
 | SEEK-ready template | `seek-ready-template` | 1.0, 2.0, 3.0 | 6 | 33 | Minimal ISA shape for a SEEK upload |
