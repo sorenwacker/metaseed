@@ -1,0 +1,198 @@
+# MIAPPE-HTP 1.0 (PPEO) example: automated greenhouse imaging of maize under
+# two watering regimes. The PPEO graph links entities in both directions;
+# this document nests each entity once, under the entity that owns it, and
+# names the other direction only where the profile requires it.
+# Fictional study; names, mailboxes and identifiers are placeholders.
+
+name: Maize drought imaging 2024
+description: Daily top and side imaging of maize plants under well-watered and water-deficit regimes in an automated greenhouse.
+submission_date: "2024-10-01"
+public_release_date: "2025-10-01"
+license: https://creativecommons.org/licenses/by/4.0/
+miappe_version: "1.1"
+associated_publications:
+  - "10.1234/example.2024.003"
+participating_institutions:
+  - name: Example Plant Phenotyping Centre
+    abbreviation: EPPC
+    address: Example Road 2, 6700 AA Wageningen, Netherlands
+    location:
+      name: Wageningen
+      latitude: 51.97
+      longitude: 5.66
+      altitude: 10
+      country:
+        name: Netherlands
+        code: NL
+person_roles:
+  - name: principal investigator
+    person:
+      name: Mira Example
+      email: m.example@example.org
+      affiliation:
+        name: Example Plant Phenotyping Centre
+        abbreviation: EPPC
+      roles:
+        - name: principal investigator
+  - name: data manager
+    person:
+      name: Tomas Placeholder
+      email: t.placeholder@example.org
+      roles:
+        - name: data manager
+studies:
+  - name: Greenhouse imaging, spring 2024
+    description: 48 plants, two watering regimes, imaged daily from 10 to 40 days after sowing.
+    start_date: "2024-03-10T08:00:00"
+    end_date: "2024-04-09T18:00:00"
+    cultural_practices: Peat substrate in 5 L pots, 16 h photoperiod, 24/18 C day/night.
+    observation_unit_description: One plant per pot; a pot is the observation unit.
+    location:
+      name: Greenhouse compartment 3
+      latitude: 51.97
+      longitude: 5.66
+      altitude: 10
+      country:
+        name: Netherlands
+        code: NL
+    contact_institution:
+      name: Example Plant Phenotyping Centre
+      abbreviation: EPPC
+    participating_institutions:
+      - name: Example Plant Phenotyping Centre
+        abbreviation: EPPC
+    experimental_design:
+      type: completely randomised design
+      description: Pots shuffled daily by the conveyor system.
+      map: https://phenotyping.example.org/studies/2024-spring/layout.csv
+    growth_facility:
+      name: Automated greenhouse
+      type: greenhouse
+      description: Conveyor-based system with imaging cabinets and automatic watering.
+    observation_level_hierarchy:
+      name: pot within block
+      levels:
+        - name: block
+        - name: pot
+    person_roles:
+      - name: experimentalist
+        person:
+          name: Tomas Placeholder
+          email: t.placeholder@example.org
+          roles:
+            - name: experimentalist
+    biological_materials:
+      - name: B73
+        description: Reference inbred line.
+        genus: Zea
+        species: mays
+        infraspecific_name: B73
+        accession_number: PI 550473
+        material_source:
+          name: Example genebank
+          description: Seed lot 2023.
+          institute_code: EXGB
+          location:
+            name: Example genebank store
+            country:
+              name: Netherlands
+              code: NL
+        country_of_origin:
+          name: United States of America
+          code: US
+        location:
+          name: Greenhouse compartment 3
+          country:
+            name: Netherlands
+            code: NL
+    data_files:
+      - name: plant_area_daily.csv
+        description: Projected shoot area per plant per day from the top camera.
+        location: https://phenotyping.example.org/studies/2024-spring/plant_area_daily.csv
+        version: "1"
+        observations:
+          - value: "412.5"
+            timestamp: "2024-03-25T10:12:00"
+            variable:
+              name: projected shoot area
+              description: Green pixel area of the top view, converted to square centimetres.
+              trait:
+                name: shoot biomass
+                description: Above-ground biomass estimated from images.
+                accession_number: TO:0000202
+              method:
+                name: top-view image segmentation
+                description: Green pixels of the calibrated top image.
+                reference: https://doi.org/10.1234/example.2022.004
+              scale:
+                name: square centimetre
+                type: numerical
+            observation_unit:
+              name: pot-0017
+              type: pot
+              biological_material:
+                name: B73
+                genus: Zea
+                species: mays
+              observation_level:
+                name: pot
+              spatial_distribution:
+                description: Conveyor position at the time of imaging.
+                type:
+                  name: conveyor lane
+                x: "3"
+                y: "17"
+              factor_values:
+                - value: water deficit
+                  description: Watering stopped at 20 days after sowing.
+              events:
+                - name: watering stopped
+                  description: Automatic watering switched off for the water-deficit group.
+                  date: "2024-03-30T08:00:00"
+              observations:
+                - value: "398.1"
+                  timestamp: "2024-03-24T10:10:00"
+                  variable:
+                    name: projected shoot area
+                    description: Green pixel area of the top view, converted to square centimetres.
+            sample:
+              name: pot-0017-leaf-2024-04-09
+              description: Third leaf sampled at the end of the experiment for dry weight.
+              collection_date: "2024-04-09T15:00:00"
+              plant_anatomical_entity: leaf
+              plant_structural_development_stage: V6
+              observations:
+                - value: "1.82"
+                  timestamp: "2024-04-11T09:00:00"
+                  variable:
+                    name: leaf dry weight
+                    description: Oven-dried mass of the sampled leaf in grams.
+    environments:
+      - name: Compartment 3 climate
+        description: Set points for the whole experiment.
+        parameters:
+          - name: day temperature
+            value: "24"
+            unit: degree Celsius
+          - name: night temperature
+            value: "18"
+            unit: degree Celsius
+          - name: photoperiod
+            value: "16"
+            unit: hour
+    factors:
+      - name: watering regime
+        description: Well-watered or water deficit from 20 days after sowing.
+        values:
+          - value: well-watered
+            description: Pots kept at 80 percent of field capacity.
+          - value: water deficit
+            description: Watering stopped at 20 days after sowing.
+    events:
+      - name: sowing
+        description: Three seeds per pot, thinned to one plant at 7 days.
+        date: "2024-03-10T09:00:00"
+      - name: watering stopped
+        description: Automatic watering switched off for the water-deficit group.
+        date: "2024-03-30T08:00:00"
+        end_date: "2024-04-09T18:00:00"

@@ -1,0 +1,174 @@
+# MetaboLights 1.0 example: untargeted LC-MS profiling of tomato leaves under salt stress
+# Fictional study; names, mailboxes and identifiers are placeholders.
+
+identifier: MTBLS-EXAMPLE-TOMATO-SALT
+title: Untargeted LC-MS metabolite profiling of tomato leaves under salt stress
+description: >-
+  Leaves of Solanum lycopersicum cv. Moneymaker were sampled seven days after
+  the onset of salt stress (150 mM NaCl) and from control plants, extracted in
+  methanol and profiled by reversed-phase LC-MS in positive ion mode.
+submission_date: "2024-05-02"
+public_release_date: "2025-05-02"
+
+contacts:
+  - first_name: Mira
+    last_name: Example
+    email: m.example@example.org
+    affiliation: Example Institute of Plant Metabolism
+    orcid: "0000-0002-0000-0001"
+    roles:
+      - principal investigator
+      - submitter
+  - first_name: Tomas
+    last_name: Placeholder
+    email: t.placeholder@example.org
+    affiliation: Example Institute of Plant Metabolism
+    roles:
+      - data analyst
+
+publications:
+  - title: Leaf metabolome remodelling of tomato under salt stress
+    authors: Example M, Placeholder T
+    doi: "10.1234/example.2024.001"
+    pubmed_id: "40000001"
+    status: Submitted
+
+studies:
+  - identifier: s-tomato-salt-leaf
+    title: Tomato leaf metabolome seven days after salt stress
+    description: Two conditions, four biological replicates each, one leaf per plant.
+    study_design_descriptors:
+      - untargeted metabolite profiling design
+      - stress response design
+    factors:
+      - name: salt treatment
+        factor_type: environmental stress
+    protocols:
+      - name: Sample collection
+        protocol_type: sample collection
+        description: The fourth true leaf was cut at midday, frozen in liquid nitrogen and stored at -80 C.
+        parameters:
+          - name: sampling time
+            value: "12:00"
+      - name: Extraction
+        protocol_type: extraction
+        description: 50 mg ground tissue extracted in 1 mL 75 percent methanol with 0.1 percent formic acid.
+        parameters:
+          - name: extraction solvent
+            value: methanol:water 75:25 with 0.1 percent formic acid
+          - name: tissue mass
+            value: "50"
+            unit: mg
+      - name: Chromatography
+        protocol_type: chromatography
+        description: Reversed-phase C18 gradient, 15 minutes.
+        parameters:
+          - name: column
+            value: C18 2.1 x 100 mm 1.7 um
+          - name: flow rate
+            value: "0.3"
+            unit: mL/min
+      - name: Mass spectrometry
+        protocol_type: mass spectrometry
+        description: Quadrupole time-of-flight, electrospray positive mode, 100 to 1500 m/z.
+        parameters:
+          - name: ion mode
+            value: positive
+      - name: Data transformation
+        protocol_type: data transformation
+        description: Peak picking, alignment and gap filling with an open-source workflow.
+        parameters:
+          - name: software
+            value: example-peak-picker 2.1
+      - name: Metabolite identification
+        protocol_type: metabolite identification
+        description: Annotation by accurate mass and MS2 spectral library match.
+        parameters:
+          - name: mass tolerance
+            value: "5"
+            unit: ppm
+    samples:
+      - name: control-leaf-1
+        organism: Solanum lycopersicum
+        organism_term: NCBITaxon:4081
+        organism_part: leaf
+        characteristics:
+          - category: cultivar
+            value: Moneymaker
+          - category: age
+            value: "35"
+            unit: day
+        factor_values:
+          - factor_name: salt treatment
+            value: control
+      - name: control-leaf-2
+        organism: Solanum lycopersicum
+        organism_part: leaf
+        characteristics:
+          - category: cultivar
+            value: Moneymaker
+        factor_values:
+          - factor_name: salt treatment
+            value: control
+      - name: salt-leaf-1
+        organism: Solanum lycopersicum
+        organism_part: leaf
+        characteristics:
+          - category: cultivar
+            value: Moneymaker
+        factor_values:
+          - factor_name: salt treatment
+            value: "150"
+            unit: mM NaCl
+      - name: salt-leaf-2
+        organism: Solanum lycopersicum
+        organism_part: leaf
+        characteristics:
+          - category: cultivar
+            value: Moneymaker
+        factor_values:
+          - factor_name: salt treatment
+            value: "150"
+            unit: mM NaCl
+    assays:
+      - identifier: a-tomato-salt-lcms-pos
+        filename: a_tomato_salt_lcms_pos.txt
+        technology_type: mass spectrometry
+        technology_platform: Q-TOF LC-MS
+        measurement_type: untargeted metabolite profiling
+        samples:
+          - control-leaf-1
+          - control-leaf-2
+          - salt-leaf-1
+          - salt-leaf-2
+        data_files:
+          - filename: control-leaf-1.mzML
+            file_type: Raw Data File
+            checksum: "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+          - filename: salt-leaf-1.mzML
+            file_type: Raw Data File
+          - filename: peak_table.tsv
+            file_type: Derived Data File
+        metabolite_assignment_file: m_tomato_salt_lcms_pos.tsv
+        metabolites:
+          - database_identifier: CHEBI:17295
+            metabolite_identification: L-phenylalanine
+            chemical_formula: C9H11NO2
+            smiles: N[C@@H](Cc1ccccc1)C(O)=O
+            inchi: InChI=1S/C9H11NO2/c10-8(9(11)12)6-7-4-2-1-3-5-7/h1-5,8H,6,10H2,(H,11,12)/t8-/m0/s1
+            mass_to_charge: 166.0863
+            retention_time: 2.4
+            charge: 1
+            reliability: "1"
+          - database_identifier: CHEBI:17234
+            metabolite_identification: glucose
+            chemical_formula: C6H12O6
+            mass_to_charge: 203.0526
+            retention_time: 0.9
+            charge: 1
+            reliability: "2"
+          - metabolite_identification: unknown feature 418.2
+            mass_to_charge: 418.2
+            retention_time: 7.1
+            charge: 1
+            reliability: "4"

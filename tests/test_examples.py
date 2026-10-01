@@ -21,24 +21,11 @@ from tests.builtin_specs import builtin_only_loader
 
 EXAMPLES_DIR = Path(__file__).parent.parent / "src" / "metaseed" / "examples"
 
-# Common field names used across different profiles
-IDENTIFIER_FIELDS = frozenset(
-    {
-        "unique_id",
-        "identifier",
-        "id",
-        "occurrenceID",
-        "alias",
-        "internal_study_id",
-        "study_id",
-        "investigation_id",
-    }
-)
-
 TITLE_FIELDS = frozenset({"title", "study_title", "investigation_title"})
 
-# Profiles that don't have standard title fields
-PROFILES_WITHOUT_TITLE = frozenset({"darwin-core", "ena", "dissco"})
+# Profiles whose root entity has no title field (MIAPPE-HTP's Investigation
+# carries a ``name``, which is also its identifier).
+PROFILES_WITHOUT_TITLE = frozenset({"darwin-core", "ena", "dissco", "miappe-htp"})
 
 
 @lru_cache(maxsize=32)
@@ -111,6 +98,32 @@ def get_all_inline_examples() -> list[tuple[str, str, str, dict]]:
                 continue
 
     return examples
+
+
+def shipped_profile_versions() -> list[tuple[str, str]]:
+    """Every (profile, version) the package ships."""
+    loader = builtin_only_loader()
+    return [
+        (profile, version)
+        for profile in loader.list_profiles()
+        for version in loader.list_versions(profile)
+    ]
+
+
+@pytest.mark.parametrize("profile,version", shipped_profile_versions())
+def test_every_shipped_profile_version_has_an_example(
+    profile: str, version: str
+) -> None:
+    """A shipped profile version ships an example dataset (#287).
+
+    An example is how a person learns the shape of a standard, and it is the
+    "Load Example" control in the UI and the ``metaseed example`` command. Four
+    profiles shipped without one, and a profile added later could too.
+    """
+    version_dir = EXAMPLES_DIR / profile / version
+    assert version_dir.is_dir() and any(version_dir.glob("*.yaml")), (
+        f"{profile} {version} ships no example under src/metaseed/examples/"
+    )
 
 
 def get_root_entity(profile: str, version: str) -> str:
@@ -457,12 +470,22 @@ class TestExampleFilesHaveRequiredFields:
     def test_example_has_identifier(
         self, profile: str, version: str, example_file: Path
     ) -> None:
-        """Each example should have a unique identifier field."""
+        """The root record carries the profile's own identifier field.
+
+        The facade knows which field identifies the root entity (``identifier``
+        for most profiles, ``name`` for MIAPPE-HTP, ``occurrenceID`` for Darwin
+        Core); a fixed list of likely names drifted from the specs.
+        """
+        from metaseed.facade import ProfileFacade
+
         data = load_example_data(example_file)
-        has_identifier = any(
-            field in data and data[field] for field in IDENTIFIER_FIELDS
+        root_entity = get_root_entity(profile, version)
+        identifier = getattr(
+            ProfileFacade(profile, version), root_entity
+        ).identifier_field
+        assert data.get(identifier), (
+            f"Example {example_file.name} has no {root_entity}.{identifier}"
         )
-        assert has_identifier, f"Example {example_file.name} missing identifier field"
 
     @pytest.mark.parametrize(
         "profile,version,example_file",
