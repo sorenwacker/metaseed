@@ -248,7 +248,7 @@ metaseed check dataset.json
 
 ### example
 
-Export the example dataset bundled with a profile.
+Export the example dataset bundled with a profile. Every shipped profile version has one, under `src/metaseed/examples/<profile>/<version>/`; the same file is behind the UI's Load Example control, and `tests/test_examples.py` fails when a profile version ships without one.
 
 ```bash
 metaseed example miappe
