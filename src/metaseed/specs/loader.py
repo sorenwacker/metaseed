@@ -41,6 +41,15 @@ _NUMERIC_TYPES = frozenset({FieldType.INTEGER, FieldType.FLOAT})
 
 logger = logging.getLogger(__name__)
 
+# libyaml parses a profile about six times faster than the pure-Python loader;
+# both accept the same documents.
+YAML_LOADER = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
+
+# Parsed profiles shared by every SpecLoader, keyed by (path, mtime_ns, size) so
+# an edited file is parsed again. Validation builds a loader per nested entity;
+# a per-instance cache re-parsed the profile for every record (#311).
+_PROFILE_CACHE: dict[tuple[str, int, int], ProfileSpec] = {}
+
 
 class SpecLoadError(Exception):
     """Raised when a specification file cannot be loaded or parsed."""
@@ -119,6 +128,84 @@ def _merge_rule_constraints_into_fields(profile: ProfileSpec) -> None:
                 field.constraints = None
 
 
+def _parse_profile_file(profile_path: Path, label: str) -> ProfileSpec | None:
+    """Parse and check one ``profile.yaml``, bypassing the shared cache.
+
+    Args:
+        profile_path: The file to parse.
+        label: How log messages name the profile, e.g. ``miappe:1.2``.
+
+    Returns:
+        The ProfileSpec, or None if the file is empty.
+
+    Raises:
+        SpecLoadError: If the file is malformed (invalid YAML or fails schema
+            validation).
+    """
+    logger.debug("Loading profile from %s", profile_path)
+    content = profile_path.read_text(encoding="utf-8")
+    try:
+        data = yaml.load(content, Loader=YAML_LOADER)  # noqa: S506 - a safe loader
+    except yaml.YAMLError as e:
+        raise SpecLoadError(f"Failed to parse profile {profile_path}: {e}") from e
+
+    if data is None:
+        logger.warning("Empty profile file: %s", profile_path)
+        return None
+
+    if not isinstance(data, dict):
+        # A YAML file whose top level is a list or a scalar. Reported as a
+        # spec problem, which every caller handles, rather than as the
+        # TypeError the next line would raise from inside the loader.
+        raise SpecLoadError(
+            f"Profile file must contain a mapping, got "
+            f"{type(data).__name__}: {profile_path}"
+        )
+
+    # Set default spec_version for backward compatibility with old specs
+    if "spec_version" not in data:
+        data["spec_version"] = "0.1"
+
+    try:
+        loaded_profile = ProfileSpec.model_validate(data)
+    except ValidationError as e:
+        errors = e.errors()
+        if errors:
+            first_error = errors[0]
+            loc = ".".join(str(part) for part in first_error["loc"])
+            msg = first_error["msg"]
+            raise SpecLoadError(
+                f"Invalid profile {profile_path} at {loc}: {msg}"
+                f"{_version_hint(data, first_error)}"
+            ) from e
+        raise SpecLoadError(f"Invalid profile {profile_path}: {e}") from e
+
+    _merge_rule_constraints_into_fields(loaded_profile)
+
+    predicate_problems = profile_predicate_issues(loaded_profile)
+    if predicate_problems:
+        # Loudly, once, at load: a predicate naming a field that does not
+        # exist is a rule that never fires, and finding that out from the
+        # record it failed to catch is the defect class it guards against.
+        raise SpecLoadError(
+            f"Invalid profile {profile_path}: " + "; ".join(predicate_problems)
+        )
+
+    if not is_in_containment_order(loaded_profile):
+        # The hierarchy is carried by the nesting fields, so the profile
+        # still loads; but a reader that trusts declaration order (the Excel
+        # export's sheet order, the graph legend) gets the root last. Saving
+        # the spec rewrites the entities root-first.
+        logger.warning(
+            "Profile %s declares its entities out of containment order; "
+            "save the spec to rewrite them root-first (expected: %s)",
+            label,
+            " > ".join(entity_order(loaded_profile)),
+        )
+
+    return loaded_profile
+
+
 class SpecLoader:
     """Loader for profile YAML specifications.
 
@@ -142,7 +229,6 @@ class SpecLoader:
         """
         self._builtin_specs_dir = get_builtin_specs_dir()
         self._user_specs_dir = get_user_specs_dir()
-        self._profile_cache: dict[str, ProfileSpec] = {}
         self._default_profile = profile.lower()
 
     def find_profile_file(
@@ -187,8 +273,8 @@ class SpecLoader:
 
         return None
 
-    def _cache_key(self: Self, version: str, profile: str | None = None) -> str:
-        """Generate cache key for profile+version combination."""
+    def _profile_label(self: Self, version: str, profile: str | None = None) -> str:
+        """Name a profile+version for log messages, e.g. ``miappe:1.2``."""
         profile = (profile or self._default_profile).lower()
         return f"{profile}:{version}"
 
@@ -208,79 +294,24 @@ class SpecLoader:
             SpecLoadError: If the profile file exists but is malformed
                 (invalid YAML or fails schema validation).
         """
-        cache_key = self._cache_key(version, profile)
-        if cache_key in self._profile_cache:
-            return self._profile_cache[cache_key]
-
+        label = self._profile_label(version, profile)
         profile_path = self._find_profile_file(version, profile)
         if profile_path is None:
             return None
 
-        logger.debug("Loading profile from %s", profile_path)
-        content = profile_path.read_text(encoding="utf-8")
-        try:
-            data = yaml.safe_load(content)
-        except yaml.YAMLError as e:
-            raise SpecLoadError(f"Failed to parse profile {profile_path}: {e}") from e
+        stat = profile_path.stat()
+        file_key = (str(profile_path.resolve()), stat.st_mtime_ns, stat.st_size)
+        if file_key in _PROFILE_CACHE:
+            return _PROFILE_CACHE[file_key]
 
-        if data is None:
-            logger.warning("Empty profile file: %s", profile_path)
+        loaded_profile = _parse_profile_file(profile_path, label)
+        if loaded_profile is None:
             return None
 
-        if not isinstance(data, dict):
-            # A YAML file whose top level is a list or a scalar. Reported as a
-            # spec problem, which every caller handles, rather than as the
-            # TypeError the next line would raise from inside the loader.
-            raise SpecLoadError(
-                f"Profile file must contain a mapping, got "
-                f"{type(data).__name__}: {profile_path}"
-            )
-
-        # Set default spec_version for backward compatibility with old specs
-        if "spec_version" not in data:
-            data["spec_version"] = "0.1"
-
-        try:
-            loaded_profile = ProfileSpec.model_validate(data)
-        except ValidationError as e:
-            errors = e.errors()
-            if errors:
-                first_error = errors[0]
-                loc = ".".join(str(part) for part in first_error["loc"])
-                msg = first_error["msg"]
-                raise SpecLoadError(
-                    f"Invalid profile {profile_path} at {loc}: {msg}"
-                    f"{_version_hint(data, first_error)}"
-                ) from e
-            raise SpecLoadError(f"Invalid profile {profile_path}: {e}") from e
-
-        _merge_rule_constraints_into_fields(loaded_profile)
-
-        predicate_problems = profile_predicate_issues(loaded_profile)
-        if predicate_problems:
-            # Loudly, once, at load: a predicate naming a field that does not
-            # exist is a rule that never fires, and finding that out from the
-            # record it failed to catch is the defect class it guards against.
-            raise SpecLoadError(
-                f"Invalid profile {profile_path}: " + "; ".join(predicate_problems)
-            )
-
-        if not is_in_containment_order(loaded_profile):
-            # The hierarchy is carried by the nesting fields, so the profile
-            # still loads; but a reader that trusts declaration order (the Excel
-            # export's sheet order, the graph legend) gets the root last. Saving
-            # the spec rewrites the entities root-first.
-            logger.warning(
-                "Profile %s declares its entities out of containment order; "
-                "save the spec to rewrite them root-first (expected: %s)",
-                cache_key,
-                " > ".join(entity_order(loaded_profile)),
-            )
-
-        self._profile_cache[cache_key] = loaded_profile
+        _PROFILE_CACHE[file_key] = loaded_profile
         logger.debug(
             "Loaded profile %s with %d entities",
-            cache_key,
+            label,
             len(loaded_profile.entities),
         )
         return loaded_profile

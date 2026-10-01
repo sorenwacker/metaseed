@@ -9,6 +9,8 @@ both through ``_specs_subpath`` (resolve + containment check).
 
 from __future__ import annotations
 
+import copy
+
 import pytest
 
 from metaseed.specs import persistence
@@ -24,7 +26,10 @@ def specs_base(tmp_path, monkeypatch):
 
 
 def _spec():
-    spec = SpecLoader(profile="miappe").load_profile(version="1.2", profile="miappe")
+    # A copy: the loaded profile is shared by every loader in the process.
+    spec = copy.deepcopy(
+        SpecLoader(profile="miappe").load_profile(version="1.2", profile="miappe")
+    )
     spec.name = "mytestprofile"
     return spec
 
