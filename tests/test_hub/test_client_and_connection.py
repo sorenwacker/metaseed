@@ -145,6 +145,46 @@ class TestTheConnectionCheck:
         assert not check.ok
         assert "rejected the token" in check.message
 
+    def test_a_refusal_carries_the_hubs_reason(self) -> None:
+        """The hub says why (SRAM tokens not enabled, sign in first, SRAM
+        refused with a status); a flat 'check it was copied' sends the user
+        to re-copy a token that was copied correctly."""
+        reason = "SRAM application tokens are not enabled on this hub; use a personal access token"
+        transport = httpx.MockTransport(
+            lambda _r: httpx.Response(401, json={"detail": reason})
+        )
+        check = check_connection(
+            {"url": "https://hub.test", "token": "opaque"},
+            http_client=httpx.Client(transport=transport),
+        )
+        assert not check.ok
+        assert reason in check.message
+
+    def test_a_token_the_hub_could_not_check_is_not_checked_not_a_hub_failure(
+        self,
+    ) -> None:
+        """A hub answers 503 when SRAM is unreachable; the hub itself is up and
+        the token may be fine, so the message must say 'not checked'."""
+        detail = "The token was not checked: SRAM could not be reached (no route)."
+        transport = httpx.MockTransport(
+            lambda _r: httpx.Response(503, json={"detail": detail})
+        )
+        check = check_connection(
+            {"url": "https://hub.test", "token": "opaque"},
+            http_client=httpx.Client(transport=transport),
+        )
+        assert not check.ok
+        assert "not checked" in check.message.lower()
+        assert "not serving the hub" not in check.message
+
+    def test_a_hub_that_is_down_is_still_said_to_be_down(self) -> None:
+        transport = httpx.MockTransport(lambda _r: httpx.Response(502))
+        check = check_connection(
+            {"url": "https://hub.test", "token": "opaque"},
+            http_client=httpx.Client(transport=transport),
+        )
+        assert "not serving the hub" in check.message
+
     def test_a_hub_too_old_for_the_endpoint_is_told_apart_from_a_wrong_url(
         self,
     ) -> None:

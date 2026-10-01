@@ -6,11 +6,11 @@ Metaseed runs on one machine for one person; [metaseed-hub](https://github.com/s
 
 The hub actions are hidden until the adapter is enabled and pointed at a hub.
 
-1. Get a token for the hub. On the hosted hub, create an application token for the Metaseed Hub application in SRAM (the collaboration's **Application tokens** tab); it is as alive as your place in SRAM and SRAM shows it once. On a local hub, create a personal access token under **Access tokens** on your profile. Either acts as you, so everything pushed lands in your account and your tenant.
+1. Get a token for the hub. On the hosted hub, create an application token for the Metaseed Hub application in SRAM (the collaboration's **Application tokens** tab); it is as alive as your place in SRAM and SRAM shows it once. On a local hub, create a personal access token under **Access tokens** on your profile; the hosted hub accepts these too, but they outlive your place in SRAM. Either acts as you, so everything pushed lands in your account and your tenant.
 2. In metaseed, open **Settings → Plugins**, enable **Metaseed Hub**, and set:
    - **URL** — the hub, e.g. `https://hub.example.org` (required).
    - **Access token** — the token from step 1 (required).
-3. Press **Check connection**. A working connection shows which hub account and tenant the token acts as; a failure names the cause (unreachable host, refused token).
+3. Press **Check connection**. A working connection shows which hub account and tenant the token acts as; a failure names the cause as the hub gave it (unreachable host, a token the hub refused and why, a hub too old for the exchange). A hub that could not check a SRAM token because SRAM was unreachable is reported as *not checked*, not as a refusal.
 
 The token is stored in `settings.json` in your data directory, like the SEEK API key.
 

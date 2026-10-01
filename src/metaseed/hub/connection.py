@@ -28,12 +28,22 @@ def describe_failure(exc: Exception, url: str) -> str:
     if isinstance(exc, httpx.TimeoutException):
         return f"{host} did not answer within {PROBE_TIMEOUT:g} seconds."
     if isinstance(exc, HubApiError):
+        detail = (exc.detail or "").strip()
         if exc.status_code in (401, 403):
+            # The hub says why: SRAM tokens not enabled there, sign in first,
+            # SRAM refused with a status. Telling someone to re-copy a token
+            # that was copied correctly sends them the wrong way.
+            if detail and detail.lower() not in ("unauthorized", "forbidden", "no"):
+                return f"The hub rejected the token: {detail}"
             return "The hub rejected the token. Check it was copied whole and has not been revoked."
         if exc.status_code == 404:
             return (
                 f"{host} answered, but not as a metaseed-hub. Give the hub's base URL."
             )
+        if exc.status_code == 503 and "not checked" in detail.lower():
+            # The hub is up; it could not ask SRAM about the token. Someone
+            # else's downtime must not read as a hub failure or a refusal.
+            return f"Not checked: {detail}"
         if exc.status_code >= 500:
             return f"{host} is not serving the hub right now (HTTP {exc.status_code})."
         return f"The hub answered HTTP {exc.status_code}: {exc.detail}"
