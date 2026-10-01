@@ -74,7 +74,7 @@ flowchart TB
 
 **Sample**: Describes the biological source material being sequenced. Samples are linked to NCBI taxonomy and annotated using ENA checklists (standardized attribute sets). Samples receive BioSample (SAMEA) or sample (ERS) accessions.
 
-Attributes such as `collection_date` and `geographic_location_country` are checklist-level requirements (e.g. checklist `ERC000011`), not properties of the base Sample. They are therefore optional on the Sample entity, so valid public ENA/DDBJ records that omit them can be imported. Apply checklist-conditional requirements via the `checklist` field rather than expecting these attributes on every Sample.
+Attributes such as `collection_date` and `geographic_location_country` are checklist-level requirements (e.g. checklist `ERC000011`), not properties of the base Sample. They are therefore optional on the Sample entity, so valid public ENA/DDBJ records that omit them can be imported. Which attributes a sample must carry depends on the checklist it is registered against; see [How ENA structures a submission](#how-ena-structures-a-submission).
 
 **Experiment**: Describes the sequencing library and platform. Key fields include:
 
@@ -108,6 +108,39 @@ ENA uses controlled vocabularies for key fields:
 **Library Selection** (31 terms): RANDOM, PCR, PolyA, ChIP, MNase, Hybrid Selection, etc.
 
 **Platform** (14 terms): ILLUMINA, OXFORD_NANOPORE, PACBIO_SMRT, ION_TORRENT, etc.
+
+## How ENA structures a submission
+
+ENA separates what is the same for every submission from what depends on the kind of material sequenced.
+
+**The generic part** is the object model above. A submission registers a Study, one Sample per piece of source material, one Experiment per library and platform, one Run per set of data files and, for derived results, Analyses. These objects have the same fields for a bacterial isolate, a maize leaf and a litre of seawater. They are submitted as XML documents (`study.xml`, `sample.xml`, `experiment.xml`, `run.xml`, `analysis.xml`) under one `submission.xml` naming the actions, which is what `to_ena_xml` produces, and they receive accessions in the formats listed below.
+
+**The domain-specific part** is the **sample checklist**. A Sample carries, besides its taxon, title and description, a list of attributes (tag, value, optional units), and ENA registers each sample against one checklist that says which attributes it must and may carry. ENA publishes 48 checklists, each as XML at `https://www.ebi.ac.uk/ena/browser/api/xml/<id>`; the submission names the checklist in the sample's attributes (`ENA-CHECKLIST`), which the profile holds in `Sample.checklist`. A sample that names none is registered against the default, `ERC000011`.
+
+| Checklist | For | Attributes | Mandatory |
+|-----------|-----|------------|-----------|
+| ERC000011 | default | 30 | collection date, country or sea |
+| ERC000028 | prokaryotic pathogen | 20 | isolation source, host health state, host scientific name, isolate, collection date, country or sea |
+| ERC000033 | virus pathogen | 36 | 10, among them host, host health state, isolate, collection date, country or sea |
+| ERC000037 | plant | 99 | developmental stage, plant structure, growth medium, isolation and growth condition, latitude, longitude, collection date, country or sea |
+| ERC000035 | crop plant, enhanced annotation | 36 | 2 |
+| ERC000022 | GSC MIxS soil | 109 | 10 |
+| ERC000024 | GSC MIxS water | 134 | 9 |
+| ERC000050 | binned metagenome | 52 | 14 |
+| ERC000053 | Tree of Life | 42 | 10 |
+
+The GSC MIxS family (`ERC000012` to `ERC000025`, `ERC000031`, `ERC000055` to `ERC000058`) covers environments for microbiome studies; the others are ENA's own or a consortium's reporting standard. Across all 48 there are 1,023 distinct attribute names; `collection_date`, `geographic_location_country_andor_sea`, `geographic_location_latitude` and `geographic_location_longitude` appear in nearly every one, so a sample's location and date are effectively universal, while `plant_structure` or `host_health_state` belong to one domain.
+
+A checklist defines four things for each attribute, and ENA validates a submission against all four:
+
+1. **Tier**: `mandatory`, `recommended` or `optional`. A sample missing a mandatory attribute is rejected; a recommended one is asked for but not enforced.
+2. **Allowed values** for a `TEXT_CHOICE_FIELD`: the country-or-sea list (about 290 values), `plant_structure`, `host_health_state` (six values), yes-or-no fields. Of the 3,486 attribute definitions across the 48 checklists, 332 carry such a list.
+3. **Pattern** for a `TEXT_FIELD` that has one: ENA's date formats for `collection_date`, decimal patterns for coordinates, digits for a taxon id.
+4. **Units**: the units an attribute accepts (`depth` in m, `shell_length` in mm), carried in the attribute's units slot.
+
+The attribute name is matched exactly, so a tag written as `plant structure` does not satisfy a checklist asking for `plant_structure`.
+
+**How this maps onto the profile.** The generic objects are the profile's entities, and a checklist attribute is a `SampleAttribute` with the checklist's tag, which is how the importer records them (every column ENA publishes for a sample, see [ENA Integration](../architecture/ena-import.md)) and how the exporter writes them. The profile declares the attributes common to nearly every checklist as fields on `Sample` (`collection_date`, `geographic_location_country`, `lat_lon_latitude`, `lat_lon_longitude`, `isolation_source`, `host`, ...), each with its pattern or vocabulary on the field itself, which is where metaseed expresses such a constraint: there is no checklist mechanism in the specification language, a requirement is a field with `required`, a `pattern` or an `enum`. Which of a checklist's attributes are mandatory is therefore not enforced by the profile today; a submission is validated against its checklist by ENA at submission time. The validation rules below cover the generic part.
 
 ## Validation Rules
 
