@@ -34,6 +34,8 @@ uv run pytest tests/test_version.py
 
 ### Code Quality
 
+A push runs the fast core of the suite before it leaves the machine (`scripts/pre_push_tests.py`: the specification language, validators, models, facade, API and services — about 1,700 tests in a few seconds), plus the duplicate-code check. The pull request's CI runs the whole suite and is the gate for merging, so the full fifteen-minute run is not paid twice per push. A push of a release tag runs the full suite locally, because nothing downstream checks a tag before it is published; `METASEED_PUSH_FULL=1 git push` asks for the full suite on any push. Prefer that to `--no-verify`, which disables every hook. `tests/test_pre_push_runs_the_core_not_the_suite.py` pins this.
+
 Pre-commit hooks run automatically on commit. To run manually:
 
 ```bash
