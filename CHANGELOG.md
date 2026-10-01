@@ -1,5 +1,25 @@
 # Changelog
 
+## v0.56.0 (261001)
+
+### Added
+- **Adapters from outside metaseed.** A package declares a `metaseed.adapters.Plugin` under the entry point group `metaseed.plugins`, carrying its adapters (the same `AdapterInfo` and `Action` declarations, lazily resolved) and optionally a specs directory and an examples directory laid out as metaseed's own. The built-in plugin and every entry point go through one list (`plugins()`, `all_adapters()`), the spec loader and the example lookup read plugin directories, and a plugin that cannot be loaded is named with its reason on the Plugins page and by `metaseed plugin list` rather than silently absent (#285).
+- **Every shipped profile version ships an example dataset**: metabolights 1.0, miappe-htp 1.0, seek 1.0 and seek-ready-template 1.0, 2.0 and 3.0 join the six that had one. A test fails for a profile version without one, and every example is loaded through the web interface's Load Example route (#287).
+- **ENA import asks the Portal for the study record and the analyses**, not only the runs: one request per Portal result (`study`, `read_run`, `analysis`), never one per record. The `ena` profile gains a `StudyAttribute` entity, which the exporter writes as `STUDY_ATTRIBUTES`; the study record fills the Study's description and centre and its other columns become study attributes, recorded once; analyses become `Analysis` entities with their references, files and attributes, so an assembly-only study imports and an imported study round-trips through `analysis.xml`. The study and analysis results take only a study accession, so a run or sample accession is resolved to its study through the runs first. The three Sample fields the Portal never publishes (`common_name`, `geographic_location_region`, `lab_host`) are documented as such (#284).
+- **The ENA profile page describes how ENA structures a submission**: the generic objects and the sample checklists (48 published by ENA; tier, allowed values, pattern and units per attribute), and how the two map onto the profile.
+- **The hub plugin names the SRAM application token** as the hosted hub's credential beside the hub's own token, and the connection check reports what the hub said: a refusal with the hub's reason, and a token the hub could not check because SRAM was unreachable as *not checked*, never as a hub failure.
+- **The fresh-install smoke test runs before release day**: weekly, and on every pull request that changes `pyproject.toml` or `uv.lock`, through one reusable workflow the release also runs (#286).
+
+### Changed
+- **A push runs the core tests, CI runs the suite.** The pre-push hook runs `scripts/pre_push_tests.py`: the specification language, validators, models, facade, API and services in a few seconds; the full suite on a tag push or with `METASEED_PUSH_FULL=1` (#277).
+- **Parsed profiles are shared across loaders**, so validating a dataset parses its profile once rather than per record; a loaded `ProfileSpec` is now a shared instance, so copy it before editing it (#311).
+- `uv.lock` moves past audited vulnerabilities in pyjwt, urllib3, tornado and virtualenv; soupsieve 2.9.
+
+### Fixed
+- **A `uri` field's `pattern` is enforced** by the validation engine; Pydantic cannot apply a regex to `AnyUrl`, so a declared pattern on a URI field was never checked (#312).
+- **Every Excel cell is written as text** by construction: the one cell formatter returns a string for every value, so a stray non-text value cannot reach a sheet (#276).
+- The Selenium suite expects the browser's date control the form has rendered since 260915, and waits for a cell's class instead of sleeping.
+
 ## v0.55.2 (260930)
 
 ### Fixed
