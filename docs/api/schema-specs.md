@@ -614,16 +614,10 @@ Common patterns:
 | `string` | pattern, min_length, max_length, enum |
 | `integer`, `float` | minimum, maximum |
 | `list` | min_items, max_items |
-| `uri`, `ontology_term`, `boolean`, `date`, `datetime`, `entity` | none (field-level) |
+| `uri`, `ontology_term` | pattern, min_length, max_length |
+| `boolean`, `date`, `datetime`, `entity` | none (field-level) |
 
-A field-level `pattern` **constraint** is applied by the model factory only to
-`string` fields — Pydantic cannot compile a regex constraint onto a `uri`
-(`AnyUrl`) field, so declaring one there makes the field reject every value. A
-`pattern` on a `uri`/`ontology_term` field is instead enforced by a **rule** (see
-[Validation Rules](#validation-rules)): the validation engine runs a
-`PatternRule` for such rules, while a rule `pattern` on a `string` field is merged
-onto the field and enforced by Pydantic. A `pattern` rule on a `date`/`datetime`
-field is not enforced (the field's own date parsing applies).
+A `pattern` on a `uri` field, whether declared as a field constraint or as a [validation rule](#validation-rules), is matched against the value as written, for example `urn:uuid:69658110-5216-4e10-95c3-b1bdca2a1e52`. Pydantic cannot apply a regex to its parsed `AnyUrl` type, so the model factory leaves the pattern off the field and the validation engine checks it with a `PatternRule`. On `string` and `ontology_term` fields, which are strings in the model, the pattern is a Pydantic constraint; a rule `pattern` on such a field is merged onto the field. A `pattern` rule on a `date`/`datetime` field is not enforced (the field's own date parsing applies).
 
 ## Relationships
 

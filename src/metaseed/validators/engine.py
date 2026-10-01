@@ -718,6 +718,30 @@ def _identifier_rule(
     return UniqueIdPatternRule(field=field.name)
 
 
+def _uri_pattern_rules(entity_spec: Any, skip: str | None) -> list[ValidationRule]:
+    """Rules for the field-level ``pattern`` constraints on ``uri`` fields.
+
+    The model factory leaves these off the Pydantic field, since a regex cannot
+    be applied to ``AnyUrl`` (#312), so the engine checks the value as written.
+
+    Args:
+        entity_spec: The entity's :class:`EntitySpec`.
+        skip: The identifier field, whose own pattern ``_identifier_rule``
+            already enforces.
+
+    Returns:
+        One :class:`PatternRule` per ``uri`` field declaring a pattern.
+    """
+    return [
+        PatternRule(field=field.name, pattern=field.constraints.pattern)
+        for field in entity_spec.fields
+        if field.type == FieldType.URI
+        and field.constraints is not None
+        and field.constraints.pattern
+        and field.name != skip
+    ]
+
+
 def create_engine_for_entity(
     entity: str,
     version: str = "1.2",
@@ -795,12 +819,17 @@ def build_engine_for_entity(
         if required_fields:
             engine.add_rule(RequiredFieldsRule(fields=required_fields))
 
+        identifier_field = None
         for field in entity_spec.fields:
             if field.name in ("unique_id", "identifier"):
+                identifier_field = field.name
                 rule = _identifier_rule(field, entity, profile_spec)
                 if rule is not None:
                     engine.add_rule(rule)
                 break
+
+        for rule in _uri_pattern_rules(entity_spec, skip=identifier_field):
+            engine.add_rule(rule)
 
     if profile_spec is not None:
         for rule in _profile_rules_for_entity(entity, profile_spec):

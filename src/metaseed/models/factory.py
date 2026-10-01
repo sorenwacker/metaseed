@@ -420,7 +420,9 @@ def _build_field_constraints(field: FieldSpec) -> dict[str, Any]:
     if constraints is None:
         return kwargs
 
-    if constraints.pattern:
+    # Pydantic cannot apply a regex to AnyUrl; the validation engine enforces a
+    # uri pattern instead (engine._uri_pattern_rules).
+    if constraints.pattern and field.type != FieldType.URI:
         kwargs["pattern"] = constraints.pattern
     if constraints.min_length is not None:
         kwargs["min_length"] = constraints.min_length
