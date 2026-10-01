@@ -11,17 +11,6 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from metaseed.facade.core import ProfileFacade
 
-__all__ = [
-    "darwin_core",
-    "dissco",
-    "ena",
-    "isa",
-    "metabolights",
-    "miappe",
-    "miappe_htp",
-    "pride",
-]
-
 
 def miappe(version: str | None = None) -> ProfileFacade:
     """Get MIAPPE profile facade.
@@ -173,3 +162,22 @@ def darwin_core(version: str | None = None) -> ProfileFacade:
     from metaseed.facade.core import ProfileFacade
 
     return ProfileFacade("darwin-core", version)
+
+
+def rembi(version: str | None = None) -> ProfileFacade:
+    """Get REMBI profile facade.
+
+    Args:
+        version: REMBI version. If None, uses the latest available version.
+
+    Returns:
+        ProfileFacade for the REMBI profile.
+
+    Example:
+        >>> from metaseed import rembi
+        >>> r = rembi()
+        >>> r.Study.help()
+    """
+    from metaseed.facade.core import ProfileFacade
+
+    return ProfileFacade("rembi", version)

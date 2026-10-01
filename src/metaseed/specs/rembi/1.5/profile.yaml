@@ -1,0 +1,640 @@
+spec_version: '0.1'
+version: '1.5'
+name: rembi
+display_name: REMBI
+description: 'Recommended Metadata for Biological Images (REMBI 1.5), as the BioImage Archive implements it: a study with
+  its study components, biosamples, specimens and image acquisitions, and the optional image correlation, image analysis and
+  annotation modules. Study components associate one biosample, one specimen and one image acquisition by title, as a BioImage
+  Archive submission does.'
+ontology: fbbi
+root_entity: Study
+validation_rules: []
+entities:
+  Study:
+    description: 'The dataset as a whole: what was imaged and why, who did it, how it is licensed and funded. One per submission;
+      everything else hangs off it.'
+    fields:
+    - name: identifier
+      type: string
+      required: true
+      description: 'The study''s identifier: the BioImage Archive accession once assigned, or a local identifier before submission.'
+      is_identifier: true
+      example: S-BIAD1234
+      tier: required
+    - name: title
+      type: string
+      required: true
+      description: The title for the dataset, shown when search results including the data are listed. At least 25 characters.
+      constraints:
+        min_length: 25
+      is_label: true
+      tier: required
+    - name: description
+      type: string
+      required: true
+      description: Summarises the dataset; the abstract of the associated publication serves. At least 25 characters.
+      constraints:
+        min_length: 25
+      tier: required
+    - name: keywords
+      type: list
+      required: true
+      description: Keywords describing the data, used to aid search and classification.
+      constraints:
+        min_items: 1
+      items: string
+      tier: required
+    - name: private_until_date
+      type: date
+      required: true
+      description: The date until which the dataset stays private in the archive; the release date.
+      tier: required
+    - name: rembi_version
+      type: string
+      required: true
+      description: The REMBI version the metadata follows.
+      constraints:
+        enum:
+        - '1.5'
+      tier: required
+    - name: license
+      type: string
+      required: false
+      description: The license under which the data are available. The BioImage Archive publishes under CC0 by default.
+      options:
+      - CC0
+      - CC BY 4.0
+      tier: optional
+    - name: funding_statement
+      type: string
+      required: false
+      description: A description of how the data generation was funded.
+      tier: optional
+    - name: acknowledgements
+      type: string
+      required: false
+      description: Acknowledgements of people and facilities that are not authors.
+      tier: optional
+    - name: authors
+      type: list
+      required: true
+      description: The people who contributed to the study; at least one.
+      constraints:
+        min_items: 1
+      items: Author
+      owns: true
+      tier: required
+    - name: publications
+      type: list
+      required: false
+      description: Publications associated with the study.
+      items: Publication
+      owns: true
+      tier: optional
+    - name: links
+      type: list
+      required: false
+      description: Links to related content outside the archive.
+      items: Link
+      owns: true
+      tier: optional
+    - name: grant_references
+      type: list
+      required: false
+      description: The grants that funded the data generation.
+      items: GrantReference
+      owns: true
+      tier: optional
+    - name: biosamples
+      type: list
+      required: true
+      description: The biological entities imaged in the study; a study component names the one it used.
+      constraints:
+        min_items: 1
+      items: Biosample
+      owns: true
+      tier: required
+    - name: specimens
+      type: list
+      required: true
+      description: The specimen preparations used in the study; a study component names the one it used.
+      constraints:
+        min_items: 1
+      items: Specimen
+      owns: true
+      tier: required
+    - name: image_acquisitions
+      type: list
+      required: true
+      description: The image acquisition set-ups used in the study; a study component names the one it used.
+      constraints:
+        min_items: 1
+      items: ImageAcquisition
+      owns: true
+      tier: required
+    - name: image_correlations
+      type: list
+      required: false
+      description: How images from different modalities were aligned, where the study correlates them.
+      items: ImageCorrelation
+      owns: true
+      tier: optional
+    - name: image_analyses
+      type: list
+      required: false
+      description: How the images were analysed, where the study includes analysed data.
+      items: ImageAnalysis
+      owns: true
+      tier: optional
+    - name: annotations
+      type: list
+      required: false
+      description: Annotations on the images, where the study includes them.
+      items: Annotation
+      owns: true
+      tier: optional
+    - name: study_components
+      type: list
+      required: true
+      description: 'The study''s components: one per combination of biosample, specimen and image acquisition, each with its
+        image files.'
+      constraints:
+        min_items: 1
+      items: StudyComponent
+      owns: true
+      tier: required
+  Author:
+    description: A person who contributed to the study, with their affiliation. The first author listed is the submitter unless
+      a role says otherwise.
+    fields:
+    - name: study_id
+      type: string
+      required: true
+      description: Reference to parent Study
+      reference: Study.identifier
+    - name: last_name
+      type: string
+      required: true
+      description: Last name.
+      is_label: true
+      tier: required
+    - name: first_name
+      type: string
+      required: true
+      description: First name.
+      tier: required
+    - name: email
+      type: string
+      required: false
+      description: E-mail address.
+      tier: optional
+    - name: orcid
+      type: string
+      required: false
+      description: ORCID identifier, if known, as sixteen digits in four groups.
+      constraints:
+        pattern: ^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$
+      example: 0000-0002-1825-0097
+      tier: recommended
+    - name: role
+      type: string
+      required: false
+      description: The person's role in the study; the submitter by default.
+      options:
+      - submitter
+      - principal investigator
+      - data acquisition
+      - data analysis
+      - corresponding author
+      tier: optional
+    - name: affiliation_name
+      type: string
+      required: true
+      description: The name of the organisation the person is affiliated with.
+      tier: required
+    - name: affiliation_url
+      type: string
+      required: false
+      description: The organisation's identifier as a URL; a ROR identifier is recommended.
+      example: https://ror.org/02e2c7k09
+      tier: recommended
+    - name: affiliation_address
+      type: string
+      required: false
+      description: The organisation's address, where it has no identifier URL.
+      tier: optional
+  Publication:
+    description: A publication associated with the study.
+    fields:
+    - name: study_id
+      type: string
+      required: true
+      description: Reference to parent Study
+      reference: Study.identifier
+    - name: title
+      type: string
+      required: true
+      description: Title of the associated publication.
+      is_label: true
+      tier: required
+    - name: authors
+      type: string
+      required: false
+      description: The publication's authors, as printed.
+      tier: optional
+    - name: doi
+      type: string
+      required: false
+      description: Digital Object Identifier (DOI), without the resolver prefix.
+      constraints:
+        pattern: ^10\.\d{4,9}/\S+$
+      example: 10.1038/s41592-021-01166-8
+      tier: recommended
+    - name: year
+      type: integer
+      required: false
+      description: Year of publication.
+      constraints:
+        minimum: 1900.0
+      tier: optional
+    - name: pubmed_id
+      type: string
+      required: false
+      description: PubMed or PMC identifier.
+      tier: optional
+  Link:
+    description: 'A link to related content outside the archive: a repository, a protocol, a related dataset.'
+    fields:
+    - name: study_id
+      type: string
+      required: true
+      description: Reference to parent Study
+      reference: Study.identifier
+    - name: link_url
+      type: string
+      required: true
+      description: The URL of the linked content.
+      constraints:
+        pattern: ^https?://\S+$
+      is_label: true
+      tier: required
+    - name: link_type
+      type: string
+      required: false
+      description: The type of the link.
+      options:
+      - repository
+      - protocol
+      - related dataset
+      - software
+      - other
+      tier: optional
+    - name: link_description
+      type: string
+      required: false
+      description: The description of the linked content.
+      tier: optional
+  GrantReference:
+    description: 'A grant that funded the data generation: its identifier and the funder.'
+    fields:
+    - name: study_id
+      type: string
+      required: true
+      description: Reference to parent Study
+      reference: Study.identifier
+    - name: identifier
+      type: string
+      required: true
+      description: The grant identifier.
+      is_identifier: true
+      tier: required
+    - name: funder
+      type: string
+      required: true
+      description: The funding body.
+      is_label: true
+      tier: required
+  StudyComponent:
+    description: One combination of biosample, specimen preparation and image acquisition within the study, with the image
+      files it produced. A study has as many components as it has such combinations.
+    fields:
+    - name: study_id
+      type: string
+      required: true
+      description: Reference to parent Study
+      reference: Study.identifier
+    - name: name
+      type: string
+      required: true
+      description: The name of the study component.
+      is_identifier: true
+      tier: required
+    - name: description
+      type: string
+      required: true
+      description: 'An explanation of the study component: what distinguishes it from the others.'
+      tier: required
+    - name: biosample
+      type: string
+      required: true
+      description: The biosample imaged in this component, by its title.
+      reference: Biosample.title
+      tier: required
+    - name: specimen
+      type: string
+      required: true
+      description: The specimen preparation used in this component, by its title.
+      reference: Specimen.title
+      tier: required
+    - name: image_acquisition
+      type: string
+      required: true
+      description: The image acquisition set-up used in this component, by its title.
+      reference: ImageAcquisition.title
+      tier: required
+    - name: image_correlation
+      type: string
+      required: false
+      description: The image correlation this component's images took part in, by its title, where there is one.
+      reference: ImageCorrelation.title
+      tier: optional
+    - name: image_analysis
+      type: string
+      required: false
+      description: The analysis applied to this component's images, by its title, where there is one.
+      reference: ImageAnalysis.title
+      tier: optional
+    - name: files
+      type: list
+      required: false
+      description: 'The image files this component produced: its file list.'
+      items: ImageFile
+      owns: true
+      tier: recommended
+  ImageFile:
+    description: 'One image file of a study component: its name, where it is, and its format. The file list of a BioImage
+      Archive submission.'
+    fields:
+    - name: study_component_id
+      type: string
+      required: true
+      description: Reference to parent StudyComponent
+      reference: StudyComponent.name
+    - name: file_name
+      type: string
+      required: true
+      description: The file's name, unique within the study.
+      is_identifier: true
+      tier: required
+    - name: file_location
+      type: string
+      required: false
+      description: 'Where the file is: its path in the submission, or a URL.'
+      tier: recommended
+    - name: file_format
+      type: string
+      required: false
+      description: The file's format.
+      options:
+      - OME-TIFF
+      - OME-Zarr
+      - TIFF
+      - CZI
+      - ND2
+      - LIF
+      - PNG
+      - JPEG
+      - HDF5
+      - other
+      tier: recommended
+    - name: description
+      type: string
+      required: false
+      description: What the file shows, where the name does not say.
+      tier: optional
+  Biosample:
+    description: 'The biological entity that was imaged: the organism, what part or scale of it, and the variables that were
+      altered or varied.'
+    fields:
+    - name: study_id
+      type: string
+      required: true
+      description: Reference to parent Study
+      reference: Study.identifier
+    - name: title
+      type: string
+      required: true
+      description: A short name for the biosample, by which a study component refers to it.
+      is_identifier: true
+      example: HeLa cells, wild type
+      tier: required
+    - name: organism_scientific_name
+      type: string
+      required: true
+      description: Scientific name of the organism.
+      example: Homo sapiens
+      tier: required
+    - name: organism_common_name
+      type: string
+      required: false
+      description: Common name of the organism.
+      example: human
+      tier: optional
+    - name: ncbi_taxon
+      type: string
+      required: true
+      description: NCBI Taxonomy identifier of the organism.
+      constraints:
+        pattern: ^(NCBITaxon:)?\d+$
+      example: NCBITaxon:9606
+      tier: required
+    - name: biological_entity
+      type: string
+      required: true
+      description: 'What is being imaged: the part or scale of the organism, such as a cell line, a tissue or an organelle.'
+      tier: required
+    - name: description
+      type: string
+      required: false
+      description: High-level description of the sample.
+      tier: optional
+    - name: intrinsic_variables
+      type: list
+      required: false
+      description: Intrinsic, for example genetic, alterations of the sample.
+      items: string
+      tier: optional
+    - name: extrinsic_variables
+      type: list
+      required: false
+      description: External treatments applied to the sample, such as a reagent.
+      items: string
+      tier: optional
+    - name: experimental_variables
+      type: list
+      required: false
+      description: What is intentionally varied between multiple images.
+      items: string
+      tier: optional
+  Specimen:
+    description: How a biosample was grown and prepared for imaging.
+    fields:
+    - name: study_id
+      type: string
+      required: true
+      description: Reference to parent Study
+      reference: Study.identifier
+    - name: title
+      type: string
+      required: true
+      description: A short name for the specimen preparation, by which a study component refers to it.
+      is_identifier: true
+      tier: required
+    - name: sample_preparation
+      type: string
+      required: true
+      description: How the sample was prepared for imaging.
+      tier: required
+    - name: growth_protocol
+      type: string
+      required: false
+      description: 'How the specimen was grown: cell line culture, crosses, plant growth.'
+      tier: optional
+  ImageAcquisition:
+    description: 'How the images were captured: the imaging method, the instrument and its settings.'
+    fields:
+    - name: study_id
+      type: string
+      required: true
+      description: Reference to parent Study
+      reference: Study.identifier
+    - name: title
+      type: string
+      required: true
+      description: A short name for the image acquisition set-up, by which a study component refers to it.
+      is_identifier: true
+      tier: required
+    - name: imaging_method
+      type: ontology_term
+      required: true
+      description: What method was used to generate the images, as a term of the Biological Imaging Methods Ontology (FBbi).
+      ontologies:
+      - fbbi
+      example: FBbi:00000243
+      tier: required
+    - name: imaging_instrument
+      type: string
+      required: true
+      description: Description of the instrument used to capture the images.
+      tier: required
+    - name: image_acquisition_parameters
+      type: string
+      required: true
+      description: How the images were acquired, including instrument settings and parameters.
+      tier: required
+  ImageCorrelation:
+    description: How images from different modalities were aligned to each other, where the study correlates them.
+    fields:
+    - name: study_id
+      type: string
+      required: true
+      description: Reference to parent Study
+      reference: Study.identifier
+    - name: title
+      type: string
+      required: true
+      description: A short name for the correlation, by which a study component refers to it.
+      is_identifier: true
+      tier: required
+    - name: spatial_and_temporal_alignment
+      type: string
+      required: true
+      description: Method used to correlate images from different modalities.
+      tier: required
+    - name: fiducials_used
+      type: string
+      required: true
+      description: Features from the correlated datasets used for colocalisation.
+      tier: required
+    - name: transformation_matrix
+      type: string
+      required: true
+      description: The correlation transforms, or the name of the file that holds them.
+      tier: required
+  ImageAnalysis:
+    description: How the images were analysed, where the study includes analysed data.
+    fields:
+    - name: study_id
+      type: string
+      required: true
+      description: Reference to parent Study
+      reference: Study.identifier
+    - name: title
+      type: string
+      required: true
+      description: A short name for the analysis, by which a study component refers to it.
+      is_identifier: true
+      tier: required
+    - name: analysis_overview
+      type: string
+      required: true
+      description: How image analysis was carried out.
+      tier: required
+  Annotation:
+    description: 'Annotations on the images: what was annotated, how, by what criteria and how completely (the MIFA module
+      the BioImage Archive attaches to REMBI).'
+    fields:
+    - name: study_id
+      type: string
+      required: true
+      description: Reference to parent Study
+      reference: Study.identifier
+    - name: title
+      type: string
+      required: true
+      description: A short name for the annotation set.
+      is_identifier: true
+      tier: required
+    - name: annotation_overview
+      type: string
+      required: true
+      description: What was annotated and why.
+      tier: required
+    - name: annotation_method
+      type: string
+      required: true
+      description: 'How the annotations were made: manually, by which tool, by which model.'
+      tier: required
+    - name: annotation_type
+      type: list
+      required: false
+      description: The kinds of annotation in the set.
+      items: string
+      options:
+      - class labels
+      - bounding boxes
+      - counts
+      - derived annotations
+      - geometrical annotations
+      - graphs
+      - point annotations
+      - segmentation mask
+      - tracks
+      - weak annotations
+      - other
+      tier: recommended
+    - name: annotation_criteria
+      type: string
+      required: false
+      description: The criteria by which annotations were assigned.
+      tier: optional
+    - name: annotation_coverage
+      type: string
+      required: false
+      description: How much of the data is annotated.
+      tier: optional
+    - name: annotation_confidence_level
+      type: string
+      required: false
+      description: How confident the annotations are, and how that was assessed.
+      tier: optional

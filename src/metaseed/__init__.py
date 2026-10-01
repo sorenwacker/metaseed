@@ -52,6 +52,7 @@ from metaseed.facade import (
     miappe,
     miappe_htp,
     pride,
+    rembi,
 )
 
 # Legacy/internal APIs
@@ -109,5 +110,6 @@ __all__ = [
     "miappe",
     "miappe_htp",
     "pride",
+    "rembi",
     "validate",
 ]

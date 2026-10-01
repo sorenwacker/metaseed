@@ -1,0 +1,126 @@
+# REMBI 1.5 example: light-sheet time-lapse imaging of zebrafish heart development
+# Fictional study; names, mailboxes and identifiers are placeholders.
+
+identifier: S-BIAD-EXAMPLE-ZEBRAFISH-HEART
+title: Light-sheet imaging of zebrafish heart development from 24 to 72 hours post fertilisation
+description: >-
+  Whole-heart light-sheet volumes of live zebrafish embryos recorded every ten
+  minutes between 24 and 72 hours post fertilisation, with a segmentation of
+  the myocardium and manual annotation of the looping stage.
+keywords:
+  - zebrafish
+  - heart development
+  - light-sheet microscopy
+  - time lapse
+private_until_date: "2027-01-01"
+rembi_version: "1.5"
+license: CC-BY-4.0
+funding_statement: Funded by the Example Research Council, grant ERC-EX-2024-001.
+acknowledgements: The Example Institute imaging facility maintained the microscope.
+
+authors:
+  - study_id: S-BIAD-EXAMPLE-ZEBRAFISH-HEART
+    last_name: Example
+    first_name: Mira
+    email: m.example@example.org
+    orcid: "0000-0002-0000-0001"
+    role: corresponding author
+    affiliation_name: Example Institute of Developmental Biology
+    affiliation_url: https://institute.example.org
+    affiliation_address: Example Street 1, 2600 AA Delft, Netherlands
+  - study_id: S-BIAD-EXAMPLE-ZEBRAFISH-HEART
+    last_name: Placeholder
+    first_name: Tomas
+    role: data acquisition
+    affiliation_name: Example Institute of Developmental Biology
+
+publications:
+  - study_id: S-BIAD-EXAMPLE-ZEBRAFISH-HEART
+    title: Cardiac looping in zebrafish followed by light-sheet microscopy
+    authors: Example M, Placeholder T
+    doi: "10.1234/example.2025.004"
+    year: 2025
+    pubmed_id: "40000004"
+
+links:
+  - study_id: S-BIAD-EXAMPLE-ZEBRAFISH-HEART
+    link_url: https://github.com/example-org/heart-segmentation
+    link_type: analysis code
+    link_description: The segmentation pipeline applied to every volume.
+
+grant_references:
+  - study_id: S-BIAD-EXAMPLE-ZEBRAFISH-HEART
+    identifier: ERC-EX-2024-001
+    funder: Example Research Council
+
+biosamples:
+  - study_id: S-BIAD-EXAMPLE-ZEBRAFISH-HEART
+    title: Zebrafish embryo heart
+    organism_scientific_name: Danio rerio
+    organism_common_name: zebrafish
+    ncbi_taxon: NCBITaxon:7955
+    biological_entity: heart
+    description: Transgenic embryos expressing a myocardial fluorescent reporter.
+    intrinsic_variables:
+      - transgenic line myl7 reporter
+    extrinsic_variables:
+      - incubation temperature 28.5 C
+    experimental_variables:
+      - developmental stage
+
+specimens:
+  - study_id: S-BIAD-EXAMPLE-ZEBRAFISH-HEART
+    title: Agarose-mounted live embryo
+    sample_preparation: Embryos dechorionated at 22 hours post fertilisation and embedded in 1 percent low-melt agarose in a glass capillary.
+    growth_protocol: Embryos raised at 28.5 C in embryo medium with 0.003 percent PTU to suppress pigmentation.
+
+image_acquisitions:
+  - study_id: S-BIAD-EXAMPLE-ZEBRAFISH-HEART
+    title: Light-sheet time lapse
+    imaging_method: FBbi:00000369
+    imaging_instrument: Example light-sheet microscope with two 10x illumination objectives
+    image_acquisition_parameters: 20x 1.0 NA detection objective, 2 um z step, 488 nm excitation, one volume every 10 minutes for 48 hours.
+
+image_correlations:
+  - study_id: S-BIAD-EXAMPLE-ZEBRAFISH-HEART
+    title: Registration of the two camera views
+    spatial_and_temporal_alignment: The two detection views were registered rigidly per time point and fused.
+    fiducials_used: Fluorescent beads embedded in the agarose.
+    transformation_matrix: Stored per time point in registration.json beside the volumes.
+
+image_analyses:
+  - study_id: S-BIAD-EXAMPLE-ZEBRAFISH-HEART
+    title: Myocardium segmentation
+    analysis_overview: The myocardium was segmented in every volume with a trained 3D U-Net; volumes and surface area were measured per time point.
+
+annotations:
+  - study_id: S-BIAD-EXAMPLE-ZEBRAFISH-HEART
+    title: Looping stage
+    annotation_overview: The cardiac looping stage was annotated manually for every time point.
+    annotation_method: Two annotators scored each time point independently; disagreements were resolved together.
+    annotation_type:
+      - developmental stage label
+    annotation_criteria: Stages follow the standard zebrafish staging series.
+    annotation_coverage: Every time point of every embryo.
+    annotation_confidence_level: Agreement between annotators was 96 percent.
+
+study_components:
+  - study_id: S-BIAD-EXAMPLE-ZEBRAFISH-HEART
+    name: Heart time lapse
+    description: The fused, registered time-lapse volumes of every embryo, with the segmentation masks.
+    biosample: Zebrafish embryo heart
+    specimen: Agarose-mounted live embryo
+    image_acquisition: Light-sheet time lapse
+    image_correlation: Registration of the two camera views
+    image_analysis: Myocardium segmentation
+    files:
+      - study_component_id: Heart time lapse
+        file_name: embryo01_fused.ome.zarr
+        file_location: volumes/embryo01/
+        file_format: OME-Zarr
+        description: Fused volumes of embryo 1, one per time point.
+      - study_component_id: Heart time lapse
+        file_name: embryo01_myocardium_mask.ome.zarr
+        file_location: masks/embryo01/
+        file_format: OME-Zarr
+        description: Myocardium segmentation masks of embryo 1.
