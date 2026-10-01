@@ -79,7 +79,10 @@ from metaseed import (
 - Underscore-prefixed names and members.
 - The adapter internals. The supported entry point for each adapter is its
   documented `import_accession` / export function under the corresponding extra,
-  not the modules beneath it.
+  not the modules beneath it. The types a plugin declares itself with —
+  `metaseed.adapters.Plugin`, `AdapterInfo`, `Action` and `ConfigField` — and
+  the entry point group `metaseed.plugins` are public (see
+  [Integration Adapters](../architecture/integration-adapters.md)).
 
 ## Extras
 

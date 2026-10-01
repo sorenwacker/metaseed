@@ -58,6 +58,45 @@ carries an `input_label` and `input_placeholder` for the prompt. Without them a
 host would have to hard-code per-adapter wording, which is the coupling the
 registry exists to remove.
 
+## Adapters from outside metaseed
+
+A profile can come from outside metaseed (`SpecLoader` reads the user specs
+directory beside the built-in one), and so can an adapter. A package declares a
+plugin under the entry point group `metaseed.plugins`:
+
+```toml
+[project.entry-points."metaseed.plugins"]
+demo = "demo_plugin.registry:PLUGIN"
+```
+
+The entry point names a `metaseed.adapters.Plugin`: its `adapters` (the same
+`AdapterInfo` and `Action` declarations the built-in list uses, with the same
+lazy `"module:function"` refs), and optionally a `specs_dir` and an
+`examples_dir`, laid out as metaseed's own are
+(`specs/<profile>/<version>/profile.yaml`,
+`examples/<profile>/<version>/*.yaml`). The three parts of one integration —
+the profile, the adapter and the example — travel in one package, and the
+profile loads, the example is offered, and the actions appear in every host
+beside the built-in ones.
+
+The registry module an entry point points at must stay light: loading it is
+what enumerating adapters costs, so it declares and imports nothing heavy, and
+the implementation behind each `ref` is imported only when the action runs —
+the same promise `metaseed.adapters` makes for the built-in list.
+
+`metaseed.adapters.plugins()` is the one list: the built-in plugin (metaseed's
+own adapters, specs and examples) followed by every discovered entry point, so
+there is one code path rather than a built-in one and a plugin one.
+`all_adapters()`, `actions_for_profile()`, `find_action()`, the spec loader's
+search path and the example lookup are all derived from it. Discovery runs once
+per process and is cached; `reload()` discards the cache.
+
+A plugin that cannot be loaded is reported, never silently absent: an entry
+point whose module fails to import, whose object is not a `Plugin`, or whose
+adapter reuses a key already registered is listed by `broken_plugins()` with
+its reason, shown on the Plugins page and printed by `metaseed plugin list`.
+The other plugins still load.
+
 ## Running an import
 
 Resolving the action is only half of an import: the returned `MetaseedClient`
