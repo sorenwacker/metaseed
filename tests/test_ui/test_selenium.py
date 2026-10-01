@@ -1097,12 +1097,12 @@ class TestAutoPopulatedFields:
             "arguments[0].dispatchEvent(new Event('input', {bubbles: true}));",
             lat_input,
         )
-        time.sleep(0.5)
-
-        # Verify the input has the 'invalid' class (red background)
-        classes = lat_input.get_attribute("class")
-        assert "invalid" in classes, (
-            f"Invalid latitude should be highlighted. Classes: {classes}"
+        # Wait for the class, not a fixed delay: on a slow runner the input
+        # event had not been handled 0.5 s later and the assertion read the
+        # classes too early.
+        WebDriverWait(browser, 5).until(
+            lambda d: "invalid" in (lat_input.get_attribute("class") or ""),
+            "Invalid latitude should be highlighted",
         )
 
         # Now enter a valid latitude
@@ -1112,12 +1112,9 @@ class TestAutoPopulatedFields:
             "arguments[0].dispatchEvent(new Event('input', {bubbles: true}));",
             lat_input,
         )
-        time.sleep(0.5)
-
-        # Verify the 'invalid' class is removed
-        classes = lat_input.get_attribute("class")
-        assert "invalid" not in classes, (
-            f"Valid latitude should not be highlighted. Classes: {classes}"
+        WebDriverWait(browser, 5).until(
+            lambda d: "invalid" not in (lat_input.get_attribute("class") or ""),
+            "A valid latitude should not stay highlighted",
         )
 
 
