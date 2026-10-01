@@ -106,6 +106,7 @@ nav:
       - MIAPPE-HTP: profiles/miappe-htp.md
       - MetaboLights: profiles/metabolights.md
       - PRIDE: profiles/pride.md
+      - REMBI: profiles/rembi.md
   - Discussion:
       - ISA vs MIAPPE: discussion/comparison.md
       - Entity Relationships: discussion/entity-relationships.md
