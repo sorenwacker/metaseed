@@ -70,7 +70,7 @@ metaseed spec save draft.yaml
 ### Pushing to a hub
 
 ```bash
-metaseed plugin config hub --set url=https://hub.example.org --set token=msh_...
+metaseed plugin config hub --set url=https://hub.example.org --set token=...
 metaseed hub check
 metaseed hub push-dataset test-drought --plan   # what would happen
 metaseed hub push-dataset test-drought          # do it
