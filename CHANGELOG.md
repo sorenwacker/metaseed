@@ -13,7 +13,7 @@
 ### Changed
 - **A push runs the core tests, CI runs the suite.** The pre-push hook runs `scripts/pre_push_tests.py`: the specification language, validators, models, facade, API and services in a few seconds; the full suite on a tag push or with `METASEED_PUSH_FULL=1` (#277).
 - **Parsed profiles are shared across loaders**, so validating a dataset parses its profile once rather than per record; a loaded `ProfileSpec` is now a shared instance, so copy it before editing it (#311).
-- `uv.lock` moves past audited vulnerabilities in pyjwt, urllib3, tornado and virtualenv; soupsieve 2.9.
+- `uv.lock` moves past audited vulnerabilities in pyjwt, urllib3, tornado, virtualenv, jupyter-server and jupyterlab; soupsieve 2.9.
 
 ### Fixed
 - **A `uri` field's `pattern` is enforced** by the validation engine; Pydantic cannot apply a regex to `AnyUrl`, so a declared pattern on a URI field was never checked (#312).
