@@ -17,30 +17,45 @@ client.serialize()                         # the ena dataset
 ```
 
 Given an ENA accession (study, sample, experiment, or run), it fetches every
-column ENA publishes for those runs — in one request — and builds a Study with
-its Samples, Experiments, Runs, and File references.
+column ENA publishes for the study, its runs and its analyses — three requests,
+never one per record — and builds a Study with its Samples, Experiments, Runs,
+Analyses and File references.
 
 ## Completeness
 
-The import asks the Portal for `fields=all`, so a single `filereport` request
-returns all ~196 `read_run` columns rather than a chosen subset. Every non-empty
-column then reaches the dataset:
+The Portal publishes a study under three results, and the `ena` profile
+describes all three, so the import asks for all three with `fields=all`:
+
+| Portal result | Rows | Becomes |
+| --- | --- | --- |
+| `result=study` | one, the study record | the Study's `description` and `center_name`, and a `StudyAttribute` per remaining column (`study_name`, `keywords`, `breed`, `tax_division`, `geo_accession`, `parent_study_accession`, `secondary_study_alias`, `secondary_study_center_name`, ...) |
+| `result=read_run` | one per run, all ~196 columns | Sample, Experiment, Run, File and their attributes |
+| `result=analysis` | one per analysis (assembly, variant call, annotation, ...) | Analysis, its File references and `AnalysisAttribute`s; a Sample the runs did not already carry |
+
+Three requests per import, whatever the study's size: one accession never
+becomes N requests. A study with no analyses is answered by the Portal with an
+empty list, which the import records as no Analysis entities; `import_accession`
+logs the three counts so an empty answer is visibly an answer, not a query that
+was never made.
+
+Every non-empty column of every row then reaches the dataset:
 
 - a column with a declared field in the `ena` profile fills that field;
-- a column without one becomes an attribute (`SampleAttribute`,
-  `ExperimentAttribute` or `RunAttribute`) whose `tag` is the ENA column name and
-  whose `value` is ENA's value verbatim;
-- an empty column is an absence, not a value, and is skipped.
+- a column without one becomes an attribute (`StudyAttribute`,
+  `SampleAttribute`, `ExperimentAttribute`, `RunAttribute` or
+  `AnalysisAttribute`) whose `tag` is the ENA column name and whose `value` is
+  ENA's value verbatim;
+- an empty column is an absence, not a value, and is skipped;
+- a fact is recorded once: a column the study row already supplied is not
+  written again from a run or an analysis row.
 
-Nothing published for the run is discarded. Which entity owns a column is ENA's
-answer rather than metaseed's: the columns ENA lists under `result=sample` belong
-to the Sample, an explicit set of library and sequencing descriptors belongs to
-the Experiment, and everything else belongs to the Run. The Run is the catch-all,
-so a column ENA adds after this release is carried as a run attribute rather than
-dropped. The `ena` profile declares no study-level attribute entity, so the few
-study-level columns without a declared field (`study_alias`,
-`secondary_study_accession`, `secondary_project`) are carried as run attributes
-too.
+Which entity owns a column is ENA's answer rather than metaseed's: the columns
+ENA lists only under `result=study` belong to the Study, the columns it lists
+under `result=sample` belong to the Sample, an explicit set of library and
+sequencing descriptors belongs to the Experiment, and everything else belongs to
+the row's own subject — the Run for a run row, the Analysis for an analysis row.
+That subject is the catch-all, so a column ENA adds after this release is carried
+as an attribute rather than dropped.
 
 Of the 37 fields the `ena` profile declares on `Sample`, 34 have a `read_run`
 column and are filled when ENA publishes them. Measured against **PRJNA273563**
@@ -70,16 +85,14 @@ profile declares a date. A value that cannot be read is left unset rather than
 written in the wrong type — a string in a date field survives the mapper but
 fails on export, where the SRA schema types the element.
 
-### What one request cannot reach
+### What the Portal does not publish
 
-- **Analyses.** Assemblies and variant calls are a different Portal result
-  (`result=analysis`), so the `Analysis` entity is not populated by import.
-- **Nine study-level columns** (`study_description`, `study_name`, `keywords`,
-  `breed`, `tax_division`, `geo_accession`, `parent_study_accession`,
-  `secondary_study_alias`, `secondary_study_center_name`) exist only under
-  `result=study`.
-- **Three declared `Sample` fields** have no `read_run` column at all:
-  `common_name`, `geographic_location_region` and `lab_host`.
+Three declared `Sample` fields — `common_name`, `geographic_location_region`
+and `lab_host` — have no column under any Portal result (`read_run`, `sample`,
+`study` or `analysis`; the column lists are recorded from ENA's `returnFields`
+endpoint in `tests/test_ena/fixtures/`). An import leaves them empty; they are
+there for datasets written by hand or exported to ENA, where the SRA schema
+accepts them as sample attributes.
 
 ## The seam
 
@@ -87,13 +100,14 @@ fails on export, where the SRA schema types the element.
 parts:
 
 - **`metaseed.ena.client.EnaClient`** — calls the ENA Portal `filereport`
-  endpoint (`result=read_run`, `fields=all`) and returns one record per run, each
-  carrying every column ENA publishes. Sends a descriptive `User-Agent` (EBI
-  etiquette) and accepts an injected `httpx.Client` for testing. Requires `httpx`
-  (the `metaseed[ena]` extra).
-- **`metaseed.ena.mapper.build_dataset`** — pure and network-free: routes each
-  column of each row to a declared `ena`-profile field, or to an attribute on the
-  entity ENA says owns that column. Importable without the extra.
+  endpoint once per result (`study`, `read_run`, `analysis`, each with
+  `fields=all`) and returns the rows, each carrying every column ENA publishes.
+  Sends a descriptive `User-Agent` (EBI etiquette) and accepts an injected
+  `httpx.Client` for testing. Requires `httpx` (the `metaseed[ena]` extra).
+- **`metaseed.ena.mapper.build_dataset`** — pure and network-free: takes the
+  three row sets and routes each column of each row to a declared `ena`-profile
+  field, or to an attribute on the entity ENA says owns that column. Importable
+  without the extra.
 - **`metaseed.ena.import_accession`** — wires the two together.
 
 ## Design choices
@@ -129,7 +143,7 @@ files and authenticating to Webin are out of scope).
 
 | Document | ENA set | Built from |
 | --- | --- | --- |
-| `study.xml` | `STUDY_SET` | Study, with `STUDY_LINKS` from its ProjectLinks |
+| `study.xml` | `STUDY_SET` | Study, with `STUDY_LINKS` from its ProjectLinks and `STUDY_ATTRIBUTES` from its StudyAttributes |
 | `sample.xml` | `SAMPLE_SET` | Sample, with `SAMPLE_ATTRIBUTES` from its SampleAttributes |
 | `experiment.xml` | `EXPERIMENT_SET` | Experiment, with `EXPERIMENT_ATTRIBUTES` |
 | `run.xml` | `RUN_SET` | Run, its Files, and `RUN_ATTRIBUTES` |
@@ -139,7 +153,8 @@ files and authenticating to Webin are out of scope).
 Only documents with content are emitted.
 
 **Every entity the profile defines is exported.** The attribute objects
-(`SampleAttribute`, `ExperimentAttribute`, `RunAttribute`, `AnalysisAttribute`)
+(`StudyAttribute`, `SampleAttribute`, `ExperimentAttribute`, `RunAttribute`,
+`AnalysisAttribute`)
 each carry a `tag`, a `value` and an optional `units`, and become the
 `TAG`/`VALUE`/`UNITS` of an attribute under the object that owns them. This
 matters beyond fidelity: ENA registers samples against a *checklist*, and a
@@ -187,10 +202,14 @@ other people's: there they are encrypted at rest rather than kept in a file.
 
 ## Testing
 
-The mapper is tested from a recorded `read_run` fixture; the client is tested
-with an `httpx` mock transport (request shape + JSON parsing); the exporter is
-tested by parsing its output back with `xml.etree`. One test asserts the
-completeness rule directly — every non-empty column of a row reaches the dataset,
-as a field or as an attribute — so a column added to the fixture cannot be
-silently ignored. One live smoke test against
-the real ENA API is marked `network` and excluded from the default run.
+The mapper is tested from recorded `study`, `read_run` and `analysis` fixtures
+(PRJEB29581, a metagenome study with assemblies, for the latter two); the client
+is tested with an `httpx` mock transport (request shape + JSON parsing); the
+exporter is tested by parsing its output back with `xml.etree`. One test asserts
+the completeness rule directly for run rows and for analysis rows — every
+non-empty column reaches the dataset, as a field or as an attribute — so a column
+added to a fixture cannot be silently ignored. One round-trip test imports the
+fixtures and exports them, and fails if an analysis does not come out in
+`analysis.xml`: the exporter could emit a document the importer never produced,
+and nothing said so. One live smoke test against the real ENA API is marked
+`network` and excluded from the default run.

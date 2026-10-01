@@ -19,6 +19,7 @@ flowchart TB
     end
 
     subgraph attributes["Attributes"]
+        STA[StudyAttribute]
         SA[SampleAttribute]
         EA[ExperimentAttribute]
         RA[RunAttribute]
@@ -44,6 +45,7 @@ flowchart TB
 
     %% Attribute relationships
     STU --> PL
+    STU --> STA
     SAM --> SA
     EXP --> EA
     RUN --> RA
@@ -55,7 +57,7 @@ flowchart TB
 
     class STU,SAM,EXP,RUN,ANA core
     class FILE file
-    class SA,EA,RA,AA,PL attr
+    class STA,SA,EA,RA,AA,PL attr
 ```
 
 ## Entities
@@ -64,7 +66,7 @@ flowchart TB
 |----------|----------|
 | **Core Objects** | Study, Sample, Experiment, Run, Analysis |
 | **Data Files** | File |
-| **Attributes** | SampleAttribute, ExperimentAttribute, RunAttribute, AnalysisAttribute, ProjectLink |
+| **Attributes** | StudyAttribute, SampleAttribute, ExperimentAttribute, RunAttribute, AnalysisAttribute, ProjectLink |
 
 ## Key Concepts
 
@@ -184,6 +186,12 @@ erDiagram
         string checksum
     }
 
+    StudyAttribute {
+        string tag
+        string value
+        string units
+    }
+
     SampleAttribute {
         string tag
         string value
@@ -200,6 +208,7 @@ erDiagram
     Study ||--o{ Experiment : experiments
     Study ||--o{ Analysis : analyses
     Study ||--o{ ProjectLink : project_links
+    Study ||--o{ StudyAttribute : study_attributes
     Experiment ||--o{ Run : runs
     Experiment }o--|| Study : study_ref
     Experiment }o--|| Sample : sample_ref
