@@ -54,6 +54,7 @@ def _counts(client: MetaseedClient) -> Counter[str]:
 def test_the_example_still_exercises_every_entity_type(client: MetaseedClient) -> None:
     """Guard the guard: these tests mean nothing if the example thins out."""
     counts = _counts(client)
+    assert counts["StudyAttribute"] >= 1
     assert counts["SampleAttribute"] >= 1
     assert counts["ExperimentAttribute"] >= 1
     assert counts["RunAttribute"] >= 1
@@ -69,6 +70,7 @@ def test_every_entity_type_reaches_the_xml(
     xml = "\n".join(documents.values())
     # An entity is represented when a value only it supplies appears in the XML.
     probes = {
+        "StudyAttribute": "tag",
         "SampleAttribute": "tag",
         "ExperimentAttribute": "tag",
         "RunAttribute": "tag",
