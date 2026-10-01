@@ -1,0 +1,1244 @@
+spec_version: '0.1'
+version: '2.0'
+name: health-ri-core
+display_name: Health-RI Core Metadata Schema
+description: Health-RI core metadata schema v2.0.3 used by the Dutch National Health Data Catalogue, based on DCAT-AP 3, DCAT-AP
+  NL and HealthDCAT-AP. Generated from the SHACL shapes (Formalisation(shacl)/Core/PiecesShape) and Documents/Metadata_CoreGenericHealth_v2.xlsx
+  of https://github.com/Health-RI/health-ri-metadata (commit acec135). Cardinality follows the SHACL shapes; tier follows
+  the Excel requirement level.
+ontology: dcat
+root_entity: Catalog
+validation_rules:
+- name: kind_email_format
+  description: has_email must be a plain email address
+  applies_to:
+  - Kind
+  field: has_email
+  pattern: ^[^@\s:]+@[^@\s]+\.[^@\s]+$
+- name: agent_email_format
+  description: email must be a plain email address
+  applies_to:
+  - Agent
+  field: email
+  pattern: ^[^@\s:]+@[^@\s]+\.[^@\s]+$
+entities:
+  Catalog:
+    ontology_term: dcat:Catalog
+    description: A curated collection of metadata about resources (dcat:Catalog). Root of the Health-RI core model.
+    fields:
+    - name: identifier
+      type: string
+      required: true
+      description: Local identifier of this resource within the metaseed dataset, used by child entities to reference it;
+        typically the IRI of the resource. Not a property of the Health-RI model.
+      constraints:
+        pattern: ^\S+$
+      is_identifier: true
+      is_label: true
+    - name: applicable_legislation
+      type: list
+      required: false
+      description: The legislation that mandates the creation or management of the Catalog.
+      ontology_term: dcatap:applicableLegislation
+      items: uri
+      tier: recommended
+    - name: catalog
+      type: list
+      required: false
+      description: This property serves to connect the different catalogs with each other.
+      ontology_term: dcat:catalog
+      items: uri
+      tier: recommended
+    - name: contact_point
+      type: entity
+      required: true
+      description: |-
+        This property points to a contact point (department or person) that can answer questions about the catalogue. Details on how to describe these are provided under class vcard:Kind.
+        Whenever possible, use a general contact information (for example from a department) instead of contact information of an individual.
+      ontology_term: dcat:contactPoint
+      items: Kind
+      dcat: dcat:contactPoint
+      tier: required
+    - name: creator
+      type: list
+      required: false
+      description: Note that the Health-RI model diverges from DCAT-AP NL here, which reduces the maximum number of creators
+        to 1. The Health-RI model allows specification of multiple creators of a catalogue.
+      ontology_term: dct:creator
+      items: Agent
+      tier: recommended
+    - name: dataset
+      type: list
+      required: false
+      description: Each catalog contains one or more datasets. This property serves to link datasets to a catalogue. Therefore,
+        a dataset is always contained inside a catalogue.
+      ontology_term: dcat:dataset
+      items: Dataset
+      tier: required
+    - name: dataset_series
+      type: list
+      required: false
+      description: Dataset series listed in the catalogue. DCAT 3 models dcat:DatasetSeries as a subclass of dcat:Dataset,
+        so these are linked with dcat:dataset.
+      ontology_term: dcat:dataset
+      items: DatasetSeries
+      tier: recommended
+    - name: description
+      type: list
+      required: true
+      description: Briefly describe the catalog and what it contains. You can repeat this in multiple languages.
+      ontology_term: dct:description
+      constraints:
+        min_items: 1
+      items: string
+      dcat: dct:description
+      tier: required
+    - name: geographical_coverage
+      type: list
+      required: false
+      description: 'The EU Vocabularies Name Authority Lists must be used for continents, countries and places that are in
+        those lists; if a particular location is not in one of the mentioned Named Authority Lists, Geonames URIs must be
+        used. For districts or neighbourhoods in NL, the Dutch vocab can be used. Controlled vocabulary: EU Vocabularies Continents
+        Named Authority List'
+      ontology_term: dct:spatial
+      items: uri
+      tier: recommended
+    - name: has_part
+      type: list
+      required: false
+      description: |-
+        Use this property to establish another catalogue in this catalogue.
+        Note that deeply nested structures should be avoided, and can currently not be displayed in the National Health Data Catalogue.
+      ontology_term: dct:hasPart
+      items: uri
+      tier: recommended
+    - name: homepage
+      type: uri
+      required: false
+      description: The home page of the catalogue, if available.
+      ontology_term: foaf:homepage
+      tier: recommended
+    - name: language
+      type: list
+      required: false
+      description: |-
+        The value of this property must be an IRI from the provided controlled vocabulary.
+        For example: http://publications.europa.eu/resource/authority/language/NLD Controlled vocabulary: http://publications.europa.eu/resource/authority/language
+      ontology_term: dct:language
+      items: uri
+      tier: recommended
+    - name: license
+      type: uri
+      required: false
+      description: 'The licence under which the catalogue (with resource description) is made available. In the description
+        of distributions and data services the licences of that resources are taken up. Controlled vocabulary: https://definities.geostandaarden.nl/dcat-ap-nl/nl/'
+      ontology_term: dct:license
+      dcat: dct:license
+      tier: recommended
+    - name: modification_date
+      type: datetime
+      required: false
+      description: The most recent date on which the Catalogue was modified.
+      ontology_term: dct:modified
+      tier: recommended
+    - name: publisher
+      type: entity
+      required: true
+      description: 'The organisation or individual that is holder of the intellectual property rights of a dataset. For more
+        details about the publisher, see the class Agent. Example: Radboudumc.'
+      ontology_term: dct:publisher
+      items: Agent
+      dcat: dct:publisher
+      tier: required
+    - name: release_date
+      type: datetime
+      required: false
+      description: The date of formal issuance (e.g., publication) of the Catalogue.
+      ontology_term: dct:issued
+      dcat: dct:issued
+      tier: recommended
+    - name: rights
+      type: uri
+      required: false
+      description: The rights statement should be a free-text statement placed at a web-accessible location such that the
+        value of this property is the IRI pointing to that statement.
+      ontology_term: dct:rights
+      tier: recommended
+    - name: service
+      type: list
+      required: false
+      description: Some datasets may have real-time Data Services (e.g., Beacon API counting individuals). IT teams should
+        define the relationship between the catalog and the Data Service via this property. While crucial for interoperability,
+        this property is not relevant for end-users to collect.
+      ontology_term: dcat:service
+      items: DataService
+      tier: recommended
+    - name: temporal_coverage
+      type: list
+      required: false
+      description: A temporal period that the Catalogue covers, if applicable.
+      ontology_term: dct:temporal
+      items: PeriodOfTime
+      tier: recommended
+    - name: theme_taxonomy
+      type: list
+      required: false
+      description: This property refers to a knowledge organisation system used to classify the Catalogue's Datasets. It must
+        have at least the value NAL:data-theme as this is the mandatory controlled vocabulary for dcat:theme.
+      ontology_term: dcat:themeTaxonomy
+      items: uri
+      tier: recommended
+    - name: title
+      type: list
+      required: true
+      description: 'Provide a unique title for your catalog, which can be repeated in multiple languages. Example: Healthy
+        Brain Study.'
+      ontology_term: dct:title
+      constraints:
+        min_items: 1
+      items: string
+      dcat: dct:title
+      tier: required
+  Dataset:
+    ontology_term: dcat:Dataset
+    description: A collection of data, published or curated by a single agent (dcat:Dataset), extended with HealthDCAT-AP
+      properties.
+    fields:
+    - name: catalog_id
+      type: string
+      required: true
+      description: Reference to parent Catalog
+      reference: Catalog.identifier
+    - name: access_rights
+      type: uri
+      required: true
+      description: 'Information that indicates whether the Dataset is publicly accessible, has access restrictions or is not
+        public. This property must be filled with a value from a controlled vocabulary. Controlled vocabulary: http://publications.europa.eu/resource/authority/access-right'
+      ontology_term: dct:accessRights
+      constraints:
+        enum:
+        - http://publications.europa.eu/resource/authority/access-right/PUBLIC
+        - http://publications.europa.eu/resource/authority/access-right/RESTRICTED
+        - http://publications.europa.eu/resource/authority/access-right/NON_PUBLIC
+      tier: required
+    - name: analytics
+      type: list
+      required: false
+      description: An analytics distribution of the dataset
+      ontology_term: healthdcatap:analytics
+      items: uri
+      tier: recommended
+    - name: applicable_legislation
+      type: list
+      required: true
+      description: The legislation that mandates the creation or management of the Dataset. The default value is the ELI of
+        the EHDS.
+      ontology_term: dcatap:applicableLegislation
+      constraints:
+        min_items: 1
+      items: uri
+      tier: required
+    - name: code_values
+      type: list
+      required: false
+      description: Health classifications and their codes associated with the dataset
+      ontology_term: healthdcatap:hasCodeValues
+      items: uri
+      tier: recommended
+    - name: coding_system
+      type: list
+      required: false
+      description: 'Coding systems in use (ex: ICD-10-CM, DGRs, SNOMED=CT, ...)'
+      ontology_term: healthdcatap:hasCodingSystem
+      items: uri
+      tier: recommended
+    - name: conforms_to
+      type: list
+      required: false
+      description: An implementing rule or other specification
+      ontology_term: dct:conformsTo
+      items: uri
+      tier: recommended
+    - name: contact_point
+      type: entity
+      required: true
+      description: Contact information that can be used for sending comments about the Dataset.
+      ontology_term: dcat:contactPoint
+      items: Kind
+      tier: required
+    - name: creator
+      type: list
+      required: true
+      description: An entity responsible for producing the dataset.
+      ontology_term: dct:creator
+      items: Agent
+      tier: required
+    - name: description
+      type: list
+      required: true
+      description: A free-text account of the Dataset.
+      ontology_term: dct:description
+      constraints:
+        min_items: 1
+      items: string
+      tier: required
+    - name: distribution
+      type: list
+      required: false
+      description: An available Distribution for the Dataset.
+      ontology_term: dcat:distribution
+      items: Distribution
+      tier: recommended
+    - name: documentation
+      type: list
+      required: false
+      description: A page or document about this Dataset.
+      ontology_term: foaf:page
+      items: uri
+      tier: recommended
+    - name: frequency
+      type: uri
+      required: false
+      description: 'The frequency at which the Dataset is updated. This property must be filled with a value from a controlled
+        vocabulary. Controlled vocabulary: http://publications.europa.eu/resource/authority/frequency'
+      ontology_term: dct:accrualPeriodicity
+      tier: recommended
+    - name: geographical_coverage
+      type: list
+      required: false
+      description: 'A geographic region that is covered by the Dataset. This property must be filled with a value from a controlled
+        vocabulary. Controlled vocabulary: EU Vocabularies Continents Named Authority List'
+      ontology_term: dct:spatial
+      items: uri
+      tier: recommended
+    - name: has_version
+      type: list
+      required: false
+      description: A related Dataset that is a version, edition, or adaptation of the described Dataset.
+      ontology_term: dcat:hasVersion
+      items: uri
+      tier: recommended
+    - name: health_theme
+      type: list
+      required: false
+      description: A category of the Dataset or tag describing the Dataset.
+      ontology_term: healthdcatap:healthTheme
+      items: uri
+      tier: recommended
+    - name: identifier
+      type: string
+      required: true
+      description: The main identifier for the Dataset, e.g. the URI or other unique identifier in the context of the Catalogue.
+      ontology_term: dct:identifier
+      constraints:
+        pattern: ^\S+$
+      is_identifier: true
+      is_label: true
+      tier: required
+    - name: in_series
+      type: list
+      required: false
+      description: A dataset series of which the dataset is part.
+      ontology_term: dcat:inSeries
+      items: uri
+      tier: recommended
+    - name: is_referenced_by
+      type: list
+      required: false
+      description: A related resource, such as a publication, that references, cites, or otherwise points to the dataset.
+      ontology_term: dct:isReferencedBy
+      items: uri
+      tier: recommended
+    - name: keyword
+      type: list
+      required: true
+      description: A keyword or tag describing the Dataset.
+      ontology_term: dcat:keyword
+      constraints:
+        min_items: 1
+      items: string
+      tier: required
+    - name: language
+      type: list
+      required: false
+      description: 'A language of the Dataset.This property must be filled with a value from a controlled vocabulary. Controlled
+        vocabulary: http://publications.europa.eu/resource/authority/language'
+      ontology_term: dct:language
+      items: uri
+      tier: recommended
+    - name: legal_basis
+      type: list
+      required: false
+      description: 'The legal basis used to justify processing of personal data. The legal basis can be provided as a value
+        from the dpv taxonomy and should be provided via IRI, for example https://w3id.org/dpv#Consent Controlled vocabulary:
+        https://w3c.github.io/dpv/2.0/dpv/modules/legal_basis.html#vocab-legal-basis'
+      ontology_term: dpv:hasLegalBasis
+      items: uri
+      tier: recommended
+    - name: maximum_typical_age
+      type: integer
+      required: false
+      description: Maximum typical age of the population within the dataset
+      ontology_term: healthdcatap:maxTypicalAge
+      constraints:
+        minimum: 0
+      tier: recommended
+    - name: minimum_typical_age
+      type: integer
+      required: false
+      description: Minimum typical age of the population within the dataset
+      ontology_term: healthdcatap:minTypicalAge
+      constraints:
+        minimum: 0
+      tier: recommended
+    - name: modification_date
+      type: datetime
+      required: false
+      description: The most recent date on which the Dataset was changed or modified.
+      ontology_term: dct:modified
+      tier: recommended
+    - name: number_of_records
+      type: integer
+      required: false
+      description: Size of the dataset in terms of the number of records
+      ontology_term: healthdcatap:numberOfRecords
+      constraints:
+        minimum: 0
+      tier: recommended
+    - name: number_of_unique_individuals
+      type: integer
+      required: false
+      description: Number of records for unique individuals.
+      ontology_term: healthdcatap:numberOfUniqueIndividuals
+      constraints:
+        minimum: 0
+      tier: recommended
+    - name: other_identifier
+      type: list
+      required: false
+      description: A secondary identifier of the Dataset, such as MAST/ADS17, DataCite18, DOI19, EZID20 or W3ID21
+      ontology_term: adms:identifier
+      items: Identifier
+      tier: recommended
+    - name: personal_data
+      type: list
+      required: false
+      description: 'Key elements that represent an individual in the dataset. Values can be picked from the dpv taxonomy,
+        for example https://w3id.org/dpv/dpv-pd#Gender Controlled vocabulary: https://w3c.github.io/dpv/2.0/pd/'
+      ontology_term: dpv:hasPersonalData
+      items: uri
+      tier: recommended
+    - name: population_coverage
+      type: list
+      required: false
+      description: A definition of the population within the dataset
+      ontology_term: healthdcatap:populationCoverage
+      items: string
+      tier: recommended
+    - name: publisher
+      type: entity
+      required: true
+      description: An entity (organisation) responsible for making the Dataset available.
+      ontology_term: dct:publisher
+      items: Agent
+      tier: required
+    - name: purpose
+      type: list
+      required: false
+      description: 'Indicates association with Purpose. One (or many) category or sub-category of the purposes can be chosen
+        from the taxonomy provided by dpv and should be provided via IRI, for example https://w3id.org/dpv#ScientificResearch
+        Controlled vocabulary: https://w3c.github.io/dpv/2.1/dpv/#vocab-purposes'
+      ontology_term: dpv:hasPurpose
+      items: uri
+      tier: recommended
+    - name: qualified_attribution
+      type: list
+      required: false
+      description: An Agent having some form of responsibility for the resource
+      ontology_term: prov:qualifiedAttribution
+      items: Attribution
+      tier: recommended
+    - name: qualified_relation
+      type: list
+      required: false
+      description: A description of a relationship with another resource
+      ontology_term: dcat:qualifiedRelation
+      items: Relationship
+      tier: recommended
+    - name: quality_annotation
+      type: list
+      required: false
+      description: A statement related to quality of the Dataset, including rating, quality certificate, feedback that can
+        be associated to the dataset
+      ontology_term: dqv:hasQualityAnnotation
+      items: QualityCertificate
+      tier: recommended
+    - name: release_date
+      type: datetime
+      required: false
+      description: The date of formal issuance (e.g., publication) of the Dataset.
+      ontology_term: dct:issued
+      tier: recommended
+    - name: retention_period
+      type: entity
+      required: false
+      description: A temporal period which the dataset is available for secondary use
+      ontology_term: healthdcatap:retentionPeriod
+      items: PeriodOfTime
+      tier: recommended
+    - name: sample
+      type: list
+      required: false
+      description: A sample distribution of the dataset
+      ontology_term: adms:sample
+      items: uri
+      tier: recommended
+    - name: source
+      type: list
+      required: false
+      description: A related dataset from which the described dataset is derived
+      ontology_term: dct:source
+      items: uri
+      tier: recommended
+    - name: status
+      type: uri
+      required: false
+      description: 'The status of a dataset. This property can be filled with a value from a controlled vocabulary. Controlled
+        vocabulary: https://publications.europa.eu/resource/authority/dataset-status'
+      ontology_term: adms:status
+      tier: recommended
+    - name: temporal_coverage
+      type: list
+      required: false
+      description: A temporal period that the Dataset covers.
+      ontology_term: dct:temporal
+      items: PeriodOfTime
+      tier: recommended
+    - name: temporal_resolution
+      type: string
+      required: false
+      description: The minimum time period resolvable in the dataset.
+      ontology_term: dcat:temporalResolution
+      constraints:
+        pattern: ^-?P((\d+Y(\d+M)?(\d+D)?|\d+M(\d+D)?|\d+D)(T(\d+H(\d+M)?(\d+(\.\d+)?S)?|\d+M(\d+(\.\d+)?S)?|\d+(\.\d+)?S))?|T(\d+H(\d+M)?(\d+(\.\d+)?S)?|\d+M(\d+(\.\d+)?S)?|\d+(\.\d+)?S))$
+      tier: recommended
+    - name: theme
+      type: list
+      required: true
+      description: 'A category of the Dataset. This property must be filled with a value from a controlled vocabulary. The
+        default value of this property is http://publications.europa.eu/resource/authority/data-theme/HEAL from the controlled
+        vocabulary. Controlled vocabulary: Dataset Theme Vocabulary'
+      ontology_term: dcat:theme
+      constraints:
+        min_items: 1
+      items: uri
+      tier: required
+    - name: title
+      type: list
+      required: true
+      description: A name given to the Dataset.
+      ontology_term: dct:title
+      constraints:
+        min_items: 1
+      items: string
+      tier: required
+    - name: type
+      type: list
+      required: false
+      description: 'A type of the Dataset.This property must be filled with a value from a controlled vocabulary. Controlled
+        vocabulary: Dataset-type authority table'
+      ontology_term: dct:type
+      items: uri
+      tier: recommended
+    - name: version
+      type: string
+      required: false
+      description: The version indicator (name or identifier) of a resource.
+      ontology_term: dcat:version
+      tier: recommended
+    - name: version_notes
+      type: list
+      required: false
+      description: A description of the differences between this version and a previous version of the Dataset
+      ontology_term: adms:versionNotes
+      items: string
+      tier: recommended
+    - name: was_generated_by
+      type: list
+      required: false
+      description: An activity that generated, or provides the business context for, the creation of the dataset.
+      ontology_term: prov:wasGeneratedBy
+      items: uri
+      tier: recommended
+  Distribution:
+    ontology_term: dcat:Distribution
+    description: A specific representation of a dataset, e.g. a downloadable file or an access URL (dcat:Distribution).
+    fields:
+    - name: dataset_id
+      type: string
+      required: true
+      description: Reference to parent Dataset
+      reference: Dataset.identifier
+    - name: identifier
+      type: string
+      required: true
+      description: Local identifier of this resource within the metaseed dataset, used by child entities to reference it;
+        typically the IRI of the resource. Not a property of the Health-RI model.
+      constraints:
+        pattern: ^\S+$
+      is_identifier: true
+      is_label: true
+    - name: access_service
+      type: uri
+      required: false
+      description: A data service that gives access to the distribution of the dataset.
+      ontology_term: dcat:accessService
+      tier: recommended
+    - name: access_url
+      type: uri
+      required: true
+      description: The resource at the access URL may contain information about how to get the Dataset.
+      ontology_term: dcat:accessURL
+      tier: required
+    - name: applicable_legislation
+      type: list
+      required: false
+      description: The legislation that is applicable to this resource.
+      ontology_term: dcatap:applicableLegislation
+      items: uri
+      tier: recommended
+    - name: byte_size
+      type: integer
+      required: true
+      description: The size of a distribution in bytes.
+      ontology_term: dcat:byteSize
+      constraints:
+        minimum: 0
+      tier: required
+    - name: checksum
+      type: entity
+      required: false
+      description: The checksum is related to the downloadURL.
+      ontology_term: spdx:checksum
+      items: Checksum
+      tier: recommended
+    - name: compression_format
+      type: uri
+      required: false
+      description: 'It SHOULD be expressed using a media type as defined in the official register of media types managed by
+        IANA. Controlled vocabulary: IANA Media Types'
+      ontology_term: dcat:compressFormat
+      tier: recommended
+    - name: description
+      type: list
+      required: false
+      description: This property can be repeated for parallel language versions of the description.
+      ontology_term: dct:description
+      items: string
+      tier: recommended
+    - name: documentation
+      type: list
+      required: false
+      description: A homepage for some thing.
+      ontology_term: foaf:page
+      items: uri
+      tier: recommended
+    - name: download_url
+      type: uri
+      required: false
+      description: The URL of the downloadable file in a given format. E.g., CSV file or RDF file. The format is indicated
+        by the distribution's dcterms:format and/or dcat:mediaType.
+      ontology_term: dcat:downloadURL
+      tier: recommended
+    - name: format
+      type: uri
+      required: true
+      description: 'The file format, physical medium, or dimensions of the resource. Controlled vocabulary: http://publications.europa.eu/resource/authority/file-type'
+      ontology_term: dct:format
+      tier: required
+    - name: language
+      type: list
+      required: false
+      description: 'This property can be repeated if the metadata is provided in multiple languages. Controlled vocabulary:
+        http://publications.europa.eu/resource/authority/language'
+      ontology_term: dct:language
+      items: uri
+      tier: recommended
+    - name: license
+      type: uri
+      required: true
+      description: 'A legal document giving official permission to do something with the resource. Controlled vocabulary:
+        https://definities.geostandaarden.nl/dcat-ap-nl/nl/'
+      ontology_term: dct:license
+      tier: required
+    - name: linked_schemas
+      type: list
+      required: false
+      description: An established standard to which the described resource conforms.
+      ontology_term: dct:conformsTo
+      items: uri
+      tier: recommended
+    - name: media_type
+      type: uri
+      required: false
+      description: 'The media type of the distribution as defined by IANA. Controlled vocabulary: IANA Media Types'
+      ontology_term: dcat:mediaType
+      tier: recommended
+    - name: modification_date
+      type: datetime
+      required: false
+      description: Date on which the resource was changed.
+      ontology_term: dct:modified
+      tier: recommended
+    - name: packaging_format
+      type: uri
+      required: false
+      description: 'It SHOULD be expressed using a media type as defined in the official register of media types managed by
+        IANA. Controlled vocabulary: IANA Media Types'
+      ontology_term: dcat:packageFormat
+      tier: recommended
+    - name: release_date
+      type: datetime
+      required: false
+      description: The date the dataset distribution was issued.
+      ontology_term: dct:issued
+      tier: recommended
+    - name: retention_period
+      type: entity
+      required: false
+      description: A temporal period which the dataset is available for secondary use.
+      ontology_term: healthdcatap:retentionperiod
+      items: PeriodOfTime
+      tier: recommended
+    - name: rights
+      type: uri
+      required: true
+      description: A statement that concerns all rights not addressed in fields License or Rights, such as copyright statements.
+        Everything that is not covered with licece
+      ontology_term: dct:rights
+      tier: required
+    - name: status
+      type: uri
+      required: false
+      description: 'The status of the distribution in the context of maturity lifecycle. Controlled vocabulary: EU Vocabularies
+        Distribution Status'
+      ontology_term: adms:status
+      constraints:
+        enum:
+        - http://publications.europa.eu/resource/authority/distribution-status/COMPLETED
+        - http://publications.europa.eu/resource/authority/distribution-status/DEVELOP
+        - http://publications.europa.eu/resource/authority/distribution-status/WITHDRAWN
+        - http://publications.europa.eu/resource/authority/distribution-status/DEPRECATED
+      tier: recommended
+    - name: temporal_resolution
+      type: string
+      required: false
+      description: Minimum time period resolvable in the dataset.
+      ontology_term: dcat:temporalResolution
+      constraints:
+        pattern: ^-?P((\d+Y(\d+M)?(\d+D)?|\d+M(\d+D)?|\d+D)(T(\d+H(\d+M)?(\d+(\.\d+)?S)?|\d+M(\d+(\.\d+)?S)?|\d+(\.\d+)?S))?|T(\d+H(\d+M)?(\d+(\.\d+)?S)?|\d+M(\d+(\.\d+)?S)?|\d+(\.\d+)?S))$
+      tier: recommended
+    - name: title
+      type: list
+      required: true
+      description: This property can be repeated for parallel language versions of the title.
+      ontology_term: dct:title
+      constraints:
+        min_items: 1
+      items: string
+      tier: recommended
+  DataService:
+    ontology_term: dcat:DataService
+    description: A collection of operations accessible through an interface that provide access to datasets (dcat:DataService).
+    fields:
+    - name: catalog_id
+      type: string
+      required: true
+      description: Reference to parent Catalog
+      reference: Catalog.identifier
+    - name: access_rights
+      type: uri
+      required: true
+      description: 'Information that indicates whether the Dataset is publicly accessible, has access restrictions or is not
+        public. Use one of the following values (:public, :restricted, :non-public). Controlled vocabulary: http://publications.europa.eu/resource/authority/access-right'
+      ontology_term: dct:accessRights
+      tier: required
+    - name: applicable_legislation
+      type: list
+      required: false
+      description: The legislation that mandates the creation or management of the Data Service.
+      ontology_term: dcatap:applicableLegislation
+      items: uri
+      tier: recommended
+    - name: conforms_to
+      type: list
+      required: false
+      description: The standards referred here SHOULD describe the Data Service and not the data it serves. The latter is
+        provided by the dataset with which this Data Service is connected. For instance the data service adheres to the OGC
+        WFS API standard, while the associated dataset adheres to the INSPIRE Address data model.
+      ontology_term: dct:conformsTo
+      items: uri
+      tier: recommended
+    - name: contact_point
+      type: entity
+      required: true
+      description: Contact information that can be used for sending comments about the Data Service.
+      ontology_term: dcat:contactPoint
+      items: Kind
+      tier: required
+    - name: creator
+      type: list
+      required: false
+      description: An entity responsible for making the resource.
+      ontology_term: dct:creator
+      items: Agent
+      tier: recommended
+    - name: rights
+      type: list
+      required: false
+      description: Information about rights held in and over the resource.
+      ontology_term: dct:rights
+      items: uri
+      tier: recommended
+    - name: description
+      type: list
+      required: true
+      description: A free-text account of the Data Service.
+      ontology_term: dct:description
+      constraints:
+        min_items: 1
+      items: string
+      tier: required
+    - name: endpoint_description
+      type: uri
+      required: true
+      description: The property gives specific details of the actual endpoint instances, while dct:conformsTo is used to indicate
+        the general standard or specification that the endpoints implement.
+      ontology_term: dcat:endpointDescription
+      tier: required
+    - name: endpoint_url
+      type: uri
+      required: true
+      description: The root location or primary endpoint of the service (an IRI).
+      ontology_term: dcat:endpointURL
+      tier: required
+    - name: format
+      type: list
+      required: false
+      description: 'The structure that can be returned by querying the endpointURL. Controlled vocabulary: http://publications.europa.eu/resource/authority/file-type'
+      ontology_term: dct:format
+      items: uri
+      tier: recommended
+    - name: hvd_category
+      type: list
+      required: false
+      description: A data category defined in the High Value Dataset Implementing Regulation.
+      ontology_term: dcatap:hvdCategory
+      items: uri
+      tier: recommended
+    - name: identifier
+      type: string
+      required: true
+      description: An unambiguous reference to the resource within a given context.
+      ontology_term: dct:identifier
+      constraints:
+        pattern: ^\S+$
+      is_identifier: true
+      is_label: true
+      tier: required
+    - name: keyword
+      type: list
+      required: false
+      description: A keyword or tag describing the Data Service.
+      ontology_term: dcat:keyword
+      items: string
+      tier: recommended
+    - name: landing_page
+      type: list
+      required: false
+      description: It is intended to point to a landing page at the original data service provider, not to a page on a site
+        of a third party, such as an aggregator.
+      ontology_term: dcat:landingPage
+      items: uri
+      tier: recommended
+    - name: language
+      type: list
+      required: false
+      description: 'A language of the resource. Controlled vocabulary: http://publications.europa.eu/resource/authority/language'
+      ontology_term: dct:language
+      items: uri
+      tier: recommended
+    - name: license
+      type: uri
+      required: true
+      description: 'A licence under which the Data service is made available. Controlled vocabulary: https://definities.geostandaarden.nl/dcat-ap-nl/nl/'
+      ontology_term: dct:license
+      tier: required
+    - name: modification_date
+      type: datetime
+      required: false
+      description: Date on which the resource was changed.
+      ontology_term: dct:modified
+      tier: recommended
+    - name: other_identifier
+      type: list
+      required: false
+      description: Links a resource to an adms:Identifier class.
+      ontology_term: adms:identifier
+      items: Identifier
+      tier: recommended
+    - name: publisher
+      type: entity
+      required: true
+      description: An entity (organisation) responsible for making the Data Service available.
+      ontology_term: dct:publisher
+      items: Agent
+      tier: required
+    - name: serves_dataset
+      type: list
+      required: false
+      description: This property refers to a collection of data that this data service can distribute.
+      ontology_term: dcat:servesDataset
+      items: uri
+      tier: recommended
+    - name: theme
+      type: list
+      required: true
+      description: 'A Data Service may be associated with multiple themes. Controlled vocabulary: Dataset Theme Vocabulary'
+      ontology_term: dcat:theme
+      constraints:
+        min_items: 1
+      items: uri
+      tier: required
+    - name: title
+      type: list
+      required: true
+      description: A name given to the Data Service.
+      ontology_term: dct:title
+      constraints:
+        min_items: 1
+      items: string
+      tier: required
+  DatasetSeries:
+    ontology_term: dcat:DatasetSeries
+    description: A collection of datasets that are published separately but share characteristics that group them (dcat:DatasetSeries).
+    fields:
+    - name: catalog_id
+      type: string
+      required: true
+      description: Reference to parent Catalog
+      reference: Catalog.identifier
+    - name: identifier
+      type: string
+      required: true
+      description: Local identifier of this resource within the metaseed dataset, used by child entities to reference it;
+        typically the IRI of the resource. Not a property of the Health-RI model.
+      constraints:
+        pattern: ^\S+$
+      is_identifier: true
+      is_label: true
+    - name: applicable_legislation
+      type: list
+      required: false
+      description: The legislation that mandates the creation or management of the Dataset Series.
+      ontology_term: dcatap:applicableLegislation
+      items: uri
+      tier: recommended
+    - name: contact_point
+      type: list
+      required: true
+      description: Contact information that can be used for sending comments about the Dataset Series.
+      ontology_term: dcat:contactPoint
+      items: Kind
+      tier: required
+    - name: description
+      type: list
+      required: true
+      description: A free-text account of the Dataset Series.
+      ontology_term: dct:description
+      constraints:
+        min_items: 1
+      items: string
+      tier: required
+    - name: frequency
+      type: uri
+      required: false
+      description: 'The frequency at which the Dataset Series is updated. Controlled vocabulary: http://publications.europa.eu/resource/authority/frequency'
+      ontology_term: dct:accrualPeriodicity
+      tier: recommended
+    - name: geographical_coverage
+      type: list
+      required: false
+      description: 'A geographic region that is covered by the Dataset Series. Controlled vocabulary: EU Vocabularies Continents
+        Named Authority List'
+      ontology_term: dct:spatial
+      items: uri
+      tier: recommended
+    - name: modification_date
+      type: datetime
+      required: false
+      description: The most recent date on which the Dataset Series was changed or modified.
+      ontology_term: dct:modified
+      tier: recommended
+    - name: publisher
+      type: entity
+      required: false
+      description: An entity (organisation) responsible for ensuring the coherency of the Dataset Series.
+      ontology_term: dct:publisher
+      items: Agent
+      tier: recommended
+    - name: release_date
+      type: datetime
+      required: false
+      description: The date of formal issuance (e.g., publication) of the Dataset Series.
+      ontology_term: dct:issued
+      tier: recommended
+    - name: temporal_coverage
+      type: list
+      required: false
+      description: A temporal period that the Dataset Series covers.
+      ontology_term: dct:temporal
+      items: PeriodOfTime
+      tier: recommended
+    - name: title
+      type: list
+      required: true
+      description: A name given to the Dataset Series.
+      ontology_term: dct:title
+      constraints:
+        min_items: 1
+      items: string
+      tier: required
+  Kind:
+    ontology_term: vcard:Kind
+    description: Contact information for a contact point (vcard:Kind).
+    fields:
+    - name: contact_page
+      type: list
+      required: false
+      description: A webpage that either allows to make contact (i.e. a webform) or the information contains how to get into
+        contact.
+      ontology_term: vcard:hasURL
+      items: uri
+      tier: recommended
+    - name: has_email
+      type: string
+      required: true
+      description: An email address via which contact can be made, e.g. info@example.org.
+      ontology_term: vcard:hasEmail
+      constraints:
+        pattern: ^[^@\s:]+@[^@\s]+\.[^@\s]+$
+      is_identifier: true
+      tier: required
+    - name: formatted_name
+      type: string
+      required: true
+      description: The full name of the contact point.
+      ontology_term: vcard:fn
+      is_label: true
+      tier: required
+  PeriodOfTime:
+    ontology_term: dct:PeriodOfTime
+    description: An interval of time delimited by a start and an end date (dct:PeriodOfTime).
+    fields:
+    - name: end_date
+      type: datetime
+      required: false
+      description: The end of the period.
+      ontology_term: dcat:endDate
+      tier: recommended
+    - name: start_date
+      type: datetime
+      required: false
+      description: The start of the period.
+      ontology_term: dcat:startDate
+      is_label: true
+      tier: recommended
+  Identifier:
+    ontology_term: adms:Identifier
+    description: A secondary identifier with its issuing agency (adms:Identifier).
+    fields:
+    - name: notation
+      type: string
+      required: true
+      description: A string that is an identifier in the context of the identifier scheme referenced by its datatype.
+      ontology_term: skos:notation
+      is_label: true
+      tier: required
+    - name: schema_agency
+      type: string
+      required: false
+      description: The name of the agency that issued the identifier.
+      ontology_term: adms:schemaAgency
+      tier: recommended
+  Attribution:
+    ontology_term: prov:Attribution
+    description: A qualified relation between a resource and an agent with a specific role (prov:Attribution).
+    fields:
+    - name: dataset_id
+      type: string
+      required: true
+      description: Reference to parent Dataset
+      reference: Dataset.identifier
+    - name: identifier
+      type: string
+      required: true
+      description: Local identifier of this resource within the metaseed dataset, used by child entities to reference it;
+        typically the IRI of the resource. Not a property of the Health-RI model.
+      constraints:
+        pattern: ^\S+$
+      is_identifier: true
+      is_label: true
+    - name: agent
+      type: entity
+      required: false
+      description: The agent that has a specific role with the described resource.
+      ontology_term: prov:agent
+      items: Agent
+      tier: recommended
+    - name: role
+      type: uri
+      required: false
+      description: 'The nature of the relationship between the agent and the described resource, as indicated by a value from
+        the controlled vocabulary. Controlled vocabulary: https://standards.iso.org/iso/19115/resources/Codelists/gml/CI_RoleCode.xml
+        or https://jats4r.niso.org/credit-taxonomy/#table-1-credit-terms-and-urls'
+      ontology_term: dcat:hadRole
+      tier: recommended
+  Agent:
+    ontology_term: foaf:Agent
+    description: An organisation or person acting as publisher or creator (foaf:Agent).
+    fields:
+    - name: name
+      type: list
+      required: true
+      description: A name of the agent.
+      ontology_term: foaf:name
+      constraints:
+        min_items: 1
+      items: string
+      tier: required
+    - name: agent_identifier
+      type: list
+      required: true
+      description: 'A unique identifier of the agent. Controlled vocabulary: ORCID: https://orcid.org/ ROR: https://ror.org/
+        ISNI: https://isni.org/page/search-database/ TOOI: https://standaarden.overheid.nl/tooi/waardelijsten/ Wikidata: https://www.wikidata.org/wiki/Wikidata:Main_Page'
+      ontology_term: dct:identifier
+      constraints:
+        min_items: 1
+      items: string
+      is_identifier: true
+      tier: required
+    - name: email
+      type: string
+      required: true
+      description: An email address via which contact can be made, e.g. info@example.org.
+      ontology_term: foaf:mbox
+      constraints:
+        pattern: ^[^@\s:]+@[^@\s]+\.[^@\s]+$
+      tier: required
+    - name: homepage
+      type: uri
+      required: true
+      description: A webpage that either allows to make contact (i.e. a webform) or the information contains how to get into
+        contact.
+      ontology_term: foaf:homepage
+      tier: required
+    - name: country
+      type: list
+      required: false
+      description: 'Spatial characteristics of the resource. Controlled vocabulary: https://publications.europa.eu/resource/authority/country'
+      ontology_term: dct:spatial
+      items: uri
+      tier: recommended
+    - name: publisher_note
+      type: string
+      required: false
+      description: A description of the publisher activities
+      ontology_term: healthdcatap:publishernote
+      tier: recommended
+    - name: publisher_type
+      type: uri
+      required: false
+      description: 'A type of organisation that makes the Dataset available Controlled vocabulary: https://raw.githubusercontent.com/SEMICeu/ADMS-AP/master/purl.org/ADMS_SKOS_v1.00.rdf'
+      ontology_term: healthdcatap:publishertype
+      tier: recommended
+    - name: type
+      type: uri
+      required: false
+      description: 'A type of the agent that makes the Catalogue or Dataset available Controlled vocabulary: https://raw.githubusercontent.com/SEMICeu/ADMS-AP/master/purl.org/ADMS_SKOS_v1.00.rdf'
+      ontology_term: dct:type
+      tier: recommended
+  Relationship:
+    ontology_term: dcat:Relationship
+    description: A qualified relation between a dataset and another resource with a specific role (dcat:Relationship).
+    fields:
+    - name: dataset_id
+      type: string
+      required: true
+      description: Reference to parent Dataset
+      reference: Dataset.identifier
+    - name: had_role
+      type: list
+      required: true
+      description: 'The nature of the relationship, as indicated via a value from the controlled vocabulary. Controlled vocabulary:
+        IANA Link Relations: https://www.iana.org/assignments/link-relations/link-relations.xhtml or ISO Codelist: https://standards.iso.org/iso/19115/resources/Codelists/gml/DS_AssociationTypeCode.xml'
+      ontology_term: dcat:hadRole
+      constraints:
+        min_items: 1
+      items: uri
+      tier: required
+    - name: relation
+      type: list
+      required: true
+      description: A resource with a relationship to the cataloged resource.
+      ontology_term: dct:relation
+      constraints:
+        min_items: 1
+      items: uri
+      tier: required
+  QualityCertificate:
+    ontology_term: dqv:QualityCertificate
+    description: A certificate that attests the quality of a dataset (dqv:QualityCertificate).
+    fields:
+    - name: dataset_id
+      type: string
+      required: true
+      description: Reference to parent Dataset
+      reference: Dataset.identifier
+    - name: target
+      type: uri
+      required: false
+      description: The identifier of the described resource targetet by the quality certificate.
+      ontology_term: oa:hasTarget
+      tier: recommended
+    - name: body
+      type: uri
+      required: false
+      description: The (web)location of the quality certificate.
+      ontology_term: oa:hasBody
+      is_identifier: true
+      is_label: true
+      tier: recommended
+  Checksum:
+    ontology_term: spdx:Checksum
+    description: A digest of a distribution file produced by a named algorithm (spdx:Checksum).
+    fields:
+    - name: distribution_id
+      type: string
+      required: true
+      description: Reference to parent Distribution
+      reference: Distribution.identifier
+    - name: algorithm
+      type: uri
+      required: true
+      description: 'The algorithm used to produce the subject Checksum Controlled vocabulary: https://spdx.org/rdf/terms/#d4e2129'
+      ontology_term: spdx:algorithm
+      tier: required
+    - name: checksum_value
+      type: string
+      required: true
+      description: A lower case hexadecimal encoded digest value produced using a specific algorithm
+      ontology_term: spdx:checksumValue
+      is_identifier: true
+      is_label: true
+      tier: required

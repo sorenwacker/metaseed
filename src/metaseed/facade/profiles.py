@@ -181,3 +181,22 @@ def rembi(version: str | None = None) -> ProfileFacade:
     from metaseed.facade.core import ProfileFacade
 
     return ProfileFacade("rembi", version)
+
+
+def health_ri_core(version: str | None = None) -> ProfileFacade:
+    """Get Health-RI core metadata profile facade.
+
+    Args:
+        version: Health-RI core version. If None, uses the latest available version.
+
+    Returns:
+        ProfileFacade for the Health-RI core profile.
+
+    Example:
+        >>> from metaseed import health_ri_core
+        >>> h = health_ri_core()
+        >>> h.Catalog.help()
+    """
+    from metaseed.facade.core import ProfileFacade
+
+    return ProfileFacade("health-ri-core", version)
