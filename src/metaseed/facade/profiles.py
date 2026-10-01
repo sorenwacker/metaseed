@@ -20,6 +20,7 @@ __all__ = [
     "miappe",
     "miappe_htp",
     "pride",
+    "rembi",
 ]
 
 
@@ -173,3 +174,22 @@ def darwin_core(version: str | None = None) -> ProfileFacade:
     from metaseed.facade.core import ProfileFacade
 
     return ProfileFacade("darwin-core", version)
+
+
+def rembi(version: str | None = None) -> ProfileFacade:
+    """Get REMBI profile facade.
+
+    Args:
+        version: REMBI version. If None, uses the latest available version.
+
+    Returns:
+        ProfileFacade for the REMBI profile.
+
+    Example:
+        >>> from metaseed import rembi
+        >>> r = rembi()
+        >>> r.Study.help()
+    """
+    from metaseed.facade.core import ProfileFacade
+
+    return ProfileFacade("rembi", version)
