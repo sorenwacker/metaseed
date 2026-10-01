@@ -1,0 +1,315 @@
+# Health-RI core v2.0 example: fictional university medical centre research catalogue
+# Synthetic data: organisations, people, addresses and identifiers under example.org are invented;
+# controlled-vocabulary IRIs (EU vocabularies, DPV, IANA, SPDX, INSPIRE) are real.
+
+identifier: https://example.org/catalog/example-umc-research
+applicable_legislation:
+- http://data.europa.eu/eli/reg/2025/327/oj
+catalog:
+- https://example.org/catalog/example-national-cohorts
+contact_point:
+  contact_page:
+  - https://example.org/research-data/contact
+  has_email: datadesk@example.org
+  formatted_name: Example UMC Research Data Desk
+creator:
+- country:
+  - http://publications.europa.eu/resource/authority/country/NLD
+  email: epidemiology@example.org
+  name:
+  - Example Department of Epidemiology
+  type: http://purl.org/adms/publishertype/Academia-ScientificOrganisation
+  homepage: https://example.org/epidemiology
+  agent_identifier:
+  - https://example.org/org/example-umc/epidemiology
+dataset:
+- access_rights: http://publications.europa.eu/resource/authority/access-right/RESTRICTED
+  analytics:
+  - https://example.org/dataset/example-cohort-2025/analytics
+  applicable_legislation:
+  - http://data.europa.eu/eli/reg/2025/327/oj
+  code_values:
+  - http://snomed.info/id/73211009
+  coding_system:
+  - http://snomed.info/sct
+  conforms_to:
+  - https://github.com/Health-RI/health-ri-metadata
+  contact_point:
+    contact_page:
+    - https://example.org/cohort/data-access
+    has_email: data-steward@example.org
+    formatted_name: Example Cohort Data Steward
+  creator:
+  - country:
+    - http://publications.europa.eu/resource/authority/country/NLD
+    email: cohort-team@example.org
+    name:
+    - Example Cohort Study Team
+    type: http://purl.org/adms/publishertype/Academia-ScientificOrganisation
+    homepage: https://example.org/cohort/team
+    agent_identifier:
+    - https://example.org/org/example-cohort-team
+  description:
+  - Synthetic example dataset with questionnaire and clinical measurements from a fictional adult cohort.
+  distribution:
+  - identifier: https://example.org/dataset/example-cohort-2025/distribution/csv
+    access_service: https://example.org/service/example-cohort-api
+    access_url: https://example.org/dataset/example-cohort-2025/access
+    applicable_legislation:
+    - http://data.europa.eu/eli/reg/2025/327/oj
+    byte_size: 5242880
+    checksum:
+      algorithm: http://spdx.org/rdf/terms#checksumAlgorithm_sha256
+      checksum_value: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+      distribution_id: https://example.org/dataset/example-cohort-2025/distribution/csv
+    compression_format: https://www.iana.org/assignments/media-types/application/gzip
+    description:
+    - Compressed CSV file with one row per participant visit.
+    documentation:
+    - https://example.org/dataset/example-cohort-2025/codebook
+    download_url: https://example.org/dataset/example-cohort-2025/data.csv.gz
+    format: http://publications.europa.eu/resource/authority/file-type/CSV
+    language:
+    - http://publications.europa.eu/resource/authority/language/ENG
+    license: http://publications.europa.eu/resource/authority/licence/CC_BY_4_0
+    linked_schemas:
+    - https://example.org/dataset/example-cohort-2025/schema.json
+    media_type: https://www.iana.org/assignments/media-types/text/csv
+    modification_date: '2026-06-01T09:00:00Z'
+    packaging_format: https://www.iana.org/assignments/media-types/application/zip
+    release_date: '2025-09-01T09:00:00Z'
+    retention_period:
+      end_date: '2035-08-31T00:00:00Z'
+      start_date: '2025-09-01T00:00:00Z'
+    rights: https://example.org/research-data/rights
+    status: http://publications.europa.eu/resource/authority/distribution-status/COMPLETED
+    temporal_resolution: P1Y
+    title:
+    - Example cohort 2025 CSV export
+    dataset_id: https://example.org/dataset/example-cohort-2025
+  documentation:
+  - https://example.org/dataset/example-cohort-2025/codebook
+  frequency: http://publications.europa.eu/resource/authority/frequency/ANNUAL
+  geographical_coverage:
+  - http://publications.europa.eu/resource/authority/country/NLD
+  has_version:
+  - https://example.org/dataset/example-cohort-2024
+  health_theme:
+  - http://www.wikidata.org/entity/Q12206
+  identifier: https://example.org/dataset/example-cohort-2025
+  in_series:
+  - https://example.org/series/example-cohort-waves
+  is_referenced_by:
+  - https://example.org/publications/example-cohort-profile
+  keyword:
+  - cohort
+  - diabetes
+  - questionnaire
+  language:
+  - http://publications.europa.eu/resource/authority/language/ENG
+  legal_basis:
+  - https://w3id.org/dpv#Consent
+  maximum_typical_age: 80
+  minimum_typical_age: 18
+  modification_date: '2026-06-01T09:00:00Z'
+  number_of_records: 12000
+  number_of_unique_individuals: 3000
+  other_identifier:
+  - notation: EX-COHORT-2025
+    schema_agency: Example University Medical Centre
+  personal_data:
+  - https://w3id.org/dpv/pd#Age
+  population_coverage:
+  - Fictional adults aged 18 to 80 living in the Netherlands.
+  publisher:
+    country:
+    - http://publications.europa.eu/resource/authority/country/NLD
+    email: dac@example.org
+    name:
+    - Example UMC Data Access Committee
+    publisher_note: Fictional committee that makes the example cohort data available for secondary use.
+    publisher_type: http://purl.org/adms/publishertype/Academia-ScientificOrganisation
+    type: http://purl.org/adms/publishertype/Academia-ScientificOrganisation
+    homepage: https://example.org/data-access-committee
+    agent_identifier:
+    - https://example.org/org/example-umc/dac
+  purpose:
+  - https://w3id.org/dpv#ScientificResearch
+  qualified_attribution:
+  - identifier: https://example.org/dataset/example-cohort-2025/attribution/custodian
+    agent:
+      country:
+      - http://publications.europa.eu/resource/authority/country/NLD
+      email: biobank@example.org
+      name:
+      - Example UMC Biobank
+      type: http://purl.org/adms/publishertype/Academia-ScientificOrganisation
+      homepage: https://example.org/biobank
+      agent_identifier:
+      - https://example.org/org/example-umc/biobank
+    role: https://inspire.ec.europa.eu/metadata-codelist/ResponsiblePartyRole/custodian
+    dataset_id: https://example.org/dataset/example-cohort-2025
+  qualified_relation:
+  - had_role:
+    - http://www.iana.org/assignments/relation/related
+    relation:
+    - https://example.org/dataset/example-cohort-2024
+    dataset_id: https://example.org/dataset/example-cohort-2025
+  quality_annotation:
+  - target: https://example.org/dataset/example-cohort-2025
+    body: https://example.org/certificates/example-cohort-quality.pdf
+    dataset_id: https://example.org/dataset/example-cohort-2025
+  release_date: '2025-09-01T09:00:00Z'
+  retention_period:
+    end_date: '2040-12-31T00:00:00Z'
+    start_date: '2025-09-01T00:00:00Z'
+  sample:
+  - https://example.org/dataset/example-cohort-2025/sample
+  source:
+  - https://example.org/dataset/example-registry-extract
+  status: http://publications.europa.eu/resource/authority/dataset-status/COMPLETED
+  temporal_coverage:
+  - end_date: '2025-06-30T00:00:00Z'
+    start_date: '2020-01-01T00:00:00Z'
+  temporal_resolution: P1Y
+  theme:
+  - http://publications.europa.eu/resource/authority/data-theme/HEAL
+  title:
+  - Example cohort study 2025 release
+  type:
+  - http://publications.europa.eu/resource/authority/dataset-type/TEST_DATA
+  version: '2.0'
+  version_notes:
+  - Adds the 2025 follow-up wave.
+  was_generated_by:
+  - https://example.org/projects/example-cohort-study
+  catalog_id: https://example.org/catalog/example-umc-research
+dataset_series:
+- identifier: https://example.org/series/example-cohort-waves
+  applicable_legislation:
+  - http://data.europa.eu/eli/reg/2025/327/oj
+  contact_point:
+  - contact_page:
+    - https://example.org/cohort/contact
+    has_email: cohort-office@example.org
+    formatted_name: Example Cohort Study Office
+  description:
+  - Synthetic example series grouping the yearly data releases of the example cohort study.
+  frequency: http://publications.europa.eu/resource/authority/frequency/ANNUAL
+  geographical_coverage:
+  - http://publications.europa.eu/resource/authority/country/NLD
+  modification_date: '2026-06-01T09:00:00Z'
+  publisher:
+    country:
+    - http://publications.europa.eu/resource/authority/country/NLD
+    email: consortium@example.org
+    name:
+    - Example Cohort Study Consortium
+    publisher_note: Fictional consortium responsible for the coherence of the example cohort releases.
+    publisher_type: http://purl.org/adms/publishertype/Academia-ScientificOrganisation
+    type: http://purl.org/adms/publishertype/Academia-ScientificOrganisation
+    homepage: https://example.org/cohort
+    agent_identifier:
+    - https://example.org/org/example-cohort-consortium
+  release_date: '2021-03-01T09:00:00Z'
+  temporal_coverage:
+  - end_date: '2025-12-31T23:00:00Z'
+    start_date: '2021-01-01T00:00:00Z'
+  title:
+  - Example cohort study waves
+  catalog_id: https://example.org/catalog/example-umc-research
+description:
+- Synthetic example catalogue listing research datasets and data services of a fictional university medical
+  centre.
+geographical_coverage:
+- http://publications.europa.eu/resource/authority/country/NLD
+has_part:
+- https://example.org/catalog/example-umc-research/imaging
+homepage: https://example.org/research-data
+language:
+- http://publications.europa.eu/resource/authority/language/ENG
+- http://publications.europa.eu/resource/authority/language/NLD
+license: http://publications.europa.eu/resource/authority/licence/CC_BY_4_0
+modification_date: '2026-06-01T09:00:00Z'
+publisher:
+  country:
+  - http://publications.europa.eu/resource/authority/country/NLD
+  email: info@example.org
+  name:
+  - Example University Medical Centre
+  publisher_note: Fictional organisation used for a synthetic Health-RI metadata example.
+  publisher_type: http://purl.org/adms/publishertype/Academia-ScientificOrganisation
+  type: http://purl.org/adms/publishertype/Academia-ScientificOrganisation
+  homepage: https://example.org/
+  agent_identifier:
+  - https://example.org/org/example-umc
+release_date: '2025-01-15T09:00:00Z'
+rights: https://example.org/research-data/rights
+service:
+- access_rights: http://publications.europa.eu/resource/authority/access-right/PUBLIC
+  applicable_legislation:
+  - http://data.europa.eu/eli/reg/2025/327/oj
+  conforms_to:
+  - https://spec.openapis.org/oas/v3.1.0
+  contact_point:
+    contact_page:
+    - https://example.org/api/support
+    has_email: api-support@example.org
+    formatted_name: Example UMC API Support
+  creator:
+  - country:
+    - http://publications.europa.eu/resource/authority/country/NLD
+    email: research-it@example.org
+    name:
+    - Example UMC Research IT
+    type: http://purl.org/adms/publishertype/Academia-ScientificOrganisation
+    homepage: https://example.org/research-it
+    agent_identifier:
+    - https://example.org/org/example-umc/research-it
+  rights:
+  - https://example.org/research-data/rights
+  description:
+  - Synthetic example REST API returning aggregate counts from the example cohort dataset.
+  endpoint_description: https://example.org/api/openapi.json
+  endpoint_url: https://example.org/api
+  format:
+  - http://publications.europa.eu/resource/authority/file-type/JSON
+  identifier: https://example.org/service/example-cohort-api
+  keyword:
+  - API
+  - aggregate counts
+  landing_page:
+  - https://example.org/api/docs
+  language:
+  - http://publications.europa.eu/resource/authority/language/ENG
+  license: http://publications.europa.eu/resource/authority/licence/CC_BY_4_0
+  modification_date: '2026-05-20T10:00:00Z'
+  other_identifier:
+  - notation: EX-API-0001
+    schema_agency: Example UMC Research IT
+  publisher:
+    country:
+    - http://publications.europa.eu/resource/authority/country/NLD
+    email: open-data@example.org
+    name:
+    - Example UMC Open Data Office
+    publisher_note: Fictional office that publishes the data services of the example UMC.
+    publisher_type: http://purl.org/adms/publishertype/Academia-ScientificOrganisation
+    type: http://purl.org/adms/publishertype/Academia-ScientificOrganisation
+    homepage: https://example.org/open-data
+    agent_identifier:
+    - https://example.org/org/example-umc/open-data
+  serves_dataset:
+  - https://example.org/dataset/example-cohort-2025
+  theme:
+  - http://publications.europa.eu/resource/authority/data-theme/HEAL
+  title:
+  - Example cohort query API
+  catalog_id: https://example.org/catalog/example-umc-research
+temporal_coverage:
+- end_date: '2025-12-31T23:59:59Z'
+  start_date: '2020-01-01T00:00:00Z'
+theme_taxonomy:
+- http://publications.europa.eu/resource/authority/data-theme
+title:
+- Example UMC research data catalogue
