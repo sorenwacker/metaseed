@@ -1,9 +1,9 @@
 """HTTP client for the ENA Portal API.
 
-Fetches run-level metadata for an accession from the ENA Portal ``filereport``
-endpoint, asking for every column ENA publishes (``fields=all``) so one request
-carries the study, sample, experiment, run and file metadata. Requires ``httpx``
-(the ``metaseed[ena]`` extra). An ``httpx.Client`` can be injected for hermetic
+Fetches the metadata the Portal ``filereport`` endpoint publishes for an
+accession, one request per result — ``study``, ``read_run`` and ``analysis`` —
+asking for every column ENA publishes (``fields=all``). Requires ``httpx`` (the
+``metaseed[ena]`` extra). An ``httpx.Client`` can be injected for hermetic
 testing.
 """
 
@@ -52,24 +52,18 @@ class EnaClient:
         self._timeout = timeout
         self._client = http_client
 
-    def read_run(self, accession: str) -> list[dict[str, Any]]:
-        """Return ENA ``read_run`` metadata rows for an accession.
+    def _rows(self, accession: str, result: str) -> list[dict[str, Any]]:
+        """One ``filereport`` request for ``result``, with every column.
 
         Asks for ``fields=all``, so each row carries every column ENA publishes
-        for the run rather than a chosen subset. A column the ``ena`` profile
-        does not declare a field for still reaches the dataset, as an attribute.
-
-        Args:
-            accession: Any ENA accession resolvable to runs (study, sample,
-                experiment, or run).
-
-        Returns:
-            One dict per run (empty if the accession resolves to no runs).
+        for that result rather than a chosen subset. A column the ``ena``
+        profile does not declare a field for still reaches the dataset, as an
+        attribute.
         """
         params: Mapping[str, str] = {
             "accession": accession,
-            "result": "read_run",
-            "fields": "all",  # every column ENA publishes for the run
+            "result": result,
+            "fields": "all",  # every column ENA publishes for the result
             "format": "json",
             "limit": "0",  # no row cap
         }
@@ -82,3 +76,37 @@ class EnaClient:
             http_client=self._client,
         )
         return data if isinstance(data, list) else []
+
+    def read_run(self, accession: str) -> list[dict[str, Any]]:
+        """Return ENA ``read_run`` rows for an accession: one per run.
+
+        Args:
+            accession: Any ENA accession resolvable to runs (study, sample,
+                experiment, or run).
+
+        Returns:
+            One dict per run (empty if the accession resolves to no runs).
+        """
+        return self._rows(accession, "read_run")
+
+    def study(self, accession: str) -> list[dict[str, Any]]:
+        """Return the ENA ``study`` row for an accession.
+
+        The study record carries the columns that exist under no other result
+        (``study_description``, ``study_name``, ``keywords``, ...).
+
+        Returns:
+            One dict per study the accession resolves to (normally one).
+        """
+        return self._rows(accession, "study")
+
+    def analysis(self, accession: str) -> list[dict[str, Any]]:
+        """Return ENA ``analysis`` rows for an accession: one per analysis.
+
+        Assemblies, variant calls and annotations are a different Portal
+        result from the runs they derive from.
+
+        Returns:
+            One dict per analysis (empty when the study has none).
+        """
+        return self._rows(accession, "analysis")

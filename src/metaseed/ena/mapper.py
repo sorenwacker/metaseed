@@ -1,25 +1,29 @@
-"""Map ENA Portal API ``read_run`` records into an ``ena``-profile dataset.
+"""Map ENA Portal API rows into an ``ena``-profile dataset.
 
 Pure and network-free: it takes already-fetched rows (as returned by the ENA
-Portal API ``filereport`` endpoint with ``result=read_run`` and ``fields=all``)
-and builds a :class:`~metaseed.api.client.MetaseedClient` bound to the ``ena``
-profile. Raw sequence files are *referenced* (their FTP URLs become ``File``
-entities), never downloaded.
+Portal API ``filereport`` endpoint with ``fields=all`` for ``result=read_run``,
+``result=study`` and ``result=analysis``) and builds a
+:class:`~metaseed.api.client.MetaseedClient` bound to the ``ena`` profile. Raw
+sequence files are *referenced* (their FTP URLs become ``File`` entities),
+never downloaded.
 
 Every non-empty column of a row reaches the dataset. A column the ``ena``
 profile declares a field for fills that field; a column without one becomes an
-attribute (``SampleAttribute``, ``ExperimentAttribute`` or ``RunAttribute``)
-carrying the ENA column name as its ``tag`` and ENA's value verbatim. Which
-entity owns a column is ENA's answer rather than this module's: the columns ENA
-publishes under ``result=sample`` belong to the Sample, an enumerated set of
-library and sequencing descriptors belongs to the Experiment, and the Run is the
-catch-all — so a column ENA adds after this release is carried rather than
-dropped. The ``ena`` profile declares no study-level attribute entity, so a
-study-level column without a declared field is carried as a run attribute.
+attribute (``StudyAttribute``, ``SampleAttribute``, ``ExperimentAttribute``,
+``RunAttribute`` or ``AnalysisAttribute``) carrying the ENA column name as its
+``tag`` and ENA's value verbatim. Which entity owns a column is ENA's answer
+rather than this module's: the columns ENA publishes only under
+``result=study`` belong to the Study, the columns it publishes under
+``result=sample`` belong to the Sample, an enumerated set of library and
+sequencing descriptors belongs to the Experiment, and the row's own subject --
+the Run for a run row, the Analysis for an analysis row -- is the catch-all, so
+a column ENA adds after this release is carried rather than dropped. A fact is
+recorded once: a study-level column is written as one study attribute however
+many rows repeat it.
 
 Accessions are used as the entity ``alias`` (the identifier the ``*_ref`` fields
 resolve against), so samples/experiments/runs/files auto-link to their parents.
-Entities are created with ``skip_validation`` — an import should not fail on a
+Entities are created with ``skip_validation`` -- an import should not fail on a
 record that omits a field; call :meth:`MetaseedClient.validate` to report gaps.
 """
 
@@ -197,9 +201,53 @@ EXPERIMENT_COLUMNS: frozenset[str] = frozenset(
     )
 )
 
+# Columns that describe the study wherever they appear: the ones ENA publishes
+# only under `result=study` (recorded from the Portal's `returnFields`, minus
+# the columns it also lists under `result=sample`, which describe the sample
+# there), plus the study-level columns of a run or analysis row.
+STUDY_COLUMNS: frozenset[str] = frozenset(
+    (
+        "breed",
+        "geo_accession",
+        "keywords",
+        "parent_study_accession",
+        "secondary_project",
+        "secondary_study_accession",
+        "secondary_study_alias",
+        "secondary_study_center_name",
+        "study_alias",
+        "study_description",
+        "study_name",
+        "tax_division",
+    )
+)
+
 # ENA column -> declared `ena`-profile field, per entity. A column named here is
 # never also written as an attribute.
 STUDY_FIELDS: Mapping[str, str] = {"broker_name": "broker_name"}
+
+# The study record (`result=study`) is about the study, so its `center_name`
+# and `broker_name` are the study's; on a run row they describe the sample.
+STUDY_RECORD_FIELDS: Mapping[str, str] = {
+    "study_description": "description",
+    "center_name": "center_name",
+    "broker_name": "broker_name",
+}
+
+ANALYSIS_FIELDS: Mapping[str, str] = {
+    "analysis_title": "title",
+    "analysis_description": "description",
+    "center_name": "center_name",
+    "analysis_type": "analysis_type",
+}
+
+# Analysis row columns consumed into the Analysis identifier and `*_refs`.
+ANALYSIS_REFERENCE_COLUMNS: Mapping[str, str] = {
+    "sample_accession": "sample_refs",
+    "experiment_accession": "experiment_refs",
+    "run_accession": "run_refs",
+    "related_analysis_accession": "analysis_refs",
+}
 
 SAMPLE_FIELDS: Mapping[str, str] = {
     "sample_title": "title",
@@ -298,9 +346,17 @@ _SRA_FILETYPE_BY_LOWERCASE = {filetype.lower(): filetype for filetype in SRA_FIL
 # Compression suffixes to look past when reading a type off a filename.
 COMPRESSION_SUFFIXES: frozenset[str] = frozenset(("gz", "bz2", "zip", "xz"))
 
+# The two file manifests ENA publishes per analysis: the submitted files and
+# the files ENA generated from them, each with its own format column.
+ANALYSIS_FILE_SETS: tuple[tuple[str, str, str], ...] = (
+    ("submitted_ftp", "submitted_md5", "submitted_format"),
+    ("generated_ftp", "generated_md5", "generated_format"),
+)
+
 # Columns consumed into entity identifiers or into File entities.
 IDENTIFIER_COLUMNS: frozenset[str] = frozenset(
     (
+        "accession",
         "study_accession",
         "study_title",
         "sample_accession",
@@ -314,7 +370,7 @@ FILE_COLUMNS: frozenset[str] = frozenset(
     + ["submitted_format", "submitted_read_type"]
 )
 
-# Every column with a home of its own; the rest become attributes.
+# Every run-row column with a home of its own; the rest become attributes.
 DECLARED_COLUMNS: frozenset[str] = (
     IDENTIFIER_COLUMNS
     | FILE_COLUMNS
@@ -322,6 +378,18 @@ DECLARED_COLUMNS: frozenset[str] = (
     | frozenset(SAMPLE_FIELDS)
     | frozenset(EXPERIMENT_FIELDS)
     | frozenset(RUN_FIELDS)
+)
+
+# The same for the study record and for an analysis row.
+STUDY_RECORD_DECLARED_COLUMNS: frozenset[str] = IDENTIFIER_COLUMNS | frozenset(
+    STUDY_RECORD_FIELDS
+)
+ANALYSIS_DECLARED_COLUMNS: frozenset[str] = (
+    IDENTIFIER_COLUMNS
+    | frozenset(("analysis_accession", "related_analysis_accession"))
+    | frozenset(column for file_set in ANALYSIS_FILE_SETS for column in file_set)
+    | frozenset(ANALYSIS_FIELDS)
+    | frozenset(SAMPLE_FIELDS)
 )
 
 
@@ -407,23 +475,46 @@ def _fields(row: dict[str, Any], mapping: Mapping[str, str]) -> dict[str, Any]:
     return values
 
 
-def _owner(column: str) -> str:
-    """The entity ENA's schema says a column describes."""
+def _owner(column: str, subject: str) -> str:
+    """The entity ENA's schema says a column describes.
+
+    ``subject`` is the row's own entity (``Run`` for a run row, ``Analysis``
+    for an analysis row) and takes whatever no other entity claims. The
+    library descriptors describe the Experiment only on a run row; an analysis
+    row has no experiment of its own to describe.
+    """
+    if column in STUDY_COLUMNS:
+        return "Study"
     if column in SAMPLE_COLUMNS:
         return "Sample"
-    if column in EXPERIMENT_COLUMNS:
+    if subject == "Run" and column in EXPERIMENT_COLUMNS:
         return "Experiment"
-    return "Run"
+    return subject
 
 
-def _overflow(row: dict[str, Any]) -> dict[str, dict[str, str]]:
+def _overflow(
+    row: dict[str, Any],
+    declared: frozenset[str] = DECLARED_COLUMNS,
+    subject: str = "Run",
+) -> dict[str, dict[str, str]]:
     """The row's columns with no declared field, grouped by owning entity."""
-    buckets: dict[str, dict[str, str]] = {"Sample": {}, "Experiment": {}, "Run": {}}
+    buckets: dict[str, dict[str, str]] = {
+        "Study": {},
+        "Sample": {},
+        "Experiment": {},
+        subject: {},
+    }
     for column, value in row.items():
-        if column in DECLARED_COLUMNS or value in (None, ""):
+        if column in declared or value in (None, ""):
             continue
-        buckets[_owner(column)][column] = str(value)
+        buckets[_owner(column, subject)][column] = str(value)
     return buckets
+
+
+def _record_once(target: dict[str, str], columns: Mapping[str, str]) -> None:
+    """Add the study-level columns a row repeats, keeping the first value seen."""
+    for tag, value in columns.items():
+        target.setdefault(tag, value)
 
 
 def _add_attributes(
@@ -477,64 +568,152 @@ def _add_files(client: MetaseedClient, row: dict[str, Any], run_acc: str) -> Non
             )
 
 
-def build_dataset(
-    rows: list[dict[str, Any]], *, version: str = "1.0"
-) -> MetaseedClient:
-    """Build an ``ena``-profile dataset from ENA ``read_run`` rows.
+def _add_analysis_files(
+    client: MetaseedClient, row: dict[str, Any], analysis_id: str
+) -> None:
+    """Reference the submitted and the generated files of an analysis."""
+    for url_column, md5_column, format_column in ANALYSIS_FILE_SETS:
+        urls = (row.get(url_column) or "").split(";")
+        md5s = (row.get(md5_column) or "").split(";")
+        formats = (row.get(format_column) or "").split(";")
+        for url, md5, reported_format in zip_longest(urls, md5s, formats, fillvalue=""):
+            if not url:
+                continue
+            filename = url.rsplit("/", 1)[-1]
+            client.create_entity(
+                "File",
+                _clean(
+                    {
+                        "filename": filename,
+                        "filetype": _filetype(reported_format, filename),
+                        "checksum_method": "MD5",
+                        "checksum": md5 or None,
+                    }
+                ),
+                parent_id=analysis_id,
+                skip_validation=True,
+            )
 
-    Args:
-        rows: ENA Portal ``read_run`` records (one per run), as returned with
-            ``fields=all``.
-        version: ``ena`` profile version.
 
-    Returns:
-        A MetaseedClient holding the Study and its Samples, Experiments, Runs,
-        File references and attributes. Empty if ``rows`` is empty.
-    """
-    from metaseed import MetaseedClient
-
-    client = MetaseedClient("ena", version)
-    if not rows:
-        return client
-
-    study_acc = rows[0].get("study_accession")
-    study_title = rows[0].get("study_title") or study_acc
-    client.create_entity(
-        "Study",
+def _add_sample(
+    client: MetaseedClient,
+    row: dict[str, Any],
+    study_acc: str | None,
+    columns: Mapping[str, str],
+) -> None:
+    """Create the row's Sample with its declared fields and its attributes."""
+    sample = client.create_entity(
+        "Sample",
         _clean(
             {
-                "alias": study_acc,
-                "accession": study_acc,
-                "title": study_title,
-                "description": study_title,
-                **_fields(rows[0], STUDY_FIELDS),
+                "alias": row.get("sample_accession"),
+                "accession": row.get("sample_accession"),
+                "study_ref": study_acc,
+                **_fields(row, SAMPLE_FIELDS),
             }
         ),
         skip_validation=True,
     )
+    _add_attributes(client, "SampleAttribute", sample.id, columns)
+
+
+def _add_analysis(
+    client: MetaseedClient,
+    row: dict[str, Any],
+    study_acc: str | None,
+    columns: Mapping[str, str],
+) -> None:
+    """Create an Analysis with its references, its files and its attributes."""
+    analysis_acc = row.get("analysis_accession")
+    references = {
+        field: [row[column]]
+        for column, field in ANALYSIS_REFERENCE_COLUMNS.items()
+        if row.get(column)
+    }
+    analysis = client.create_entity(
+        "Analysis",
+        _clean(
+            {
+                "alias": analysis_acc,
+                "accession": analysis_acc,
+                "study_ref": study_acc,
+                **references,
+                **_fields(row, ANALYSIS_FIELDS),
+            }
+        ),
+        skip_validation=True,
+    )
+    _add_analysis_files(client, row, analysis.id)
+    _add_attributes(client, "AnalysisAttribute", analysis.id, columns)
+
+
+def build_dataset(
+    rows: list[dict[str, Any]],
+    *,
+    study: list[dict[str, Any]] | None = None,
+    analyses: list[dict[str, Any]] | None = None,
+    version: str = "1.0",
+) -> MetaseedClient:
+    """Build an ``ena``-profile dataset from the Portal's rows for a study.
+
+    Args:
+        rows: ENA Portal ``read_run`` records (one per run), as returned with
+            ``fields=all``.
+        study: The ``result=study`` record for the study, if fetched. It
+            carries the columns no other result publishes.
+        analyses: ENA Portal ``analysis`` records (one per analysis), if
+            fetched.
+        version: ``ena`` profile version.
+
+    Returns:
+        A MetaseedClient holding the Study and its Samples, Experiments, Runs,
+        Analyses, File references and attributes. Empty if nothing was given.
+    """
+    from metaseed import MetaseedClient
+
+    client = MetaseedClient("ena", version)
+    study = study or []
+    analyses = analyses or []
+    if not (rows or study or analyses):
+        return client
+
+    source = (study or rows or analyses)[0]
+    study_acc = source.get("study_accession")
+    study_title = source.get("study_title") or study_acc
+    study_fields: dict[str, Any] = {
+        "alias": study_acc,
+        "accession": study_acc,
+        "title": study_title,
+        "description": study_title,
+    }
+    study_fields.update(
+        _fields(study[0], STUDY_RECORD_FIELDS)
+        if study
+        else _fields(source, STUDY_FIELDS)
+    )
+    study_entity = client.create_entity(
+        "Study", _clean(study_fields), skip_validation=True
+    )
+    study_attributes: dict[str, str] = {}
+    if study:
+        record = _overflow(study[0], STUDY_RECORD_DECLARED_COLUMNS, "Study")
+        _record_once(study_attributes, record["Study"])
+        # The study record is about the study: every column it carries is the
+        # study's, whichever result ENA also lists it under.
+        for bucket in ("Sample", "Experiment"):
+            _record_once(study_attributes, record[bucket])
 
     seen_samples: set[str] = set()
     seen_experiments: set[str] = set()
 
     for row in rows:
         overflow = _overflow(row)
+        _record_once(study_attributes, overflow["Study"])
 
         sample_acc = row.get("sample_accession")
         if sample_acc and sample_acc not in seen_samples:
             seen_samples.add(sample_acc)
-            sample = client.create_entity(
-                "Sample",
-                _clean(
-                    {
-                        "alias": sample_acc,
-                        "accession": sample_acc,
-                        "study_ref": study_acc,
-                        **_fields(row, SAMPLE_FIELDS),
-                    }
-                ),
-                skip_validation=True,
-            )
-            _add_attributes(client, "SampleAttribute", sample.id, overflow["Sample"])
+            _add_sample(client, row, study_acc, overflow["Sample"])
 
         exp_acc = row.get("experiment_accession")
         if exp_acc and exp_acc not in seen_experiments:
@@ -577,4 +756,18 @@ def build_dataset(
         _add_attributes(client, "RunAttribute", run.id, overflow["Run"])
         _add_files(client, row, run_acc)
 
+    for row in analyses:
+        overflow = _overflow(row, ANALYSIS_DECLARED_COLUMNS, "Analysis")
+        _record_once(study_attributes, overflow["Study"])
+        # The analysis row repeats its sample's columns; they are the sample's,
+        # recorded once -- from the run that carried it, or from here when no
+        # run did (an assembly-only study has no runs at all).
+        sample_acc = row.get("sample_accession")
+        if sample_acc and sample_acc not in seen_samples:
+            seen_samples.add(sample_acc)
+            _add_sample(client, row, study_acc, overflow["Sample"])
+        if row.get("analysis_accession"):
+            _add_analysis(client, row, study_acc, overflow["Analysis"])
+
+    _add_attributes(client, "StudyAttribute", study_entity.id, study_attributes)
     return client

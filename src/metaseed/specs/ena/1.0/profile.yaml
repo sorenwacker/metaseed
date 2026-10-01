@@ -355,6 +355,14 @@ entities:
         description: External links associated with the project.
         ontology_term: SRA:project_link
 
+      - name: study_attributes
+        codename: STUDY_ATTRIBUTES
+        type: list
+        items: StudyAttribute
+        required: false
+        description: Custom attributes (tag-value pairs) for the study.
+        ontology_term: SRA:study_attribute
+
       - name: samples
         codename: samples
         type: list
@@ -1132,6 +1140,37 @@ entities:
         required: false
         description: Reference assembly accession for aligned files.
         ontology_term: SRA:assembly
+
+  StudyAttribute:
+    ontology_term: SRA:study_attribute
+    description: A custom attribute (tag-value pair) for a study.
+    example:
+      tag: study_name
+      value: Arabidopsis drought transcriptome
+    fields:
+      - name: tag
+        codename: TAG
+        type: string
+        required: true
+        description: Attribute name.
+        ontology_term: SRA:tag
+        constraints:
+          min_length: 1
+          max_length: 255
+
+      - name: value
+        codename: VALUE
+        type: string
+        required: true
+        description: Attribute value.
+        ontology_term: SRA:value
+
+      - name: units
+        codename: UNITS
+        type: string
+        required: false
+        description: Units of measurement if applicable.
+        ontology_term: SRA:units
 
   SampleAttribute:
     ontology_term: SRA:sample_attribute

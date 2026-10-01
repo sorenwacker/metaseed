@@ -53,7 +53,7 @@ The package ships these profiles. Counts refer to each profile's latest version.
 | ISA | `isa` | 1.0 | 22 | 139 | Life science investigations |
 | Darwin Core | `darwin-core` | 1.0 | 10 | 189 | Biodiversity |
 | DiSSCo | `dissco` | 0.4 | 16 | 261 | Digital specimens |
-| ENA | `ena` | 1.0 | 11 | 109 | Nucleotide archive submissions |
+| ENA | `ena` | 1.0 | 12 | 113 | Nucleotide archive submissions |
 | MetaboLights | `metabolights` | 1.0 | 13 | 71 | Metabolomics |
 | PRIDE | `pride` | 1.0, 2.0 | 9 | 61 | Proteomics |
 | SEEK | `seek` | 1.0 | 24 | 229 | The FAIRDOM-SEEK data model |

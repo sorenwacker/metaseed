@@ -23,6 +23,12 @@ project_links:
     id: "10.1234/plantgenomics.2024.001"
     label: Data descriptor
 
+study_attributes:
+  - tag: study_name
+    value: Arabidopsis drought transcriptome
+  - tag: keywords
+    value: drought; transcriptome; Arabidopsis thaliana
+
 samples:
   # Col-0 ecotype samples
   - alias: SAMEA-COL0-0H-REP1
