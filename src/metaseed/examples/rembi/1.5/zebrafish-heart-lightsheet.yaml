@@ -103,11 +103,27 @@ annotations:
     annotation_criteria: Stages follow the standard zebrafish staging series.
     annotation_coverage: Every time point of every embryo.
     annotation_confidence_level: Agreement between annotators was 96 percent.
+    authors:
+      - study_id: S-BIAD-EXAMPLE-ZEBRAFISH-HEART
+        last_name: Placeholder
+        first_name: Tomas
+        role: annotator
+        affiliation_name: Example Institute of Developmental Biology
+    file_metadata:
+      - annotation_title: Looping stage
+        annotation_id: looping-stage-embryo01
+        source_image_id: embryo01_fused.ome.zarr
+        annotation_type:
+          - developmental stage label
+        transformations: None; stages were scored on the fused volumes as recorded.
+        spatial_information: Whole volume per time point.
+        annotation_creation_time: "2025-02-10T14:00:00"
 
 study_components:
   - study_id: S-BIAD-EXAMPLE-ZEBRAFISH-HEART
     name: Heart time lapse
     description: The fused, registered time-lapse volumes of every embryo, with the segmentation masks.
+    rembi_version: "1.5"
     biosample: Zebrafish embryo heart
     specimen: Agarose-mounted live embryo
     image_acquisition: Light-sheet time lapse

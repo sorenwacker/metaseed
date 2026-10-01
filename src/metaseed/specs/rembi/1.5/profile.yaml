@@ -163,66 +163,6 @@ entities:
       items: StudyComponent
       owns: true
       tier: required
-  Author:
-    description: A person who contributed to the study, with their affiliation. The first author listed is the submitter unless
-      a role says otherwise.
-    fields:
-    - name: study_id
-      type: string
-      required: true
-      description: Reference to parent Study
-      reference: Study.identifier
-    - name: last_name
-      type: string
-      required: true
-      description: Last name.
-      is_label: true
-      tier: required
-    - name: first_name
-      type: string
-      required: true
-      description: First name.
-      tier: required
-    - name: email
-      type: string
-      required: false
-      description: E-mail address.
-      tier: optional
-    - name: orcid
-      type: string
-      required: false
-      description: ORCID identifier, if known, as sixteen digits in four groups.
-      constraints:
-        pattern: ^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$
-      example: 0000-0002-1825-0097
-      tier: recommended
-    - name: role
-      type: string
-      required: false
-      description: The person's role in the study; the submitter by default.
-      options:
-      - submitter
-      - principal investigator
-      - data acquisition
-      - data analysis
-      - corresponding author
-      tier: optional
-    - name: affiliation_name
-      type: string
-      required: true
-      description: The name of the organisation the person is affiliated with.
-      tier: required
-    - name: affiliation_url
-      type: string
-      required: false
-      description: The organisation's identifier as a URL; a ROR identifier is recommended.
-      example: https://ror.org/02e2c7k09
-      tier: recommended
-    - name: affiliation_address
-      type: string
-      required: false
-      description: The organisation's address, where it has no identifier URL.
-      tier: optional
   Publication:
     description: A publication associated with the study.
     fields:
@@ -333,6 +273,14 @@ entities:
       type: string
       required: true
       description: 'An explanation of the study component: what distinguishes it from the others.'
+      tier: required
+    - name: rembi_version
+      type: string
+      required: true
+      description: The REMBI version this component's metadata follows.
+      constraints:
+        enum:
+        - '1.5'
       tier: required
     - name: biosample
       type: string
@@ -637,4 +585,117 @@ entities:
       type: string
       required: false
       description: How confident the annotations are, and how that was assessed.
+      tier: optional
+    - name: authors
+      type: list
+      items: Author
+      required: false
+      description: The people who made the annotations, where they differ from the study's authors.
+      tier: optional
+    - name: file_metadata
+      type: list
+      items: FileLevelMetadata
+      required: false
+      description: Per-file metadata for the annotation files.
+      tier: optional
+  Author:
+    description: A person who contributed to the study, with their affiliation. The first author listed is the submitter unless
+      a role says otherwise.
+    fields:
+    - name: study_id
+      type: string
+      required: true
+      description: Reference to parent Study
+      reference: Study.identifier
+    - name: last_name
+      type: string
+      required: true
+      description: Last name.
+      is_label: true
+      tier: required
+    - name: first_name
+      type: string
+      required: true
+      description: First name.
+      tier: required
+    - name: email
+      type: string
+      required: false
+      description: E-mail address.
+      tier: optional
+    - name: orcid
+      type: string
+      required: false
+      description: ORCID identifier, if known, as sixteen digits in four groups.
+      constraints:
+        pattern: ^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$
+      example: 0000-0002-1825-0097
+      tier: recommended
+    - name: role
+      type: string
+      required: false
+      description: The person's role in the study; the submitter by default.
+      options:
+      - submitter
+      - principal investigator
+      - data acquisition
+      - data analysis
+      - corresponding author
+      tier: optional
+    - name: affiliation_name
+      type: string
+      required: true
+      description: The name of the organisation the person is affiliated with.
+      tier: required
+    - name: affiliation_url
+      type: string
+      required: false
+      description: The organisation's identifier as a URL; a ROR identifier is recommended.
+      example: https://ror.org/02e2c7k09
+      tier: recommended
+    - name: affiliation_address
+      type: string
+      required: false
+      description: The organisation's address, where it has no identifier URL.
+      tier: optional
+  FileLevelMetadata:
+    description: 'Metadata of one annotation file: which image it annotates, what kind of annotation it holds, and how it was derived.'
+    fields:
+    - name: annotation_title
+      type: string
+      required: true
+      description: The title of the annotation this file belongs to.
+      reference: Annotation.title
+      tier: required
+    - name: annotation_id
+      type: string
+      required: true
+      description: A unique identifier of this annotation file.
+      is_identifier: true
+      tier: required
+    - name: source_image_id
+      type: string
+      required: true
+      description: The image the annotation refers to.
+      tier: required
+    - name: annotation_type
+      type: list
+      items: string
+      required: false
+      description: The kinds of annotation the file holds, such as segmentation mask or class label.
+      tier: optional
+    - name: transformations
+      type: string
+      required: false
+      description: Any transformations applied to the source image before annotation.
+      tier: optional
+    - name: spatial_information
+      type: string
+      required: false
+      description: Where in the source image the annotation applies, as coordinates or a description.
+      tier: optional
+    - name: annotation_creation_time
+      type: datetime
+      required: false
+      description: When the annotation was created.
       tier: optional
