@@ -1,19 +1,22 @@
-"""Registry of metaseed's optional integration adapters ("plugins").
+"""Registry of metaseed's integration adapters ("plugins").
 
-Each adapter is an optional package installed via a pip extra (e.g.
-``metaseed[seek]``). There is no runtime discovery — this module is the single
-canonical list, so the UI and settings layer can enumerate, describe, and
-toggle them. Availability (is the extra installed?) is checked with
-``importlib.util.find_spec`` so this module has no heavy imports and no import
-side effects.
+Each built-in adapter is an optional package installed via a pip extra (e.g.
+``metaseed[seek]``), and a package outside metaseed can contribute one through
+the ``metaseed.plugins`` entry point group (see :func:`plugins`). Either way
+the registry can be enumerated, described and toggled by the UI and the
+settings layer without importing an adapter's implementation: availability (is
+the extra installed?) is checked with ``importlib.util.find_spec``, and an
+action's target is imported only when it runs.
 """
 
 from __future__ import annotations
 
 import importlib
+import importlib.metadata
 import importlib.util
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Literal, cast
 
 
@@ -339,17 +342,140 @@ ADAPTERS: tuple[AdapterInfo, ...] = (
     ),
 )
 
-_BY_KEY: dict[str, AdapterInfo] = {a.key: a for a in ADAPTERS}
+
+@dataclass(frozen=True)
+class Plugin:
+    """What one package contributes: adapters, and the profiles and examples
+    that go with them.
+
+    The built-in plugin is metaseed itself; any other comes from a package
+    that names a ``Plugin`` under the ``metaseed.plugins`` entry point group.
+    ``specs_dir`` and ``examples_dir`` are laid out as metaseed's own
+    (``specs/<profile>/<version>/profile.yaml``,
+    ``examples/<profile>/<version>/*.yaml``), so the three parts of one
+    integration travel together.
+    """
+
+    name: str
+    """The plugin's name (the entry point name, or ``metaseed``)."""
+    adapters: tuple[AdapterInfo, ...] = ()
+    specs_dir: Path | None = None
+    examples_dir: Path | None = None
+
+
+@dataclass(frozen=True)
+class BrokenPlugin:
+    """An entry point that could not be loaded, and why.
+
+    A plugin that does not appear must say so: an adapter missing from the
+    list because its module failed to import looks exactly like one that was
+    never installed.
+    """
+
+    name: str
+    value: str
+    reason: str
+
+
+ENTRY_POINT_GROUP = "metaseed.plugins"
+
+BUILTIN = Plugin(
+    name="metaseed",
+    adapters=ADAPTERS,
+    specs_dir=Path(__file__).parent / "specs",
+    examples_dir=Path(__file__).parent / "examples",
+)
+
+_discovered: tuple[tuple[Plugin, ...], tuple[BrokenPlugin, ...]] | None = None
+
+
+def _entry_points() -> Iterable[importlib.metadata.EntryPoint]:
+    """The ``metaseed.plugins`` entry points of the installed distributions.
+
+    A module-level seam, so tests can announce a plugin without installing
+    one.
+    """
+    return importlib.metadata.entry_points(group=ENTRY_POINT_GROUP)
+
+
+def _load(point: importlib.metadata.EntryPoint, taken: set[str]) -> Plugin:
+    """Load one entry point, or raise with the reason it is unusable."""
+    try:
+        plugin = point.load()
+    except Exception as exc:
+        raise ValueError(f"{type(exc).__name__}: {exc}") from exc
+    if not isinstance(plugin, Plugin):
+        raise TypeError(f"{point.value} is not a Plugin, it is {type(plugin).__name__}")
+    for info in plugin.adapters:
+        if info.key in taken:
+            raise ValueError(f"adapter key {info.key!r} is already registered")
+    return plugin
+
+
+def _discover() -> tuple[tuple[Plugin, ...], tuple[BrokenPlugin, ...]]:
+    global _discovered  # noqa: PLW0603 - the one process-wide cache
+    if _discovered is None:
+        loaded: list[Plugin] = [BUILTIN]
+        broken: list[BrokenPlugin] = []
+        taken = {info.key for info in BUILTIN.adapters}
+        for point in _entry_points():
+            try:
+                plugin = _load(point, taken)
+            except (TypeError, ValueError) as exc:
+                broken.append(BrokenPlugin(point.name, point.value, str(exc)))
+                continue
+            taken.update(info.key for info in plugin.adapters)
+            loaded.append(plugin)
+        _discovered = (tuple(loaded), tuple(broken))
+    return _discovered
+
+
+def reload() -> None:
+    """Discard the discovered plugins so the next call discovers again."""
+    global _discovered  # noqa: PLW0603
+    _discovered = None
+
+
+def plugins() -> tuple[Plugin, ...]:
+    """Every loadable plugin: the built-in one first, then each entry point.
+
+    Discovery runs once per process; loading an entry point imports the
+    registry module it names, which a plugin keeps as light as this one.
+    """
+    return _discover()[0]
+
+
+def broken_plugins() -> tuple[BrokenPlugin, ...]:
+    """The entry points that could not be loaded, each with its reason."""
+    return _discover()[1]
+
+
+def all_adapters() -> tuple[AdapterInfo, ...]:
+    """Every adapter of every loadable plugin, built-in ones first."""
+    return tuple(info for plugin in plugins() for info in plugin.adapters)
+
+
+def specs_dirs() -> tuple[Path, ...]:
+    """The specification directories the plugins carry, built-in first."""
+    return tuple(p.specs_dir for p in plugins() if p.specs_dir is not None)
+
+
+def examples_dirs() -> tuple[Path, ...]:
+    """The example directories the plugins carry, built-in first."""
+    return tuple(p.examples_dir for p in plugins() if p.examples_dir is not None)
 
 
 def get_adapter(key: str) -> AdapterInfo:
     """Return the adapter with ``key`` or raise ``KeyError``."""
-    return _BY_KEY[key]
+    for info in all_adapters():
+        if info.key == key:
+            return info
+    raise KeyError(key)
 
 
 def is_known(key: str) -> bool:
     """Return whether ``key`` names a registered adapter."""
-    return key in _BY_KEY
+    return any(info.key == key for info in all_adapters())
 
 
 def _module_present(module: str) -> bool:
@@ -385,7 +511,7 @@ def actions_for_profile(
     """
     return tuple(
         action
-        for adapter in ADAPTERS
+        for adapter in all_adapters()
         if is_available(adapter)
         for action in adapter.actions
         if action.applies_to(profile, adapter_key=adapter.key)
@@ -425,7 +551,7 @@ def importable_profiles() -> tuple[str, ...]:
         Sorted, de-duplicated profile names.
     """
     profiles: set[str] = set()
-    for adapter in ADAPTERS:
+    for adapter in all_adapters():
         if not is_available(adapter):
             continue
         for action in adapter.actions:
@@ -437,7 +563,7 @@ def importable_profiles() -> tuple[str, ...]:
 
 def find_action(key: str) -> Action | None:
     """Return the :class:`Action` with ``key`` across all adapters, or None."""
-    for adapter in ADAPTERS:
+    for adapter in all_adapters():
         for action in adapter.actions:
             if action.key == key:
                 return action

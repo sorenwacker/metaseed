@@ -27,19 +27,20 @@ if TYPE_CHECKING:
     from ..state import AppState
 
 UI_DIR = Path(__file__).parent.parent
-EXAMPLES_DIR = UI_DIR.parent / "examples"
 
 
 def example_dir(profile_name: str, version: str) -> Path | None:
     """The directory holding this profile version's example YAML, if any.
 
-    Packaged examples live beside the package; a profile installed under the
-    user data dir keeps its examples there (``examples/<profile>/<version>/``),
-    beside its spec. The packaged location wins when both exist.
+    Packaged examples live beside the package, a plugin's beside the plugin,
+    and a profile installed under the user data dir keeps its examples there
+    (``examples/<profile>/<version>/``), beside its spec. The packaged
+    location wins when several exist.
     """
+    from metaseed import adapters
     from metaseed.paths import user_data_base
 
-    for base in (EXAMPLES_DIR, user_data_base() / "examples"):
+    for base in (*adapters.examples_dirs(), user_data_base() / "examples"):
         version_dir = base / profile_name / version
         if version_dir.is_dir() and any(version_dir.glob("*.yaml")):
             return version_dir

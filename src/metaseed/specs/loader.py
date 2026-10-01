@@ -24,7 +24,9 @@ from typing import TYPE_CHECKING, Any, ClassVar, Self
 import yaml
 from pydantic import ValidationError
 
-from metaseed.paths import get_builtin_specs_dir, get_user_specs_dir
+from metaseed.paths import (
+    get_user_specs_dir,
+)
 from metaseed.specs.ordering import entity_order, is_in_containment_order
 from metaseed.specs.predicates import profile_predicate_issues
 from metaseed.specs.schema import Constraints, EntitySpec, FieldType, ProfileSpec
@@ -227,9 +229,17 @@ class SpecLoader:
         Args:
             profile: Profile name (e.g., "miappe", "isa"). Defaults to "miappe".
         """
-        self._builtin_specs_dir = get_builtin_specs_dir()
         self._user_specs_dir = get_user_specs_dir()
         self._default_profile = profile.lower()
+
+    @property
+    def _specs_dirs(self: Self) -> list[Path]:
+        """Where profiles are looked for, first match winning: the user's
+        directory, then the directories the plugins carry (metaseed's own
+        built-in specs first, then each installed plugin's)."""
+        from metaseed import adapters
+
+        return [self._user_specs_dir, *adapters.specs_dirs()]
 
     def find_profile_file(
         self: Self, version: str, profile: str | None = None
@@ -266,7 +276,7 @@ class SpecLoader:
         profile = (profile or self._default_profile).lower()
 
         # Search user specs first, then built-in
-        for specs_dir in [self._user_specs_dir, self._builtin_specs_dir]:
+        for specs_dir in self._specs_dirs:
             profile_path = specs_dir / profile / version / "profile.yaml"
             if profile_path.exists():
                 return profile_path
@@ -501,7 +511,7 @@ class SpecLoader:
         for candidate in candidates:
             if versions:
                 break
-            for specs_dir in [self._user_specs_dir, self._builtin_specs_dir]:
+            for specs_dir in self._specs_dirs:
                 profile_dir = specs_dir / candidate
                 if profile_dir.exists() and profile_dir.is_dir():
                     for version_dir in profile_dir.iterdir():
@@ -528,7 +538,7 @@ class SpecLoader:
         profiles = set()
 
         # Search both user and built-in specs
-        for specs_dir in [self._user_specs_dir, self._builtin_specs_dir]:
+        for specs_dir in self._specs_dirs:
             if not specs_dir.exists():
                 continue
             for item in specs_dir.iterdir():
