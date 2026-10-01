@@ -136,6 +136,12 @@ def _study_set(studies: list[tuple[str, dict[str, Any]]], tree: _Tree) -> str:
         )
         _text(descriptor, "STUDY_ABSTRACT", s.get("description"))
         _study_links(study, tree.children(node_id, "ProjectLink"))
+        _attributes(
+            study,
+            "STUDY_ATTRIBUTES",
+            "STUDY_ATTRIBUTE",
+            tree.children(node_id, "StudyAttribute"),
+        )
     return _serialize(root)
 
 
