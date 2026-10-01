@@ -62,12 +62,13 @@ def register_settings_routes(
     async def settings_page(request: Request) -> HTMLResponse:
         """Render the Plugins page listing every adapter."""
         settings = _settings(request)
-        rows = [_row(settings, info) for info in adapters.ADAPTERS]
+        rows = [_row(settings, info) for info in adapters.all_adapters()]
         return templates.TemplateResponse(
             request,
             "settings/index.html",
             {
                 "adapters": rows,
+                "broken_plugins": adapters.broken_plugins(),
                 "base_url": base_url,
                 "hub_enabled": hub_configured(settings),
             },

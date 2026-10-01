@@ -292,7 +292,11 @@ class TestISAProfile:
             (spec_dir / "profile.yaml").write_text("name: jerm\n")
 
         monkeypatch.setattr(loader_module, "get_user_specs_dir", lambda: user)
-        monkeypatch.setattr(loader_module, "get_builtin_specs_dir", lambda: builtin)
+        # The built-in directory now reaches the loader through the plugin
+        # registry, as every plugin's does.
+        from metaseed import adapters
+
+        monkeypatch.setattr(adapters, "specs_dirs", lambda: (builtin,))
 
         profiles = SpecLoader().list_profiles()
 

@@ -24,7 +24,7 @@ app = typer.Typer(
 def _known(key: str) -> adapters.AdapterInfo:
     if not adapters.is_known(key):
         echo_error(
-            f"'{key}' is not an adapter. Known: {', '.join(a.key for a in adapters.ADAPTERS)}."
+            f"'{key}' is not an adapter. Known: {', '.join(a.key for a in adapters.all_adapters())}."
         )
         raise typer.Exit(ExitCode.INPUT_ERROR)
     return adapters.get_adapter(key)
@@ -32,8 +32,16 @@ def _known(key: str) -> adapters.AdapterInfo:
 
 @app.command("list")
 def list_plugins() -> None:
-    """Every adapter: what it does, whether it is installed, enabled, configured."""
+    """Every adapter: what it does, whether it is installed, enabled, configured.
+
+    A plugin that could not be loaded is named with its reason, so an adapter
+    missing from the list is never mistaken for one that was not installed.
+    """
     settings = Settings()
+    for broken in adapters.broken_plugins():
+        echo_error(
+            f"plugin {broken.name} ({broken.value}) could not be loaded: {broken.reason}"
+        )
     emit(
         [
             {
@@ -50,7 +58,7 @@ def list_plugins() -> None:
                     if (value := settings.get_adapter_config(info.key).get(field.key))
                 },
             }
-            for info in adapters.ADAPTERS
+            for info in adapters.all_adapters()
         ]
     )
 

@@ -13,6 +13,14 @@
         {% include "partials/adapter_toggle.html" %}
         {% endfor %}
     </div>
+    {% if broken_plugins %}
+    <h3 style="margin-top: 1.5rem;">Plugins that could not be loaded</h3>
+    <ul class="broken-plugins">
+        {% for plugin in broken_plugins %}
+        <li data-testid="broken-plugin-{{ plugin.name }}"><code>{{ plugin.name }}</code> ({{ plugin.value }}): {{ plugin.reason }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
     {% if hub_enabled %}
     <h3 style="margin-top: 1.5rem;">Profiles on the hub</h3>
     <p class="muted">Push a profile of your own to the hub as a private draft, publish it, or pull a published specification.</p>
