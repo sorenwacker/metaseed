@@ -35,8 +35,6 @@ def _bundled_examples() -> list[tuple[str, str]]:
 
 
 _EXAMPLE_CASES = _bundled_examples()
-# Profiles known to ship no example — the picker must NOT offer a link for them.
-_NO_EXAMPLE_PROFILES = ("metabolights", "seek", "miappe-htp")
 
 
 @pytest.mark.parametrize(("profile", "version"), _EXAMPLE_CASES)
@@ -87,19 +85,34 @@ def test_pride_example_materializes_all_entities() -> None:
     assert sample_labels == {"HeLa-control-rep1", "HeLa-heatshock-rep1"}
 
 
-def test_example_link_only_shown_when_example_exists() -> None:
+def test_example_link_only_shown_when_example_exists(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Every shipped profile version has an example (tests/test_examples.py), so
+    # the "no example" half of the rule is checked by hiding one: the picker
+    # asks example_exists per version, and a version it says no for gets no
+    # link. The picker used to point a Load Example control at a version whose
+    # load would 404.
+    from metaseed.ui.routes import examples as examples_module
+
+    real = examples_module.example_exists
+    monkeypatch.setattr(
+        examples_module,
+        "example_exists",
+        lambda profile, version: profile != "metabolights" and real(profile, version),
+    )
     client = TestClient(create_app(AppState()))
     html = client.get("/new-dataset").text
 
     for profile, version in _EXAMPLE_CASES:
+        if profile == "metabolights":
+            continue
         assert f"example-{profile}-v{version}" in html, (
             f"missing example link for {profile} v{version}"
         )
-
-    for profile in _NO_EXAMPLE_PROFILES:
-        assert f"example-{profile}-v" not in html, (
-            f"example link shown for {profile}, which has no example"
-        )
+    assert "example-metabolights-v" not in html, (
+        "example link shown for metabolights, whose example was hidden"
+    )
 
 
 def test_the_picker_says_what_to_do_when_a_standard_is_missing() -> None:
