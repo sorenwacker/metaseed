@@ -30,11 +30,9 @@ class ValidationMixin(InstanceDataMixin):
         field lets those rules validate against the real subtree, while the
         child's own content is still validated when the traversal reaches it.
 
-        A child is matched to a field by entity type. When a parent nests the
-        same type in more than one field, all such children land in the first
-        of those fields; no shipped cardinality rule targets an
-        ambiguously-typed field, and per-child validation is unaffected. Each
-        child now goes into the field it was recorded in (ADR 006).
+        Which field a child goes into is decided in one place,
+        :func:`metaseed.facade.children.field_holding`, shared with the MCP
+        tool and the web application so all three count the same records.
 
         Args:
             node: The entity node whose data to reconstruct.
@@ -42,27 +40,9 @@ class ValidationMixin(InstanceDataMixin):
         Returns:
             The node's JSON data dict, with children embedded in nested fields.
         """
-        data = self._get_instance_data(node.instance)
-        if not node.children:
-            return data
+        from metaseed.facade.children import data_with_children
 
-        helper = self._facade.get_helper(node.entity_type)
-        if helper is None:
-            return data
-
-        for child in node.children:
-            # The field the child was recorded in (ADR 006).
-            target_field = child.parent_field
-            if target_field is None:
-                continue
-            child_data = self._get_instance_data(child.instance)
-            existing = data.get(target_field)
-            if isinstance(existing, list):
-                existing.append(child_data)
-            else:
-                # A single (non-list) nested entity field, empty on the parent.
-                data[target_field] = child_data
-        return data
+        return data_with_children(node, self._facade)
 
     def _nested_document(self: Self, node: Any) -> dict[str, Any]:
         """A node's data with its whole subtree embedded, each record naming its node.
@@ -81,8 +61,11 @@ class ValidationMixin(InstanceDataMixin):
         """
         data = self._get_instance_data(node.instance)
         data["_node_id"] = node.id
+        from metaseed.facade.children import field_holding
+
+        helper = self._facade.get_helper(node.entity_type)
         for child in node.children:
-            target_field = child.parent_field
+            target_field = field_holding(child, helper)
             if target_field is None:
                 continue
             child_data = self._nested_document(child)

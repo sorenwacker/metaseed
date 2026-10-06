@@ -314,12 +314,9 @@ else:
         print(f"{issue.field}: {issue.message} (rule: {issue.rule})")
 ```
 
-Children are stored as flat sibling nodes, but validation reconstructs each
-parent's subtree first, so list-cardinality rules (for example "an Investigation
-must have at least one study") are satisfied by children created with
-`parent_id=...`. A child is matched to a nested field by its entity type; when a
-parent nests the same type in more than one field, the reconstruction cannot yet
-tell which field a child belongs to (see issue #137).
+Children are stored as separate nodes under their parent, so a parent's own nested list is empty even when it has children. Validation therefore puts each child back into the parent field that holds it before judging the parent, and a list-cardinality rule (for example "a Run must have at least one file") counts the children in the tree. This is one function, `metaseed.facade.children.data_with_children`, used wherever a dataset is validated: `client.validate()`, the MCP `validate_dataset` tool and the web application's validation.
+
+A child is put into the field it was recorded in. A child that records none, such as a File an importer linked to its Run by `run_ref` alone, goes into the one nested field of the parent that takes its entity type. When the parent has several fields of that type and the child records none, the field is not guessed: the child is left out of the parent's lists and is still validated on its own.
 
 ### Validate a specific entity
 

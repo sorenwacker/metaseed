@@ -150,6 +150,7 @@ def register_api_routes(  # noqa: C901
         Returns:
             JSON with validation summary and per-entity results.
         """
+        from metaseed.facade.children import data_with_children
         from metaseed.ui.datasets import get_current_dataset_name
         from metaseed.validators import validate_entity
 
@@ -169,7 +170,7 @@ def register_api_routes(  # noqa: C901
             def validate_recursive(node: TreeNode) -> None:
                 errors = []
                 if node.instance:
-                    data = node.instance.model_dump(exclude_none=True)
+                    data = data_with_children(node, facade)
                     validation_errors = validate_entity(
                         data=data,
                         entity_type=node.entity_type,
