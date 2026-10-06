@@ -333,7 +333,11 @@ def _validate_node_recursive(
     errors = []
 
     if node.instance:
-        data = node.instance.model_dump(exclude_none=True)
+        # With its children in the fields that hold them: a node dumped on its
+        # own has empty lists, and every cardinality rule then fails (#343).
+        from metaseed.facade.children import data_with_children
+
+        data = data_with_children(node, facade)
 
         # Use comprehensive validation with check reporting
         validation_checks = validate_entity_with_report(
