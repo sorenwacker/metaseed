@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.57.0 (261006)
+
+### Added
+- **REMBI 1.5 ships as a built-in profile** (`rembi`): Recommended Metadata for Biological Images as the BioImage Archive implements it, 13 entities with a Study root, matched field by field to the BioImage Archive model reference, with an example dataset (#338, #340).
+- **Health-RI core 2.0 ships as a built-in profile** (`health-ri-core`): the Health-RI core metadata schema, 13 entities with a Catalog root, held to the recorded SHACL shapes by a test and described property by property on its profile page (#339, #341, #342).
+
+### Fixed
+- **A parent is validated with its children wherever a dataset is validated.** The MCP `validate_dataset` tool and the web application's validation judged each record without its child records, so a list-cardinality rule on a nested field always failed: every Run of an imported ENA study was reported as having no files. A child linked to its parent by a reference alone, the shape importers produce, was skipped by `client.validate()` as well. All three now share `metaseed.facade.children.data_with_children`. Across the 16 shipped examples the MCP path reported 28 records invalid and now reports one, a finding `client.validate()` already made (#343).
+
 ## v0.56.0 (261001)
 
 ### Added
