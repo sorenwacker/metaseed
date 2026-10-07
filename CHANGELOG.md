@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.58.0 (261007)
 
 ### Removed
 - **The `miappe-htp` profile is no longer shipped**: the specification, its example dataset, its documentation page and the `metaseed.miappe_htp()` constructor are gone. A dataset saved against `miappe-htp` 1.0 no longer opens unless the profile is installed in the user specs directory; the last release carrying the profile is 0.57.0, and its `profile.yaml` can be copied from there.
