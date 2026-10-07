@@ -31,13 +31,13 @@
                             <label class="form-label">Base Profile (Reference)</label>
                             <div class="profile-selector">
                                 <select id="base-profile" class="form-select" onchange="updateVersions('base')">
-                                    <option value="">Profile</option>
+                                    <option value="" disabled hidden selected>Choose a profile</option>
                                     {% for profile in profiles %}
                                     <option value="{{ profile }}">{{ profile_display_names[profile] }}</option>
                                     {% endfor %}
                                 </select>
                                 <select id="base-version" class="form-select">
-                                    <option value="">Version</option>
+                                    <option value="" disabled hidden selected>Choose a version</option>
                                 </select>
                             </div>
                         </div>
@@ -52,7 +52,7 @@
                                     {% endfor %}
                                 </select>
                                 <select id="compare-version" class="form-select">
-                                    <option value="">Version</option>
+                                    <option value="" disabled hidden selected>Choose a version</option>
                                 </select>
                             </div>
                         </div>
@@ -203,7 +203,7 @@
             const profile = profileSelect.value;
 
             // Clear current options
-            versionSelect.innerHTML = '<option value="">Version</option>';
+            versionSelect.innerHTML = '<option value="" disabled hidden selected>Choose a version</option>';
 
             if (profile && profileVersions[profile]) {
                 const versions = profileVersions[profile];

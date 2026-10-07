@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- **The Explorer's dropdowns no longer list their own prompt.** "Profile" and "Version" appeared at the top of the lists as though they were choices; they are now prompts shown only in the closed control.
+
 ## v0.58.0 (261007)
 
 ### Removed
