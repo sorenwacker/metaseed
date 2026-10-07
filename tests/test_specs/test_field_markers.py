@@ -178,14 +178,10 @@ def _shipped_profiles() -> list[tuple[str, Path]]:
 
 _SHIPPED = _shipped_profiles()
 
-# Recorded state of every shipped profile under the rule. The advisory fired five
-# times when it was introduced; three of those entities have since declared the
-# identifier they were already keyed by (#212). The two left are not oversights:
-# SpatialDistribution is a value object with no identity of its own, and PRIDE
-# Publication is identified by its doi, which is a different field from the one
-# inference picks and so cannot move before a MAJOR version.
+# Recorded state of every shipped profile under the rule. The one left is not an
+# oversight: PRIDE Publication is identified by its doi, which is a different
+# field from the one inference picks and so cannot move before a MAJOR version.
 _EXPECTED_WARNING_TARGETS: dict[str, set[str]] = {
-    "miappe-htp/1.0": {"SpatialDistribution.description"},
     "pride/1.0": {"Publication.title"},
 }
 
@@ -195,7 +191,6 @@ _EXPECTED_WARNING_TARGETS: dict[str, set[str]] = {
 # dataset that was written before it.
 _DECLARED_IDENTIFIERS: dict[str, dict[str, str]] = {
     "isa/1.0": {"Process": "name"},
-    "miappe-htp/1.0": {"Location": "name", "ObservationLevelHierarchy": "name"},
 }
 
 

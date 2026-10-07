@@ -206,21 +206,16 @@ resolves identity and never changes what a dataset is keyed by; at worst it
 withholds a suggestion. That is a different risk class from the heuristics the
 markers replaced, which silently picked the wrong field.
 
-The advisory fired five times across the ten shipped profiles (#212), and the
-five were not one problem:
+Among the shipped profiles the advisory fired for two entities (#212), and the
+two were not one problem:
 
-- `isa` 1.0 `Process.name`, `miappe-htp` 1.0 `Location.name` and
-  `ObservationLevelHierarchy.name` are entities whose identifier *is* that field
-  — it was simply never declared. They now declare it. Nothing about them is
+- `isa` 1.0 `Process.name` is an entity whose identifier *is* that field
+  — it was simply never declared. It now declares it. Nothing about it is
   keyed differently: the marker names the field inference already resolved to,
   which the [comparator](../api/schema-specs.md#comparing-versions) classifies
   compatible, so no version was bumped to record it. That reclassification was
   the substance of the fix; before it, saying out loud what the format already
   did counted as a breaking change.
-- `miappe-htp` 1.0 `SpatialDistribution` has no identifier. It is a value object
-  nested one-to-one in an ObservationUnit — a description and three coordinates
-  — and marking any of them would state an identity the entity does not have.
-  The advisory is accurate and stays.
 - `pride` 1.0 `Publication` is identified by its `doi`, not by the `title`
   inference picks. Moving it is a real change to what datasets are keyed by, so
   it belongs in a MAJOR version rather than in a patch.

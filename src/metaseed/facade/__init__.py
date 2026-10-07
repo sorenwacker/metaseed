@@ -37,7 +37,6 @@ from metaseed.facade.profiles import (
     isa,
     metabolights,
     miappe,
-    miappe_htp,
     pride,
     rembi,
 )
@@ -56,7 +55,6 @@ __all__ = [
     "isa",
     "metabolights",
     "miappe",
-    "miappe_htp",
     "pride",
     "rembi",
     "validate_ontology_term",

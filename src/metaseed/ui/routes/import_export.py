@@ -260,6 +260,15 @@ def register_import_routes(
                 detail=f"{key} is not available for the {state.profile} profile.",
             )
 
+        # The import replaces the whole dataset. The page offers it only while
+        # the dataset is empty; refused here too, or a hand-posted request
+        # would discard what was entered.
+        if state.nodes_by_id:
+            raise HTTPException(
+                status_code=409,
+                detail="This dataset already has entities; an import would replace them.",
+            )
+
         try:
             info = import_from_source(state, state.profile, value.strip())
         except ImportSourceError as exc:

@@ -167,7 +167,6 @@ graph_data = visualizer.build_diff_graph(result)
 |---------|-------------|
 | `isa/1.0` | Investigation-Study-Assay framework |
 | `miappe/1.1`, `miappe/1.2` | Plant phenotyping metadata |
-| `miappe-htp/1.0` | High-throughput plant phenotyping |
 | `seek/1.0` | The model FAIRDOM-SEEK stores research in, built on JERM |
 | `darwin-core/1.0` | Biodiversity data standard |
 | `dissco/0.4` | Digital Specimen standard |

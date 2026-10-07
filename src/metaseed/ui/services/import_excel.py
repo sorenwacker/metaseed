@@ -103,7 +103,7 @@ def workbook_to_payload(
 
     # The spec says which columns are entity lists (skip: children arrive on
     # their own sheets) and which are scalar lists (split what export joined).
-    spec = SpecLoader().load_profile(version, profile)
+    spec = facade.profile_spec or SpecLoader().load_profile(version, profile)
 
     entities: list[dict[str, Any]] = []
     # The export's own sheets are not entities; matching by entity name already

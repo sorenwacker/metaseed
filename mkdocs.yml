@@ -103,7 +103,6 @@ nav:
       - SEEK: profiles/seek.md
       - SEEK-ready template (ISA): profiles/seek-ready-template.md
       - MIAPPE: profiles/miappe.md
-      - MIAPPE-HTP: profiles/miappe-htp.md
       - MetaboLights: profiles/metabolights.md
       - PRIDE: profiles/pride.md
       - REMBI: profiles/rembi.md

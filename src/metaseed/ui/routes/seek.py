@@ -98,7 +98,9 @@ def register_seek_routes(  # noqa: C901
         from metaseed.specs.loader import SpecLoader
 
         facade = state.get_or_create_facade()
-        return SpecLoader().load_profile(facade.version, facade.profile)
+        return facade.profile_spec or SpecLoader().load_profile(
+            facade.version, facade.profile
+        )
 
     def _load_profile_named(name: str, version: str = "") -> Any:
         """Load a profile by name and version.

@@ -38,7 +38,6 @@ PROFILE_DOCS: dict[str, tuple[str, str]] = {
     "seek-ready-template.md": ("seek-ready-template", "1.0"),
     "metabolights.md": ("metabolights", "1.0"),
     "miappe.md": ("miappe", "1.2"),  # library default; page targets 1.2
-    "miappe-htp.md": ("miappe-htp", "1.0"),
     "pride.md": ("pride", "1.0"),
 }
 

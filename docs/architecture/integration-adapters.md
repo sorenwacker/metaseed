@@ -122,7 +122,7 @@ behalf.
 
 | Host | Entry point |
 |------|-------------|
-| Web UI | `POST /import/source` with `key` and `value` form fields; the control is rendered on the dataset page from `import_options_for_profile` |
+| Web UI | `POST /import/source` with `key` and `value` form fields; the control is rendered from `import_options_for_profile` on the page of a dataset that has no entities, and the route answers 409 for one that has, because the import replaces the whole dataset |
 | MCP | the `import_from_database` tool (`profile`, `accession`, `name`) |
 | Library | `metaseed.<repo>.import_accession(...)` directly |
 

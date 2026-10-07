@@ -31,25 +31,6 @@ def miappe(version: str | None = None) -> ProfileFacade:
     return ProfileFacade("miappe", version)
 
 
-def miappe_htp(version: str | None = None) -> ProfileFacade:
-    """Get MIAPPE-HTP profile facade.
-
-    Args:
-        version: MIAPPE-HTP version. If None, uses the latest available version.
-
-    Returns:
-        ProfileFacade for MIAPPE-HTP (High Throughput Phenotyping).
-
-    Example:
-        >>> from metaseed import miappe_htp
-        >>> m = miappe_htp()
-        >>> m.Investigation.help()
-    """
-    from metaseed.facade.core import ProfileFacade
-
-    return ProfileFacade("miappe-htp", version)
-
-
 def isa(version: str | None = None) -> ProfileFacade:
     """Get ISA profile facade.
 

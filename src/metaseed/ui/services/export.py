@@ -278,7 +278,9 @@ def _load_spec(facade: Any) -> Any:
     from metaseed.specs.loader import SpecLoader
 
     try:
-        return SpecLoader().load_profile(facade.version, facade.profile)
+        return facade.profile_spec or SpecLoader().load_profile(
+            facade.version, facade.profile
+        )
     except Exception:
         return None
 
