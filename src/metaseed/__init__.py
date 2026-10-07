@@ -51,7 +51,6 @@ from metaseed.facade import (
     isa,
     metabolights,
     miappe,
-    miappe_htp,
     pride,
     rembi,
 )
@@ -110,7 +109,6 @@ __all__ = [
     "list_profiles",
     "metabolights",
     "miappe",
-    "miappe_htp",
     "pride",
     "rembi",
     "validate",

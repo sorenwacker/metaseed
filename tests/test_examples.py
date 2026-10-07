@@ -23,9 +23,8 @@ EXAMPLES_DIR = Path(__file__).parent.parent / "src" / "metaseed" / "examples"
 
 TITLE_FIELDS = frozenset({"title", "study_title", "investigation_title"})
 
-# Profiles whose root entity has no title field (MIAPPE-HTP's Investigation
-# carries a ``name``, which is also its identifier).
-PROFILES_WITHOUT_TITLE = frozenset({"darwin-core", "ena", "dissco", "miappe-htp"})
+# Profiles whose root entity has no title field.
+PROFILES_WITHOUT_TITLE = frozenset({"darwin-core", "ena", "dissco"})
 
 
 @lru_cache(maxsize=32)
@@ -473,7 +472,7 @@ class TestExampleFilesHaveRequiredFields:
         """The root record carries the profile's own identifier field.
 
         The facade knows which field identifies the root entity (``identifier``
-        for most profiles, ``name`` for MIAPPE-HTP, ``occurrenceID`` for Darwin
+        for most profiles, ``occurrenceID`` for Darwin
         Core); a fixed list of likely names drifted from the specs.
         """
         from metaseed.facade import ProfileFacade

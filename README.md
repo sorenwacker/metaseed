@@ -49,7 +49,6 @@ The package ships these profiles. Counts refer to each profile's latest version.
 | Profile | `--profile` | Versions | Entities | Fields | Domain |
 |---------|-------------|----------|----------|--------|--------|
 | MIAPPE | `miappe` | 1.1, 1.2 | 14 | 163 | Plant phenotyping |
-| MIAPPE-HTP | `miappe-htp` | 1.0 | 28 | 137 | High-throughput plant phenotyping |
 | ISA | `isa` | 1.0 | 22 | 139 | Life science investigations |
 | Darwin Core | `darwin-core` | 1.0 | 10 | 189 | Biodiversity |
 | DiSSCo | `dissco` | 0.4 | 16 | 261 | Digital specimens |
