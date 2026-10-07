@@ -54,7 +54,6 @@
             </a>
         </div>
     </div>
-    {% include "partials/import_source.html" %}
     <div class="entity-list">
         {% for node in tree_nodes recursive %}
         <div class="entity-item {% if loop.depth > 1 %}child{% endif %}">

@@ -174,13 +174,8 @@ class TestImportSourceRoute:
         assert "refreshPage" in response.headers.get("HX-Trigger", "")
         assert _root_accessions(state) == ["PXD000001"]
 
-    def test_route_reports_an_empty_import_without_replacing_the_dataset(self) -> None:
+    def test_route_reports_an_empty_import_without_a_reload(self) -> None:
         state = AppState(profile="pride", version="1.0")
-        state.add_node(
-            "Dataset",
-            {"accession": "PXD000002", "title": "Existing"},
-            skip_validation=True,
-        )
         client = TestClient(create_app(state))
 
         with patch("metaseed.pride.import_accession", _empty_client):
@@ -191,6 +186,31 @@ class TestImportSourceRoute:
         assert response.status_code == 200
         assert "notification-error" in response.text
         assert "refreshPage" not in response.headers.get("HX-Trigger", "")
+        assert _root_accessions(state) == []
+
+    def test_route_refuses_a_dataset_that_has_entities(self) -> None:
+        """The import replaces the whole dataset, so it is for an empty one.
+
+        The page stopped offering the control on a dataset with entities; the
+        route refuses as well, or a hand-posted request would still discard
+        what was entered.
+        """
+        state = AppState(profile="pride", version="1.0")
+        state.add_node(
+            "Dataset",
+            {"accession": "PXD000002", "title": "Existing"},
+            skip_validation=True,
+        )
+        client = TestClient(create_app(state))
+
+        importer = Mock(side_effect=_pride_client)
+        with patch("metaseed.pride.import_accession", importer):
+            response = client.post(
+                "/import/source", data={"key": "pride-import", "value": "PXD000001"}
+            )
+
+        assert response.status_code == 409
+        importer.assert_not_called()
         assert _root_accessions(state) == ["PXD000002"]
 
     def test_route_refuses_an_importer_not_offered_for_the_profile(self) -> None:
@@ -221,16 +241,16 @@ class TestImportSourceRoute:
 class TestImportControlIsRendered:
     """The capability has to be reachable, not merely routable."""
 
-    def test_dataset_page_offers_the_profiles_importer(self) -> None:
+    def test_a_dataset_with_entities_offers_no_importer(self) -> None:
+        """Reported: the BrAPI field sat above the entities of a dataset that
+        already had them, offering to replace them."""
         state = AppState()
         client = TestClient(create_app(state), follow_redirects=True)
 
         response = client.get("/load-example/pride/1.0")
 
         assert response.status_code == 200
-        assert 'data-testid="btn-import-pride-import"' in response.text
-        assert "ProteomeXchange accession" in response.text
-        assert 'data-testid="btn-import-ena-import"' not in response.text
+        assert "btn-import-" not in response.text
 
     def test_empty_dataset_offers_the_importer_too(self, temp_datasets_dir) -> None:
         """An empty dataset is exactly when a user wants to fill it from an
@@ -251,12 +271,20 @@ class TestImportControlIsRendered:
         assert response.status_code == 200
         assert "This dataset has no entities yet" in response.text
         assert 'data-testid="btn-import-pride-import"' in response.text
+        assert "ProteomeXchange accession" in response.text
+        assert 'data-testid="btn-import-ena-import"' not in response.text
 
-    def test_dataset_page_offers_no_importer_for_a_profile_without_one(self) -> None:
-        state = AppState()
+    def test_an_empty_dataset_of_a_profile_without_an_importer_offers_none(
+        self, temp_datasets_dir
+    ) -> None:
+        from metaseed.ui.datasets import save_dataset
+
+        state = AppState(profile="darwin-core", version="1.0")
+        save_dataset(state, "test-blank-dwc")
         client = TestClient(create_app(state), follow_redirects=True)
 
-        response = client.get("/load-example/darwin-core/1.0")
+        response = client.get("/dataset/test-blank-dwc/edit")
 
         assert response.status_code == 200
+        assert "This dataset has no entities yet" in response.text
         assert "btn-import-" not in response.text
