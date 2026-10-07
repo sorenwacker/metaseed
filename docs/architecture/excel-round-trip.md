@@ -37,6 +37,8 @@ Some columns are structural rather than data:
 Scalar list fields are joined into one cell, and a cell whose text would make
 Excel evaluate a formula is prefixed with a quote.
 
+The dropdowns, heading notes and rules come from the dataset's specification. A facade built from a supplied specification (`ProfileFacade(..., spec=...)`, `MetaseedClient.from_spec`) carries it in memory, and the export and the import read that one; only a facade that loads by name asks a `SpecLoader`. A specification stored by the hub has no profile file, so it reaches the workbook this way.
+
 ### Adding a row
 
 A field that can hold an entity type is a *holder*, written `Type.field`. A MIAPPE Study has one holder, `Investigation.studies`. A MIAPPE Person has two, `Investigation.contacts` and `Study.persons`, and a DCAT Agent is held by one catalogue as both `creator` and `publisher`, so an identifier alone cannot say where a row belongs.
@@ -143,3 +145,5 @@ asserting the same entities, the same tree and the same values — including the
 ones Excel mangles and the scalar lists the export joins. A template's
 placeholder rows are covered directly, since a template is the one workbook a
 user is most likely to import unedited.
+
+`tests/test_ui/test_excel_uses_the_facades_own_spec.py` exports and reimports a dataset whose specification exists only in memory, and fails if a UI module looks a facade's specification up by name without asking the facade first.

@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- **The Excel export and import use the specification the facade holds.** Both looked the specification up by name in a fresh `SpecLoader`, which finds nothing for a facade built from a supplied specification: the export wrote a bare grid without heading notes or dropdowns, the import raised `Profile not found`, and the SEEK routes of the web application failed the same way. Every specification stored by the hub is of that kind. MIAPPE 1.1 held in memory exported 14 heading notes (the `_parent` ones) where the built-in profile exports 164; both now export 164.
+
 ## v0.57.0 (261006)
 
 ### Added
