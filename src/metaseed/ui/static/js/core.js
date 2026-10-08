@@ -266,3 +266,24 @@ function saveDcatMetadata(event) {
 function closeDcatPanel() {
     document.getElementById('dcat-panel').classList.add('hidden');
 }
+
+
+// Repository import on the New Dataset screen: each identifier is its own
+// request, and the server names this event after each row is swapped in. The
+// bar counts the rows that are no longer waiting; an imported dataset is
+// announced, since its row may be below the fold.
+document.body.addEventListener('importRecordDone', function(e) {
+    var detail = e.detail || {};
+    var bar = document.getElementById('import-progress');
+    if (bar) {
+        var done = document.querySelectorAll(
+            '[data-testid="import-row"]:not([data-status="waiting"])'
+        ).length;
+        bar.value = done;
+        var label = document.getElementById('import-progress-label');
+        if (label) label.textContent = done + ' of ' + bar.max + ' done';
+    }
+    if (detail.status === 'imported') {
+        showNotification('Imported ' + detail.name, 'success');
+    }
+});

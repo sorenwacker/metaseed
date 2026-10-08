@@ -27,6 +27,40 @@ if TYPE_CHECKING:
 __all__ = ["build_dataset", "import_brapi", "to_brapi"]
 
 
+#: BrAPI resources an address may name below the base URL.
+_RESOURCES = frozenset(
+    {"trials", "studies", "germplasm", "observationunits", "observations", "programs"}
+)
+
+
+def _refuse_an_address_below_the_base_url(address: str) -> None:
+    """Raise if ``address`` names a record or a list on the server, not the server.
+
+    Every request appends its path to the base URL, so a trial's own address
+    turns ``/studies`` into ``/trials/<id>/studies``. A server that ignores the
+    extra segments answers with every study it holds, and the import then
+    fetches all of them.
+
+    Raises:
+        ValueError: Naming the base URL to enter instead.
+    """
+    from urllib.parse import urlsplit, urlunsplit
+
+    parts = urlsplit(address)
+    segments = [segment for segment in parts.path.split("/") if segment]
+    below = next((i for i, s in enumerate(segments) if s.lower() in _RESOURCES), None)
+    if below is None:
+        return
+    base = urlunsplit(
+        (parts.scheme, parts.netloc, "/" + "/".join(segments[:below]), "", "")
+    )
+    raise ValueError(
+        f"'{address}' is the address of a record on a BrAPI server, and the import "
+        f"takes the server's base URL, which ends in /brapi/v2: enter {base}. "
+        "Importing a single trial or study by its address is not supported."
+    )
+
+
 def import_brapi(
     base_url: str,
     *,
@@ -55,6 +89,7 @@ def import_brapi(
     """
     from metaseed.brapi.client import BrapiClient
 
+    _refuse_an_address_below_the_base_url(base_url)
     client = client or BrapiClient(base_url, token=token)
 
     studies = client.studies()

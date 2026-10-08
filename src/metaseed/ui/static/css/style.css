@@ -5556,6 +5556,73 @@ details.sidebar-section summary:hover {
     margin-top: var(--space-xs);
 }
 
+/* New Dataset, From a repository */
+[data-testid="missing-profile-note"] {
+    margin-bottom: var(--space-md);
+}
+
+.import-new-form .form-input {
+    width: 100%;
+    max-width: none;
+}
+
+/* A button and what it wants, side by side: the shared version row pushes its
+   second item to the far edge, which put the hint out of sight. */
+.import-new-options {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: var(--space-sm) var(--space-md);
+    align-items: center;
+    margin-top: var(--space-md);
+}
+
+.import-new-option {
+    display: contents;
+}
+
+.import-new-option .btn {
+    justify-self: stretch;
+}
+
+.import-new-option .form-hint {
+    margin: 0;
+}
+
+.import-progress {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    margin: var(--space-lg) 0 var(--space-sm);
+}
+
+.import-progress progress {
+    flex: 1;
+    height: 0.5rem;
+    accent-color: var(--clr-forest);
+}
+
+.import-progress .form-hint {
+    margin: 0;
+    white-space: nowrap;
+}
+
+.import-results-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.import-results-table th,
+.import-results-table td {
+    padding: var(--space-sm) var(--space-md) var(--space-sm) 0;
+    text-align: left;
+    vertical-align: top;
+}
+
+.import-results-table .form-hint {
+    display: block;
+    margin: 0;
+}
+
 /* Datasets Page */
 .datasets-page {
     padding: var(--space-xl) var(--space-lg);

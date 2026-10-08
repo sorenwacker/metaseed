@@ -27,7 +27,7 @@ Read-only `GET` routes are views of a capability rather than capabilities of the
 | Validate a dataset | `dataset validate` | `validate_dataset` | `GET /api/validate` |
 | Check that links between entities are complete | `dataset validate-links` | `validate_relationships` | — |
 | Export a dataset (Excel or an adapter format) | `dataset export` | — | `GET /export`, `GET /export/adapter/{fmt}` |
-| Import a public record by accession | `dataset import-record` | `import_from_database` | `POST /import/source` into an empty dataset, `POST /import/new` as a new dataset named by the record |
+| Import a public record by accession | `dataset import-record` | `import_from_database` | `POST /import/source` into an empty dataset, `POST /import/new` and `POST /import/new/record` as a new dataset named by the record |
 | **Entities** | | | |
 | List a dataset's entities | `entity list` | `list_entities` | — |
 | Show one entity | `entity show` | `get_entity` | — |

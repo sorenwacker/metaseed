@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- **A repository import on the New Dataset screen shows how far it has got.** Each identifier is its own request: a progress bar counts the identifiers that are done, each row shows its outcome as it arrives, and each imported dataset is announced in a toast.
+
+### Fixed
+- **A repository import no longer stalls the application.** The importer ran on the request loop, so while one import fetched from a repository no other page answered. It runs on a worker thread.
+- **A BrAPI address below the server's base URL is refused.** Given a trial's own address (`.../brapi/v2/trials/<id>`), the importer appended `/studies` to it; a server that ignores the trial answered with every study it holds (2763 on FAIDARE) and the import fetched them all. The address is refused before any request, naming the base URL to enter. Importing a single trial is not supported.
+- **The New Dataset screen's repository buttons sit beside what they take.** Each button's hint was pushed to the far edge of the card, and the note above the name field ran into its label.
+
 ## v0.59.0 (261008)
 
 ### Added
