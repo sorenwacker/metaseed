@@ -103,8 +103,14 @@
                         <button id="sidebar-toggle-btn" class="btn btn-sm btn-secondary" onclick="toggleSidebar()" title="Hide sidebar (Ctrl+B)">
                             Sidebar
                         </button>
-                        <button class="btn btn-sm btn-secondary" onclick="autoLayout()">
+                        <button class="btn btn-sm btn-secondary" onclick="autoLayout()"
+                                title="Arrange entities by force, which reads references well">
                             Layout
+                        </button>
+                        <button id="btn-hierarchical" class="btn btn-sm btn-secondary" onclick="toggleHierarchicalLayout()"
+                                data-testid="btn-tree-layout"
+                                title="Arrange entities as the containment tree they describe, root at the top">
+                            Tree
                         </button>
                         <button class="btn btn-sm btn-secondary"
                                 hx-get="/spec-builder/preview"
@@ -260,7 +266,7 @@
     <script>
         const BASE_URL = "{{ base_url }}";
     </script>
-    <script src="{{ base_url }}/static/js/erd-common.js?v=1"></script>
+    <script src="{{ base_url }}/static/js/erd-common.js?v=2"></script>
     <script src="{{ base_url }}/static/js/spec-builder-core.js?v=1"></script>
     <script src="{{ base_url }}/static/js/spec-builder.js?v=28"></script>
     <script src="{{ base_url }}/static/js/help-markers.js?v=1"></script>
