@@ -9,7 +9,7 @@
     <link rel="icon" type="image/png" sizes="128x128" href="{{ base_url }}/static/images/metaseed-icon-128.png">
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
     <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
-    <script src="{{ base_url }}/static/js/erd-common.js?v=1"></script>
+    <script src="{{ base_url }}/static/js/erd-common.js?v=2"></script>
     <script src="{{ base_url }}/static/js/explore-graph.js?v=3"></script>
     <script src="{{ base_url }}/static/js/explore-panel.js?v=4"></script>
     <link rel="stylesheet" href="{{ base_url }}/static/css/style.css?v=102">
@@ -19,6 +19,9 @@
         {% call header('explorer') %}
             <div class="header-actions">
                 <button class="btn btn-header" onclick="autoLayout()">Layout</button>
+                <button id="btn-hierarchical" class="btn btn-header" onclick="toggleHierarchicalLayout()"
+                        data-testid="btn-tree-layout"
+                        title="Arrange entities as the containment tree they describe, root at the top">Tree</button>
                 <button class="btn btn-header" onclick="fitGraph()">Fit</button>
             </div>
         {% endcall %}
@@ -31,13 +34,13 @@
                             <label class="form-label">Base Profile (Reference)</label>
                             <div class="profile-selector">
                                 <select id="base-profile" class="form-select" onchange="updateVersions('base')">
-                                    <option value="">Profile</option>
+                                    <option value="" disabled hidden selected>Choose a profile</option>
                                     {% for profile in profiles %}
                                     <option value="{{ profile }}">{{ profile_display_names[profile] }}</option>
                                     {% endfor %}
                                 </select>
                                 <select id="base-version" class="form-select">
-                                    <option value="">Version</option>
+                                    <option value="" disabled hidden selected>Choose a version</option>
                                 </select>
                             </div>
                         </div>
@@ -52,7 +55,7 @@
                                     {% endfor %}
                                 </select>
                                 <select id="compare-version" class="form-select">
-                                    <option value="">Version</option>
+                                    <option value="" disabled hidden selected>Choose a version</option>
                                 </select>
                             </div>
                         </div>
@@ -203,7 +206,7 @@
             const profile = profileSelect.value;
 
             // Clear current options
-            versionSelect.innerHTML = '<option value="">Version</option>';
+            versionSelect.innerHTML = '<option value="" disabled hidden selected>Choose a version</option>';
 
             if (profile && profileVersions[profile]) {
                 const versions = profileVersions[profile];

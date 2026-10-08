@@ -269,6 +269,10 @@ For cross-entity validation, use the **Advanced Rules** section in the sidebar:
 - **Pattern**: Regex validation
 - **Range**: Numeric min/max validation
 
+## Arranging the Diagram
+
+The toolbar above the diagram has two layouts. **Layout** arranges the entities by force, which keeps entities joined by a reference close together. **Tree** arranges them as the containment tree the specification describes, with the root entity at the top and each nested entity one level below the entity that holds it. **Tree** is a toggle: selecting it again, or selecting **Layout**, returns to the free arrangement, and the button is highlighted while the tree is shown. Neither layout changes the specification.
+
 ## Saving and Exporting
 
 ### Save

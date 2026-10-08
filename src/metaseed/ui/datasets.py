@@ -7,12 +7,15 @@ All operations use DatasetManagerFactory for proper dependency injection.
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import asdict
 from typing import TYPE_CHECKING, Any
 
 from metaseed.repositories.dataset_repository import DatasetData, DatasetRepository
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from .dataset_manager import DatasetManagerFactory
     from .state import AppState
 
@@ -274,6 +277,98 @@ def import_from_source(state: AppState, profile: str, value: str) -> dict[str, A
         "root_count": len(client.get_roots()),
         "entity_count": len(state.nodes_by_id),
     }
+
+
+#: Identifiers one New Dataset submission takes; they are fetched in turn.
+MAX_IMPORTED_AT_ONCE = 20
+
+_NOT_NAME_CHARACTERS = re.compile(r"[^a-zA-Z0-9_-]+")
+
+
+def _name_part(text: str, length: int) -> str:
+    """``text`` reduced to the characters a dataset name may hold."""
+    return _NOT_NAME_CHARACTERS.sub("_", text).strip("_-")[:length].strip("_-")
+
+
+def imported_dataset_name(
+    title: str, identifier: str, taken: Iterable[str]
+) -> str | None:
+    """The name an imported record is saved under, or ``None`` if none is free.
+
+    The record's title names the dataset, else its identifier. Where that name
+    is taken the identifier is appended; where that is taken too the record is
+    already imported.
+
+    Args:
+        title: The title the root record carries at the repository.
+        identifier: The accession or server URL the record was fetched by.
+        taken: Names of the datasets that exist.
+
+    Returns:
+        A name :func:`validate_dataset_name` accepts, or ``None``.
+    """
+    taken = set(taken)
+    tail = _name_part(identifier, 23)
+    head = _name_part(title, 40) or tail
+    for name in dict.fromkeys((head, f"{head}_{tail}")):
+        if name and name not in taken and validate_dataset_name(name) is None:
+            return name
+    return None
+
+
+def source_did_not_answer(exc: Exception) -> bool:
+    """Whether an import failed on the repository's availability, not the identifier."""
+    try:
+        import httpx
+    except ModuleNotFoundError:  # an importer that does not use httpx raised it
+        transport_error: tuple[type[Exception], ...] = ()
+    else:
+        transport_error = (httpx.TransportError,)
+    if isinstance(exc, transport_error):
+        return True
+    status = getattr(getattr(exc, "response", None), "status_code", None)
+    return isinstance(status, int) and status >= 500
+
+
+def import_as_new_dataset(state: AppState, profile: str, value: str) -> dict[str, Any]:
+    """Import one record and save it as a dataset named by the record.
+
+    Never raises for a failed import: the outcome says what happened, so a
+    list of identifiers can be worked through whatever any one of them does.
+
+    Args:
+        state: AppState the imported dataset is installed in before saving.
+        profile: Profile whose registered importer fetches the record.
+        value: The accession or server URL.
+
+    Returns:
+        Dict with ``identifier``, ``status`` (``imported``, ``empty``,
+        ``duplicate``, ``failed`` or ``not_checked``), and ``name`` or
+        ``detail`` where the status has one.
+
+    Raises:
+        NoImporterError: If no installed adapter imports into ``profile``.
+    """
+    try:
+        import_from_source(state, profile, value)
+    except NoImporterError:
+        raise
+    except EmptyImportError:
+        return {"identifier": value, "status": "empty"}
+    except Exception as exc:
+        status = "not_checked" if source_did_not_answer(exc) else "failed"
+        return {"identifier": value, "status": status, "detail": str(exc)[:200]}
+
+    roots = state.get_or_create_facade().get_roots()
+    instance = roots[0].instance if roots else None
+    data = instance.model_dump() if instance is not None else {}
+    title = str(data.get("title") or "")
+    name = imported_dataset_name(title, value, (d["name"] for d in list_datasets()))
+    if name is None:
+        return {"identifier": value, "status": "duplicate", "detail": title}
+    save_dataset(state, name)
+    set_current_dataset_name(state, name)
+    return {"identifier": value, "status": "imported", "name": name}
 
 
 def delete_dataset(name: str) -> bool:

@@ -122,7 +122,7 @@ behalf.
 
 | Host | Entry point |
 |------|-------------|
-| Web UI | `POST /import/source` with `key` and `value` form fields; the control is rendered from `import_options_for_profile` on the page of a dataset that has no entities, and the route answers 409 for one that has, because the import replaces the whole dataset |
+| Web UI | On the New Dataset screen, one button per importer from `import_options`: `POST /import/new` with `key` and `values` (identifiers, one per line, up to 20) fetches them in turn and saves each as a dataset named by the title its record carries, or by the identifier where it has none; a taken name gets the identifier appended. Into an existing dataset: `POST /import/source` with `key` and `value` form fields; the control is rendered from `import_options_for_profile` on the page of a dataset that has no entities, and the route answers 409 for one that has, because the import replaces the whole dataset |
 | MCP | the `import_from_database` tool (`profile`, `accession`, `name`) |
 | Library | `metaseed.<repo>.import_accession(...)` directly |
 
