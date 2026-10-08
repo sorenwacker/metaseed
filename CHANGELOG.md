@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.60.0 (261008)
 
 ### Changed
 - **The datasets overview searches on the server and pages at 24.** The box above the list narrows the datasets by name or standard as you type, the address carries the search and the page, and a pager follows the list. The client-side filter, which hid cards on the page and could not find a dataset beyond it, is gone.
