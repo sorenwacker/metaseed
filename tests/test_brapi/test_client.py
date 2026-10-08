@@ -202,3 +202,41 @@ class TestUnhelpfulErrorsAreTranslated:
         )
 
         assert client.studies() == [{"studyDbId": "1"}]
+
+
+def test_a_dropped_connection_is_tried_again(monkeypatch) -> None:
+    """A trial is thousands of requests over half an hour; one name that did
+    not resolve threw them all away."""
+    from metaseed.brapi import client as client_module
+
+    monkeypatch.setattr(client_module, "RETRY_PAUSE_SECONDS", 0.0)
+    attempts: list[int] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        attempts.append(len(attempts) + 1)
+        if len(attempts) < 3:
+            raise httpx.ConnectError("nodename nor servname provided", request=request)
+        return httpx.Response(200, json=_payloads()["studies"])
+
+    client = BrapiClient(
+        BASE_URL, http_client=httpx.Client(transport=httpx.MockTransport(handler))
+    )
+
+    assert client.studies()
+    assert attempts == [1, 2, 3]
+
+
+def test_a_connection_that_keeps_dropping_is_reported(monkeypatch) -> None:
+    from metaseed.brapi import client as client_module
+
+    monkeypatch.setattr(client_module, "RETRY_PAUSE_SECONDS", 0.0)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("no route", request=request)
+
+    client = BrapiClient(
+        BASE_URL, http_client=httpx.Client(transport=httpx.MockTransport(handler))
+    )
+
+    with pytest.raises(httpx.ConnectError):
+        client.studies()
