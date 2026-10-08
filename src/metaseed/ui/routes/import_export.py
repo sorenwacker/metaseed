@@ -17,8 +17,11 @@ from starlette.requests import Request
 from metaseed import adapters
 
 from ..datasets import (
+    MAX_IMPORTED_AT_ONCE,
     ImportSourceError,
+    NoImporterError,
     get_current_dataset_name,
+    import_as_new_dataset,
     import_dataset,
     import_from_source,
 )
@@ -69,9 +72,32 @@ def import_options_for_profile(profile: str) -> list[dict[str, str]]:
     ]
 
 
+def import_options() -> list[dict[str, str]]:
+    """Every installed importer, for the New Dataset screen.
+
+    One entry per profile an installed adapter imports into, so a plugin that
+    declares an ``import`` action on the ``import-menu`` surface gets its
+    button there without a template change.
+    """
+    options = []
+    for profile in adapters.importable_profiles():
+        action = adapters.import_action_for_profile(profile)
+        if action is not None:
+            options.append(
+                {
+                    "key": action.key,
+                    "profile": profile,
+                    "label": action.label,
+                    "input_label": action.input_label,
+                    "input_placeholder": action.input_placeholder,
+                }
+            )
+    return options
+
+
 def register_export_routes(
     app: FastAPI,
-    templates: Jinja2Templates,  # noqa: ARG001
+    templates: Jinja2Templates,
     get_state: Callable[[], AppState],
 ) -> None:
     """Register export routes on the FastAPI app.
@@ -81,6 +107,8 @@ def register_export_routes(
         templates: Jinja2Templates instance (unused, kept for API consistency).
         get_state: Callable returning AppState.
     """
+
+    _new_dataset_import_route(app, templates, get_state)
 
     @app.get("/export")
     async def export_excel(_request: Request) -> StreamingResponse:
@@ -299,6 +327,51 @@ def register_import_routes(
         # the empty dataset they just filled.
         response.headers["HX-Trigger"] = "refreshPage"
         return response
+
+
+def _new_dataset_import_route(
+    app: FastAPI,
+    templates: Jinja2Templates,
+    get_state: Callable[[], AppState],
+) -> None:
+    """Register ``POST /import/new``: repository records as new datasets."""
+
+    @app.post("/import/new", response_class=HTMLResponse)
+    async def import_new(
+        request: Request, key: str = Form(...), values: str = Form("")
+    ) -> HTMLResponse:
+        """Import each identifier as a saved dataset named by its record."""
+        option = next((o for o in import_options() if o["key"] == key), None)
+        if option is None:
+            raise HTTPException(status_code=404, detail=f"Unknown importer: {key}")
+
+        identifiers = list(
+            dict.fromkeys(line.strip() for line in values.splitlines() if line.strip())
+        )
+        problem = ""
+        outcomes: list[dict[str, Any]] = []
+        if not identifiers:
+            problem = "Enter at least one identifier."
+        elif len(identifiers) > MAX_IMPORTED_AT_ONCE:
+            problem = (
+                f"{len(identifiers)} identifiers were entered and one submission "
+                f"takes {MAX_IMPORTED_AT_ONCE}. Nothing was imported; split the list."
+            )
+        else:
+            state = get_state()
+            try:
+                outcomes = [
+                    import_as_new_dataset(state, option["profile"], identifier)
+                    for identifier in identifiers
+                ]
+            except NoImporterError as exc:
+                raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+        return templates.TemplateResponse(
+            request,
+            "partials/import_results.html",
+            {"problem": problem, "outcomes": outcomes},
+        )
 
 
 def _import_notification(

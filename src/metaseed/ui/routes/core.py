@@ -198,12 +198,18 @@ def register_core_routes(
     @app.get("/new-dataset", response_class=HTMLResponse)
     async def new_dataset(request: Request) -> HTMLResponse:
         """Show the new dataset / profile selection screen."""
+        from .import_export import import_options
+
         profile_factory = ProfileFactory()
         profiles_info = get_profile_display_info(profile_factory)
         return templates.TemplateResponse(
             request,
             "partials/profile_select.html",
-            {"profiles": profiles_info},
+            {
+                "profiles": profiles_info,
+                "import_options": import_options(),
+                "base_url": base_url,
+            },
         )
 
     @app.get("/profile/{name}")

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Added
+- **Repository records import from the New Dataset screen.** The screen has a *From a repository* section with one button per importer in the adapter registry, so a plugin that declares an import action gets its button there. Up to 20 identifiers, one per line, are fetched in turn; each becomes a saved dataset named by the title its record carries, and the result lists every identifier as imported, nothing to import, already imported, failed, or not checked when the repository did not answer.
+
 ### Fixed
 - **The Explorer's dropdowns no longer list their own prompt.** "Profile" and "Version" appeared at the top of the lists as though they were choices; they are now prompts shown only in the closed control.
 
