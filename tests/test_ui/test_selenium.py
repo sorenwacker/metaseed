@@ -214,8 +214,9 @@ def start_new_investigation(
     """
     click_button(driver, "btn-new-dataset")
     # Fill in the dataset name
-    fill_field(driver, "new-dataset-name", dataset_name)
     click_button(driver, f"profile-{profile}-v{version}")
+    fill_field(driver, "new-dataset-name", dataset_name)
+    click_button(driver, "btn-create-dataset")
 
 
 def fill_inline_cell(driver, field_name: str, row_idx: int, col: str, value: str):

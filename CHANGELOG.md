@@ -2,12 +2,16 @@
 
 ## Unreleased
 
+### Changed
+- **The datasets overview searches on the server and pages at 24.** The box above the list narrows the datasets by name or standard as you type, the address carries the search and the page, and a pager follows the list. The client-side filter, which hid cards on the page and could not find a dataset beyond it, is gone.
+- **New Dataset asks for the name last.** The standard and its version are chosen first; the name is asked on a screen of its own that names the choice and offers a way back. The name field used to sit above the cards, where it read as a search box.
+
 ### Added
 - **A repository import on the New Dataset screen shows how far it has got.** Each identifier is its own request: a progress bar counts the identifiers that are done, each row shows its outcome as it arrives, and each imported dataset is announced in a toast.
 
 ### Fixed
 - **A repository import no longer stalls the application.** The importer ran on the request loop, so while one import fetched from a repository no other page answered. It runs on a worker thread.
-- **A BrAPI address below the server's base URL is refused.** Given a trial's own address (`.../brapi/v2/trials/<id>`), the importer appended `/studies` to it; a server that ignores the trial answered with every study it holds (2763 on FAIDARE) and the import fetched them all. The address is refused before any request, naming the base URL to enter. Importing a single trial is not supported.
+- **A BrAPI address below the server's base URL no longer imports the whole server.** Given a trial's address (`.../brapi/v2/trials/<id>`), the importer appended `/studies` to it; a server that ignored the trial answered with every study it holds (2763 on FAIDARE) and the import fetched them all. A trial's address now imports that trial's studies, a study's address that one study, with the germplasm of those studies rather than of the server; any other resource below the base URL is refused before a request is made, naming the three forms the import takes.
 - **The New Dataset screen's repository buttons sit beside what they take.** Each button's hint was pushed to the far edge of the card, and the note above the name field ran into its label.
 
 ## v0.59.0 (261008)

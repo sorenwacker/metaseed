@@ -105,6 +105,22 @@ class BrapiClient:
         """Return BrAPI ``studies`` objects."""
         return self._get("studies")
 
+    def trial(self, trial_db_id: str) -> dict[str, Any]:
+        """Return one BrAPI ``trial`` object, with the studies it lists.
+
+        Args:
+            trial_db_id: The ``trialDbId``, as the server spells it in a URL.
+        """
+        return self._get_one(f"trials/{trial_db_id}")
+
+    def study(self, study_db_id: str) -> dict[str, Any]:
+        """Return one BrAPI ``study`` object.
+
+        Args:
+            study_db_id: The ``studyDbId``, as the server spells it in a URL.
+        """
+        return self._get_one(f"studies/{study_db_id}")
+
     def observation_units(self, study_db_id: str) -> list[dict[str, Any]]:
         """Return BrAPI ``observationunits`` objects for a study.
 
@@ -129,9 +145,36 @@ class BrapiClient:
             "observations", {"observationUnitDbId": observation_unit_db_id}
         )
 
-    def germplasm(self) -> list[dict[str, Any]]:
-        """Return BrAPI ``germplasm`` objects."""
-        return self._get("germplasm")
+    def germplasm(self, study_db_id: str | None = None) -> list[dict[str, Any]]:
+        """Return BrAPI ``germplasm`` objects, those of one study when asked.
+
+        Args:
+            study_db_id: Restrict to the germplasm of this study. A server
+                holding thousands of accessions is not read whole for one
+                trial.
+        """
+        return self._get(
+            "germplasm", {"studyDbId": study_db_id} if study_db_id else None
+        )
+
+    def _get_one(self, path: str) -> dict[str, Any]:
+        """Issue one GET for a single record and return its ``result``.
+
+        A single-record endpoint carries the object in ``result`` itself, where
+        a list endpoint carries a page in ``result.data``.
+        """
+        url = f"{self._base_url}/{path}"
+        headers = {"User-Agent": USER_AGENT, "Accept": "application/json"}
+        if self._token:
+            headers["Authorization"] = f"Bearer {self._token}"
+        try:
+            body = request_json(
+                url, headers=headers, timeout=self._timeout, http_client=self._client
+            )
+        except (httpx.HTTPStatusError, JSONDecodeError) as exc:
+            raise _not_a_brapi_endpoint(self._base_url, url, exc) from exc
+        result = body.get("result") if isinstance(body, dict) else None
+        return result if isinstance(result, dict) else {}
 
     def _get(
         self, path: str, params: Mapping[str, str] | None = None

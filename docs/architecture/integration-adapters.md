@@ -46,14 +46,14 @@ reachable from the command line rather than only as a library call.
 | `ena-import` | import | `ena` | ENA accession |
 | `pride-import` | import | `pride` | ProteomeXchange accession |
 | `metabolights-import` | import | `metabolights` | MetaboLights study accession |
-| `brapi-import` | import | `miappe` | BrAPI v2 server URL |
+| `brapi-import` | import | `miappe` | BrAPI v2 server base URL, or a trial's or a study's address on it |
 | `ena` | export | `ena` | — |
 | `pride` | export | `pride` | — |
 | `metabolights` | export | `metabolights` | — |
 
 Every import action takes exactly one string, so a host renders one text input
 and calls `action.resolve()(value)`. What that string *means* differs — an
-accession for the three archives, a server URL for BrAPI — so each action
+accession for the three archives, an address for BrAPI (the server's base URL for every study it holds, `<base>/trials/<trialDbId>` for one trial's studies, `<base>/studies/<studyDbId>` for one study; any other resource is refused with those three forms named) — so each action
 carries an `input_label` and `input_placeholder` for the prompt. Without them a
 host would have to hard-code per-adapter wording, which is the coupling the
 registry exists to remove.

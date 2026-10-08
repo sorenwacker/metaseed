@@ -230,7 +230,8 @@ def register_dataset_tools(  # noqa: C901
             profile: Profile to import into ("ena", "pride", "metabolights",
                 or "miappe" for a BrAPI server).
             accession: The public accession (e.g. "MTBLS1", "PXD000001",
-                "PRJEB1234") or, for "miappe", a BrAPI v2 server URL.
+                "PRJEB1234") or, for "miappe", a BrAPI v2 server, trial or
+                study URL.
             name: Name to save the imported dataset under.
 
         Returns:

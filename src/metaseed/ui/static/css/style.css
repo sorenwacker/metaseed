@@ -5668,6 +5668,26 @@ details.sidebar-section summary:hover {
     font-size: 0.95rem;
 }
 
+.datasets-pager {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    margin-top: var(--space-lg);
+}
+
+.datasets-pager-status {
+    color: var(--clr-ink-light);
+    font-size: 0.9rem;
+}
+
+.dataset-name-form .btn {
+    margin-top: var(--space-sm);
+}
+
+.dataset-name-choice {
+    font-weight: 600;
+}
+
 .datasets-filter-empty {
     padding: var(--space-xl);
     text-align: center;
