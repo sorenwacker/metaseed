@@ -116,7 +116,7 @@ def import_brapi(
         ValueError: If the address names anything but a server, a trial or a
             study.
     """
-    from metaseed.brapi.client import BrapiClient
+    from metaseed.brapi.client import BrapiClient, BrapiEndpointError
 
     where = parse_address(address)
     client = client or BrapiClient(where.base_url, token=token)
@@ -144,14 +144,18 @@ def import_brapi(
     for study_id in study_ids:
         units = client.observation_units(study_id)
         observation_units.extend(units)
-        # Asked for the study first, which is one request where the server
+        # Asked for the study first, which is a few requests where the server
         # honours the filter (FAIDARE does). Not every server does: the BrAPI
         # reference server answers with nothing, which once imported a dataset
-        # with no measurements at all. Then one request per unit we already
-        # have, and a measurement a server lists under more than one unit is
-        # imported once.
+        # with no measurements at all; and FAIDARE answers 500 past its
+        # 20,000th record of one study. Then one request per unit we already
+        # have, which never reaches that deep, and a measurement a server
+        # lists under more than one unit is imported once.
         seen_observations: set[str] = set()
-        found = client.observations_for_study(study_id)
+        try:
+            found = client.observations_for_study(study_id)
+        except BrapiEndpointError:
+            found = []
         if not found:
             found = [
                 observation

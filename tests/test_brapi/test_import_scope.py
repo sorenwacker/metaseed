@@ -210,3 +210,73 @@ class TestWhatIsImported:
         )
 
         assert _materials(client) == ["G-S1", "G-S2", "G-shared"]
+
+
+def test_a_study_too_deep_for_the_server_s_filter_is_read_per_unit() -> None:
+    """FAIDARE answers 500 past the 20,000th observation of a study; the
+    import then asks each observation unit, which never reaches that deep."""
+    asked: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        path = request.url.path.removeprefix("/brapi/v2/")
+        asked.append(f"{path}?{request.url.query.decode()}")
+        if path == "studies/S1":
+            return httpx.Response(200, json={"result": _study("S1")})
+        if path == "observationunits":
+            return httpx.Response(
+                200,
+                json=_page(
+                    [
+                        {"observationUnitDbId": f"U{n}", "studyDbId": "S1"}
+                        for n in range(3)
+                    ]
+                ),
+            )
+        if path == "observations" and request.url.params.get("studyDbId"):
+            if request.url.params.get("page") == "0":
+                return httpx.Response(
+                    200,
+                    json={
+                        "metadata": {"pagination": {"totalPages": 30}},
+                        "result": {
+                            "data": [
+                                {
+                                    "observationDbId": "lost-if-kept",
+                                    "observationVariableDbId": "V-partial",
+                                }
+                            ]
+                        },
+                    },
+                )
+            return httpx.Response(500, json={"errors": [{"message": "window"}]})
+        if path == "observations":
+            unit = request.url.params["observationUnitDbId"]
+            return httpx.Response(
+                200,
+                json=_page(
+                    [
+                        {
+                            "observationDbId": f"O-{unit}",
+                            "observationVariableDbId": f"V-{unit}",
+                        }
+                    ]
+                ),
+            )
+        if path == "germplasm":
+            return httpx.Response(200, json=_page([]))
+        return httpx.Response(404, json={})
+
+    client = import_brapi(
+        f"{BASE}/studies/S1",
+        client=BrapiClient(
+            BASE, http_client=httpx.Client(transport=httpx.MockTransport(handler))
+        ),
+    )
+
+    variables = [
+        e for e in client.serialize()["entities"] if e["_type"] == "ObservedVariable"
+    ]
+    assert sorted(v["unique_id"] for v in variables) == ["V-U0", "V-U1", "V-U2"], (
+        "every unit's observation, none of the partial page"
+    )
+    assert sum("observationUnitDbId=" in a for a in asked) == 3
