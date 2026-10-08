@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.59.0 (261008)
 
 ### Added
 - **A Tree layout in the Builder and the Explorer.** A **Tree** button beside **Layout** arranges a specification as its containment tree, root at the top; **Layout** or a second press returns to the free arrangement. The toggle is `ERD.toggleHierarchicalLayout` in the shared `erd-common.js`, so the hub's Builder and Explorer, which load that script, can offer the same button without a script of their own.
