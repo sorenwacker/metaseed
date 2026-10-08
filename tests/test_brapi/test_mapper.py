@@ -80,3 +80,36 @@ def test_data_files_reference_urls_not_downloads():
 def test_empty_inputs_yield_empty_dataset():
     client = build_dataset([], [], [], [])
     assert client.serialize()["entities"] == []
+
+
+def test_faidare_s_level_strings_are_read_as_block_replicate_and_plot() -> None:
+    """FAIDARE lists a unit's level relationships as one string per unit and
+    puts the level's number where BrAPI puts its name; the import crashed on
+    the string. Shape copied from a Drops Phenotyping Network unit."""
+    from metaseed.brapi.mapper import build_dataset
+
+    unit = {
+        "observationUnitDbId": "ou-223977",
+        "studyDbId": "S1",
+        "observationUnitPosition": {
+            "observationLevel": {
+                "levelName": "223977",
+                "levelOrder": "REPLICATE>BLOCK>PLOT",
+            },
+            "observationLevelRelationships": [
+                "REPLICATE>BLOCK>PLOT:223977,REPLICATE>BLOCK:5,REPLICATE:2"
+            ],
+            "positionCoordinateX": "10",
+            "positionCoordinateXType": "X",
+        },
+    }
+
+    client = build_dataset([{"studyDbId": "S1", "studyName": "S"}], [unit], [], [])
+
+    (ou,) = [
+        e for e in client.serialize()["entities"] if e["_type"] == "ObservationUnit"
+    ]
+    assert ou["observation_level"] == "plot"
+    assert ou["observation_level_code"] == "223977"
+    assert ou["observation_unit_block"] == "5"
+    assert ou["observation_unit_replicate"] == "2"

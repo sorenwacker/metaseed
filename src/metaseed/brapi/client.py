@@ -12,6 +12,7 @@ each method returns the ``result.data`` list.
 
 from __future__ import annotations
 
+import time
 from json import JSONDecodeError
 from typing import TYPE_CHECKING, Any
 
@@ -73,6 +74,18 @@ def _not_a_brapi_endpoint(
     return BrapiEndpointError(f"{detail}.{hint}")
 
 
+#: A request is tried this many times on a transport error (a dropped
+#: connection, a name that did not resolve), with a pause that doubles
+#: between tries. A trial is thousands of requests over half an hour; one
+#: hiccup must not throw them away.
+ATTEMPTS = 3
+RETRY_PAUSE_SECONDS = 2.0
+
+#: Records asked for per page. Servers default to ten (FAIDARE among them),
+#: which made a study of 1737 observation units 174 requests.
+PAGE_SIZE = 1000
+
+
 class BrapiClient:
     """Minimal client for the BrAPI v2 endpoints metaseed imports."""
 
@@ -105,6 +118,22 @@ class BrapiClient:
         """Return BrAPI ``studies`` objects."""
         return self._get("studies")
 
+    def trial(self, trial_db_id: str) -> dict[str, Any]:
+        """Return one BrAPI ``trial`` object, with the studies it lists.
+
+        Args:
+            trial_db_id: The ``trialDbId``, as the server spells it in a URL.
+        """
+        return self._get_one(f"trials/{trial_db_id}")
+
+    def study(self, study_db_id: str) -> dict[str, Any]:
+        """Return one BrAPI ``study`` object.
+
+        Args:
+            study_db_id: The ``studyDbId``, as the server spells it in a URL.
+        """
+        return self._get_one(f"studies/{study_db_id}")
+
     def observation_units(self, study_db_id: str) -> list[dict[str, Any]]:
         """Return BrAPI ``observationunits`` objects for a study.
 
@@ -112,6 +141,18 @@ class BrapiClient:
             study_db_id: The ``studyDbId`` to filter observation units by.
         """
         return self._get("observationunits", {"studyDbId": study_db_id})
+
+    def observations_for_study(self, study_db_id: str) -> list[dict[str, Any]]:
+        """Return BrAPI ``observations`` objects of a study, where the server filters.
+
+        Not every server honours ``studyDbId`` on ``/observations``: the
+        reference server answers with nothing. An empty answer is the caller's
+        cue to ask per observation unit instead.
+
+        Args:
+            study_db_id: The ``studyDbId`` to filter by.
+        """
+        return self._get("observations", {"studyDbId": study_db_id})
 
     def observations_for_unit(
         self, observation_unit_db_id: str
@@ -129,9 +170,53 @@ class BrapiClient:
             "observations", {"observationUnitDbId": observation_unit_db_id}
         )
 
-    def germplasm(self) -> list[dict[str, Any]]:
-        """Return BrAPI ``germplasm`` objects."""
-        return self._get("germplasm")
+    def germplasm(self, study_db_id: str | None = None) -> list[dict[str, Any]]:
+        """Return BrAPI ``germplasm`` objects, those of one study when asked.
+
+        Args:
+            study_db_id: Restrict to the germplasm of this study. A server
+                holding thousands of accessions is not read whole for one
+                trial.
+        """
+        return self._get(
+            "germplasm", {"studyDbId": study_db_id} if study_db_id else None
+        )
+
+    def _get_one(self, path: str) -> dict[str, Any]:
+        """Issue one GET for a single record and return its ``result``.
+
+        A single-record endpoint carries the object in ``result`` itself, where
+        a list endpoint carries a page in ``result.data``.
+        """
+        url = f"{self._base_url}/{path}"
+        headers = {"User-Agent": USER_AGENT, "Accept": "application/json"}
+        if self._token:
+            headers["Authorization"] = f"Bearer {self._token}"
+        try:
+            body = self._request(url, None, headers)
+        except (httpx.HTTPStatusError, JSONDecodeError) as exc:
+            raise _not_a_brapi_endpoint(self._base_url, url, exc) from exc
+        result = body.get("result") if isinstance(body, dict) else None
+        return result if isinstance(result, dict) else {}
+
+    def _request(
+        self, url: str, params: Mapping[str, str] | None, headers: dict[str, str]
+    ) -> Any:
+        """One GET, tried again after a transport error; the last error is raised."""
+        for attempt in range(1, ATTEMPTS + 1):
+            try:
+                return request_json(
+                    url,
+                    params=params,
+                    headers=headers,
+                    timeout=self._timeout,
+                    http_client=self._client,
+                )
+            except httpx.TransportError:
+                if attempt == ATTEMPTS:
+                    raise
+                time.sleep(RETRY_PAUSE_SECONDS * 2 ** (attempt - 1))
+        raise AssertionError("unreachable")
 
     def _get(
         self, path: str, params: Mapping[str, str] | None = None
@@ -157,15 +242,9 @@ class BrapiClient:
         collected: list[dict[str, Any]] = []
         page = 0
         while True:
-            query = {**(params or {}), "page": str(page)}
+            query = {**(params or {}), "pageSize": str(PAGE_SIZE), "page": str(page)}
             try:
-                body = request_json(
-                    url,
-                    params=query,
-                    headers=headers,
-                    timeout=self._timeout,
-                    http_client=self._client,
-                )
+                body = self._request(url, query, headers)
             except (httpx.HTTPStatusError, JSONDecodeError) as exc:
                 raise _not_a_brapi_endpoint(self._base_url, url, exc) from exc
             if not isinstance(body, dict):

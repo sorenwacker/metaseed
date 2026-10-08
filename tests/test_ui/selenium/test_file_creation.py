@@ -254,10 +254,11 @@ def create_ena_dataset_with_run(browser, dataset_name: str):
     time.sleep(CLICK_DELAY)
 
     # Fill dataset name
-    fill_field(browser, "new-dataset-name", dataset_name)
 
     # Select ENA profile
     click_button(browser, "profile-ena-v1.0")
+    fill_field(browser, "new-dataset-name", dataset_name)
+    click_button(browser, "btn-create-dataset")
     time.sleep(1)
 
     # Fill Study form (root entity for ENA)
@@ -513,10 +514,11 @@ class TestFileCreationWithSimpleDataset:
         time.sleep(CLICK_DELAY)
 
         # Fill in the dataset name
-        fill_field(browser, "new-dataset-name", "file-test-dataset")
 
         # Select ENA profile
         click_button(browser, "profile-ena-v1.0")
+        fill_field(browser, "new-dataset-name", "file-test-dataset")
+        click_button(browser, "btn-create-dataset")
         time.sleep(1)
 
         # We should now be on the Study form (root entity for ENA)

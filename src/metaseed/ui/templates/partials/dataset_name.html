@@ -1,0 +1,30 @@
+{# The second step of New Dataset: the standard and version are chosen, and
+   the dataset is named. The form sends its fields as the query of the root
+   entity's form, which creates the dataset under that name. #}
+<div class="card" data-testid="dataset-name-step">
+    <h2 class="card-title">Name your dataset</h2>
+    <p class="card-subtitle">
+        <span class="dataset-name-choice" data-testid="dataset-name-choice">{{ profile.display_name }} v{{ version }}</span>
+        &middot;
+        <a href="#" class="dataset-name-back"
+           hx-get="{{ base_url }}/new-dataset"
+           hx-target="#main"
+           hx-swap="innerHTML"
+           data-testid="btn-choose-standard">Choose another standard</a>
+    </p>
+    <form class="dataset-name-form"
+          hx-get="{{ base_url }}/form/{{ profile.root_entity }}"
+          hx-target="#main"
+          hx-swap="innerHTML"
+          onsubmit="return validateDatasetName()">
+        <input type="hidden" name="profile" value="{{ profile.name }}">
+        <input type="hidden" name="version" value="{{ version }}">
+        <div class="dataset-name-input">
+            <label for="new-dataset-name" class="form-label">Dataset Name <span class="required">*</span></label>
+            <input type="text" id="new-dataset-name" name="dataset" class="form-input"
+                   placeholder="e.g., wheat-drought-2024" data-testid="new-dataset-name" required autofocus>
+            <p class="form-hint">Use lowercase letters, numbers, and hyphens.</p>
+        </div>
+        <button type="submit" class="btn btn-primary" data-testid="btn-create-dataset">Create dataset</button>
+    </form>
+</div>

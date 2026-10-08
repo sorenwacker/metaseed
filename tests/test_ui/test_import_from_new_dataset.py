@@ -9,6 +9,9 @@ See docs/architecture/integration-adapters.md, *The hosts*.
 
 from __future__ import annotations
 
+import json
+import re
+from pathlib import Path
 from unittest.mock import patch
 
 import httpx
@@ -60,8 +63,24 @@ def _saved() -> list[str]:
     return sorted(dataset["name"] for dataset in list_datasets())
 
 
-def _post(client: TestClient, values: str, key: str = "pride-import"):
-    return client.post("/import/new", data={"key": key, "values": values})
+class _Imported:
+    """What the page ends up holding after a submission has run to its end."""
+
+    def __init__(self, status_code: int, text: str, triggers: list[str]) -> None:
+        self.status_code = status_code
+        self.text = text
+        self.triggers = triggers
+
+
+def _post(client: TestClient, values: str, key: str = "pride-import") -> _Imported:
+    """Submit the list, then send each pending row's own request, as htmx does."""
+    listing = client.post("/import/new", data={"key": key, "values": values})
+    rows, triggers = [], []
+    for identifier in re.findall(r'name="value" value="([^"]*)"', listing.text):
+        row = client.post("/import/new/record", data={"key": key, "value": identifier})
+        rows.append(row.text)
+        triggers.append(row.headers.get("HX-Trigger-After-Swap", ""))
+    return _Imported(listing.status_code, listing.text + "".join(rows), triggers)
 
 
 class TestTheName:
@@ -112,6 +131,7 @@ class TestTheImport:
             "test-hela_a_time_course_PXD000002",
         ]
         assert response.text.count('data-status="imported"') == 2
+        assert 'data-testid="import-progress" max="2" value="0"' in response.text
         assert "/dataset/test-hela_a_time_course/edit" in response.text
 
     def test_a_record_holding_nothing_saves_nothing(self, temp_datasets_dir) -> None:
@@ -165,3 +185,49 @@ class TestTheImport:
         response = _post(TestClient(create_app(AppState())), "x", key="nope")
 
         assert response.status_code == 404
+
+
+class TestTheAppStaysResponsive:
+    def test_the_importer_runs_off_the_event_loop(self, temp_datasets_dir) -> None:
+        """Reported: one slow BrAPI import and no other page of the
+        application answered until it finished."""
+        import threading
+
+        seen: list[str] = []
+
+        def _records_thread(accession: str, **_kwargs: object) -> MetaseedClient:
+            seen.append(threading.current_thread().name)
+            return _project(accession)
+
+        client = TestClient(create_app(AppState()))
+        with patch(IMPORTER, _records_thread):
+            _post(client, "PXD000001")
+
+        assert seen and seen[0] != "MainThread"
+        assert "AnyIO worker" in seen[0] or "ThreadPool" in seen[0], seen
+
+
+class TestWhatThePageIsTold:
+    def test_each_finished_row_reports_its_outcome_for_the_bar_and_the_toast(
+        self, temp_datasets_dir
+    ) -> None:
+        client = TestClient(create_app(AppState()))
+
+        with patch(IMPORTER, _project):
+            response = _post(client, "PXD000001")
+
+        (trigger,) = response.triggers
+        assert json.loads(trigger) == {
+            "importRecordDone": {
+                "status": "imported",
+                "name": "test-hela_a_time_course",
+            }
+        }
+
+    def test_the_page_script_listens_for_it(self) -> None:
+        script = (
+            Path(__file__).resolve().parents[2] / "src/metaseed/ui/static/js/core.js"
+        ).read_text()
+
+        assert "addEventListener('importRecordDone'" in script
+        assert "showNotification('Imported '" in script

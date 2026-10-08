@@ -18,6 +18,9 @@ from metaseed.specs.loader import SpecLoader, SpecLoadError
 from ..dataset_manager import resolve_dataset_manager
 from .hub import hub_configured
 
+#: Datasets the overview lists on one page.
+DATASETS_PER_PAGE = 24
+
 if TYPE_CHECKING:
     from collections.abc import Callable
 
@@ -113,6 +116,24 @@ def register_core_routes(
         manager = resolve_dataset_manager(app, state)
         datasets = manager.list_datasets()
 
+        # Searched and paged here, not on the page: a filter that hides cards
+        # cannot find a dataset beyond the ones the page holds.
+        query = request.query_params.get("q", "").strip()
+        wanted = query.lower()
+        matching = [
+            d
+            for d in datasets
+            if not wanted
+            or wanted in d.name.lower()
+            or wanted in f"{d.profile} {d.version}".lower()
+        ]
+        pages = max(1, -(-len(matching) // DATASETS_PER_PAGE))
+        try:
+            page = min(max(int(request.query_params.get("page", "1")), 1), pages)
+        except ValueError:
+            page = 1
+        shown = matching[(page - 1) * DATASETS_PER_PAGE : page * DATASETS_PER_PAGE]
+
         return templates.TemplateResponse(
             request,
             "base.html",
@@ -127,8 +148,13 @@ def register_core_routes(
                         "created": d.created,
                         "hub": d.hub,
                     }
-                    for d in datasets
+                    for d in shown
                 ],
+                "has_datasets": bool(datasets),
+                "query": query,
+                "page": page,
+                "pages": pages,
+                "matching": len(matching),
                 "current_dataset": manager.current_dataset,
                 "tree_nodes": [],
                 "base_url": base_url,
@@ -210,6 +236,29 @@ def register_core_routes(
                 "import_options": import_options(),
                 "base_url": base_url,
             },
+        )
+
+    @app.get("/new-dataset/name", response_class=HTMLResponse)
+    async def new_dataset_name(
+        request: Request, profile: str, version: str
+    ) -> HTMLResponse:
+        """The second step of New Dataset: name the dataset of the chosen standard."""
+        chosen = next(
+            (
+                p
+                for p in get_profile_display_info(ProfileFactory())
+                if p["name"] == profile
+            ),
+            None,
+        )
+        if chosen is None or version not in chosen["versions"]:
+            raise HTTPException(
+                status_code=404, detail=f"No profile {profile} version {version}"
+            )
+        return templates.TemplateResponse(
+            request,
+            "partials/dataset_name.html",
+            {"profile": chosen, "version": version, "base_url": base_url},
         )
 
     @app.get("/profile/{name}")

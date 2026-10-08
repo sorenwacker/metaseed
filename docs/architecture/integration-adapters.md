@@ -46,14 +46,14 @@ reachable from the command line rather than only as a library call.
 | `ena-import` | import | `ena` | ENA accession |
 | `pride-import` | import | `pride` | ProteomeXchange accession |
 | `metabolights-import` | import | `metabolights` | MetaboLights study accession |
-| `brapi-import` | import | `miappe` | BrAPI v2 server URL |
+| `brapi-import` | import | `miappe` | BrAPI v2 server base URL, or a trial's or a study's address on it |
 | `ena` | export | `ena` | — |
 | `pride` | export | `pride` | — |
 | `metabolights` | export | `metabolights` | — |
 
 Every import action takes exactly one string, so a host renders one text input
 and calls `action.resolve()(value)`. What that string *means* differs — an
-accession for the three archives, a server URL for BrAPI — so each action
+accession for the three archives, an address for BrAPI (the server's base URL for every study it holds, `<base>/trials/<trialDbId>` for one trial's studies, `<base>/studies/<studyDbId>` for one study; any other resource is refused with those three forms named) — so each action
 carries an `input_label` and `input_placeholder` for the prompt. Without them a
 host would have to hard-code per-adapter wording, which is the coupling the
 registry exists to remove.
@@ -122,7 +122,7 @@ behalf.
 
 | Host | Entry point |
 |------|-------------|
-| Web UI | On the New Dataset screen, one button per importer from `import_options`: `POST /import/new` with `key` and `values` (identifiers, one per line, up to 20) fetches them in turn and saves each as a dataset named by the title its record carries, or by the identifier where it has none; a taken name gets the identifier appended. Into an existing dataset: `POST /import/source` with `key` and `value` form fields; the control is rendered from `import_options_for_profile` on the page of a dataset that has no entities, and the route answers 409 for one that has, because the import replaces the whole dataset |
+| Web UI | On the New Dataset screen, one button per importer from `import_options`: `POST /import/new` with `key` and `values` (identifiers, one per line, up to 20) answers with one pending row each, and each row posts its identifier to `POST /import/new/record`, in turn and on a worker thread, which saves it as a dataset named by the title its record carries, or by the identifier where it has none; a taken name gets the identifier appended. Into an existing dataset: `POST /import/source` with `key` and `value` form fields; the control is rendered from `import_options_for_profile` on the page of a dataset that has no entities, and the route answers 409 for one that has, because the import replaces the whole dataset |
 | MCP | the `import_from_database` tool (`profile`, `accession`, `name`) |
 | Library | `metaseed.<repo>.import_accession(...)` directly |
 
@@ -190,6 +190,7 @@ page to leave the result sitting on.
     we read the nested fields.
   - **Lesson:** a live smoke test per adapter is non-negotiable; fixtures must be
     derived from real responses, not invented.
+- **BrAPI servers page at ten by default.** FAIDARE made a study of 1737 observation units 174 requests. Every list request asks for a thousand (`pageSize=1000`), and a study's observations are asked for in one request (`/observations?studyDbId=`) where the server honours the filter, falling back to one request per observation unit where it answers with nothing, as the reference server does, or fails part way, as FAIDARE does past the 20,000th record of a study.
 - **Pagination was silently dropped.** The first cut of the PRIDE and BrAPI
   clients fetched a single page, truncating large datasets (PXD000561: 100 of
   2384 files). Only visible by testing a *large* accession. Both now page

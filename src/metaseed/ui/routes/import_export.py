@@ -6,12 +6,14 @@ from an uploaded JSON file.
 
 from __future__ import annotations
 
+import json
 import zipfile
 from io import BytesIO
 from typing import TYPE_CHECKING, Any
 
 from fastapi import Form, HTTPException, UploadFile
 from fastapi.responses import HTMLResponse, StreamingResponse
+from starlette.concurrency import run_in_threadpool
 from starlette.requests import Request
 
 from metaseed import adapters
@@ -334,22 +336,30 @@ def _new_dataset_import_route(
     templates: Jinja2Templates,
     get_state: Callable[[], AppState],
 ) -> None:
-    """Register ``POST /import/new``: repository records as new datasets."""
+    """Register the New Dataset screen's repository import.
+
+    Two requests: the list of identifiers, answered with one pending row each
+    and a progress bar; and one request per row, which imports that record.
+    The rows ask in turn, so the page shows each outcome as it arrives and how
+    far the list has got.
+    """
+
+    def _option(key: str) -> dict[str, str]:
+        option = next((o for o in import_options() if o["key"] == key), None)
+        if option is None:
+            raise HTTPException(status_code=404, detail=f"Unknown importer: {key}")
+        return option
 
     @app.post("/import/new", response_class=HTMLResponse)
     async def import_new(
         request: Request, key: str = Form(...), values: str = Form("")
     ) -> HTMLResponse:
-        """Import each identifier as a saved dataset named by its record."""
-        option = next((o for o in import_options() if o["key"] == key), None)
-        if option is None:
-            raise HTTPException(status_code=404, detail=f"Unknown importer: {key}")
-
+        """One pending row per identifier; each row then asks for its import."""
+        _option(key)
         identifiers = list(
             dict.fromkeys(line.strip() for line in values.splitlines() if line.strip())
         )
         problem = ""
-        outcomes: list[dict[str, Any]] = []
         if not identifiers:
             problem = "Enter at least one identifier."
         elif len(identifiers) > MAX_IMPORTED_AT_ONCE:
@@ -357,21 +367,40 @@ def _new_dataset_import_route(
                 f"{len(identifiers)} identifiers were entered and one submission "
                 f"takes {MAX_IMPORTED_AT_ONCE}. Nothing was imported; split the list."
             )
-        else:
-            state = get_state()
-            try:
-                outcomes = [
-                    import_as_new_dataset(state, option["profile"], identifier)
-                    for identifier in identifiers
-                ]
-            except NoImporterError as exc:
-                raise HTTPException(status_code=404, detail=str(exc)) from exc
-
         return templates.TemplateResponse(
             request,
             "partials/import_results.html",
-            {"problem": problem, "outcomes": outcomes},
+            {"problem": problem, "key": key, "identifiers": identifiers},
         )
+
+    @app.post("/import/new/record", response_class=HTMLResponse)
+    async def import_new_record(
+        request: Request, key: str = Form(...), value: str = Form(...)
+    ) -> HTMLResponse:
+        """Import one identifier as a saved dataset named by its record."""
+        option = _option(key)
+        try:
+            # Off the event loop: the importer is blocking HTTP against a
+            # repository, and on the loop one slow import stalled every page.
+            outcome = await run_in_threadpool(
+                import_as_new_dataset, get_state(), option["profile"], value.strip()
+            )
+        except NoImporterError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+        response = templates.TemplateResponse(
+            request, "partials/import_row.html", {"outcome": outcome}
+        )
+        # After the swap, so the page counts the finished row it just received.
+        response.headers["HX-Trigger-After-Swap"] = json.dumps(
+            {
+                "importRecordDone": {
+                    "status": outcome["status"],
+                    "name": outcome.get("name", ""),
+                }
+            }
+        )
+        return response
 
 
 def _import_notification(

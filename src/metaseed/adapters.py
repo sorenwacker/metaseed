@@ -248,13 +248,13 @@ ADAPTERS: tuple[AdapterInfo, ...] = (
             Action(
                 "import",
                 "brapi-import",
-                "Import BrAPI server",
+                "Import from BrAPI",
                 "metaseed.brapi:import_brapi",
                 surface="import-menu",
                 # BrAPI reads a breeding server into the miappe profile, so the
                 # adapter-key-names-the-profile convention does not apply.
                 profiles=("miappe",),
-                input_label="BrAPI v2 server URL",
+                input_label="BrAPI v2 server, trial or study URL",
                 input_placeholder="https://test-server.brapi.org/brapi/v2",
             ),
         ),

@@ -1,0 +1,27 @@
+{% set labels = {
+    "imported": "Imported",
+    "empty": "Nothing to import",
+    "duplicate": "Already imported",
+    "failed": "Failed",
+    "not_checked": "Not checked",
+} %}
+<tr data-testid="import-row" data-status="{{ outcome.status }}">
+    <td>{{ outcome.identifier }}</td>
+    <td>
+        <strong>{{ labels[outcome.status] }}</strong>
+        {% if outcome.status == "empty" %}
+        <span class="form-hint">The repository holds no records of the kind the importer reads for this identifier.</span>
+        {% elif outcome.status == "duplicate" %}
+        <span class="form-hint">Datasets named after &ldquo;{{ outcome.detail }}&rdquo; exist, with and without the identifier.</span>
+        {% elif outcome.status == "not_checked" %}
+        <span class="form-hint">The repository did not answer. Try again later.</span>
+        {% elif outcome.status == "failed" %}
+        <span class="form-hint">{{ outcome.detail }}</span>
+        {% endif %}
+    </td>
+    <td>
+        {% if outcome.name %}
+        <a href="{{ base_url }}/dataset/{{ outcome.name }}/edit" data-testid="import-dataset-link">{{ outcome.name }}</a>
+        {% endif %}
+    </td>
+</tr>

@@ -156,7 +156,7 @@ def _add_observation_units(
         position = unit.get("observationUnitPosition") or {}
         # In BrAPI v2 the observationLevel object is nested inside the position,
         # and block/replicate are expressed via observationLevelRelationships.
-        level = position.get("observationLevel") or {}
+        level = _level(position.get("observationLevel"))
         client.create_entity(
             "ObservationUnit",
             _clean(
@@ -183,12 +183,58 @@ def _add_observation_units(
         )
 
 
+def _level(level: Any) -> dict[str, Any]:
+    """The unit's level as ``levelName`` and ``levelCode``, however the server put it.
+
+    BrAPI names the level (``plot``) in ``levelName`` and numbers it in
+    ``levelCode``. FAIDARE puts the number in ``levelName`` and the path of
+    level names in ``levelOrder`` (``REPLICATE>BLOCK>PLOT``), whose last
+    segment is the level.
+    """
+    if not isinstance(level, dict):
+        return {}
+    order = level.get("levelOrder")
+    name = level.get("levelName")
+    if (
+        isinstance(order, str)
+        and ">" in order
+        and (name is None or str(name).isdigit())
+    ):
+        return {"levelName": order.rsplit(">", 1)[-1].lower(), "levelCode": name}
+    return level
+
+
+def _relationships(position: dict[str, Any]) -> list[tuple[str, str | None]]:
+    """``(level name, code)`` per relationship, from objects or FAIDARE's strings.
+
+    BrAPI lists objects with ``levelName`` and ``levelCode``. FAIDARE lists
+    strings, one per unit, of the form
+    ``REPLICATE>BLOCK>PLOT:223977,REPLICATE>BLOCK:5,REPLICATE:2``: a level path
+    and its code per comma, the level being the path's last segment.
+    """
+    found: list[tuple[str, str | None]] = []
+    for rel in position.get("observationLevelRelationships") or []:
+        if isinstance(rel, dict):
+            code = rel.get("levelCode")
+            found.append(
+                (
+                    str(rel.get("levelName", "")).lower(),
+                    str(code) if code is not None else None,
+                )
+            )
+        elif isinstance(rel, str):
+            for piece in rel.split(","):
+                path, _, code = piece.strip().rpartition(":")
+                if path:
+                    found.append((path.rsplit(">", 1)[-1].lower(), code or None))
+    return found
+
+
 def _level_code(position: dict[str, Any], level_names: tuple[str, ...]) -> str | None:
     """Return the levelCode for a named level from observationLevelRelationships."""
-    for rel in position.get("observationLevelRelationships") or []:
-        if str(rel.get("levelName", "")).lower() in level_names:
-            code = rel.get("levelCode")
-            return str(code) if code is not None else None
+    for name, code in _relationships(position):
+        if name in level_names:
+            return code
     return None
 
 

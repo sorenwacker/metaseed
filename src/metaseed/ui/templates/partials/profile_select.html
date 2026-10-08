@@ -1,18 +1,12 @@
 <div class="card">
     <h2 class="card-title">New Dataset</h2>
-    <p class="card-subtitle">Name your dataset and choose which metadata standard to use.</p>
+    <p class="card-subtitle">Choose the metadata standard and its version; the name comes next.</p>
     {# Above the list, not below it: below, the note sat 1500px down and the
        reader who stopped scrolling never saw it. #}
     <p class="form-hint" data-testid="missing-profile-note">
         Can't find the standard you need?
         <a href="https://github.com/sorenwacker/metaseed/issues" target="_blank" rel="noopener">Let us know</a>.
     </p>
-
-    <div class="dataset-name-input">
-        <label for="new-dataset-name" class="form-label">Dataset Name <span class="required">*</span></label>
-        <input type="text" id="new-dataset-name" name="dataset" class="form-input" placeholder="e.g., wheat-drought-2024" data-testid="new-dataset-name" required>
-        <p class="form-hint">Use lowercase letters, numbers, and hyphens.</p>
-    </div>
 
     {% if import_options %}
     {# One button per importer in the adapter registry: a plugin's importer
@@ -26,16 +20,16 @@
                 by name, never downloaded.
             </p>
         </div>
-        <form hx-post="{{ base_url }}/import/new"
+        <form class="import-new-form"
+              hx-post="{{ base_url }}/import/new"
               hx-target="#import-new-results"
-              hx-swap="innerHTML"
-              hx-indicator="#import-new-progress">
+              hx-swap="innerHTML">
             <label for="import-new-values" class="form-label">Identifiers, one per line</label>
             <textarea id="import-new-values" name="values" class="form-input" rows="4"
                       data-testid="import-new-values" required></textarea>
-            <div class="profile-versions">
+            <div class="import-new-options">
                 {% for opt in import_options %}
-                <div class="profile-version-row">
+                <div class="import-new-option" data-testid="import-new-option">
                     <button type="submit" name="key" value="{{ opt.key }}"
                             class="btn btn-sm btn-primary"
                             data-testid="btn-import-new-{{ opt.key }}">{{ opt.label }}</button>
@@ -43,7 +37,6 @@
                 </div>
                 {% endfor %}
             </div>
-            <p id="import-new-progress" class="htmx-indicator form-hint" role="status">Importing&hellip; fetching metadata from the repository.</p>
         </form>
         <div id="import-new-results"></div>
     </div>
@@ -60,11 +53,9 @@
                 {% for version in profile.versions %}
                 <div class="profile-version-row">
                     <button class="btn btn-sm {% if version == profile.latest_version %}btn-primary{% else %}btn-secondary{% endif %}"
-                            hx-get="/form/{{ profile.root_entity }}?profile={{ profile.name }}&version={{ version }}"
+                            hx-get="{{ base_url }}/new-dataset/name?profile={{ profile.name }}&version={{ version }}"
                             hx-target="#main"
                             hx-swap="innerHTML"
-                            hx-include="#new-dataset-name"
-                            onclick="return validateDatasetName()"
                             data-testid="profile-{{ profile.name }}-v{{ version }}">
                         v{{ version }}{% if version == profile.latest_version %} (latest){% endif %}
                     </button>

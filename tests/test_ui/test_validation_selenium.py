@@ -133,8 +133,9 @@ def start_new_investigation(driver, profile: str = "miappe", version: str = "1.1
     """Start creating a new Investigation by selecting profile."""
     click_button(driver, "btn-new-dataset")
     time.sleep(CLICK_DELAY)
-    fill_field(driver, "new-dataset-name", f"test-{int(time.time())}")
     click_button(driver, f"profile-{profile}-v{version}")
+    fill_field(driver, "new-dataset-name", f"test-{int(time.time())}")
+    click_button(driver, "btn-create-dataset")
 
 
 @pytest.mark.ui

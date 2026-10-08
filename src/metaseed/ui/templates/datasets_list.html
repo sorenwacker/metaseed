@@ -1,4 +1,4 @@
-<div class="datasets-page">
+<div class="datasets-page" id="datasets-page">
     <div class="datasets-header">
         <div class="datasets-title">
             <h2>Datasets</h2>
@@ -40,16 +40,27 @@
     {# Hub actions render their outcome here, below the header. #}
     <div id="hub-panel" class="hub-panel"></div>
 
-    {% if datasets %}
-    <div class="datasets-filter">
-        <input type="text"
-               id="dataset-filter"
+    {% if has_datasets %}
+    {# The search and the pager ask the server and swap this page in again;
+       the address follows, so a search or a page can be bookmarked. #}
+    <form class="datasets-filter" method="get" action="{{ base_url }}/" role="search">
+        <input type="search"
+               id="dataset-search"
+               name="q"
+               value="{{ query }}"
                class="form-input datasets-filter-input"
-               placeholder="Filter datasets..."
-               oninput="filterDatasets(this.value)"
+               placeholder="Search datasets by name or standard"
+               data-testid="dataset-search"
+               hx-get="{{ base_url }}/"
+               hx-trigger="input changed delay:300ms, search"
+               hx-target="#datasets-page"
+               hx-select="#datasets-page"
+               hx-swap="outerHTML"
+               hx-push-url="true"
                autocomplete="off">
-    </div>
+    </form>
 
+    {% if datasets %}
     <div class="datasets-grid">
         {% for ds in datasets %}
         <a href="{{ base_url }}/dataset/{{ ds.name }}/edit" class="dataset-card {% if ds.name == current_dataset %}active{% endif %}" data-name="{{ ds.name|lower }}" data-profile="{{ ds.profile|lower }}">
@@ -99,6 +110,28 @@
         </a>
         {% endfor %}
     </div>
+    {% if pages > 1 %}
+    <nav class="datasets-pager" aria-label="Pages of datasets" data-testid="dataset-pager">
+        {% if page > 1 %}
+        <a href="{{ base_url }}/?q={{ query | urlencode }}&page={{ page - 1 }}" class="btn btn-sm btn-secondary"
+           hx-get="{{ base_url }}/?q={{ query | urlencode }}&page={{ page - 1 }}" hx-target="#datasets-page"
+           hx-select="#datasets-page" hx-swap="outerHTML" hx-push-url="true" data-testid="pager-previous">Previous</a>
+        {% endif %}
+        <span class="datasets-pager-status" data-testid="pager-status">Page {{ page }} of {{ pages }} &middot; {{ matching }} datasets</span>
+        {% if page < pages %}
+        <a href="{{ base_url }}/?q={{ query | urlencode }}&page={{ page + 1 }}" class="btn btn-sm btn-secondary"
+           hx-get="{{ base_url }}/?q={{ query | urlencode }}&page={{ page + 1 }}" hx-target="#datasets-page"
+           hx-select="#datasets-page" hx-swap="outerHTML" hx-push-url="true" data-testid="pager-next">Next</a>
+        {% endif %}
+    </nav>
+    {% endif %}
+    {% else %}
+    <p class="datasets-filter-empty" data-testid="dataset-search-empty">
+        No datasets match &ldquo;{{ query }}&rdquo;.
+        <a href="{{ base_url }}/" hx-get="{{ base_url }}/" hx-target="#datasets-page" hx-select="#datasets-page"
+           hx-swap="outerHTML" hx-push-url="true">Show all</a>
+    </p>
+    {% endif %}
     {% else %}
     <div class="datasets-empty">
         <div class="datasets-empty-icon">
