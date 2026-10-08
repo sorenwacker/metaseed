@@ -56,7 +56,16 @@ class _Server:
             "studies/S1": {"result": _study("S1")},
             "studies/S2": {"result": _study("S2")},
             "studies/S3": {"result": _study("S3", "T2")},
-            "observationunits": _page([]),
+            "observationunits": _page(
+                [{"observationUnitDbId": f"U-{study}", "studyDbId": study}]
+                if study
+                else []
+            ),
+            "observations": _page(
+                [{"observationDbId": f"O-{study}", "observationUnitDbId": f"U-{study}"}]
+                if study
+                else []
+            ),
             "germplasm": _page(
                 [{"germplasmDbId": f"G-{study}", "germplasmName": study}]
                 if study
@@ -143,7 +152,25 @@ class TestWhatIsImported:
         assert "germplasm?page=0" not in server.asked, (
             "the server's germplasm was not read"
         )
-        assert "germplasm?studyDbId=S1&page=0" in server.asked
+        assert any(asked.startswith("germplasm?studyDbId=S1") for asked in server.asked)
+
+    def test_observations_come_per_study_where_the_server_filters_them(
+        self, server
+    ) -> None:
+        """One request for the study, not one per observation unit."""
+        import_brapi(f"{BASE}/studies/S1", client=_client(server))
+
+        assert any(
+            asked.startswith("observations?studyDbId=S1") for asked in server.asked
+        )
+        assert not any("observationUnitDbId=" in asked for asked in server.asked)
+
+    def test_pages_are_asked_for_a_thousand_at_a_time(self, server) -> None:
+        import_brapi(f"{BASE}/studies/S1", client=_client(server))
+
+        assert all(
+            "pageSize=1000" in asked for asked in server.asked if "page=" in asked
+        )
 
     def test_a_study_s_address_imports_that_study(self, server) -> None:
         client = import_brapi(f"{BASE}/studies/S3", client=_client(server))

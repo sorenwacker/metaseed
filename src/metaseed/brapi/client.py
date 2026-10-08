@@ -73,6 +73,11 @@ def _not_a_brapi_endpoint(
     return BrapiEndpointError(f"{detail}.{hint}")
 
 
+#: Records asked for per page. Servers default to ten (FAIDARE among them),
+#: which made a study of 1737 observation units 174 requests.
+PAGE_SIZE = 1000
+
+
 class BrapiClient:
     """Minimal client for the BrAPI v2 endpoints metaseed imports."""
 
@@ -128,6 +133,18 @@ class BrapiClient:
             study_db_id: The ``studyDbId`` to filter observation units by.
         """
         return self._get("observationunits", {"studyDbId": study_db_id})
+
+    def observations_for_study(self, study_db_id: str) -> list[dict[str, Any]]:
+        """Return BrAPI ``observations`` objects of a study, where the server filters.
+
+        Not every server honours ``studyDbId`` on ``/observations``: the
+        reference server answers with nothing. An empty answer is the caller's
+        cue to ask per observation unit instead.
+
+        Args:
+            study_db_id: The ``studyDbId`` to filter by.
+        """
+        return self._get("observations", {"studyDbId": study_db_id})
 
     def observations_for_unit(
         self, observation_unit_db_id: str
@@ -200,7 +217,7 @@ class BrapiClient:
         collected: list[dict[str, Any]] = []
         page = 0
         while True:
-            query = {**(params or {}), "page": str(page)}
+            query = {**(params or {}), "pageSize": str(PAGE_SIZE), "page": str(page)}
             try:
                 body = request_json(
                     url,

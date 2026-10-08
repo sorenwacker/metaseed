@@ -190,6 +190,7 @@ page to leave the result sitting on.
     we read the nested fields.
   - **Lesson:** a live smoke test per adapter is non-negotiable; fixtures must be
     derived from real responses, not invented.
+- **BrAPI servers page at ten by default.** FAIDARE made a study of 1737 observation units 174 requests. Every list request asks for a thousand (`pageSize=1000`), and a study's observations are asked for in one request (`/observations?studyDbId=`) where the server honours the filter, falling back to one request per observation unit where it answers with nothing, as the reference server does.
 - **Pagination was silently dropped.** The first cut of the PRIDE and BrAPI
   clients fetched a single page, truncating large datasets (PXD000561: 100 of
   2384 files). Only visible by testing a *large* accession. Both now page

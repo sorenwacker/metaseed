@@ -144,25 +144,30 @@ def import_brapi(
     for study_id in study_ids:
         units = client.observation_units(study_id)
         observation_units.extend(units)
-        # Collected per observation unit, not per study: servers do not reliably
-        # honour a studyDbId filter on /observations (the BrAPI reference server
-        # returns nothing), which silently imported a dataset with no
-        # measurements at all. One request per unit we already have.
+        # Asked for the study first, which is one request where the server
+        # honours the filter (FAIDARE does). Not every server does: the BrAPI
+        # reference server answers with nothing, which once imported a dataset
+        # with no measurements at all. Then one request per unit we already
+        # have, and a measurement a server lists under more than one unit is
+        # imported once.
         seen_observations: set[str] = set()
-        for unit in units:
-            unit_id = unit.get("observationUnitDbId")
-            if not unit_id:
-                continue
-            for observation in client.observations_for_unit(unit_id):
-                # Guard against a server returning one observation under more
-                # than one unit: per-unit collection would otherwise import the
-                # same measurement twice.
-                key = observation.get("observationDbId")
-                if key is not None:
-                    if key in seen_observations:
-                        continue
-                    seen_observations.add(str(key))
-                observations.append(observation)
+        found = client.observations_for_study(study_id)
+        if not found:
+            found = [
+                observation
+                for unit in units
+                if unit.get("observationUnitDbId")
+                for observation in client.observations_for_unit(
+                    unit["observationUnitDbId"]
+                )
+            ]
+        for observation in found:
+            key = observation.get("observationDbId")
+            if key is not None:
+                if key in seen_observations:
+                    continue
+                seen_observations.add(str(key))
+            observations.append(observation)
         if scoped:
             # The germplasm of these studies, not of the whole server; a study
             # may share accessions with the one before it.
