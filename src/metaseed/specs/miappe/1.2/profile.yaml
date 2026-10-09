@@ -17,10 +17,10 @@ validation_rules:
   - Event
   condition: end_date >= date
 - name: unique_id_pattern
-  description: Unique IDs must contain only alphanumeric characters, underscores, and hyphens
+  description: Unique IDs must contain no whitespace
   applies_to: all
   field: unique_id
-  pattern: ^[A-Za-z0-9_-]+$
+  pattern: '^\S+$'
 - name: coordinate_pair
   description: Latitude and longitude must be provided together
   applies_to:
@@ -317,7 +317,7 @@ entities:
       description: Unique identifier for the investigation.
       ontology_term: PPEO:hasIdentifier
       constraints:
-        pattern: ^[A-Za-z0-9_-]+$
+        pattern: '^\S+$'
         min_length: 1
         max_length: 100
     - name: title
@@ -423,7 +423,7 @@ entities:
       description: Unique identifier for the study.
       ontology_term: PPEO:hasIdentifier
       constraints:
-        pattern: ^[A-Za-z0-9_-]+$
+        pattern: '^\S+$'
         min_length: 1
         max_length: 100
     - name: investigation_id
@@ -697,7 +697,7 @@ entities:
       description: Unique identifier for the biological material.
       ontology_term: PPEO:hasIdentifier
       constraints:
-        pattern: ^[A-Za-z0-9_-]+$
+        pattern: '^\S+$'
         min_length: 1
         max_length: 100
     - name: study_id
@@ -874,7 +874,7 @@ entities:
       description: Unique identifier for the observation unit.
       ontology_term: PPEO:hasIdentifier
       constraints:
-        pattern: ^[A-Za-z0-9_-]+$
+        pattern: '^\S+$'
         min_length: 1
         max_length: 100
     - name: study_id
@@ -1010,7 +1010,7 @@ entities:
       description: Unique identifier.
       ontology_term: PPEO:hasIdentifier
       constraints:
-        pattern: ^[A-Za-z0-9_-]+$
+        pattern: '^\S+$'
         min_length: 1
         max_length: 100
     - name: study_id
@@ -1155,7 +1155,7 @@ entities:
       description: Unique identifier.
       ontology_term: PPEO:hasIdentifier
       constraints:
-        pattern: ^[A-Za-z0-9_-]+$
+        pattern: '^\S+$'
         min_length: 1
         max_length: 100
     - name: study_id
@@ -1209,7 +1209,7 @@ entities:
       description: Unique identifier.
       ontology_term: PPEO:hasIdentifier
       constraints:
-        pattern: ^[A-Za-z0-9_-]+$
+        pattern: '^\S+$'
         min_length: 1
         max_length: 100
     - name: factor_id
@@ -1254,7 +1254,7 @@ entities:
       description: Unique identifier.
       ontology_term: PPEO:hasIdentifier
       constraints:
-        pattern: ^[A-Za-z0-9_-]+$
+        pattern: '^\S+$'
         min_length: 1
         max_length: 100
     - name: study_id
@@ -1330,7 +1330,7 @@ entities:
       description: Unique identifier.
       ontology_term: PPEO:hasIdentifier
       constraints:
-        pattern: ^[A-Za-z0-9_-]+$
+        pattern: '^\S+$'
         min_length: 1
         max_length: 100
     - name: study_id
@@ -1399,7 +1399,7 @@ entities:
       description: Unique identifier.
       ontology_term: PPEO:hasIdentifier
       constraints:
-        pattern: ^[A-Za-z0-9_-]+$
+        pattern: '^\S+$'
         min_length: 1
         max_length: 100
     - name: observation_unit_id
@@ -1459,7 +1459,7 @@ entities:
       description: Unique identifier.
       ontology_term: PPEO:hasIdentifier
       constraints:
-        pattern: ^[A-Za-z0-9_-]+$
+        pattern: '^\S+$'
         min_length: 1
         max_length: 100
     - name: study_id
@@ -1526,7 +1526,7 @@ entities:
       description: Unique identifier.
       ontology_term: PPEO:hasIdentifier
       constraints:
-        pattern: ^[A-Za-z0-9_-]+$
+        pattern: '^\S+$'
         min_length: 1
         max_length: 100
     - name: study_id
@@ -1629,7 +1629,7 @@ entities:
       description: Unique identifier.
       ontology_term: PPEO:hasIdentifier
       constraints:
-        pattern: ^[A-Za-z0-9_-]+$
+        pattern: '^\S+$'
         min_length: 1
         max_length: 100
     - name: name

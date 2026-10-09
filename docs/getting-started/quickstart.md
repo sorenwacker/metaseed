@@ -82,4 +82,6 @@ This opens a browser at `http://127.0.0.1:8080`.
 
 The **Datasets** overview lists the saved datasets 24 to a page, newest first, with a pager below the list. The search box above the list narrows them to those whose name or standard contains the text; the search runs on the server as you type, and the page's address carries it, so a search can be bookmarked or shared.
 
+A saved dataset reloads with every entity it was saved with. One whose values validation refuses, such as a record an importer stored as the server sent it, is kept and reported by **Validate**, never dropped on reload.
+
 **+ New Dataset** asks for two things in this order: the standard and its version, chosen from the cards; then the dataset's name, on a screen of its own that says which standard was chosen and offers a way back. **Load Example** on a card skips the name: the example is loaded under the example's own name.

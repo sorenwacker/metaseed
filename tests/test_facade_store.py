@@ -18,6 +18,10 @@ class _FakeHelper:
         self.nested_fields: dict[str, str] = {}
         self.reference_fields: dict[str, tuple[str, str]] = {}
 
+    def create(self, skip_validation: bool = False, **data: Any) -> BaseModel:
+        """What the store asks for when it keeps an entity validation refused."""
+        return _FakeInstance.model_construct(**data)
+
 
 class _FakeInstance(BaseModel):
     """Minimal validated model used in place of generated entity models."""
@@ -54,24 +58,11 @@ class _RecordingHandler(logging.Handler):
         self.records.append(record)
 
 
-def test_malformed_entity_skipped_logged_and_rest_load() -> None:
-    """A malformed entity is skipped and logged, others still load."""
+def _loading(store, entities):
+    """Load, returning the count and the warnings the store logged.
 
-    def instance_creator(entity_type: str, data: dict) -> BaseModel:
-        if data.get("name") == "bad":
-            raise ValidationError.from_exception_data("Thing", [])
-        return _FakeInstance(name=data["name"])
-
-    store = _build_store(instance_creator)
-
-    entities = [
-        {"_type": "Thing", "_node_id": "n1", "name": "good-1"},
-        {"_type": "Thing", "_node_id": "n2", "name": "bad"},
-        {"_type": "Thing", "_node_id": "n3", "name": "good-2"},
-    ]
-
-    # Attach a handler directly to the module logger so capture does not depend
-    # on root propagation, which configure_logging disables for "metaseed".
+    A handler on the module logger, so capture does not depend on root
+    propagation, which configure_logging disables for "metaseed"."""
     logger = logging.getLogger("metaseed.facade.store")
     handler = _RecordingHandler()
     previous_level = logger.level
@@ -82,16 +73,71 @@ def test_malformed_entity_skipped_logged_and_rest_load() -> None:
     finally:
         logger.removeHandler(handler)
         logger.setLevel(previous_level)
+    return loaded, [
+        r.getMessage() for r in handler.records if r.levelno == logging.WARNING
+    ]
+
+
+_THREE = [
+    {"_type": "Thing", "_node_id": "n1", "name": "good-1"},
+    {"_type": "Thing", "_node_id": "n2", "name": "bad"},
+    {"_type": "Thing", "_node_id": "n3", "name": "good-2"},
+]
+
+
+def test_an_entity_with_refused_values_is_kept_and_logged() -> None:
+    """Reported (#353): a BrAPI study whose facility term is outside MIAPPE's
+    vocabulary was dropped on reload, with its units and data file, and five
+    orphans were left. Kept now; Validate says what is wrong with it."""
+
+    def instance_creator(entity_type: str, data: dict) -> BaseModel:
+        if data.get("name") == "bad":
+            raise ValidationError.from_exception_data(
+                "Thing",
+                [
+                    {
+                        "type": "string_pattern_mismatch",
+                        "loc": ("name",),
+                        "input": "bad",
+                        "ctx": {"pattern": "x"},
+                    }
+                ],
+            )
+        return _FakeInstance(name=data["name"])
+
+    store = _build_store(instance_creator)
+
+    loaded, warnings = _loading(store, _THREE)
+
+    assert loaded == 3
+    assert {node.instance.name for node in store._instances.values()} == {
+        "good-1",
+        "bad",
+        "good-2",
+    }
+    assert len(warnings) == 1
+    assert "n2" in warnings[0] and "Validate" in warnings[0] and "name" in warnings[0]
+
+
+def test_a_record_that_cannot_be_built_is_skipped_and_logged() -> None:
+    """Only what is malformed beyond validation is left out: the rest load."""
+
+    def instance_creator(entity_type: str, data: dict) -> BaseModel:
+        if data.get("name") == "bad":
+            raise TypeError("not a record")
+        return _FakeInstance(name=data["name"])
+
+    store = _build_store(instance_creator)
+
+    loaded, warnings = _loading(store, _THREE)
 
     assert loaded == 2
-    labels = {node.instance.name for node in store._instances.values()}
-    assert labels == {"good-1", "good-2"}
-
-    warnings = [r for r in handler.records if r.levelno == logging.WARNING]
+    assert {node.instance.name for node in store._instances.values()} == {
+        "good-1",
+        "good-2",
+    }
     assert len(warnings) == 1
-    message = warnings[0].getMessage()
-    assert "Thing" in message
-    assert "n2" in message
+    assert "Thing" in warnings[0] and "n2" in warnings[0]
 
 
 def test_entities_sharing_identifier_are_not_overwritten() -> None:
