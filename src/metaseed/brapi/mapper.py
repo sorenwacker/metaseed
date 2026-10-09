@@ -60,6 +60,44 @@ def build_dataset(
     return client
 
 
+#: MIAPPE's entry types and growth facility types, as the profile's
+#: vocabulary rules spell them. BrAPI servers return what their database
+#: holds: Breedbase an entry type in capitals, FAIDARE a facility as a list
+#: of CO_715 descriptions ("field environment condition, greenhouse").
+ENTRY_TYPES = ("test", "check", "filler")
+GROWTH_FACILITY_TYPES = (
+    "field",
+    "greenhouse",
+    "glasshouse",
+    "growth chamber",
+    "phytotron",
+    "open top chamber",
+)
+
+
+def _entry_type(value: Any) -> Any:
+    """The entry type in MIAPPE's spelling where it is one, else as sent."""
+    if isinstance(value, str) and value.strip().lower() in ENTRY_TYPES:
+        return value.strip().lower()
+    return value
+
+
+def _growth_facility_type(value: Any) -> Any:
+    """The MIAPPE facility type a server's description names, else as sent.
+
+    An exact match wins; otherwise the first vocabulary term the description
+    contains, in the description's own order, so "field environment
+    condition, greenhouse" reads as a field.
+    """
+    if not isinstance(value, str):
+        return value
+    text = value.strip().lower()
+    if text in GROWTH_FACILITY_TYPES:
+        return text
+    found = [(text.find(term), term) for term in GROWTH_FACILITY_TYPES if term in text]
+    return min(found)[1] if found else value
+
+
 def _trial_id(study: dict[str, Any]) -> str | None:
     """Return the Investigation id for a study (its trial, else itself)."""
     return study.get("trialDbId") or study.get("studyDbId")
@@ -103,8 +141,8 @@ def _add_investigations_and_studies(
                     "experimental_site_name": study.get("locationName"),
                     "experimental_design_type": design.get("PUI"),
                     "experimental_design_description": design.get("description"),
-                    "growth_facility_type": (study.get("growthFacility") or {}).get(
-                        "description"
+                    "growth_facility_type": _growth_facility_type(
+                        (study.get("growthFacility") or {}).get("description")
                     ),
                     "map_of_experimental_design": study.get("documentationURL"),
                 }
@@ -176,7 +214,7 @@ def _add_observation_units(
                     "observation_unit_replicate": _level_code(
                         position, ("rep", "replicate")
                     ),
-                    "entry_type": position.get("entryType"),
+                    "entry_type": _entry_type(position.get("entryType")),
                 }
             ),
             skip_validation=True,

@@ -113,3 +113,108 @@ def test_faidare_s_level_strings_are_read_as_block_replicate_and_plot() -> None:
     assert ou["observation_level_code"] == "223977"
     assert ou["observation_unit_block"] == "5"
     assert ou["observation_unit_replicate"] == "2"
+
+
+def test_the_server_s_spelling_becomes_miappe_s_vocabulary() -> None:
+    """Breedbase sends TEST, FAIDARE a list of CO_715 descriptions; MIAPPE's
+    rules know test and field. What cannot be placed is kept as sent (#353)."""
+    from metaseed.brapi.mapper import build_dataset
+
+    study = {
+        "studyDbId": "S1",
+        "studyName": "S",
+        "growthFacility": {"description": "field environment condition, greenhouse"},
+    }
+    units = [
+        {
+            "observationUnitDbId": f"ou-{n}",
+            "studyDbId": "S1",
+            "observationUnitPosition": {"entryType": entry},
+        }
+        for n, entry in enumerate(("TEST", "Check", "border row"))
+    ]
+
+    client = build_dataset([study], units, [], [])
+
+    entities = client.serialize()["entities"]
+    (s,) = [e for e in entities if e["_type"] == "Study"]
+    assert s["growth_facility_type"] == "field"
+    assert [e["entry_type"] for e in entities if e["_type"] == "ObservationUnit"] == [
+        "test",
+        "check",
+        "border row",
+    ]
+
+
+def test_a_server_s_own_key_is_a_valid_miappe_identifier() -> None:
+    """FAIDARE's DbIds are base64 and end in '='; a file's name has a dot. The
+    profiles refused both, and the reload then dropped the entity (#353)."""
+    from metaseed import ProfileFacade
+
+    for version in ("1.1", "1.2"):
+        facade = ProfileFacade("miappe", version)
+        study = facade.Study.create(
+            unique_id="dXJuOklOUkFFLVVSR0kvc3R1ZHkvQ2FtMTE=",
+            title="Cam11",
+            investigation_id="T",
+        )
+        assert study.unique_id.endswith("=")
+        file = facade.DataFile.create(
+            unique_id="image-archive.zip",
+            study_id="S",
+            name="images",
+            link="https://x.example.org/a",
+        )
+        assert file.unique_id == "image-archive.zip"
+
+
+def test_the_documented_example_reloads_whole() -> None:
+    """The issue's own reproduction: ten entities imported, ten after a reload,
+    every child with its parent (#353). The shapes are the reference server's
+    for study1, reduced to what matters."""
+    from metaseed import MetaseedClient
+    from metaseed.brapi.mapper import build_dataset
+
+    study = {
+        "studyDbId": "study1",
+        "studyName": "Study 1",
+        "trialDbId": "trial1",
+        "trialName": "Trial 1",
+        "growthFacility": {"description": "field environment condition, greenhouse"},
+        "dataLinks": [
+            {
+                "url": "https://server.example.org/files/image-archive.zip",
+                "name": "images",
+            }
+        ],
+    }
+    units = [
+        {
+            "observationUnitDbId": f"unit{n}",
+            "studyDbId": "study1",
+            "germplasmDbId": f"germ{n}",
+            "observationUnitPosition": {"entryType": "TEST"},
+        }
+        for n in range(3)
+    ]
+    germplasm = [
+        {"germplasmDbId": f"germ{n}", "germplasmName": f"G{n}"} for n in range(3)
+    ]
+    observations = [
+        {
+            "observationDbId": "o1",
+            "observationVariableDbId": "var1",
+            "studyDbId": "study1",
+        }
+    ]
+    data = build_dataset([study], units, observations, germplasm).serialize()
+    assert len(data["entities"]) == 10
+
+    reloaded = MetaseedClient(data["profile"], data["version"])
+    reloaded.load(data)
+
+    after = reloaded.serialize()["entities"]
+    assert len(after) == 10
+    assert all(
+        e.get("_parent_unique_id") for e in after if e["_type"] != "Investigation"
+    )

@@ -694,17 +694,25 @@ class EntityStore:
             try:
                 instance = self._create_instance(entity_type, fields)
             except ValidationError as exc:
-                # Distinguish an incomplete *draft* from corrupt data. The UI
-                # persists drafts on purpose (a root can be saved before its
-                # required children exist); dropping those on read lost user
-                # data, because several routes reload from disk on ordinary
-                # navigation. Only absent required fields qualify -- anything
-                # else (wrong types, unusable values) is still treated as
-                # malformed and skipped by the caller. ``validate()`` continues
-                # to report the draft's gaps.
-                errors = exc.errors()
-                if not errors or not all(err["type"] == "missing" for err in errors):
-                    raise
+                # Kept, whatever validation refused. The UI persists drafts on
+                # purpose (a root can be saved before its required children
+                # exist), and an importer stores what a server sent (a BrAPI
+                # entry type in capitals, a facility term outside the
+                # vocabulary); dropping either on read lost the entity and
+                # orphaned its children, because several routes reload from
+                # disk on ordinary navigation, and only a log line said so.
+                # ``validate()`` reports what is wrong with it.
+                logger.warning(
+                    "%s %s has values validation refuses (%s); kept, and "
+                    "Validate reports them.",
+                    entity_type,
+                    entity_data.get("_node_id")
+                    or fields.get(helper.identifier_field or "", ""),
+                    "; ".join(
+                        f"{'.'.join(str(p) for p in err.get('loc', ()))}: {err.get('msg')}"
+                        for err in exc.errors()[:3]
+                    ),
+                )
                 instance = self._create_instance(
                     entity_type, fields, skip_validation=True
                 )

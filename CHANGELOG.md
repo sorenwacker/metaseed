@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.60.2 (261009)
+
+### Fixed
+- **A reload keeps an entity whose values validation refuses** (#353). The store dropped such an entity with a log line nobody saw, and every route that reloads from disk, and the hub's dataset page, then showed its children as orphans: the documented BrAPI example reloaded as five disconnected entities, its Study, ObservationUnits and DataFile gone. The entity is kept and **Validate** reports what is wrong with it; only a record that cannot be built at all is skipped.
+- **The BrAPI import writes MIAPPE's vocabularies** (#353). An entry type arrives in the server's spelling (`TEST`) and a growth facility as a CO_715 description (`field environment condition, greenhouse`); the mapper writes `test` and `field`, the first MIAPPE term the description names, and keeps as sent what it cannot place.
+- **MIAPPE identifiers admit a server's own keys** (#353). The `miappe` 1.1 and 1.2 profiles required `[A-Za-z0-9_-]` in every `unique_id`, which refused FAIDARE's base64 `DbId`s (ending in `=`) and a file name with a dot; the rule is now anything without whitespace, up to 100 characters, which is all MIAPPE asks of an identifier. A loosened rule fails no record that passed before.
+
+### Changed
+- The BrAPI import documentation records what the reference server, FAIDARE and Breedbase actually send, and what the importer does with each.
+
 ## v0.60.1 (261009)
 
 ### Changed

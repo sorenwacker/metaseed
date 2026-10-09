@@ -83,7 +83,16 @@ returned under more than one unit is imported once, keyed by `observationDbId`.
   germplasm, and variables auto-link to their parents.
 - **Lenient build.** Entities are created with `skip_validation`, so a record
   that omits a field does not abort the import; `client.validate()` reports gaps
-  afterwards.
+  afterwards, and a reload keeps such an entity rather than dropping it.
+- **MIAPPE's vocabularies.** BrAPI carries what a server's database holds. The
+  mapper writes the entry type in MIAPPE's spelling where it is one of `test`,
+  `check`, `filler`, and the growth facility as the first MIAPPE term the
+  server's description contains (`field`, `greenhouse`, `glasshouse`, `growth
+  chamber`, `phytotron`, `open top chamber`); what it cannot place is kept as
+  sent and reported by validation.
+- **Identifiers as the server spells them.** A `DbId` is the server's own key,
+  and the `miappe` profiles admit any identifier without whitespace, so it is
+  stored unchanged and a round trip through the BrAPI exporter keeps it.
 - **Configurable client.** Because BrAPI is a standard, the base URL is required
   and a bearer token is optional, rather than targeting a fixed server.
 - **Optional extra.** The network dependency installs only with
@@ -110,6 +119,26 @@ bodies = to_brapi(client)
 objects — the request bodies a BrAPI server's POST endpoints accept. Pure and
 dependency-free. With `import_brapi` this makes metaseed a round-trip BrAPI
 bridge.
+
+## What servers actually send
+
+Found by importing from the BrAPI reference server, FAIDARE (INRAE) and a
+Breedbase instance (Sweetpotatobase), 261008 and 261009. Each shaped the
+importer; none is in the specification.
+
+| Server | What it sends | What the importer does |
+|--------|---------------|------------------------|
+| All | Ten records per page by default; FAIDARE made a study of 1737 observation units 174 requests | Asks for a thousand per page (`pageSize=1000`), which every server tried honours |
+| Reference server | Nothing for `/observations?studyDbId=`, though it holds the observations | Asks per observation unit when the study filter returns nothing |
+| FAIDARE | 500 for any `/observations` page past the 20,000th record of a study, whatever the page size | The same fallback: one request per unit, which never reaches that deep |
+| FAIDARE | A trial's address (`/trials/<id>`) answered with every study on the server when the importer appended `/studies` to it: 2763 studies | Reads the address first: a trial's imports its studies, a study's that study, anything else below the base URL is refused |
+| FAIDARE | `observationLevelRelationships` as one string per unit, `REPLICATE>BLOCK>PLOT:223977,REPLICATE>BLOCK:5,REPLICATE:2`, where the specification has objects; and the level's number in `levelName` with the path of names in `levelOrder` | Reads both forms into level, code, block and replicate |
+| FAIDARE | `DbId`s that are base64 and end in `=` | Admitted as identifiers; the `miappe` profiles refused them until 0.60.2 |
+| FAIDARE, reference server | A growth facility as a list of CO_715 descriptions, `field environment condition, greenhouse` | Writes the first MIAPPE term it names, `field` |
+| Breedbase, reference server | An entry type in capitals, `TEST` | Writes `test` |
+| Reference server | A data link whose file name has a dot, `image-archive.zip`, used as the `DataFile` identifier | Admitted; the profiles refused a dot until 0.60.2 |
+| Breedbase | The breeding programme's name as the trial's name (`NCSU`), and a study that is a field layout plus measurements: plots, accessions, a few traits | Faithful: that is the record; the dataset is named after the trial |
+| All | A dropped connection or a name that did not resolve part way through thousands of requests | Tries a request three times before giving up |
 
 ## Testing
 
