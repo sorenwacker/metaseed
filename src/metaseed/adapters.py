@@ -188,7 +188,7 @@ ADAPTERS: tuple[AdapterInfo, ...] = (
                 "metaseed.ena:import_accession",
                 surface="import-menu",
                 input_label="ENA accession",
-                input_placeholder="PRJEB1234",
+                input_placeholder="PRJDA51199",
             ),
         ),
     ),

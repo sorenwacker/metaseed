@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.60.1 (261009)
+
+### Changed
+- **The ENA example accession is PRJDA51199.** The New Dataset screens and the MCP tool offered PRJEB1234, a study of 29 runs; PRJDA51199 is a four-run study (Arabidopsis thaliana transcriptome) that imports in seconds, so the example is also the quickest first try.
+
 ## v0.60.0 (261008)
 
 ### Changed
