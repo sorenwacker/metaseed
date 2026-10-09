@@ -67,7 +67,7 @@ def test_an_import_fills_the_bar_and_announces_the_dataset(browser) -> None:  # 
     page script's doing, which nothing short of a real import exercises."""
     browser.get(BASE_URL)
     click_button(browser, "btn-new-dataset")
-    _visible(browser, "import-new-values").send_keys("PRJEB1234")
+    _visible(browser, "import-new-values").send_keys("PRJDA51199")
     click_button(browser, "btn-import-new-ena-import")
 
     bar = _visible(browser, "import-progress")
