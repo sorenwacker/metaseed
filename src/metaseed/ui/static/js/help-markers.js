@@ -10,8 +10,10 @@
  * builder clips its overflow, which cut a tooltip off at the edge of the section
  * it belonged to.
  *
- * Runs over the whole page and again after each htmx swap, so a partial loaded
- * later (the entity editor, a field form) is covered without knowing about this.
+ * Runs over the whole page, or over the element carrying `data-help-root` when
+ * a consumer wraps the builder in chrome of its own, and again after each htmx
+ * swap inside that root, so a partial loaded later (the entity editor, a field
+ * form) is covered without knowing about this.
  */
 (function () {
     'use strict';
@@ -82,8 +84,15 @@
         });
     }
 
+    // A consumer that wraps the builder in a header and footer of its own
+    // names the builder's element with data-help-root, so its own tooltips
+    // (a version string, a status chip) keep their native title.
+    function helpRoot() {
+        return document.querySelector('[data-help-root]') || document.body;
+    }
+
     function start() {
-        addMarkers(document.body);
+        addMarkers(helpRoot());
     }
 
     if (document.readyState === 'loading') {
@@ -93,7 +102,8 @@
     }
 
     document.body.addEventListener('htmx:afterSwap', function (e) {
-        addMarkers(e.target);
+        var root = helpRoot();
+        if (root.contains(e.target)) addMarkers(e.target);
         hide();
     });
 
