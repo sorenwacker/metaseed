@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.61.0 (261011)
+
+### Changed
+- **Help markers stay inside a declared root.** The builder's script turned every `title` on the page into a "?" marker, so a consumer that wraps the builder in a header and footer of its own saw markers on its status chip and version string. An element carrying `data-help-root` confines the markers to the builder, and a partial swapped in outside it is left alone; without one, the whole page is the root as before.
+
 ## v0.60.2 (261009)
 
 ### Fixed

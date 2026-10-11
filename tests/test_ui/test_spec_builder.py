@@ -1049,6 +1049,20 @@ class TestFieldFormReuse:
         assert ".help-marker" in css
         assert ".help-bubble" in css
 
+    def test_the_markers_stay_inside_the_declared_root(self) -> None:
+        """A consumer that wraps the builder in its own header and footer (the
+        hub) saw a "?" on its development chip and its version string: the
+        script marked every ``title`` on the page. An element carrying
+        ``data-help-root`` confines the markers, and a partial swapped in
+        outside it is left alone; without one the whole body is the root."""
+        from metaseed.ui.app import STATIC_DIR
+
+        script = (Path(STATIC_DIR) / "js" / "help-markers.js").read_text()
+        assert "querySelector('[data-help-root]')" in script
+        assert "root.contains(e.target)" in script, (
+            "a swap outside the root is not marked"
+        )
+
     def test_every_constraint_control_carries_guidance(self, client):
         """The tooltips are the reason a consumer should reuse rather than copy.
 
