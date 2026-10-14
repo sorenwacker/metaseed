@@ -354,3 +354,21 @@ def test_nested_array_linking_is_not_order_dependent() -> None:
     nodes = {n.instance.name: n for n in store._instances.values()}
     assert nodes["stu"].parent_id == nodes["inv"].id
     assert nodes["sam"].parent_id == nodes["stu"].id
+
+
+def test_a_refused_update_keeps_the_entity_findable_by_its_identifier() -> None:
+    """update_entity unindexed the old identifier before validating the new data,
+    so a refused update left the unchanged entity unreachable by its identifier."""
+    store = _build_store(lambda _t, data: _FakeInstance(**data))
+    node = store.add_entity("Thing", {"name": "THING-1"})
+
+    try:
+        store.update_entity(node.id, {"name": ["not", "a", "string"]})
+    except ValidationError:
+        pass
+    else:
+        raise AssertionError("the update should have been refused")
+
+    assert store.get_entity_by_ref("THING-1", "Thing") is node
+    assert store.get_entity_by_ref("THING-1") is node
+    assert node.instance.name == "THING-1"
