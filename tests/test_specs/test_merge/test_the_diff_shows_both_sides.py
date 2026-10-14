@@ -161,3 +161,34 @@ def test_a_nested_field_carries_its_target_on_each_side() -> None:
         "Observation",
         "ObservationUnit",
     ]
+
+
+def test_an_attribute_change_carries_the_old_and_new_value() -> None:
+    """A field modified only in its example used to show `- string` over
+    `+ string`: the sides hold type, required and target, which had not
+    changed, and the example itself never reached the browser."""
+    field = _graph_field(
+        FieldDiff(
+            field_name="protocol",
+            diff_type=DiffType.MODIFIED,
+            profiles={
+                BASE: FieldSpec(name="protocol", type=FieldType.STRING, required=True),
+                COMPARE: FieldSpec(
+                    name="protocol",
+                    type=FieldType.STRING,
+                    required=False,
+                    example="Tissue harvest SOP",
+                ),
+            },
+            attributes_changed=["example", "required"],
+            values={
+                "example": {BASE: None, COMPARE: "Tissue harvest SOP"},
+                "required": {BASE: True, COMPARE: False},
+            },
+        ),
+        [BASE, COMPARE],
+    )
+
+    assert field["changes"] == [
+        {"attribute": "example", "values": [None, "Tissue harvest SOP"]}
+    ], "type, required and target travel in sides; every other change travels here"

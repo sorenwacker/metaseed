@@ -121,12 +121,26 @@ function renderFieldRow(field) {
     const vocabulary = field.vocabulary && field.vocabulary.length
         ? `<details class="field-vocabulary"><summary>controlled vocabulary (${field.vocabulary.length} terms)</summary><ul>${field.vocabulary.map(term => `<li>${escapeHtml(term)}</li>`).join('')}</ul></details>`
         : '';
-    const changed = field.attributes_changed && field.attributes_changed.length
-        ? `<div class="field-diff-changes">Changed: ${escapeHtml(field.attributes_changed.join(', '))}</div>` : '';
+    // Each changed attribute with its old value on a `-` line and its new one
+    // on a `+` line. Naming the attribute alone said what moved, not from what.
+    const changed = (field.changes || []).map(change => {
+        const [before, after] = change.values;
+        const value = v => v === null || v === undefined ? '<em>(none)</em>' : escapeHtml(v);
+        return `<div class="field-diff-change" data-testid="change-${escapeHtml(change.attribute)}">
+            <span class="field-diff-attribute">${escapeHtml(change.attribute)}</span>
+            <div class="field-side base"><code>-</code> ${value(before)}</div>
+            <div class="field-side compare"><code>+</code> ${value(after)}</div>
+        </div>`;
+    }).join('');
     // Naming the changed attributes says what moved but not where from or to.
     // Both profiles' versions of the field, base first, answer that.
     const sides = field.sides || [];
-    const twoSided = sides.length === 2 && field.diff_type && field.diff_type !== 'unchanged'
+    // The type lines only when type, required or target changed: identical
+    // `- string` and `+ string` lines claim a change that is not there.
+    const bothPresent = sides.length === 2 && sides[0].present && sides[1].present;
+    const showSides = sides.length === 2 && field.diff_type && field.diff_type !== 'unchanged'
+        && (!bothPresent || sidesDiffer(sides[0], sides[1]));
+    const twoSided = showSides
         ? `<div class="field-diff-sides">${sides.map((side, index) => {
             const mark = index === 0 ? '-' : '+';
             const cls = index === 0 ? 'base' : 'compare';
