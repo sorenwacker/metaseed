@@ -11,7 +11,10 @@ import re
 from dataclasses import asdict
 from typing import TYPE_CHECKING, Any
 
-from metaseed.repositories.dataset_repository import DatasetData, DatasetRepository
+from metaseed.repositories.dataset_repository import (
+    DatasetRepository,
+    dataset_data_from_saved,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -153,8 +156,9 @@ def import_dataset(state: AppState, raw: bytes | str) -> dict[str, Any]:
     """Import a dataset from raw JSON content into the state.
 
     The expected JSON shape matches a saved dataset file: an object with
-    ``profile`` and ``entities`` (a list), and optionally ``name``, ``version``
-    and ``modified``. The imported dataset replaces the current state but is
+    ``profile`` and ``entities`` (a list), and optionally ``name``, ``version``,
+    ``modified``, ``created`` and ``catalog_metadata``, read exactly as a saved
+    dataset file is loaded. The imported dataset replaces the current state but is
     not persisted to storage.
 
     Args:
@@ -191,12 +195,8 @@ def import_payload(state: AppState, payload: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(entities, list):
         raise ValueError("Dataset 'entities' must be a list")  # noqa: TRY004
 
-    data = DatasetData(
-        name=payload.get("name", ""),
-        profile=profile,
-        version=payload.get("version") or "",
-        entities=entities,
-        modified=payload.get("modified", ""),
+    data = dataset_data_from_saved(
+        payload, name="", profile=profile, version=payload.get("version") or ""
     )
 
     factory = _resolve_factory()

@@ -78,6 +78,41 @@ class DatasetData:
     """Hub provenance, as on :class:`DatasetInfo`."""
 
 
+def dataset_data_from_saved(
+    data: dict[str, Any], *, name: str, profile: str, version: str
+) -> DatasetData:
+    """Build DatasetData from the dict of a saved dataset file.
+
+    The single reader of the saved-file format, shared by the repository load
+    and the JSON import, so a key one of them reads cannot be dropped by the
+    other. Profile and version are passed in because the two callers default
+    them differently.
+
+    Args:
+        data: Parsed contents of a saved dataset file.
+        name: Dataset name to use when the file names none.
+        profile: Profile name, already resolved by the caller.
+        version: Profile version, already resolved by the caller.
+
+    Returns:
+        DatasetData with entities, timestamps, catalog metadata and hub
+        provenance as the file records them.
+    """
+    catalog_metadata = data.get("catalog_metadata")
+    return DatasetData(
+        name=data.get("name") or name,
+        profile=profile,
+        version=version,
+        entities=data.get("entities", []),
+        modified=data.get("modified", ""),
+        created=data.get("created", ""),
+        catalog_metadata=CatalogMetadata(**catalog_metadata)
+        if catalog_metadata
+        else None,
+        hub=data.get("hub"),
+    )
+
+
 def validate_dataset_name(name: str) -> str | None:
     """Validate a dataset name.
 
