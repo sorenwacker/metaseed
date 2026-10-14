@@ -53,6 +53,15 @@ def _created_message(
     return f"Created {entity_type}: {label}", "success"
 
 
+def _with_save_error(
+    message: str, message_type: str, save_error: str | None
+) -> tuple[str, str]:
+    """Append an auto-save failure to a notification, demoting it to a warning."""
+    if save_error is None:
+        return message, message_type
+    return f"{message} (not saved: {save_error})", "warning"
+
+
 def register_entity_crud_routes(
     app: FastAPI,
     templates: Jinja2Templates,
@@ -133,9 +142,13 @@ def register_entity_crud_routes(
         # Through the factory the app was composed with, not the ambient one:
         # a host serving several sessions would otherwise read through its own
         # repository and write through a private default.
-        auto_save(state, getattr(request.app.state, "dataset_factory", None))
+        save_error = auto_save(
+            state, getattr(request.app.state, "dataset_factory", None)
+        )
 
-        message, message_type = _created_message(entity_type, node.label, warning)
+        message, message_type = _with_save_error(
+            *_created_message(entity_type, node.label, warning), save_error
+        )
 
         return render_entity_form(
             request,
@@ -223,7 +236,9 @@ def register_entity_crud_routes(
         # Through the factory the app was composed with, not the ambient one:
         # a host serving several sessions would otherwise read through its own
         # repository and write through a private default.
-        auto_save(state, getattr(request.app.state, "dataset_factory", None))
+        save_error = auto_save(
+            state, getattr(request.app.state, "dataset_factory", None)
+        )
 
         action = form_data.get("_action", "")
 
@@ -236,6 +251,7 @@ def register_entity_crud_routes(
         else:
             msg = f"Saved {entity_type}: {node.label}"
             msg_type = "success"
+        msg, msg_type = _with_save_error(msg, msg_type, save_error)
 
         if action == "back":
             return templates.TemplateResponse(
@@ -285,8 +301,13 @@ def register_entity_crud_routes(
         # Through the factory the app was composed with, not the ambient one:
         # a host serving several sessions would otherwise read through its own
         # repository and write through a private default.
-        auto_save(state, getattr(request.app.state, "dataset_factory", None))
+        save_error = auto_save(
+            state, getattr(request.app.state, "dataset_factory", None)
+        )
 
+        message, _ = _with_save_error(
+            f"Deleted {entity_type}: {label}", "warning", save_error
+        )
         facade = state.get_or_create_facade()
         return templates.TemplateResponse(
             request,
@@ -298,7 +319,7 @@ def register_entity_crud_routes(
                 "version": facade.version,
                 "notification": {
                     "type": "warning",
-                    "message": f"Deleted {entity_type}: {label}",
+                    "message": message,
                 },
                 "base_url": base_url,
             },

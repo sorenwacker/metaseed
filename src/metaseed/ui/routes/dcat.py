@@ -137,7 +137,11 @@ def register_dcat_routes(app: FastAPI, get_state: Callable[[], AppState]) -> Non
         # Saved on the same terms as every other mutating route: without this
         # the response said "saved" while nothing was written, and the metadata
         # was gone on the next load.
-        auto_save(state, getattr(request.app.state, "dataset_factory", None))
+        save_error = auto_save(
+            state, getattr(request.app.state, "dataset_factory", None)
+        )
+        if save_error is not None:
+            return JSONResponse({"status": "not_saved", "save_warning": save_error})
         return JSONResponse({"status": "saved"})
 
     @app.get("/dcat", response_class=HTMLResponse)

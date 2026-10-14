@@ -37,7 +37,7 @@ class MemoryEntityRepository(EntityRepository):
     def __init__(
         self: Self,
         state: EntityTreeState,
-        on_change: Callable[[Any], None] | None = None,
+        on_change: Callable[[Any], object] | None = None,
     ) -> None:
         """Initialize with the state to wrap.
 
@@ -47,6 +47,7 @@ class MemoryEntityRepository(EntityRepository):
                 create/update/delete. The composition root wires this to the
                 UI's ``auto_save`` so the data layer need not import the UI;
                 its parameter is therefore typed by whoever wires it, not here.
+                Its return value is ignored.
         """
         self._state = state
         self._on_change = on_change

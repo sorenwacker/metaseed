@@ -17,6 +17,7 @@ for loading and saving operations.
 
 from __future__ import annotations
 
+import logging
 import re
 import weakref
 from datetime import UTC, datetime
@@ -35,6 +36,8 @@ if TYPE_CHECKING:
     from fastapi import FastAPI
 
     from metaseed.ui.state import AppState
+
+logger = logging.getLogger(__name__)
 
 
 class DatasetManager:
@@ -239,26 +242,33 @@ class DatasetManager:
         """
         return self._repo.exists(name)
 
-    def auto_save(self: Self) -> None:
+    def auto_save(self: Self) -> str | None:
         """Auto-save the current state.
 
         Saves to the current dataset if one is loaded, otherwise derives
-        a name from the first entity's label.
+        a name from the first entity's label. A failed save leaves the edit in
+        the session and is returned, not raised: the edit itself succeeded,
+        and the caller reports that it was not written.
+
+        Returns:
+            None if the dataset was saved, otherwise the reason it was not.
         """
         name = self._current or self._get_default_dataset_name()
 
         try:
             result = self.save_dataset(name)
+        except (ValueError, OSError) as e:
+            logger.warning("Auto-save of dataset %r failed: %s", name, e)
+            return str(e)
 
-            from metaseed.ui.websocket import notify_state_changed
+        from metaseed.ui.websocket import notify_state_changed
 
-            notify_state_changed(
-                event="state_changed",
-                dataset=name,
-                entity_count=result.entity_count,
-            )
-        except (ValueError, OSError):
-            pass
+        notify_state_changed(
+            event="state_changed",
+            dataset=name,
+            entity_count=result.entity_count,
+        )
+        return None
 
 
 class DatasetManagerFactory:

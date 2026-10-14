@@ -239,7 +239,7 @@ from metaseed.ui.datasets import (
 )
 ```
 
-These delegate to DatasetManager internally.
+These delegate to DatasetManager internally. `auto_save` returns `None` on success and the failure reason otherwise; the edit stays in the session, and the UI and MCP tools report that it was not saved.
 
 ## File Format
 

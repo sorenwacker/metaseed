@@ -255,7 +255,14 @@ function saveDcatMetadata(event) {
     fetch(BASE_URL + '/api/dcat/metadata', { method: 'POST', body: body })
         .then(function(response) {
             if (!response.ok) { throw new Error('HTTP ' + response.status); }
-            showNotification('Catalog metadata saved', 'success');
+            return response.json();
+        })
+        .then(function(data) {
+            if (data.save_warning) {
+                showNotification('Catalog metadata kept in this session but not saved: ' + data.save_warning, 'warning');
+            } else {
+                showNotification('Catalog metadata saved', 'success');
+            }
             showDcatCard();  // refresh the card with the new values
         })
         .catch(function(err) {
