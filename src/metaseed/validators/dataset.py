@@ -245,6 +245,17 @@ class DatasetValidator:
             rules_from_profile(self._load_profile_spec())
         )
 
+    def _start_run(self: Self) -> None:
+        """Clear what one validation run accumulates, so the next starts empty.
+
+        Every entry point calls this; a reused validator otherwise reported a
+        previous run's identifiers, references and unverified terms again.
+        """
+        self._registry = IdRegistry()
+        self._unchecked = {}
+        self._self_referencing = {}
+        self._unchecked_terms = []
+
     def _entity_spec(self: Self, entity_type: str) -> Any:
         """The spec of ``entity_type``, from the supplied profile or the loader.
 
@@ -755,9 +766,7 @@ class DatasetValidator:
             external references as warnings.
         """
         result = DatasetValidationResult()
-        self._registry = IdRegistry()
-        self._unchecked = {}
-        self._self_referencing = {}
+        self._start_run()
         for data, entity_type in records:
             self._collect_ids(data, entity_type)
         seen: set[tuple[str, str, str]] = set()
@@ -830,10 +839,7 @@ class DatasetValidator:
             )
             return result
 
-        # Reset registry for single file validation
-        self._registry = IdRegistry()
-        self._unchecked = {}
-        self._self_referencing = {}
+        self._start_run()
 
         # Pass 1: Collect IDs
         self._collect_ids(data, entity_type)
@@ -869,9 +875,7 @@ class DatasetValidator:
         result = DatasetValidationResult()
 
         # Reset registry for directory validation
-        self._registry = IdRegistry()
-        self._unchecked = {}
-        self._self_referencing = {}
+        self._start_run()
 
         # Find all YAML and JSON files
         files = list(path.glob("**/*.yaml")) + list(path.glob("**/*.yml"))
