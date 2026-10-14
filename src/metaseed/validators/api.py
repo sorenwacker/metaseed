@@ -63,6 +63,13 @@ def _pydantic_constraint_errors(
     return errors
 
 
+def _unknown_entity_error(entity: str, exc: Exception) -> ValidationError:
+    """The error both validate() paths return for an entity the profile lacks."""
+    return ValidationError(
+        field=entity, message=f"Unknown entity type: {entity} - {exc}", rule="error"
+    )
+
+
 def _validate_nested(
     data: dict[str, Any],
     entity: str,
@@ -93,13 +100,7 @@ def _validate_nested(
     try:
         engine = create_engine_for_entity(entity, version, profile=profile)
     except SpecLoadError as e:
-        return [
-            ValidationError(
-                field=entity,
-                message=f"Unknown entity type: {entity} - {e}",
-                rule="error",
-            )
-        ]
+        return [_unknown_entity_error(entity, e)]
     for error in engine.validate(data):
         # Prefix field with path for nested errors. `kind` rides along: a
         # rebuild that drops it silently upgrades every completeness report to
@@ -218,9 +219,13 @@ def validate(
     if cascade:
         return _validate_nested(data, entity, version, profile)
 
-    engine = create_engine_for_entity(entity, version, profile=profile)
-    errors: list[ValidationError] = list(engine.validate(data))
     from metaseed.specs.loader import SpecLoader, SpecLoadError
+
+    try:
+        engine = create_engine_for_entity(entity, version, profile=profile)
+    except SpecLoadError as e:
+        return [_unknown_entity_error(entity, e)]
+    errors: list[ValidationError] = list(engine.validate(data))
 
     try:
         spec = SpecLoader(profile=profile).load_entity(entity, version)
