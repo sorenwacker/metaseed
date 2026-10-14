@@ -288,11 +288,14 @@ A skipped node takes its subtree with it. Re-parenting the orphans to the skippe
       "entity_type": "Investigation",
       "label": "INV-1",
       "data": {"unique_id": "INV-1", "title": "..."},
+      "parent_field": null,
       "children": [...]
     }
   ]
 }
 ```
+
+`parent_field` names the field of the parent that holds the node (`null` on a root). It is required when the parent holds the child's type in more than one field, such as a SEEK Study's Persons.
 
 ### Clear
 
