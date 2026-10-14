@@ -32,6 +32,8 @@ serves which capability, and a test fails when the three surfaces drift apart.
 
 Each group prints its own help: `metaseed dataset --help`.
 
+`seek`, `hub` and `dcat` are contributed by plugins, not by the core command line. A plugin's adapter names its command group (`AdapterInfo.commands_ref`, a lazy `"module:attribute"` reference to a Typer app), and the core registers every group the installed plugins declare under the adapter's key; it names no plugin itself. `metaseed --help` lists a group only while its plugin is installed and enabled, as the web interface's Plugins page shows it. Run without its plugin, a group names what is missing instead of running: the install command for the plugin's extra (`uv tool install 'metaseed[dcat]'`, or `pip install 'metaseed[dcat]'` in a virtual environment) when it is not installed, and `metaseed plugin enable <name>` when it is disabled.
+
 ### How a dataset command works
 
 The web interface and the MCP server act on one editing session; the command

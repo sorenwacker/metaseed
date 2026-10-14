@@ -17,21 +17,20 @@ except ImportError:
 
 # Import commands from submodules
 from metaseed.cli.commands.datasets import app as dataset_app
-from metaseed.cli.commands.dcat import app as dcat_app
 from metaseed.cli.commands.entities import app as entity_app
 from metaseed.cli.commands.example import export_example
 from metaseed.cli.commands.extract import app as extract_app
-from metaseed.cli.commands.hub import app as hub_app
 from metaseed.cli.commands.merge import compare_profiles, merge_profiles
 from metaseed.cli.commands.ontology import app as ontology_app
 from metaseed.cli.commands.plugins import app as plugin_app
 from metaseed.cli.commands.profile_info import app as profile_app
-from metaseed.cli.commands.seek import app as seek_app
 from metaseed.cli.commands.spec import app as spec_app
 from metaseed.cli.output import CheckOutput, ExitCode, echo_error, echo_success
+from metaseed.cli.plugin_commands import register_plugin_groups
 from metaseed.logging import configure_logging
 from metaseed.models import get_model
 from metaseed.profiles import ProfileFactory
+from metaseed.settings import Settings
 from metaseed.specs.loader import SpecLoader, SpecLoadError
 from metaseed.storage import JsonStorage, StorageError, YamlStorage
 from metaseed.storage.base import StorageBackend
@@ -413,10 +412,8 @@ app.add_typer(profile_app, name="profile")
 app.add_typer(ontology_app, name="ontology")
 app.add_typer(extract_app, name="extract")
 app.add_typer(spec_app, name="spec")
-app.add_typer(seek_app, name="seek")
-app.add_typer(hub_app, name="hub")
 app.add_typer(plugin_app, name="plugin")
-app.add_typer(dcat_app, name="dcat")
+register_plugin_groups(app, Settings())
 
 
 @app.command(name="mcp")
@@ -509,54 +506,6 @@ def migrate_spec_versions(
 
     if apply and migrate_specs.has_failures(migrations):
         raise typer.Exit(ExitCode.VALIDATION_ERROR)
-
-
-# Also `metaseed seek import-templates`: the grouped name is the one the
-# parity table lists, and the flat one keeps working for anything that already
-# calls it.
-@seek_app.command(name="import-templates")
-@app.command(name="seek-import-templates")
-def seek_import_templates(
-    profile: Annotated[Path, typer.Argument(help="Profile YAML to update")],
-    templates: Annotated[
-        list[Path], typer.Argument(help="SEEK ISA Template JSON files")
-    ],
-    write: Annotated[
-        bool, typer.Option("--write", help="Rewrite the profile (default: report)")
-    ] = False,
-) -> None:
-    """Re-derive a profile's template-bound entities from SEEK template files.
-
-    Every entity whose ``seek.template`` names one of the templates gets that
-    template's attributes as its fields, column for column: attribute type,
-    required flag, title attribute, ISA tag and vocabulary. What only the
-    profile knows (an Input field's reference, ontology terms, identity
-    markers) is kept. The file is the source of truth SEEK's API does not
-    expose once a template is installed.
-    """
-    import json
-
-    from metaseed.seek.definitions import apply_isa_templates
-
-    document = yaml.safe_load(profile.read_text(encoding="utf-8"))
-    entries: list[dict[str, Any]] = []
-    for path in templates:
-        entries.extend(json.loads(path.read_text(encoding="utf-8"))["data"])
-    applied = apply_isa_templates(document, entries)
-    if not applied:
-        echo_error("no entity of the profile names one of these templates")
-        raise typer.Exit(ExitCode.VALIDATION_ERROR)
-    for entity_name, dropped in applied.items():
-        note = f" (dropped: {', '.join(dropped)})" if dropped else ""
-        typer.echo(f"{entity_name}: re-derived from its template{note}")
-    if write:
-        profile.write_text(
-            yaml.safe_dump(document, sort_keys=False, allow_unicode=True, width=120),
-            encoding="utf-8",
-        )
-        echo_success(f"wrote {profile}")
-    else:
-        typer.echo("DRY RUN - use --write to rewrite the profile")
 
 
 if __name__ == "__main__":
