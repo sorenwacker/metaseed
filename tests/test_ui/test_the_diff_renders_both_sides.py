@@ -88,3 +88,30 @@ def test_the_panel_shows_the_values_not_only_the_attribute_names() -> None:
         "the entity panel lists which attributes changed but not what they "
         "changed from and to"
     )
+
+
+def test_a_modified_line_names_what_changed() -> None:
+    """A bare `~` said a field changed without saying what: every field of a
+    version that added examples carried one and nothing else."""
+    source = GRAPH_SCRIPT.read_text()
+
+    assert "field.changes" in source, (
+        "the canvas does not read the changed attributes, so a `~` line "
+        "cannot name them"
+    )
+
+
+def test_the_panel_shows_each_changed_value() -> None:
+    source = PANEL_SCRIPT.read_text()
+
+    assert "field.changes" in source, "the panel does not show the changed values"
+    assert "(none)" in source, "a side without a value has nothing to show on its line"
+
+
+def test_the_panel_draws_the_type_lines_only_when_they_differ() -> None:
+    """`- string` over `+ string` claims a change that is not there."""
+    source = PANEL_SCRIPT.read_text()
+
+    assert "sidesDiffer(sides[0], sides[1])" in source, (
+        "the panel draws the type lines for every modified field, identical or not"
+    )

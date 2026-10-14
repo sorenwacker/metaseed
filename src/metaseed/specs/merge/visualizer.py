@@ -231,6 +231,7 @@ class DiffVisualizer:
                     "profiles": field_profiles,
                     "attributes_changed": fd.attributes_changed,
                     "sides": sides,
+                    "changes": _attribute_changes(fd, comparison.profiles),
                 }
             )
 
@@ -563,3 +564,45 @@ def _seek_for(comparison: ComparisonResult, entity_name: str) -> dict[str, Any]:
                 k: v for k, v in entity.seek.model_dump(exclude_none=True).items() if v
             }
     return {}
+
+
+#: Attributes every side already carries in ``sides``; the rest travel as changes.
+_SIDE_ATTRIBUTES = frozenset({"type", "required", "items"})
+
+
+def _attribute_changes(fd: Any, profiles: list[str]) -> list[dict[str, Any]]:
+    """Each changed attribute outside ``sides``, with every profile's value.
+
+    Without these a field modified only in its example or description arrived
+    at the browser as a ``~`` and identical type lines: the change itself
+    never travelled.
+
+    Args:
+        fd: The field's diff.
+        profiles: The compared profiles, in the order they were selected.
+
+    Returns:
+        ``{"attribute", "values"}`` per changed attribute, values ordered as
+        ``profiles`` and ``None`` where a profile has no value.
+    """
+    changes = []
+    for attribute in fd.attributes_changed:
+        if attribute in _SIDE_ATTRIBUTES:
+            continue
+        by_profile = fd.values.get(attribute, {})
+        changes.append(
+            {
+                "attribute": attribute,
+                "values": [_display(by_profile.get(pid)) for pid in profiles],
+            }
+        )
+    return changes
+
+
+def _display(value: Any) -> str | None:
+    """An attribute value as the explorer shows it; ``None`` and empty stay ``None``."""
+    if value is None or value in ("", []):
+        return None
+    if isinstance(value, (list, tuple)):
+        return ", ".join(str(item) for item in value)
+    return str(getattr(value, "value", value))

@@ -126,9 +126,13 @@ function buildNodeLabel(name, fields, exploreMode) {
         // so becoming required or repointing to another entity is visible.
         const sides = field.sides || [];
         const changed = field.diff_type === 'conflict' || field.diff_type === 'modified';
+        // What changed outside type, required and target (an example, a
+        // description), named after the line so a `~` never stands alone.
+        const named = (field.changes || []).map(change => change.attribute);
+        const suffix = named.length ? ` (${named.join(', ')})` : '';
         if (changed && sides.length === 2 && sides[0].present && sides[1].present
             && sidesDiffer(sides[0], sides[1])) {
-            label += fieldChangeLine(field.name, sides[0], sides[1]);
+            label += fieldChangeLine(field.name, sides[0], sides[1]) + suffix;
             return;
         }
         let ind = ' ';
@@ -136,7 +140,7 @@ function buildNodeLabel(name, fields, exploreMode) {
         else if (field.diff_type === 'added') ind = '+';
         else if (field.diff_type === 'removed') ind = '-';
         else if (field.diff_type === 'modified') ind = '~';
-        label += `\n${ind}${req}${fk} ${field.name}: ${field.type}`;
+        label += `\n${ind}${req}${fk} ${field.name}: ${field.type}${changed ? suffix : ''}`;
     });
 
     return label;

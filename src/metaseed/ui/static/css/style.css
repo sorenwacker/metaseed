@@ -4943,7 +4943,8 @@ details.sidebar-section summary:hover {
 .field-diff-header span { font-weight: 600; }
 .field-diff-header code { color: var(--clr-ink-light); }
 .field-diff-profiles { margin-top: var(--space-xs); }
-.field-diff-changes { margin-top: var(--space-xs); font-size: 0.75rem; color: #e65100; font-style: italic; }
+.field-diff-change { margin-top: var(--space-xs); font-size: 0.75rem; }
+.field-diff-attribute { font-weight: 600; }
 
 /* Both profiles' versions of a changed field, read as a diff: base then
    compare. The attribute names alone said that something changed without

@@ -73,7 +73,7 @@ A field whose type, required marker or nested target differs is drawn on one lin
 
 The marker is `~`, which the legend already explains as modified, so `-` and `+` keep meaning only removed and added. Drawing a change the way git does — the old version on a `-` line above the new one on a `+` line — misreads here: those two glyphs are the legend's, not a diff's, so a field that merely became required looked like one field removed and another added, and every changed field cost two lines of node height.
 
-A field can also be modified for a reason the line does not carry — a reworded description, another ontology term, a tightened constraint. Those keep the bare `~` line; the entity panel names those attributes under the field.
+A field can also be modified in an attribute the line has no column for: an example, a description, an ontology term. The line then names those attributes after the type, so a `~` always says what changed: `~  age: string (example)`. The entity panel shows each changed attribute with its old value on a `-` line and its new value on a `+` line, `(none)` where a side has no value; the type line is drawn as `-`/`+` only when the type, the required marker or the nested target changed.
 
 A removed field keeps its `-` line and an added field its `+` line, each showing the version held by the profile that has it. The removed field's line is what the field was before it was dropped, and the panel spells out that the compare profile does not have it.
 
