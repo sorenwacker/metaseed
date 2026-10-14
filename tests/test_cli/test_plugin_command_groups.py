@@ -84,12 +84,21 @@ def _app(settings: Settings) -> typer.Typer:
     return app
 
 
+def _listed(app: typer.Typer) -> set[str]:
+    """The commands ``--help`` lists, read from the command itself.
+
+    Not from the help text: CI renders it with colour codes between the words.
+    """
+    group = typer.main.get_command(app)
+    return {name for name, command in group.commands.items() if not command.hidden}
+
+
 def test_an_enabled_plugin_group_is_listed_and_runs(
     announce, settings: Settings
 ) -> None:
     announce("INSTALLED")
     app = _app(settings)
-    assert " demo " in runner.invoke(app, ["--help"]).output
+    assert "demo" in _listed(app)
     result = runner.invoke(app, ["demo", "hello"])
     assert result.exit_code == 0
     assert "demo says hello" in result.output
@@ -101,7 +110,7 @@ def test_a_disabled_plugin_group_is_hidden_and_names_the_enable_command(
     announce("INSTALLED")
     settings.set_adapter_enabled("demo", False)
     app = _app(settings)
-    assert " demo " not in runner.invoke(app, ["--help"]).output
+    assert "demo" not in _listed(app)
     result = runner.invoke(app, ["demo", "hello"])
     assert result.exit_code == ExitCode.CONFIG_ERROR
     assert "metaseed plugin enable demo" in result.output
@@ -113,7 +122,7 @@ def test_a_plugin_group_that_is_not_installed_is_hidden_and_names_the_install_co
 ) -> None:
     announce("NOT_INSTALLED")
     app = _app(settings)
-    assert " demo " not in runner.invoke(app, ["--help"]).output
+    assert "demo" not in _listed(app)
     result = runner.invoke(app, ["demo", "hello"])
     assert result.exit_code == ExitCode.CONFIG_ERROR
     assert "uv tool install 'metaseed[demo]'" in result.output
