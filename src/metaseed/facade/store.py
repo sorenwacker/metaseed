@@ -399,12 +399,20 @@ class EntityStore:
 
         Returns:
             Updated EntityNode if found, None otherwise.
+
+        Raises:
+            ValidationError: If the data is refused; the entity and its
+                identifier index are left unchanged.
         """
         node = self._instances.get(node_id)
         if not node:
             return None
 
         id_fields_to_check = self._get_identifier_fields(node.entity_type)
+
+        # Validate before touching the index: a refused update must leave the
+        # entity reachable by the identifiers it still has.
+        new_instance = self._create_instance(node.entity_type, data, skip_validation)
 
         # Remove old index entries
         old_data = (
@@ -415,8 +423,7 @@ class EntityStore:
             if old_value:
                 self._unindex_identifier(node.entity_type, str(old_value), node_id)
 
-        # Create new instance
-        node.instance = self._create_instance(node.entity_type, data, skip_validation)
+        node.instance = new_instance
 
         # Add new index entries
         for id_field in id_fields_to_check:
