@@ -1,19 +1,42 @@
-"""Shared helper functions for entity repositories.
+"""Shared helper functions for repositories.
 
-These utilities are used by both FileEntityRepository and MemoryEntityRepository
-to handle common operations like finding parent references and deriving labels.
+These utilities are used by the entity and dataset repositories for common
+operations like finding parent references, deriving labels and writing files.
 """
 
 from __future__ import annotations
 
 import copy
 import datetime
+import json
 from typing import TYPE_CHECKING, Any, cast
 
 from pydantic import AnyUrl
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from metaseed.facade import EntityHelper
+
+
+def write_json_atomic(path: Path, data: Any) -> None:
+    """Write data as JSON to path so a failed write leaves the old file intact.
+
+    The JSON is written beside the target and renamed over it. An interrupted
+    or failing write therefore never leaves a truncated file, which is the
+    file that would make the next load fail.
+
+    Args:
+        path: Target file.
+        data: JSON-serializable data; other values are written via ``str``.
+    """
+    tmp_path = path.with_name(path.name + ".tmp")
+    try:
+        with open(tmp_path, "w") as f:
+            json.dump(data, f, indent=2, default=str)
+        tmp_path.replace(path)
+    finally:
+        tmp_path.unlink(missing_ok=True)
 
 
 def find_parent_ref_field(helper: Any, parent_type: str) -> str | None:

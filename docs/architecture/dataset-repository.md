@@ -243,7 +243,7 @@ These delegate to DatasetManager internally.
 
 ## File Format
 
-FilesystemDatasetRepository stores datasets as JSON:
+FilesystemDatasetRepository stores datasets as JSON. A save writes to a temporary file beside the target and renames it over the target, so a save that fails partway leaves the previous version of the dataset intact.
 
 ```json
 {
