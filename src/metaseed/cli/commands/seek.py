@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Annotated, Any
 
 import typer
+import yaml
 
 from metaseed.cli.output import ExitCode, echo_error, echo_success
 from metaseed.cli.workspace import emit, open_dataset
@@ -237,3 +238,47 @@ def model_ttl(
         return
     output.write_text(text)
     echo_success(f"Wrote {output}.")
+
+
+@app.command(name="import-templates")
+def seek_import_templates(
+    profile: Annotated[Path, typer.Argument(help="Profile YAML to update")],
+    templates: Annotated[
+        list[Path], typer.Argument(help="SEEK ISA Template JSON files")
+    ],
+    write: Annotated[
+        bool, typer.Option("--write", help="Rewrite the profile (default: report)")
+    ] = False,
+) -> None:
+    """Re-derive a profile's template-bound entities from SEEK template files.
+
+    Every entity whose ``seek.template`` names one of the templates gets that
+    template's attributes as its fields, column for column: attribute type,
+    required flag, title attribute, ISA tag and vocabulary. What only the
+    profile knows (an Input field's reference, ontology terms, identity
+    markers) is kept. The file is the source of truth SEEK's API does not
+    expose once a template is installed.
+    """
+    import json
+
+    from metaseed.seek.definitions import apply_isa_templates
+
+    document = yaml.safe_load(profile.read_text(encoding="utf-8"))
+    entries: list[dict[str, Any]] = []
+    for path in templates:
+        entries.extend(json.loads(path.read_text(encoding="utf-8"))["data"])
+    applied = apply_isa_templates(document, entries)
+    if not applied:
+        echo_error("no entity of the profile names one of these templates")
+        raise typer.Exit(ExitCode.VALIDATION_ERROR)
+    for entity_name, dropped in applied.items():
+        note = f" (dropped: {', '.join(dropped)})" if dropped else ""
+        typer.echo(f"{entity_name}: re-derived from its template{note}")
+    if write:
+        profile.write_text(
+            yaml.safe_dump(document, sort_keys=False, allow_unicode=True, width=120),
+            encoding="utf-8",
+        )
+        echo_success(f"wrote {profile}")
+    else:
+        typer.echo("DRY RUN - use --write to rewrite the profile")

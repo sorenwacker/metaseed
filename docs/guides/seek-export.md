@@ -108,7 +108,7 @@ are in [ISA-JSON compliance](../architecture/seek-isa-compliance.md).
 
 If you have the template files that configured the instance, derive the
 entities from them instead of tagging fields by hand:
-`metaseed seek-import-templates profile.yaml templates/*.json --write`. Every
+`metaseed seek import-templates profile.yaml templates/*.json --write`. Every
 entity naming one of the templates gets its columns exactly — types,
 required flags, tags, vocabularies — and the sync creates Sample Types that
 are the template's, column for column.

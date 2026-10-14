@@ -98,7 +98,7 @@ Read-only `GET` routes are views of a capability rather than capabilities of the
 | Export ISA RDF | `seek isa-rdf` | — | `GET /seek/isa-rdf` |
 | Download ISA Templates | `seek isa-templates` | — | `GET /seek/isa-templates` |
 | Download the model as Turtle | `seek model-ttl` | — | `GET /seek/model-ttl` |
-| Derive a profile from installed templates | `seek import-templates`, `seek-import-templates` | — | — |
+| Derive a profile from installed templates | `seek import-templates` | — | — |
 | **Metaseed Hub** | | | |
 | Check the connection | `hub check` | — | — |
 | List datasets on the hub | `hub list` | — | `GET /hub/datasets/pull` |

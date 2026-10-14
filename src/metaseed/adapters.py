@@ -151,15 +151,27 @@ class AdapterInfo:
     stored config and returning an object with ``ok``, ``message`` and
     ``projects``; ``None`` when the adapter has nothing to connect to."""
 
+    commands_ref: str | None = None
+    """Lazy ``"module:attribute"`` of the Typer app the adapter adds to the
+    command line, registered under ``key``; ``None`` when it adds none."""
+
     def resolve_check(self) -> Callable[..., Any]:
         """Import and return the connection check (only when invoked)."""
         if self.check_ref is None:
             raise LookupError(f"Adapter {self.key!r} declares no connection check")
-        module_name, _, attribute = self.check_ref.partition(":")
-        return cast(
-            "Callable[..., Any]",
-            getattr(importlib.import_module(module_name), attribute),
-        )
+        return cast("Callable[..., Any]", _resolve(self.check_ref))
+
+    def resolve_commands(self) -> Any:
+        """Import and return the adapter's command group (a ``typer.Typer``)."""
+        if self.commands_ref is None:
+            raise LookupError(f"Adapter {self.key!r} declares no command group")
+        return _resolve(self.commands_ref)
+
+
+def _resolve(ref: str) -> Any:
+    """Import the module of a ``"module:attribute"`` reference and return the attribute."""
+    module_name, _, attribute = ref.partition(":")
+    return getattr(importlib.import_module(module_name), attribute)
 
 
 ADAPTERS: tuple[AdapterInfo, ...] = (
@@ -310,6 +322,7 @@ ADAPTERS: tuple[AdapterInfo, ...] = (
                 profiles=("*",),
             ),
         ),
+        commands_ref="metaseed.cli.commands.dcat:app",
     ),
     AdapterInfo(
         key="seek",
@@ -326,6 +339,7 @@ ADAPTERS: tuple[AdapterInfo, ...] = (
         ),
         action_path="/seek",
         check_ref="metaseed.seek.connection:check_connection",
+        commands_ref="metaseed.cli.commands.seek:app",
     ),
     AdapterInfo(
         key="hub",
@@ -339,6 +353,7 @@ ADAPTERS: tuple[AdapterInfo, ...] = (
             ConfigField("token", "Access token", secret=True),
         ),
         check_ref="metaseed.hub.connection:check_connection",
+        commands_ref="metaseed.cli.commands.hub:app",
     ),
 )
 
