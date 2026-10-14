@@ -20,6 +20,7 @@ from metaseed.repositories.dataset_repository import (
     DatasetInfo,
     DatasetRepository,
 )
+from metaseed.repositories.helpers import write_json_atomic
 
 DEFAULT_DATASETS_DIR = user_data_base() / "datasets"
 """Where datasets live when nothing overrides it.
@@ -165,8 +166,7 @@ class FilesystemDatasetRepository(DatasetRepository):
         if data.hub is not None:
             file_data["hub"] = data.hub
 
-        with open(path, "w") as f:
-            json.dump(file_data, f, indent=2, default=str)
+        write_json_atomic(path, file_data)
 
         return DatasetInfo(
             name=name,

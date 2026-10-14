@@ -23,6 +23,7 @@ from metaseed.repositories.helpers import (
     normalize_reference_fields,
     remove_parent_reference,
     update_parent_reference,
+    write_json_atomic,
 )
 
 logger = logging.getLogger(__name__)
@@ -295,16 +296,7 @@ class FileEntityRepository(EntityRepository):
         }
 
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        # Written beside the target and renamed over it: an interrupted save
-        # leaves the previous file intact instead of a truncated one, which is
-        # precisely the file that makes the next load fail.
-        tmp_path = self._path.with_name(self._path.name + ".tmp")
-        try:
-            with open(tmp_path, "w") as f:
-                json.dump(data, f, indent=2, default=str)
-            tmp_path.replace(self._path)
-        finally:
-            tmp_path.unlink(missing_ok=True)
+        write_json_atomic(self._path, data)
 
         logger.info("Saved %d entities to %s", len(self._entities), self._path)
 
