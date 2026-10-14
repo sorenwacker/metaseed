@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.62.0 (261014)
+
+### Changed
+- **Plugins inject their command groups.** The core command line imported and registered `seek`, `hub` and `dcat` itself, so `metaseed --help` listed them on an install without their extras, and `dcat` then failed on the missing rdflib. An adapter declares its group with `commands_ref`; the core registers what the installed plugins declare, lists a group only while its plugin is installed and enabled, and a group run without its plugin names the install or enable command. A test fails if the core imports a plugin's command module.
+- **`seek-import-templates` is `seek import-templates` only.** The flat alias lived in the core command line, which no longer names a plugin.
+
+### Fixed
+- **The Explorer's comparison says what changed on a modified field.** A field changed only in an attribute without a column, such as its example or description, showed a bare `~` on the canvas and identical `- string` / `+ string` lines in the panel; cropxr-sequencing 1.3 against 1.2 marked every SequencingSample field this way because 1.3 added examples. The canvas names the changed attributes after the line (`~ age: string (example)`), the panel shows each with its old and new value, and the type lines appear only when type, required or target changed.
+
 ## v0.61.0 (261011)
 
 ### Changed
