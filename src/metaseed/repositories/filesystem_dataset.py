@@ -15,10 +15,10 @@ from typing import Any, Self
 
 from metaseed.paths import user_data_base
 from metaseed.repositories.dataset_repository import (
-    CatalogMetadata,
     DatasetData,
     DatasetInfo,
     DatasetRepository,
+    dataset_data_from_saved,
 )
 from metaseed.repositories.helpers import write_json_atomic
 
@@ -198,18 +198,11 @@ class FilesystemDatasetRepository(DatasetRepository):
         with open(path) as f:
             data = json.load(f)
 
-        catalog_metadata = data.get("catalog_metadata")
-        return DatasetData(
-            name=data.get("name", name),
+        return dataset_data_from_saved(
+            data,
+            name=name,
             profile=data.get("profile", "unknown"),
             version=data.get("version", "unknown"),
-            entities=data.get("entities", []),
-            modified=data.get("modified", ""),
-            created=data.get("created", ""),
-            catalog_metadata=(
-                CatalogMetadata(**catalog_metadata) if catalog_metadata else None
-            ),
-            hub=data.get("hub"),
         )
 
     def delete(self: Self, name: str) -> bool:

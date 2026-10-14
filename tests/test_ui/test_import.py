@@ -149,3 +149,29 @@ class TestImportRoute:
         assert response.status_code == 200
         assert "Import failed" in response.text
         assert "notification-error" in response.text
+
+
+def test_import_keeps_created_and_catalog_metadata(temp_datasets_dir):
+    """A saved dataset file's creation time and catalog card survive an import."""
+    state = AppState()
+    saved = {
+        "name": "test-with-card",
+        "profile": "miappe",
+        "version": "1.1",
+        "entities": [],
+        "modified": "2026-10-01T10:00:00+00:00",
+        "created": "2026-09-01T10:00:00+00:00",
+        "catalog_metadata": {
+            "title": "Example catalog title",
+            "publisher": "Example Institute",
+            "keywords": ["example"],
+        },
+    }
+
+    info = import_dataset(state, json.dumps(saved))
+
+    assert info["created"] == "2026-09-01T10:00:00+00:00"
+    assert state.catalog_metadata is not None
+    assert state.catalog_metadata.title == "Example catalog title"
+    assert state.catalog_metadata.publisher == "Example Institute"
+    assert state.catalog_metadata.keywords == ["example"]
