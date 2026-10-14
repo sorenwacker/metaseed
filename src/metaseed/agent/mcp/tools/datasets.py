@@ -7,6 +7,7 @@ from dataclasses import asdict
 from typing import TYPE_CHECKING
 
 from metaseed.agent.mcp.ui_session import DatasetManager, ui_datasets
+from metaseed.repositories import DatasetRepository
 
 if TYPE_CHECKING:
     from mcp.server.fastmcp import FastMCP
@@ -184,12 +185,21 @@ def register_dataset_tools(  # noqa: C901
         try:
             state = current_state()
 
-            # Prove the profile/version loads BEFORE touching the live
+            # Prove the profile/version loads and the name is free BEFORE touching the live
             # session: a typo'd profile name must cost an error message, not
             # the caller's unsaved entities and a state no tool can use.
             from metaseed.facade import ProfileFacade
 
             facade = ProfileFacade(profile, version)
+
+            manager = _get_dataset_manager(resolve_context())
+            name_error = DatasetRepository.validate_name(name)
+            if name_error:
+                return json.dumps({"error": name_error})
+            if manager.dataset_exists(name):
+                return json.dumps(
+                    {"error": f"A dataset named '{name}' already exists."}
+                )
 
             state.profile = profile
             state.version = version
@@ -197,7 +207,6 @@ def register_dataset_tools(  # noqa: C901
             state.reset()
             state.facade = facade
 
-            manager = _get_dataset_manager(resolve_context())
             manager.save_dataset(name)
             # Update state's current dataset so auto_save uses correct target
             ui_datasets.set_current_dataset_name(state, name)

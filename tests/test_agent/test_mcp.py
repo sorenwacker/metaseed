@@ -2011,3 +2011,57 @@ class TestCreateDatasetValidatesBeforeWiping:
             info = json.loads(info_fn.fn())
             assert info["profile"] == "miappe"
             assert info["entity_counts"] == {"Investigation": 1}
+
+    def _session_with_one_investigation(self):
+        from metaseed.agent.mcp.server import create_server
+
+        tools = create_server()._tool_manager._tools
+        assert "error" not in json.loads(
+            tools["create_dataset"].fn(
+                name="test-keep-me", profile="miappe", version="1.1"
+            )
+        )
+        assert "error" not in json.loads(
+            tools["create_entity"].fn(
+                entity_type="Investigation", data='{"title": "Precious"}'
+            )
+        )
+        return tools
+
+    def test_an_invalid_name_keeps_the_current_session(self):
+        with patch("metaseed.ui.datasets.auto_save"):
+            tools = self._session_with_one_investigation()
+
+            result = json.loads(
+                tools["create_dataset"].fn(
+                    name="../bad name", profile="isa", version="1.0"
+                )
+            )
+            assert "error" in result
+
+            info = json.loads(tools["get_dataset_info"].fn())
+            assert info["profile"] == "miappe"
+            assert info["entity_counts"] == {"Investigation": 1}
+
+    def test_an_existing_name_is_refused_and_not_overwritten(self):
+        with patch("metaseed.ui.datasets.auto_save"):
+            tools = self._session_with_one_investigation()
+            assert "error" not in json.loads(
+                tools["save_dataset"].fn(name="test-keep-me")
+            )
+
+            result = json.loads(
+                tools["create_dataset"].fn(
+                    name="test-keep-me", profile="isa", version="1.0"
+                )
+            )
+            assert "already exists" in result["error"]
+
+            info = json.loads(tools["get_dataset_info"].fn())
+            assert info["profile"] == "miappe"
+            assert info["entity_counts"] == {"Investigation": 1}
+            assert "error" not in json.loads(
+                tools["load_dataset"].fn(name="test-keep-me")
+            )
+            info = json.loads(tools["get_dataset_info"].fn())
+            assert info["entity_counts"] == {"Investigation": 1}
