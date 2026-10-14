@@ -98,20 +98,51 @@ def test_a_field_is_not_guessed_between_several_of_one_type() -> None:
     ["agent/mcp/tools/validation.py", "ui/routes/api.py", "api/validation.py"],
 )
 def test_no_validation_entry_point_dumps_a_node_on_its_own(module: str) -> None:
-    """The defect was a second and a third tree walk. Each entry point must take
-    a node's data from the shared function, not from the instance directly,
-    inside the function that validates."""
+    """The defect was a second and a third tree walk, then a single-entity tool.
+    Every function that hands a node to a validator must take the node's data
+    from the shared function, not from the instance directly. Selected by what
+    it calls rather than by name, so a renamed or new entry point is covered."""
+    validators = {"validate_entity", "validate_fn", "validate_entity_with_report"}
     tree = ast.parse((SRC / module).read_text())
-    names = {"_validate_node_recursive", "validate_recursive", "validate_node"}
-    walkers = [
-        n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.name in names
+    callers = [
+        n
+        for n in ast.walk(tree)
+        if isinstance(n, ast.FunctionDef)
+        and any(
+            isinstance(c, ast.Call)
+            and isinstance(c.func, ast.Name)
+            and c.func.id in validators
+            for c in ast.walk(n)
+        )
     ]
-    assert walkers, f"{module} no longer has the function this gate reads"
-    for walker in walkers:
-        source = ast.unparse(walker)
+    assert callers, f"{module} no longer calls a validator this gate reads"
+    for caller in callers:
+        source = ast.unparse(caller)
         assert "data_with_children" in source or "_data_with_children" in source, (
-            f"{module}:{walker.name} validates a node without its children"
+            f"{module}:{caller.name} validates a node without its children"
         )
         assert "instance.model_dump" not in source, (
-            f"{module}:{walker.name} reads the instance directly"
+            f"{module}:{caller.name} reads the instance directly"
         )
+
+
+def test_the_mcp_single_entity_tool_counts_children(ena: MetaseedClient) -> None:
+    """validate_entity dumped the node alone, so a Run with files failed min-items."""
+    import json
+
+    from metaseed.agent.mcp.server import create_server, reset_mcp_state, set_mcp_state
+    from metaseed.ui.state import AppState
+
+    state = AppState(profile="ena", version="1.0")
+    state.facade = ena.facade
+    reset_mcp_state()
+    try:
+        set_mcp_state(state)
+        tool = create_server()._tool_manager._tools["validate_entity"]
+        run = _runs(ena)[0]
+
+        result = json.loads(tool.fn(node_id=run.id))
+
+        assert result.get("valid") is True, result
+    finally:
+        reset_mcp_state()

@@ -103,7 +103,6 @@ def register_validation_tools(  # noqa: C901
         Returns:
             JSON with validation results.
         """
-        from metaseed.validators import validate_entity_with_report
 
         state = current_state()
 
@@ -122,36 +121,7 @@ def register_validation_tools(  # noqa: C901
             if not helper:
                 return json.dumps({"error": f"Unknown entity type: {node.entity_type}"})
 
-            data = node.instance.model_dump(exclude_none=True)
-
-            # Use comprehensive validation with check reporting
-            validation_checks = validate_entity_with_report(
-                data=data,
-                entity_type=node.entity_type,
-                profile=facade.profile,
-                version=facade.version,
-            )
-
-            # Build checks and errors lists
-            checks = []
-            errors = []
-            for check in validation_checks:
-                check_dict = {
-                    "field": check.field,
-                    "check": check.check,
-                    "passed": check.passed,
-                }
-                if check.message:
-                    check_dict["message"] = check.message
-                checks.append(check_dict)
-                if not check.passed:
-                    errors.append(
-                        {
-                            "field": check.field,
-                            "message": check.message or f"{check.check} check failed",
-                            "rule": check.check,
-                        }
-                    )
+            checks, errors = _node_checks(node, facade)
 
             return json.dumps(
                 {
@@ -313,6 +283,57 @@ def register_validation_tools(  # noqa: C901
             return json.dumps({"error": str(e)})
 
 
+def _node_checks(
+    node: TreeNode, facade: ProfileFacade
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Validate one node with its children and report the checks and errors.
+
+    Shared by validate_entity and validate_dataset so the two tools cannot
+    judge the same entity differently.
+
+    Args:
+        node: TreeNode to validate.
+        facade: ProfileFacade instance.
+
+    Returns:
+        The checks run, and the errors among them, as the tools report them.
+    """
+    from metaseed.facade.children import data_with_children
+    from metaseed.validators import validate_entity_with_report
+
+    checks: list[dict[str, Any]] = []
+    errors: list[dict[str, Any]] = []
+    if not node.instance:
+        return checks, errors
+
+    # With its children in the fields that hold them: a node dumped on its
+    # own has empty lists, and every cardinality rule then fails (#343).
+    validation_checks = validate_entity_with_report(
+        data=data_with_children(node, facade),
+        entity_type=node.entity_type,
+        profile=facade.profile,
+        version=facade.version,
+    )
+    for check in validation_checks:
+        check_dict: dict[str, Any] = {
+            "field": check.field,
+            "check": check.check,
+            "passed": check.passed,
+        }
+        if check.message:
+            check_dict["message"] = check.message
+        checks.append(check_dict)
+        if not check.passed:
+            errors.append(
+                {
+                    "field": check.field,
+                    "message": check.message or f"{check.check} check failed",
+                    "rule": check.check,
+                }
+            )
+    return checks, errors
+
+
 def _validate_node_recursive(
     node: TreeNode, facade: ProfileFacade, results: list[dict[str, Any]]
 ) -> None:
@@ -327,43 +348,7 @@ def _validate_node_recursive(
         facade: ProfileFacade instance.
         results: List to append results to.
     """
-    from metaseed.validators import validate_entity_with_report
-
-    checks = []
-    errors = []
-
-    if node.instance:
-        # With its children in the fields that hold them: a node dumped on its
-        # own has empty lists, and every cardinality rule then fails (#343).
-        from metaseed.facade.children import data_with_children
-
-        data = data_with_children(node, facade)
-
-        # Use comprehensive validation with check reporting
-        validation_checks = validate_entity_with_report(
-            data=data,
-            entity_type=node.entity_type,
-            profile=facade.profile,
-            version=facade.version,
-        )
-
-        for check in validation_checks:
-            check_dict = {
-                "field": check.field,
-                "check": check.check,
-                "passed": check.passed,
-            }
-            if check.message:
-                check_dict["message"] = check.message
-            checks.append(check_dict)
-            if not check.passed:
-                errors.append(
-                    {
-                        "field": check.field,
-                        "message": check.message or f"{check.check} check failed",
-                        "rule": check.check,
-                    }
-                )
+    checks, errors = _node_checks(node, facade)
 
     results.append(
         {
