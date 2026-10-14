@@ -26,10 +26,14 @@ def search(
     limit: Annotated[int, typer.Option("--limit", "-n")] = 10,
 ) -> None:
     """Search the ontologies for a term."""
+    from metaseed.services.term_check import TermSourceUnavailableError
     from metaseed.services.terms import get_term_source
 
     try:
         results = get_term_source().search_sync(query, ontology=ontology, limit=limit)
+    except TermSourceUnavailableError as exc:
+        echo_error(f"Not searched: {exc}")
+        raise typer.Exit(ExitCode.UNAVAILABLE) from exc
     except Exception as exc:
         echo_error(f"Search for '{query}' failed: {exc}")
         raise typer.Exit(ExitCode.INPUT_ERROR) from exc
@@ -61,10 +65,14 @@ def suggest(
     limit: Annotated[int, typer.Option("--limit", "-n")] = 5,
 ) -> None:
     """Suggest terms for a free-text value."""
+    from metaseed.services.term_check import TermSourceUnavailableError
     from metaseed.services.terms import get_term_source
 
     try:
         results = get_term_source().search_sync(text, ontology=ontology, limit=limit)
+    except TermSourceUnavailableError as exc:
+        echo_error(f"Not searched: {exc}")
+        raise typer.Exit(ExitCode.UNAVAILABLE) from exc
     except Exception as exc:
         echo_error(f"Suggesting a term for '{text}' failed: {exc}")
         raise typer.Exit(ExitCode.INPUT_ERROR) from exc

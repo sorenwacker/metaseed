@@ -21,6 +21,8 @@ class ExitCode(IntEnum):
     VALIDATION_ERROR = 1
     INPUT_ERROR = 2
     CONFIG_ERROR = 3
+    UNAVAILABLE = 4
+    """An outside service could not be asked, which says nothing about the input."""
 
 
 def echo_error(message: str) -> None:

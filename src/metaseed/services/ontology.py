@@ -307,6 +307,10 @@ class OntologyService:
 
         Returns:
             List of OntologySearchResult objects.
+
+        Raises:
+            TermSourceUnavailableError: If OLS does not answer. The caller
+                reports "not searched", never "no results".
         """
         if not query or not query.strip():
             return []
@@ -350,14 +354,14 @@ class OntologyService:
                 response = client.get(f"{self.base_url}/search", params=params)
                 response.raise_for_status()
                 data = response.json()
-        except httpx.HTTPStatusError as e:
-            logger.warning(
-                "OLS4 search error: %s %s", e.response.status_code, e.response.text
-            )
-            return []
-        except httpx.RequestError as e:
-            logger.warning("OLS4 search request failed: %s", e)
-            return []
+        except (httpx.HTTPStatusError, httpx.RequestError) as e:
+            # Not ``[]``: an empty list means "nothing matches", and a picker or
+            # agent shown that cannot tell it from OLS being down.
+            from metaseed.services.term_check import TermSourceUnavailableError
+
+            raise TermSourceUnavailableError(
+                f"{self.base_url} did not answer the search: {e}"
+            ) from e
 
         # Parse results
         results: list[OntologySearchResult] = []

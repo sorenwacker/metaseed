@@ -27,6 +27,23 @@ OLS4_BASE_URL = "https://www.ebi.ac.uk/ols4/api"
 DEFAULT_TIMEOUT = 30.0
 
 
+def _not_searched(query: str, ontology: str | None, exc: Exception) -> str:
+    """The answer to a search no term source could be asked.
+
+    Not an empty result list: that would tell the agent nothing matches,
+    when the service that would know was down.
+    """
+    return json.dumps(
+        {
+            "query": query,
+            "ontology": ontology,
+            "status": "not_searched",
+            "reason": str(exc),
+        },
+        indent=2,
+    )
+
+
 def _make_request(
     endpoint: str, params: dict[str, Any] | None = None
 ) -> dict[str, Any] | None:
@@ -127,12 +144,17 @@ def register_ontology_tools(  # noqa: C901
 
         Returns:
             JSON with search results including term IDs, labels, and which
-            source answered.
+            source answered, or ``status: not_searched`` when no source could
+            be asked.
         """
+        from metaseed.services.term_check import TermSourceUnavailableError
         from metaseed.services.terms import get_term_source
 
         rows = min(max(1, rows), 100)
-        hits = get_term_source().search_sync(query, ontology, rows)
+        try:
+            hits = get_term_source().search_sync(query, ontology, rows)
+        except TermSourceUnavailableError as exc:
+            return _not_searched(query, ontology, exc)
 
         return json.dumps(
             {
@@ -318,11 +340,16 @@ def register_ontology_tools(  # noqa: C901
             ontology: Optional ontology ID to restrict suggestions (e.g., "pato", "go").
 
         Returns:
-            JSON with suggested terms including IDs and labels.
+            JSON with suggested terms including IDs and labels, or
+            ``status: not_searched`` when no source could be asked.
         """
+        from metaseed.services.term_check import TermSourceUnavailableError
         from metaseed.services.terms import get_term_source
 
-        hits = get_term_source().search_sync(query, ontology, 10)
+        try:
+            hits = get_term_source().search_sync(query, ontology, 10)
+        except TermSourceUnavailableError as exc:
+            return _not_searched(query, ontology, exc)
 
         return json.dumps(
             {
