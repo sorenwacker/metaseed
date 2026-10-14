@@ -22,20 +22,23 @@ if TYPE_CHECKING:
     from metaseed.agent.mcp.ui_session import AppState, EntityService
 
 
-def _auto_save_dataset(ctx: MCPContext) -> None:
+def _auto_save_dataset(ctx: MCPContext) -> dict[str, str]:
     """Auto-save the dataset of the session this call is serving.
 
     Takes the whole context, not just the state: the write must go through the
     session's own factory, or a host serving two callers would read from one
     repository and write to another.
+
+    Returns:
+        An empty dict if the dataset was saved, otherwise ``save_warning``
+        naming why it was not, for the tool to merge into its response.
     """
-
-    logger = logging.getLogger(__name__)
-
-    try:
-        ui_datasets.auto_save(ctx.state, factory=ctx.dataset_factory)
-    except Exception as e:
-        logger.debug(f"MCP auto-save skipped: {e}")
+    save_error = ui_datasets.auto_save(ctx.state, factory=ctx.dataset_factory)
+    if save_error is None:
+        return {}
+    return {
+        "save_warning": f"Changes are in the session but were not saved: {save_error}"
+    }
 
 
 def _get_current_dataset_info(state: AppState) -> dict[str, Any]:
@@ -192,7 +195,6 @@ def _auto_fill_reference_fields(
     Returns:
         The modified entity_data dict.
     """
-    import logging
 
     logger = logging.getLogger(__name__)
     try:
@@ -536,8 +538,7 @@ def register_entity_tools(  # noqa: C901
             if result.get("parent_field"):
                 result["linked_via_field"] = result["parent_field"]
 
-            # Auto-save to persist changes
-            _auto_save_dataset(resolve_context())
+            result.update(_auto_save_dataset(resolve_context()))
 
             return json.dumps(result, indent=2)
         except json.JSONDecodeError as e:
@@ -580,8 +581,7 @@ def register_entity_tools(  # noqa: C901
             result = service.update_entity(node_id, updates)
             result["_dataset"] = _get_current_dataset_info(current_state())
 
-            # Auto-save to persist changes
-            _auto_save_dataset(resolve_context())
+            result.update(_auto_save_dataset(resolve_context()))
 
             return json.dumps(result, indent=2)
         except json.JSONDecodeError as e:
@@ -614,8 +614,7 @@ def register_entity_tools(  # noqa: C901
             result = service.delete_entity(node_id)
             result["_dataset"] = _get_current_dataset_info(current_state())
 
-            # Auto-save to persist changes
-            _auto_save_dataset(resolve_context())
+            result.update(_auto_save_dataset(resolve_context()))
 
             return json.dumps(result, indent=2)
         except Exception as e:
@@ -676,11 +675,11 @@ def register_entity_tools(  # noqa: C901
                         }
                     )
 
-            # Auto-save to persist changes
-            _auto_save_dataset(resolve_context())
+            save_status = _auto_save_dataset(resolve_context())
 
             return json.dumps(
                 {
+                    **save_status,
                     "total": len(update_list),
                     "updated": sum(1 for r in results if r["status"] == "updated"),
                     "errors": sum(1 for r in results if r["status"] == "error"),
@@ -794,11 +793,11 @@ def register_entity_tools(  # noqa: C901
                             }
                         )
 
-            # Auto-save to persist changes
-            _auto_save_dataset(resolve_context())
+            save_status = _auto_save_dataset(resolve_context())
 
             return json.dumps(
                 {
+                    **save_status,
                     "total": len(entity_list),
                     "created": sum(1 for r in results if r["status"] == "created"),
                     "failed": sum(1 for r in results if r["status"] == "error"),
