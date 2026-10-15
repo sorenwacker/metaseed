@@ -148,10 +148,10 @@ class MarkdownReportGenerator(ReportGenerator):
             self._add_conflicts_section(lines)
             lines.append("")
 
-        # Modified fields
-        lines.append("## Modified Fields")
+        # Every other changed field; conflicts have their own section above.
+        lines.append("## Changed Fields")
         lines.append("")
-        self._add_modified_fields_section(lines)
+        self._add_changed_fields_section(lines)
 
         return "\n".join(lines)
 
@@ -222,8 +222,8 @@ class MarkdownReportGenerator(ReportGenerator):
 
                 lines.append("")
 
-    def _add_modified_fields_section(self: Self, lines: list[str]) -> None:
-        """Add modified fields section to lines.
+    def _add_changed_fields_section(self: Self, lines: list[str]) -> None:
+        """Add the added, removed and modified fields to lines.
 
         Args:
             lines: List of lines to append to.
@@ -232,7 +232,7 @@ class MarkdownReportGenerator(ReportGenerator):
             modified = [
                 fd
                 for fd in ed.field_diffs
-                if fd.diff_type in [DiffType.MODIFIED, DiffType.ADDED]
+                if fd.diff_type in (DiffType.MODIFIED, DiffType.ADDED, DiffType.REMOVED)
             ]
             if not modified:
                 continue
