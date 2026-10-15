@@ -778,3 +778,36 @@ class TestMultiEntityRulesAreAuthorable:
         fn = server._tool_manager._tools[tool_name].fn
         annotation = inspect.signature(fn).parameters["applies_to"].annotation
         assert "list" in str(annotation), annotation
+
+
+class TestUpdateFieldIsAllOrNothing:
+    """A `spec_update_field` call that fails changes nothing.
+
+    The attribute update and the constraint merge are two steps; a constraint
+    error raised by the second once left the first applied while the tool
+    reported an error.
+    """
+
+    def test_a_constraint_error_leaves_the_attributes_unchanged(self, server):
+        call(server, "spec_create", name="p", version="0.1")
+        call(server, "spec_add_entity", name="Study")
+        call(
+            server, "spec_add_field", entity="Study", name="rating", field_type="string"
+        )
+
+        result = call(
+            server,
+            "spec_update_field",
+            entity="Study",
+            field_name="rating",
+            required=True,
+            description="changed",
+            minimum=1,
+            clear=["minimum"],
+        )
+
+        assert "error" in result
+        spec = yaml.safe_load(get_tool(server, "spec_preview_yaml")())
+        (field,) = spec["entities"]["Study"]["fields"]
+        assert not field.get("required")
+        assert field.get("description") != "changed"

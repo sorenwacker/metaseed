@@ -152,6 +152,8 @@ entirely, and the same spec would otherwise carry two different
 the same `exclude_none=True` dump, so the distinction is equally visible in the
 saved file.
 
+The `spec_update_field` MCP tool runs `update_field` and `update_field_constraints` as two steps, so it applies both to a copy of the draft and replaces the draft only when both succeed. A call that fails, for example one naming a constraint both as a value and in `clear`, leaves the draft unchanged.
+
 ### Validation
 
 `validate()` performs a full model build, not only structural checks. It
