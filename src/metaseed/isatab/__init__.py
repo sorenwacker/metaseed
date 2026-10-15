@@ -287,19 +287,35 @@ def _joined(items: list[dict[str, Any]], field: str) -> str:
     return ";".join(str(item.get(field, "")) for item in items)
 
 
-def _sources_used(by_type: dict[str, list[dict[str, Any]]]) -> list[str]:
-    """Every ontology named by an accession in the dataset, first-seen order."""
+def _sources_referenced(documents: dict[str, str]) -> list[str]:
+    """Every source a ``Term Source REF`` in the archive names, first-seen order.
+
+    Read from what was written rather than re-derived from the entities, so a
+    reference the writers emit cannot go undeclared: a separate scan of a few
+    entity types missed sources written for qualifiers embedded in a sample.
+    """
     seen: list[str] = []
-    for entity_type in ("Sample", "Characteristic", "FactorValue"):
-        for entity in by_type.get(entity_type, []):
-            term = entity.get("organism_term")
-            accessions = [entity.get("term_accession")]
-            if isinstance(term, dict):
-                accessions.append(term.get("term_accession"))
-            for accession in accessions:
-                source = _term_source(accession)
-                if source and source not in seen:
-                    seen.append(source)
+
+    def note(cell: str) -> None:
+        if cell and cell not in seen:
+            seen.append(cell)
+
+    for name, text in documents.items():
+        lines = text.splitlines()
+        if name.startswith("i_"):
+            for line in lines:
+                label, *cells = line.split(TAB)
+                if label.endswith("Term Source REF"):
+                    for cell in cells:
+                        note(cell)
+        elif lines:
+            header = lines[0].split(TAB)
+            columns = [i for i, h in enumerate(header) if h == "Term Source REF"]
+            for row in lines[1:]:
+                cells = row.split(TAB)
+                for i in columns:
+                    if i < len(cells):
+                        note(cells[i])
     return seen
 
 
@@ -534,9 +550,8 @@ def to_isatab(client: MetaseedClient) -> dict[str, str]:
         if protocol_id:
             parameters_by_protocol.setdefault(protocol_id, []).append(parameter)
 
-    lines = _ontology_source_section(_sources_used(by_type))
     investigation = investigations[0] if investigations else {}
-    lines += _investigation_section(investigation)
+    lines = _investigation_section(investigation)
     lines += _publication_section(
         "INVESTIGATION PUBLICATIONS", "Investigation", of(publications, None)
     )
@@ -582,6 +597,13 @@ def to_isatab(client: MetaseedClient) -> dict[str, str]:
             if direct_parent.get(str(df.get("_node_id"))) == assay_id
         ]
         documents[assay_filename(assay)] = _assay_file(assay, assay_data_files)
+
+    # Declared last, from the references just written, and placed first as the
+    # specification orders the investigation file.
+    section = _ontology_source_section(_sources_referenced(documents))
+    documents["i_Investigation.txt"] = (
+        "\n".join(section) + "\n" + documents["i_Investigation.txt"]
+    )
     return documents
 
 
