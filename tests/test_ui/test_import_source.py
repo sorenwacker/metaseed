@@ -288,3 +288,29 @@ class TestImportControlIsRendered:
         assert response.status_code == 200
         assert "This dataset has no entities yet" in response.text
         assert "btn-import-" not in response.text
+
+
+def test_the_route_runs_the_import_off_the_event_loop() -> None:
+    """The import makes blocking HTTP calls; run inline in the async handler,
+    one slow repository stalled every other request."""
+    import asyncio
+
+    ran_on_loop: list[bool] = []
+
+    def importer(accession: str):
+        try:
+            asyncio.get_running_loop()
+            ran_on_loop.append(True)
+        except RuntimeError:
+            ran_on_loop.append(False)
+        return _pride_client(accession)
+
+    state = AppState(profile="pride", version="1.0")
+    client = TestClient(create_app(state))
+    with patch("metaseed.pride.import_accession", importer):
+        response = client.post(
+            "/import/source", data={"key": "pride-import", "value": "PXD000001"}
+        )
+
+    assert response.status_code == 200
+    assert ran_on_loop == [False]
