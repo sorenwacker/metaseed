@@ -56,10 +56,12 @@ and would make the otherwise network-free mapper issue a request per sample.
 
 ## Design choices
 
-- **Metadata, not raw data.** Spectra are *referenced* — each assay data file
-  becomes a `DataFile` entity whose `filename` is a resolvable URL under the
-  study's public download root (`studyHttpUrl`, falling back to `studyFtpUrl`) —
-  never downloaded.
+- **Metadata, not raw data.** Spectra are *referenced*, never downloaded: each
+  assay data file becomes a `DataFile` entity whose `filename` is the name the
+  study's `a_*.txt` file gives it, whichever import path produced it. That is
+  the value an exported `a_*.txt` must carry; a URL there would not name a file
+  in the submission. A public study's files are fetched from its download root
+  (`studyHttpUrl`, falling back to `studyFtpUrl`) followed by that name.
 - **Hierarchy via `parent_id`.** Entities are linked to their parents
   (Investigation → Study → {Factor, Protocol, Sample, Assay}, …) so the dataset
   mirrors the profile's parent-child structure.

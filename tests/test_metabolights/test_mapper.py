@@ -6,6 +6,7 @@ import json
 from collections import Counter
 from pathlib import Path
 
+from metaseed.metabolights import to_metabolights
 from metaseed.metabolights.mapper import build_dataset
 
 FIXTURE = Path(__file__).parent / "fixtures" / "study.json"
@@ -96,7 +97,7 @@ def test_sample_organism_and_characteristics_are_mapped():
     assert factor_value["value"] == "Male"
 
 
-def test_assay_references_raw_files_as_urls_not_downloads():
+def test_assay_references_raw_files_by_name_not_downloads():
     client = build_dataset(_study())
 
     assay = _by_type(client, "Assay")[0]
@@ -107,10 +108,9 @@ def test_assay_references_raw_files_as_urls_not_downloads():
     assert assay["metabolite_assignment_file"].endswith("_maf.tsv")
 
     data_file = _by_type(client, "DataFile")[0]
-    assert data_file["filename"] == (
-        "http://ftp.ebi.ac.uk/pub/databases/metabolights/studies/public/MTBLS1"
-        "/ADG10003u_007.zip"
-    )
+    # The name the a_*.txt file uses, as the ISA-Tab path records it; a URL
+    # here was exported into the assay file's data-file column.
+    assert data_file["filename"] == "ADG10003u_007.zip"
     assert data_file["file_type"] == "Raw Spectral Data File"
 
 
@@ -162,3 +162,13 @@ class TestMafSelectionHonorsTheDeclaredFile:
         names = {m.get("metabolite_identification") for m in metabolites}
         assert names == {"metabolite-1", "metabolite-2"}
         assert len(assays) == 2
+
+
+def test_an_exported_assay_file_names_its_data_files() -> None:
+    """The ISA-JSON path stored a download URL as the filename, which the
+    exporter then wrote into the a_*.txt data-file column."""
+    documents = to_metabolights(build_dataset(_study()))
+
+    (assay_file,) = [text for name, text in documents.items() if name.startswith("a_")]
+    assert "ADG10003u_007.zip" in assay_file
+    assert "://" not in assay_file

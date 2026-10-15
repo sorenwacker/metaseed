@@ -8,9 +8,8 @@ and builds a :class:`~metaseed.api.client.MetaseedClient` bound to the
 The document follows the ISA model the MetaboLights web service exposes: an
 ``isaInvestigation`` carrying people, publications, and one or more studies, each
 with study-design descriptors, factors, protocols, samples, and assays. Raw
-spectra are *referenced* — each assay data file becomes a ``DataFile`` entity
-carrying a resolvable URL under the study's public download root — never
-downloaded.
+spectra are *referenced*, never downloaded — each assay data file becomes a
+``DataFile`` entity named as the study's ``a_*.txt`` file names it.
 
 Entities are linked through ``parent_id`` to mirror the profile hierarchy
 (Investigation -> Study -> {Factor, Protocol, Sample, Assay}, and so on) and are
@@ -47,13 +46,6 @@ def _term(value: Any) -> str | None:
     if isinstance(value, str):
         return value or None
     return None
-
-
-def _study_download_root(document: dict[str, Any]) -> str | None:
-    """Return the public download root for a study's raw files, if published."""
-    mtbls = document.get("mtblsStudy") or {}
-    root = mtbls.get("studyHttpUrl") or mtbls.get("studyFtpUrl")
-    return root.rstrip("/") if isinstance(root, str) and root else None
 
 
 def _isatab_for_prefix(files: dict[str, str], prefix: str) -> str | None:
@@ -219,8 +211,6 @@ def build_dataset(
 
     isatab_files = isatab_files or {}
 
-    download_root = _study_download_root(study)
-
     identifier = investigation.get("identifier")
     inv = client.create_entity(
         "Investigation",
@@ -247,7 +237,6 @@ def build_dataset(
         _add_study(
             client,
             study_record,
-            download_root,
             parent_id=inv.id,
             isatab_files=isatab_files,
         )
@@ -300,7 +289,6 @@ def _add_publication(
 def _add_study(
     client: MetaseedClient,
     study: dict[str, Any],
-    download_root: str | None,
     *,
     parent_id: str,
     isatab_files: dict[str, str] | None = None,
@@ -365,7 +353,6 @@ def _add_study(
         _add_assay(
             client,
             assay,
-            download_root,
             parent_id=study_entity.id,
             isatab_files=isatab_files,
         )
@@ -486,7 +473,6 @@ def _maf_from_comments(comments: list[Any]) -> str | None:
 def _add_assay(
     client: MetaseedClient,
     assay: dict[str, Any],
-    download_root: str | None,
     *,
     parent_id: str,
     isatab_files: dict[str, str] | None = None,
@@ -525,12 +511,11 @@ def _add_assay(
         name = data_file.get("filename") or data_file.get("name")
         if not name:
             continue
-        reference = f"{download_root}/{name}" if download_root else name
         client.create_entity(
             "DataFile",
             _clean(
                 {
-                    "filename": reference,
+                    "filename": name,
                     "file_type": data_file.get("label") or data_file.get("type"),
                 }
             ),
