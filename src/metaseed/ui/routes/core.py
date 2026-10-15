@@ -93,6 +93,21 @@ def get_profile_display_info(factory: ProfileFactory) -> list[dict[str, Any]]:
     return profiles
 
 
+def profile_select_context(base_url: str) -> dict[str, Any]:
+    """What the new-dataset profile picker renders with, wherever it is shown.
+
+    Args:
+        base_url: The prefix the app is mounted under, for the picker's links.
+    """
+    from .import_export import import_options
+
+    return {
+        "profiles": get_profile_display_info(ProfileFactory()),
+        "import_options": import_options(),
+        "base_url": base_url,
+    }
+
+
 def register_core_routes(
     app: FastAPI,
     templates: Jinja2Templates,
@@ -224,18 +239,8 @@ def register_core_routes(
     @app.get("/new-dataset", response_class=HTMLResponse)
     async def new_dataset(request: Request) -> HTMLResponse:
         """Show the new dataset / profile selection screen."""
-        from .import_export import import_options
-
-        profile_factory = ProfileFactory()
-        profiles_info = get_profile_display_info(profile_factory)
         return templates.TemplateResponse(
-            request,
-            "partials/profile_select.html",
-            {
-                "profiles": profiles_info,
-                "import_options": import_options(),
-                "base_url": base_url,
-            },
+            request, "partials/profile_select.html", profile_select_context(base_url)
         )
 
     @app.get("/new-dataset/name", response_class=HTMLResponse)
