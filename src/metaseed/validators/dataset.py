@@ -360,11 +360,12 @@ class DatasetValidator:
             data: The data dictionary.
 
         Returns:
-            The lowercased ``_type`` value, or None if absent. The type is read
-            from the data, never guessed from profile-specific field names.
+            The ``_type`` value in snake case, the form every type-keyed table
+            here uses, or None if absent. The type is read from the data, never
+            guessed from profile-specific field names.
         """
         entity_type = data.get("_type")
-        return str(entity_type).lower() if entity_type else None
+        return to_snake_case(str(entity_type)) if entity_type else None
 
     def _is_known_entity(self: Self, entity_type: str) -> bool:
         """Whether ``entity_type`` resolves to an entity in the active profile.
@@ -385,12 +386,12 @@ class DatasetValidator:
         """The profile's root entity type, for data lacking a ``_type`` marker.
 
         Returns:
-            The root entity type from the active profile (lowercased), or None
+            The root entity type from the active profile (snake case), or None
             if the profile cannot be loaded. Profile-agnostic - no entity name
             is hardcoded.
         """
         spec = self._load_profile_spec()
-        return spec.root_entity.lower() if spec and spec.root_entity else None
+        return to_snake_case(spec.root_entity) if spec and spec.root_entity else None
 
     def _traverse_entity_tree(
         self: Self,
