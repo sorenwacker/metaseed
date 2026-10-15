@@ -17,7 +17,7 @@ from pydantic import ValidationError
 
 from metaseed.models import get_model
 from metaseed.profiles import ProfileFactory
-from metaseed.specs.loader import SpecLoader
+from metaseed.specs.loader import SpecLoader, SpecLoadError
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -101,14 +101,12 @@ def register_example_routes(
                 status_code=500, detail=f"Error loading example: {e}"
             ) from e
 
-        state.reset()
-        state.profile = profile_name
-        state.version = version
-        state.facade = None
-        facade = state.get_or_create_facade()
-
-        loader = SpecLoader(profile=profile_name)
-        spec = loader.load_profile(version, profile_name)
+        try:
+            spec = SpecLoader(profile=profile_name).load_profile(version, profile_name)
+        except SpecLoadError as e:
+            raise HTTPException(
+                status_code=500, detail=f"Error loading profile: {e}"
+            ) from e
         root_entity = spec.root_entity or "Investigation"
 
         # Keep a pristine copy: building a model to validate coerces the nested
@@ -127,6 +125,14 @@ def register_example_routes(
             raise HTTPException(
                 status_code=500, detail=f"Error creating entity from example: {e}"
             ) from e
+
+        # Only now, with the spec loaded and the example valid, is the session
+        # replaced: a failure above leaves the user's unsaved entities in place.
+        state.reset()
+        state.profile = profile_name
+        state.version = version
+        state.facade = None
+        facade = state.get_or_create_facade()
 
         # The library loads the document — root and every nested entity, owned
         # children only where the profile declares containment. This route used
