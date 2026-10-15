@@ -10,16 +10,12 @@
 - **The hub's documentation** — [how the hosted version works](https://sorenwacker.github.io/metaseed-hub/)
 
 
-Metaseed creates, edits, and validates scientific metadata against a standard, from a YAML specification of that standard.
+Metaseed helps researchers describe their experiments and data so that others can find, understand and reuse them.
 
-A metadata standard is written as a *profile*: a YAML file naming the entity types, their fields, the parent–child hierarchy, and the validation rules. Profiles ship for MIAPPE, ISA, Darwin Core, DiSSCo, ENA, PRIDE, MetaboLights, REMBI, Health-RI core and FAIRDOM-SEEK. From a profile, metaseed:
+Research communities agree on what such a description must contain — who did the work, what was studied, which samples were taken, how they were measured. Metaseed knows these community standards, among them MIAPPE for plant experiments, ISA for life-science studies, Darwin Core and DiSSCo for biodiversity collections, and the formats of the ENA, PRIDE and MetaboLights repositories. It turns a standard into forms to fill in, checks what is missing or wrong, and suggests terms from established vocabularies so that everyone names the same thing the same way.
 
-- Generates Pydantic models for every entity type at runtime.
-- Validates a dataset: required fields, patterns, ranges, uniqueness, references between entities, conditional rules, and ontology terms looked up in the term sources the field names.
-- Serializes datasets to JSON, YAML and Excel, and reads them back.
-- Imports public records from ENA, PRIDE, MetaboLights and BrAPI servers.
-- Exports to ISA-Tab, ENA XML, PRIDE `submission.px` with SDRF, SEEK's ISA RDF, and a [DCAT](architecture/dcat.md) catalog record; pushes a dataset into a running FAIRDOM-SEEK instance or a [metaseed-hub](https://github.com/sorenwacker/metaseed-hub).
+A finished description can be saved as a spreadsheet or file, exported in the format a data repository expects for submission, or shared with collaborators. Existing public records can be imported and reused as a starting point.
 
-Profiles are data, not code: the [spec builder](guides/spec-builder.md) authors a new one or adapts an existing one, and [spec merge](guides/spec-merge.md) compares and merges profiles.
+Where no standard fits, a group can define its own or combine existing ones, without programming.
 
-Metaseed is used from a command line, a web interface, a Python API, or an [MCP server](guides/mcp-setup.md) for an AI agent. All four call the same library functions.
+Metaseed can be used in the browser, from the command line, from Python, or through an AI assistant. The [hub](https://metaseed.ewi.tudelft.nl/hub/) offers the same without installing anything.
