@@ -54,23 +54,35 @@ def _dataset_with_children(client: MetaseedClient) -> dict[str, Any] | None:
 
     by_node = {str(entity.get("_node_id")): entity for entity in entities}
 
-    def descend(node: Any) -> None:
+    def descend(node: Any, into: dict[str, Any]) -> None:
+        """Fold ``node``'s children into ``into``, the dict of ``node`` itself.
+
+        Each child lands on its own parent: a CustomAttribute created under a
+        Sample belongs in that Sample's ``custom_attributes``, not the
+        Dataset's.
+        """
         for child in node.children:
             entity = by_node.get(str(child.id))
             # The field the child was recorded in (ADR 006).
             target = getattr(child, "parent_field", None)
-            if entity is not None and target is not None:
-                existing = dataset.get(target)
-                if isinstance(existing, list):
-                    existing.append(entity)
-                else:
-                    dataset[target] = [entity]
-            descend(child)
+            if entity is None or target is None:
+                descend(child, into)
+                continue
+            folded = {
+                key: list(value) if isinstance(value, list) else value
+                for key, value in entity.items()
+            }
+            existing = into.get(target)
+            if isinstance(existing, list):
+                existing.append(folded)
+            else:
+                into[target] = [folded]
+            descend(child, folded)
 
     dataset_node_id = str(dataset.get("_node_id"))
     for root in client.get_tree():
         if str(root.id) == dataset_node_id:
-            descend(root)
+            descend(root, dataset)
     return dataset
 
 

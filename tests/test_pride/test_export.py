@@ -319,3 +319,20 @@ def test_sdrf_sees_child_node_samples():
     assert rows[1][organism] == "Homo sapiens"
     data_file = rows[0].index("comment[data file]")
     assert rows[1][data_file] == "run1.raw"
+
+
+def test_sdrf_sees_a_custom_attribute_created_under_its_sample():
+    """A grandchild was folded onto the Dataset under its own parent_field, so
+    a CustomAttribute created under a Sample never reached the SDRF."""
+    client = _child_node_client()
+    (sample,) = [n for n in client.get_tree()[0].children if n.entity_type == "Sample"]
+    client.create_entity(
+        "CustomAttribute",
+        {"name": "strain", "value": "K-12"},
+        parent_id=sample.id,
+        skip_validation=True,
+    )
+
+    rows = [line.split("\t") for line in to_pride_sdrf(client)["sdrf.tsv"].splitlines()]
+    strain = rows[0].index("characteristics[strain]")
+    assert rows[1][strain] == "K-12"
