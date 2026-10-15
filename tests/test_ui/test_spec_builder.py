@@ -1263,6 +1263,30 @@ class TestFieldEditFailsWhole:
         assert "renamed" not in preview
 
 
+class TestEntityEditFailsWhole:
+    """`update_entity` assigned the description, ontology term and SEEK role
+    before attempting the rename; a refused rename returned an error while the
+    other edits stayed in the draft."""
+
+    def test_a_refused_rename_keeps_the_entity_metadata(self, client) -> None:
+        client.get("/spec-builder/new")
+        client.post("/spec-builder/entity", data={"name": "Thing"})
+        client.post("/spec-builder/entity", data={"name": "Other"})
+
+        client.put(
+            "/spec-builder/entity/Thing",
+            data={
+                "name": "Other",
+                "description": "edited description",
+                "ontology_term": "EX:0001",
+            },
+        )
+
+        preview = client.get("/spec-builder/preview").text
+        assert "edited description" not in preview
+        assert "EX:0001" not in preview
+
+
 class TestTheFieldEditorCanAuthorAnIsaTag:
     """isa_tag is settable from the UI, not only over MCP.
 
