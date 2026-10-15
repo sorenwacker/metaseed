@@ -166,11 +166,13 @@ def import_brapi(
                 )
             ]
         for observation in found:
-            key = observation.get("observationDbId")
-            if key is not None:
+            raw_key = observation.get("observationDbId")
+            if raw_key is not None:
+                # A server may send the id as a number; compare as text.
+                key = str(raw_key)
                 if key in seen_observations:
                     continue
-                seen_observations.add(str(key))
+                seen_observations.add(key)
             observations.append(observation)
         if scoped:
             # The germplasm of these studies, not of the whole server; a study
