@@ -16,6 +16,6 @@ Research communities agree on what such a description must contain — who did t
 
 A finished description can be saved as a spreadsheet or file, exported in the format a data repository expects for submission, or shared with collaborators. Existing public records can be imported and reused as a starting point.
 
-Where no standard fits, a group can define its own or combine existing ones, without programming.
+Metaseed writes every standard in one common form. That makes standards themselves something researchers can read, examine and compare side by side: which information two standards share, where they differ, and what combining them would require. Where no standard fits, a group can define its own or combine existing ones, without programming.
 
 Metaseed can be used in the browser, from the command line, from Python, or through an AI assistant. The [hub](https://metaseed.ewi.tudelft.nl/hub/) offers the same without installing anything.
