@@ -29,6 +29,13 @@ from .strategies import MergeStrategy, get_strategy
 logger = logging.getLogger(__name__)
 
 
+#: Warning text for a field kept although some profiles lack it.
+_PRESENCE_NOTES = {
+    DiffType.ADDED: "Field absent from the base profile kept",
+    DiffType.REMOVED: "Field absent from later profiles kept",
+}
+
+
 class SpecMerger:
     """Merges multiple profile specifications.
 
@@ -216,19 +223,18 @@ class SpecMerger:
             for r in resolutions
         }
 
-    def _chosen_for_modified(
+    def _strategy_choice(
         self: Self,
         field_diff: FieldDiff,
         strategy: MergeStrategy,
         profile_order: list[str],
     ) -> FieldSpec | None:
-        """The spec to keep for a field that is MODIFIED or UNCHANGED.
+        """The spec the strategy keeps for a field, whatever its diff type.
 
-        A MODIFIED field differs on description, example, label or a
-        non-structural constraint; only CONFLICT used to consult the strategy,
-        so whichever strategy the caller chose, the first profile's wording won.
-        UNCHANGED is identical everywhere, so any copy will do and the strategy
-        answers the same thing.
+        Only CONFLICT used to consult the strategy, so a MODIFIED, ADDED or
+        REMOVED field took the first profile having it whichever strategy the
+        caller chose. A field that only one profile has, or that is identical
+        everywhere, gets the same answer from every strategy.
 
         Args:
             field_diff: The field's difference across profiles.
@@ -284,78 +290,54 @@ class SpecMerger:
             if not any(s is not None for s in field_diff.profiles.values()):
                 continue
 
-            if field_diff.diff_type == DiffType.CONFLICT:
-                # Check for manual resolution
-                manual = self._find_manual_resolution(
-                    entity_name, field_diff.field_name, resolution_map
-                )
-
-                if manual:
-                    resolved_spec = self._apply_manual_resolution(
-                        field_diff, manual, profile_order
+            manual = self._find_manual_resolution(
+                entity_name, field_diff.field_name, resolution_map
+            )
+            if manual:
+                # The strategy answers first; each manual resolution then
+                # replaces only the attribute it names.
+                base = self._strategy_choice(field_diff, strategy, profile_order)
+                if base is None:
+                    continue
+                merged_fields.append(self._apply_manual_resolution(base, manual))
+                resolutions_applied.extend(manual)
+                warnings.append(
+                    MergeWarning(
+                        entity_name=entity_name,
+                        field_name=field_diff.field_name,
+                        message="Resolved via manual resolution",
+                        resolution_applied=str([m.attribute for m in manual]),
                     )
+                )
+            elif field_diff.diff_type == DiffType.CONFLICT:
+                try:
+                    resolved_spec = strategy.resolve_field(field_diff, profile_order)
                     merged_fields.append(resolved_spec)
-                    resolutions_applied.extend(manual)
                     warnings.append(
                         MergeWarning(
                             entity_name=entity_name,
                             field_name=field_diff.field_name,
-                            message="Conflict resolved via manual resolution",
-                            resolution_applied=str([m.attribute for m in manual]),
+                            message=f"Conflict resolved via {strategy.name}",
+                            resolution_applied=strategy.name,
                         )
                     )
-                else:
-                    # Use strategy to resolve
-                    try:
-                        resolved_spec = strategy.resolve_field(
-                            field_diff, profile_order
+                except ValueError:
+                    unresolved.append(field_diff)
+            else:
+                chosen = self._strategy_choice(field_diff, strategy, profile_order)
+                if chosen is None:
+                    continue
+                merged_fields.append(chosen)
+                note = _PRESENCE_NOTES.get(field_diff.diff_type)
+                if note:
+                    warnings.append(
+                        MergeWarning(
+                            entity_name=entity_name,
+                            field_name=field_diff.field_name,
+                            message=f"{note} via {strategy.name}",
+                            resolution_applied=strategy.name,
                         )
-                        merged_fields.append(resolved_spec)
-                        warnings.append(
-                            MergeWarning(
-                                entity_name=entity_name,
-                                field_name=field_diff.field_name,
-                                message=f"Conflict resolved via {strategy.name}",
-                                resolution_applied=strategy.name,
-                            )
-                        )
-                    except ValueError:
-                        unresolved.append(field_diff)
-
-            elif field_diff.diff_type in (DiffType.MODIFIED, DiffType.UNCHANGED):
-                chosen = self._chosen_for_modified(field_diff, strategy, profile_order)
-                if chosen is not None:
-                    merged_fields.append(chosen)
-
-            elif field_diff.diff_type == DiffType.ADDED:
-                # Include fields that exist in any profile
-                for profile_id in profile_order:
-                    spec = field_diff.profiles.get(profile_id)
-                    if spec is not None:
-                        merged_fields.append(spec)
-                        warnings.append(
-                            MergeWarning(
-                                entity_name=entity_name,
-                                field_name=field_diff.field_name,
-                                message=f"Field added from {profile_id}",
-                            )
-                        )
-                        break
-
-            elif field_diff.diff_type == DiffType.REMOVED:
-                # Include fields that exist only in earlier profiles
-                for profile_id in profile_order:
-                    spec = field_diff.profiles.get(profile_id)
-                    if spec is not None:
-                        merged_fields.append(spec)
-                        warnings.append(
-                            MergeWarning(
-                                entity_name=entity_name,
-                                field_name=field_diff.field_name,
-                                message=f"Field retained from {profile_id}",
-                            )
-                        )
-                        break
+                    )
 
         return merged_fields, warnings, resolutions_applied, unresolved
 
@@ -383,31 +365,18 @@ class SpecMerger:
 
     def _apply_manual_resolution(
         self: Self,
-        field_diff: FieldDiff,
+        base_spec: FieldSpec,
         resolutions: list[ConflictResolution],
-        profile_order: list[str],
     ) -> FieldSpec:
-        """Apply manual resolutions to a field.
+        """Apply manual resolutions on top of a resolved field.
 
         Args:
-            field_diff: Field difference.
+            base_spec: The field as the merge strategy resolved it.
             resolutions: Manual resolutions to apply.
-            profile_order: Profile order.
 
         Returns:
-            Resolved FieldSpec.
+            The field with each resolved attribute replaced.
         """
-        # Start with first available spec
-        base_spec: FieldSpec | None = None
-        for profile_id in profile_order:
-            spec = field_diff.profiles.get(profile_id)
-            if spec is not None:
-                base_spec = spec
-                break
-
-        if base_spec is None:
-            raise ValueError(f"No base spec for {field_diff.field_name}")
-
         # Apply resolutions
         data = base_spec.model_dump()
         for resolution in resolutions:

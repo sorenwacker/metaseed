@@ -184,6 +184,8 @@ graph_data = visualizer.build_diff_graph(result)
 | `modified` | Present in both but with different attributes |
 | `conflict` | Incompatible differences (e.g., different field types) |
 
+With three or more profiles, a field's attributes are compared across every profile that has it, whether or not all of them do. A field that the base lacks but two later profiles define with different types is a `conflict`, not `added`; presence decides between `added`, `removed` and `modified` only when the profiles that have the field agree.
+
 ## Data Models
 
 ### ComparisonResult
@@ -282,6 +284,8 @@ for warning in result.warnings:
 | `least_restrictive` | `required=False` wins, looser constraints |
 | `prefer_<profile>` | Always prefer specific profile (e.g., `prefer_miappe/1.1`) |
 
+The strategy chooses the definition of every field present in more than one profile, including a field absent from the base (added) or from some later profile (removed). A field present in one profile only is taken from that profile.
+
 ### MergeResult
 
 Contains the merged profile and metadata:
@@ -327,7 +331,7 @@ strategy = get_strategy("most_restrictive")
 
 ## Manual Conflict Resolution
 
-Override automatic conflict resolution with manual resolutions:
+Override automatic conflict resolution with manual resolutions. The strategy resolves the field first, and each manual resolution then replaces one attribute of that result, so an attribute you do not answer keeps the strategy's value. A resolution applies to any field it names, whether the comparison classed it as a conflict or as modified.
 
 ```python
 from metaseed.specs.merge import merge, ConflictResolution
