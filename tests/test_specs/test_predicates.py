@@ -273,3 +273,24 @@ class TestAppliesToMatchesLikeTheEngine:
         profile.entities["Other"].fields[0].items = "SampleType"
 
         assert profile_predicate_issues(profile) == []
+
+    def test_a_when_require_rule_is_checked_under_a_snake_case_spelling(self) -> None:
+        """`when`/`require` resolved `applies_to` exact-case, so a rule the
+        engine enforces on SampleType had its undeclared required field go
+        unreported when written as `sample_type`."""
+        from metaseed.specs.predicates import profile_predicate_issues
+        from metaseed.specs.schema import ValidationRuleSpec
+
+        profile = self._profile(["sample_type"])
+        profile.validation_rules = [
+            ValidationRuleSpec(
+                name="needs-a-missing-field",
+                applies_to="sample_type",
+                when=parse_predicate({"field": "title", "op": "is_set"}),
+                require=["no_such_field"],
+            )
+        ]
+
+        issues = profile_predicate_issues(profile)
+
+        assert any("no_such_field" in issue for issue in issues), issues

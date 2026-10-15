@@ -342,18 +342,23 @@ def _requirement_issues(profile: ProfileSpec, rule: ValidationRuleSpec) -> list[
 def _applicable_entities(
     profile: ProfileSpec, rule: ValidationRuleSpec
 ) -> list[tuple[str, EntityDefSpec]]:
-    """The entities a rule applies to, by name.
+    """The entities a rule applies to, matched as the engine matches them.
 
+    Through :func:`~metaseed.specs.schema.applies_to_entity`, like
+    :func:`_target_entities`: an exact-case lookup here left a rule written as
+    ``sample_type`` unchecked at load while the engine enforced it.
     ``applies_to: all`` is not resolved to every entity here: a requirement
     written for one entity and left unscoped would then report against all the
     others, which is noise rather than a finding.
     """
-    if isinstance(rule.applies_to, str):
-        names = [] if rule.applies_to == "all" else [rule.applies_to]
-    else:
-        names = list(rule.applies_to)
+    from metaseed.specs.schema import applies_to_entity
+
+    if rule.applies_to == "all":
+        return []
     return [
-        (name, profile.entities[name]) for name in names if name in profile.entities
+        (name, entity)
+        for name, entity in profile.entities.items()
+        if applies_to_entity(rule.applies_to, name)
     ]
 
 
