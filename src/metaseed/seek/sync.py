@@ -41,20 +41,32 @@ if TYPE_CHECKING:
 def _create_study_data_file(
     client: IsaWriter,
     project_id: str,
+    study_id: str,
     node_id: str,
     files: list[tuple[str, str]],
     result: SyncResult,
 ) -> None:
-    """Register a study's external files as one remote SEEK data file."""
+    """Register a study's external files as one remote SEEK data file.
+
+    A data file an earlier push registered for the same SEEK study is reused.
+    """
     directory = base_url([loc for _, loc in files if loc])
     if not directory:
         result.skipped.append(
             (node_id, f"{len(files)} data file(s) have no location URL to link to")
         )
         return
+    # Titled after the SEEK study, which a re-push reuses: the title is then
+    # both unique to the study and stable, so it can be found again.
+    title = f"Data files of study {study_id}"
+    existing = client.find_data_file_id_by_title(title, project_id=project_id)
+    if existing is not None:
+        result.data_files[node_id] = existing
+        result.reused[f"{node_id}:data files"] = existing
+        return
     try:
         result.data_files[node_id] = client.create_data_file(
-            title=f"Data files ({len(files)})",
+            title=title,
             project_id=project_id,
             url=directory,
             original_filename=f"{len(files)} files in external storage",
@@ -341,7 +353,12 @@ def sync_dataset_to_seek(
     study_id_to_node = {sid: nid for nid, sid in result.studies.items()}
     for study_id, files in files_by_study.items():
         _create_study_data_file(
-            client, project_id, study_id_to_node.get(study_id, study_id), files, result
+            client,
+            project_id,
+            study_id,
+            study_id_to_node.get(study_id, study_id),
+            files,
+            result,
         )
 
     return result
