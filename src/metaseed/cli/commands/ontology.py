@@ -101,30 +101,36 @@ def list_ontologies(
 def validate_terms(
     dataset: Annotated[str, typer.Argument(help="Dataset name")],
 ) -> None:
-    """Check that every ontology term a dataset uses resolves.
+    """Check every value in a dataset's ontology_term fields.
 
-    A term source that cannot be reached is reported as *not checked*, never as
-    a failure: someone else's downtime must not invalidate the data.
+    Each value is checked against the ontologies its field declares. Exits
+    with status 1 when a value is demonstrably wrong. A term source that cannot
+    be reached is reported as *not checked* and does not fail the command:
+    someone else's downtime must not invalidate the data.
     """
-    from metaseed.services.term_check import check_term
+    from metaseed.services.term_check import check_entity_terms
 
     client, _data = open_dataset(dataset)
     checked: list[dict[str, object]] = []
+    wrong = False
     for entity in client.serialize()["entities"]:
         entity_type = str(entity.get("_type", "?"))
-        for field_name, value in entity.items():
-            if not isinstance(value, str) or ":" not in value:
-                continue
-            if "ontology" not in field_name and "_term" not in field_name:
-                continue
-            verdict = check_term(value, ontologies=None)
+        helper = client.facade.get_helper(entity_type)
+        if helper is None:
+            continue
+        for field_name, verdict in check_entity_terms(
+            helper.spec.fields, entity
+        ).items():
+            wrong = wrong or verdict.is_problem
             checked.append(
                 {
                     "entity": entity_type,
                     "field": field_name,
-                    "term": value,
-                    "outcome": getattr(verdict.outcome, "value", str(verdict.outcome)),
+                    "term": entity.get(field_name),
+                    "outcome": verdict.outcome.value,
                     "message": verdict.message,
                 }
             )
     emit({"dataset": dataset, "terms": checked})
+    if wrong:
+        raise typer.Exit(ExitCode.VALIDATION_ERROR)
