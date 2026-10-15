@@ -300,7 +300,11 @@ def register_import_routes(
             )
 
         try:
-            info = import_from_source(state, state.profile, value.strip())
+            # The importer makes blocking HTTP calls; on the loop, one slow
+            # repository stalled every other request.
+            info = await run_in_threadpool(
+                import_from_source, state, state.profile, value.strip()
+            )
         except ImportSourceError as exc:
             return _import_notification(request, templates, "error", str(exc))
         except ModuleNotFoundError:
