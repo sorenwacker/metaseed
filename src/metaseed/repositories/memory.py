@@ -58,18 +58,7 @@ class MemoryEntityRepository(EntityRepository):
 
         def collect(node: EntityTreeNode) -> None:
             if entity_type is None or node.entity_type == entity_type:
-                data = {}
-                if node.instance and hasattr(node.instance, "model_dump"):
-                    data = node.instance.model_dump(mode="json", exclude_none=True)
-                result.append(
-                    EntityData(
-                        id=node.id,
-                        entity_type=node.entity_type,
-                        label=node.label,
-                        data=data,
-                        parent_id=node.parent_id,
-                    )
-                )
+                result.append(self._node_to_entity(node, include_children=False))
             for child in node.children:
                 collect(child)
 
@@ -84,18 +73,7 @@ class MemoryEntityRepository(EntityRepository):
         if not node:
             return None
 
-        data = {}
-        if node.instance and hasattr(node.instance, "model_dump"):
-            data = node.instance.model_dump(mode="json", exclude_none=True)
-
-        return EntityData(
-            id=node.id,
-            entity_type=node.entity_type,
-            label=node.label,
-            data=data,
-            parent_id=node.parent_id,
-            children=[self._node_to_entity(c) for c in node.children],
-        )
+        return self._node_to_entity(node)
 
     def create_entity(
         self: Self,
