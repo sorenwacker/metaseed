@@ -190,10 +190,10 @@ Exposes agent capabilities via Model Context Protocol:
 | `get_entity_tree` | Get hierarchical tree showing parent-child relationships |
 | `get_entity` | Get a specific entity by node ID |
 | `create_entity` | Create entity with optional `parent_id` and `parent_field` (auto-fills parent references). On success returns `linked_via_field` and `hints` (`expected_children`, `typical_next`, `cross_ref_consumers`); on validation errors returns `identifier_field`, `field_types`, `valid_fields`, `required_fields`, and a `hint` |
-| `batch_create` | Create multiple entities in one operation with `[{entity_type, data, parent_id?, parent_field?}, ...]`. Each created result carries the same relational `hints` as `create_entity` |
+| `batch_create` | Create multiple entities in one operation with `[{entity_type, data, parent_id?, parent_field?}, ...]`. Each created result carries the same relational `hints` as `create_entity`. An element that is not a JSON object gets its own error row; the other elements are still created and saved |
 | `link_entity` | Link existing entity as child of another |
 | `update_entity` | Update an existing entity (auto-saves) |
-| `bulk_update_entities` | Update multiple entities at once |
+| `bulk_update_entities` | Update multiple entities at once with `[{id, data}, ...]`. An element that is not a JSON object gets its own error row; the other elements are still updated and saved |
 | `delete_entity` | Delete an entity (auto-saves) |
 
 **Building Hierarchies:** Use `parent_id` when creating entities, and `parent_field` to name the parent field the child goes into. `parent_field` may be omitted when the parent has exactly one field for the child's type; when it has several — a DCAT catalogue's `creator` and `publisher` are both Agents — the call is rejected and the error lists the candidate fields ([ADR 006](decisions/006-relationships-are-recorded-edges.md)). The MCP server automatically:
