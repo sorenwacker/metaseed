@@ -615,16 +615,19 @@ def register_spec_builder_tools(  # noqa: C901
             seek_controlled_vocab=seek_controlled_vocab,
             seek_cv_free_text=seek_cv_free_text,
         )
-        # Checked before the first mutation: the attribute update and the
-        # constraint merge are two calls, so a bad `clear` name caught by the
-        # second would otherwise leave the first already applied.
+        # Checked first so the error names the bad argument.
         name_error = validate_constraint_names(clear or ()) or validate_marker_values(
             markers
         )
         if name_error:
             return json.dumps({"error": name_error})
+        state = current_state()
         try:
-            builder = _require_draft(current_state())
+            # The two steps run on a copy that replaces the draft only when
+            # both succeed, so a constraint error leaves nothing half-applied.
+            builder = SpecBuilder.from_spec(
+                _require_draft(state).spec.model_copy(deep=True)
+            )
             builder.update_field(
                 entity,
                 field_name,
@@ -648,7 +651,7 @@ def register_spec_builder_tools(  # noqa: C901
                 )
         except ValueError as exc:
             return json.dumps({"error": str(exc)})
-        return json.dumps(_status(builder), indent=2)
+        return json.dumps(_status(_set_draft(state, builder)), indent=2)
 
     @mcp.tool()
     def spec_delete_field(entity: str, field_name: str) -> str:
