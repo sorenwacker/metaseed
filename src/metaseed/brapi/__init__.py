@@ -182,6 +182,10 @@ def import_brapi(
                 if key and key in seen_germplasm:
                     continue
                 seen_germplasm.add(key)
+                # Fetched for this study: a server that leaves out
+                # ``studyDbIds`` still told us which study it belongs to.
+                if not item.get("studyDbIds"):
+                    item = {**item, "studyDbIds": [study_id]}
                 germplasm.append(item)
 
     if not scoped:

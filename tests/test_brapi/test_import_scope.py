@@ -327,3 +327,18 @@ def test_an_observation_with_a_numeric_id_listed_under_two_units_is_kept_once(
     )
 
     assert [o["observationDbId"] for o in passed[0]] == [7]
+
+
+def test_germplasm_without_study_ids_belongs_to_the_study_it_was_fetched_for(
+    server: _Server,
+) -> None:
+    """The fixture server's per-study germplasm carries no ``studyDbIds``; the
+    import used to link every one of them to the first study."""
+    client = import_brapi(f"{BASE}/trials/{TRIAL}", client=_client(server))
+
+    linked = {
+        entity["unique_id"]: entity.get("study_id")
+        for entity in client.serialize()["entities"]
+        if entity["_type"] == "BiologicalMaterial"
+    }
+    assert linked == {"G-S1": "S1", "G-S2": "S2"}
