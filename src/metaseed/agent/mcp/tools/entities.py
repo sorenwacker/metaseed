@@ -22,6 +22,15 @@ if TYPE_CHECKING:
     from metaseed.agent.mcp.ui_session import AppState, EntityService
 
 
+def _not_an_object_row(idx: int) -> dict[str, Any]:
+    """The result row for a batch element that is not a JSON object."""
+    return {
+        "index": idx,
+        "status": "error",
+        "message": "Each element must be a JSON object",
+    }
+
+
 def _auto_save_dataset(ctx: MCPContext) -> dict[str, str]:
     """Auto-save the dataset of the session this call is serving.
 
@@ -650,8 +659,11 @@ def register_entity_tools(  # noqa: C901
                 return json.dumps({"error": "Updates must be a JSON array"})
 
             results = []
-            for item in update_list:
-                node_id = item.get("id")
+            for idx, item in enumerate(update_list):
+                if not isinstance(item, dict):
+                    results.append(_not_an_object_row(idx))
+                    continue
+                node_id: Any = item.get("id")
                 data = item.get("data", {})
 
                 try:
@@ -733,6 +745,9 @@ def register_entity_tools(  # noqa: C901
 
             results = []
             for idx, spec in enumerate(entity_list):
+                if not isinstance(spec, dict):
+                    results.append(_not_an_object_row(idx))
+                    continue
                 entity_type = spec.get("entity_type")
                 data = spec.get("data", {})
                 parent_id = spec.get("parent_id")
