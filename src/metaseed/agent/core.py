@@ -92,10 +92,13 @@ class TypeConverter:
 
     @staticmethod
     def _to_integer(value: Any) -> int | None:
+        # "3.0" is an integer written as a float; "1.7" is not one, and
+        # truncating it stored a different value with nothing reported.
         try:
-            return int(float(value))
+            number = float(value)
         except (ValueError, TypeError):
             return None
+        return int(number) if number.is_integer() else None
 
     @staticmethod
     def _to_float(value: Any) -> float | None:

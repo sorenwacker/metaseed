@@ -36,3 +36,13 @@ class TestBooleanConversion:
     @pytest.mark.parametrize("value", ["N/A", "unknown", "FALSE_", "2", "maybe"])
     def test_unrecognised_values_fail_the_conversion(self, value) -> None:
         assert TypeConverter.convert(value, "boolean") is None
+
+
+def test_a_fractional_value_is_not_an_integer() -> None:
+    """``int(float('1.7'))`` stored 1 in an integer field and reported nothing;
+    a failed conversion returns None, which the caller reports."""
+    from metaseed.agent.core import TypeConverter
+
+    assert TypeConverter.convert("1.7", "integer") is None
+    assert TypeConverter.convert("3.0", "integer") == 3
+    assert TypeConverter.convert("12", "integer") == 12
