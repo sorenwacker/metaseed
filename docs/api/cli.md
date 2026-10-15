@@ -114,6 +114,8 @@ submission rules (mandatory MTD fields, RAW/RESULT/SEARCH file mapping) and
 resolves CV terms; `--profile metabolights` resolves its CV terms. Their
 findings count toward the exit code like any other validation error.
 
+The file holds one entity as a mapping of field names. A file that is not valid YAML, is not a mapping, or names an entity type the profile does not define exits with code 2 (input error).
+
 ### template
 
 Generate an empty template for an entity:

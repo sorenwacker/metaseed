@@ -155,8 +155,9 @@ def validate(
     except yaml.YAMLError as e:
         echo_error(f"Invalid YAML: {e}")
         raise typer.Exit(ExitCode.INPUT_ERROR) from None
-
-    from metaseed.specs.loader import SpecLoadError
+    if not isinstance(data, dict):
+        echo_error(f"{file} must hold one entity as a mapping of field names.")
+        raise typer.Exit(ExitCode.INPUT_ERROR)
 
     try:
         errors = validate_data(data, entity, version, profile=profile)
@@ -174,9 +175,14 @@ def validate(
     profile_checks = list(actions_for_profile(profile, kind="validate"))
     if profile_checks:
         from metaseed.api.client import MetaseedClient
+        from metaseed.api.errors import MetaseedError
 
         client = MetaseedClient(profile, version)
-        client.create_entity(entity, data, skip_validation=True)
+        try:
+            client.create_entity(entity, data, skip_validation=True)
+        except MetaseedError as e:
+            echo_error(str(e))
+            raise typer.Exit(ExitCode.INPUT_ERROR) from None
         for action in profile_checks:
             errors.extend(action.resolve()(client))
 
