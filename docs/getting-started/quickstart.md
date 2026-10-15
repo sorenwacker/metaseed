@@ -84,4 +84,4 @@ The **Datasets** overview lists the saved datasets 24 to a page, newest first, w
 
 A saved dataset reloads with every entity it was saved with. One whose values validation refuses, such as a record an importer stored as the server sent it, is kept and reported by **Validate**, never dropped on reload.
 
-**+ New Dataset** asks for two things in this order: the standard and its version, chosen from the cards; then the dataset's name, on a screen of its own that says which standard was chosen and offers a way back. **Load Example** on a card skips the name: the example is loaded under the example's own name.
+**+ New Dataset** asks for two things in this order: the standard and its version, chosen from the cards; then the dataset's name, on a screen of its own that says which standard was chosen and offers a way back. **Load Example** on a card skips the name: the example is loaded under the example's own name. If the example cannot be loaded, the error is shown and the dataset you had open is left as it was.
