@@ -126,17 +126,10 @@ def register_entity_routes(  # noqa: C901
 
         builder = _require_spec()
         assert builder.spec is not None  # guaranteed by _require_spec
-        entity = _require_entity(builder, name)
-        entity.description = description.strip()
-        entity.ontology_term = ontology_term.strip() or None
-        # Only touch entity.seek when the form actually carried the field, so a
-        # post that omits it (older form / API caller) preserves a saved role.
-        # An empty or unrecognized value clears it (dropdown "— none —").
-        if seek_role is not None:
-            role = seek_role.strip()
-            entity.seek = SeekEntityConfig(role=role) if role in SEEK_ROLES else None
+        _require_entity(builder, name)
 
-        # Handle rename
+        # The rename is the step that can be refused, so it runs first: a
+        # refusal then returns before any other edit reaches the draft.
         final_name = name
         if new_name and new_name.strip() != name:
             new_name = new_name.strip()
@@ -150,6 +143,16 @@ def register_entity_routes(  # noqa: C901
                 builder.editing_entity = new_name
 
             final_name = new_name
+
+        entity = builder.spec.entities[final_name]
+        entity.description = description.strip()
+        entity.ontology_term = ontology_term.strip() or None
+        # Only touch entity.seek when the form actually carried the field, so a
+        # post that omits it (older form / API caller) preserves a saved role.
+        # An empty or unrecognized value clears it (dropdown "— none —").
+        if seek_role is not None:
+            role = seek_role.strip()
+            entity.seek = SeekEntityConfig(role=role) if role in SEEK_ROLES else None
 
         builder.mark_changed()
 

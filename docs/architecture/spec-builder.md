@@ -260,5 +260,6 @@ interface can save a draft.
   there means the user emptied the box, not that the value is unchanged. This is
   the one place where whole-object replacement is the correct reading of the
   input.
+  The entity editor attempts a rename before it applies the description, ontology term and SEEK role, so a refused rename (a duplicate or invalid name) leaves the entity unchanged.
 - **MCP**: one `SpecBuilder` draft lives in the MCP session. See
   [Spec Builder MCP Tools](../api/spec-builder-mcp.md) for the tool reference.
