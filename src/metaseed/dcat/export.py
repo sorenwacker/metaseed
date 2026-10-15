@@ -58,7 +58,7 @@ def build_card(
         root_entity_type=spec.root_entity,
         entities=entities,
         catalog_metadata=catalog_metadata,
-        identifier=identifier or facade.profile,
+        identifier=identifier,
     )
 
 
