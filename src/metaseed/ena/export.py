@@ -262,8 +262,11 @@ def _run_set(
     # A File nested under its Run is the tree's answer; ``run_ref`` is the
     # fallback for a dataset whose files were built without that nesting.
     files_by_run: dict[str, list[dict[str, Any]]] = {}
+    # A File naming no run belongs to no run: grouped under "" it went to any
+    # Run without an alias, an Analysis's files included.
     for f in loose_files:
-        files_by_run.setdefault(f.get("run_ref", ""), []).append(f)
+        if f.get("run_ref"):
+            files_by_run.setdefault(f["run_ref"], []).append(f)
 
     root = ET.Element("RUN_SET")
     for node_id, r in runs:
@@ -272,8 +275,8 @@ def _run_set(
         )
         if r.get("experiment_ref"):
             ET.SubElement(run, "EXPERIMENT_REF", {"refname": r["experiment_ref"]})
-        run_files = tree.children(node_id, "File") or files_by_run.get(
-            r.get("alias", ""), []
+        run_files = tree.children(node_id, "File") or (
+            files_by_run.get(r["alias"], []) if r.get("alias") else []
         )
         if run_files:
             _file_elements(ET.SubElement(run, "DATA_BLOCK"), run_files)
