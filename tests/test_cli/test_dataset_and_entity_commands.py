@@ -137,6 +137,31 @@ class TestDatasetCommands:
         assert result.exit_code == 2
         assert "--profile" in result.output
 
+    def test_import_with_only_a_profile_takes_its_latest_version(
+        self, tmp_path: Path
+    ) -> None:
+        """A bare list with --profile alone was saved with version "", which
+        no later command could open."""
+        from metaseed.profiles import ProfileFactory
+
+        source = tmp_path / "bare.json"
+        source.write_text(json.dumps([{"_type": "Investigation", "identifier": "I1"}]))
+        result = runner.invoke(
+            app, ["dataset", "import", "test-cli-bare", str(source), "-p", "isa"]
+        )
+        assert result.exit_code == 0, result.output
+        saved = _repo().load("test-cli-bare")
+        assert saved.version == ProfileFactory().get_latest_version("isa")
+
+    def test_import_refuses_an_unknown_profile(self, tmp_path: Path) -> None:
+        source = tmp_path / "bare.json"
+        source.write_text(json.dumps([{"_type": "Investigation", "identifier": "I1"}]))
+        result = runner.invoke(
+            app, ["dataset", "import", "test-cli-bare", str(source), "-p", "nope"]
+        )
+        assert result.exit_code != 0
+        assert not _repo().exists("test-cli-bare")
+
     def test_export_writes_json_or_yaml(self, tmp_path: Path) -> None:
         _repo().save(
             "test-cli-exported",
