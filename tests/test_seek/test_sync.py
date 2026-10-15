@@ -636,12 +636,8 @@ class TestSharing:
             isa_assay_form(title="A", study_id="1", assay_class_id=1, sharing="public")
 
 
-def test_data_files_under_a_study_become_one_remote_data_file():
-    """A study's file entities collapse to a single SEEK DataFile linking to the
-    common base URL, with the filenames listed -- the files stay in external
-    storage, SEEK holds the reference."""
-    from metaseed import MetaseedClient
-    from metaseed.seek.sync import sync_dataset_to_seek
+def _study_with_files() -> MetaseedClient:
+    """A Study holding two files in one external storage directory."""
     from metaseed.specs.schema import (
         EntityDefSpec as E,
     )
@@ -711,6 +707,14 @@ def test_data_files_under_a_study_become_one_remote_data_file():
             skip_validation=True,
         )
 
+    return c
+
+
+def test_data_files_under_a_study_become_one_remote_data_file():
+    """A study's file entities collapse to a single SEEK DataFile linking to the
+    common base URL, with the filenames listed -- the files stay in external
+    storage, SEEK holds the reference."""
+    c = _study_with_files()
     seek = _FakeSeek()
     res = sync_dataset_to_seek(seek, c, project_id="1")
 
@@ -974,3 +978,33 @@ def test_a_reused_study_without_a_stream_gets_one_back() -> None:
         a["assay_stream_id"] == result.assay_streams["11"]
         for a in _of_kind(seek, "assay")
     )
+
+
+def test_a_second_push_reuses_the_study_data_file() -> None:
+    """The Investigation, Study and Assays were reused on a second push, but
+    the study's data file was created again every time."""
+    first = _FakeSeek()
+    sync_dataset_to_seek(first, _study_with_files(), project_id="1")
+    (created,) = [c for kind, c in first.calls if kind == "data_file"]
+
+    second = _FakeSeek(_n=first._n)
+    second.existing_investigations = {"t": "2"}
+    second.existing_studies = {("s", "2"): "3"}
+    second.existing_data_files = {created["title"]: "99"}
+    again = sync_dataset_to_seek(second, _study_with_files(), project_id="1")
+
+    assert not [c for kind, c in second.calls if kind == "data_file"], (
+        "a second push created another data file"
+    )
+    assert "99" in again.data_files.values()
+
+
+def test_two_studies_do_not_share_a_data_file_title() -> None:
+    """Titled only by its file count, one study's data file was found and
+    reused for another study with as many files."""
+    seek = _FakeSeek()
+    sync_dataset_to_seek(seek, _study_with_files(), project_id="1")
+    sync_dataset_to_seek(seek, _study_with_files(), project_id="1")
+
+    titles = [c["title"] for kind, c in seek.calls if kind == "data_file"]
+    assert len(set(titles)) == 2, titles
