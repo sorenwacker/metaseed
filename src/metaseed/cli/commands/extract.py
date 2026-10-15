@@ -4,6 +4,9 @@ The same path the MCP server's extraction tools take: parse a file with
 :func:`metaseed.agent.core.parse_file`, suggest a mapping with
 :func:`metaseed.agent.mapping.suggest_mapping`, then extract rows through an
 :class:`~metaseed.agent.core.ExtractionContext`.
+
+A missing or unreadable file, a ``--table`` index the file does not have, and
+a mapping or records file that is not the expected JSON exit with code 2.
 """
 
 from __future__ import annotations
@@ -47,6 +50,29 @@ def _parsed(source: Path) -> Any:
         return parse_file(source)
     except ValueError as exc:
         echo_error(f"{source} could not be parsed: {exc}")
+        raise typer.Exit(ExitCode.INPUT_ERROR) from exc
+
+
+def _headers(content: Any, table: int, source: Path) -> list[str]:
+    """The column headers of table ``table``, or an input error naming the range."""
+    if not 0 <= table < len(content.tables):
+        echo_error(
+            f"--table {table}: {source} holds tables 0 to {len(content.tables) - 1}."
+        )
+        raise typer.Exit(ExitCode.INPUT_ERROR)
+    headers: list[str] = content.tables[table].headers
+    return headers
+
+
+def _read_json(path: Path) -> Any:
+    """The JSON content of ``path``, or an input error when it has none."""
+    if not path.exists():
+        echo_error(f"No such file: {path}")
+        raise typer.Exit(ExitCode.INPUT_ERROR)
+    try:
+        return json.loads(path.read_text())
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        echo_error(f"{path} is not readable as JSON: {exc}")
         raise typer.Exit(ExitCode.INPUT_ERROR) from exc
 
 
@@ -101,7 +127,7 @@ def analyze(
         echo_error(f"{source} holds no tables to map.")
         raise typer.Exit(ExitCode.INPUT_ERROR)
     spec = _entity_spec(_profile(profile, version), entity)
-    columns = content.tables[table].headers
+    columns = _headers(content, table, source)
     suggestions = suggest_mapping(columns, spec)
     emit(
         {
@@ -148,25 +174,22 @@ def run(
     spec_profile = _profile(profile, version)
     spec = _entity_spec(spec_profile, entity)
     context = ExtractionContext(spec_profile)
-    content = context.add_source(source)
+    if not source.exists():
+        echo_error(f"No such file: {source}")
+        raise typer.Exit(ExitCode.INPUT_ERROR)
+    try:
+        content = context.add_source(source)
+    except ValueError as exc:
+        echo_error(f"{source} could not be parsed: {exc}")
+        raise typer.Exit(ExitCode.INPUT_ERROR) from exc
     if not content.tables:
         echo_error(f"{source} holds no tables to extract from.")
         raise typer.Exit(ExitCode.INPUT_ERROR)
+    headers = _headers(content, table, source)
     if mapping_file is not None:
-        from metaseed.agent.mapping import FieldMapping
-
-        raw = json.loads(mapping_file.read_text())
-        pairs = raw.get("mappings", raw)
-        field_mappings = [
-            FieldMapping(
-                field_name=item["field"],
-                source_column=item["column"],
-                confidence=item.get("confidence", 1.0),
-            )
-            for item in pairs
-        ]
+        field_mappings = _mapping_from_file(mapping_file)
     else:
-        field_mappings = suggest_mapping(content.tables[table].headers, spec)
+        field_mappings = suggest_mapping(headers, spec)
     mapping = create_mapping(entity, field_mappings)
     result = context.extract_entities(0, entity, mapping=mapping, table_index=table)
     payload = {
@@ -183,6 +206,29 @@ def run(
         raise typer.Exit(ExitCode.VALIDATION_ERROR)
 
 
+def _mapping_from_file(path: Path) -> list[Any]:
+    """The field mappings in a file written by `extract analyze`."""
+    from metaseed.agent.mapping import FieldMapping
+
+    raw = _read_json(path)
+    pairs = raw.get("mappings", raw) if isinstance(raw, dict) else raw
+    try:
+        return [
+            FieldMapping(
+                field_name=item["field"],
+                source_column=item["column"],
+                confidence=item.get("confidence", 1.0),
+            )
+            for item in pairs
+        ]
+    except (KeyError, TypeError, AttributeError) as exc:
+        echo_error(
+            f"{path} is not a mapping from `extract analyze`: each entry needs "
+            f"'field' and 'column' ({exc!r})."
+        )
+        raise typer.Exit(ExitCode.INPUT_ERROR) from exc
+
+
 @app.command("validate")
 def validate(
     records: Annotated[Path, typer.Argument(help="Records from `extract run`")],
@@ -195,10 +241,7 @@ def validate(
     """Check extracted records against the profile before they become entities."""
     from metaseed.agent.core import ExtractionContext
 
-    if not records.exists():
-        echo_error(f"No such file: {records}")
-        raise typer.Exit(ExitCode.INPUT_ERROR)
-    payload = json.loads(records.read_text())
+    payload = _read_json(records)
     instances = (
         payload.get("extracted", payload) if isinstance(payload, dict) else payload
     )
@@ -221,10 +264,7 @@ def export(
     """Write extracted records out as JSON or YAML."""
     import yaml
 
-    if not records.exists():
-        echo_error(f"No such file: {records}")
-        raise typer.Exit(ExitCode.INPUT_ERROR)
-    payload = json.loads(records.read_text())
+    payload = _read_json(records)
     if fmt not in ("json", "yaml"):
         echo_error("Format is 'json' or 'yaml'.")
         raise typer.Exit(ExitCode.INPUT_ERROR)
