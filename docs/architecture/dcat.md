@@ -88,6 +88,8 @@ identifier when it builds the card (`fallback_identifier`, or the publication
 context once a caller supplies one). Understating provenance is recoverable;
 falsely claiming someone else's identifier is not.
 
+When neither the dataset nor the caller supplies an identifier, the card has none and its node is a blank node. It is never named after the profile, which would give every dataset of one profile the same IRI. The UI and `metaseed dcat show` pass the dataset name.
+
 `dct:source` is serialized alongside `prov:wasDerivedFrom`, which states the same
 fact for a provenance reader. One model field drives both so they cannot drift.
 `dct:isVersionOf` is reserved for the narrower case of a straight copy.

@@ -34,7 +34,9 @@ def show(
     if fmt == "fields":
         emit(asdict(data.catalog_metadata) if data.catalog_metadata else {})
         return
-    card = build_card(client, catalog_metadata=data.catalog_metadata)
+    card = build_card(
+        client, catalog_metadata=data.catalog_metadata, identifier=dataset
+    )
     if card is None:
         echo_error(f"'{dataset}' holds no entities, so it has no catalogue card.")
         raise typer.Exit(ExitCode.INPUT_ERROR)
