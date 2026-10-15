@@ -130,6 +130,7 @@ class SerializationMixin(InstanceDataMixin):
                 "entity_type": node.entity_type,
                 "label": label,
                 "data": data,
+                "parent_field": node.parent_field,
                 "children": [node_to_tree(c) for c in node.children],
             }
 
@@ -228,6 +229,7 @@ class SerializationMixin(InstanceDataMixin):
                     node_id=node.get("id"),
                     parent_id=parent_id,
                     skip_validation=True,
+                    parent_field=node.get("parent_field"),
                 )
             except Exception as exc:
                 if on_skip is None:
