@@ -346,6 +346,7 @@ def register_api_routes(  # noqa: C901
             ontology and the source that answered, plus ``not_asked`` naming
             any source left out for being too slow to type against.
         """
+        from metaseed.services.term_check import TermSourceUnavailableError
         from metaseed.services.terms import get_term_source
 
         if not q.strip():
@@ -358,12 +359,23 @@ def register_api_routes(  # noqa: C901
         # 51 seconds for PO — and is named in the response, because a shorter
         # list of results is indistinguishable from there being less to find
         # (#247).
-        hits = await source.search(q, ontology, 20, within, interactive=True)
         # Both ways a source is left out are named: declared too slow for a
         # picker, and unable to honour the branch restriction — no local
         # vocabulary implements `within`, so a branch-scoped search skipped
         # every local source with nothing to say so.
         not_asked = sorted({*source.not_interactive(), *source.cannot_restrict(within)})
+        try:
+            hits = await source.search(q, ontology, 20, within, interactive=True)
+        except TermSourceUnavailableError as exc:
+            # Not "no terms found": the source that would know was not asked.
+            return JSONResponse(
+                status_code=503,
+                content={
+                    "results": [],
+                    "not_asked": not_asked,
+                    "unavailable": str(exc),
+                },
+            )
         return JSONResponse(
             content={
                 "results": [hit.to_dict() for hit in hits],

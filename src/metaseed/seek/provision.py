@@ -19,6 +19,7 @@ definition for an admin separately.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from dataclasses import field as dc_field
 from typing import TYPE_CHECKING
@@ -38,6 +39,9 @@ if TYPE_CHECKING:
 
 
 from metaseed.seek.values import CORE_FIELDS as _CORE_FIELDS
+from metaseed.services.term_check import TermSourceUnavailableError
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -134,7 +138,13 @@ def _cv_terms(
     for value in enum:
         iri: str | None = None
         if term_source is not None and ols_id:
-            hits = term_source.search_sync(value, ontology=ols_id, limit=5)
+            try:
+                hits = term_source.search_sync(value, ontology=ols_id, limit=5)
+            except TermSourceUnavailableError as exc:
+                # Label-only, as with no term source at all: an outage costs
+                # the IRI, not the provisioning run.
+                logger.warning("CV term %r provisioned without an IRI: %s", value, exc)
+                hits = []
             for hit in hits:
                 if str(getattr(hit, "label", "")).lower() == value.lower():
                     iri = getattr(hit, "iri", None)

@@ -108,7 +108,7 @@ class TestOntologyTools:
     def test_search_ontology_reports_a_source_that_could_not_answer(
         self, server
     ) -> None:
-        """A source that fails yields no results rather than an exception."""
+        """A source that fails is reported as not searched, not as no results."""
         search_fn = get_tool(server, "search_ontology")
 
         with patch(
@@ -118,8 +118,8 @@ class TestOntologyTools:
             result = search_fn(query="test")
             data = json.loads(result)
 
-            assert data["results"] == []
-            assert data["total_found"] == 0
+            assert data["status"] == "not_searched"
+            assert "results" not in data
 
     def test_a_local_vocabulary_is_searchable_through_the_tool(self, server) -> None:
         """The reason the tool routes: OLS cannot offer a project's own terms."""

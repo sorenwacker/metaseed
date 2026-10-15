@@ -688,6 +688,15 @@ function loadOntologyModalResults(query) {
                   ' (too slow to answer while you type)</div>'
                 : '';
 
+            // Said as "not searched", not "no terms found": the source that
+            // would know could not be asked.
+            if (data.unavailable) {
+                resultsDiv.innerHTML = notAsked +
+                    '<div class="lookup-modal-empty ontology-unavailable">Not searched: ' +
+                    escapeHtml(data.unavailable) + '</div>';
+                return;
+            }
+
             if (!data.results || data.results.length === 0) {
                 resultsDiv.innerHTML = notAsked +
                     '<div class="lookup-modal-empty">No terms found</div>';

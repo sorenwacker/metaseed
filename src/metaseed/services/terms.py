@@ -29,6 +29,7 @@ from metaseed.services.term_check import (
     _MATERIALISATION_ORDER,
     Materialisation,
     SourceCapabilities,
+    TermSourceUnavailableError,
 )
 
 if TYPE_CHECKING:
@@ -161,10 +162,7 @@ class TermRouter:
                 not exist, which is a verdict on the user's data that an
                 outage does not support.
         """
-        from metaseed.services.term_check import (
-            TermSourceUnavailableError,
-            ontology_of,
-        )
+        from metaseed.services.term_check import ontology_of
 
         prefix = ontology_of(term_id)
         owner = next((s for s in self.sources if _owns(s, prefix)), None)
@@ -362,9 +360,15 @@ class TermRouter:
                 shorter list looks exactly like there being less to find
                 (#247). Validation asks with this off: a slow source is still
                 the right source to ask whether a term exists.
+
+        Raises:
+            TermSourceUnavailableError: If no hit was found and at least one
+                source could not be searched: an empty list would claim that
+                nothing matches.
         """
         hits: list[TermHit] = []
         seen: set[str] = set()
+        unreachable: list[str] = []
         for source in self.sources:
             searches = getattr(source, "search_sync", None)
             if not callable(searches):
@@ -388,13 +392,14 @@ class TermRouter:
                         continue
                 else:
                     results = searches(query, ontology, limit)
-            except Exception:
+            except Exception as exc:
                 logger.warning(
                     "term source %s failed searching %r",
                     type(source).__name__,
                     query,
                     exc_info=True,
                 )
+                unreachable.append(f"{type(source).__name__}: {exc}")
                 continue
             for result in results or []:
                 hit = _as_hit(result, type(source).__name__)
@@ -404,6 +409,11 @@ class TermRouter:
                 hits.append(hit)
                 if len(hits) >= limit:
                     return hits
+        if unreachable and not hits:
+            raise TermSourceUnavailableError(
+                f"no term source could be searched for {query!r} "
+                f"({'; '.join(unreachable)})"
+            )
         return hits
 
     @staticmethod

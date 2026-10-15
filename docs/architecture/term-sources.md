@@ -41,6 +41,7 @@ An adapter is not required to live in metaseed. Anything with those methods can 
 2. Being authoritative applies to an answer, not to a failure. A claimant that could not be reached has not spoken, so the remaining sources are asked.
 3. Otherwise every source is asked in order, and the first answer wins.
 4. When no source answered and at least one could not be asked, the router raises `TermSourceUnavailableError`. It does not return `None`: `None` means *asked, and it is not there*, and acting on that reports the user's value as wrong because a service was down. The check turns the exception into *not checked* — never invalid.
+5. A search follows the same rule. A source that cannot be reached is skipped and the others answer; when none of them returned a hit and at least one could not be asked, the search raises `TermSourceUnavailableError` instead of returning an empty list, because an empty list means *nothing matches*. The term picker, the MCP search tools and `metaseed ontology search` report this as *not searched*.
 
 Order is composition, not preference given at each call: local vocabularies are registered ahead of OLS, so offline work resolves without a network round trip.
 
