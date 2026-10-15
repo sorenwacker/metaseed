@@ -20,7 +20,7 @@ The token is stored in `settings.json` in your data directory, like the SEEK API
 
 On the datasets overview every dataset has **Push to hub**. Pushing creates a hub dataset of the same name, profile and version in your tenant, holding the same entities. If the hub already has a dataset of that name:
 
-- identical content: nothing is sent, and the page says so;
+- identical content (the same entities, in any order; a field's position within an entity does not count): nothing is sent, and the page says so;
 - different content: the page shows what differs (entity counts per type, the entities that would be added, changed or removed) and offers **Replace on hub**. Nothing changes until that is pressed.
 
 The hub stores every dataset in its own tree form; a dataset pushed as a flat list is stored that way too. Pulling, listing and planning a push read that tree as the flat entities metaseed works with, so a dataset saved in the hub's web interface counts and pulls with all its entities. `metaseed hub list` reported 0 entities for such datasets and a pull brought them down empty.

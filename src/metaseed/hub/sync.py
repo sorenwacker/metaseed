@@ -9,6 +9,7 @@ are testable without a network and the UI shows exactly what these say.
 from __future__ import annotations
 
 import json
+from collections import Counter
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any, Protocol
@@ -127,6 +128,18 @@ def _key(entity: dict[str, Any]) -> str:
     return f"{entity.get('_type', '?')} {ident}".strip()
 
 
+def _take(remaining: Counter[str], canonical: str, sign: int) -> bool:
+    """Consume one surplus copy of ``canonical`` on the side ``sign`` names.
+
+    ``remaining`` holds local-minus-hub counts: positive for copies only the
+    local dataset has, negative for copies only the hub has.
+    """
+    if remaining[canonical] * sign > 0:
+        remaining[canonical] -= sign
+        return True
+    return False
+
+
 def _canonical(entity: dict[str, Any]) -> str:
     return json.dumps(entity, sort_keys=True, default=str)
 
@@ -156,11 +169,20 @@ def plan_dataset_push(local: DatasetData, remote: dict[str, Any] | None) -> Push
     if remote is None:
         return PushPlan(kind="create", added=[_key(e) for e in local.entities])
     theirs = HubRecord.from_row(remote).entities
-    mine_by = {_key(e): _canonical(e) for e in local.entities}
-    theirs_by = {_key(e): _canonical(e) for e in theirs}
-    added = [k for k in mine_by if k not in theirs_by]
-    removed = [k for k in theirs_by if k not in mine_by]
-    changed = [k for k in mine_by if k in theirs_by and mine_by[k] != theirs_by[k]]
+    # Compared as multisets of whole entities, as a pull compares them: keyed
+    # by report name, entities without an identifier collapsed onto one key
+    # and a real difference between them was planned identical.
+    only_mine = Counter(_canonical(e) for e in local.entities)
+    only_mine.subtract(_canonical(e) for e in theirs)
+    added_by = Counter(
+        _key(e) for e in local.entities if _take(only_mine, _canonical(e), 1)
+    )
+    removed_by = Counter(_key(e) for e in theirs if _take(only_mine, _canonical(e), -1))
+    # An entity whose report name is on both sides was changed, not swapped.
+    changed_by = added_by & removed_by
+    added = list((added_by - changed_by).elements())
+    removed = list((removed_by - changed_by).elements())
+    changed = list(changed_by)
     counts: dict[str, tuple[int, int]] = {}
     for t in sorted({e.get("_type", "?") for e in [*local.entities, *theirs]}):
         counts[t] = (

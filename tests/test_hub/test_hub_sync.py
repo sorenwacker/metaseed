@@ -126,6 +126,21 @@ class TestPlanningAPush:
         assert plan.added == []
         assert plan.counts == {"Investigation": (1, 1), "Study": (1, 2)}
 
+    def test_unnamed_entities_of_one_type_are_all_compared(self) -> None:
+        """Entities without an identifier share one report key; keyed by it,
+        the later overwrote the earlier and [A, B] against [C, B] was
+        planned identical, so the push sent nothing."""
+        a, b, c = ({"_type": "Person", "email": f"{n}@example.org"} for n in "abc")
+        plan = plan_dataset_push(_local([a, b]), remote=_remote([c, b]))
+        assert plan.kind == "differs"
+        assert plan.changed == ["Person"]
+
+    def test_a_duplicated_entity_is_a_difference(self) -> None:
+        a = {"_type": "Person", "email": "a@example.org"}
+        plan = plan_dataset_push(_local([a, a]), remote=_remote([a]))
+        assert plan.kind == "differs"
+        assert plan.added == ["Person"]
+
     def test_a_field_order_difference_is_not_a_difference(self) -> None:
         reordered = [dict(reversed(list(e.items()))) for e in ENTITIES]
         assert (
