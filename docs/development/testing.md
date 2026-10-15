@@ -300,11 +300,13 @@ The following end-to-end tests are implemented:
 
 Tests are marked for selective execution:
 
-- `@pytest.mark.ui` - UI tests (Selenium)
+- `@pytest.mark.selenium` - drives a real browser against a live server
+- `@pytest.mark.ui` - a subset of the Selenium tests, run by `make test-ui`
+- `@pytest.mark.network` - calls a live third-party API
 
-Run specific markers:
+`make test`, the pre-push hook, the CI `test` job and the release gate all run `-m "not selenium and not network"`; `tests/test_local_test_markers_match_ci.py` fails when one of them spells a different expression.
 
 ```bash
 uv run pytest -m ui           # Only UI tests
-uv run pytest -m "not ui"     # Exclude UI tests
+uv run pytest -m selenium     # All browser tests
 ```
