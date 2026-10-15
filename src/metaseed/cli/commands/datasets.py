@@ -102,7 +102,8 @@ def import_dataset(
     """Write the entities of a JSON or YAML file into a dataset.
 
     The file may be a whole saved dataset (with ``profile`` and ``version``) or
-    a bare list of entities, in which case the profile has to be named.
+    a bare list of entities, in which case the profile has to be named. A
+    profile given without a version takes its latest version.
     """
     import yaml
 
@@ -124,10 +125,17 @@ def import_dataset(
     if not profile_name:
         echo_error("The file does not name a profile; pass --profile and --version.")
         raise typer.Exit(ExitCode.INPUT_ERROR)
+    from metaseed.cli.app import resolve_profile_version
+
+    # Checks the profile exists and fills a missing version with its latest,
+    # as `create` does; an empty version saved here no command could open.
+    profile_name, profile_version = resolve_profile_version(
+        str(profile_name), str(profile_version) if profile_version else None
+    )
     data = DatasetData(
         name=name,
-        profile=str(profile_name),
-        version=str(profile_version or ""),
+        profile=profile_name,
+        version=profile_version,
         entities=entities,
     )
     try:
