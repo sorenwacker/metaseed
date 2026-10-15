@@ -21,15 +21,11 @@ def test_a_dotted_constraint_resolution_is_applied_not_rejected() -> None:
     merger = SpecMerger()
     base = FieldSpec(name="length", type="integer", constraints=Constraints(minimum=1))
 
-    class _Diff:
-        field_name = "length"
-        profiles = {"a/1": base}
-
     class _Resolution:
         attribute = "constraints.minimum"
         resolved_value = 5
 
-    resolved = merger._apply_manual_resolution(_Diff(), [_Resolution()], ["a/1"])
+    resolved = merger._apply_manual_resolution(base, [_Resolution()])
 
     assert resolved.constraints is not None
     assert resolved.constraints.minimum == 5

@@ -367,10 +367,12 @@ class SpecComparator:
         """Analyze differences in a field across profiles.
 
         The first profile in all_profile_ids is treated as the base/reference.
+        - CONFLICT: The profiles that have the field disagree on type,
+          required, items or constraints, whichever profiles lack it
         - REMOVED: Field in base but not in other profiles
         - ADDED: Field not in base but in other profiles
+        - MODIFIED: Field in base and some others, or differing otherwise
         - UNCHANGED: Field same in all profiles
-        - MODIFIED: Field differs between profiles
 
         Args:
             field_specs: Mapping of profile ID to FieldSpec or None.
@@ -383,35 +385,45 @@ class SpecComparator:
         base_spec = field_specs.get(base_profile)
         other_specs = {k: v for k, v in field_specs.items() if k != base_profile}
 
-        # Check presence relative to base
         in_base = base_spec is not None
         in_others = any(v is not None for v in other_specs.values())
+        present_specs = {k: v for k, v in field_specs.items() if v is not None}
 
-        if not in_base and not in_others:
-            return DiffType.REMOVED, [], {}
+        # Attributes are compared across every profile that has the field,
+        # before presence is considered: with three or more profiles, two that
+        # define the field with different types conflict whether or not a
+        # third has it.
+        changed_attrs, values, has_conflict = self._compare_field_attributes(
+            present_specs
+        )
+        if has_conflict:
+            return DiffType.CONFLICT, changed_attrs, values
 
         if not in_base and in_others:
-            # Field only in other profiles (added relative to base)
-            return DiffType.ADDED, [], {}
+            return DiffType.ADDED, changed_attrs, values
+        if not in_others:
+            return DiffType.REMOVED, changed_attrs, values
+        # In the base and some, not all, of the others is a modification too.
+        if changed_attrs or len(present_specs) < len(all_profile_ids):
+            return DiffType.MODIFIED, changed_attrs, values
+        return DiffType.UNCHANGED, [], {}
 
-        if in_base and not in_others:
-            # Field only in base (removed in other profiles)
-            return DiffType.REMOVED, [], {}
+    def _compare_field_attributes(
+        self: Self, present_specs: dict[str, FieldSpec]
+    ) -> tuple[list[str], dict[str, dict[str, object]], bool]:
+        """Compare a field's attributes across the profiles that define it.
 
-        # Field exists in base - check if it's in all other profiles
-        present_specs = {k: v for k, v in field_specs.items() if v is not None}
-        if len(present_specs) < len(all_profile_ids):
-            # Field missing from some profiles
-            return DiffType.MODIFIED, [], {}
+        Args:
+            present_specs: Mapping of profile ID to that profile's FieldSpec.
 
-        # Field exists in all profiles - compare attributes
-        attributes_to_compare = FIELD_ATTRIBUTES_TO_COMPARE
-
+        Returns:
+            Tuple of (attributes_changed, values_by_attribute, has_conflict).
+        """
         changed_attrs: list[str] = []
         values: dict[str, dict[str, object]] = {}
         has_conflict = False
 
-        for attr in attributes_to_compare:
+        for attr in FIELD_ATTRIBUTES_TO_COMPARE:
             attr_values: dict[str, object] = {}
             for profile_id, spec in present_specs.items():
                 attr_values[profile_id] = getattr(spec, attr, None)
@@ -441,11 +453,7 @@ class SpecComparator:
             # MODIFIED and the merger would silently take the first spec.
             has_conflict = True
 
-        if has_conflict:
-            return DiffType.CONFLICT, changed_attrs, values
-        if changed_attrs:
-            return DiffType.MODIFIED, changed_attrs, values
-        return DiffType.UNCHANGED, [], {}
+        return changed_attrs, values, has_conflict
 
     def _compare_constraints(
         self: Self, constraints: dict[str, Constraints | None]
