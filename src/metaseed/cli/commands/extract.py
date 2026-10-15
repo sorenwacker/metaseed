@@ -18,7 +18,7 @@ from typing import Annotated, Any
 import typer
 
 from metaseed.cli.output import ExitCode, echo_error, echo_success
-from metaseed.cli.workspace import emit
+from metaseed.cli.workspace import emit, load_profile_spec
 
 app = typer.Typer(
     name="extract", no_args_is_help=True, help="Extract metadata from files."
@@ -26,18 +26,6 @@ app = typer.Typer(
 
 ProfileOption = Annotated[str | None, typer.Option("--profile", "-p")]
 VersionOption = Annotated[str | None, typer.Option("--version", "-v")]
-
-
-def _profile(profile: str | None, version: str | None) -> Any:
-    from metaseed.cli.app import resolve_profile_version
-    from metaseed.specs.loader import SpecLoader
-
-    name, resolved = resolve_profile_version(profile, version)
-    try:
-        return SpecLoader().load_profile(version=resolved, profile=name)
-    except Exception as exc:
-        echo_error(f"Could not load profile {name} {resolved}: {exc}")
-        raise typer.Exit(ExitCode.CONFIG_ERROR) from exc
 
 
 def _parsed(source: Path) -> Any:
@@ -126,7 +114,7 @@ def analyze(
     if not content.tables:
         echo_error(f"{source} holds no tables to map.")
         raise typer.Exit(ExitCode.INPUT_ERROR)
-    spec = _entity_spec(_profile(profile, version), entity)
+    spec = _entity_spec(load_profile_spec(profile, version), entity)
     columns = _headers(content, table, source)
     suggestions = suggest_mapping(columns, spec)
     emit(
@@ -171,7 +159,7 @@ def run(
     from metaseed.agent.core import ExtractionContext
     from metaseed.agent.mapping import create_mapping, suggest_mapping
 
-    spec_profile = _profile(profile, version)
+    spec_profile = load_profile_spec(profile, version)
     spec = _entity_spec(spec_profile, entity)
     context = ExtractionContext(spec_profile)
     if not source.exists():
@@ -245,7 +233,7 @@ def validate(
     instances = (
         payload.get("extracted", payload) if isinstance(payload, dict) else payload
     )
-    context = ExtractionContext(_profile(profile, version))
+    context = ExtractionContext(load_profile_spec(profile, version))
     issues = []
     for position, instance in enumerate(instances):
         for issue in context.validate_instance(instance, entity):

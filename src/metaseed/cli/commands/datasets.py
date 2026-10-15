@@ -15,7 +15,13 @@ from typing import Annotated, Any
 import typer
 
 from metaseed.cli.output import ExitCode, echo_error, echo_success
-from metaseed.cli.workspace import emit, load_data, open_dataset, repository
+from metaseed.cli.workspace import (
+    emit,
+    load_data,
+    load_profile_spec,
+    open_dataset,
+    repository,
+)
 from metaseed.repositories.dataset_repository import DatasetData
 
 app = typer.Typer(name="dataset", no_args_is_help=True, help="Saved datasets.")
@@ -225,10 +231,8 @@ def validate_links(name: Annotated[str, typer.Argument(help="Dataset name")]) ->
     The same check the ``validate_relationships`` MCP tool reports: an entity
     the profile expects to hang off another, standing on its own.
     """
-    from metaseed.specs.loader import SpecLoader
-
     client, data = open_dataset(name)
-    spec = SpecLoader().load_profile(version=data.version, profile=data.profile)
+    spec = load_profile_spec(data.profile, data.version)
     unlinked = [
         {
             "id": node.id,

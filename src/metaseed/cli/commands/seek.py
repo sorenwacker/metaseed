@@ -14,7 +14,7 @@ import typer
 import yaml
 
 from metaseed.cli.output import ExitCode, echo_error, echo_success
-from metaseed.cli.workspace import emit, open_dataset
+from metaseed.cli.workspace import emit, load_profile_spec, open_dataset
 from metaseed.settings import Settings
 
 app = typer.Typer(name="seek", no_args_is_help=True, help="FAIRDOM-SEEK.")
@@ -31,13 +31,6 @@ def _client() -> Any:
             f"{exc} (`metaseed plugin config seek --set url=... --set api_key=...`)"
         )
         raise typer.Exit(ExitCode.CONFIG_ERROR) from exc
-
-
-def _profile_of(dataset: str) -> Any:
-    from metaseed.specs.loader import SpecLoader
-
-    _client_obj, data = open_dataset(dataset)
-    return SpecLoader().load_profile(version=data.version, profile=data.profile)
 
 
 @app.command("check")
@@ -59,18 +52,14 @@ def preview(
     version: Annotated[str | None, typer.Option("--version", "-v")] = None,
 ) -> None:
     """Show the SEEK model a profile would create, without touching an instance."""
-    from metaseed.cli.app import resolve_profile_version
     from metaseed.seek.preview import build_model_preview
-    from metaseed.specs.loader import SpecLoader
 
-    name, resolved = resolve_profile_version(profile, version)
-    model = build_model_preview(
-        SpecLoader().load_profile(version=resolved, profile=name)
-    )
+    spec = load_profile_spec(profile, version)
+    model = build_model_preview(spec)
     emit(
         {
-            "profile": name,
-            "version": resolved,
+            "profile": spec.name,
+            "version": spec.version,
             "sample_types": [
                 {
                     "title": sample_type.title,
@@ -93,23 +82,19 @@ def provision(
     ] = None,
 ) -> None:
     """Create the Sample Types and controlled vocabularies a profile needs."""
-    from metaseed.cli.app import resolve_profile_version
     from metaseed.seek.provision import (
         build_provisioning_plan,
         execute_provisioning_plan,
     )
-    from metaseed.specs.loader import SpecLoader
 
-    name, resolved = resolve_profile_version(profile, version)
+    spec = load_profile_spec(profile, version)
     client = _client()
     target = (
         project_id
         or Settings().get_adapter_config("seek").get("project_id")
         or client.default_project_id()
     )
-    plan = build_provisioning_plan(
-        SpecLoader().load_profile(version=resolved, profile=name)
-    )
+    plan = build_provisioning_plan(spec)
     try:
         result = execute_provisioning_plan(client, plan, project_id=str(target))
     except Exception as exc:
@@ -139,7 +124,6 @@ def sync(
     """Push a dataset into SEEK as Investigations, Studies, Assays and Samples."""
     from metaseed.seek.provision import resolve_cv_ids
     from metaseed.seek.sync import sync_dataset_to_seek
-    from metaseed.specs.loader import SpecLoader
 
     metaseed_client, data = open_dataset(dataset)
     client = _client()
@@ -148,7 +132,7 @@ def sync(
         or Settings().get_adapter_config("seek").get("project_id")
         or client.default_project_id()
     )
-    profile = SpecLoader().load_profile(version=data.version, profile=data.profile)
+    profile = load_profile_spec(data.profile, data.version)
     try:
         result = sync_dataset_to_seek(
             client,
@@ -202,14 +186,9 @@ def isa_templates(
     output: Annotated[Path | None, typer.Option("--output", "-o")] = None,
 ) -> None:
     """Write a profile as SEEK ISA Template JSON, ready to populate an instance."""
-    from metaseed.cli.app import resolve_profile_version
     from metaseed.seek.templates import to_isa_template_json
-    from metaseed.specs.loader import SpecLoader
 
-    name, resolved = resolve_profile_version(profile, version)
-    payload = to_isa_template_json(
-        SpecLoader().load_profile(version=resolved, profile=name)
-    )
+    payload = to_isa_template_json(load_profile_spec(profile, version))
     text = json.dumps(payload, indent=2)
     if output is None:
         typer.echo(text)
@@ -225,14 +204,9 @@ def model_ttl(
     output: Annotated[Path | None, typer.Option("--output", "-o")] = None,
 ) -> None:
     """Write a profile as the FAIR Data Station model, in Turtle."""
-    from metaseed.cli.app import resolve_profile_version
     from metaseed.seek.fairds import to_fair_data_station_model_rdf
-    from metaseed.specs.loader import SpecLoader
 
-    name, resolved = resolve_profile_version(profile, version)
-    text = to_fair_data_station_model_rdf(
-        SpecLoader().load_profile(version=resolved, profile=name)
-    )
+    text = to_fair_data_station_model_rdf(load_profile_spec(profile, version))
     if output is None:
         typer.echo(text)
         return

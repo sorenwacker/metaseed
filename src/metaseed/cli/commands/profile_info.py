@@ -13,21 +13,9 @@ from typing import Annotated, Any
 import typer
 
 from metaseed.cli.output import ExitCode, echo_error
-from metaseed.cli.workspace import emit
+from metaseed.cli.workspace import emit, load_profile_spec
 
 app = typer.Typer(name="profile", no_args_is_help=True, help="What a profile defines.")
-
-
-def _spec(profile: str | None, version: str | None) -> Any:
-    from metaseed.cli.app import resolve_profile_version
-    from metaseed.specs.loader import SpecLoader
-
-    name, resolved = resolve_profile_version(profile, version)
-    try:
-        return SpecLoader().load_profile(version=resolved, profile=name)
-    except Exception as exc:
-        echo_error(f"Could not load profile {name} {resolved}: {exc}")
-        raise typer.Exit(ExitCode.CONFIG_ERROR) from exc
 
 
 def _entity(spec: Any, entity_type: str) -> Any:
@@ -62,7 +50,7 @@ VersionOption = Annotated[str | None, typer.Option("--version", "-v")]
 @app.command("schema")
 def schema(profile: ProfileOption = None, version: VersionOption = None) -> None:
     """Every entity type of a profile with its fields."""
-    spec = _spec(profile, version)
+    spec = load_profile_spec(profile, version)
     emit(
         {
             "profile": spec.name,
@@ -83,7 +71,7 @@ def schema(profile: ProfileOption = None, version: VersionOption = None) -> None
 @app.command("relationships")
 def relationships(profile: ProfileOption = None, version: VersionOption = None) -> None:
     """Which entity types nest under which, and by what field."""
-    spec = _spec(profile, version)
+    spec = load_profile_spec(profile, version)
     emit(
         {
             "profile": spec.name,
@@ -118,7 +106,7 @@ def fields(
     version: VersionOption = None,
 ) -> None:
     """Every field of one entity type."""
-    spec = _spec(profile, version)
+    spec = load_profile_spec(profile, version)
     emit([_field_summary(f) for f in _entity(spec, entity_type).fields])
 
 
@@ -129,7 +117,7 @@ def required(
     version: VersionOption = None,
 ) -> None:
     """The fields an entity of this type must carry."""
-    spec = _spec(profile, version)
+    spec = load_profile_spec(profile, version)
     emit([_field_summary(f) for f in _entity(spec, entity_type).fields if f.required])
 
 
@@ -141,7 +129,7 @@ def field(
     version: VersionOption = None,
 ) -> None:
     """One field's full specification."""
-    spec = _spec(profile, version)
+    spec = load_profile_spec(profile, version)
     entity = _entity(spec, entity_type)
     found = next((f for f in entity.fields if f.name == field_name), None)
     if found is None:
