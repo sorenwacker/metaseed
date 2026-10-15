@@ -10,16 +10,6 @@
 - **The hub's documentation** — [how the hosted version works](https://sorenwacker.github.io/metaseed-hub/)
 
 
-Metaseed creates, edits, and validates scientific metadata against a standard, from a YAML specification of that standard.
+Metaseed helps research teams create, validate and share standardized metadata. It supports domain standards such as MIAPPE, ISA and Darwin Core, and the submission formats of repositories such as ENA, PRIDE and MetaboLights. Each standard becomes a guided form with automated checks and suggestions from controlled vocabularies. Researchers can import public records, export files in the format a repository expects, and compare or combine standards without programming. Metaseed runs in the browser (locally or on the hosted hub), from the command line, from Python, or through an AI assistant.
 
-A metadata standard is written as a *profile*: a YAML file naming the entity types, their fields, the parent–child hierarchy, and the validation rules. Profiles ship for MIAPPE, ISA, Darwin Core, DiSSCo, ENA, PRIDE, MetaboLights, REMBI, Health-RI core and FAIRDOM-SEEK. From a profile, metaseed:
-
-- Generates Pydantic models for every entity type at runtime.
-- Validates a dataset: required fields, patterns, ranges, uniqueness, references between entities, conditional rules, and ontology terms looked up in the term sources the field names.
-- Serializes datasets to JSON, YAML and Excel, and reads them back.
-- Imports public records from ENA, PRIDE, MetaboLights and BrAPI servers.
-- Exports to ISA-Tab, ENA XML, PRIDE `submission.px` with SDRF, SEEK's ISA RDF, and a [DCAT](architecture/dcat.md) catalog record; pushes a dataset into a running FAIRDOM-SEEK instance or a [metaseed-hub](https://github.com/sorenwacker/metaseed-hub).
-
-Profiles are data, not code: the [spec builder](guides/spec-builder.md) authors a new one or adapts an existing one, and [spec merge](guides/spec-merge.md) compares and merges profiles.
-
-Metaseed is used from a command line, a web interface, a Python API, or an [MCP server](guides/mcp-setup.md) for an AI agent. All four call the same library functions.
+Metaseed writes every standard in one common form. That makes standards themselves something researchers can read, examine and compare side by side: which information two standards share, where they differ, and what combining them would require. Where no standard fits, a group can define its own or combine existing ones.

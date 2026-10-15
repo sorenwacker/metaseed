@@ -8,7 +8,7 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-Metaseed creates, edits, and validates scientific metadata against a standard, from a YAML specification of that standard.
+Metaseed helps research teams create, validate and share standardized metadata. It supports domain standards such as MIAPPE, ISA and Darwin Core, and the submission formats of repositories such as ENA, PRIDE and MetaboLights. Each standard becomes a guided form with automated checks and suggestions from controlled vocabularies. Researchers can import public records, export files in the format a repository expects, and compare or combine standards without programming. Metaseed runs in the browser (locally or on the hosted hub), from the command line, from Python, or through an AI assistant.
 
 [Documentation](https://sorenwacker.github.io/metaseed/) · [Introduction slides](https://sorenwacker.github.io/metaseed/slides/) · [Try it hosted](https://metaseed.ewi.tudelft.nl/hub/) · [Changelog](CHANGELOG.md)
 
