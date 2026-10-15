@@ -14,7 +14,7 @@ See docs/architecture/dcat.md and issue #28.
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeGuard
 from urllib.parse import quote
 
 try:
@@ -95,6 +95,16 @@ def _node_for(identifier: str | None) -> Node:
 def _uri_or_literal(value: str) -> Node:
     """Render a value as a URIRef when it is a usable IRI, else a literal."""
     return URIRef(value) if "://" in value and _iri_ok(value) else Literal(value)
+
+
+def _identifies(agent: DcatAgent | None) -> TypeGuard[DcatAgent]:
+    """Whether an agent carries anything that identifies it.
+
+    Any of name, URI or email is enough; requiring a name dropped a publisher
+    identified by URI or email from the graph. Dataset and catalog publishers
+    share this test so the two cannot drift.
+    """
+    return agent is not None and bool(agent.name or agent.uri or agent.email)
 
 
 def _add_agent(graph: Graph, agent: DcatAgent) -> Node:
@@ -199,11 +209,8 @@ def _add_dataset(graph: Graph, dataset: DcatDataset) -> Node:
     for relation in dataset.related:
         graph.add((node, DCTERMS.relation, _uri_or_literal(relation)))
     _add_provenance(graph, node, dataset)
-    publisher = dataset.publisher
-    if publisher and (publisher.name or publisher.uri or publisher.email):
-        # Any identifying attribute is enough. Requiring a name dropped a
-        # publisher identified by URI or email from the graph entirely.
-        graph.add((node, DCTERMS.publisher, _add_agent(graph, publisher)))
+    if _identifies(dataset.publisher):
+        graph.add((node, DCTERMS.publisher, _add_agent(graph, dataset.publisher)))
     if dataset.contact_point:
         graph.add((node, DCAT.contactPoint, _add_contact(graph, dataset.contact_point)))
     for dist in dataset.distributions:
@@ -220,7 +227,7 @@ def _add_catalog(graph: Graph, catalog: DcatCatalog) -> Node:
         graph.add((node, DCTERMS.description, Literal(catalog.description)))
     if catalog.homepage:
         graph.add((node, FOAF.homepage, _safe_uriref(catalog.homepage)))
-    if catalog.publisher and catalog.publisher.name:
+    if _identifies(catalog.publisher):
         graph.add((node, DCTERMS.publisher, _add_agent(graph, catalog.publisher)))
     for dataset in catalog.datasets:
         graph.add((node, DCAT.dataset, _add_dataset(graph, dataset)))
