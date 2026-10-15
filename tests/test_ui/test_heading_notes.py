@@ -177,6 +177,26 @@ class TestRulesFromTheProfile:
             heading_note("decimalLatitude", field, [rule])
         )
 
+    def test_a_rule_s_constraints_stay_on_the_field_it_constrains(self) -> None:
+        """A rule only mentioning a column (in ``condition``) lent that column
+        its pattern and range, which apply to the rule's own field."""
+        field = FieldSpec(name="status", type=FieldType.STRING)
+        rule = ValidationRuleSpec(
+            name="end-bound",
+            description="A finished study's end date is bounded",
+            field="end_year",
+            condition="status == 'done'",
+            pattern="^[0-9]{4}$",
+            maximum=2100,
+            unique_within="global",
+        )
+        lines = _lines(heading_note("status", field, [rule]))
+
+        assert "Rules: A finished study's end date is bounded" in lines
+        assert not [
+            line for line in lines if line.startswith(("Pattern:", "Range:", "Unique:"))
+        ], lines
+
 
 def test_the_exported_miappe_study_sheet_carries_constraints_and_rules() -> None:
     """End to end: the note is what the workbook carries, with the profile's
