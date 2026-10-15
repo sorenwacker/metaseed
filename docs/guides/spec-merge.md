@@ -286,6 +286,8 @@ for warning in result.warnings:
 
 The strategy chooses the definition of every field present in more than one profile, including a field absent from the base (added) or from some later profile (removed). A field present in one profile only is taken from that profile.
 
+An entity designates at most one `is_identifier` field and one `is_label` field. When the merged profiles mark different fields, the marker stays on the first marked field in the merged entity and is removed from the others, and a warning names the field that lost it.
+
 ### MergeResult
 
 Contains the merged profile and metadata:

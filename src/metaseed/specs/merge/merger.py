@@ -124,6 +124,9 @@ class SpecMerger:
                 )
             )
 
+            merged_fields = self._keep_one_marked_field(
+                entity_diff.entity_name, merged_fields, entity_warnings
+            )
             warnings.extend(entity_warnings)
             resolutions_applied.extend(entity_resolutions)
             unresolved.extend(entity_unresolved)
@@ -252,6 +255,46 @@ class SpecMerger:
                 if spec is not None:
                     return spec
         return None
+
+    def _keep_one_marked_field(
+        self: Self,
+        entity_name: str,
+        fields: list[FieldSpec],
+        warnings: list[MergeWarning],
+    ) -> list[FieldSpec]:
+        """Leave each singular marker on the first field that sets it.
+
+        Profiles that mark different fields ``is_identifier`` or ``is_label``
+        would give the merged entity two of a marker, which the entity rejects.
+
+        Args:
+            entity_name: Name of the entity.
+            fields: The merged fields, in merged order.
+            warnings: Receives one warning per field that loses a marker.
+
+        Returns:
+            The fields with every later duplicate marker removed.
+        """
+        kept: list[FieldSpec] = []
+        marked: dict[str, str] = {}
+        for field_spec in fields:
+            update: dict[str, None] = {}
+            for marker in ("is_identifier", "is_label"):
+                if not getattr(field_spec, marker):
+                    continue
+                if marker in marked:
+                    update[marker] = None
+                    warnings.append(
+                        MergeWarning(
+                            entity_name=entity_name,
+                            field_name=field_spec.name,
+                            message=(f"{marker} removed; {marked[marker]} keeps it"),
+                        )
+                    )
+                else:
+                    marked[marker] = field_spec.name
+            kept.append(field_spec.model_copy(update=update) if update else field_spec)
+        return kept
 
     def _merge_entity_fields(
         self: Self,
