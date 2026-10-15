@@ -280,3 +280,50 @@ def test_a_study_too_deep_for_the_server_s_filter_is_read_per_unit() -> None:
         "every unit's observation, none of the partial page"
     )
     assert sum("observationUnitDbId=" in a for a in asked) == 3
+
+
+def test_an_observation_with_a_numeric_id_listed_under_two_units_is_kept_once(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A server may send ``observationDbId`` as a number; the seen-set held
+    strings, so the membership test never matched and the observation was
+    passed on once per unit that listed it."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        path = request.url.path.removeprefix("/brapi/v2/")
+        if path == "studies/S1":
+            return httpx.Response(200, json={"result": _study("S1")})
+        if path == "observationunits":
+            units = [
+                {"observationUnitDbId": f"U{n}", "studyDbId": "S1"} for n in range(2)
+            ]
+            return httpx.Response(200, json=_page(units))
+        if path == "observations" and request.url.params.get("studyDbId"):
+            return httpx.Response(200, json=_page([]))
+        if path == "observations":
+            return httpx.Response(
+                200,
+                json=_page([{"observationDbId": 7, "observationVariableDbId": "V"}]),
+            )
+        if path == "germplasm":
+            return httpx.Response(200, json=_page([]))
+        return httpx.Response(404, json={})
+
+    passed: list[list[dict]] = []
+    from metaseed import brapi
+
+    real = brapi.build_dataset
+    monkeypatch.setattr(
+        brapi,
+        "build_dataset",
+        lambda s, u, o, g, **kw: passed.append(o) or real(s, u, o, g, **kw),
+    )
+
+    import_brapi(
+        f"{BASE}/studies/S1",
+        client=BrapiClient(
+            BASE, http_client=httpx.Client(transport=httpx.MockTransport(handler))
+        ),
+    )
+
+    assert [o["observationDbId"] for o in passed[0]] == [7]
