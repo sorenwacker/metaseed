@@ -69,7 +69,7 @@ returned under more than one unit is imported once, keyed by `observationDbId`.
 | --- | --- | --- |
 | `studies[].trialDbId` | Investigation | One Investigation per distinct trial; falls back to the `studyDbId` when a study has no trial. |
 | `studies[]` | Study | `studyDbId` → `unique_id`, `trialDbId` → `investigation_id`. |
-| `germplasm[]` | BiologicalMaterial | `germplasmDbId` → `unique_id`; `study_id` from the germplasm's `studyDbIds[0]`, else the first imported study. |
+| `germplasm[]` | BiologicalMaterial | `germplasmDbId` → `unique_id`; `study_id` from the germplasm's `studyDbIds[0]`; for germplasm fetched per study (a trial or study import) that the server returns without `studyDbIds`, the study it was fetched for; otherwise the first imported study. Germplasm shared by several studies is one BiologicalMaterial under the first. |
 | `observationunits[]` | ObservationUnit | Position and level fields flattened from `observationUnitPosition` and `observationLevel`. |
 | `observations[]` | ObservedVariable | Deduplicated by `observationVariableDbId` (see limitation below). |
 | `studies[].dataLinks[]` | DataFile | URL referenced via the `link` field. |
