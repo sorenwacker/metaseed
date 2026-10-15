@@ -141,3 +141,37 @@ class TestTagNamesAreAlwaysWellFormed:
             )
             is not None
         )
+
+
+def test_a_run_without_an_alias_does_not_take_unreferenced_files():
+    """Files were grouped by ``run_ref`` with ``''`` for none, and a Run was
+    matched by ``alias`` with ``''`` for none, so an unnamed Run with no files
+    of its own took every File that names no run, here an Analysis's."""
+    from metaseed import MetaseedClient
+
+    client = MetaseedClient("ena", "1.0")
+    study = client.create_entity(
+        "Study", {"alias": "S1", "title": "t"}, skip_validation=True
+    )
+    experiment = client.create_entity(
+        "Experiment", {"alias": "E1"}, parent_id=study.id, skip_validation=True
+    )
+    client.create_entity("Run", {}, parent_id=experiment.id, skip_validation=True)
+    analysis = client.create_entity(
+        "Analysis",
+        {"alias": "A1", "title": "a"},
+        parent_id=study.id,
+        skip_validation=True,
+    )
+    client.create_entity(
+        "File",
+        {"filename": "assembly.fasta.gz", "filetype": "fasta"},
+        parent_id=analysis.id,
+        skip_validation=True,
+    )
+
+    parsed = ET.fromstring(to_ena_xml(client)["run.xml"])
+
+    assert parsed.find("RUN/DATA_BLOCK") is None, (
+        "the analysis file was put under the run"
+    )
