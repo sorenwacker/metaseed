@@ -43,10 +43,35 @@ class TestReadingATermId:
             ("NCBITaxon_3702", "ncbitaxon"),
             ("PATO:0000001", "pato"),
             ("just a label", None),
+            # A label with an underscore is not an identifier.
+            ("leaf_area", None),
+            # A prefix with an underscore, written with underscores throughout.
+            ("CO_321_0000123", "co_321"),
+            # An OBO PURL names its ontology in the path.
+            ("http://purl.obolibrary.org/obo/PO_0009005", "po"),
+            # Any other IRI cannot be traced to an ontology prefix by reading it.
+            ("http://purl.org/ppeo/PPEO.owl#investigation", None),
+            ("urn:uuid:7f9b3c2e-0000-4000-8000-000000000000", None),
+            # Free text with a colon is not a CURIE.
+            ("Note: grown in a greenhouse", None),
         ],
     )
     def test_the_ontology_a_term_names(self, value: str, expected: str | None) -> None:
         assert ontology_of(value) == expected
+
+
+class TestAnIriOrLabelIsNotCalledWrong:
+    """ontology_of split an IRI at ``http`` and a label at its first ``_``, so a
+    field restricted to an ontology reported both as NOT_IN_ONTOLOGY."""
+
+    @pytest.mark.parametrize(
+        "value", ["http://purl.org/ppeo/PPEO.owl#investigation", "leaf_area"]
+    )
+    def test_not_checked_rather_than_wrong(self, value: str) -> None:
+        verdict = check_term(value, ["ppeo"], _Source(set()))
+
+        assert verdict.outcome is Outcome.NOT_CHECKED
+        assert not verdict.is_problem
 
 
 class TestCheckingAValue:

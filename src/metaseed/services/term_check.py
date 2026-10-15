@@ -19,6 +19,7 @@ check silently reported "fine" when it had learned nothing.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import StrEnum
@@ -185,17 +186,32 @@ class TermSource(Protocol):
         ...
 
 
+_CURIE = re.compile(r"^([A-Za-z][A-Za-z0-9_.-]*):(\S+)$")
+# Non-greedy, so the last ``_<digits>`` is the local id: CO_321_0000123 -> co_321.
+_UNDERSCORED_ID = re.compile(r"^([A-Za-z][A-Za-z0-9_]*?)_(\d+)$")
+_OBO_PURL = re.compile(r"^https?://purl\.obolibrary\.org/obo/([^/#?]+)$")
+
+
 def ontology_of(term_id: str) -> str | None:
     """The ontology prefix a term id names, lowercased, or ``None``.
 
-    ``TO:0000387`` names ``to``; ``NCBITaxon_3702`` names ``ncbitaxon``. A value
-    with neither separator is a plain label, and a label cannot be traced to an
-    ontology without asking, which is a different question from this one.
+    ``TO:0000387`` names ``to``; ``NCBITaxon_3702`` names ``ncbitaxon``; the
+    OBO PURL ``http://purl.obolibrary.org/obo/PO_0009005`` names ``po``. Any
+    other IRI, a label (``leaf_area``) and free text with a colon name no
+    prefix: tracing them to an ontology needs asking, which is a different
+    question from this one, and reading ``http`` or ``leaf`` as a prefix
+    reported valid values as coming from the wrong ontology.
     """
-    for separator in (":", "_"):
-        if separator in term_id:
-            prefix = term_id.split(separator, 1)[0].strip()
-            return prefix.lower() or None
+    value = term_id.strip()
+    purl = _OBO_PURL.match(value)
+    if purl:
+        value = purl.group(1)
+    elif "://" in value or value.lower().startswith("urn:"):
+        return None
+    for pattern in (_CURIE, _UNDERSCORED_ID):
+        match = pattern.match(value)
+        if match:
+            return match.group(1).lower()
     return None
 
 
