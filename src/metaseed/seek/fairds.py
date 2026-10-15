@@ -323,7 +323,12 @@ def to_fair_data_station_rdf(client: MetaseedClient) -> str:  # noqa: C901
             return None
         return f"{mapping[1]}_{_slug(node_identity(node))}"
 
-    def walk(node: Any, parent_path: str, parent_uri: URIRef | None = None) -> None:
+    def walk(
+        node: Any,
+        parent_path: str,
+        parent_uri: URIRef | None = None,
+        parent_class: str | None = None,
+    ) -> None:
         """Emit ``node`` and its descendants beneath ``parent_path``.
 
         An entity with no JERM class is not exported, but it does not take its
@@ -331,14 +336,31 @@ def to_fair_data_station_rdf(client: MetaseedClient) -> str:  # noqa: C901
         ancestor instead. Dropping a whole subtree because one level in the
         middle has no mapping loses content silently — ``unmapped_entities``
         warns about the unmapped entity, never about what hung beneath it.
+        ``parent_class`` is that nearest mapped ancestor's JERM class.
         """
         mapping = resolve(node.entity_type)
         seg = segment(node)
         if mapping is None or seg is None:
             for child in node.children:
-                walk(child, parent_path, parent_uri)
+                walk(child, parent_path, parent_uri, parent_class)
             return
         jerm_class = mapping[0]
+        if parent_class == "Study" and jerm_class == "Sample" and parent_uri:
+            # SEEK reads the ISA hierarchy positionally, so a Study's children
+            # are ObservationUnits whatever their rdf:type says. A Sample placed
+            # directly under a Study -- or under an unmapped entity that is --
+            # is therefore read as an empty ObservationUnit and never arrives.
+            # Profiles do not model that level (the observation unit is carried
+            # by the sample), so synthesise one per sample here.
+            identity = node_identity(node)
+            parent_path = f"{parent_path}/obs_{_slug(identity)}"
+            ou_uri = URIRef(_BASE + parent_path)
+            graph.add((ou_uri, RDF.type, PPEO.observation_unit))
+            graph.add((ou_uri, SCHEMA.identifier, Literal(identity)))
+            graph.add((ou_uri, SCHEMA.title, Literal(identity)))
+            graph.add((ou_uri, SCHEMA.name, Literal(identity)))
+            graph.add((parent_uri, JERM.hasPart, ou_uri))
+            parent_uri = ou_uri
         path = f"{parent_path}/{seg}" if parent_path else seg
         uri = URIRef(_BASE + path)
 
@@ -385,29 +407,7 @@ def to_fair_data_station_rdf(client: MetaseedClient) -> str:  # noqa: C901
                     used[key] = entity_fields[key]
 
         for child in node.children:
-            child_seg = segment(child)
-            if child_seg is None:
-                walk(child, path, uri)
-                continue
-            child_mapping = resolve(child.entity_type)
-            if jerm_class == "Study" and child_mapping and child_mapping[0] == "Sample":
-                # SEEK reads the ISA hierarchy positionally, so a Study's children
-                # are ObservationUnits whatever their rdf:type says. A Sample
-                # placed directly under a Study is therefore read as an empty
-                # ObservationUnit and never arrives. Profiles do not model that
-                # level -- the observation unit is carried by the sample -- so
-                # synthesise one per sample here, keeping specs free of it.
-                ou_path = f"{path}/obs_{_slug(node_identity(child))}"
-                ou_uri = URIRef(_BASE + ou_path)
-                identity = node_identity(child)
-                graph.add((ou_uri, RDF.type, PPEO.observation_unit))
-                graph.add((ou_uri, SCHEMA.identifier, Literal(identity)))
-                graph.add((ou_uri, SCHEMA.title, Literal(identity)))
-                graph.add((ou_uri, SCHEMA.name, Literal(identity)))
-                graph.add((uri, JERM.hasPart, ou_uri))
-                walk(child, ou_path, ou_uri)
-                continue
-            walk(child, path, uri)
+            walk(child, path, uri, jerm_class)
 
     for root in client.get_tree():
         walk(root, "")
