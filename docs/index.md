@@ -5,7 +5,7 @@
 # Metaseed
 
 - **Try it without installing** — [the hub](https://metaseed.ewi.tudelft.nl/hub/), a hosted metaseed you sign into
-- **Install it** — [`metaseed` on PyPI](https://pypi.org/project/metaseed/) · `pip install metaseed`
+- **Install it** — [`metaseed` on PyPI](https://pypi.org/project/metaseed/) · `uv tool install metaseed` for the command-line tool, `uv add metaseed` or `pip install metaseed` for library use
 - **Source** — [metaseed](https://github.com/sorenwacker/metaseed) · [metaseed-hub](https://github.com/sorenwacker/metaseed-hub)
 - **The hub's documentation** — [how the hosted version works](https://sorenwacker.github.io/metaseed-hub/)
 
