@@ -1,5 +1,25 @@
 # Changelog
 
+## v0.63.0 (261015)
+
+Fixes from the codebase review (docs/REVIEW.md).
+
+### Changed
+- **A term search no source could answer is reported as not searched** (#367). An OLS outage showed "No terms found", which reads as nothing matching. The term picker, the MCP search tools and `metaseed ontology search` now say the search did not run; the CLI exits with code 4 (`UNAVAILABLE`). SEEK provisioning falls back to terms without IRIs instead of failing.
+- **`metaseed ontology validate` checks the profile's ontology fields and fails on a wrong term** (#368). It chose fields by name, so it checked none of MIAPPE's six `ontology_term` fields, and it always exited 0.
+- **Spec merge compares and resolves a field only some profiles have** (#375). With three or more profiles, a structural disagreement among the profiles that have a field is a conflict whether or not the others have it; the strategy now also chooses added and removed fields, and a manual resolution overrides only the attribute it names on top of the strategy's result. `first_wins` merges are unchanged.
+- **A DCAT card is never named after the profile** (#382). A dataset with no identifier got `urn:metaseed:<profile>`, shared by every such dataset. `metaseed dcat show` passes the dataset name; a library call without one gets a blank node.
+- **A SEEK re-push reuses the study's data file** (#383), titled `Data files of study <id>`. A project pushed before this release gets one more data file on its next push.
+- The docs index and README open with one shared summary of what metaseed is for (#377, #378).
+
+### Fixed
+- **Saving a dataset** writes atomically, so a failed save no longer truncates the file and loses the previous version (#361). A failed auto-save is reported in the UI, the MCP tools and the DCAT page instead of passing as saved (#362). MCP `create_dataset` refuses an existing or invalid name instead of replacing the dataset with an empty one (#360). A JSON import keeps the file's creation time and catalog card (#363). A refused entity update leaves the entity reachable by its identifier (#364).
+- **Tree serialization records `parent_field`**, so a SEEK tree export reloads (#365); the memory repository reports it from every read (#366).
+- **Validation**: a reused validator no longer repeats earlier runs' "not checked" warnings (#369); a root record of a multi-word type such as ObservationUnit has its references checked (#370); `validate(cascade=False)` returns the unknown-entity error instead of raising (#371); MCP `validate_entity` validates a node with its children (#372); a snake-case `applies_to` in a when/require rule is checked at load (#373); an IRI or an underscored label is no longer read as an ontology prefix (#374).
+- **Merging profiles that mark different label or identifier fields** succeeds; the first marked field keeps the marker (#376).
+- **BrAPI import**: an observation with a numeric id is kept once (#379); germplasm without `studyDbIds` belongs to the study it was fetched for (#380).
+- **DCAT**: a catalog publisher identified only by URI or email is kept (#381).
+
 ## v0.62.0 (261014)
 
 ### Changed
