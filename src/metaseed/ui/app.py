@@ -160,7 +160,7 @@ def create_app(
 
     # Register all route modules
     register_core_routes(app, templates, get_state, base_url=base_url)
-    register_form_routes(app, templates, get_state)
+    register_form_routes(app, templates, get_state, base_url=base_url)
     register_entity_crud_routes(app, templates, get_state, base_url=base_url)
     register_table_routes(app, templates, get_state)
     register_nested_routes(app, templates, get_state)

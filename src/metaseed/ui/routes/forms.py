@@ -22,7 +22,7 @@ from ..helpers import (
     get_field_data,
     get_nested_items_for_edit,
 )
-from .core import get_profile_display_info
+from .core import get_profile_display_info, profile_select_context
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -38,6 +38,7 @@ def register_form_routes(  # noqa: C901
     app: FastAPI,
     templates: Jinja2Templates,
     get_state: Callable[[], AppState],
+    base_url: str = "",
 ) -> None:
     """Register entity form routes on the FastAPI app.
 
@@ -45,6 +46,7 @@ def register_form_routes(  # noqa: C901
         app: FastAPI application instance.
         templates: Jinja2Templates instance.
         get_state: Callable returning AppState.
+        base_url: The prefix the app is mounted under.
     """
 
     @app.get("/form/{entity_type}", response_class=HTMLResponse)
@@ -59,10 +61,12 @@ def register_form_routes(  # noqa: C901
             profiles_info = get_profile_display_info(profile_factory)
             root_entities = {p["root_entity"] for p in profiles_info}
             if entity_type in root_entities:
+                # The same picker /new-dataset shows, with its links under the
+                # mount and its import controls.
                 return templates.TemplateResponse(
                     request,
                     "partials/profile_select.html",
-                    {"profiles": profiles_info},
+                    profile_select_context(base_url),
                 )
 
         version = request.query_params.get("version")
