@@ -295,3 +295,77 @@ def test_model_rdf_carries_a_skeleton_instance_per_isa_level():
     assert (obs, SCHEMA.growth_facility, None) not in graph
     # and the property definitions are still there for the attribute metadata
     assert (SCHEMA.platform, SCHEMA.valueRequired, Literal(True)) in graph
+
+
+def _study_with_sample(*, via: str | None) -> MetaseedClient:
+    """Investigation > Study > [via >] Sample, ``via`` an entity SEEK cannot map."""
+    from metaseed.specs.schema import EntityDefSpec as E
+    from metaseed.specs.schema import FieldSpec as F
+    from metaseed.specs.schema import FieldType as T
+    from metaseed.specs.schema import ProfileSpec, SeekEntityConfig
+
+    def entity(role: str | None, child: str | None) -> E:
+        fields = [F(name="identifier", type=T.STRING, is_identifier=True)]
+        if child:
+            fields.append(F(name="children", type=T.LIST, items=child))
+        return E(
+            description="d",
+            seek=SeekEntityConfig(role=role) if role else None,
+            fields=fields,
+        )
+
+    entities = {
+        "Investigation": entity("Investigation", "Study"),
+        "Study": entity("Study", via or "Sample"),
+        "Sample": entity("Sample", None),
+    }
+    if via:
+        entities[via] = entity(None, "Sample")
+    spec = ProfileSpec(
+        spec_version="0.6",
+        name="test-fairds",
+        version="1.0",
+        display_name="t",
+        description="t",
+        root_entity="Investigation",
+        entities=entities,
+    )
+    client = MetaseedClient.from_spec(spec.model_dump(mode="json"))
+    inv = client.create_entity(
+        "Investigation", {"identifier": "I"}, skip_validation=True
+    )
+    parent = client.create_entity(
+        "Study", {"identifier": "S"}, parent_id=inv.id, skip_validation=True
+    )
+    if via:
+        parent = client.create_entity(
+            via, {"identifier": "P"}, parent_id=parent.id, skip_validation=True
+        )
+    client.create_entity(
+        "Sample", {"identifier": "X1"}, parent_id=parent.id, skip_validation=True
+    )
+    return client
+
+
+def _study_parts(client: MetaseedClient) -> list[set]:
+    """The rdf:types of each part of the Study."""
+    graph = Graph()
+    graph.parse(data=to_fair_data_station_rdf(client), format="turtle")
+    (study,) = graph.subjects(RDF.type, JERM.Study)
+    return [
+        set(graph.objects(part, RDF.type))
+        for part in graph.objects(study, JERM.hasPart)
+    ]
+
+
+PPEO = Namespace("http://purl.org/ppeo/PPEO.owl#")
+
+
+def test_a_sample_under_a_study_is_wrapped_in_an_observation_unit():
+    assert _study_parts(_study_with_sample(via=None)) == [{PPEO.observation_unit}]
+
+
+def test_a_sample_under_an_unmapped_study_child_is_wrapped_too():
+    """The unmapped level was passed through, but the Sample then arrived
+    directly under the Study, where SEEK reads it as an empty ObservationUnit."""
+    assert _study_parts(_study_with_sample(via="Plot")) == [{PPEO.observation_unit}]
