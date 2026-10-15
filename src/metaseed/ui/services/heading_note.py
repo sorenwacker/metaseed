@@ -68,6 +68,10 @@ def heading_note(column: str, field: Any, rules: Sequence[Any]) -> str:
         return ""
 
     naming = [rule for rule in rules if column in _fields_named_by(rule)]
+    # A rule's pattern, bounds, enum, reference and uniqueness apply to its own
+    # field; a column it only mentions (in a condition, say) is listed under
+    # Rules but takes none of them.
+    constraining = [rule for rule in naming if rule.field == column]
     constraints = getattr(field, "constraints", None)
 
     def declared(name: str) -> Any:
@@ -76,7 +80,11 @@ def heading_note(column: str, field: Any, rules: Sequence[Any]) -> str:
         if own is not None:
             return own
         return next(
-            (getattr(r, name) for r in naming if getattr(r, name, None) is not None),
+            (
+                getattr(r, name)
+                for r in constraining
+                if getattr(r, name, None) is not None
+            ),
             None,
         )
 
@@ -89,7 +97,7 @@ def heading_note(column: str, field: Any, rules: Sequence[Any]) -> str:
 
     patterns = _unique(
         [getattr(constraints, "pattern", None) if constraints else None]
-        + [rule.pattern for rule in naming]
+        + [rule.pattern for rule in constraining]
     )
     lines += [f"Pattern: {pattern}" for pattern in patterns]
 
@@ -115,12 +123,12 @@ def heading_note(column: str, field: Any, rules: Sequence[Any]) -> str:
         lines.append(f"Terms under: {within}")
 
     reference = getattr(field, "reference", None) or next(
-        (rule.reference for rule in naming if rule.reference), None
+        (rule.reference for rule in constraining if rule.reference), None
     )
     if reference:
         lines.append(f"Must match: {reference}")
     unique_within = getattr(field, "unique_within", None) or next(
-        (rule.unique_within for rule in naming if rule.unique_within), None
+        (rule.unique_within for rule in constraining if rule.unique_within), None
     )
     if unique_within:
         lines.append(f"Unique: {_UNIQUE_WORDS.get(unique_within, unique_within)}")
