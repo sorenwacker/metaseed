@@ -95,6 +95,8 @@ that a passing suite failed to catch (see issue #139 and its follow-ups).
 - `make test` and CI must exclude the same markers. CI runs
   `-m "not selenium and not network"`; keep the Makefile in step so the local
   default is neither slower nor less hermetic than CI.
+  `tests/test_local_test_markers_match_ci.py` fails when the Makefile, the
+  pre-push hook or the release gate spells a different expression.
 - `network`-marked tests hit live third-party APIs (EBI/MetaboLights) and are
   excluded from CI, so they give no regression protection until recorded as
   fixtures. Do not rely on them as the only cover for an adapter.

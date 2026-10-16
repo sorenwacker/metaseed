@@ -26,12 +26,12 @@ setup:
 	uv sync --extra dev --extra docs
 	uv run pre-commit install
 
-# The marker set must match CI (.github/workflows/ci.yml): network tests hit
-# live third-party APIs and are not part of the local default either — one of
-# them (test_example_accessions.py) also poisons the model caches for later
-# tests when it runs, which "-m not ui" let happen.
+# The marker expression must match CI (.github/workflows/ci.yml), and
+# tests/test_local_test_markers_match_ci.py fails when it does not. Network tests
+# hit live third-party APIs; one of them (test_example_accessions.py) also
+# poisons the model caches for later tests when it runs.
 test:
-	uv run pytest -m "not ui and not selenium and not network"
+	uv run pytest -m "not selenium and not network"
 
 test-ui:
 	uv run pytest -m ui

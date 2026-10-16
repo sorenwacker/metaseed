@@ -31,7 +31,7 @@ CORE = (
     "tests/test_profiles.py",
     "tests/test_examples.py",
 )
-MARKERS = "not network and not selenium and not ui"
+MARKERS = "not selenium and not network"
 FULL_SUITE = "full suite"
 CORE_SUBSET = "core subset"
 
