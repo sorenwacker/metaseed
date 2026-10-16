@@ -101,7 +101,7 @@ def push_dataset(
     Without ``--replace`` a hub dataset of the same name that differs is left
     alone and the difference is printed.
     """
-    from metaseed.hub.sync import find_remote_by_name, plan_dataset_push, provenance
+    from metaseed.hub.sync import find_remote_by_name, plan_dataset_push
     from metaseed.hub.sync import push_dataset as push
 
     hub = client()
@@ -145,9 +145,6 @@ def push_dataset(
         "identical": f"'{name}' on {hub.url} is identical; nothing was sent.",
     }
     echo_success(messages[outcome.kind])
-    if outcome.provenance is None:
-        return
-    _ = provenance  # the stamp came from the push; named here for the reader
 
 
 @app.command("pull-dataset")
