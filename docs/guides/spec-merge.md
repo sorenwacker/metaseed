@@ -87,6 +87,8 @@ Clicking an entity opens a panel with everything the profile says about it: the 
 
 The panel lists the validation rules that apply to the entity — those whose `applies_to` names it or is `all` — with the rule's name, type, description and its parameters (field, condition, pattern, bounds, reference, message). A rule that references another entity (`reference: Study.identifier`) is also drawn on the graph, as a dashed amber edge from the entity it applies to toward the entity it references, labelled with the rule's name; hovering it shows the field and the target. The sidebar's *Validation rules* section lists every rule of the base profile, so cross-entity rules are visible without opening each entity, and its *Profile* section shows what the builder's profile form holds: display name, description, ontology, and root entity.
 
+When the compared profiles define a rule differently, or only some of them define it, the rule is shown once per profile, side by side, each labelled with its profile; a profile that lacks the rule shows *not defined*. This applies in the entity panel and in the sidebar, where a rule missing from the base profile is listed too. Two profiles whose `id_format` rules set the patterns `^A` and `^B` therefore show both patterns, not only the first.
+
 The panel is one script, `static/js/explore-panel.js`, that metaseed serves; metaseed-hub renders the same panel from it rather than keeping a copy.
 
 ### Export Reports
@@ -96,6 +98,8 @@ After comparing, export the results:
 - **MD**: Markdown report with tables
 - **CSV**: Spreadsheet-compatible format
 - **HTML**: Styled HTML report
+
+Each report has a validation rule section when the profiles' rules differ: one row per differing rule, with each profile's rule type and parameters, and an empty cell or `-` where a profile does not define it.
 
 ## Python API
 

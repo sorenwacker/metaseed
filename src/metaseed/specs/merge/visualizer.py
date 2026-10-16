@@ -123,6 +123,12 @@ class DiffVisualizer:
                 pid: [_rule_details(rule) for rule in spec.validation_rules]
                 for pid, spec in comparison.profile_specs.items()
             },
+            # Each rule the profiles define differently, or not all define,
+            # with every profile's version, so none is hidden behind another.
+            "rule_diffs": [
+                {"name": name, "variants": _rule_variants(comparison, name)}
+                for name in comparison.validation_rule_diffs
+            ],
             # What the profile says about itself -- the builder's profile form.
             "profiles_meta": {
                 pid: {
@@ -551,8 +557,33 @@ def _rules_for(comparison: ComparisonResult, entity_name: str) -> list[dict[str,
             targets = [applies] if isinstance(applies, str) else list(applies or [])
             if ("all" in targets or entity_name in targets) and rule.name not in seen:
                 seen.add(rule.name)
-                found.append(_rule_details(rule))
+                details = _rule_details(rule)
+                if rule.name in comparison.validation_rule_diffs:
+                    details["variants"] = _rule_variants(comparison, rule.name)
+                found.append(details)
     return found
+
+
+def _rule_variants(
+    comparison: ComparisonResult, rule_name: str
+) -> list[dict[str, Any]]:
+    """Every profile's version of a differing rule, ``None`` where it has none.
+
+    Args:
+        comparison: The comparison holding ``validation_rule_diffs``.
+        rule_name: A rule named in ``validation_rule_diffs``.
+
+    Returns:
+        ``{"profile", "rule"}`` per compared profile, in the order selected.
+    """
+    by_profile = comparison.validation_rule_diffs[rule_name]
+    variants = []
+    for pid in comparison.profiles:
+        rule = by_profile.get(pid)
+        variants.append(
+            {"profile": pid, "rule": None if rule is None else _rule_details(rule)}
+        )
+    return variants
 
 
 def _seek_for(comparison: ComparisonResult, entity_name: str) -> dict[str, Any]:

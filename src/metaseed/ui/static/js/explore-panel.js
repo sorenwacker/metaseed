@@ -5,7 +5,9 @@
 //
 // Contract: the graph payload from /explore/graph carries, per node,
 // data.{name, description, ontology_term, seek, fields[], rules[]} and, at the
-// top level, rules{profile: [...]} and profiles_meta{profile: {...}}. The page
+// top level, rules{profile: [...]}, rule_diffs[{name, variants}] and
+// profiles_meta{profile: {...}}. A rule entry with `variants` holds every
+// profile's version ({profile, rule|null}). The page
 // provides #editor-panel, #editor-title, #editor-content, and optionally
 // #rules-section/#rules-list/#rules-count and #profile-section/#profile-meta.
 
@@ -42,16 +44,46 @@ function renderRule(rule) {
     </div>`;
 }
 
-// The sidebar's list of every rule of the base profile.
-function renderRules(rulesByProfile, baseProfile) {
+// A rule as listed: one card, or -- when the compared profiles define it
+// differently or not all define it (`variants`) -- one card per profile, side
+// by side, so no profile's version is hidden behind the first one found.
+function renderRuleEntry(entry) {
+    if (!entry.variants) return renderRule(entry);
+    const cells = entry.variants.map(variant => `<div class="explore-rule-variant">
+        <span class="profile-tag sm">${escapeHtml(variant.profile)}</span>
+        ${variant.rule ? renderRule(variant.rule) : `<div class="explore-rule-absent"><em>not defined</em></div>`}
+    </div>`).join('');
+    return `<div class="explore-rule-diff" data-testid="rule-diff-${escapeHtml(entry.name)}">
+        <div class="explore-rule-header"><strong>${escapeHtml(entry.name)}</strong> <span class="explore-rule-param">differs between profiles</span></div>
+        <div class="explore-rule-variants">${cells}</div>
+    </div>`;
+}
+
+// The sidebar's entries: the base profile's rules in its order, each that
+// differs carrying every profile's version, then the differing rules the
+// base profile does not define at all.
+function sidebarRuleEntries(rulesByProfile, baseProfile, ruleDiffs) {
+    const rules = (baseProfile && rulesByProfile[baseProfile]) || Object.values(rulesByProfile || {})[0] || [];
+    const diffs = new Map((ruleDiffs || []).map(d => [d.name, d]));
+    const entries = rules.map(rule => diffs.has(rule.name) ? {...rule, variants: diffs.get(rule.name).variants} : rule);
+    const listed = new Set(rules.map(rule => rule.name));
+    for (const diff of diffs.values()) {
+        if (!listed.has(diff.name)) entries.push(diff);
+    }
+    return entries;
+}
+
+// The sidebar's list of every rule of the base profile, and of every rule the
+// compared profiles disagree on.
+function renderRules(rulesByProfile, baseProfile, ruleDiffs) {
     const section = document.getElementById('rules-section');
     const list = document.getElementById('rules-list');
     const count = document.getElementById('rules-count');
     if (!section || !list) return;
-    const rules = (baseProfile && rulesByProfile[baseProfile]) || Object.values(rulesByProfile || {})[0] || [];
-    if (!rules.length) { section.style.display = 'none'; list.innerHTML = ''; return; }
-    if (count) count.textContent = `(${rules.length})`;
-    list.innerHTML = rules.map(renderRule).join('');
+    const entries = sidebarRuleEntries(rulesByProfile, baseProfile, ruleDiffs);
+    if (!entries.length) { section.style.display = 'none'; list.innerHTML = ''; return; }
+    if (count) count.textContent = `(${entries.length})`;
+    list.innerHTML = entries.map(renderRuleEntry).join('');
     section.style.display = '';
 }
 
@@ -190,7 +222,7 @@ function renderEntityPanel(node) {
     }
     const rules = node.data.rules || [];
     if (rules.length) {
-        html += `<div class="form-section" data-testid="entity-rules"><label class="form-label">Validation rules (${rules.length})</label>${rules.map(renderRule).join('')}</div>`;
+        html += `<div class="form-section" data-testid="entity-rules"><label class="form-label">Validation rules (${rules.length})</label>${rules.map(renderRuleEntry).join('')}</div>`;
     }
     document.getElementById('editor-content').innerHTML = html;
     document.getElementById('editor-panel').classList.add('open');
