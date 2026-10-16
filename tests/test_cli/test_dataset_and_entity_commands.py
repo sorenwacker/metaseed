@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
 from typer.testing import CliRunner
 
 from metaseed.cli import app
@@ -396,6 +397,39 @@ class TestEntityCommands:
             runner.invoke(app, ["entity", "tree", "test-cli-batch"]).stdout
         )
         assert tree["tree"][0]["children"][0]["entity_type"] == "Study"
+
+    @pytest.mark.parametrize("parent", [1, 5, -1, "3", True])
+    def test_batch_create_refuses_a_parent_index_not_before_the_item(
+        self, tmp_path: Path, parent: object
+    ) -> None:
+        """An index at or after the item, out of range, negative or boolean
+        raised IndexError or picked an entity counted from the end."""
+        _make("test-cli-batch")
+        batch = tmp_path / "batch.json"
+        batch.write_text(
+            json.dumps(
+                [
+                    {"_type": "Investigation", "identifier": "I1", "title": "An inv"},
+                    {"_type": "Study", "identifier": "S1", "_parent": parent},
+                ]
+            )
+        )
+        result = runner.invoke(
+            app, ["entity", "batch-create", "test-cli-batch", str(batch)]
+        )
+        assert result.exit_code == 2, result.output
+        assert "_parent" in result.output
+        assert _repo().load("test-cli-batch").entities == []
+
+    def test_batch_create_reports_unreadable_yaml(self, tmp_path: Path) -> None:
+        _make("test-cli-batch")
+        batch = tmp_path / "batch.yaml"
+        batch.write_text("- [unclosed\n")
+        result = runner.invoke(
+            app, ["entity", "batch-create", "test-cli-batch", str(batch)]
+        )
+        assert result.exit_code == 2
+        assert isinstance(result.exception, SystemExit)
 
     def test_bulk_update_touches_only_the_named_type(self) -> None:
         _make("test-cli-bulk")

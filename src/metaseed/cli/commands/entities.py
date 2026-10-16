@@ -177,14 +177,19 @@ def batch_create(
 
     Each item names its ``_type`` and its fields; ``_parent`` names an earlier
     item's index or an existing entity id, so a parent and its children can
-    land together.
+    land together. An index that names no earlier item is an input error, and
+    nothing is saved.
     """
     import yaml
 
     if not source.exists():
         echo_error(f"No such file: {source}")
         raise typer.Exit(ExitCode.INPUT_ERROR)
-    payload: Any = yaml.safe_load(source.read_text())
+    try:
+        payload: Any = yaml.safe_load(source.read_text())
+    except yaml.YAMLError as exc:
+        echo_error(f"{source} is not readable as JSON or YAML: {exc}")
+        raise typer.Exit(ExitCode.INPUT_ERROR) from exc
     items = payload.get("entities") if isinstance(payload, dict) else payload
     if not isinstance(items, list):
         echo_error(f"{source} holds no list of entities.")
@@ -196,12 +201,7 @@ def batch_create(
             echo_error(f"Item {position} names no _type.")
             raise typer.Exit(ExitCode.INPUT_ERROR)
         fields = {k: v for k, v in item.items() if not k.startswith("_")}
-        raw_parent = item.get("_parent")
-        parent_id: str | None = None
-        if isinstance(raw_parent, int):
-            parent_id = created[raw_parent]
-        elif isinstance(raw_parent, str):
-            parent_id = created[int(raw_parent)] if raw_parent.isdigit() else raw_parent
+        parent_id = _parent_id(item.get("_parent"), position, created)
         try:
             entity = client.create_entity(
                 str(item["_type"]), fields, parent_id=parent_id
@@ -212,3 +212,27 @@ def batch_create(
         created.append(entity.id)
     save_dataset(dataset, client, data)
     typer.echo(json.dumps({"created": created}, indent=2))
+
+
+def _parent_id(raw_parent: Any, position: int, created: list[str]) -> str | None:
+    """The id ``_parent`` names: an earlier item's index, or an existing id.
+
+    An index must name an item before this one; anything else (this item, a
+    later or missing one, a negative or boolean value) exits with an input
+    error instead of raising or counting from the end.
+    """
+    if raw_parent is None:
+        return None
+    if isinstance(raw_parent, str) and not raw_parent.isdigit():
+        return raw_parent
+    if isinstance(raw_parent, bool) or not isinstance(raw_parent, int | str):
+        index = -1
+    else:
+        index = int(raw_parent)
+    if not 0 <= index < len(created):
+        echo_error(
+            f"Item {position}: _parent {raw_parent!r} is not the index of an "
+            f"earlier item (0 to {position - 1})."
+        )
+        raise typer.Exit(ExitCode.INPUT_ERROR)
+    return created[index]
