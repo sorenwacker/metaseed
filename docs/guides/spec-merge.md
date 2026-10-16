@@ -93,7 +93,7 @@ The panel is one script, `static/js/explore-panel.js`, that metaseed serves; met
 
 After comparing, export the results:
 
-- **MD**: Markdown report with tables
+- **MD**: Markdown report with tables: statistics, entities, conflicts, and every added, removed or modified field
 - **CSV**: Spreadsheet-compatible format
 - **HTML**: Styled HTML report
 
