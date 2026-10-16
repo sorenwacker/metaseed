@@ -9,6 +9,8 @@ import io
 from abc import ABC, abstractmethod
 from typing import Any, Self
 
+from metaseed.specs.schema import ValidationRuleSpec
+
 from .models import ComparisonResult, DiffType
 
 
@@ -31,6 +33,36 @@ class ReportGenerator(ABC):
             Report content as string.
         """
 
+    def _rule_rows(self: Self) -> list[tuple[str, list[str | None]]]:
+        """Each differing rule with every profile's version, ``None`` if absent.
+
+        Returns:
+            ``(rule name, versions)``, versions ordered as the compared profiles.
+        """
+        return [
+            (
+                name,
+                [
+                    _rule_summary(by_profile.get(pid))
+                    for pid in self.comparison.profiles
+                ],
+            )
+            for name, by_profile in self.comparison.validation_rule_diffs.items()
+        ]
+
+
+def _rule_summary(rule: ValidationRuleSpec | None) -> str | None:
+    """A rule's type and the parameters it sets, as ``key=value; ...``."""
+    if rule is None:
+        return None
+    parts = []
+    for key, value in rule.model_dump(exclude_none=True).items():
+        if key == "name" or value in ("", []):
+            continue
+        shown = ", ".join(map(str, value)) if isinstance(value, list) else value
+        parts.append(f"{key}={shown}")
+    return "; ".join(parts)
+
 
 class CSVReportGenerator(ReportGenerator):
     """Generates CSV reports for profile comparisons."""
@@ -51,6 +83,14 @@ class CSVReportGenerator(ReportGenerator):
         # Field details
         output.write("# Field Comparison\n")
         self._write_field_table(output)
+
+        rows = self._rule_rows()
+        if rows:
+            output.write("\n# Validation Rule Comparison\n")
+            writer = csv.writer(output)
+            writer.writerow(["Rule", *self.comparison.profiles])
+            for name, versions in rows:
+                writer.writerow([name, *(v or "" for v in versions)])
 
         return output.getvalue()
 
@@ -152,6 +192,20 @@ class MarkdownReportGenerator(ReportGenerator):
         lines.append("## Changed Fields")
         lines.append("")
         self._add_changed_fields_section(lines)
+
+        rows = self._rule_rows()
+        if rows:
+            lines.append("")
+            lines.append("## Validation Rule Differences")
+            lines.append("")
+            header = ["Rule", *self.comparison.profiles]
+            lines.append("| " + " | ".join(header) + " |")
+            lines.append("| " + " | ".join(["---"] * len(header)) + " |")
+            for name, versions in rows:
+                cells = [name, *(v if v is not None else "-" for v in versions)]
+                lines.append(
+                    "| " + " | ".join(c.replace("|", "\\|") for c in cells) + " |"
+                )
 
         return "\n".join(lines)
 
@@ -329,6 +383,23 @@ class HTMLReportGenerator(ReportGenerator):
         # Field details
         lines.append("<h2>Field Details</h2>")
         self._add_html_field_details(lines)
+
+        rows = self._rule_rows()
+        if rows:
+            lines.append("<h2>Validation Rule Differences</h2>")
+            lines.append("<table>")
+            lines.append(
+                "<tr><th>Rule</th>"
+                + "".join(f"<th>{_safe(p)}</th>" for p in self.comparison.profiles)
+                + "</tr>"
+            )
+            for name, versions in rows:
+                lines.append(
+                    f"<tr><td>{_safe(name)}</td>"
+                    + "".join(f"<td>{_safe(v or '-')}</td>" for v in versions)
+                    + "</tr>"
+                )
+            lines.append("</table>")
 
         lines.append("</body>")
         lines.append("</html>")

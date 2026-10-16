@@ -6145,6 +6145,10 @@ details.sidebar-section summary:hover {
 .explore-rule-param { font-family: monospace; overflow-wrap: anywhere; }
 .explore-rule-message { font-style: italic; color: var(--clr-ink-muted, #666); }
 .rule-message { font-style: italic; }
+.explore-rule-diff { padding: var(--space-xs) 0 var(--space-sm); border-bottom: 1px solid var(--clr-parchment); }
+.explore-rule-variants { display: grid; grid-template-columns: repeat(auto-fit, minmax(10em, 1fr)); gap: var(--space-sm); }
+.explore-rule-variant .explore-rule { border-bottom: none; padding-bottom: 0; }
+.explore-rule-absent { color: var(--clr-ink-muted, #666); padding: var(--space-xs) 0; }
 
 /* Explorer: the profile block reads as a heading, a subtitle and a paragraph */
 #profile-meta { display: block; }

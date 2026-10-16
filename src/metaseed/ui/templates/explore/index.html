@@ -301,7 +301,7 @@
 
                 comparisonData = data;
                 originalGraphData = data.graph;
-                renderRules(data.graph.rules || {}, profiles[0]);
+                renderRules(data.graph.rules || {}, profiles[0], data.graph.rule_diffs || []);
                 renderProfileMeta(data.graph.profiles_meta || {}, profiles[0]);
                 hiddenEntities.clear();
                 initERD(data.graph);

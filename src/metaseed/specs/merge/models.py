@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any
 
-from metaseed.specs.schema import FieldSpec, ProfileSpec
+from metaseed.specs.schema import FieldSpec, ProfileSpec, ValidationRuleSpec
 
 
 class DiffType(StrEnum):
@@ -134,7 +134,9 @@ class ComparisonResult:
         profiles: List of profile identifiers compared.
         profile_specs: Mapping of profile identifier to ProfileSpec.
         entity_diffs: List of entity differences.
-        validation_rule_diffs: Differences in validation rules.
+        validation_rule_diffs: Each rule the profiles define differently or
+            not all define, mapped to every profile's version (``None`` where
+            a profile lacks it).
         metadata_diffs: Differences in profile metadata.
         statistics: Summary statistics for the comparison.
     """
@@ -142,7 +144,9 @@ class ComparisonResult:
     profiles: list[str] = field(default_factory=list)
     profile_specs: dict[str, ProfileSpec] = field(default_factory=dict)
     entity_diffs: list[EntityDiff] = field(default_factory=list)
-    validation_rule_diffs: dict[str, Any] = field(default_factory=dict)
+    validation_rule_diffs: dict[str, dict[str, ValidationRuleSpec | None]] = field(
+        default_factory=dict
+    )
     metadata_diffs: dict[str, dict[str, Any]] = field(default_factory=dict)
     statistics: ComparisonStatistics = field(default_factory=ComparisonStatistics)
 
