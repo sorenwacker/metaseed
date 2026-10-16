@@ -21,6 +21,26 @@ from metaseed.repositories.filesystem_dataset import FilesystemDatasetRepository
 
 if TYPE_CHECKING:
     from metaseed.api.client import MetaseedClient
+    from metaseed.specs.schema import ProfileSpec
+
+
+def load_profile_spec(profile: str | None, version: str | None) -> ProfileSpec:
+    """A profile's spec, or exit with a config error naming it.
+
+    ``None`` takes the default profile and its latest version, as
+    :func:`metaseed.cli.app.resolve_profile_version` resolves them. Every
+    command module loads a profile through here, so a profile that cannot be
+    loaded is one message and exit code 3 everywhere, never a traceback.
+    """
+    from metaseed.cli.app import resolve_profile_version
+    from metaseed.specs.loader import SpecLoader
+
+    name, resolved = resolve_profile_version(profile, version)
+    try:
+        return SpecLoader().load_profile(version=resolved, profile=name)
+    except Exception as exc:
+        echo_error(f"Could not load profile {name} {resolved}: {exc}")
+        raise typer.Exit(ExitCode.CONFIG_ERROR) from exc
 
 
 def repository() -> FilesystemDatasetRepository:
