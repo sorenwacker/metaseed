@@ -252,9 +252,105 @@ const ERD = (function() {
             if (_network) {
                 _network.fit({ animation: { duration: 300 } });
             }
+        },
+
+        /**
+         * The graph as a PNG data URL: every shown node, whatever is in view,
+         * on white. The canvas is resized to the frame `pngExportFrame`
+         * decides and copied once vis has drawn it there (`afterDrawing`; a
+         * redraw is asynchronous, so copying straight away copies a blank
+         * canvas), then the size and view are put back.
+         *
+         * @returns {Promise<string|null>} The data URL, or null with no graph.
+         */
+        toPngDataUrl() {
+            if (!_network) return Promise.resolve(null);
+            const ids = _nodes.getIds().filter(id => !_nodes.get(id).hidden);
+            if (!ids.length) return Promise.resolve(null);
+            const frame = pngExportFrame(ids.map(id => _network.getBoundingBox(id)), window.devicePixelRatio || 1);
+            const container = _network.body.container;
+            const saved = {
+                width: container.style.width,
+                height: container.style.height,
+                position: _network.getViewPosition(),
+                scale: _network.getScale()
+            };
+            const restore = () => {
+                container.style.width = saved.width;
+                container.style.height = saved.height;
+                _network.setSize('100%', '100%');
+                _network.moveTo({ position: saved.position, scale: saved.scale });
+            };
+            return new Promise((resolve, reject) => {
+                _network.once('afterDrawing', drawn => {
+                    try {
+                        const source = drawn.canvas;
+                        const out = document.createElement('canvas');
+                        out.width = source.width;
+                        out.height = source.height;
+                        const context = out.getContext('2d');
+                        context.fillStyle = '#ffffff';
+                        context.fillRect(0, 0, out.width, out.height);
+                        context.drawImage(source, 0, 0);
+                        resolve(out.toDataURL('image/png'));
+                    } catch (error) {
+                        reject(error);
+                    } finally {
+                        restore();
+                    }
+                });
+                container.style.width = `${frame.width}px`;
+                container.style.height = `${frame.height}px`;
+                _network.setSize(`${frame.width}px`, `${frame.height}px`);
+                _network.moveTo({ position: frame.center, scale: frame.scale });
+                _network.redraw();
+            });
+        },
+
+        /**
+         * Download the graph as `<name>.png`.
+         */
+        async exportPng(name) {
+            const url = await this.toPngDataUrl();
+            if (!url) return;
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${name || 'graph'}.png`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
         }
     };
 })();
+
+/**
+ * The frame a PNG export draws: the nodes' extent plus a margin, centred, at
+ * two image pixels per graph unit and at most 8192 on a side.
+ *
+ * The browser multiplies the canvas by its pixel ratio, so the view scale is
+ * divided by it and the image is the same size on every screen. Width and
+ * height are CSS pixels, the unit the container is sized in.
+ */
+function pngExportFrame(boxes, devicePixelRatio) {
+    const MARGIN = 40;
+    const PIXELS_PER_UNIT = 2;
+    const MAX_PIXELS = 8192;
+    const left = Math.min(...boxes.map(b => b.left));
+    const top = Math.min(...boxes.map(b => b.top));
+    const right = Math.max(...boxes.map(b => b.right));
+    const bottom = Math.max(...boxes.map(b => b.bottom));
+    const width = right - left + 2 * MARGIN;
+    const height = bottom - top + 2 * MARGIN;
+    let scale = PIXELS_PER_UNIT / devicePixelRatio;
+    const largest = Math.max(width, height) * scale * devicePixelRatio;
+    if (largest > MAX_PIXELS) scale *= MAX_PIXELS / largest;
+    return {
+        center: { x: (left + right) / 2, y: (top + bottom) / 2 },
+        width: Math.floor(width * scale),
+        height: Math.floor(height * scale),
+        scale
+    };
+}
 
 // Convenience functions for HTML onclick handlers
 function autoLayout() { ERD.autoLayout(); }

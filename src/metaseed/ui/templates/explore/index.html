@@ -73,11 +73,12 @@
                         </div>
 
                         <div id="export-section" class="form-section" style="display: none; margin-top: 16px;">
-                            <label class="form-label">Export Report</label>
+                            <label class="form-label">Export</label>
                             <div style="display: flex; gap: 6px; margin-top: 6px;">
                                 <button class="btn btn-secondary btn-sm" onclick="exportReport('markdown')">MD</button>
                                 <button class="btn btn-secondary btn-sm" onclick="exportReport('csv')">CSV</button>
                                 <button class="btn btn-secondary btn-sm" onclick="exportReport('html')">HTML</button>
+                                <button class="btn btn-secondary btn-sm" onclick="ERD.exportPng(currentProfiles.join('_vs_').replaceAll('/', '-'))" data-testid="export-png">PNG</button>
                             </div>
                         </div>
 
