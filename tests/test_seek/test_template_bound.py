@@ -365,7 +365,10 @@ class TestAnInputReferenceChoosesThePredecessor:
             "Investigation", {"identifier": "I1"}, skip_validation=True
         )
         study = c.create_entity(
-            "Study", {"study_id": "S1"}, parent_id=inv.id, skip_validation=True
+            "Study",
+            {"study_id": "S1", "title": "Study S1"},
+            parent_id=inv.id,
+            skip_validation=True,
         )
         c.create_entity(
             "Source", {"Source Name": "SRC-1"}, parent_id=study.id, skip_validation=True

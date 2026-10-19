@@ -421,10 +421,16 @@ class TestSamplePlacement:
             "Investigation", {"identifier": "I"}, skip_validation=True
         )
         study = client.create_entity(
-            "Study", {"identifier": "S"}, parent_id=inv.id, skip_validation=True
+            "Study",
+            {"identifier": "S", "title": "Study S"},
+            parent_id=inv.id,
+            skip_validation=True,
         )
         assay = client.create_entity(
-            "Assay", {"identifier": "A"}, parent_id=study.id, skip_validation=True
+            "Assay",
+            {"filename": "a_assay.txt"},
+            parent_id=study.id,
+            skip_validation=True,
         )
         client.create_entity(
             "Sample", {"name": "smp"}, parent_id=assay.id, skip_validation=True

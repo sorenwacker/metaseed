@@ -291,6 +291,7 @@ entities:
       type: string
       required: true
       description: The name of the Assay file (a_*.txt)
+      is_label: true
       constraints:
         pattern: ^a_.*\.txt$
     - name: study_id

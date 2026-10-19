@@ -25,17 +25,24 @@ from metaseed.seek.context import SyncContext, SyncResult
 from metaseed.seek.placement import (
     place_node,
     placeholder_sample_type_id,
+    record_title,
     sample_level,
 )
 from metaseed.seek.roles import jerm_class_in_profile
 from metaseed.seek.templates import LEVEL_ORDER, sample_chain_entities
-from metaseed.seek.values import base_url, file_fields, profile_of
+from metaseed.seek.values import (
+    UNMARKED_TITLE_FIELDS,
+    base_url,
+    file_fields,
+    profile_of,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
 
     from metaseed.api.client import MetaseedClient
     from metaseed.seek.ports import IsaWriter
+    from metaseed.specs.schema import ProfileSpec
 
 
 def _create_study_data_file(
@@ -203,6 +210,57 @@ def _report_unreachable(ctx: SyncContext, roots: list[Any]) -> None:
         )
 
 
+#: The JERM classes SEEK names by title, and a re-push finds again by it.
+TITLED_CLASSES = ("Investigation", "Study", "Assay", "Sample")
+
+
+def untitled_records(
+    profile: ProfileSpec,
+    roles: Mapping[str, str],
+    roots: list[Any],
+    values_by_node: Mapping[str, Mapping[str, Any]],
+) -> list[tuple[str, str]]:
+    """Every record a push would have to name without a title.
+
+    Args:
+        profile: The dataset's profile, which names each entity's label and
+            identifier fields.
+        roles: Entity type -> SEEK role declared by the profile.
+        roots: The dataset tree's roots.
+        values_by_node: Node id -> the entity's field values.
+
+    Returns:
+        ``(node id, message)`` per untitled Investigation, Study, Assay or
+        Sample, the message naming the entity and the fields it lacks.
+    """
+    found: list[tuple[str, str]] = []
+    stack = list(roots)
+    while stack:
+        node = stack.pop(0)
+        stack[:0] = list(node.children)
+        jerm_class = jerm_class_in_profile(profile, node.entity_type, roles)
+        if jerm_class not in TITLED_CLASSES:
+            continue
+        entity = profile.entities.get(node.entity_type)
+        if record_title(entity, jerm_class, values_by_node.get(node.id, {})):
+            continue
+        fields = [
+            f.name
+            for f in (entity.fields if entity else [])
+            if f.is_label or f.is_identifier
+        ] or list(UNMARKED_TITLE_FIELDS)
+        found.append(
+            (
+                node.id,
+                f"{node.entity_type} {node.id} has no title: SEEK names it, and "
+                "finds it again on the next push, by its "
+                + " or ".join(f"'{f}'" for f in dict.fromkeys(fields))
+                + " -- fill it in and push again; nothing was sent to SEEK",
+            )
+        )
+    return found
+
+
 def sync_dataset_to_seek(
     client: IsaWriter,
     metaseed_client: MetaseedClient,
@@ -267,6 +325,13 @@ def sync_dataset_to_seek(
         e.get("_node_id"): e for e in metaseed_client.serialize().get("entities", [])
     }
     result = SyncResult()
+
+    # Checked before any write: a record without a title would be sent under a
+    # placeholder, and every dataset doing so would share one SEEK record.
+    roots = list(metaseed_client.get_tree())
+    result.errors.extend(untitled_records(profile, roles, roots, values_by_node))
+    if result.errors:
+        return result
 
     # A column bound to the instance's own vocabulary (``seek_controlled_vocab``)
     # resolves that vocabulary by title here, beside the provisioned ones; a
@@ -337,8 +402,6 @@ def sync_dataset_to_seek(
 
     if any(e.seek and e.seek.extended_metadata for e in profile.entities.values()):
         ctx.extended_metadata_type_ids = client.extended_metadata_type_ids()
-
-    roots = list(metaseed_client.get_tree())
 
     def count(node: Any) -> int:
         return 1 + sum(count(child) for child in node.children)

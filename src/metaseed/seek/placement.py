@@ -43,6 +43,24 @@ if TYPE_CHECKING:
     from metaseed.specs.schema import EntityDefSpec
 
 
+def record_title(
+    entity: EntityDefSpec | None, jerm_class: str | None, values: Mapping[str, Any]
+) -> str | None:
+    """The title the push gives this record in SEEK, or ``None`` if it has none.
+
+    A Sample is titled by its Sample Type's title attribute -- the template's
+    title-tagged column, or the core ``Title`` an identity field routes to --
+    and falls back, like every other record, to :func:`title_of`.
+    """
+    if jerm_class == "Sample":
+        bound = is_template_bound(entity)
+        attribute = title_attribute_of(entity) if bound else "Title"
+        value = sample_data(values, frozenset(), route_core=not bound).get(attribute)
+        if value not in (None, "", [], {}) and str(value).strip():
+            return str(value)
+    return title_of(entity, values)
+
+
 def place_node(
     ctx: SyncContext,
     node: Any,
@@ -61,7 +79,12 @@ def place_node(
     r = ctx.result
     values = ctx.values_by_node.get(node.id, {})
     jerm_class = jerm_class_in_profile(ctx.profile, node.entity_type, ctx.roles)
-    title = title_of(node, values)
+    # Never None here: the sync refuses a dataset with an untitled record
+    # before placing anything (``untitled_records``).
+    title = (
+        record_title(ctx.profile.entities.get(node.entity_type), jerm_class, values)
+        or node.id
+    )
     description = values.get("description")
     next_investigation, next_study, next_assay = investigation_id, study_id, assay_id
     next_sample, next_depth = parent_sample_id, depth
@@ -849,6 +872,6 @@ def collect_file(
         ctx.result.skipped.append((node.id, "data file has no study parent"))
         return
     name_f, url_f = ctx.file_fields_by_entity.get(node.entity_type, (None, None))
-    filename = str((name_f and values.get(name_f)) or node.label or node.id)
+    filename = str((name_f and values.get(name_f)) or node.id)
     location = str((url_f and values.get(url_f)) or "")
     ctx.files_by_study.setdefault(study_id, []).append((filename, location))
