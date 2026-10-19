@@ -123,7 +123,7 @@ def _profile_spec() -> dict[str, Any]:
             },
             "Study": {
                 "fields": [
-                    {"name": "study_id", "type": "string"},
+                    {"name": "study_id", "type": "string", "is_identifier": True},
                     {"name": "units", "type": "list", "items": "Unit"},
                 ],
                 "seek": {"role": "Study"},
@@ -168,7 +168,10 @@ def test_the_sync_binds_the_instance_vocabulary_and_the_template_attribute() -> 
         "Investigation", {"identifier": "I"}, skip_validation=True
     )
     study = client.create_entity(
-        "Study", {"study_id": "S"}, parent_id=inv.id, skip_validation=True
+        "Study",
+        {"study_id": "S", "title": "Study S"},
+        parent_id=inv.id,
+        skip_validation=True,
     )
     client.create_entity(
         "Unit",
@@ -200,7 +203,10 @@ def test_a_missing_instance_vocabulary_is_an_error_naming_the_column() -> None:
         "Investigation", {"identifier": "I"}, skip_validation=True
     )
     client.create_entity(
-        "Study", {"study_id": "S"}, parent_id=inv.id, skip_validation=True
+        "Study",
+        {"study_id": "S", "title": "Study S"},
+        parent_id=inv.id,
+        skip_validation=True,
     )
     result = sync_dataset_to_seek(_FakeSeek(), client, project_id="1")
     assert any("growth_medium" in msg for _, msg in result.errors), result.errors
@@ -246,7 +252,10 @@ def test_a_registered_data_file_column_gets_the_file_registered_and_its_id() -> 
         "Investigation", {"identifier": "I"}, skip_validation=True
     )
     study = client.create_entity(
-        "Study", {"study_id": "S"}, parent_id=inv.id, skip_validation=True
+        "Study",
+        {"study_id": "S", "title": "Study S"},
+        parent_id=inv.id,
+        skip_validation=True,
     )
     client.create_entity(
         "Unit",
@@ -288,7 +297,10 @@ def test_a_data_file_registered_by_a_previous_push_is_reused() -> None:
         "Investigation", {"identifier": "I"}, skip_validation=True
     )
     study = client.create_entity(
-        "Study", {"study_id": "S"}, parent_id=inv.id, skip_validation=True
+        "Study",
+        {"study_id": "S", "title": "Study S"},
+        parent_id=inv.id,
+        skip_validation=True,
     )
     client.create_entity(
         "Unit",

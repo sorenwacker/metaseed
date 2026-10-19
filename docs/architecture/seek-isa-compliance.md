@@ -164,6 +164,10 @@ Two SEEK behaviours the sync works around, verified live:
 
 Creating a Study needs a placeholder `linked_sample_type_id` (see the `ISAStudy` defect above). The sync creates one Sample Type per project named `<profile> ISA placeholder`, reused by title; it is an artifact of that defect, not part of the ISA structure.
 
+### Every record needs a title
+
+SEEK names an Investigation, Study, Assay and Sample by its title, and a re-push finds what an earlier push created by that title. The sync therefore titles each record from the dataset's own values: a Sample from its Sample Type's title attribute, and every record from the field its profile marks `is_label`, else the one marked `is_identifier`; an entity marking neither is read by `title`, `name`, `identifier` and `unique_id`. Before anything is sent, the sync checks every such record; if one has no title, the push stops, sends nothing, and reports each untitled record with the fields it would be titled by. There is no placeholder title: the tree's `New Study` label was once sent instead, and every untitled dataset then landed on the same SEEK Study. The FAIR Data Station export titles its instances by the same rule, falling back to the record's identity.
+
 ## Two ways a profile can describe the chain
 
 The material chain SEEK exports — source → sample → assay material → assay data file — can be written in a profile in two shapes, and the sync treats them as one model.

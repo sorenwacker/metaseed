@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
     from metaseed.api.client import MetaseedClient
-    from metaseed.specs.schema import ProfileSpec
+    from metaseed.specs.schema import EntityDefSpec, ProfileSpec
 
 
 # The one definition of SEEK's core fields: which metaseed field names map
@@ -131,8 +131,39 @@ def base_url(locations: list[str]) -> str:
     return head + "/" if head else ""
 
 
-def title_of(node: Any, values: Mapping[str, Any]) -> str:
-    return str(values.get("title") or node.label or node.id)
+#: Read, in order, for an entity whose profile marks no label or identifier.
+UNMARKED_TITLE_FIELDS = ("title", "name", "identifier", "unique_id")
+
+
+def title_of(entity: EntityDefSpec | None, values: Mapping[str, Any]) -> str | None:
+    """The title SEEK gives a record: the label field, else the identifier field.
+
+    The fields are the ones the profile marks ``is_label`` and
+    ``is_identifier``; an entity marking neither is read by
+    :data:`UNMARKED_TITLE_FIELDS`. ``None`` when the dataset holds no such value. There is
+    deliberately no further fallback: SEEK identifies a record by its title and
+    a re-push finds it again by that title, and a placeholder such as the
+    tree's ``New Study`` made every untitled dataset land on the same record.
+
+    Args:
+        entity: The profile's definition of the entity, which names the label
+            field (``is_label``); ``None`` when the profile lacks the type.
+        values: The entity's field values.
+
+    Returns:
+        The title, or ``None`` when there is none.
+    """
+    fields = entity.fields if entity else []
+    names = [f.name for f in fields if f.is_label] + [
+        f.name for f in fields if f.is_identifier
+    ]
+    if not names:
+        names = list(UNMARKED_TITLE_FIELDS)
+    for name in names:
+        value = values.get(name)
+        if isinstance(value, (str, int, float)) and str(value).strip():
+            return str(value)
+    return None
 
 
 def profile_of(client: MetaseedClient) -> ProfileSpec:

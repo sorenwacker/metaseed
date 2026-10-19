@@ -60,7 +60,7 @@ if TYPE_CHECKING:
 # Core fields emitted as native schema.org triples (or the identifier), so they
 # do not get a property definition of their own.
 from metaseed.seek.values import CORE_FIELDS as _CORE_FIELDS
-from metaseed.seek.values import profile_of
+from metaseed.seek.values import profile_of, title_of
 
 logger = logging.getLogger(__name__)
 
@@ -278,6 +278,7 @@ def to_fair_data_station_rdf(client: MetaseedClient) -> str:  # noqa: C901
         A Turtle string SEEK's "Import from FAIR Data Station" accepts.
     """
     fields, roles = _profile_index(client)
+    profile_entities = profile_of(client).entities
     values_by_node = {
         e.get("_node_id"): e for e in client.serialize().get("entities", [])
     }
@@ -378,7 +379,7 @@ def to_fair_data_station_rdf(client: MetaseedClient) -> str:  # noqa: C901
         # schema:name, not schema:identifier. Emit both for every instance,
         # falling back to the identity when the entity has no title/name field,
         # so identifier-keyed entities (e.g. a MIAPPE Sample) still import.
-        title_value = data.get("title") or data.get("name") or identity
+        title_value = title_of(profile_entities.get(node.entity_type), data) or identity
         graph.add((uri, SCHEMA.title, Literal(title_value)))
         graph.add((uri, SCHEMA.name, Literal(data.get("name") or title_value)))
 

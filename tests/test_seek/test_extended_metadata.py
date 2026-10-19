@@ -218,7 +218,10 @@ def test_a_reference_typed_attribute_that_is_not_a_file_is_reported_not_sent() -
     c = MetaseedClient.from_spec(spec)
     inv = c.create_entity("Investigation", {"identifier": "I1"}, skip_validation=True)
     study = c.create_entity(
-        "Study", {"study_id": "S1"}, parent_id=inv.id, skip_validation=True
+        "Study",
+        {"study_id": "S1", "title": "Study S1"},
+        parent_id=inv.id,
+        skip_validation=True,
     )
     c.create_entity(
         "Assay",
