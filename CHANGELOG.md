@@ -1,6 +1,12 @@
 # Changelog
 
-## v0.63.1 (261019)
+## v0.64.0 (261019)
+
+### Added
+- **The explorer exports its graph as a PNG** (#411): every shown entity, whatever part is in view, at two pixels per graph unit (at most 8192 px a side), on white.
+
+### Changed
+- **A SEEK push refuses a record without a title** (#412). An untitled Study or Assay was sent as `New Study` / `New Assay`, and every such dataset landed on the same SEEK record. Titles come from the profile's label field, else its identifier field; with any record untitled, nothing is sent and each one is reported. ISA 1.0 marks the Assay `filename` as its label.
 
 ### Fixed
 - **The Tree layout no longer overlaps entities** (#409). Levels were a fixed 120 px apart, so tall entity boxes covered each other and the root could appear inside its child; levels and neighbours are now spaced by their box sizes.
