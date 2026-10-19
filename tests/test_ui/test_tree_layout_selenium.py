@@ -54,3 +54,36 @@ def test_tree_puts_the_root_on_top_and_layout_leaves_the_tree(browser) -> None: 
     browser.execute_script("autoLayout()")
 
     assert "active" not in button.get_attribute("class")
+
+
+_OVERLAPS = """
+const network = ERD.getNetwork();
+const boxes = ERD.getNodes().getIds().map(id => [id, network.getBoundingBox(id)]);
+const overlaps = [];
+for (let i = 0; i < boxes.length; i++) {
+    for (let j = i + 1; j < boxes.length; j++) {
+        const [a, p] = boxes[i];
+        const [b, q] = boxes[j];
+        if (p.left < q.right && q.left < p.right && p.top < q.bottom && q.top < p.bottom) {
+            overlaps.push([String(a), String(b)]);
+        }
+    }
+}
+return overlaps;
+"""
+
+
+@pytest.mark.parametrize("profile", ["miappe", "isa"])
+def test_tree_spaces_entities_by_their_size(browser, profile) -> None:  # noqa: F811
+    browser.get(f"{BASE_URL}/explore/")
+    Select(browser.find_element(By.ID, "base-profile")).select_by_value(profile)
+    browser.find_element(By.ID, "compare-btn").click()
+    WebDriverWait(browser, 20).until(
+        lambda d: d.execute_script(
+            "return Boolean(typeof ERD !== 'undefined' && ERD.getNetwork() && ERD.getNodes().length)"
+        )
+    )
+
+    click_button(browser, "btn-tree-layout")
+
+    assert browser.execute_script(_OVERLAPS) == []

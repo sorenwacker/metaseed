@@ -15,6 +15,38 @@ const ERD = (function() {
         if (button) button.classList.toggle('active', _hierarchical);
     }
 
+    const TREE_GAP = 60;
+
+    // vis-network places tree levels a fixed distance apart, which the tall
+    // entity boxes of a specification overrun. Keep the levels and the order
+    // vis chose within each, and restack them so every level is centred below the
+    // tallest box of the one above and boxes in a level sit side by side.
+    function _spaceTreeBySize() {
+        const positions = _network.getPositions();
+        const levels = new Map();
+        for (const id of Object.keys(positions)) {
+            const key = Math.round(positions[id].y);
+            if (!levels.has(key)) levels.set(key, []);
+            const node = _nodes.get(id) !== null ? id : Number(id);
+            levels.get(key).push({ id: node, x: positions[id].x, box: _network.getBoundingBox(node) });
+        }
+        let top = 0;
+        for (const key of [...levels.keys()].sort((a, b) => a - b)) {
+            const row = levels.get(key).sort((a, b) => a.x - b.x);
+            const width = row.reduce((sum, n) => sum + n.box.right - n.box.left, 0)
+                + TREE_GAP * (row.length - 1);
+            const centre = row.reduce((sum, n) => sum + n.x, 0) / row.length;
+            const height = Math.max(...row.map(n => n.box.bottom - n.box.top));
+            let left = centre - width / 2;
+            for (const n of row) {
+                const w = n.box.right - n.box.left;
+                _network.moveNode(n.id, left + w / 2, top + height / 2);
+                left += w + TREE_GAP;
+            }
+            top += height + TREE_GAP * 2;
+        }
+    }
+
     // Standard network options
     const OPTIONS = {
         layout: {
@@ -188,6 +220,7 @@ const ERD = (function() {
                     layout: { hierarchical: { enabled: false } },
                     physics: { enabled: false }
                 });
+            if (_hierarchical) _spaceTreeBySize();
             _markHierarchicalButton();
             _network.fit({ animation: true });
         },
