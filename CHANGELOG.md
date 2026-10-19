@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.63.1 (261019)
+
+### Fixed
+- **The Tree layout no longer overlaps entities** (#409). Levels were a fixed 120 px apart, so tall entity boxes covered each other and the root could appear inside its child; levels and neighbours are now spaced by their box sizes.
+- **Command line**: `seek` commands report a profile that fails to load instead of a traceback (#404); `extract` reports a missing source, an absent `--table` index or a non-JSON mapping or records file (#402); `batch-create` refuses a `_parent` index that names no earlier item (#401); `validate` reports a non-mapping document or an unknown entity type (#400); `dataset import --profile` no longer saves an unopenable empty version (#399); `push-dataset` drops an unused provenance import (#405).
+- **Explorer and reports**: profiles whose rules differ show each profile's version (#408); the Markdown comparison lists removed fields as CSV and HTML do (#407); a column heading shows only rules that constrain that column (#394).
+- **Builder and MCP**: a refused entity rename, a failing `spec_update_field` and a batch with a non-object element leave the draft unchanged (#398, #395, #396); loading an example keeps the open session until the example loads and validates (#397); the agent reports instead of truncating a non-integer value in an integer field (#392); the profile picker under `/form` keeps the mount prefix and import controls (#393).
+- **Adapters**: the repository import no longer blocks the event loop (#391); SEEK places samples under an unmapped Study child correctly (#390); ISA-Tab declares every ontology source it writes (#389); ENA assigns only unassigned run files to a Run without an alias (#388); PRIDE keeps a grandchild under its Sample (#387); ISA-JSON import stores a file name, not a download URL, as a DataFile filename (#386); a push detects changes in entities without an identifier (#385).
+- `make test` and the pre-push hook use CI's marker expression, gated by a test (#406).
+
 ## v0.63.0 (261015)
 
 Fixes from the codebase review (docs/REVIEW.md).
