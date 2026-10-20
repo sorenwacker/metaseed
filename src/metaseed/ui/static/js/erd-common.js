@@ -259,11 +259,13 @@ const ERD = (function() {
          * on white. The canvas is resized to the frame `pngExportFrame`
          * decides and copied once vis has drawn it there (`afterDrawing`; a
          * redraw is asynchronous, so copying straight away copies a blank
-         * canvas), then the size and view are put back.
+         * canvas), then the size and view are put back. Legend entries, as
+         * `visibleLegend` reads them, are drawn as a band below the graph.
          *
+         * @param {Array<Object>} [legend] The entries to draw; none by default.
          * @returns {Promise<string|null>} The data URL, or null with no graph.
          */
-        toPngDataUrl() {
+        toPngDataUrl(legend = []) {
             if (!_network) return Promise.resolve(null);
             const ids = _nodes.getIds().filter(id => !_nodes.get(id).hidden);
             if (!ids.length) return Promise.resolve(null);
@@ -287,11 +289,13 @@ const ERD = (function() {
                         const source = drawn.canvas;
                         const out = document.createElement('canvas');
                         out.width = source.width;
-                        out.height = source.height;
+                        const rows = pngLegendRows(out.getContext('2d'), legend, source.width);
+                        out.height = source.height + rows.height;
                         const context = out.getContext('2d');
                         context.fillStyle = '#ffffff';
                         context.fillRect(0, 0, out.width, out.height);
                         context.drawImage(source, 0, 0);
+                        drawPngLegend(context, rows, source.height);
                         resolve(out.toDataURL('image/png'));
                     } catch (error) {
                         reject(error);
@@ -308,10 +312,10 @@ const ERD = (function() {
         },
 
         /**
-         * Download the graph as `<name>.png`.
+         * Download the graph as `<name>.png`, with the given legend entries.
          */
-        async exportPng(name) {
-            const url = await this.toPngDataUrl();
+        async exportPng(name, legend = []) {
+            const url = await this.toPngDataUrl(legend);
             if (!url) return;
             const link = document.createElement('a');
             link.href = url;
@@ -350,6 +354,119 @@ function pngExportFrame(boxes, devicePixelRatio) {
         height: Math.floor(height * scale),
         scale
     };
+}
+
+// Legend text and swatches in the PNG, in image pixels per CSS pixel: the
+// graph is drawn at two pixels per unit, so the legend matches its text size.
+const LEGEND_SCALE = 2;
+const LEGEND_FONT = 13 * LEGEND_SCALE;
+const LEGEND_PAD = 16 * LEGEND_SCALE;
+const LEGEND_ROW = 24 * LEGEND_SCALE;
+const LEGEND_SWATCH = 20 * LEGEND_SCALE;
+const LEGEND_GAP = 6 * LEGEND_SCALE;
+const LEGEND_SPACING = 24 * LEGEND_SCALE;
+
+/**
+ * The entries of the legend the page shows under the canvas, for the PNG.
+ *
+ * Each `.legend-item` of the visible `.canvas-legend` becomes one entry: a
+ * coloured dot, an edge line (dashed where the page draws it dashed), or a
+ * glyph from its `<code>`, followed by its label. Items marked
+ * `data-legend-hint` explain the page, not the graph, and are left out.
+ *
+ * @returns {Array<Object>} The entries, empty when no legend is shown.
+ */
+function visibleLegend() {
+    const legend = [...document.querySelectorAll('.canvas-legend')]
+        .find(element => element.offsetParent !== null);
+    if (!legend) return [];
+    return [...legend.querySelectorAll('.legend-item:not([data-legend-hint])')].map(item => {
+        const label = item.textContent.replace(item.querySelector('code')?.textContent || '', '').trim();
+        const dot = item.querySelector('[class*="legend-dot"]');
+        const line = item.querySelector('[class*="legend-line"]');
+        const code = item.querySelector('code');
+        if (dot) {
+            const style = getComputedStyle(dot);
+            return { kind: 'dot', label, color: style.backgroundColor, border: style.borderColor };
+        }
+        if (line) {
+            const style = getComputedStyle(line, '::after');
+            return {
+                kind: 'line', label, color: style.borderLeftColor,
+                dashed: getComputedStyle(line).backgroundImage.includes('gradient')
+            };
+        }
+        return { kind: 'glyph', label, glyph: code ? code.textContent : '' };
+    });
+}
+
+/**
+ * Lay the legend entries out in rows that fit the image width.
+ *
+ * @returns {{rows: Array<Array<Object>>, height: number}} The rows of entries
+ *     with their x positions, and the band height (0 without entries).
+ */
+function pngLegendRows(context, legend, width) {
+    if (!legend.length) return { rows: [], height: 0 };
+    context.font = `${LEGEND_FONT}px sans-serif`;
+    const rows = [[]];
+    let x = LEGEND_PAD;
+    for (const entry of legend) {
+        const span = LEGEND_SWATCH + LEGEND_GAP + context.measureText(entry.label).width;
+        if (x + span > width - LEGEND_PAD && rows[rows.length - 1].length) {
+            rows.push([]);
+            x = LEGEND_PAD;
+        }
+        rows[rows.length - 1].push({ ...entry, x });
+        x += span + LEGEND_SPACING;
+    }
+    return { rows, height: rows.length * LEGEND_ROW + 2 * LEGEND_PAD };
+}
+
+/** Draw the rows `pngLegendRows` laid out, starting at `top`. */
+function drawPngLegend(context, layout, top) {
+    if (!layout.rows.length) return;
+    context.strokeStyle = '#dddddd';
+    context.lineWidth = LEGEND_SCALE;
+    context.beginPath();
+    context.moveTo(0, top + LEGEND_SCALE / 2);
+    context.lineTo(context.canvas.width, top + LEGEND_SCALE / 2);
+    context.stroke();
+    context.font = `${LEGEND_FONT}px sans-serif`;
+    context.textBaseline = 'middle';
+    layout.rows.forEach((row, index) => {
+        const y = top + LEGEND_PAD + index * LEGEND_ROW + LEGEND_ROW / 2;
+        for (const entry of row) {
+            const mid = entry.x + LEGEND_SWATCH / 2;
+            if (entry.kind === 'dot') {
+                context.beginPath();
+                context.arc(mid, y, 6 * LEGEND_SCALE, 0, 2 * Math.PI);
+                context.fillStyle = entry.color;
+                context.fill();
+                context.strokeStyle = entry.border;
+                context.stroke();
+            } else if (entry.kind === 'line') {
+                context.strokeStyle = entry.color;
+                context.lineWidth = 2 * LEGEND_SCALE;
+                context.setLineDash(entry.dashed ? [4 * LEGEND_SCALE, 3 * LEGEND_SCALE] : []);
+                context.beginPath();
+                context.moveTo(entry.x, y);
+                context.lineTo(entry.x + LEGEND_SWATCH, y);
+                context.stroke();
+                context.setLineDash([]);
+                context.lineWidth = LEGEND_SCALE;
+            } else {
+                context.fillStyle = '#333333';
+                context.textAlign = 'center';
+                context.font = `bold ${LEGEND_FONT}px monospace`;
+                context.fillText(entry.glyph, mid, y);
+                context.font = `${LEGEND_FONT}px sans-serif`;
+                context.textAlign = 'left';
+            }
+            context.fillStyle = '#333333';
+            context.fillText(entry.label, entry.x + LEGEND_SWATCH + LEGEND_GAP, y);
+        }
+    });
 }
 
 // Convenience functions for HTML onclick handlers

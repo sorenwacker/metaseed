@@ -78,7 +78,7 @@
                                 <button class="btn btn-secondary btn-sm" onclick="exportReport('markdown')">MD</button>
                                 <button class="btn btn-secondary btn-sm" onclick="exportReport('csv')">CSV</button>
                                 <button class="btn btn-secondary btn-sm" onclick="exportReport('html')">HTML</button>
-                                <button class="btn btn-secondary btn-sm" onclick="ERD.exportPng(currentProfiles.join('_vs_').replaceAll('/', '-'))" data-testid="export-png">PNG</button>
+                                <button class="btn btn-secondary btn-sm" onclick="ERD.exportPng(currentProfiles.join('_vs_').replaceAll('/', '-'), visibleLegend())" data-testid="export-png">PNG</button>
                             </div>
                         </div>
 
@@ -147,7 +147,7 @@
                     <span class="legend-item"><span class="legend-line-dashed"></span> Reference</span>
                     <span class="legend-item"><span class="legend-line-rule"></span> Rule</span>
                     <span class="legend-item"><code>*</code> Required</span>
-                    <span class="legend-item" style="margin-left: 12px;">Right-click to hide</span>
+                    <span class="legend-item" style="margin-left: 12px;" data-legend-hint>Right-click to hide</span>
                 </div>
 
                 <!-- Context Menu for nodes -->
