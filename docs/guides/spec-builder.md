@@ -286,7 +286,7 @@ Specs are saved to:
 
 ### Export
 
-Click **Export** to download the specification as a YAML file.
+Click **Export** to download the specification as a YAML file. **Docs MD** and **Docs XLSX** download its documentation: every entity in containment order with its fields, descriptions, constraints and examples, as described under [Specification Documentation](spec-merge.md#specification-documentation).
 
 ### Preview
 
