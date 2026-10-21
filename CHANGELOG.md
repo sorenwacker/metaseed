@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.66.0 (261021)
+
+### Added
+- Specification documentation export: a profile's model as Markdown or an Excel workbook (Entities, Fields, Rules sheets), entities in containment order, every field with its type, requirement, description, constraints and example. The explorer's MD export with one profile open is this documentation instead of a comparison of the profile with itself, and an XLSX button offers the workbook; the spec builder has Docs MD and Docs XLSX next to Export. `metaseed.ui.services.spec_documentation`.
+
 ## v0.65.0 (261021)
 
 ### Added
