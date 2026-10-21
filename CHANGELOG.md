@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.65.0 (261021)
+
+### Added
+- The explorer's PNG export draws the legend shown under the canvas as a band below the graph, so the image explains its colours and edge styles on its own.
+
 ## v0.64.0 (261019)
 
 ### Added

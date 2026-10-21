@@ -127,3 +127,58 @@ def test_the_exported_image_is_a_png_of_the_whole_graph(browser) -> None:  # noq
         browser.execute_script("return ERD.getNetwork().body.container.style.width;")
         == ""
     ), "the canvas was left at the export size"
+
+
+def test_the_page_hands_its_legend_to_the_export() -> None:
+    page = EXPLORE_PAGE.read_text()
+
+    assert "ERD.exportPng(" in page and "visibleLegend()" in page
+
+
+@pytest.mark.selenium
+def test_the_image_carries_the_legend_below_the_graph(browser) -> None:  # noqa: F811 (the fixture imported above)
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.support import expected_conditions as EC
+    from selenium.webdriver.support.ui import Select, WebDriverWait
+
+    from tests.test_ui.test_selenium import BASE_URL
+
+    browser.get(f"{BASE_URL}/explore")
+    Select(browser.find_element(By.ID, "base-profile")).select_by_value("miappe")
+    WebDriverWait(browser, 10).until(
+        lambda d: len(Select(d.find_element(By.ID, "base-version")).options) > 1
+    )
+    Select(browser.find_element(By.ID, "base-version")).select_by_index(1)
+    browser.find_element(By.ID, "compare-btn").click()
+    WebDriverWait(browser, 30).until(
+        EC.visibility_of_element_located((By.ID, "export-section"))
+    )
+    sizes = browser.execute_async_script(
+        """
+        const done = arguments[arguments.length - 1];
+        const size = url => new Promise(ok => {
+            const image = new Image();
+            image.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = image.width;
+                canvas.height = image.height;
+                const context = canvas.getContext('2d');
+                context.drawImage(image, 0, 0);
+                ok({ image, context });
+            };
+            image.src = url;
+        });
+        (async () => {
+            const bare = await size(await ERD.toPngDataUrl());
+            const withLegend = await size(await ERD.toPngDataUrl(visibleLegend()));
+            const band = withLegend.context.getImageData(
+                0, bare.image.height, withLegend.image.width,
+                withLegend.image.height - bare.image.height).data;
+            let inked = 0;
+            for (let i = 0; i < band.length; i += 4) if (band[i] < 200) inked++;
+            done({ bare: bare.image.height, legend: withLegend.image.height, inked });
+        })();
+        """
+    )
+    assert sizes["legend"] > sizes["bare"], "the image has no legend band"
+    assert sizes["inked"] > 200, "the legend band is empty"

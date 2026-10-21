@@ -98,7 +98,7 @@ After comparing, export the results:
 - **MD**: Markdown report with tables: statistics, entities, conflicts, and every added, removed or modified field
 - **CSV**: Spreadsheet-compatible format
 - **HTML**: Styled HTML report
-- **PNG**: The graph as an image. The image holds every entity shown on the canvas, whatever part of the graph is in view, at two pixels per graph unit (at most 8192 pixels on a side; a larger graph is scaled down to fit), on a white background. Hidden entities and filtered edges are left out, as on the canvas; the entity panel and the sidebar are not part of the image. The view is restored afterwards.
+- **PNG**: The graph as an image. The image holds every entity shown on the canvas, whatever part of the graph is in view, at two pixels per graph unit (at most 8192 pixels on a side; a larger graph is scaled down to fit), on a white background, with the legend shown under the canvas drawn as a band below the graph. Hidden entities and filtered edges are left out, as on the canvas; the entity panel and the sidebar are not part of the image. The view is restored afterwards.
 
 Each report has a validation rule section when the profiles' rules differ: one row per differing rule, with each profile's rule type and parameters, and an empty cell or `-` where a profile does not define it.
 
