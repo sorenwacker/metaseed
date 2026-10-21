@@ -14,6 +14,8 @@ from metaseed.specs.merge import (
     MarkdownReportGenerator,
     compare,
 )
+from metaseed.specs.schema import ProfileSpec
+from metaseed.ui.services.spec_documentation import profile_markdown, profile_workbook
 from metaseed.ui.spec_provider import SpecProvider
 from metaseed.ui.state import AppState
 
@@ -183,6 +185,12 @@ def register_explore_routes(  # noqa: C901
             return PlainTextResponse(content=f"Error: {parse_error}", status_code=400)
 
         try:
+            if len(profile_tuples) == 1:
+                # One profile has nothing to compare: its export documents it.
+                profile, version = profile_tuples[0]
+                spec = await spec_provider.get_spec(profile=profile, version=version)
+                return documentation_download(spec, format_type)
+
             result = compare(profile_tuples)
 
             if format_type == "csv":
@@ -199,3 +207,19 @@ def register_explore_routes(  # noqa: C901
 
         except (ValueError, SpecLoadError) as e:
             return PlainTextResponse(content=f"Error: {e}", status_code=400)
+
+
+def documentation_download(spec: ProfileSpec, format_type: str) -> Response:
+    """A profile's documentation as a download named ``<profile>-<version>``."""
+    stem = f"{spec.name}-{spec.version}".replace("/", "-")
+    if format_type == "xlsx":
+        return Response(
+            content=profile_workbook(spec),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f'attachment; filename="{stem}.xlsx"'},
+        )
+    return Response(
+        content=profile_markdown(spec),
+        media_type="text/markdown",
+        headers={"Content-Disposition": f'inline; filename="{stem}.md"'},
+    )
