@@ -22,6 +22,7 @@ from fastapi.templating import Jinja2Templates
 from metaseed.specs.schema import ProfileSpec
 
 from ..helpers.spec_builder_helpers import spec_to_yaml
+from ..routes.explore import documentation_download
 from .access import require_spec
 
 if TYPE_CHECKING:
@@ -126,6 +127,13 @@ def register_export_routes(  # noqa: C901
             media_type="application/x-yaml",
             headers={"Content-Disposition": f'attachment; filename="{filename}"'},
         )
+
+    @router.get("/export/doc/{format_type}")
+    async def export_documentation(format_type: str) -> Response:
+        """Download the draft's documentation, as Markdown or an ``xlsx`` workbook."""
+        builder = _require_spec()
+        assert builder.spec is not None  # guaranteed by _require_spec
+        return documentation_download(builder.spec, format_type)
 
     @router.post("/save", response_class=HTMLResponse)
     async def save_to_filesystem(request: Request) -> HTMLResponse:
