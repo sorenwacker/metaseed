@@ -25,6 +25,8 @@ import re
 from typing import TYPE_CHECKING, Any
 from xml.etree import ElementTree as ET
 
+from metaseed.specs.taxon import taxon_number
+
 if TYPE_CHECKING:
     from metaseed.api.client import MetaseedClient
 
@@ -170,7 +172,7 @@ def _sample_set(samples: list[tuple[str, dict[str, Any]]], tree: _Tree) -> str:
         )
         _text(sample, "TITLE", s.get("title"))
         name = ET.SubElement(sample, "SAMPLE_NAME")
-        _text(name, "TAXON_ID", s.get("taxon_id"))
+        _text(name, "TAXON_ID", taxon_number(s.get("taxon_id")))
         _text(name, "SCIENTIFIC_NAME", s.get("scientific_name"))
         _text(name, "COMMON_NAME", s.get("common_name"))
         _text(sample, "DESCRIPTION", s.get("description"))
