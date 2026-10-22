@@ -102,9 +102,10 @@ After comparing, export the results:
 
 ### Specification Documentation
 
-With one profile open (explore mode), the export section offers the profile's documentation instead of a comparison, which has nothing to compare:
+With one profile open (explore mode), the export section offers the profile's documentation instead of a comparison, which has nothing to compare (HTML is a comparison format only and is hidden):
 
-- **MD**: The entities in containment order, root first. Each entity has its description, its ontology term, the entities it is contained in and contains, and a table of its fields: name, type, whether it is required, description, constraints (pattern, length and value bounds, allowed values, ontologies, references, uniqueness, and the validation rules that name the field) and the example value from the specification. The profile's validation rules follow as a table.
+- **MD**: A `.md` file download: the entities in containment order, root first. Each entity has its description, its ontology term, the entities it is contained in and contains, and a table of its fields: name, type, whether it is required, description, constraints (pattern, length and value bounds, allowed values, ontologies, references, uniqueness, and the validation rules that name the field) and the example value from the specification. The profile's validation rules follow as a table.
+- **CSV**: The *Fields* sheet of the workbook below, one row per field.
 - **XLSX**: The same content as a workbook for reading or annotating the model: an *Entities* sheet (one row per entity, in the same order) and a *Fields* sheet (one row per field, with the entity it belongs to), and a *Rules* sheet. Header rows are frozen and filterable. It describes the model only and holds no dataset values; the dataset template is the Excel export of a dataset.
 
 The constraints text is the note a table heading shows on hover in the dataset editor, so the documentation and the editor describe a field the same way. In Python: `from metaseed.ui.services.spec_documentation import profile_markdown, profile_workbook`.
