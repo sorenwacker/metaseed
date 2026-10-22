@@ -12,7 +12,7 @@ Open the dataset and choose **Export Excel** in the toolbar. The workbook contai
 
 ## Read what a field holds
 
-Hover over a column heading. The note states whether the field is required, its type, an example value, and its pattern, allowed values and rules. A column with allowed values has a dropdown. A cell that breaks a rule is coloured.
+Click a column heading: a note appears beside it while the heading is selected, without having to hover over the small red mark in its corner. Hovering over the heading shows the same note. It states whether the field is required, its type, an example value, and its pattern, allowed values and rules. A note longer than Excel's 255-character limit for a selected-cell message is shortened there; the hover note is complete. A column with allowed values has a dropdown. A cell that breaks a rule is coloured.
 
 ## Add a row
 

@@ -25,6 +25,7 @@ from typing import TYPE_CHECKING, Any
 from openpyxl.comments import Comment
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl.worksheet.table import Table, TableStyleInfo
 
 from metaseed.ui.services.belongs_to import BELONGS_TO
@@ -73,6 +74,29 @@ SYSTEM_COLUMNS = frozenset({BELONGS_TO})
 #: already part of the table.
 EMPTY_TABLE_ROWS = 1
 
+#: Excel's limits on the message shown while a cell is selected.
+PROMPT_LIMIT = 255
+PROMPT_TITLE_LIMIT = 32
+_SHORTENED = " ... (hover for the full note)"
+
+
+def heading_prompt(column: str, note: str) -> DataValidation:
+    """The note shown while the heading cell is selected.
+
+    A comment opens only while the pointer rests on its cell, which in a table
+    heading is a strip beside the filter button. An input message opens on
+    selecting the cell. Excel caps it at 255 characters, so a longer note is
+    cut at a word and points to the comment, which holds it whole.
+    """
+    text = note
+    if len(text) > PROMPT_LIMIT:
+        text = text[: PROMPT_LIMIT - len(_SHORTENED)].rsplit(" ", 1)[0] + _SHORTENED
+    return DataValidation(
+        showInputMessage=True,
+        promptTitle=column[:PROMPT_TITLE_LIMIT],
+        prompt=text,
+    )
+
 
 def style_sheet(
     ws: Worksheet,
@@ -114,6 +138,9 @@ def style_sheet(
             cell.comment = Comment(
                 note, "metaseed", width=NOTE_WIDTH, height=note_height(note)
             )
+            prompt = heading_prompt(column, note)
+            ws.add_data_validation(prompt)
+            prompt.add(cell.coordinate)
 
         ws.column_dimensions[letter].width = _width(ws, index, column, row_count)
 

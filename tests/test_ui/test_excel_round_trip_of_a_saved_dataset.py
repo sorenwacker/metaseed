@@ -281,3 +281,23 @@ def test_a_belongs_to_naming_nothing_refuses_the_workbook() -> None:
     message = str(refused.value)
     assert "Sample" in message and "OU-9" in message
     assert "Study does not hold Sample" in message
+
+
+def test_selecting_a_heading_shows_its_note() -> None:
+    """Hovering needed the pointer on the heading cell's red corner, beside the filter button."""
+    workbook = _workbook(_saved_dataset())
+    ws = workbook["Study"]
+    header = [cell.value for cell in ws[1]]
+    letter = chr(ord("A") + header.index("title"))
+    prompts = [
+        dv
+        for dv in ws.data_validations.dataValidation
+        if f"{letter}1" in str(dv.sqref).split()
+    ]
+
+    assert len(prompts) == 1
+    prompt = prompts[0]
+    assert prompt.showInputMessage
+    assert prompt.promptTitle == "title"
+    assert prompt.prompt and len(prompt.prompt) <= 255
+    assert prompt.prompt.split("\n", 1)[0] in ws[f"{letter}1"].comment.text
