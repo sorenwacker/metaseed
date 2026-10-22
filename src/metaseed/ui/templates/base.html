@@ -14,6 +14,9 @@
 <body{% if standalone_graph %} data-standalone-graph="1"{% endif %}>
     <div class="layout">
         {{ header('datasets') }}
+        {% if current_dataset is defined and current_dataset and not standalone_graph %}
+        {% include "partials/dataset_toolbar.html" %}
+        {% endif %}
 
         {# The graph and the list share the workspace; each is switched on or
            off from the dataset toolbar and whatever is on fills the width. The
@@ -105,6 +108,6 @@
     <script src="{{ base_url }}/static/js/lookup.js?v=10"></script>
     <script src="{{ base_url }}/static/js/graph.js?v=14"></script>
     <script src="{{ base_url }}/static/js/dataset.js?v=9"></script>
-    <script src="{{ base_url }}/static/js/field-notes.js?v=1"></script>
+    <script src="{{ base_url }}/static/js/field-notes.js?v=2"></script>
 </body>
 </html>

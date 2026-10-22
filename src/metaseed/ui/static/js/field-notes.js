@@ -15,12 +15,23 @@
 
     function renderNote(note) {
         const fragment = document.createDocumentFragment();
-        const [description, ...rest] = note.split('\n\n');
-        const lead = document.createElement('p');
-        lead.className = 'note-tooltip-description';
-        lead.textContent = description;
-        fragment.appendChild(lead);
-        const rows = rest.join('\n').split('\n').filter(Boolean);
+        // Read by content, not position: heading_note has put the description
+        // both first and last. A paragraph of "Label: value" lines (and the
+        // Required/Optional line) is rows; any other paragraph is description.
+        const isRow = line => /^(Required|Optional)$/.test(line) || /^[A-Z][\w ]*: /.test(line);
+        const description = [];
+        const rows = [];
+        for (const paragraph of note.split('\n\n')) {
+            const lines = paragraph.split('\n').filter(Boolean);
+            if (lines.length && lines.every(isRow)) rows.push(...lines);
+            else if (paragraph.trim()) description.push(paragraph.trim());
+        }
+        if (description.length) {
+            const lead = document.createElement('p');
+            lead.className = 'note-tooltip-description';
+            lead.textContent = description.join(' ');
+            fragment.appendChild(lead);
+        }
         if (!rows.length) return fragment;
         const list = document.createElement('dl');
         for (const row of rows) {

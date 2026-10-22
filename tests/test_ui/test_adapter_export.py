@@ -45,14 +45,11 @@ def test_adapter_export_unknown_format_is_404():
 
 
 def test_export_button_renders_for_matching_profile():
-    # Creating an ENA entity returns the edit form, which must offer the ENA
-    # export download and not an unrelated one.
-    state = AppState(profile="ena", version="1.0")
-    client = TestClient(create_app(state))
-    response = client.post(
-        "/entity",
-        data={"_entity_type": "Study", "alias": "S1", "title": "My study"},
-    )
+    # The open dataset's bar offers the ENA export download and not an
+    # unrelated one.
+    state = AppState()
+    client = TestClient(create_app(state), follow_redirects=True)
+    response = client.get("/load-example/ena/1.0")
     assert response.status_code == 200
     assert 'data-testid="btn-export-ena"' in response.text
     assert 'data-testid="btn-export-metabolights"' not in response.text

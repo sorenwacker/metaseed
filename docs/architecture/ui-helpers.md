@@ -42,6 +42,14 @@ nested = ctx.get_nested_fields()      # holding entities, required or not
 
 A field that holds entities, a list of entities or a single entity, is rendered once: as its table under Related Entities, whose header marks the field required and a single-entity field as holding exactly one. A single-entity table offers no second row, and the add-row route refuses one ([ADR 006](decisions/006-relationships-are-recorded-edges.md)).
 
+### Dataset toolbar
+
+The open dataset's toolbar (Validate, List, Graph, the exports, Import) is one partial, `partials/dataset_toolbar.html`, shown on the dataset page and above every record form, so the graph can be switched on beside the record being edited. The form's first crumb, **Entities**, returns to the open dataset's page, `/dataset/<name>/edit`.
+
+### Editing a row's record
+
+Every row of a table under Related Entities has an **Edit** button that opens the record the row stands for in its own form. `build_inline_tables` gives each row the id of that record (`_node_id`), the child records of the open record held in the table's field, in order; a row it cannot match keeps only the delete button.
+
 ### Field notes
 
 Hovering over a field's label in the entity form, required or optional, opens its note: the description, whether it is required, its type, an example, and its pattern, length or range, allowed values and the validation rules that name it. `field_notes(helper, spec)` in `metaseed.ui.services.heading_note` builds the notes for one entity type from `heading_note`, the builder the exported Excel headings use, so the form and the workbook describe a field in the same words. The label carries the note as `data-note`; `static/js/field-notes.js` draws it in one box attached to the page body, which stays open while the pointer is on it so a long note can be scrolled. metaseed-hub loads the same script and builds its notes with the same function.

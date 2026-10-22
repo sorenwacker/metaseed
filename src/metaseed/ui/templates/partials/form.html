@@ -2,11 +2,8 @@
     {% if is_edit %}
     <nav class="breadcrumb" data-testid="breadcrumb">
         <span class="breadcrumb-item">
-            <a href="#"
-               hx-get="/"
-               hx-target="#main"
-               hx-swap="innerHTML"
-               hx-select="#main > *">Entities</a>
+            {# The open dataset's page; "/" is the list of datasets. #}
+            <a href="{{ base_url }}/dataset/{{ open_dataset() }}/edit">Entities</a>
         </span>
         {# The node's own containment chain, so a child opened directly can be
            left upwards rather than only back to the entity list. #}
@@ -21,12 +18,12 @@
                hx-swap="innerHTML">{{ item.label }}</a>
         </span>
         {% else %}
-        <span class="breadcrumb-item{% if loop.last %} active{% endif %}">{{ item.label }}</span>
+        <span class="breadcrumb-item{% if loop.last %} active{% endif %}" title="{{ item.label }}">{{ item.label }}</span>
         {% endif %}
         {% endfor %}
         {% else %}
         <span class="breadcrumb-sep">&gt;</span>
-        <span class="breadcrumb-item active">{{ entity_type }}{% if node_label %}: {{ node_label }}{% endif %}</span>
+        <span class="breadcrumb-item active" title="{{ entity_type }}{% if node_label %}: {{ node_label }}{% endif %}">{{ entity_type }}{% if node_label %}: {{ node_label }}{% endif %}</span>
         {% endif %}
     </nav>
     {% endif %}
@@ -44,20 +41,8 @@
                     data-testid="btn-back">
                 Back
             </button>
-            {% if is_edit %}
-            <a href="/export" class="btn btn-secondary btn-sm" data-testid="btn-export" download>
-                Export All
-            </a>
-            {% for opt in export_options %}
-            <a href="/export/adapter/{{ opt.key }}"
-               class="btn btn-secondary btn-sm"
-               data-testid="btn-export-{{ opt.key }}"
-               title="Download {{ opt.label }} files"
-               download>
-                {{ opt.label }}
-            </a>
-            {% endfor %}
-            {% elif example_available %}
+            {# The exports act on the whole dataset and sit in its bar above. #}
+            {% if not is_edit and example_available %}
             <a href="{{ base_url }}/load-example/{{ current_profile }}/{{ current_version }}"
                class="btn btn-outline-secondary btn-sm"
                data-testid="btn-load-example"
@@ -91,11 +76,8 @@
     {% if parent_label %}
     <nav class="breadcrumb" data-testid="breadcrumb-child">
         <span class="breadcrumb-item">
-            <a href="#"
-               hx-get="/"
-               hx-target="#main"
-               hx-swap="innerHTML"
-               hx-select="#main > *">Entities</a>
+            {# The open dataset's page; "/" is the list of datasets. #}
+            <a href="{{ base_url }}/dataset/{{ open_dataset() }}/edit">Entities</a>
         </span>
         <span class="breadcrumb-sep">&gt;</span>
         <span class="breadcrumb-item">{{ parent_label }}</span>

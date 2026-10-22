@@ -5,7 +5,7 @@
     {% endif %}
 
     {% if loop.last or not item.url %}
-    <span class="breadcrumb-item {% if loop.last %}active{% endif %}">{{ item.label }}</span>
+    <span class="breadcrumb-item {% if loop.last %}active{% endif %}" title="{{ item.label }}">{{ item.label }}</span>
     {% else %}
     <span class="breadcrumb-item">
         <a href="#"

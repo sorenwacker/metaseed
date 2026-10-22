@@ -127,6 +127,8 @@ def create_app(
 
     templates.env.globals["app_version"] = __version__
     templates.env.globals["base_url"] = base_url
+    # The dataset open in this application, for links back to it from a form.
+    templates.env.globals["open_dataset"] = lambda: state._current_dataset
 
     def format_display(value: Any) -> str:
         """Format a value for display in table cells."""

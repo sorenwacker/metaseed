@@ -123,6 +123,7 @@ def build_inline_tables(
     """
     # Import here to avoid circular imports
     from metaseed.facade.linking import holds_exactly_one
+    from metaseed.ui.services.heading_note import field_notes
 
     from .navigation_helpers import get_parent_id_fields, get_reference_fields
 
@@ -135,6 +136,14 @@ def build_inline_tables(
 
     inline_tables: dict[str, dict[str, Any]] = {}
 
+    # The record whose form shows these tables, so each row can open the
+    # record it stands for. A nested-edit context has no stored record.
+    parent = (
+        state.nodes_by_id.get(state.editing_node_id or "")
+        if items_source is None
+        else None
+    )
+
     # Build map of field_name -> nested_type from spec
     field_to_type = dict(helper.nested_fields)
 
@@ -146,6 +155,18 @@ def build_inline_tables(
 
         # Format rows
         rows = format_table_rows(items)
+        if parent is not None:
+            held = [
+                child.id
+                for child in parent.children
+                if child.entity_type == nested_type
+                and child.parent_field in (None, field_name)
+            ]
+            # Matched in order, and only when every row has its record: a
+            # partial match would open the wrong record.
+            if len(held) == len(rows):
+                for row, node_id in zip(rows, held, strict=True):
+                    row["_node_id"] = node_id
 
         # Get reference fields
         ref_fields = get_reference_fields(
@@ -170,6 +191,12 @@ def build_inline_tables(
             "reference_fields": ref_fields,
             "parent_id_fields": parent_id_fields,
             "nested_entity_type": nested_type,
+            # What a heading shows on hover: the note a form label shows.
+            "column_notes": field_notes(
+                getattr(facade, nested_type, None), facade.profile_spec
+            )
+            if getattr(facade, nested_type, None) is not None
+            else {},
             # The table is the only place the field appears (ADR 006), so it
             # carries whether the field is required and holds exactly one.
             "required": field_name in helper.required_fields,
