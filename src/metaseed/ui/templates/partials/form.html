@@ -21,12 +21,12 @@
                hx-swap="innerHTML">{{ item.label }}</a>
         </span>
         {% else %}
-        <span class="breadcrumb-item{% if loop.last %} active{% endif %}">{{ item.label }}</span>
+        <span class="breadcrumb-item{% if loop.last %} active{% endif %}" title="{{ item.label }}">{{ item.label }}</span>
         {% endif %}
         {% endfor %}
         {% else %}
         <span class="breadcrumb-sep">&gt;</span>
-        <span class="breadcrumb-item active">{{ entity_type }}{% if node_label %}: {{ node_label }}{% endif %}</span>
+        <span class="breadcrumb-item active" title="{{ entity_type }}{% if node_label %}: {{ node_label }}{% endif %}">{{ entity_type }}{% if node_label %}: {{ node_label }}{% endif %}</span>
         {% endif %}
     </nav>
     {% endif %}

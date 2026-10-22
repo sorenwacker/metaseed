@@ -879,6 +879,7 @@ body::before {
 .breadcrumb {
     display: flex;
     align-items: center;
+    overflow: hidden;
     gap: var(--space-sm);
     margin-bottom: var(--space-lg);
     font-size: 0.875rem;
@@ -890,6 +891,12 @@ body::before {
 
 .breadcrumb-item {
     color: var(--clr-ink-light);
+    /* One line: a long label is shortened rather than wrapped, and its full
+       text is the item's title. */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 3em;
 }
 
 .breadcrumb-item a {
@@ -906,12 +913,16 @@ body::before {
 .breadcrumb-item.active {
     color: var(--clr-ink);
     font-weight: 500;
+    /* The record being edited is shown whole; the path before it gives way. */
+    flex-shrink: 0;
+    max-width: 50%;
 }
 
 .breadcrumb-separator,
 .breadcrumb-sep {
     color: var(--clr-ink-light);
     opacity: 0.5;
+    flex-shrink: 0;
 }
 
 /* ============================================
