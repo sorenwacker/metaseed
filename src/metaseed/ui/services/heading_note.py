@@ -6,7 +6,10 @@ range, the values it may take, what it must refer to, the rules that name it —
 belongs where the value is typed, not in a report after import.
 
 A constraint can be declared on the field or in a profile-level rule. The note
-shows it once, whichever declared it. See docs/architecture/excel-round-trip.md.
+shows it once, whichever declared it. Each fact stands on its own labelled line,
+and the facts come before the description: Excel shows a selected heading's
+message up to 255 characters, so a description placed first could hide the
+format and the example. See docs/architecture/excel-round-trip.md.
 """
 
 from __future__ import annotations
@@ -88,12 +91,7 @@ def heading_note(column: str, field: Any, rules: Sequence[Any]) -> str:
             None,
         )
 
-    parts: list[str] = []
-    description = (getattr(field, "description", "") or "").strip()
-    if description:
-        parts.append(description)
-
-    lines = [_summary(field)]
+    lines = _facts(field)
 
     patterns = _unique(
         [getattr(constraints, "pattern", None) if constraints else None]
@@ -137,7 +135,10 @@ def heading_note(column: str, field: Any, rules: Sequence[Any]) -> str:
     if rule_texts:
         lines.append(f"Rules: {'; '.join(rule_texts)}")
 
-    parts.append("\n".join(lines))
+    parts = ["\n".join(lines)]
+    description = (getattr(field, "description", "") or "").strip()
+    if description:
+        parts.append(description)
     return "\n\n".join(parts)
 
 
@@ -149,19 +150,19 @@ def note_height(note: str) -> int:
     return max(120, min(640, 24 + 16 * lines))
 
 
-def _summary(field: Any) -> str:
-    """Required or optional, the type in words, the unit and the example."""
+def _facts(field: Any) -> list[str]:
+    """Required or optional, then the format in words, the unit and the example."""
     facts = ["Required" if getattr(field, "required", False) else "Optional"]
     kind = _type_words(field)
     if kind:
-        facts.append(kind)
+        facts.append(f"Format: {kind}")
     unit = getattr(field, "unit", None)
     if unit:
         facts.append(f"Unit: {unit}")
     example = getattr(field, "example", None)
     if example:
         facts.append(f"Example: {example}")
-    return " · ".join(facts)
+    return facts
 
 
 def _type_words(field: Any) -> str:

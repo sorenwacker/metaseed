@@ -38,8 +38,9 @@ STEPS = (
     ),
     (
         "Fill in the fields",
-        "Click or hover over a column heading to read what the field holds: whether it is "
-        "required, its type, an example, and its pattern, allowed values and rules. A "
+        "Click or hover over a column heading to read what the field holds, one fact per "
+        "line: whether it is required, its format, an example, and its pattern, allowed "
+        "values and rules, then the description. A "
         "column with allowed values has a dropdown. A cell that breaks a rule is coloured.",
     ),
     (
