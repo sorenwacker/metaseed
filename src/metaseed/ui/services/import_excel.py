@@ -31,8 +31,18 @@ from openpyxl import load_workbook
 
 from metaseed.specs.loader import SpecLoader
 from metaseed.specs.schema import FieldType
-from metaseed.ui.services.belongs_to import BELONGS_TO, LEGACY_PARENT, parse
+from metaseed.ui.services.belongs_to import (
+    BELONGS_TO,
+    LEGACY_PARENT,
+    PARENTS_SHEET,
+    parse,
+)
+from metaseed.ui.services.controlled_terms import TERMS_SHEET
 from metaseed.ui.services.export import FORMULA_TRIGGERS
+from metaseed.ui.services.instructions import INSTRUCTIONS_SHEET
+
+#: The export's own sheets, which are no entity of any profile.
+OWN_SHEETS = frozenset({INSTRUCTIONS_SHEET, TERMS_SHEET, PARENTS_SHEET})
 
 if TYPE_CHECKING:
     from metaseed.facade import ProfileFacade
@@ -187,9 +197,10 @@ def workbook_to_payload(
         A payload for :func:`metaseed.ui.datasets.import_payload`.
 
     Raises:
-        ValueError: If the file is not a readable workbook, or no sheet matches
-            an entity type of the profile — which means it was exported from a
-            different profile, and loading it would silently produce nothing.
+        ValueError: If the file is not a readable workbook, or it yields no row:
+            either no sheet is named after an entity type of the profile (it was
+            exported from a different profile) or the matching sheets hold no
+            rows. Loading either would silently produce nothing.
     """
     try:
         workbook = load_workbook(BytesIO(raw), read_only=True, data_only=True)
@@ -203,23 +214,43 @@ def workbook_to_payload(
     reading = _Reading(facade)
     # The export's own sheets are not entities; matching by entity name already
     # skips them, and naming the fact keeps it true if that changes.
-    for entity_type in facade.entities:
-        if entity_type in workbook.sheetnames:
-            fields = (
-                {f.name: f for f in spec.entities[entity_type].fields}
-                if entity_type in spec.entities
-                else {}
-            )
-            reading.read_sheet(entity_type, workbook[entity_type], fields)
+    matched = [e for e in facade.entities if e in workbook.sheetnames]
+    for entity_type in matched:
+        fields = (
+            {f.name: f for f in spec.entities[entity_type].fields}
+            if entity_type in spec.entities
+            else {}
+        )
+        reading.read_sheet(entity_type, workbook[entity_type], fields)
     entities = reading.entities_or_refusal()
 
     if not entities:
-        # An empty result is never what an import meant. The usual cause is a
-        # workbook exported from a different profile: sheet names largely miss,
-        # and any that coincide hold no rows this profile can read.
-        raise ValueError(
-            f"Nothing in this workbook matches the {profile} profile — was it "
-            "exported from a different profile?"
-        )
+        raise ValueError(_nothing_to_import(profile, matched, workbook.sheetnames))
 
     return {"profile": profile, "version": version, "entities": entities}
+
+
+def _nothing_to_import(profile: str, matched: list[str], sheets: list[str]) -> str:
+    """Why an import found no row: empty sheets, another profile's workbook, or both.
+
+    An empty result is never what an import meant, and the causes call for
+    different repairs, so the message says what it found: which sheets of the
+    profile it read and found empty, and which sheets belong to no entity of
+    the profile. A workbook from another profile can share some sheet names
+    with this one, so both parts can apply at once.
+    """
+    foreign = [s for s in sheets if s not in matched and s not in OWN_SHEETS]
+    parts = []
+    if matched:
+        parts.append(
+            f"The sheets matching the {profile} profile ({', '.join(matched)}) hold "
+            "no rows: type each record into the first row below the headings."
+        )
+    if foreign:
+        parts.append(
+            f"The sheets {', '.join(foreign)} are no entity of the {profile} "
+            "profile — was the workbook exported from a different profile?"
+        )
+    if not matched and not foreign:
+        parts.append(f"The workbook holds no sheet of the {profile} profile.")
+    return " ".join(parts)

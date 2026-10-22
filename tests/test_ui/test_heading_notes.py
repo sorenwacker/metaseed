@@ -12,6 +12,7 @@ from __future__ import annotations
 from metaseed.specs.schema import Constraints, FieldSpec, FieldType, ValidationRuleSpec
 from metaseed.ui.services.export import build_workbook
 from metaseed.ui.services.heading_note import MAX_LISTED_VALUES, heading_note
+from metaseed.ui.services.sheet_style import PROMPT_LIMIT, heading_prompt
 from metaseed.ui.state import AppState
 
 
@@ -19,22 +20,70 @@ def _lines(note: str) -> list[str]:
     return note.splitlines()
 
 
-class TestTheSummaryLine:
-    def test_it_names_the_type_in_words(self) -> None:
+class TestTheFacts:
+    """Each fact stands on its own labelled line, before the description.
+
+    Joined on one line after the description, the format and example were the
+    part a long description pushed out of Excel's 255-character selected-cell
+    message, and read as missing.
+    """
+
+    def test_it_names_the_format_in_words(self) -> None:
         field = FieldSpec(
             name="sown", type=FieldType.DATE, required=True, example="2024-03-01"
         )
 
-        assert "Required · Date (YYYY-MM-DD) · Example: 2024-03-01" in _lines(
-            heading_note("sown", field, [])
-        )
+        assert _lines(heading_note("sown", field, [])) == [
+            "Required",
+            "Format: Date (YYYY-MM-DD)",
+            "Example: 2024-03-01",
+        ]
 
     def test_a_scalar_list_says_how_values_are_separated(self) -> None:
         field = FieldSpec(name="keywords", type=FieldType.LIST, items="string")
 
-        assert "Optional · List of values separated by commas" in heading_note(
-            "keywords", field, []
+        assert "Format: List of values separated by commas" in _lines(
+            heading_note("keywords", field, [])
         )
+
+    def test_the_unit_has_its_line(self) -> None:
+        field = FieldSpec(name="depth", type=FieldType.FLOAT, unit="cm", example="12")
+
+        assert _lines(heading_note("depth", field, [])) == [
+            "Optional",
+            "Format: Decimal number",
+            "Unit: cm",
+            "Example: 12",
+        ]
+
+    def test_the_description_follows_the_facts(self) -> None:
+        field = FieldSpec(
+            name="title",
+            type=FieldType.STRING,
+            required=True,
+            description="Title of the record.",
+            example="Drought trial 2024",
+        )
+
+        assert heading_note("title", field, []) == (
+            "Required\nFormat: Text\nExample: Drought trial 2024\n\nTitle of the record."
+        )
+
+    def test_a_long_description_does_not_push_the_facts_out_of_the_prompt(
+        self,
+    ) -> None:
+        field = FieldSpec(
+            name="title",
+            type=FieldType.STRING,
+            description="A description. " * 30,
+            example="Drought trial 2024",
+        )
+        prompt = heading_prompt("title", heading_note("title", field, [])).prompt
+
+        assert prompt is not None
+        assert len(prompt) <= PROMPT_LIMIT
+        assert "Format: Text" in prompt
+        assert "Example: Drought trial 2024" in prompt
 
     def test_a_field_holding_entities_has_no_type(self) -> None:
         field = FieldSpec(name="studies", type=FieldType.LIST, items="Study")

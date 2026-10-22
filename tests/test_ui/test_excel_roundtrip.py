@@ -61,15 +61,37 @@ def test_a_scalar_list_splits_back_into_a_list() -> None:
     assert study["observation_unit_level_hierarchy"] == ["block", "plot"]
 
 
-def test_a_workbook_from_another_profile_is_refused() -> None:
+def test_a_workbook_from_another_profile_is_refused_naming_its_sheets() -> None:
     import pytest
 
     raw = _exported_state()
     other = AppState(profile="darwin-core", version="1.0")
-    with pytest.raises(ValueError, match="different profile"):
+    with pytest.raises(ValueError, match="different profile") as refusal:
         workbook_to_payload(
             raw,
             profile="darwin-core",
             version="1.0",
             facade=other.get_or_create_facade(),
         )
+    # MIAPPE's Event and Location sheets share their names with Darwin Core, so
+    # the message names both what it read and found empty and what is foreign.
+    assert "Event, Location" in str(refusal.value)
+    assert "Investigation" in str(refusal.value)
+
+
+def test_an_untouched_empty_export_is_refused_naming_the_empty_sheets() -> None:
+    """The sheets match, so this is not another profile's workbook: the person
+    typed nothing into it, and the message says where a row was expected."""
+    import pytest
+
+    state = AppState(profile="miappe", version="1.2")
+    raw = export_to_bytes(state).getvalue()
+    with pytest.raises(ValueError, match="hold no rows") as refusal:
+        workbook_to_payload(
+            raw,
+            profile="miappe",
+            version="1.2",
+            facade=state.get_or_create_facade(),
+        )
+    assert "Investigation" in str(refusal.value)
+    assert "different profile" not in str(refusal.value)

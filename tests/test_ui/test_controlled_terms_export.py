@@ -20,7 +20,8 @@ from metaseed.ui.state import AppState
 
 
 def _validations(ws) -> list:
-    return list(ws.data_validations.dataValidation)
+    """The validations that check a value; a heading's note checks none."""
+    return [v for v in ws.data_validations.dataValidation if v.type is not None]
 
 
 class TestWhichFieldsGetADropdown:
@@ -364,9 +365,7 @@ class TestExcelActuallyEnforcesTheRules:
             ),
         )
         wb = build_workbook(state)
-        return [
-            v for sheet in wb.worksheets for v in sheet.data_validations.dataValidation
-        ]
+        return [v for sheet in wb.worksheets for v in _validations(sheet)]
 
     def test_every_rule_actually_speaks_up(self) -> None:
         validations = self._validations()
