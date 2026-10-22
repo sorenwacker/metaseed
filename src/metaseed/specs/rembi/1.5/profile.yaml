@@ -25,6 +25,7 @@ entities:
       type: string
       required: true
       description: The title for the dataset, shown when search results including the data are listed. At least 25 characters.
+      example: Light-sheet imaging of root growth in Arabidopsis thaliana under salt stress
       constraints:
         min_length: 25
       is_label: true
@@ -33,6 +34,7 @@ entities:
       type: string
       required: true
       description: Summarises the dataset; the abstract of the associated publication serves. At least 25 characters.
+      example: Time-lapse light-sheet fluorescence microscopy of primary roots of Arabidopsis thaliana seedlings expressing a nuclear marker, imaged every 15 minutes for 24 hours on control and 100 mM NaCl medium
       constraints:
         min_length: 25
       tier: required
@@ -40,6 +42,7 @@ entities:
       type: list
       required: true
       description: Keywords describing the data, used to aid search and classification.
+      example: [light-sheet microscopy, root growth, salt stress, Arabidopsis thaliana]
       constraints:
         min_items: 1
       items: string
@@ -48,11 +51,13 @@ entities:
       type: date
       required: true
       description: The date until which the dataset stays private in the archive; the release date.
+      example: '2025-06-01'
       tier: required
     - name: rembi_version
       type: string
       required: true
       description: The REMBI version the metadata follows.
+      example: '1.5'
       constraints:
         enum:
         - '1.5'
@@ -61,6 +66,7 @@ entities:
       type: string
       required: false
       description: The license under which the data are available. The BioImage Archive publishes under CC0 by default.
+      example: CC BY 4.0
       options:
       - CC0
       - CC BY 4.0
@@ -69,11 +75,13 @@ entities:
       type: string
       required: false
       description: A description of how the data generation was funded.
+      example: Funded by the Example Research Council, grant ERC-0000
       tier: optional
     - name: acknowledgements
       type: string
       required: false
       description: Acknowledgements of people and facilities that are not authors.
+      example: The Example University imaging facility for instrument access and support
       tier: optional
     - name: authors
       type: list
@@ -170,17 +178,20 @@ entities:
       type: string
       required: true
       description: Reference to parent Study
+      example: S-BIAD0001
       reference: Study.identifier
     - name: title
       type: string
       required: true
       description: Title of the associated publication.
+      example: Salt stress slows root meristem cell division within hours
       is_label: true
       tier: required
     - name: authors
       type: string
       required: false
       description: The publication's authors, as printed.
+      example: Example A, Example B, Example C
       tier: optional
     - name: doi
       type: string
@@ -194,6 +205,7 @@ entities:
       type: integer
       required: false
       description: Year of publication.
+      example: 2024
       constraints:
         minimum: 1900.0
       tier: optional
@@ -201,6 +213,7 @@ entities:
       type: string
       required: false
       description: PubMed or PMC identifier.
+      example: '38123456'
       tier: optional
   Link:
     description: 'A link to related content outside the archive: a repository, a protocol, a related dataset.'
@@ -209,11 +222,13 @@ entities:
       type: string
       required: true
       description: Reference to parent Study
+      example: S-BIAD0001
       reference: Study.identifier
     - name: link_url
       type: string
       required: true
       description: The URL of the linked content.
+      example: https://example.org/protocols/root-light-sheet-imaging
       constraints:
         pattern: ^https?://\S+$
       is_label: true
@@ -222,6 +237,7 @@ entities:
       type: string
       required: false
       description: The type of the link.
+      example: protocol
       options:
       - repository
       - protocol
@@ -233,6 +249,7 @@ entities:
       type: string
       required: false
       description: The description of the linked content.
+      example: Sample mounting and imaging protocol
       tier: optional
   GrantReference:
     description: 'A grant that funded the data generation: its identifier and the funder.'
@@ -241,17 +258,20 @@ entities:
       type: string
       required: true
       description: Reference to parent Study
+      example: S-BIAD0001
       reference: Study.identifier
     - name: identifier
       type: string
       required: true
       description: The grant identifier.
+      example: ERC-0000
       is_identifier: true
       tier: required
     - name: funder
       type: string
       required: true
       description: The funding body.
+      example: Example Research Council
       is_label: true
       tier: required
   StudyComponent:
@@ -262,22 +282,26 @@ entities:
       type: string
       required: true
       description: Reference to parent Study
+      example: S-BIAD0001
       reference: Study.identifier
     - name: name
       type: string
       required: true
       description: The name of the study component.
+      example: Primary root time-lapse, control medium
       is_identifier: true
       tier: required
     - name: description
       type: string
       required: true
       description: 'An explanation of the study component: what distinguishes it from the others.'
+      example: Seedlings on control medium; the salt-treated seedlings form the second component
       tier: required
     - name: rembi_version
       type: string
       required: true
       description: The REMBI version this component's metadata follows.
+      example: '1.5'
       constraints:
         enum:
         - '1.5'
@@ -286,30 +310,35 @@ entities:
       type: string
       required: true
       description: The biosample imaged in this component, by its title.
+      example: Arabidopsis thaliana root tip
       reference: Biosample.title
       tier: required
     - name: specimen
       type: string
       required: true
       description: The specimen preparation used in this component, by its title.
+      example: Seedling in agarose on the light-sheet holder
       reference: Specimen.title
       tier: required
     - name: image_acquisition
       type: string
       required: true
       description: The image acquisition set-up used in this component, by its title.
+      example: Light-sheet time-lapse, 15 minute interval
       reference: ImageAcquisition.title
       tier: required
     - name: image_correlation
       type: string
       required: false
       description: The image correlation this component's images took part in, by its title, where there is one.
+      example: Bright-field and fluorescence alignment
       reference: ImageCorrelation.title
       tier: optional
     - name: image_analysis
       type: string
       required: false
       description: The analysis applied to this component's images, by its title, where there is one.
+      example: Nuclear tracking and division counting
       reference: ImageAnalysis.title
       tier: optional
     - name: files
@@ -327,22 +356,26 @@ entities:
       type: string
       required: true
       description: Reference to parent StudyComponent
+      example: Primary root time-lapse, control medium
       reference: StudyComponent.name
     - name: file_name
       type: string
       required: true
       description: The file's name, unique within the study.
+      example: root_control_rep1.ome.tiff
       is_identifier: true
       tier: required
     - name: file_location
       type: string
       required: false
       description: 'Where the file is: its path in the submission, or a URL.'
+      example: images/control/root_control_rep1.ome.tiff
       tier: recommended
     - name: file_format
       type: string
       required: false
       description: The file's format.
+      example: OME-TIFF
       options:
       - OME-TIFF
       - OME-Zarr
@@ -359,6 +392,7 @@ entities:
       type: string
       required: false
       description: What the file shows, where the name does not say.
+      example: Primary root of seedling 1 on control medium, 96 time points
       tier: optional
   Biosample:
     description: 'The biological entity that was imaged: the organism, what part or scale of it, and the variables that were
@@ -368,6 +402,7 @@ entities:
       type: string
       required: true
       description: Reference to parent Study
+      example: S-BIAD0001
       reference: Study.identifier
     - name: title
       type: string
@@ -400,28 +435,33 @@ entities:
       type: string
       required: true
       description: 'What is being imaged: the part or scale of the organism, such as a cell line, a tissue or an organelle.'
+      example: Primary root tip of a 5-day-old seedling
       tier: required
     - name: description
       type: string
       required: false
       description: High-level description of the sample.
+      example: Arabidopsis thaliana Col-0 seedlings expressing a histone H2B-GFP nuclear marker
       tier: optional
     - name: intrinsic_variables
       type: list
       required: false
       description: Intrinsic, for example genetic, alterations of the sample.
+      example: [H2B-GFP nuclear marker]
       items: string
       tier: optional
     - name: extrinsic_variables
       type: list
       required: false
       description: External treatments applied to the sample, such as a reagent.
+      example: [100 mM NaCl in the growth medium]
       items: string
       tier: optional
     - name: experimental_variables
       type: list
       required: false
       description: What is intentionally varied between multiple images.
+      example: [salt concentration, time after transfer]
       items: string
       tier: optional
   Specimen:
@@ -431,22 +471,26 @@ entities:
       type: string
       required: true
       description: Reference to parent Study
+      example: S-BIAD0001
       reference: Study.identifier
     - name: title
       type: string
       required: true
       description: A short name for the specimen preparation, by which a study component refers to it.
+      example: Seedling in agarose on the light-sheet holder
       is_identifier: true
       tier: required
     - name: sample_preparation
       type: string
       required: true
       description: How the sample was prepared for imaging.
+      example: Seedlings were embedded in 1 percent low-melting agarose in a glass capillary and extruded into the imaging chamber filled with liquid medium
       tier: required
     - name: growth_protocol
       type: string
       required: false
       description: 'How the specimen was grown: cell line culture, crosses, plant growth.'
+      example: Seeds were surface-sterilised, stratified for 2 days at 4 C and grown vertically on half-strength MS agar for 5 days at 22 C under 16 h light
       tier: optional
   ImageAcquisition:
     description: 'How the images were captured: the imaging method, the instrument and its settings.'
@@ -455,11 +499,13 @@ entities:
       type: string
       required: true
       description: Reference to parent Study
+      example: S-BIAD0001
       reference: Study.identifier
     - name: title
       type: string
       required: true
       description: A short name for the image acquisition set-up, by which a study component refers to it.
+      example: Light-sheet time-lapse, 15 minute interval
       is_identifier: true
       tier: required
     - name: imaging_method
@@ -474,11 +520,13 @@ entities:
       type: string
       required: true
       description: Description of the instrument used to capture the images.
+      example: Zeiss Lightsheet 7 with a 20x/1.0 water-dipping detection objective
       tier: required
     - name: image_acquisition_parameters
       type: string
       required: true
       description: How the images were acquired, including instrument settings and parameters.
+      example: 488 nm excitation at 2 percent laser power, 50 ms exposure, 2 micrometre z-step, 150 slices, one stack every 15 minutes for 24 hours
       tier: required
   ImageCorrelation:
     description: How images from different modalities were aligned to each other, where the study correlates them.
@@ -487,27 +535,32 @@ entities:
       type: string
       required: true
       description: Reference to parent Study
+      example: S-BIAD0001
       reference: Study.identifier
     - name: title
       type: string
       required: true
       description: A short name for the correlation, by which a study component refers to it.
+      example: Bright-field and fluorescence alignment
       is_identifier: true
       tier: required
     - name: spatial_and_temporal_alignment
       type: string
       required: true
       description: Method used to correlate images from different modalities.
+      example: Rigid registration of the bright-field channel onto the fluorescence channel at every time point
       tier: required
     - name: fiducials_used
       type: string
       required: true
       description: Features from the correlated datasets used for colocalisation.
+      example: Root tip outline and the quiescent centre
       tier: required
     - name: transformation_matrix
       type: string
       required: true
       description: The correlation transforms, or the name of the file that holds them.
+      example: transforms/root_control_rep1_registration.csv
       tier: required
   ImageAnalysis:
     description: How the images were analysed, where the study includes analysed data.
@@ -516,17 +569,20 @@ entities:
       type: string
       required: true
       description: Reference to parent Study
+      example: S-BIAD0001
       reference: Study.identifier
     - name: title
       type: string
       required: true
       description: A short name for the analysis, by which a study component refers to it.
+      example: Nuclear tracking and division counting
       is_identifier: true
       tier: required
     - name: analysis_overview
       type: string
       required: true
       description: How image analysis was carried out.
+      example: Nuclei were segmented with StarDist and tracked with TrackMate; divisions were counted per hour within 300 micrometres of the quiescent centre
       tier: required
   Annotation:
     description: 'Annotations on the images: what was annotated, how, by what criteria and how completely (the MIFA module
@@ -536,27 +592,32 @@ entities:
       type: string
       required: true
       description: Reference to parent Study
+      example: S-BIAD0001
       reference: Study.identifier
     - name: title
       type: string
       required: true
       description: A short name for the annotation set.
+      example: Nuclear segmentation masks
       is_identifier: true
       tier: required
     - name: annotation_overview
       type: string
       required: true
       description: What was annotated and why.
+      example: Segmentation of every nucleus in the meristem at every time point, used to count divisions
       tier: required
     - name: annotation_method
       type: string
       required: true
       description: 'How the annotations were made: manually, by which tool, by which model.'
+      example: StarDist 3D model trained on 20 manually annotated stacks, then corrected by hand
       tier: required
     - name: annotation_type
       type: list
       required: false
       description: The kinds of annotation in the set.
+      example: [segmentation mask, tracks]
       items: string
       options:
       - class labels
@@ -575,16 +636,19 @@ entities:
       type: string
       required: false
       description: The criteria by which annotations were assigned.
+      example: A nucleus is one connected H2B-GFP signal above the local background
       tier: optional
     - name: annotation_coverage
       type: string
       required: false
       description: How much of the data is annotated.
+      example: All time points of all replicates in both components
       tier: optional
     - name: annotation_confidence_level
       type: string
       required: false
       description: How confident the annotations are, and how that was assessed.
+      example: Manual check of 10 percent of the masks found 97 percent agreement
       tier: optional
     - name: authors
       type: list
@@ -606,22 +670,26 @@ entities:
       type: string
       required: true
       description: Reference to parent Study
+      example: S-BIAD0001
       reference: Study.identifier
     - name: last_name
       type: string
       required: true
       description: Last name.
+      example: Submitter
       is_label: true
       tier: required
     - name: first_name
       type: string
       required: true
       description: First name.
+      example: Example
       tier: required
     - name: email
       type: string
       required: false
       description: E-mail address.
+      example: submitter@example.org
       tier: optional
     - name: orcid
       type: string
@@ -635,6 +703,7 @@ entities:
       type: string
       required: false
       description: The person's role in the study; the submitter by default.
+      example: submitter
       options:
       - submitter
       - principal investigator
@@ -646,6 +715,7 @@ entities:
       type: string
       required: true
       description: The name of the organisation the person is affiliated with.
+      example: Example University, Department of Plant Sciences
       tier: required
     - name: affiliation_url
       type: string
@@ -657,6 +727,7 @@ entities:
       type: string
       required: false
       description: The organisation's address, where it has no identifier URL.
+      example: 1 Example Street, Exampleton, Exampleland
       tier: optional
   FileLevelMetadata:
     description: 'Metadata of one annotation file: which image it annotates, what kind of annotation it holds, and how it was derived.'
@@ -665,37 +736,44 @@ entities:
       type: string
       required: true
       description: The title of the annotation this file belongs to.
+      example: Nuclear segmentation masks
       reference: Annotation.title
       tier: required
     - name: annotation_id
       type: string
       required: true
       description: A unique identifier of this annotation file.
+      example: masks/root_control_rep1_t001.tiff
       is_identifier: true
       tier: required
     - name: source_image_id
       type: string
       required: true
       description: The image the annotation refers to.
+      example: root_control_rep1.ome.tiff
       tier: required
     - name: annotation_type
       type: list
       items: string
       required: false
       description: The kinds of annotation the file holds, such as segmentation mask or class label.
+      example: [segmentation mask]
       tier: optional
     - name: transformations
       type: string
       required: false
       description: Any transformations applied to the source image before annotation.
+      example: Gaussian blur with sigma 1 before segmentation
       tier: optional
     - name: spatial_information
       type: string
       required: false
       description: Where in the source image the annotation applies, as coordinates or a description.
+      example: Whole stack, time point 1
       tier: optional
     - name: annotation_creation_time
       type: datetime
       required: false
       description: When the annotation was created.
+      example: '2024-04-02T14:30:00+00:00'
       tier: optional

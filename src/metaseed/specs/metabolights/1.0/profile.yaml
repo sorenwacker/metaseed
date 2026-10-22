@@ -112,6 +112,7 @@ entities:
       type: string
       required: true
       description: A locally unique identifier for the investigation
+      example: INV-001
       constraints:
         min_length: 1
         max_length: 100
@@ -124,12 +125,14 @@ entities:
       type: string
       required: false
       description: MetaboLights accession number (assigned upon submission)
+      example: MTBLS1
 
     - name: title
       dcat: dct:title
       type: string
       required: true
       description: A concise descriptive title for the investigation
+      example: Metabolite profiling of Arabidopsis thaliana leaves under drought stress
       constraints:
         min_length: 10
         max_length: 500
@@ -139,6 +142,7 @@ entities:
       type: string
       required: true
       description: Detailed description of the investigation aims and scope
+      example: Untargeted LC-MS profiling of rosette leaves from well-watered and drought-stressed plants to identify metabolites that accumulate during dehydration
       constraints:
         min_length: 50
 
@@ -147,11 +151,13 @@ entities:
       type: date
       required: false
       description: Date the investigation was submitted
+      example: '2024-06-01'
 
     - name: public_release_date
       type: date
       required: false
       description: Date the investigation becomes publicly available
+      example: '2025-06-01'
 
     - name: contacts
       dcat: dcat:contactPoint
@@ -180,22 +186,26 @@ entities:
       type: string
       required: true
       description: Unique identifier for the study
+      example: MTBLS1
 
     - name: title
       type: string
       required: true
       description: Title of the study
+      example: Leaf metabolome of Arabidopsis thaliana during progressive drought
 
     - name: description
       type: string
       required: false
       description: Description of the study
+      example: Plants were grown for four weeks, then water was withheld for 72 hours; leaves were sampled at 0, 24 and 72 hours
 
     - name: study_design_descriptors
       type: list
       items: string
       required: false
       description: Study design types (ontology terms)
+      example: [untargeted metabolites, time series design]
 
     - name: factors
       type: list
@@ -229,16 +239,19 @@ entities:
       type: string
       required: true
       description: Unique identifier for the assay
+      example: a_MTBLS1_LC-MS_positive
 
     - name: filename
       type: string
       required: true
       description: Assay file name (a_*.txt)
+      example: a_MTBLS1_LC-MS_positive_hilic_metabolite_profiling.txt
 
     - name: technology_type
       type: string
       required: true
       description: Technology type (e.g., mass spectrometry, NMR spectroscopy)
+      example: mass spectrometry
       constraints:
         enum: [mass spectrometry, NMR spectroscopy, capillary electrophoresis]
 
@@ -246,11 +259,13 @@ entities:
       type: string
       required: false
       description: Technology platform or instrument
+      example: Thermo Q Exactive HF (LC-ESI-QTOF)
 
     - name: measurement_type
       type: string
       required: true
       description: Measurement type (e.g., metabolite profiling)
+      example: untargeted metabolite profiling
       constraints:
         enum: [metabolite profiling, targeted metabolite profiling, untargeted metabolite profiling, lipidomics, fluxomics]
 
@@ -259,6 +274,7 @@ entities:
       items: string
       required: true
       description: Sample names in this assay
+      example: [leaf-drought-72h-rep1]
 
     - name: data_files
       type: list
@@ -270,6 +286,7 @@ entities:
       type: string
       required: false
       description: Metabolite annotation file (m_*.tsv)
+      example: m_MTBLS1_LC-MS_positive_hilic_metabolite_profiling_v2_maf.tsv
 
     - name: metabolites
       type: list
@@ -285,16 +302,19 @@ entities:
       type: string
       required: true
       description: Sample name
+      example: leaf-drought-72h-rep1
 
     - name: organism
       type: string
       required: true
       description: Source organism name
+      example: Arabidopsis thaliana
 
     - name: organism_term
       type: ontology_term
       required: false
       description: Organism ontology accession
+      example: NCBITaxon:3702
       ontologies:
         - ncbitaxon
 
@@ -302,6 +322,7 @@ entities:
       type: string
       required: false
       description: Part of organism sampled
+      example: rosette leaf
 
     - name: characteristics
       type: list
@@ -323,31 +344,37 @@ entities:
       type: string
       required: false
       description: Identifier in external database (e.g., CHEBI:12345)
+      example: CHEBI:17790
 
     - name: metabolite_identification
       type: string
       required: true
       description: Name or identifier of the metabolite
+      example: proline
 
     - name: chemical_formula
       type: string
       required: false
       description: Molecular formula
+      example: C5H9NO2
 
     - name: smiles
       type: string
       required: false
       description: SMILES notation
+      example: OC(=O)[C@@H]1CCCN1
 
     - name: inchi
       type: string
       required: false
       description: InChI string
+      example: InChI=1S/C5H9NO2/c7-5(8)4-2-1-3-6-4/h4,6H,1-3H2,(H,7,8)/t4-/m0/s1
 
     - name: mass_to_charge
       type: float
       required: false
       description: Mass to charge ratio (m/z)
+      example: 116.0706
       constraints:
         minimum: 0
 
@@ -355,6 +382,7 @@ entities:
       type: float
       required: false
       description: Retention time in minutes
+      example: 7.42
       constraints:
         minimum: 0
 
@@ -362,6 +390,7 @@ entities:
       type: integer
       required: false
       description: Charge state
+      example: 1
       constraints:
         minimum: -10
         maximum: 10
@@ -370,6 +399,7 @@ entities:
       type: string
       required: false
       description: Identification reliability level (MSI levels 1-4)
+      example: '1'
       constraints:
         enum: ["1", "2", "3", "4"]
 
@@ -381,11 +411,13 @@ entities:
       type: string
       required: true
       description: Protocol name
+      example: Extraction
 
     - name: protocol_type
       type: string
       required: true
       description: Type of protocol (extraction, chromatography, mass spectrometry, etc.)
+      example: extraction
       constraints:
         enum: [sample collection, extraction, chromatography, mass spectrometry, NMR spectroscopy, data transformation, metabolite identification, normalization]
 
@@ -393,11 +425,13 @@ entities:
       type: string
       required: false
       description: Protocol description
+      example: 50 mg of frozen leaf powder was extracted in 1 mL of methanol:water (80:20) at 4 C for 30 minutes
 
     - name: uri
       type: uri
       required: false
       description: URI to protocol documentation
+      example: https://example.org/protocols/leaf-metabolite-extraction
 
     - name: parameters
       type: list
@@ -413,16 +447,19 @@ entities:
       type: string
       required: true
       description: Parameter name
+      example: Extraction solvent
 
     - name: value
       type: string
       required: false
       description: Parameter value
+      example: methanol:water 80:20
 
     - name: unit
       type: string
       required: false
       description: Unit of measurement
+      example: percent
 
   Factor:
     ontology_term: mtbls:Factor
@@ -432,11 +469,13 @@ entities:
       type: string
       required: true
       description: Factor name
+      example: drought duration
 
     - name: factor_type
       type: string
       required: true
       description: Type of factor (ontology term)
+      example: time
 
   FactorValue:
     ontology_term: mtbls:FactorValue
@@ -446,16 +485,19 @@ entities:
       type: string
       required: true
       description: Name of the factor
+      example: drought duration
 
     - name: value
       type: string
       required: false
       description: The factor value
+      example: '72'
 
     - name: unit
       type: string
       required: false
       description: Unit for numeric values
+      example: hour
 
   Characteristic:
     ontology_term: mtbls:Characteristic
@@ -465,16 +507,19 @@ entities:
       type: string
       required: true
       description: Characteristic category
+      example: Organism part
 
     - name: value
       type: string
       required: false
       description: Characteristic value
+      example: rosette leaf
 
     - name: unit
       type: string
       required: false
       description: Unit for numeric values
+      example: milligram
 
   DataFile:
     ontology_term: mtbls:DataFile
@@ -484,11 +529,13 @@ entities:
       type: string
       required: true
       description: Name of the data file
+      example: leaf-drought-72h-rep1.mzML
 
     - name: file_type
       type: string
       required: true
       description: Type of file (raw, derived, etc.)
+      example: Raw Data File
       constraints:
         enum: [Raw Data File, Derived Data File, Acquisition Parameter Data File, Free Induction Decay Data File]
 
@@ -496,6 +543,7 @@ entities:
       type: string
       required: false
       description: MD5 or SHA256 checksum
+      example: d41d8cd98f00b204e9800998ecf8427e
 
   Person:
     ontology_term: mtbls:Person
@@ -505,32 +553,38 @@ entities:
       type: string
       required: true
       description: First name
+      example: Example
 
     - name: last_name
       type: string
       required: true
       description: Last name
+      example: Submitter
 
     - name: email
       type: string
       required: true
       description: Email address
+      example: submitter@example.org
 
     - name: affiliation
       type: string
       required: false
       description: Institutional affiliation
+      example: Example University, Department of Plant Sciences
 
     - name: orcid
       type: string
       required: false
       description: ORCID identifier
+      example: 0000-0002-1825-0097
 
     - name: roles
       type: list
       items: string
       required: false
       description: Roles in the investigation
+      example: [submitter, principal investigator]
 
   Publication:
     ontology_term: mtbls:Publication
@@ -540,25 +594,30 @@ entities:
       type: string
       required: true
       description: Publication title
+      example: Proline accumulation in the Arabidopsis thaliana leaf metabolome during progressive drought
 
     - name: authors
       type: string
       required: false
       description: Author list
+      example: Example A, Example B, Example C
 
     - name: doi
       type: string
       required: false
       description: Digital Object Identifier
+      example: 10.1234/example.2024.002
 
     - name: pubmed_id
       type: string
       required: false
       description: PubMed ID
+      example: '38123457'
 
     - name: status
       type: string
       required: false
       description: Publication status
+      example: Published
       constraints:
         enum: [Published, Submitted, In Preparation, In Press]
