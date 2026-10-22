@@ -35,6 +35,7 @@ from metaseed.seek.templates import (
     template_title,
 )
 from metaseed.seek.values import sample_data, title_of
+from metaseed.specs.taxon import export_values
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
@@ -760,7 +761,7 @@ def place_sample(
 
     bound = is_template_bound(entity)
     data = sample_data(
-        values,
+        export_values(entity.fields, values) if entity is not None else values,
         ctx.text_list_fields_by_entity.get(node.entity_type, frozenset()),
         route_core=not bound,
     )

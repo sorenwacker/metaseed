@@ -144,7 +144,7 @@ files and authenticating to Webin are out of scope).
 | Document | ENA set | Built from |
 | --- | --- | --- |
 | `study.xml` | `STUDY_SET` | Study, with `STUDY_LINKS` from its ProjectLinks and `STUDY_ATTRIBUTES` from its StudyAttributes |
-| `sample.xml` | `SAMPLE_SET` | Sample, with `SAMPLE_ATTRIBUTES` from its SampleAttributes |
+| `sample.xml` | `SAMPLE_SET` | Sample, with `SAMPLE_ATTRIBUTES` from its SampleAttributes; `TAXON_ID` is the NCBI number, also when `taxon_id` is a [taxon field](../api/schema-specs.md#taxon-fields) holding `NCBITaxon:3702` |
 | `experiment.xml` | `EXPERIMENT_SET` | Experiment, with `EXPERIMENT_ATTRIBUTES` |
 | `run.xml` | `RUN_SET` | Run, its Files, and `RUN_ATTRIBUTES` |
 | `analysis.xml` | `ANALYSIS_SET` | Analysis, its Files, and `ANALYSIS_ATTRIBUTES` |

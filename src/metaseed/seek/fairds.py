@@ -52,6 +52,7 @@ from metaseed.seek.roles import (
     role_from_annotation,
     unmapped_entities,
 )
+from metaseed.specs.taxon import export_values
 
 if TYPE_CHECKING:
     from metaseed.api.client import MetaseedClient
@@ -384,6 +385,9 @@ def to_fair_data_station_rdf(client: MetaseedClient) -> str:  # noqa: C901
         graph.add((uri, SCHEMA.name, Literal(data.get("name") or title_value)))
 
         entity_fields = fields.get(node.entity_type, {})
+        entity = profile_entities.get(node.entity_type)
+        if entity is not None:
+            data = export_values(entity.fields, data)
         for key, value in data.items():
             if key.startswith("_") or key in (
                 "identifier",

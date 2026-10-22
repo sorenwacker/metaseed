@@ -131,6 +131,8 @@ scriptable path that creates the ISA structure **and** the Extended Metadata fro
 a single file. Controlled vocabularies (including ontology-backed ones via
 `source_ontology` + `ols_root_term_uris`) remain available over the JSON:API.
 
+A [taxon field](../api/schema-specs.md#taxon-fields) is provisioned as an `Integer` attribute and pushed as the NCBI Taxonomy number, in both the FAIR Data Station file and the API route.
+
 ## Sample import: how the pieces line up
 
 Investigation and Study round-trip from the RDF with no extra setup. **Samples**

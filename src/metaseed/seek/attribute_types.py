@@ -15,6 +15,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from metaseed.specs.schema import FieldType
+from metaseed.specs.taxon import is_taxon_field
 
 if TYPE_CHECKING:
     from metaseed.specs.schema import FieldSpec
@@ -45,6 +46,9 @@ def is_cv_field(field: FieldSpec) -> bool:
 
 def attribute_type_title(field: FieldSpec) -> str:
     """SEEK base attribute-type title for a (non-nested) field."""
+    if is_taxon_field(field):
+        # Pushed as the NCBI number: see metaseed.specs.taxon.
+        return _ATTR_TYPE_TITLE[FieldType.INTEGER]
     if is_cv_field(field):
         return CV_LIST_TYPE_TITLE if field.type == FieldType.LIST else CV_TYPE_TITLE
     if field.type == FieldType.LIST:

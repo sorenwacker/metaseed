@@ -474,6 +474,19 @@ The two annotation keys answer different questions: `ontology_term` says what th
 
 See [Ontology Lookup Guide](../guides/ontology-lookup.md) for details on autocomplete, modal search, and configuration.
 
+#### Taxon fields
+
+A field of type `ontology_term` whose `ontologies` is exactly `[ncbitaxon]` is a *taxon field*. It stores the NCBI Taxonomy term the lookup returns, for example `NCBITaxon:3702`.
+
+```yaml
+- name: taxon_id
+  type: ontology_term
+  ontologies: [ncbitaxon]
+  example: NCBITaxon:3702
+```
+
+Why: a taxon typed as an `integer` gets a number box, so a person has to know the NCBI number of their organism, and nothing checks that `3702` names a taxon at all. As an ontology term it is chosen by name from NCBI Taxonomy and validated against it. The repositories that receive the value expect the bare number instead: ENA's `TAXON_ID` is an integer, and a SEEK sample attribute provisioned for a taxon holds an integer. So every export writes a taxon field as the NCBI number (`3702`), and a SEEK attribute for it is provisioned as `Integer`. A value already written as a number, an `NCBITaxon_3702` identifier or the term's OBO IRI exports the same way; a value that names no NCBI taxon is left out of the export rather than sent as text a repository would refuse.
+
 ### DCAT Mapping
 
 *(spec_version 0.5+)*
