@@ -340,7 +340,7 @@ fields:
 | `is_identifier` | no | Marks this field as the entity's declared identifier (see Field Markers) |
 | `reference_scope` | no | `dataset` (default) or `external` — whether a `reference` must resolve here (see Entity References) |
 | `is_label` | no | Marks this field as the entity's declared display label (see Field Markers) |
-| `example` | no | Illustrative value for templates/forms |
+| `example` | yes, on every value field | Illustrative value for templates, forms and the hub's field panel. Every field that holds a value carries one; `list` and `entity` fields whose `items` name another entity hold child records and carry none (see Field Markers) |
 | `options` | no | Allowed values (controlled vocabulary); falls back to `constraints.enum` |
 | `unit` | no | Expected unit, where the standard defines one |
 | `label` | no | Human-readable field label distinct from the machine `name` |
@@ -401,6 +401,8 @@ read whatever the spec's `spec_version` says. When an entity declares no
 `is_identifier` and the positional fallback lands on an optional free-text field,
 `spec_validate` reports it as a warning rather than leaving the spec silently
 valid — see [Issues versus warnings](spec-builder-mcp.md#issues-versus-warnings).
+
+**`example` is required on every value field.** A field without an example tells a reader nothing about what to enter, and the hub's field panel and the generated templates show nothing for it. The rule covers every field except a `list` or `entity` field whose `items` name another entity: that field holds child records, which the profile's example dataset illustrates. The example must satisfy the field's own `type`, `constraints` and `options`. Two gates hold the rule: `tests/test_specs/test_every_field_has_an_example.py` fails the suite for any shipped profile that breaks it, and `spec_validate` reports a draft's fields without an example as warnings (see [Issues versus warnings](spec-builder-mcp.md#issues-versus-warnings)). A profile's example dataset is required separately (`test_every_shipped_profile_version_has_an_example`).
 
 **`example` / `options` / `unit` / `label` / `tier` — field metadata.** Surfaced
 through `get_field_data()`, the client's `FieldInfo`, and the MCP field tools so

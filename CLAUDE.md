@@ -42,6 +42,7 @@ Each entity has:
 
 Each field has:
 - `name`, `codename`, `type`, `required`, `description`
+- `example` (required on every field that holds a value; not on lists or entity references to another entity)
 - `ontology_term`, `constraints`, `items` (for lists/entities)
 
 Field types: `string`, `integer`, `float`, `boolean`, `date`, `datetime`, `uri`, `ontology_term`, `list`, `entity`

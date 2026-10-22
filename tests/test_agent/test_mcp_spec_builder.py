@@ -624,6 +624,7 @@ class TestRulesAndValidation:
             entity="Assay",
             name="variable_name",
             field_type="string",
+            example="leaf area",
         )
 
         result = call(server, "spec_validate")
@@ -645,6 +646,7 @@ class TestRulesAndValidation:
             name="variable_name",
             field_type="string",
             is_identifier=True,
+            example="leaf area",
         )
 
         assert call(server, "spec_validate")["warnings"] == []

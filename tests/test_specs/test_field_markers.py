@@ -93,9 +93,38 @@ def _weak_draft(**marker: object) -> SpecBuilder:
     """A draft whose Assay identifier is inferred onto an optional free-text field."""
     builder = SpecBuilder.empty("p", "1.0")
     builder.add_entity("Assay")
-    builder.add_field("Assay", "variable_name", "string", **marker)
+    builder.add_field("Assay", "variable_name", "string", example="leaf area", **marker)
     builder.set_root_entity("Assay")
     return builder
+
+
+class TestMissingExampleWarning:
+    """Every value field carries an example; a draft is told which do not."""
+
+    def test_names_the_entity_and_the_fields_without_one(self) -> None:
+        builder = SpecBuilder.empty("p", "1.0")
+        builder.add_entity("Assay")
+        builder.add_field("Assay", "title", "string")
+        builder.add_field("Assay", "measured_on", "date", example="2024-03-15")
+        builder.add_field("Assay", "replicates", "integer")
+        builder.set_root_entity("Assay")
+
+        [warning] = [w for w in builder.warnings() if "example" in w]
+
+        assert warning.startswith("Assay: no example on title, replicates")
+        assert "measured_on" not in warning
+
+    def test_silent_when_every_value_field_has_one(self) -> None:
+        assert _weak_draft(is_identifier=True).warnings() == []
+
+    def test_a_field_nesting_another_entity_needs_none(self) -> None:
+        builder = SpecBuilder.empty("p", "1.0")
+        builder.add_entity("Study")
+        builder.add_entity("Assay")
+        builder.add_field("Study", "assays", "list", items="Assay")
+        builder.set_root_entity("Study")
+
+        assert not any("assays" in w for w in builder.warnings())
 
 
 class TestWeakInferredIdentifierWarning:
@@ -116,7 +145,7 @@ class TestWeakInferredIdentifierWarning:
     def test_silent_when_the_inferred_field_is_not_text(self) -> None:
         builder = SpecBuilder.empty("p", "1.0")
         builder.add_entity("Assay")
-        builder.add_field("Assay", "measured_on", "date")
+        builder.add_field("Assay", "measured_on", "date", example="2024-03-15")
         assert builder.warnings() == []
 
     @pytest.mark.parametrize(
@@ -139,14 +168,14 @@ class TestWeakInferredIdentifierWarning:
     ) -> None:
         builder = SpecBuilder.empty("p", "1.0")
         builder.add_entity("Assay")
-        builder.add_field("Assay", field_name, "string")
+        builder.add_field("Assay", field_name, "string", example="a-1")
         assert builder.warnings() == []
 
     def test_a_label_shaped_name_is_not_exempt(self) -> None:
         """`name`/`title` state a display label, which is not an identity claim."""
         builder = SpecBuilder.empty("p", "1.0")
         builder.add_entity("Assay")
-        builder.add_field("Assay", "title", "string")
+        builder.add_field("Assay", "title", "string", example="Leaf area")
         assert len(builder.warnings()) == 1
 
     def test_a_parent_reference_is_skipped_like_the_facade_skips_it(self) -> None:
@@ -154,8 +183,10 @@ class TestWeakInferredIdentifierWarning:
         builder = SpecBuilder.empty("p", "1.0")
         builder.add_entity("Study")
         builder.add_entity("Assay")
-        builder.add_field("Assay", "study_id", "string", reference="Study.identifier")
-        builder.add_field("Assay", "variable_name", "string")
+        builder.add_field(
+            "Assay", "study_id", "string", reference="Study.identifier", example="S-1"
+        )
+        builder.add_field("Assay", "variable_name", "string", example="leaf area")
 
         warnings = builder.warnings()
 
