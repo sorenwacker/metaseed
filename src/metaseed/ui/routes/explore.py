@@ -15,7 +15,11 @@ from metaseed.specs.merge import (
     compare,
 )
 from metaseed.specs.schema import ProfileSpec
-from metaseed.ui.services.spec_documentation import profile_markdown, profile_workbook
+from metaseed.ui.services.spec_documentation import (
+    profile_fields_csv,
+    profile_markdown,
+    profile_workbook,
+)
 from metaseed.ui.spec_provider import SpecProvider
 from metaseed.ui.state import AppState
 
@@ -210,7 +214,10 @@ def register_explore_routes(  # noqa: C901
 
 
 def documentation_download(spec: ProfileSpec, format_type: str) -> Response:
-    """A profile's documentation as a download named ``<profile>-<version>``."""
+    """A profile's documentation as a download named ``<profile>-<version>``.
+
+    ``xlsx`` is the workbook, ``csv`` its *Fields* sheet, anything else Markdown.
+    """
     stem = f"{spec.name}-{spec.version}".replace("/", "-")
     if format_type == "xlsx":
         return Response(
@@ -218,8 +225,14 @@ def documentation_download(spec: ProfileSpec, format_type: str) -> Response:
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             headers={"Content-Disposition": f'attachment; filename="{stem}.xlsx"'},
         )
+    if format_type == "csv":
+        return Response(
+            content=profile_fields_csv(spec),
+            media_type="text/csv",
+            headers={"Content-Disposition": f'attachment; filename="{stem}.csv"'},
+        )
     return Response(
         content=profile_markdown(spec),
         media_type="text/markdown",
-        headers={"Content-Disposition": f'inline; filename="{stem}.md"'},
+        headers={"Content-Disposition": f'attachment; filename="{stem}.md"'},
     )

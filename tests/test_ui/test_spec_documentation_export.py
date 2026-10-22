@@ -115,3 +115,36 @@ def test_both_pages_offer_the_documentation() -> None:
     assert "exportReport('xlsx')" in explore
     assert "/spec-builder/export/doc/markdown" in builder
     assert "/spec-builder/export/doc/xlsx" in builder
+
+
+def test_the_markdown_downloads_as_a_file(client) -> None:
+    """Served inline, the browser showed the Markdown as text in a tab."""
+    response = client.get("/explore/report/markdown/ena/1.0")
+
+    assert (
+        response.headers["content-disposition"] == 'attachment; filename="ena-1.0.md"'
+    )
+
+
+def test_csv_of_one_profile_is_its_fields_table(client, spec) -> None:
+    """CSV once returned the Markdown, under a CSV button."""
+    import csv
+
+    response = client.get("/explore/report/csv/ena/1.0")
+
+    assert (
+        response.headers["content-disposition"] == 'attachment; filename="ena-1.0.csv"'
+    )
+    assert response.headers["content-type"].startswith("text/csv")
+    rows = list(csv.reader(io.StringIO(response.text)))
+    assert rows[0][:4] == ["Entity", "Field", "Type", "Required"]
+    assert len(rows) - 1 == sum(len(e.fields) for e in spec.entities.values())
+
+
+def test_one_profile_has_no_html_export() -> None:
+    """HTML is a comparison report only; with one profile its button hides."""
+    from metaseed.ui.app import TEMPLATES_DIR
+
+    explore = (TEMPLATES_DIR / "explore" / "index.html").read_text()
+    assert 'id="export-html"' in explore
+    assert "getElementById('export-html').style.display = 'none'" in explore
