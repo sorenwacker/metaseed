@@ -186,6 +186,7 @@ def build_inline_tables(
             "rows": rows,
             "column_types": col_info["column_types"],
             "column_constraints": col_info["column_constraints"],
+            "column_ontologies": col_info["column_ontologies"],
             "required_columns": col_info["required_columns"],
             "has_nested_children": col_info["has_nested_children"],
             "reference_fields": ref_fields,
