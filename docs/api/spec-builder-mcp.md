@@ -56,7 +56,11 @@ agent can edit without tracking positions. The single exception is
   likely not what the author meant. Warnings never set `valid` to `false` and
   never block `spec_save`.
 
-The current warning is a **weak inferred identifier**: an entity that declares no
+There are two warnings.
+
+A **field without an example**: every value field carries an `example` (see [schema-specs](schema-specs.md#fields)); the warning names the entity and the fields that have none, one warning per entity.
+
+A **weak inferred identifier**: an entity that declares no
 `is_identifier` and whose positionally-inferred identifier is an optional,
 unconstrained string. Such a field can be absent, duplicated across rows, and
 free-form, yet it is what index keys and node IDs are built from — and because

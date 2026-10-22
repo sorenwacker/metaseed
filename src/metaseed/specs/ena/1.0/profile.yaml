@@ -280,6 +280,7 @@ entities:
         type: string
         required: true
         description: Unique submitter-assigned identifier for the study.
+        example: my-study-001
         ontology_term: SRA:alias
         constraints:
           min_length: 1
@@ -295,6 +296,7 @@ entities:
         type: string
         required: false
         description: ENA-assigned accession number (PRJEB or ERP format).
+        example: PRJEB12345
         ontology_term: SRA:accession
 
       - name: center_name
@@ -303,6 +305,7 @@ entities:
         type: string
         required: false
         description: Submitting center or institution name.
+        example: Example Genomics Institute
         ontology_term: SRA:center_name
 
       - name: broker_name
@@ -310,6 +313,7 @@ entities:
         type: string
         required: false
         description: Name of the broker submitting on behalf of the center.
+        example: Example Sequencing Broker
         ontology_term: SRA:broker_name
 
       - name: title
@@ -318,6 +322,7 @@ entities:
         type: string
         required: true
         description: Short descriptive title for the study.
+        example: Whole genome sequencing of Arabidopsis thaliana ecotypes
         ontology_term: SRA:title
         constraints:
           min_length: 1
@@ -329,6 +334,7 @@ entities:
         type: string
         required: true
         description: Detailed abstract describing the study objectives and scope.
+        example: Genomic variation across 100 Arabidopsis thaliana ecotypes collected from different geographic regions
         ontology_term: SRA:description
 
       - name: study_type
@@ -336,6 +342,7 @@ entities:
         type: string
         required: false
         description: Type of study (e.g., Whole Genome Sequencing, Metagenomics).
+        example: Whole Genome Sequencing
         ontology_term: SRA:study_type
 
       - name: pubmed_ids
@@ -345,6 +352,7 @@ entities:
         items: string
         required: false
         description: PubMed identifiers for associated publications.
+        example: ['38123456']
         ontology_term: SRA:pubmed_id
 
       - name: project_links
@@ -408,6 +416,7 @@ entities:
         type: string
         required: true
         description: Unique submitter-assigned identifier for the sample.
+        example: sample-arabidopsis-001
         ontology_term: SRA:alias
         constraints:
           min_length: 1
@@ -418,6 +427,7 @@ entities:
         type: string
         required: false
         description: Reference to the parent study (alias or accession).
+        example: my-study-001
         ontology_term: SRA:study_ref
         reference: Study.alias
 
@@ -426,6 +436,7 @@ entities:
         type: string
         required: false
         description: ENA-assigned accession number (ERS or SAMEA format).
+        example: ERS123456
         ontology_term: SRA:accession
 
       - name: center_name
@@ -433,6 +444,7 @@ entities:
         type: string
         required: false
         description: Submitting center or institution name.
+        example: Example Genomics Institute
         ontology_term: SRA:center_name
 
       - name: title
@@ -440,6 +452,7 @@ entities:
         type: string
         required: true
         description: Short descriptive title for the sample.
+        example: Arabidopsis thaliana Col-0 leaf tissue
         ontology_term: SRA:title
         constraints:
           min_length: 1
@@ -450,6 +463,7 @@ entities:
         type: integer
         required: true
         description: NCBI taxonomy identifier for the organism.
+        example: 3702
         ontology_term: SRA:taxon_id
         constraints:
           minimum: 1
@@ -459,6 +473,7 @@ entities:
         type: string
         required: false
         description: Scientific name of the organism (auto-populated from taxon_id).
+        example: Arabidopsis thaliana
         ontology_term: SRA:scientific_name
 
       - name: common_name
@@ -466,6 +481,7 @@ entities:
         type: string
         required: false
         description: Common name of the organism.
+        example: thale cress
         ontology_term: SRA:common_name
 
       - name: description
@@ -473,6 +489,7 @@ entities:
         type: string
         required: false
         description: Detailed description of the sample.
+        example: Rosette leaf tissue from a 4-week-old Arabidopsis thaliana Col-0 plant, well-watered control, biological replicate 1
         ontology_term: SRA:description
 
       - name: checklist
@@ -480,6 +497,7 @@ entities:
         type: string
         required: false
         description: ENA checklist identifier (e.g., ERC000011 for default).
+        example: ERC000011
         ontology_term: SRA:checklist
         constraints:
           pattern: "^ERC[0-9]{6}$"
@@ -490,6 +508,7 @@ entities:
         type: string
         required: false
         description: Date of sample collection (ISO 8601 format or missing value term). Checklist-level (e.g. ERC000011), not required on the base Sample.
+        example: '2024-06-15'
         ontology_term: SRA:collection_date
 
       - name: geographic_location_country
@@ -497,6 +516,7 @@ entities:
         type: string
         required: false
         description: Country or sea where the sample was collected (INSDC country list). Checklist-level (e.g. ERC000011), not required on the base Sample.
+        example: Exampleland
         ontology_term: SRA:geo_loc_name
 
       - name: geographic_location_region
@@ -504,6 +524,7 @@ entities:
         type: string
         required: false
         description: Region and locality within the country.
+        example: Example Province, Exampleton
         ontology_term: SRA:geo_loc_name
 
       - name: lat_lon
@@ -511,6 +532,7 @@ entities:
         type: string
         required: false
         description: Geographic coordinates (latitude longitude in decimal degrees).
+        example: 12.3400 34.5600
         ontology_term: SRA:lat_lon
 
       - name: lat_lon_latitude
@@ -518,6 +540,7 @@ entities:
         type: float
         required: false
         description: Latitude component of coordinates (decimal degrees).
+        example: 12.34
         ontology_term: SRA:latitude
         constraints:
           minimum: -90
@@ -528,6 +551,7 @@ entities:
         type: float
         required: false
         description: Longitude component of coordinates (decimal degrees).
+        example: 34.56
         ontology_term: SRA:longitude
         constraints:
           minimum: -180
@@ -538,6 +562,7 @@ entities:
         type: string
         required: false
         description: Physical, environmental, or organismal source of the sample.
+        example: rosette leaf of a soil-grown plant
         ontology_term: SRA:isolation_source
 
       - name: collected_by
@@ -545,6 +570,7 @@ entities:
         type: string
         required: false
         description: Name of person or institute who collected the sample.
+        example: Example Genomics Institute
         ontology_term: SRA:collected_by
 
       - name: identified_by
@@ -552,6 +578,7 @@ entities:
         type: string
         required: false
         description: Name of person or institute who identified the sample.
+        example: Example Genomics Institute
         ontology_term: SRA:identified_by
 
       - name: environmental_sample
@@ -559,6 +586,7 @@ entities:
         type: boolean
         required: false
         description: Whether this is an environmental sample.
+        example: false
         ontology_term: SRA:environmental_sample
 
       # Organism characteristics
@@ -567,6 +595,7 @@ entities:
         type: string
         required: false
         description: Microbial or eukaryotic strain name.
+        example: Col-0
         ontology_term: SRA:strain
 
       - name: isolate
@@ -574,6 +603,7 @@ entities:
         type: string
         required: false
         description: Individual isolate identifier.
+        example: isolate-001
         ontology_term: SRA:isolate
 
       - name: cultivar
@@ -581,6 +611,7 @@ entities:
         type: string
         required: false
         description: Cultivar name for plants.
+        example: Col-0
         ontology_term: SRA:cultivar
 
       - name: ecotype
@@ -588,6 +619,7 @@ entities:
         type: string
         required: false
         description: Ecotype name for plants.
+        example: Col-0
         ontology_term: SRA:ecotype
 
       - name: variety
@@ -595,6 +627,7 @@ entities:
         type: string
         required: false
         description: Variety name.
+        example: var. thaliana
         ontology_term: SRA:variety
 
       - name: sub_species
@@ -602,6 +635,7 @@ entities:
         type: string
         required: false
         description: Subspecies name.
+        example: subsp. thaliana
         ontology_term: SRA:sub_species
 
       - name: sex
@@ -609,6 +643,7 @@ entities:
         type: string
         required: false
         description: Sex of the organism.
+        example: hermaphrodite
         ontology_term: SRA:sex
 
       - name: mating_type
@@ -616,6 +651,7 @@ entities:
         type: string
         required: false
         description: Mating type for applicable organisms.
+        example: MATa
         ontology_term: SRA:mating_type
 
       - name: cell_type
@@ -623,6 +659,7 @@ entities:
         type: string
         required: false
         description: Cell type from which the sample was derived.
+        example: mesophyll cell
         ontology_term: SRA:cell_type
 
       - name: dev_stage
@@ -630,6 +667,7 @@ entities:
         type: string
         required: false
         description: Developmental stage of the organism.
+        example: 4-week-old rosette
         ontology_term: SRA:dev_stage
 
       - name: tissue_type
@@ -637,6 +675,7 @@ entities:
         type: string
         required: false
         description: Tissue type of the sample.
+        example: leaf
         ontology_term: SRA:tissue_type
 
       - name: cell_line
@@ -644,6 +683,7 @@ entities:
         type: string
         required: false
         description: Cell line identifier.
+        example: BY-2
         ontology_term: SRA:cell_line
 
       - name: culture_collection
@@ -651,6 +691,7 @@ entities:
         type: string
         required: false
         description: Culture collection identifier.
+        example: NASC:N1092
         ontology_term: SRA:culture_collection
 
       - name: specimen_voucher
@@ -658,6 +699,7 @@ entities:
         type: string
         required: false
         description: Reference to physical specimen voucher.
+        example: WAG:0123456
         ontology_term: SRA:specimen_voucher
 
       - name: bio_material
@@ -665,6 +707,7 @@ entities:
         type: string
         required: false
         description: Identifier for biological material.
+        example: NASC:N1092
         ontology_term: SRA:bio_material
 
       # Host information
@@ -673,6 +716,7 @@ entities:
         type: string
         required: false
         description: Scientific name of the host organism.
+        example: Arabidopsis thaliana
         ontology_term: SRA:host
 
       - name: lab_host
@@ -680,6 +724,7 @@ entities:
         type: string
         required: false
         description: Laboratory host used for propagation.
+        example: Nicotiana benthamiana
         ontology_term: SRA:lab_host
 
       - name: sample_attributes
@@ -715,6 +760,7 @@ entities:
         type: string
         required: true
         description: Unique submitter-assigned identifier for the experiment.
+        example: experiment-wgs-001
         ontology_term: SRA:alias
         constraints:
           min_length: 1
@@ -725,6 +771,7 @@ entities:
         type: string
         required: false
         description: ENA-assigned accession number (ERX format).
+        example: ERX123456
         ontology_term: SRA:accession
 
       - name: center_name
@@ -732,6 +779,7 @@ entities:
         type: string
         required: false
         description: Submitting center or institution name.
+        example: Example Genomics Institute
         ontology_term: SRA:center_name
 
       - name: title
@@ -739,6 +787,7 @@ entities:
         type: string
         required: false
         description: Short descriptive title for the experiment.
+        example: Whole genome sequencing of Arabidopsis thaliana Col-0
         ontology_term: SRA:title
         constraints:
           max_length: 4000
@@ -748,6 +797,7 @@ entities:
         type: string
         required: true
         description: Reference to the parent study (alias or accession).
+        example: my-study-001
         ontology_term: SRA:study_ref
         reference: Study.alias
 
@@ -756,6 +806,7 @@ entities:
         type: string
         required: true
         description: Reference to the sample (alias or accession).
+        example: sample-arabidopsis-001
         ontology_term: SRA:sample_ref
         reference: Sample.alias
 
@@ -764,6 +815,7 @@ entities:
         type: string
         required: false
         description: Description of the experimental design.
+        example: Paired-end whole genome sequencing of one DNA extract per plant, three biological replicates per ecotype
         ontology_term: SRA:design_description
 
       # Library descriptor
@@ -772,6 +824,7 @@ entities:
         type: string
         required: false
         description: Name of the sequencing library.
+        example: LIB-001
         ontology_term: SRA:library_name
 
       - name: library_strategy
@@ -779,6 +832,7 @@ entities:
         type: string
         required: true
         description: Sequencing strategy (e.g., WGS, RNA-Seq, ChIP-Seq).
+        example: WGS
         ontology_term: SRA:library_strategy
 
       - name: library_source
@@ -786,6 +840,7 @@ entities:
         type: string
         required: true
         description: Source material type (e.g., GENOMIC, TRANSCRIPTOMIC).
+        example: GENOMIC
         ontology_term: SRA:library_source
 
       - name: library_selection
@@ -793,6 +848,7 @@ entities:
         type: string
         required: true
         description: Library selection method (e.g., RANDOM, PCR, PolyA).
+        example: RANDOM
         ontology_term: SRA:library_selection
 
       - name: library_layout
@@ -800,6 +856,7 @@ entities:
         type: string
         required: true
         description: Library layout (SINGLE or PAIRED).
+        example: PAIRED
         ontology_term: SRA:library_layout
         constraints:
           enum:
@@ -811,6 +868,7 @@ entities:
         type: integer
         required: false
         description: Average insert size for paired-end libraries.
+        example: 350
         ontology_term: SRA:nominal_length
         constraints:
           minimum: 0
@@ -820,6 +878,7 @@ entities:
         type: float
         required: false
         description: Standard deviation of insert size.
+        example: 45.0
         ontology_term: SRA:nominal_sdev
         constraints:
           minimum: 0
@@ -829,6 +888,7 @@ entities:
         type: string
         required: false
         description: Description of library construction protocol.
+        example: TruSeq DNA PCR-free library with a 350 bp insert
         ontology_term: SRA:library_construction_protocol
 
       # Platform
@@ -837,6 +897,7 @@ entities:
         type: string
         required: true
         description: Sequencing platform (e.g., ILLUMINA, OXFORD_NANOPORE).
+        example: ILLUMINA
         ontology_term: SRA:platform
 
       - name: instrument_model
@@ -844,6 +905,7 @@ entities:
         type: string
         required: true
         description: Specific instrument model used.
+        example: Illumina NovaSeq 6000
         ontology_term: SRA:instrument_model
 
       - name: experiment_attributes
@@ -879,6 +941,7 @@ entities:
         type: string
         required: true
         description: Unique submitter-assigned identifier for the run.
+        example: run-001
         ontology_term: SRA:alias
         constraints:
           min_length: 1
@@ -889,6 +952,7 @@ entities:
         type: string
         required: false
         description: ENA-assigned accession number (ERR format).
+        example: ERR123456
         ontology_term: SRA:accession
 
       - name: center_name
@@ -896,6 +960,7 @@ entities:
         type: string
         required: false
         description: Submitting center or institution name.
+        example: Example Genomics Institute
         ontology_term: SRA:center_name
 
       - name: experiment_ref
@@ -903,6 +968,7 @@ entities:
         type: string
         required: true
         description: Reference to the parent experiment (alias or accession).
+        example: experiment-wgs-001
         ontology_term: SRA:experiment_ref
         reference: Experiment.alias
 
@@ -911,6 +977,7 @@ entities:
         type: date
         required: false
         description: Date when the sequencing run was performed.
+        example: '2024-06-20'
         ontology_term: SRA:run_date
 
       - name: run_center
@@ -918,6 +985,7 @@ entities:
         type: string
         required: false
         description: Center where the run was performed.
+        example: Example Genomics Institute
         ontology_term: SRA:run_center
 
       - name: files
@@ -959,6 +1027,7 @@ entities:
         type: string
         required: true
         description: Unique submitter-assigned identifier for the analysis.
+        example: analysis-assembly-001
         ontology_term: SRA:alias
         constraints:
           min_length: 1
@@ -969,6 +1038,7 @@ entities:
         type: string
         required: false
         description: ENA-assigned accession number (ERZ format).
+        example: ERZ123456
         ontology_term: SRA:accession
 
       - name: center_name
@@ -976,6 +1046,7 @@ entities:
         type: string
         required: false
         description: Submitting center or institution name.
+        example: Example Genomics Institute
         ontology_term: SRA:center_name
 
       - name: title
@@ -983,6 +1054,7 @@ entities:
         type: string
         required: true
         description: Short descriptive title for the analysis.
+        example: Arabidopsis thaliana Col-0 genome assembly
         ontology_term: SRA:title
         constraints:
           min_length: 1
@@ -993,6 +1065,7 @@ entities:
         type: string
         required: false
         description: Detailed description of the analysis.
+        example: De novo assembly of Arabidopsis thaliana Col-0 from long reads
         ontology_term: SRA:description
 
       - name: study_ref
@@ -1000,6 +1073,7 @@ entities:
         type: string
         required: true
         description: Reference to the parent study (alias or accession).
+        example: my-study-001
         ontology_term: SRA:study_ref
         reference: Study.alias
 
@@ -1009,6 +1083,7 @@ entities:
         items: string
         required: false
         description: References to samples used in the analysis.
+        example: [sample-arabidopsis-001]
         ontology_term: SRA:sample_ref
 
       - name: experiment_refs
@@ -1017,6 +1092,7 @@ entities:
         items: string
         required: false
         description: References to experiments used in the analysis.
+        example: [experiment-wgs-001]
         ontology_term: SRA:experiment_ref
 
       - name: run_refs
@@ -1025,6 +1101,7 @@ entities:
         items: string
         required: false
         description: References to runs used in the analysis.
+        example: [run-001]
         ontology_term: SRA:run_ref
 
       - name: analysis_refs
@@ -1033,6 +1110,7 @@ entities:
         items: string
         required: false
         description: References to other analyses used as input.
+        example: [analysis-reads-001]
         ontology_term: SRA:analysis_ref
 
       - name: analysis_type
@@ -1040,6 +1118,7 @@ entities:
         type: string
         required: true
         description: Type of analysis performed.
+        example: SEQUENCE_ASSEMBLY
         ontology_term: SRA:analysis_type
         constraints:
           enum:
@@ -1088,6 +1167,7 @@ entities:
         type: string
         required: false
         description: Reference to the parent run (alias or accession).
+        example: run-001
         ontology_term: SRA:run_ref
         reference: Run.alias
 
@@ -1097,6 +1177,7 @@ entities:
         type: string
         required: true
         description: Name of the file (may include subdirectory path).
+        example: sample_R1.fastq.gz
         ontology_term: SRA:filename
         constraints:
           min_length: 1
@@ -1107,6 +1188,7 @@ entities:
         type: string
         required: true
         description: File format type.
+        example: fastq
         ontology_term: SRA:filetype
 
       - name: checksum_method
@@ -1114,6 +1196,7 @@ entities:
         type: string
         required: true
         description: Checksum algorithm used (typically MD5).
+        example: MD5
         ontology_term: SRA:checksum_method
         constraints:
           enum:
@@ -1125,6 +1208,7 @@ entities:
         type: string
         required: true
         description: Checksum value for file integrity verification.
+        example: d41d8cd98f00b204e9800998ecf8427e
         ontology_term: SRA:checksum
 
       - name: read_type
@@ -1132,6 +1216,7 @@ entities:
         type: string
         required: false
         description: Read type for multi-file submissions (e.g., paired, index).
+        example: paired
         ontology_term: SRA:read_type
 
       - name: assembly_ref
@@ -1139,6 +1224,7 @@ entities:
         type: string
         required: false
         description: Reference assembly accession for aligned files.
+        example: GCA_000001735.2
         ontology_term: SRA:assembly
 
   StudyAttribute:
@@ -1153,6 +1239,7 @@ entities:
         type: string
         required: true
         description: Attribute name.
+        example: study_name
         ontology_term: SRA:tag
         constraints:
           min_length: 1
@@ -1163,6 +1250,7 @@ entities:
         type: string
         required: true
         description: Attribute value.
+        example: Arabidopsis drought transcriptome
         ontology_term: SRA:value
 
       - name: units
@@ -1170,6 +1258,7 @@ entities:
         type: string
         required: false
         description: Units of measurement if applicable.
+        example: hours
         ontology_term: SRA:units
 
   SampleAttribute:
@@ -1184,6 +1273,7 @@ entities:
         type: string
         required: true
         description: Attribute name.
+        example: treatment
         ontology_term: SRA:tag
         constraints:
           min_length: 1
@@ -1194,6 +1284,7 @@ entities:
         type: string
         required: true
         description: Attribute value.
+        example: drought stress
         ontology_term: SRA:value
 
       - name: units
@@ -1201,6 +1292,7 @@ entities:
         type: string
         required: false
         description: Units of measurement if applicable.
+        example: hours
         ontology_term: SRA:units
 
   ExperimentAttribute:
@@ -1212,6 +1304,7 @@ entities:
         type: string
         required: true
         description: Attribute name.
+        example: library_prep_kit
         ontology_term: SRA:tag
         constraints:
           min_length: 1
@@ -1222,6 +1315,7 @@ entities:
         type: string
         required: true
         description: Attribute value.
+        example: TruSeq DNA PCR-free
         ontology_term: SRA:value
 
   RunAttribute:
@@ -1233,6 +1327,7 @@ entities:
         type: string
         required: true
         description: Attribute name.
+        example: flowcell_type
         ontology_term: SRA:tag
         constraints:
           min_length: 1
@@ -1243,6 +1338,7 @@ entities:
         type: string
         required: true
         description: Attribute value.
+        example: S4
         ontology_term: SRA:value
 
   AnalysisAttribute:
@@ -1254,6 +1350,7 @@ entities:
         type: string
         required: true
         description: Attribute name.
+        example: assembler
         ontology_term: SRA:tag
         constraints:
           min_length: 1
@@ -1264,6 +1361,7 @@ entities:
         type: string
         required: true
         description: Attribute value.
+        example: hifiasm 0.19.8
         ontology_term: SRA:value
 
   ProjectLink:
@@ -1278,6 +1376,7 @@ entities:
         type: string
         required: true
         description: External database name (e.g., PUBMED, DOI).
+        example: PUBMED
         ontology_term: SRA:db
         constraints:
           min_length: 1
@@ -1288,6 +1387,7 @@ entities:
         type: string
         required: true
         description: Identifier in the external database.
+        example: '12345678'
         ontology_term: SRA:id
 
       - name: label
@@ -1295,4 +1395,5 @@ entities:
         type: string
         required: false
         description: Human-readable label for the link.
+        example: Associated publication
         ontology_term: SRA:label

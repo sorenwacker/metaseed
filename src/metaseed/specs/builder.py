@@ -755,11 +755,42 @@ class SpecBuilder:
             A list of human-readable advisories. An empty list means nothing
             looks suspect.
         """
-        return self._weak_identifier_warnings()
+        return self._missing_example_warnings() + self._weak_identifier_warnings()
 
     # ------------------------------------------------------------------
     # Internals
     # ------------------------------------------------------------------
+    def _missing_example_warnings(self: Self) -> list[str]:
+        """Report an entity whose value fields carry no ``example``.
+
+        Every field that holds a value carries an example (``docs/api/
+        schema-specs.md``, Fields): the hub's field panel and a generated
+        template show nothing for a field without one. A list or entity field
+        whose items name another entity holds child records, which the example
+        dataset illustrates, so it is not asked for one. One warning per
+        entity, naming the fields, so a long draft reads as a short list.
+        """
+        issues: list[str] = []
+        for entity_name, entity_def in self._spec.entities.items():
+            missing = [
+                f.name
+                for f in entity_def.fields
+                if f.example is None and not self._holds_child_records(f)
+            ]
+            if missing:
+                issues.append(
+                    f"{entity_name}: no example on {', '.join(missing)}. "
+                    "Every field that holds a value carries an example."
+                )
+        return issues
+
+    def _holds_child_records(self: Self, field: FieldSpec) -> bool:
+        """Whether the field nests another entity rather than holding a value."""
+        return (
+            field.type in (FieldType.LIST, FieldType.ENTITY)
+            and field.items in self._spec.entities
+        )
+
     def _weak_identifier_warnings(self: Self) -> list[str]:
         """Report an entity whose identifier is inferred onto a weak field.
 

@@ -65,6 +65,7 @@ entities:
       type: string
       required: true
       description: A unique identifier for the project
+      example: PRJ-001
       ontology_term: jerm:identifier
       constraints:
         pattern: ^[A-Za-z0-9_-]+$
@@ -72,28 +73,34 @@ entities:
       type: string
       required: true
       description: The title of the project
+      example: Drought resilience of Arabidopsis thaliana
       ontology_term: jerm:title
     - name: description
       type: string
       required: false
       description: A detailed description of the project's aims and scope
+      example: A four-year project measuring growth, transcriptome and metabolome responses of Arabidopsis thaliana ecotypes to drought
       ontology_term: jerm:description
     - name: seek_id
       type: uri
       required: false
       description: The persistent SEEK identifier URL
+      example: https://seek.example.org/projects/1
     - name: web_page
       type: uri
       required: false
       description: Project website URL
+      example: https://example.org/projects/drought-resilience
     - name: start_date
       type: date
       required: false
       description: Project start date
+      example: '2023-01-01'
     - name: end_date
       type: date
       required: false
       description: Project end date
+      example: '2026-12-31'
     - name: members
       type: list
       required: false
@@ -113,10 +120,12 @@ entities:
       type: string
       required: false
       description: Default license for assets in this project
+      example: CC-BY-4.0
     - name: default_policy
       type: string
       required: false
       description: Default sharing policy for assets
+      example: visible to project members
   Institution:
     ontology_term: jerm:Institution
     description: An institution or organization
@@ -125,23 +134,28 @@ entities:
       type: string
       required: true
       description: Name of the institution
+      example: Example University
       ontology_term: jerm:title
     - name: country
       type: string
       required: false
       description: Country where the institution is located
+      example: Exampleland
     - name: city
       type: string
       required: false
       description: City where the institution is located
+      example: Exampleton
     - name: address
       type: string
       required: false
       description: Full address of the institution
+      example: 1 Example Street, Exampleton, Exampleland
     - name: web_page
       type: uri
       required: false
       description: Institution website URL
+      example: https://example.org
   Investigation:
     ontology_term: jerm:Investigation
     description: An investigation maintains metadata about the project context and links to one or more studies. Represents
@@ -151,6 +165,7 @@ entities:
       type: string
       required: true
       description: A locally unique identifier
+      example: INV-001
       ontology_term: jerm:identifier
       constraints:
         pattern: ^[A-Za-z0-9_-]+$
@@ -158,25 +173,30 @@ entities:
       type: string
       required: true
       description: Reference to the parent Project
+      example: PRJ-001
       reference: Project.identifier
     - name: title
       type: string
       required: true
       description: A concise name given to the investigation
+      example: Drought response of Arabidopsis thaliana ecotypes
       ontology_term: jerm:title
     - name: description
       type: string
       required: true
       description: Free text describing the purpose of the investigation
+      example: Growth, transcriptome and metabolite measurements of two ecotypes under progressive drought
       ontology_term: jerm:description
     - name: seek_id
       type: uri
       required: false
       description: The persistent SEEK identifier URL
+      example: https://seek.example.org/investigations/1
     - name: web_page
       type: uri
       required: false
       description: External web page for the investigation
+      example: https://example.org/projects/drought-resilience/investigation-1
     - name: studies
       type: list
       required: false
@@ -196,10 +216,12 @@ entities:
       type: date
       required: false
       description: Date the investigation was created
+      example: '2024-06-01'
     - name: updated_at
       type: date
       required: false
       description: Date the investigation was last updated
+      example: '2024-06-15'
   Study:
     ontology_term: jerm:Study
     description: A study is a series of experiments (assays) which can be combined to answer a particular biological question.
@@ -208,6 +230,7 @@ entities:
       type: string
       required: true
       description: A unique identifier for the study
+      example: STU-001
       ontology_term: jerm:identifier
       constraints:
         pattern: ^[A-Za-z0-9_-]+$
@@ -215,21 +238,25 @@ entities:
       type: string
       required: true
       description: Reference to the parent Investigation
+      example: INV-001
       reference: Investigation.identifier
     - name: title
       type: string
       required: true
       description: A concise phrase describing the study
+      example: Progressive drought in the growth chamber
       ontology_term: jerm:title
     - name: description
       type: string
       required: true
       description: Free text describing the purpose of the study
+      example: Plants were grown for four weeks under controlled conditions, then water was withheld for 72 hours
       ontology_term: jerm:description
     - name: seek_id
       type: uri
       required: false
       description: The persistent SEEK identifier URL
+      example: https://seek.example.org/studies/1
     - name: person_responsible
       type: entity
       required: false
@@ -259,10 +286,12 @@ entities:
       type: date
       required: false
       description: Date the study was created
+      example: '2024-06-01'
     - name: updated_at
       type: date
       required: false
       description: Date the study was last updated
+      example: '2024-06-15'
   Assay:
     ontology_term: jerm:Assay
     description: An assay is the application of a process (SOP) that converts input material into new material or data. Each
@@ -272,6 +301,7 @@ entities:
       type: string
       required: true
       description: A unique identifier for the assay
+      example: ASY-001
       ontology_term: jerm:identifier
       constraints:
         pattern: ^[A-Za-z0-9_-]+$
@@ -279,25 +309,30 @@ entities:
       type: string
       required: true
       description: Reference to the parent Study
+      example: STU-001
       reference: Study.identifier
     - name: title
       type: string
       required: true
       description: Name for the assay
+      example: Leaf metabolite profiling
       ontology_term: jerm:title
     - name: description
       type: string
       required: false
       description: Description of what the assay measures
+      example: Untargeted LC-MS profiling of rosette leaves at 0, 24 and 72 hours of drought
       ontology_term: jerm:description
     - name: seek_id
       type: uri
       required: false
       description: The persistent SEEK identifier URL
+      example: https://seek.example.org/assays/1
     - name: assay_class
       type: string
       required: true
       description: Classification of assay (experimental or modelling)
+      example: EXP
       constraints:
         enum:
         - EXP
@@ -326,10 +361,12 @@ entities:
       type: string
       required: false
       description: Tissue and cell type information
+      example: rosette leaf, mesophyll
     - name: culture_growth_type
       type: string
       required: false
       description: Growth methodology (batch, fed-batch, continuous)
+      example: batch
     - name: samples
       type: list
       required: false
@@ -364,10 +401,12 @@ entities:
       type: date
       required: false
       description: Date the assay was created
+      example: '2024-06-01'
     - name: updated_at
       type: date
       required: false
       description: Date the assay was last updated
+      example: '2024-06-15'
   Model:
     ontology_term: jerm:Model
     description: A computational or mathematical model. Can be SBML, CellML, MATLAB, or other formats.
@@ -376,6 +415,7 @@ entities:
       type: string
       required: true
       description: A unique identifier for the model
+      example: MOD-001
       ontology_term: jerm:identifier
       constraints:
         pattern: ^[A-Za-z0-9_-]+$
@@ -383,20 +423,24 @@ entities:
       type: string
       required: true
       description: Name for the model
+      example: Leaf water balance model
       ontology_term: jerm:title
     - name: description
       type: string
       required: true
       description: Description of what the model represents
+      example: Ordinary differential equation model of leaf water content under declining soil water potential
       ontology_term: jerm:description
     - name: seek_id
       type: uri
       required: false
       description: The persistent SEEK identifier URL
+      example: https://seek.example.org/models/1
     - name: filename
       type: string
       required: false
       description: Original filename or archive name
+      example: leaf_water_balance.xml
     - name: model_type
       type: entity
       required: false
@@ -406,6 +450,7 @@ entities:
       type: string
       required: true
       description: Technical format (SBML, CellML, MATLAB, etc.)
+      example: SBML
       constraints:
         pattern: ^(SBML|CellML|BioPAX|MATLAB|Python|R|Other)$
         enum:
@@ -420,10 +465,12 @@ entities:
       type: string
       required: false
       description: Simulation environment (COPASI, VCell, etc.)
+      example: COPASI
     - name: environment_url
       type: uri
       required: false
       description: URL to the simulation environment
+      example: https://copasi.org
     - name: organism
       type: entity
       required: false
@@ -433,6 +480,7 @@ entities:
       type: string
       required: false
       description: Reference to associated Assay
+      example: ASY-001
       reference: Assay.identifier
     - name: linked_data_files
       type: list
@@ -443,10 +491,12 @@ entities:
       type: integer
       required: false
       description: Version number of the model
+      example: 2
     - name: license
       type: string
       required: false
       description: License for the model
+      example: CC-BY-4.0
     - name: creators
       type: list
       required: false
@@ -456,10 +506,12 @@ entities:
       type: date
       required: false
       description: Date the model was uploaded
+      example: '2024-06-01'
     - name: updated_at
       type: date
       required: false
       description: Date the model was last updated
+      example: '2024-06-15'
   DataFile:
     ontology_term: jerm:DataFile
     description: A data file containing experimental data. Can be raw data, processed data, calibration information, or any
@@ -469,6 +521,7 @@ entities:
       type: string
       required: true
       description: A unique identifier for the data file
+      example: DF-001
       ontology_term: jerm:identifier
       constraints:
         pattern: ^[A-Za-z0-9_-]+$
@@ -476,28 +529,34 @@ entities:
       type: string
       required: true
       description: Name for the data file entry
+      example: Leaf metabolite peak table
       ontology_term: jerm:title
     - name: description
       type: string
       required: true
       description: Description of the data file contents
+      example: Peak areas per metabolite and sample after normalisation
       ontology_term: jerm:description
     - name: seek_id
       type: uri
       required: false
       description: The persistent SEEK identifier URL
+      example: https://seek.example.org/data_files/1
     - name: filename
       type: string
       required: false
       description: Original filename
+      example: leaf_metabolites_peak_table.csv
     - name: content_type
       type: string
       required: false
       description: MIME type of the file
+      example: text/csv
     - name: file_format
       type: string
       required: false
       description: File format description
+      example: comma-separated values
     - name: data_type
       type: entity
       required: false
@@ -517,19 +576,23 @@ entities:
       type: string
       required: false
       description: Measurement units
+      example: peak area, arbitrary units
     - name: assay_id
       type: string
       required: false
       description: Reference to the parent Assay
+      example: ASY-001
       reference: Assay.identifier
     - name: version
       type: integer
       required: false
       description: Version number of the file
+      example: 1
     - name: license
       type: string
       required: false
       description: License for the data file
+      example: CC-BY-4.0
     - name: creators
       type: list
       required: false
@@ -539,10 +602,12 @@ entities:
       type: date
       required: false
       description: Date the data file was uploaded
+      example: '2024-06-01'
     - name: updated_at
       type: date
       required: false
       description: Date the data file was last updated
+      example: '2024-06-15'
   SOP:
     ontology_term: jerm:SOP
     description: Standard Operating Procedure. Describes how an assay is performed and can be associated with data files and
@@ -552,6 +617,7 @@ entities:
       type: string
       required: true
       description: A unique identifier for the SOP
+      example: SOP-001
       ontology_term: jerm:identifier
       constraints:
         pattern: ^[A-Za-z0-9_-]+$
@@ -559,20 +625,24 @@ entities:
       type: string
       required: true
       description: Name for the SOP
+      example: Leaf metabolite extraction
       ontology_term: jerm:title
     - name: description
       type: string
       required: true
       description: Description of the procedure
+      example: 50 mg of frozen leaf powder is extracted in 1 mL of methanol:water (80:20) at 4 C for 30 minutes
       ontology_term: jerm:description
     - name: seek_id
       type: uri
       required: false
       description: The persistent SEEK identifier URL
+      example: https://seek.example.org/sops/1
     - name: filename
       type: string
       required: false
       description: Original filename
+      example: leaf_metabolite_extraction_v1.2.pdf
     - name: sop_type
       type: entity
       required: false
@@ -582,23 +652,28 @@ entities:
       type: string
       required: false
       description: Fixed experimental conditions
+      example: 4 C, 30 minutes, 1400 rpm shaking
     - name: units
       type: string
       required: false
       description: Relevant measurement units
+      example: milligram, millilitre
     - name: assay_id
       type: string
       required: false
       description: Reference to associated Assay
+      example: ASY-001
       reference: Assay.identifier
     - name: version
       type: integer
       required: false
       description: Version number of the SOP
+      example: 1
     - name: license
       type: string
       required: false
       description: License for the SOP
+      example: CC-BY-4.0
     - name: creators
       type: list
       required: false
@@ -608,10 +683,12 @@ entities:
       type: date
       required: false
       description: Date the SOP was uploaded
+      example: '2024-06-01'
     - name: updated_at
       type: date
       required: false
       description: Date the SOP was last updated
+      example: '2024-06-15'
   Sample:
     ontology_term: jerm:Sample
     description: A biological sample or specimen
@@ -620,6 +697,7 @@ entities:
       type: string
       required: true
       description: A unique identifier for the sample
+      example: SMP-001
       ontology_term: jerm:identifier
       constraints:
         pattern: ^[A-Za-z0-9_-]+$
@@ -627,16 +705,19 @@ entities:
       type: string
       required: true
       description: Name for the sample
+      example: Col-0 leaf, drought 72 h, replicate 1
       ontology_term: jerm:title
     - name: description
       type: string
       required: false
       description: Description of the sample
+      example: Rosette leaves pooled from three plants after 72 hours without watering
       ontology_term: jerm:description
     - name: seek_id
       type: uri
       required: false
       description: The persistent SEEK identifier URL
+      example: https://seek.example.org/samples/1
     - name: sample_type
       type: entity
       required: false
@@ -656,30 +737,37 @@ entities:
       type: string
       required: false
       description: Brief genotype description
+      example: Col-0 wild type
     - name: phenotype
       type: string
       required: false
       description: Observable characteristics
+      example: wilted, rosette diameter 4.2 cm
     - name: tissue
       type: string
       required: false
       description: Tissue type
+      example: rosette leaf
     - name: cell_type
       type: string
       required: false
       description: Cell type
+      example: mesophyll
     - name: treatment
       type: string
       required: false
       description: Treatment applied to the sample
+      example: water withheld for 72 hours
     - name: donor_id
       type: string
       required: false
       description: Identifier of the donor organism
+      example: PLANT-0042
     - name: collection_date
       type: date
       required: false
       description: Date the sample was collected
+      example: '2024-03-18'
     - name: attributes
       type: list
       required: false
@@ -699,6 +787,7 @@ entities:
       type: date
       required: false
       description: Date the sample was registered
+      example: '2024-06-01'
   SampleType:
     ontology_term: jerm:SampleType
     description: A sample type definition with attribute templates
@@ -707,11 +796,13 @@ entities:
       type: string
       required: true
       description: Name of the sample type
+      example: Arabidopsis leaf sample
       ontology_term: jerm:title
     - name: description
       type: string
       required: false
       description: Description of the sample type
+      example: A pooled leaf sample from one treatment and time point
     - name: attribute_definitions
       type: list
       required: false
@@ -725,22 +816,27 @@ entities:
       type: string
       required: true
       description: Name of the attribute
+      example: drought duration
     - name: description
       type: string
       required: false
       description: Description of the attribute
+      example: Hours since water was withheld
     - name: sample_attribute_type
       type: string
       required: true
       description: Data type of the attribute
+      example: Integer
     - name: required
       type: boolean
       required: false
       description: Whether this attribute is required
+      example: true
     - name: unit
       type: string
       required: false
       description: Unit of measurement
+      example: hour
   SampleAttribute:
     ontology_term: jerm:SampleAttribute
     description: A sample attribute value
@@ -749,14 +845,17 @@ entities:
       type: string
       required: true
       description: Name of the attribute
+      example: drought duration
     - name: value
       type: string
       required: true
       description: Value of the attribute
+      example: '72'
     - name: unit
       type: string
       required: false
       description: Unit of measurement
+      example: hour
   Organism:
     ontology_term: jerm:Organism
     description: A biological organism or species
@@ -765,6 +864,7 @@ entities:
       type: string
       required: true
       description: A unique identifier (e.g., NCBI taxonomy ID)
+      example: NCBITaxon-3702
       ontology_term: jerm:identifier
       constraints:
         pattern: ^[A-Za-z0-9_-]+$
@@ -772,15 +872,18 @@ entities:
       type: string
       required: true
       description: Common or scientific name
+      example: Arabidopsis thaliana
       ontology_term: jerm:title
     - name: ncbi_id
       type: integer
       required: false
       description: NCBI Taxonomy ID
+      example: 3702
     - name: bioportal_concept
       type: uri
       required: false
       description: BioPortal concept URI
+      example: http://purl.bioontology.org/ontology/NCBITAXON/3702
   Strain:
     ontology_term: jerm:Strain
     description: A strain of an organism
@@ -789,6 +892,7 @@ entities:
       type: string
       required: true
       description: A unique identifier for the strain
+      example: STR-001
       ontology_term: jerm:identifier
       constraints:
         pattern: ^[A-Za-z0-9_-]+$
@@ -796,36 +900,44 @@ entities:
       type: string
       required: true
       description: Name of the strain
+      example: Col-0
       ontology_term: jerm:title
     - name: organism_id
       type: string
       required: true
       description: Reference to the parent Organism
+      example: NCBITaxon-3702
       reference: Organism.identifier
     - name: synonym
       type: string
       required: false
       description: Alternative name for the strain
+      example: Columbia-0
     - name: comment
       type: string
       required: false
       description: Additional comments about the strain
+      example: Reference accession of the TAIR10 genome
     - name: provider_name
       type: string
       required: false
       description: Name of the strain provider
+      example: Nottingham Arabidopsis Stock Centre
     - name: provider_id
       type: string
       required: false
       description: Provider's identifier for the strain
+      example: N1092
     - name: genotype
       type: string
       required: false
       description: Genotype description
+      example: wild type
     - name: phenotype
       type: string
       required: false
       description: Phenotype description
+      example: wild type
   Publication:
     ontology_term: jerm:Publication
     description: A scientific publication
@@ -834,6 +946,7 @@ entities:
       type: string
       required: true
       description: A unique identifier
+      example: PUB-001
       ontology_term: jerm:identifier
       constraints:
         pattern: ^[A-Za-z0-9_-]+$
@@ -841,11 +954,13 @@ entities:
       type: string
       required: true
       description: Title of the publication
+      example: Leaf metabolome of Arabidopsis thaliana during progressive drought
       ontology_term: jerm:title
     - name: pubmed_id
       type: string
       required: false
       description: PubMed ID
+      example: '38123456'
       ontology_term: jerm:pubmed_id
       constraints:
         pattern: ^[0-9]+$
@@ -853,6 +968,7 @@ entities:
       type: string
       required: false
       description: Digital Object Identifier
+      example: 10.1234/example.2024.001
       ontology_term: jerm:doi
       constraints:
         pattern: ^10\.[0-9]{4,}/.*$
@@ -865,30 +981,37 @@ entities:
       type: string
       required: false
       description: Comma-separated list of author names
+      example: Example A, Example B, Example C
     - name: journal
       type: string
       required: false
       description: Journal name
+      example: Journal of Example Plant Science
     - name: publication_date
       type: date
       required: false
       description: Date of publication
+      example: '2024-09-15'
     - name: abstract
       type: string
       required: false
       description: Publication abstract
+      example: We profiled the leaf metabolome of two Arabidopsis thaliana ecotypes over 72 hours of drought and found proline accumulation within 24 hours
     - name: citation
       type: string
       required: false
       description: Full citation text
+      example: Example A, Example B, Example C (2024) Leaf metabolome of Arabidopsis thaliana during progressive drought. J Example Plant Sci 12:345-356
     - name: url
       type: uri
       required: false
       description: URL to the publication
+      example: https://doi.org/10.1234/example.2024.001
     - name: publication_type
       type: string
       required: false
       description: Type of publication (journal, conference, book, etc.)
+      example: journal
   Document:
     ontology_term: jerm:Document
     description: A document associated with research (reports, specifications, etc.)
@@ -897,6 +1020,7 @@ entities:
       type: string
       required: true
       description: A unique identifier
+      example: DOC-001
       ontology_term: jerm:identifier
       constraints:
         pattern: ^[A-Za-z0-9_-]+$
@@ -904,28 +1028,34 @@ entities:
       type: string
       required: true
       description: Document title
+      example: Data management plan
       ontology_term: jerm:title
     - name: description
       type: string
       required: false
       description: Description of the document
+      example: Data management plan of the drought resilience project, version 2
       ontology_term: jerm:description
     - name: seek_id
       type: uri
       required: false
       description: The persistent SEEK identifier URL
+      example: https://seek.example.org/documents/1
     - name: filename
       type: string
       required: false
       description: Original filename
+      example: dmp_v2.pdf
     - name: version
       type: integer
       required: false
       description: Version number
+      example: 2
     - name: license
       type: string
       required: false
       description: License for the document
+      example: CC-BY-4.0
     - name: creators
       type: list
       required: false
@@ -935,6 +1065,7 @@ entities:
       type: date
       required: false
       description: Date the document was uploaded
+      example: '2024-06-01'
   Presentation:
     ontology_term: jerm:Presentation
     description: A presentation (slides, poster, etc.)
@@ -943,6 +1074,7 @@ entities:
       type: string
       required: true
       description: A unique identifier
+      example: PRES-001
       ontology_term: jerm:identifier
       constraints:
         pattern: ^[A-Za-z0-9_-]+$
@@ -950,20 +1082,24 @@ entities:
       type: string
       required: true
       description: Presentation title
+      example: Drought resilience project kick-off
       ontology_term: jerm:title
     - name: description
       type: string
       required: false
       description: Description of the presentation
+      example: Slides presented at the project kick-off meeting
       ontology_term: jerm:description
     - name: seek_id
       type: uri
       required: false
       description: The persistent SEEK identifier URL
+      example: https://seek.example.org/presentations/1
     - name: filename
       type: string
       required: false
       description: Original filename
+      example: kickoff_2023.pdf
     - name: event
       type: entity
       required: false
@@ -973,10 +1109,12 @@ entities:
       type: integer
       required: false
       description: Version number
+      example: 1
     - name: license
       type: string
       required: false
       description: License for the presentation
+      example: CC-BY-4.0
     - name: creators
       type: list
       required: false
@@ -986,6 +1124,7 @@ entities:
       type: date
       required: false
       description: Date the presentation was uploaded
+      example: '2023-01-15'
   Event:
     ontology_term: jerm:Event
     description: An event (conference, workshop, meeting)
@@ -994,6 +1133,7 @@ entities:
       type: string
       required: true
       description: A unique identifier
+      example: EVT-001
       ontology_term: jerm:identifier
       constraints:
         pattern: ^[A-Za-z0-9_-]+$
@@ -1001,36 +1141,44 @@ entities:
       type: string
       required: true
       description: Event title
+      example: Annual project meeting 2024
       ontology_term: jerm:title
     - name: description
       type: string
       required: false
       description: Description of the event
+      example: Progress reports of all work packages
       ontology_term: jerm:description
     - name: start_date
       type: date
       required: false
       description: Event start date
+      example: '2024-09-10'
     - name: end_date
       type: date
       required: false
       description: Event end date
+      example: '2024-09-11'
     - name: address
       type: string
       required: false
       description: Event location
+      example: Example University, Lecture Hall A
     - name: city
       type: string
       required: false
       description: City
+      example: Exampleton
     - name: country
       type: string
       required: false
       description: Country
+      example: Exampleland
     - name: url
       type: uri
       required: false
       description: Event website
+      example: https://example.org/projects/drought-resilience/meeting-2024
   Workflow:
     ontology_term: jerm:Workflow
     description: A computational workflow or pipeline
@@ -1039,6 +1187,7 @@ entities:
       type: string
       required: true
       description: A unique identifier
+      example: WF-001
       ontology_term: jerm:identifier
       constraints:
         pattern: ^[A-Za-z0-9_-]+$
@@ -1046,32 +1195,39 @@ entities:
       type: string
       required: true
       description: Workflow title
+      example: LC-MS peak picking and alignment
       ontology_term: jerm:title
     - name: description
       type: string
       required: false
       description: Description of the workflow
+      example: Converts raw files to mzML, picks peaks with XCMS and aligns them across samples
       ontology_term: jerm:description
     - name: seek_id
       type: uri
       required: false
       description: The persistent SEEK identifier URL
+      example: https://seek.example.org/workflows/1
     - name: filename
       type: string
       required: false
       description: Original filename
+      example: lcms_peak_picking.cwl
     - name: workflow_class
       type: string
       required: false
       description: Type of workflow (Galaxy, CWL, Nextflow, etc.)
+      example: CWL
     - name: version
       type: integer
       required: false
       description: Version number
+      example: 1
     - name: license
       type: string
       required: false
       description: License for the workflow
+      example: MIT
     - name: creators
       type: list
       required: false
@@ -1081,6 +1237,7 @@ entities:
       type: date
       required: false
       description: Date the workflow was uploaded
+      example: '2024-06-01'
   Collection:
     ontology_term: jerm:Collection
     description: A collection of related assets
@@ -1089,6 +1246,7 @@ entities:
       type: string
       required: true
       description: A unique identifier
+      example: COL-001
       ontology_term: jerm:identifier
       constraints:
         pattern: ^[A-Za-z0-9_-]+$
@@ -1096,16 +1254,19 @@ entities:
       type: string
       required: true
       description: Collection title
+      example: Drought 2024 release
       ontology_term: jerm:title
     - name: description
       type: string
       required: false
       description: Description of the collection
+      example: Everything behind the 2024 publication
       ontology_term: jerm:description
     - name: seek_id
       type: uri
       required: false
       description: The persistent SEEK identifier URL
+      example: https://seek.example.org/collections/1
     - name: items
       type: list
       required: false
@@ -1120,6 +1281,7 @@ entities:
       type: date
       required: false
       description: Date the collection was created
+      example: '2024-09-15'
   Person:
     ontology_term: jerm:Person
     description: A person or contact
@@ -1128,6 +1290,7 @@ entities:
       type: string
       required: true
       description: A unique identifier for the person
+      example: PER-001
       ontology_term: jerm:identifier
       constraints:
         pattern: ^[A-Za-z0-9_-]+$
@@ -1135,16 +1298,19 @@ entities:
       type: string
       required: true
       description: First name
+      example: Example
       ontology_term: jerm:first_name
     - name: last_name
       type: string
       required: true
       description: Last name
+      example: Researcher
       ontology_term: jerm:last_name
     - name: email
       type: string
       required: false
       description: Email address
+      example: researcher@example.org
       ontology_term: jerm:email
       constraints:
         pattern: ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$
@@ -1152,30 +1318,36 @@ entities:
       type: string
       required: false
       description: ORCID identifier
+      example: 0000-0002-1825-0097
       constraints:
         pattern: ^[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{3}[0-9X]$
     - name: phone
       type: string
       required: false
       description: Phone number
+      example: +00 0 000 00000
     - name: affiliation
       type: string
       required: false
       description: Organization affiliation
+      example: Example University
       ontology_term: jerm:affiliation
     - name: institution_id
       type: string
       required: false
       description: Reference to Institution
+      example: Example University
       reference: Institution.title
     - name: web_page
       type: uri
       required: false
       description: Personal website
+      example: https://example.org/people/researcher
     - name: roles
       type: list
       required: false
       description: Roles in the project
+      example: [project administrator, asset housekeeper]
       items: string
   CollectionItem:
     ontology_term: jerm:CollectionItem
@@ -1185,18 +1357,22 @@ entities:
       type: string
       required: true
       description: Type of asset (DataFile, Model, Document, etc.)
+      example: DataFile
     - name: asset_id
       type: string
       required: true
       description: Identifier of the referenced asset
+      example: DF-001
     - name: comment
       type: string
       required: false
       description: Comment about this item in the collection
+      example: The peak table the figures were made from
     - name: order
       type: integer
       required: false
       description: Order in the collection
+      example: 1
   Factor:
     ontology_term: jerm:Factor
     description: An experimental factor studied
@@ -1210,6 +1386,7 @@ entities:
       type: string
       required: false
       description: Value of the factor
+      example: '72'
     - name: unit
       type: entity
       required: false
@@ -1223,19 +1400,24 @@ entities:
       type: string
       required: true
       description: The term from controlled vocabulary
+      example: leaf
     - name: term_uri
       type: uri
       required: false
       description: URI of the ontology term
+      example: http://purl.obolibrary.org/obo/PO_0025034
     - name: term_accession
       type: ontology_term
       required: false
       description: Accession number of the term
+      example: PO:0025034
     - name: ontology_name
       type: string
       required: false
       description: Name of the source ontology
+      example: Plant Ontology
     - name: ontology_version
       type: string
       required: false
       description: Version of the ontology
+      example: '2024-02-01'

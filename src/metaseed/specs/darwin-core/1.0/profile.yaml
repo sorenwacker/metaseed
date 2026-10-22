@@ -97,11 +97,13 @@ entities:
       type: string
       required: true
       description: Unique identifier for the occurrence record
+      example: urn:catalog:UWBM:Bird:89776
       ontology_term: dwc:occurrenceID
     - name: basisOfRecord
       type: string
       required: true
       description: The specific nature of the data record
+      example: HumanObservation
       ontology_term: dwc:basisOfRecord
       constraints:
         enum:
@@ -117,56 +119,67 @@ entities:
       type: integer
       required: false
       description: Number of individuals present
+      example: 1
       ontology_term: dwc:individualCount
     - name: organismQuantity
       type: float
       required: false
       description: Quantity of organisms
+      example: 12.5
       ontology_term: dwc:organismQuantity
     - name: organismQuantityType
       type: string
       required: false
       description: Type of quantification (individuals, biomass, etc.)
+      example: percent cover
       ontology_term: dwc:organismQuantityType
     - name: sex
       type: string
       required: false
       description: Sex of the biological individual(s)
+      example: female
       ontology_term: dwc:sex
     - name: lifeStage
       type: string
       required: false
       description: Age class or life stage
+      example: adult
       ontology_term: dwc:lifeStage
     - name: reproductiveCondition
       type: string
       required: false
       description: Reproductive condition of the biological individual
+      example: flowering
       ontology_term: dwc:reproductiveCondition
     - name: behavior
       type: string
       required: false
       description: Behavior shown by the subject
+      example: foraging
       ontology_term: dwc:behavior
     - name: establishmentMeans
       type: string
       required: false
       description: Process by which organism established (native, introduced, etc.)
+      example: native
       ontology_term: dwc:establishmentMeans
     - name: degreeOfEstablishment
       type: string
       required: false
       description: Degree to which organism survives and reproduces
+      example: established
       ontology_term: dwc:degreeOfEstablishment
     - name: pathway
       type: string
       required: false
       description: Process by which organism came to be in location
+      example: natural dispersal
       ontology_term: dwc:pathway
     - name: occurrenceStatus
       type: string
       required: false
       description: Statement about presence or absence
+      example: present
       ontology_term: dwc:occurrenceStatus
       constraints:
         enum:
@@ -176,51 +189,61 @@ entities:
       type: string
       required: false
       description: Preparation or preservation method for specimen
+      example: pressed and dried herbarium sheet
       ontology_term: dwc:preparations
     - name: disposition
       type: string
       required: false
       description: Current state of specimen (in collection, lost, etc.)
+      example: in collection
       ontology_term: dwc:disposition
     - name: associatedMedia
       type: string
       required: false
       description: List of identifiers for associated media
+      example: https://example.org/media/89776.jpg
       ontology_term: dwc:associatedMedia
     - name: associatedReferences
       type: string
       required: false
       description: List of identifiers for associated literature
+      example: https://doi.org/10.1234/example.2024.001
       ontology_term: dwc:associatedReferences
     - name: associatedSequences
       type: string
       required: false
       description: List of identifiers for genetic sequence data
+      example: https://www.ebi.ac.uk/ena/browser/view/ERS123456
       ontology_term: dwc:associatedSequences
     - name: associatedTaxa
       type: string
       required: false
       description: List of identifiers for associated taxa
+      example: 'host: Quercus robur'
       ontology_term: dwc:associatedTaxa
     - name: otherCatalogNumbers
       type: string
       required: false
       description: Previous or alternate catalog numbers
+      example: FMNH:Mammal:1234
       ontology_term: dwc:otherCatalogNumbers
     - name: occurrenceRemarks
       type: string
       required: false
       description: Comments about the occurrence
+      example: Found on the north-facing slope under a fallen log
       ontology_term: dwc:occurrenceRemarks
     - name: recordedBy
       type: string
       required: false
       description: Person(s) responsible for recording the occurrence
+      example: Example Recorder
       ontology_term: dwc:recordedBy
     - name: recordedByID
       type: string
       required: false
       description: Identifier for the person(s) who recorded
+      example: https://orcid.org/0000-0002-1825-0097
       ontology_term: dwc:recordedByID
     - name: event
       type: entity
@@ -251,17 +274,20 @@ entities:
       type: string
       required: true
       description: Unique identifier for the sampling event
+      example: EVT-2024-001
       ontology_term: dwc:eventID
     - name: occurrenceID
       type: string
       required: true
       description: Reference to the parent Occurrence
+      example: urn:catalog:UWBM:Bird:89776
       ontology_term: dwc:occurrenceID
       reference: Occurrence.occurrenceID
     - name: parentEventID
       type: string
       required: false
       description: Identifier for the parent event
+      example: EVT-2024
       ontology_term: dwc:parentEventID
       reference: Event.eventID
       reference_scope: external
@@ -269,16 +295,19 @@ entities:
       type: string
       required: false
       description: Date or date-time of the event (ISO 8601)
+      example: '2024-06-15'
       ontology_term: dwc:eventDate
     - name: eventTime
       type: string
       required: false
       description: Time of the event
+      example: 08:30:00+02:00
       ontology_term: dwc:eventTime
     - name: startDayOfYear
       type: integer
       required: false
       description: Earliest ordinal day of the year (1-366)
+      example: 167
       ontology_term: dwc:startDayOfYear
       constraints:
         minimum: 1
@@ -287,6 +316,7 @@ entities:
       type: integer
       required: false
       description: Latest ordinal day of the year (1-366)
+      example: 167
       ontology_term: dwc:endDayOfYear
       constraints:
         minimum: 1
@@ -295,11 +325,13 @@ entities:
       type: integer
       required: false
       description: Four-digit year
+      example: 2024
       ontology_term: dwc:year
     - name: month
       type: integer
       required: false
       description: Ordinal month (1-12)
+      example: 6
       ontology_term: dwc:month
       constraints:
         minimum: 1
@@ -308,6 +340,7 @@ entities:
       type: integer
       required: false
       description: Integer day of the month (1-31)
+      example: 15
       ontology_term: dwc:day
       constraints:
         minimum: 1
@@ -316,46 +349,55 @@ entities:
       type: string
       required: false
       description: Original date-related information
+      example: 15 June 2024, morning
       ontology_term: dwc:verbatimEventDate
     - name: habitat
       type: string
       required: false
       description: Category or description of habitat
+      example: oak-hornbeam forest edge
       ontology_term: dwc:habitat
     - name: samplingProtocol
       type: string
       required: false
       description: Names or descriptions of sampling methods
+      example: point count
       ontology_term: dwc:samplingProtocol
     - name: sampleSizeValue
       type: float
       required: false
       description: Numeric value for sample size measurement
+      example: 100.0
       ontology_term: dwc:sampleSizeValue
     - name: sampleSizeUnit
       type: string
       required: false
       description: Unit of measurement for sample size
+      example: meters
       ontology_term: dwc:sampleSizeUnit
     - name: samplingEffort
       type: string
       required: false
       description: Amount of effort expended during the event
+      example: 40 trap-nights
       ontology_term: dwc:samplingEffort
     - name: fieldNumber
       type: string
       required: false
       description: Identifier given during field work
+      example: RV-2024-17
       ontology_term: dwc:fieldNumber
     - name: fieldNotes
       type: string
       required: false
       description: Reference to or text of field notes
+      example: Notebook 12, page 34
       ontology_term: dwc:fieldNotes
     - name: eventRemarks
       type: string
       required: false
       description: Comments about the event
+      example: Light rain during the second hour
       ontology_term: dwc:eventRemarks
     - name: location
       type: entity
@@ -377,52 +419,62 @@ entities:
       type: string
       required: false
       description: Unique identifier for the location
+      example: LOC-001
       ontology_term: dwc:locationID
     - name: eventID
       type: string
       required: true
       description: Reference to the parent Event
+      example: EVT-2024-001
       ontology_term: dwc:eventID
       reference: Event.eventID
     - name: higherGeographyID
       type: string
       required: false
       description: Identifier for the geographic region
+      example: http://vocab.getty.edu/tgn/7000084
       ontology_term: dwc:higherGeographyID
     - name: higherGeography
       type: string
       required: false
       description: Geographic names less specific than locality
+      example: Europe; Exampleland; Example Province
       ontology_term: dwc:higherGeography
     - name: continent
       type: string
       required: false
       description: Name of the continent
+      example: Europe
       ontology_term: dwc:continent
     - name: waterBody
       type: string
       required: false
       description: Name of the water body
+      example: Example Lake
       ontology_term: dwc:waterBody
     - name: islandGroup
       type: string
       required: false
       description: Name of the island group
+      example: Example Archipelago
       ontology_term: dwc:islandGroup
     - name: island
       type: string
       required: false
       description: Name of the island
+      example: Example Island
       ontology_term: dwc:island
     - name: country
       type: string
       required: false
       description: Name of the country
+      example: Exampleland
       ontology_term: dwc:country
     - name: countryCode
       type: string
       required: false
       description: Standard country code (ISO 3166-1-alpha-2)
+      example: XX
       ontology_term: dwc:countryCode
       constraints:
         min_length: 2
@@ -431,81 +483,97 @@ entities:
       type: string
       required: false
       description: Name of state, province, or region
+      example: Example Province
       ontology_term: dwc:stateProvince
     - name: county
       type: string
       required: false
       description: Name of the county or shire
+      example: Example County
       ontology_term: dwc:county
     - name: municipality
       type: string
       required: false
       description: Name of the municipality
+      example: Exampleton
       ontology_term: dwc:municipality
     - name: locality
       type: string
       required: false
       description: Specific description of the place
+      example: Forest Park, 2 km north of Exampleton
       ontology_term: dwc:locality
     - name: verbatimLocality
       type: string
       required: false
       description: Original textual description of the place
+      example: Forest Park nr. Exampleton
       ontology_term: dwc:verbatimLocality
     - name: minimumElevationInMeters
       type: float
       required: false
       description: Lower limit of elevation range
+      example: 120.0
       ontology_term: dwc:minimumElevationInMeters
     - name: maximumElevationInMeters
       type: float
       required: false
       description: Upper limit of elevation range
+      example: 135.0
       ontology_term: dwc:maximumElevationInMeters
     - name: verbatimElevation
       type: string
       required: false
       description: Original elevation description
+      example: 120-135 m
       ontology_term: dwc:verbatimElevation
     - name: minimumDepthInMeters
       type: float
       required: false
       description: Lesser depth of a range
+      example: 0.5
       ontology_term: dwc:minimumDepthInMeters
     - name: maximumDepthInMeters
       type: float
       required: false
       description: Greater depth of a range
+      example: 2.0
       ontology_term: dwc:maximumDepthInMeters
     - name: verbatimDepth
       type: string
       required: false
       description: Original depth description
+      example: 0.5-2 m
       ontology_term: dwc:verbatimDepth
     - name: minimumDistanceAboveSurfaceInMeters
       type: float
       required: false
       description: Lesser distance above surface
+      example: 1.5
       ontology_term: dwc:minimumDistanceAboveSurfaceInMeters
     - name: maximumDistanceAboveSurfaceInMeters
       type: float
       required: false
       description: Greater distance above surface
+      example: 3.0
       ontology_term: dwc:maximumDistanceAboveSurfaceInMeters
     - name: locationAccordingTo
       type: string
       required: false
       description: Source of location information
+      example: Example national topographic map 1:25000
       ontology_term: dwc:locationAccordingTo
     - name: locationRemarks
       type: string
       required: false
       description: Comments about the location
+      example: Under the canopy of a single mature oak
       ontology_term: dwc:locationRemarks
     - name: decimalLatitude
       type: float
       required: false
       description: Geographic latitude in decimal degrees
+      example: 45.5231
       ontology_term: dwc:decimalLatitude
       constraints:
         minimum: -90.0
@@ -514,6 +582,7 @@ entities:
       type: float
       required: false
       description: Geographic longitude in decimal degrees
+      example: -122.6765
       ontology_term: dwc:decimalLongitude
       constraints:
         minimum: -180.0
@@ -522,11 +591,13 @@ entities:
       type: string
       required: false
       description: Geodetic datum (e.g., WGS84)
+      example: WGS84
       ontology_term: dwc:geodeticDatum
     - name: coordinateUncertaintyInMeters
       type: float
       required: false
       description: Horizontal distance from coordinates describing smallest circle containing location
+      example: 30.0
       ontology_term: dwc:coordinateUncertaintyInMeters
       constraints:
         minimum: 0.0
@@ -534,76 +605,91 @@ entities:
       type: float
       required: false
       description: Decimal precision of the coordinates
+      example: 0.0001
       ontology_term: dwc:coordinatePrecision
     - name: pointRadiusSpatialFit
       type: float
       required: false
       description: Ratio of area of point-radius to area of true spatial representation
+      example: 1.0
       ontology_term: dwc:pointRadiusSpatialFit
     - name: verbatimCoordinates
       type: string
       required: false
       description: Original spatial coordinates
+      example: 45 31 23 N 122 40 35 W
       ontology_term: dwc:verbatimCoordinates
     - name: verbatimLatitude
       type: string
       required: false
       description: Original latitude
+      example: 45 31 23 N
       ontology_term: dwc:verbatimLatitude
     - name: verbatimLongitude
       type: string
       required: false
       description: Original longitude
+      example: 122 40 35 W
       ontology_term: dwc:verbatimLongitude
     - name: verbatimCoordinateSystem
       type: string
       required: false
       description: Coordinate system for verbatim coordinates
+      example: degrees minutes seconds
       ontology_term: dwc:verbatimCoordinateSystem
     - name: verbatimSRS
       type: string
       required: false
       description: Spatial reference system for verbatim coordinates
+      example: EPSG:4326
       ontology_term: dwc:verbatimSRS
     - name: footprintWKT
       type: string
       required: false
       description: Well-Known Text representation of spatial footprint
+      example: POLYGON ((-122.68 45.52, -122.67 45.52, -122.67 45.53, -122.68 45.53, -122.68 45.52))
       ontology_term: dwc:footprintWKT
     - name: footprintSRS
       type: string
       required: false
       description: Spatial reference system for footprintWKT
+      example: EPSG:4326
       ontology_term: dwc:footprintSRS
     - name: footprintSpatialFit
       type: float
       required: false
       description: Ratio of footprint area to actual spatial extent
+      example: 1.0
       ontology_term: dwc:footprintSpatialFit
     - name: georeferencedBy
       type: string
       required: false
       description: Person(s) who georeferenced the location
+      example: Example Georeferencer
       ontology_term: dwc:georeferencedBy
     - name: georeferencedDate
       type: string
       required: false
       description: Date on which location was georeferenced
+      example: '2024-06-20'
       ontology_term: dwc:georeferencedDate
     - name: georeferenceProtocol
       type: string
       required: false
       description: Description of georeferencing methods
+      example: Georeferencing Quick Reference Guide (Zermoglio et al. 2020)
       ontology_term: dwc:georeferenceProtocol
     - name: georeferenceSources
       type: string
       required: false
       description: Resources used to georeference
+      example: GPS reading; Example topographic map
       ontology_term: dwc:georeferenceSources
     - name: georeferenceRemarks
       type: string
       required: false
       description: Comments about the georeference
+      example: Coordinates taken at the trap line midpoint
       ontology_term: dwc:georeferenceRemarks
     example:
       locationID: LOC-001
@@ -622,57 +708,68 @@ entities:
       type: string
       required: false
       description: Unique identifier for the identification
+      example: ID-2024-001
       ontology_term: dwc:identificationID
     - name: occurrenceID
       type: string
       required: true
       description: Reference to the parent Occurrence
+      example: urn:catalog:UWBM:Bird:89776
       ontology_term: dwc:occurrenceID
       reference: Occurrence.occurrenceID
     - name: verbatimIdentification
       type: string
       required: false
       description: String representing the taxonomic identification as it appeared
+      example: Puma concolor
       ontology_term: dwc:verbatimIdentification
     - name: identificationQualifier
       type: string
       required: false
       description: Expression of uncertainty (cf., aff., etc.)
+      example: cf.
       ontology_term: dwc:identificationQualifier
     - name: typeStatus
       type: string
       required: false
       description: Nomenclatural type designation
+      example: holotype of Puma concolor couguar
       ontology_term: dwc:typeStatus
     - name: identifiedBy
       type: string
       required: false
       description: Person(s) who assigned the taxon
+      example: Example Identifier
       ontology_term: dwc:identifiedBy
     - name: identifiedByID
       type: string
       required: false
       description: Identifier for the person(s) who identified
+      example: https://orcid.org/0000-0002-1825-0097
       ontology_term: dwc:identifiedByID
     - name: dateIdentified
       type: string
       required: false
       description: Date on which the identification was made
+      example: '2024-06-15'
       ontology_term: dwc:dateIdentified
     - name: identificationReferences
       type: string
       required: false
       description: References used in the identification
+      example: Example Field Guide to Mammals, 3rd edition
       ontology_term: dwc:identificationReferences
     - name: identificationVerificationStatus
       type: string
       required: false
       description: Indicator of the extent to which identification has been verified
+      example: verified by expert
       ontology_term: dwc:identificationVerificationStatus
     - name: identificationRemarks
       type: string
       required: false
       description: Comments about the identification
+      example: Distinguished from Lynx by the long tail
       ontology_term: dwc:identificationRemarks
     - name: taxon
       type: entity
@@ -693,21 +790,25 @@ entities:
       type: string
       required: true
       description: Unique identifier for the taxon
+      example: urn:lsid:catalogueoflife.org:taxon:d79c11aa-29c1-102b-9a4a-00304854f820
       ontology_term: dwc:taxonID
     - name: identificationID
       type: string
       required: true
       description: Reference to the parent Identification
+      example: ID-2024-001
       ontology_term: dwc:identificationID
     - name: scientificNameID
       type: string
       required: false
       description: Identifier for the nomenclatural details
+      example: urn:lsid:ipni.org:names:37829-1:1.3
       ontology_term: dwc:scientificNameID
     - name: acceptedNameUsageID
       type: string
       required: false
       description: Identifier for the accepted name usage
+      example: urn:lsid:catalogueoflife.org:taxon:d79c11aa-29c1-102b-9a4a-00304854f820
       ontology_term: dwc:acceptedNameUsageID
       reference: Taxon.taxonID
       reference_scope: external
@@ -715,6 +816,7 @@ entities:
       type: string
       required: false
       description: Identifier for the parent taxon
+      example: urn:lsid:catalogueoflife.org:taxon:5a5b2a2a-0b6a-11e0-8d27-00304854f820
       ontology_term: dwc:parentNameUsageID
       reference: Taxon.taxonID
       reference_scope: external
@@ -722,131 +824,157 @@ entities:
       type: string
       required: false
       description: Identifier for the original name usage
+      example: urn:lsid:catalogueoflife.org:taxon:d79c11aa-29c1-102b-9a4a-00304854f820
       ontology_term: dwc:originalNameUsageID
     - name: nameAccordingToID
       type: string
       required: false
       description: Identifier for the reference for taxon concept
+      example: https://doi.org/10.1234/example.2024.004
       ontology_term: dwc:nameAccordingToID
     - name: namePublishedInID
       type: string
       required: false
       description: Identifier for the publication where name was established
+      example: https://www.biodiversitylibrary.org/page/727013
       ontology_term: dwc:namePublishedInID
     - name: taxonConceptID
       type: string
       required: false
       description: Identifier for the taxonomic concept
+      example: https://www.catalogueoflife.org/data/taxon/4CGXQ
       ontology_term: dwc:taxonConceptID
     - name: scientificName
       type: string
       required: true
       description: Full scientific name with authorship
+      example: Puma concolor (Linnaeus, 1771)
       ontology_term: dwc:scientificName
     - name: acceptedNameUsage
       type: string
       required: false
       description: Full name of the accepted taxon
+      example: Puma concolor (Linnaeus, 1771)
       ontology_term: dwc:acceptedNameUsage
     - name: parentNameUsage
       type: string
       required: false
       description: Full name of the parent taxon
+      example: Puma Jardine, 1834
       ontology_term: dwc:parentNameUsage
     - name: originalNameUsage
       type: string
       required: false
       description: Original combination for this name
+      example: Felis concolor Linnaeus, 1771
       ontology_term: dwc:originalNameUsage
     - name: nameAccordingTo
       type: string
       required: false
       description: Reference for taxon concept definition
+      example: Mammal Species of the World, 3rd edition
       ontology_term: dwc:nameAccordingTo
     - name: namePublishedIn
       type: string
       required: false
       description: Reference where name was originally published
+      example: Linnaeus, C. (1771). Mantissa Plantarum. Regni Animalis Appendix
       ontology_term: dwc:namePublishedIn
     - name: namePublishedInYear
       type: integer
       required: false
       description: Year in which name was published
+      example: 1771
       ontology_term: dwc:namePublishedInYear
     - name: higherClassification
       type: string
       required: false
       description: Full taxonomic hierarchy
+      example: Animalia; Chordata; Mammalia; Carnivora; Felidae; Puma
       ontology_term: dwc:higherClassification
     - name: kingdom
       type: string
       required: false
       description: Full scientific name of the kingdom
+      example: Animalia
       ontology_term: dwc:kingdom
     - name: phylum
       type: string
       required: false
       description: Full scientific name of the phylum
+      example: Chordata
       ontology_term: dwc:phylum
     - name: class
       type: string
       required: false
       description: Full scientific name of the class
+      example: Mammalia
       ontology_term: dwc:class
     - name: order
       type: string
       required: false
       description: Full scientific name of the order
+      example: Carnivora
       ontology_term: dwc:order
     - name: family
       type: string
       required: false
       description: Full scientific name of the family
+      example: Felidae
       ontology_term: dwc:family
     - name: subfamily
       type: string
       required: false
       description: Full scientific name of the subfamily
+      example: Felinae
       ontology_term: dwc:subfamily
     - name: genus
       type: string
       required: false
       description: Full scientific name of the genus
+      example: Puma
       ontology_term: dwc:genus
     - name: genericName
       type: string
       required: false
       description: Genus part of the scientificName
+      example: Puma
       ontology_term: dwc:genericName
     - name: subgenus
       type: string
       required: false
       description: Full scientific name of the subgenus
+      example: Puma
       ontology_term: dwc:subgenus
     - name: infragenericEpithet
       type: string
       required: false
       description: Infrageneric part of a binomial name
+      example: Puma
       ontology_term: dwc:infragenericEpithet
     - name: specificEpithet
       type: string
       required: false
       description: Name of the species epithet
+      example: concolor
       ontology_term: dwc:specificEpithet
     - name: infraspecificEpithet
       type: string
       required: false
       description: Name of the infraspecific epithet
+      example: couguar
       ontology_term: dwc:infraspecificEpithet
     - name: cultivarEpithet
       type: string
       required: false
       description: Part of the name for a cultivar or cultivar group
+      example: King Edward
       ontology_term: dwc:cultivarEpithet
     - name: taxonRank
       type: string
       required: false
       description: Taxonomic rank of the most specific name
+      example: species
       ontology_term: dwc:taxonRank
       constraints:
         enum:
@@ -866,31 +994,37 @@ entities:
       type: string
       required: false
       description: Taxonomic rank as it appeared in original record
+      example: sp.
       ontology_term: dwc:verbatimTaxonRank
     - name: scientificNameAuthorship
       type: string
       required: false
       description: Authorship for scientificName
+      example: (Linnaeus, 1771)
       ontology_term: dwc:scientificNameAuthorship
     - name: vernacularName
       type: string
       required: false
       description: Common or vernacular name
+      example: cougar
       ontology_term: dwc:vernacularName
     - name: nomenclaturalCode
       type: string
       required: false
       description: Nomenclatural code under which name is constructed
+      example: ICZN
       ontology_term: dwc:nomenclaturalCode
     - name: taxonomicStatus
       type: string
       required: false
       description: Status of the use of scientificName (accepted, synonym)
+      example: accepted
       ontology_term: dwc:taxonomicStatus
     - name: nomenclaturalStatus
       type: string
       required: false
       description: Status related to original publication
+      example: valid
       ontology_term: dwc:nomenclaturalStatus
       constraints:
         enum:
@@ -904,6 +1038,7 @@ entities:
       type: string
       required: false
       description: Comments about the taxon
+      example: Also known as the mountain lion or puma
       ontology_term: dwc:taxonRemarks
     example:
       taxonID: urn:lsid:catalogueoflife.org:taxon:d79c11aa-29c1-102b-9a4a-00304854f820
@@ -925,42 +1060,50 @@ entities:
       type: string
       required: true
       description: Unique identifier for the organism
+      example: ORG-2024-001
       ontology_term: dwc:organismID
     - name: occurrenceID
       type: string
       required: true
       description: Reference to the parent Occurrence
+      example: urn:catalog:UWBM:Bird:89776
       ontology_term: dwc:occurrenceID
       reference: Occurrence.occurrenceID
     - name: organismName
       type: string
       required: false
       description: Textual name or label for the organism
+      example: Cheeta
       ontology_term: dwc:organismName
     - name: organismScope
       type: string
       required: false
       description: Description of the kind of organism instance
+      example: individual
       ontology_term: dwc:organismScope
     - name: associatedOccurrences
       type: string
       required: false
       description: List of identifiers for associated occurrence records
+      example: 'sighting of: urn:catalog:UWBM:Bird:89777'
       ontology_term: dwc:associatedOccurrences
     - name: associatedOrganisms
       type: string
       required: false
       description: Relationships to other organisms
+      example: 'sibling of: ORG-2024-002'
       ontology_term: dwc:associatedOrganisms
     - name: previousIdentifications
       type: string
       required: false
       description: List of previous taxonomic identifications
+      example: Felis concolor
       ontology_term: dwc:previousIdentifications
     - name: organismRemarks
       type: string
       required: false
       description: Comments about the organism
+      example: Radio-collared in 2023
       ontology_term: dwc:organismRemarks
     example:
       organismID: ORG-2024-001
@@ -975,26 +1118,31 @@ entities:
       type: string
       required: true
       description: Unique identifier for the material sample
+      example: MAT-2024-001
       ontology_term: dwc:materialSampleID
     - name: materialEntityID
       type: string
       required: false
       description: Identifier for the material entity
+      example: urn:catalog:UWBM:Mamm:12345
       ontology_term: dwc:materialEntityID
     - name: preparations
       type: string
       required: false
       description: Preparation or preservation method
+      example: tissue in ethanol
       ontology_term: dwc:preparations
     - name: disposition
       type: string
       required: false
       description: Current state of the material sample
+      example: in collection
       ontology_term: dwc:disposition
     - name: verbatimLabel
       type: string
       required: false
       description: Original content of the label
+      example: Puma concolor, Forest Park, 15.vi.2024, leg. Example Recorder
       ontology_term: dwc:verbatimLabel
     example:
       materialSampleID: MAT-2024-001
@@ -1006,51 +1154,61 @@ entities:
       type: string
       required: false
       description: Unique identifier for the measurement
+      example: MEAS-001
       ontology_term: dwc:measurementID
     - name: parentMeasurementID
       type: string
       required: false
       description: Identifier for the parent measurement
+      example: MEAS-000
       ontology_term: dwc:parentMeasurementID
     - name: measurementType
       type: string
       required: true
       description: Nature of the measurement or characteristic
+      example: body mass
       ontology_term: dwc:measurementType
     - name: measurementValue
       type: string
       required: false
       description: Value of the measurement
+      example: '45'
       ontology_term: dwc:measurementValue
     - name: measurementAccuracy
       type: string
       required: false
       description: Accuracy of the measurement
+      example: '0.5'
       ontology_term: dwc:measurementAccuracy
     - name: measurementUnit
       type: string
       required: false
       description: Units for the measurement value
+      example: kg
       ontology_term: dwc:measurementUnit
     - name: measurementDeterminedBy
       type: string
       required: false
       description: Person(s) who made the measurement
+      example: Example Recorder
       ontology_term: dwc:measurementDeterminedBy
     - name: measurementDeterminedDate
       type: string
       required: false
       description: Date on which measurement was made
+      example: '2024-06-15'
       ontology_term: dwc:measurementDeterminedDate
     - name: measurementMethod
       type: string
       required: false
       description: Description of method used for measurement
+      example: spring scale, animal in a sling
       ontology_term: dwc:measurementMethod
     - name: measurementRemarks
       type: string
       required: false
       description: Comments about the measurement
+      example: Measured before release
       ontology_term: dwc:measurementRemarks
     example:
       measurementID: MEAS-001
@@ -1065,91 +1223,109 @@ entities:
       type: string
       required: false
       description: Unique identifier for the geological context
+      example: GEO-001
       ontology_term: dwc:geologicalContextID
     - name: earliestEonOrLowestEonothem
       type: string
       required: false
       description: Full name of the earliest possible geochronologic eon
+      example: Phanerozoic
       ontology_term: dwc:earliestEonOrLowestEonothem
     - name: latestEonOrHighestEonothem
       type: string
       required: false
       description: Full name of the latest possible geochronologic eon
+      example: Phanerozoic
       ontology_term: dwc:latestEonOrHighestEonothem
     - name: earliestEraOrLowestErathem
       type: string
       required: false
       description: Full name of the earliest possible geochronologic era
+      example: Cenozoic
       ontology_term: dwc:earliestEraOrLowestErathem
     - name: latestEraOrHighestErathem
       type: string
       required: false
       description: Full name of the latest possible geochronologic era
+      example: Cenozoic
       ontology_term: dwc:latestEraOrHighestErathem
     - name: earliestPeriodOrLowestSystem
       type: string
       required: false
       description: Full name of the earliest possible geochronologic period
+      example: Quaternary
       ontology_term: dwc:earliestPeriodOrLowestSystem
     - name: latestPeriodOrHighestSystem
       type: string
       required: false
       description: Full name of the latest possible geochronologic period
+      example: Quaternary
       ontology_term: dwc:latestPeriodOrHighestSystem
     - name: earliestEpochOrLowestSeries
       type: string
       required: false
       description: Full name of the earliest possible geochronologic epoch
+      example: Pleistocene
       ontology_term: dwc:earliestEpochOrLowestSeries
     - name: latestEpochOrHighestSeries
       type: string
       required: false
       description: Full name of the latest possible geochronologic epoch
+      example: Holocene
       ontology_term: dwc:latestEpochOrHighestSeries
     - name: earliestAgeOrLowestStage
       type: string
       required: false
       description: Full name of the earliest possible geochronologic age
+      example: Late Pleistocene
       ontology_term: dwc:earliestAgeOrLowestStage
     - name: latestAgeOrHighestStage
       type: string
       required: false
       description: Full name of the latest possible geochronologic age
+      example: Meghalayan
       ontology_term: dwc:latestAgeOrHighestStage
     - name: lowestBiostratigraphicZone
       type: string
       required: false
       description: Full name of the lowest possible biostratigraphic zone
+      example: Rancholabrean
       ontology_term: dwc:lowestBiostratigraphicZone
     - name: highestBiostratigraphicZone
       type: string
       required: false
       description: Full name of the highest possible biostratigraphic zone
+      example: Rancholabrean
       ontology_term: dwc:highestBiostratigraphicZone
     - name: lithostratigraphicTerms
       type: string
       required: false
       description: Lithostratigraphic names for the rock
+      example: Example Formation, upper member
       ontology_term: dwc:lithostratigraphicTerms
     - name: group
       type: string
       required: false
       description: Full name of the lithostratigraphic group
+      example: Example Group
       ontology_term: dwc:group
     - name: formation
       type: string
       required: false
       description: Full name of the lithostratigraphic formation
+      example: Example Formation
       ontology_term: dwc:formation
     - name: member
       type: string
       required: false
       description: Full name of the lithostratigraphic member
+      example: Upper Example Member
       ontology_term: dwc:member
     - name: bed
       type: string
       required: false
       description: Full name of the lithostratigraphic bed
+      example: Bone bed 3
       ontology_term: dwc:bed
     example:
       geologicalContextID: GEO-001
@@ -1163,41 +1339,49 @@ entities:
       type: string
       required: false
       description: Unique identifier for the relationship
+      example: REL-001
       ontology_term: dwc:resourceRelationshipID
     - name: resourceID
       type: string
       required: true
       description: Identifier for the subject resource
+      example: OCC-001
       ontology_term: dwc:resourceID
     - name: relationshipOfResourceID
       type: string
       required: false
       description: Identifier for the relationship type
+      example: http://rs.tdwg.org/dwc/terms/relationshipOfResource
       ontology_term: dwc:relationshipOfResourceID
     - name: relatedResourceID
       type: string
       required: true
       description: Identifier for the related resource
+      example: OCC-002
       ontology_term: dwc:relatedResourceID
     - name: relationshipOfResource
       type: string
       required: true
       description: Description of the relationship
+      example: mother of
       ontology_term: dwc:relationshipOfResource
     - name: relationshipAccordingTo
       type: string
       required: false
       description: Source asserting the relationship
+      example: Example Recorder
       ontology_term: dwc:relationshipAccordingTo
     - name: relationshipEstablishedDate
       type: string
       required: false
       description: Date on which relationship was established
+      example: '2024-06-15'
       ontology_term: dwc:relationshipEstablishedDate
     - name: relationshipRemarks
       type: string
       required: false
       description: Comments about the relationship
+      example: Observed nursing
       ontology_term: dwc:relationshipRemarks
     example:
       resourceRelationshipID: REL-001

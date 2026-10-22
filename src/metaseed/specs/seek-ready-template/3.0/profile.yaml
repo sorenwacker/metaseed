@@ -19,24 +19,29 @@ entities:
       type: string
       required: true
       description: Unique investigation id.
+      example: INV-001
       is_identifier: true
     - name: title
       type: string
       required: true
       description: Human-readable title.
+      example: Drought response of Arabidopsis thaliana ecotypes
       is_label: true
     - name: description
       type: string
       required: false
       description: What the investigation is about.
+      example: Growth, transcriptome and metabolite measurements of two ecotypes under progressive drought
     - name: submission_date
       type: date
       required: false
       description: When the metadata was submitted.
+      example: '2024-06-01'
     - name: public_release_date
       type: date
       required: false
       description: When it may be released publicly.
+      example: '2025-06-01'
     - name: studies
       type: list
       required: false
@@ -51,36 +56,44 @@ entities:
       type: string
       required: true
       description: Unique study id.
+      example: STU-001
       is_identifier: true
     - name: title
       type: string
       required: true
       description: Study title.
+      example: Progressive drought in the growth chamber
       is_label: true
     - name: description
       type: string
       required: false
       description: Study description.
+      example: Plants were grown for four weeks under controlled conditions, then water was withheld for 72 hours
     - name: study_design_type
       type: string
       required: false
       description: e.g. case-control, time series.
+      example: time series
     - name: start_date
       type: date
       required: false
       description: ''
+      example: '2024-03-01'
     - name: end_date
       type: date
       required: false
       description: ''
+      example: '2024-03-18'
     - name: experimental_site
       type: string
       required: false
       description: Where the study took place (folded context, not a separate entity).
+      example: Example University growth facility, chamber 3
     - name: country
       type: string
       required: false
       description: Country of the experimental site.
+      example: Exampleland
     - name: sources
       type: list
       required: false
@@ -102,24 +115,29 @@ entities:
       type: string
       required: true
       description: Unique assay id.
+      example: ASY-001
       is_identifier: true
     - name: title
       type: string
       required: false
       description: Assay title.
+      example: Leaf metabolite profiling
       is_label: true
     - name: measurement_type
       type: string
       required: false
       description: What is measured (e.g. metabolite profiling).
+      example: metabolite profiling
     - name: technology_type
       type: string
       required: false
       description: Technology used (e.g. mass spectrometry).
+      example: mass spectrometry
     - name: technology_platform
       type: string
       required: false
       description: Instrument or platform.
+      example: Thermo Q Exactive HF
     seek:
       role: Assay
   Source:
@@ -129,16 +147,19 @@ entities:
       type: string
       required: true
       description: Unique source name.
+      example: SRC-001
       is_identifier: true
       is_label: true
     - name: organism
       type: string
       required: false
       description: Source organism (e.g. an NCBI taxon name).
+      example: Arabidopsis thaliana
     - name: provider
       type: string
       required: false
       description: Who or what supplied the source material.
+      example: Nottingham Arabidopsis Stock Centre
     - name: samples
       type: list
       required: false
@@ -154,20 +175,24 @@ entities:
       type: string
       required: true
       description: Unique sample name.
+      example: SMP-001
       is_identifier: true
       is_label: true
     - name: organism
       type: string
       required: false
       description: Source organism (e.g. an NCBI taxon name).
+      example: Arabidopsis thaliana
     - name: organism_part
       type: string
       required: false
       description: Tissue or part sampled.
+      example: rosette leaf
     - name: collection_date
       type: date
       required: false
       description: ''
+      example: '2024-03-15'
     - name: assay_materials
       type: list
       required: false
@@ -183,17 +208,20 @@ entities:
       type: string
       required: true
       description: Unique material or data file name.
+      example: MAT-001
       is_identifier: true
       is_label: true
     - name: assay
       type: string
       required: true
       description: The Assay that measured this material, by its identifier.
+      example: ASY-001
       reference: Assay.identifier
     - name: measurement_value
       type: string
       required: false
       description: The value or file produced.
+      example: MAT-001_leaf_extract.mzML
       isa_tag: data_file_comment
     seek:
       role: Sample

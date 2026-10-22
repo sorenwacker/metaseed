@@ -37,6 +37,7 @@ entities:
       type: string
       required: true
       description: DOI-format unique identifier for the digital specimen
+      example: https://doi.org/10.3535/ABC-DEF-GHI
       constraints:
         pattern: ^https://doi\.org/.*$
     - name: type
@@ -44,6 +45,7 @@ entities:
       type: string
       required: true
       description: Type of the digital object
+      example: ods:DigitalSpecimen
       constraints:
         enum:
         - ods:DigitalSpecimen
@@ -52,6 +54,7 @@ entities:
       type: string
       required: true
       description: DOI identifier matching the @id
+      example: https://doi.org/10.3535/ABC-DEF-GHI
       constraints:
         pattern: ^https://doi\.org/.*$
     - name: version
@@ -59,6 +62,7 @@ entities:
       type: integer
       required: true
       description: Version number of the digital specimen record
+      example: 1
       constraints:
         minimum: 1
     - name: status
@@ -66,6 +70,7 @@ entities:
       type: string
       required: false
       description: Status of the digital specimen
+      example: Active
       constraints:
         enum:
         - Draft
@@ -76,21 +81,25 @@ entities:
       type: datetime
       required: true
       description: Date and time the record was created (ISO 8601)
+      example: '2024-06-01T12:00:00+00:00'
     - name: modified
       codename: dcterms:modified
       type: datetime
       required: true
       description: Date and time the record was last modified (ISO 8601)
+      example: '2024-06-15T09:30:00+00:00'
     - name: fdo_type
       codename: ods:fdoType
       type: string
       required: true
       description: DOI reference to the FDO type definition
+      example: https://doi.org/21.T11148/894b1e6cad57e921764e
     - name: mids_level
       codename: ods:midsLevel
       type: integer
       required: true
       description: Minimum Information about a Digital Specimen level (0-3)
+      example: 2
       constraints:
         minimum: 0
         maximum: 3
@@ -99,16 +108,19 @@ entities:
       type: string
       required: true
       description: Normalised unique identifier for the physical specimen
+      example: https://example.org/specimens/L.1234567
     - name: physical_specimen_id
       codename: ods:physicalSpecimenID
       type: string
       required: true
       description: Main identifier for the physical specimen
+      example: L.1234567
     - name: physical_specimen_id_type
       codename: ods:physicalSpecimenIDType
       type: string
       required: true
       description: Type of the physical specimen identifier
+      example: Local
       constraints:
         enum:
         - Resolvable
@@ -119,16 +131,19 @@ entities:
       type: uri
       required: true
       description: Handle URL of the source system
+      example: https://hdl.handle.net/20.5000.1025/ABC-123
     - name: source_system_name
       codename: ods:sourceSystemName
       type: string
       required: false
       description: Name of the source system
+      example: Example Herbarium collection management system
     - name: organisation_id
       codename: ods:organisationID
       type: string
       required: true
       description: ROR or Wikidata identifier for the holding organisation
+      example: https://ror.org/0566bfb96
       constraints:
         pattern: ^https://ror\.org/.*$|^https://www\.wikidata\.org/wiki/Q.*$
     - name: organisation_code
@@ -136,31 +151,37 @@ entities:
       type: string
       required: false
       description: Code for the holding organisation
+      example: L
     - name: organisation_name
       codename: ods:organisationName
       type: string
       required: false
       description: Name of the holding organisation
+      example: Example Natural History Museum
     - name: owner_organisation_code
       codename: ods:ownerOrganisationCode
       type: string
       required: false
       description: Code for the owning organisation
+      example: L
     - name: collection_code
       codename: dwc:collectionCode
       type: string
       required: false
       description: Collection code within the organisation
+      example: Herbarium
     - name: collection_id
       codename: dwc:collectionID
       type: uri
       required: false
       description: Globally unique identifier for the collection
+      example: https://example.org/collections/herbarium
     - name: topic_origin
       codename: ods:topicOrigin
       type: string
       required: false
       description: Origin classification of the specimen
+      example: Natural
       constraints:
         enum:
         - Natural
@@ -172,6 +193,7 @@ entities:
       type: string
       required: false
       description: Domain classification of the specimen
+      example: Life
       constraints:
         enum:
         - Life
@@ -186,6 +208,7 @@ entities:
       type: string
       required: false
       description: Discipline classification of the specimen
+      example: Botany
       constraints:
         enum:
         - Anthropology
@@ -204,21 +227,25 @@ entities:
       type: string
       required: false
       description: Detailed category classification
+      example: Vascular plants
     - name: specimen_name
       codename: ods:specimenName
       type: string
       required: false
       description: Human-readable name for the specimen
+      example: Arabidopsis thaliana (L.) Heynh.
     - name: basis_of_record
       codename: dwc:basisOfRecord
       type: string
       required: false
       description: Nature of the specimen record
+      example: PreservedSpecimen
     - name: living_or_preserved
       codename: ods:livingOrPreserved
       type: string
       required: false
       description: Whether the specimen is living or preserved
+      example: Preserved
       constraints:
         enum:
         - Living
@@ -228,102 +255,122 @@ entities:
       type: string
       required: false
       description: Preparation methods applied to the specimen
+      example: pressed and dried herbarium sheet
     - name: disposition
       codename: dwc:disposition
       type: string
       required: false
       description: Current state of the specimen in the collection
+      example: in collection
     - name: is_marked_as_type
       codename: ods:isMarkedAsType
       type: boolean
       required: false
       description: Whether the specimen is marked as a nomenclatural type
+      example: false
     - name: is_known_to_contain_media
       codename: ods:isKnownToContainMedia
       type: boolean
       required: false
       description: Whether digital media exists for this specimen
+      example: true
     - name: organism_id
       codename: dwc:organismID
       type: uri
       required: false
       description: Identifier for the organism
+      example: https://example.org/organisms/ORG-001
     - name: organism_name
       codename: dwc:organismName
       type: string
       required: false
       description: Name or label for the organism
+      example: Plant 1 of population Exampleton-North
     - name: organism_scope
       codename: dwc:organismScope
       type: string
       required: false
       description: Scope of the organism (colony, pack, etc.)
+      example: individual
     - name: organism_quantity
       codename: dwc:organismQuantity
       type: string
       required: false
       description: Number of organisms represented
+      example: '1'
     - name: organism_quantity_type
       codename: dwc:organismQuantityType
       type: string
       required: false
       description: Type of quantity measurement
+      example: individuals
     - name: organism_remarks
       codename: dwc:organismRemarks
       type: string
       required: false
       description: Comments about the organism
+      example: Collected with seed
     - name: license
       codename: dcterms:license
       type: uri
       required: false
       description: Rights documentation for the record
+      example: https://creativecommons.org/publicdomain/zero/1.0/
     - name: access_rights
       codename: dcterms:accessRights
       type: string
       required: false
       description: Access rights information
+      example: open
     - name: rights_holder
       codename: dcterms:rightsHolder
       type: string
       required: false
       description: Rights holder for the record
+      example: Example Natural History Museum
     - name: information_withheld
       codename: dwc:informationWithheld
       type: string
       required: false
       description: Description of information withheld
+      example: Exact coordinates withheld for a protected site
     - name: data_generalizations
       codename: dwc:dataGeneralizations
       type: string
       required: false
       description: Description of data modifications
+      example: Coordinates rounded to 0.1 degree
     - name: verbatim_label
       codename: dwc:verbatimLabel
       type: string
       required: false
       description: Original label transcription
+      example: Arabidopsis thaliana, roadside near Exampleton, 15 May 2023, leg. E. Collector 1234
     - name: dynamic_properties
       codename: dwc:dynamicProperties
       type: string
       required: false
       description: JSON-encoded additional properties
+      example: '{"soil": "sandy loam"}'
     - name: metadata_languages
       codename: ods:metadataLanguages
       type: list
       required: false
       description: Languages used in the metadata
+      example: [en]
       items: string
     - name: dataset_name
       codename: dwc:datasetName
       type: string
       required: false
       description: Name of the dataset
+      example: Example Herbarium vascular plants
     - name: dataset_id
       codename: dwc:datasetID
       type: string
       required: false
       description: UUID identifier for the dataset
+      example: 123e4567-e89b-12d3-a456-426614174000
     - name: identifications
       codename: ods:hasIdentifications
       type: list
@@ -393,11 +440,13 @@ entities:
       type: string
       required: false
       description: Identifier for the identification
+      example: https://doi.org/10.3535/ABC-DEF-GHI/identification/1
     - name: type
       codename: '@type'
       type: string
       required: true
       description: Type of the object
+      example: ods:Identification
       constraints:
         enum:
         - ods:Identification
@@ -406,11 +455,13 @@ entities:
       type: string
       required: false
       description: Identifier for the identification
+      example: ID-001
     - name: identification_type
       codename: ods:identificationType
       type: string
       required: false
       description: Type of identification
+      example: TaxonIdentification
       constraints:
         enum:
         - TaxonIdentification
@@ -419,31 +470,37 @@ entities:
       type: string
       required: false
       description: Original identification string
+      example: Arabidopsis thaliana
     - name: type_status
       codename: dwc:typeStatus
       type: string
       required: false
       description: Nomenclatural type status
+      example: isotype
     - name: date_identified
       codename: dwc:dateIdentified
       type: string
       required: false
       description: Date the identification was made
+      example: '2023-06-01'
     - name: is_verified_identification
       codename: ods:isVerifiedIdentification
       type: boolean
       required: true
       description: Whether this is the accepted identification
+      example: true
     - name: identification_remarks
       codename: dwc:identificationRemarks
       type: string
       required: false
       description: Comments about the identification
+      example: Confirmed against the reference collection
     - name: identification_qualifier
       codename: dwc:identificationQualifier
       type: string
       required: false
       description: Uncertainty qualifier (cf., aff., etc.)
+      example: cf.
     - name: agents
       codename: ods:hasAgents
       type: list
@@ -471,11 +528,13 @@ entities:
       type: string
       required: false
       description: Identifier for the taxon identification
+      example: https://doi.org/10.3535/ABC-DEF-GHI/taxon/1
     - name: type
       codename: '@type'
       type: string
       required: true
       description: Type of the object
+      example: ods:TaxonIdentification
       constraints:
         enum:
         - ods:TaxonIdentification
@@ -484,126 +543,151 @@ entities:
       type: string
       required: false
       description: Identifier for the taxon
+      example: https://www.catalogueoflife.org/data/taxon/6JPS5
     - name: scientific_name
       codename: dwc:scientificName
       type: string
       required: true
       description: Full scientific name with authorship
+      example: Arabidopsis thaliana (L.) Heynh.
     - name: scientific_name_id
       codename: dwc:scientificNameID
       type: string
       required: false
       description: Identifier for the nomenclatural details
+      example: urn:lsid:ipni.org:names:30011304-2
     - name: scientific_name_authorship
       codename: dwc:scientificNameAuthorship
       type: string
       required: false
       description: Authorship information
+      example: (L.) Heynh.
     - name: name_published_in_year
       codename: dwc:namePublishedInYear
       type: string
       required: false
       description: Year the name was published
+      example: '1842'
     - name: taxon_rank
       codename: dwc:taxonRank
       type: string
       required: false
       description: Taxonomic rank
+      example: species
     - name: verbatim_taxon_rank
       codename: dwc:verbatimTaxonRank
       type: string
       required: false
       description: Original rank as recorded
+      example: sp.
     - name: taxon_remarks
       codename: dwc:taxonRemarks
       type: string
       required: false
       description: Comments about the taxon
+      example: Model organism of plant biology
     - name: kingdom
       codename: dwc:kingdom
       type: string
       required: false
       description: Kingdom classification
+      example: Plantae
     - name: phylum
       codename: dwc:phylum
       type: string
       required: false
       description: Phylum or division
+      example: Tracheophyta
     - name: class_name
       codename: dwc:class
       type: string
       required: false
       description: Class classification
+      example: Magnoliopsida
     - name: order_name
       codename: dwc:order
       type: string
       required: false
       description: Order classification
+      example: Brassicales
     - name: family
       codename: dwc:family
       type: string
       required: false
       description: Family classification
+      example: Brassicaceae
     - name: subfamily
       codename: dwc:subfamily
       type: string
       required: false
       description: Subfamily classification
+      example: Brassicoideae
     - name: genus
       codename: dwc:genus
       type: string
       required: false
       description: Genus classification
+      example: Arabidopsis
     - name: subgenus
       codename: dwc:subgenus
       type: string
       required: false
       description: Subgenus classification
+      example: Arabidopsis
     - name: specific_epithet
       codename: dwc:specificEpithet
       type: string
       required: false
       description: Species epithet
+      example: thaliana
     - name: infraspecific_epithet
       codename: dwc:infraspecificEpithet
       type: string
       required: false
       description: Infraspecific epithet
+      example: thaliana
     - name: cultivar_epithet
       codename: dwc:cultivarEpithet
       type: string
       required: false
       description: Cultivar name
+      example: Columbia
     - name: taxonomic_status
       codename: dwc:taxonomicStatus
       type: string
       required: false
       description: Status of the scientific name
+      example: accepted
     - name: nomenclatural_code
       codename: dwc:nomenclaturalCode
       type: string
       required: false
       description: Nomenclatural code governing the name
+      example: ICN
     - name: nomenclatural_status
       codename: dwc:nomenclaturalStatus
       type: string
       required: false
       description: Nomenclatural status
+      example: valid
     - name: vernacular_name
       codename: dwc:vernacularName
       type: string
       required: false
       description: Common or vernacular name
+      example: thale cress
     - name: accepted_name_usage
       codename: dwc:acceptedNameUsage
       type: string
       required: false
       description: Currently accepted name
+      example: Arabidopsis thaliana (L.) Heynh.
     - name: accepted_name_usage_id
       codename: dwc:acceptedNameUsageID
       type: string
       required: false
       description: Identifier for accepted name
+      example: https://www.catalogueoflife.org/data/taxon/6JPS5
   Event:
     ontology_term: ods:Event
     description: An event in the history of the specimen (collecting, etc.)
@@ -613,11 +697,13 @@ entities:
       type: string
       required: false
       description: Identifier for the event
+      example: https://doi.org/10.3535/ABC-DEF-GHI/event/1
     - name: type
       codename: '@type'
       type: string
       required: true
       description: Type of the object
+      example: ods:Event
       constraints:
         enum:
         - ods:Event
@@ -626,36 +712,43 @@ entities:
       type: string
       required: false
       description: Nature of the event
+      example: Collecting event
     - name: field_number
       codename: dwc:fieldNumber
       type: string
       required: false
       description: Field identifier for the event
+      example: EC-1234
     - name: event_date
       codename: dwc:eventDate
       type: string
       required: false
       description: Date or interval of the event
+      example: '2023-05-15'
     - name: event_time
       codename: dwc:eventTime
       type: string
       required: false
       description: Time of the event
+      example: 10:30:00+02:00
     - name: verbatim_event_date
       codename: dwc:verbatimEventDate
       type: string
       required: false
       description: Original date representation
+      example: 15 May 2023
     - name: year
       codename: dwc:year
       type: integer
       required: false
       description: Four-digit year
+      example: 2023
     - name: month
       codename: dwc:month
       type: integer
       required: false
       description: Month (1-12)
+      example: 5
       constraints:
         minimum: 1
         maximum: 12
@@ -664,6 +757,7 @@ entities:
       type: integer
       required: false
       description: Day of month (1-31)
+      example: 15
       constraints:
         minimum: 1
         maximum: 31
@@ -672,6 +766,7 @@ entities:
       type: integer
       required: false
       description: Earliest day of year (1-366)
+      example: 135
       constraints:
         minimum: 1
         maximum: 366
@@ -680,6 +775,7 @@ entities:
       type: integer
       required: false
       description: Latest day of year (1-366)
+      example: 135
       constraints:
         minimum: 1
         maximum: 366
@@ -688,81 +784,97 @@ entities:
       type: string
       required: false
       description: Habitat description
+      example: sandy roadside verge
     - name: behavior
       codename: dwc:behavior
       type: string
       required: false
       description: Behavior at time of event
+      example: flowering
     - name: sex
       codename: dwc:sex
       type: string
       required: false
       description: Sex of the organism
+      example: hermaphrodite
     - name: life_stage
       codename: dwc:lifeStage
       type: string
       required: false
       description: Life stage at time of event
+      example: flowering adult
     - name: reproductive_condition
       codename: dwc:reproductiveCondition
       type: string
       required: false
       description: Reproductive condition
+      example: flowering and fruiting
     - name: caste
       codename: dwc:caste
       type: string
       required: false
       description: Caste for eusocial species
+      example: worker
     - name: vitality
       codename: dwc:vitality
       type: string
       required: false
       description: Whether alive or dead at collection
+      example: alive
     - name: establishment_means
       codename: dwc:establishmentMeans
       type: string
       required: false
       description: How the organism came to be at location
+      example: native
     - name: pathway
       codename: dwc:pathway
       type: string
       required: false
       description: Process by which organism arrived
+      example: natural dispersal
     - name: degree_of_establishment
       codename: dwc:degreeOfEstablishment
       type: string
       required: false
       description: Degree organism survives at location
+      example: established
     - name: sampling_protocol
       codename: dwc:samplingProtocol
       type: string
       required: false
       description: Sampling methods used
+      example: hand collection
     - name: sampling_effort
       codename: dwc:samplingEffort
       type: string
       required: false
       description: Effort expended during event
+      example: 1 person-hour
     - name: sample_size_value
       codename: dwc:sampleSizeValue
       type: float
       required: false
       description: Numeric sample size
+      example: 10.0
     - name: sample_size_unit
       codename: dwc:sampleSizeUnit
       type: string
       required: false
       description: Unit of sample size
+      example: square metres
     - name: field_notes
       codename: dwc:fieldNotes
       type: string
       required: false
       description: Field notes reference
+      example: Field book 7, page 12
     - name: event_remarks
       codename: dwc:eventRemarks
       type: string
       required: false
       description: Comments about the event
+      example: Dense population along 20 m of verge
     - name: location
       codename: ods:hasLocation
       type: entity
@@ -790,11 +902,13 @@ entities:
       type: string
       required: false
       description: Identifier for the location
+      example: https://doi.org/10.3535/ABC-DEF-GHI/location/1
     - name: type
       codename: '@type'
       type: string
       required: true
       description: Type of the object
+      example: ods:Location
       constraints:
         enum:
         - ods:Location
@@ -803,116 +917,139 @@ entities:
       type: string
       required: false
       description: Identifier for the location
+      example: LOC-001
     - name: higher_geography_id
       codename: dwc:higherGeographyID
       type: string
       required: false
       description: Identifier for higher geography
+      example: http://vocab.getty.edu/tgn/7000084
     - name: higher_geography
       codename: dwc:higherGeography
       type: string
       required: false
       description: Higher geography hierarchy
+      example: Europe; Exampleland; Example Province
     - name: continent
       codename: dwc:continent
       type: string
       required: false
       description: Continent name
+      example: Europe
     - name: water_body
       codename: dwc:waterBody
       type: string
       required: false
       description: Water body name
+      example: Example Lake
     - name: island_group
       codename: dwc:islandGroup
       type: string
       required: false
       description: Island group name
+      example: Example Archipelago
     - name: island
       codename: dwc:island
       type: string
       required: false
       description: Island name
+      example: Example Island
     - name: country
       codename: dwc:country
       type: string
       required: false
       description: Country name
+      example: Exampleland
     - name: country_code
       codename: dwc:countryCode
       type: string
       required: false
       description: ISO country code
+      example: XX
     - name: state_province
       codename: dwc:stateProvince
       type: string
       required: false
       description: State or province
+      example: Example Province
     - name: county
       codename: dwc:county
       type: string
       required: false
       description: County or equivalent
+      example: Example County
     - name: municipality
       codename: dwc:municipality
       type: string
       required: false
       description: Municipality
+      example: Exampleton
     - name: locality
       codename: dwc:locality
       type: string
       required: false
       description: Specific locality description
+      example: Roadside verge 2 km north of Exampleton
     - name: verbatim_locality
       codename: dwc:verbatimLocality
       type: string
       required: false
       description: Original locality text
+      example: roadside nr. Exampleton
     - name: minimum_elevation_in_meters
       codename: dwc:minimumElevationInMeters
       type: float
       required: false
       description: Minimum elevation (meters)
+      example: 12.0
     - name: maximum_elevation_in_meters
       codename: dwc:maximumElevationInMeters
       type: float
       required: false
       description: Maximum elevation (meters)
+      example: 15.0
     - name: verbatim_elevation
       codename: dwc:verbatimElevation
       type: string
       required: false
       description: Original elevation text
+      example: 12-15 m
     - name: minimum_depth_in_meters
       codename: dwc:minimumDepthInMeters
       type: float
       required: false
       description: Minimum depth (meters)
+      example: 0.0
     - name: maximum_depth_in_meters
       codename: dwc:maximumDepthInMeters
       type: float
       required: false
       description: Maximum depth (meters)
+      example: 0.1
     - name: verbatim_depth
       codename: dwc:verbatimDepth
       type: string
       required: false
       description: Original depth text
+      example: surface
     - name: vertical_datum
       codename: dwc:verticalDatum
       type: string
       required: false
       description: Vertical datum reference
+      example: EGM96
     - name: location_according_to
       codename: dwc:locationAccordingTo
       type: string
       required: false
       description: Source of location information
+      example: Example national topographic map 1:25000
     - name: location_remarks
       codename: dwc:locationRemarks
       type: string
       required: false
       description: Comments about the location
+      example: Sandy soil, full sun
     - name: georeference
       codename: ods:hasGeoreference
       type: entity
@@ -928,11 +1065,13 @@ entities:
       type: string
       required: false
       description: Identifier for the georeference
+      example: https://doi.org/10.3535/ABC-DEF-GHI/georeference/1
     - name: type
       codename: '@type'
       type: string
       required: true
       description: Type of the object
+      example: ods:Georeference
       constraints:
         enum:
         - ods:Georeference
@@ -941,6 +1080,7 @@ entities:
       type: float
       required: false
       description: Latitude in decimal degrees
+      example: 52.1601
       constraints:
         minimum: -90
         maximum: 90
@@ -949,6 +1089,7 @@ entities:
       type: float
       required: false
       description: Longitude in decimal degrees
+      example: 4.497
       constraints:
         minimum: -180
         maximum: 180
@@ -957,86 +1098,103 @@ entities:
       type: string
       required: false
       description: Geodetic datum (e.g., WGS84)
+      example: WGS84
     - name: coordinate_uncertainty_in_meters
       codename: dwc:coordinateUncertaintyInMeters
       type: float
       required: false
       description: Uncertainty radius in meters
+      example: 30.0
     - name: coordinate_precision
       codename: dwc:coordinatePrecision
       type: float
       required: false
       description: Decimal precision of coordinates
+      example: 0.0001
     - name: point_radius_spatial_fit
       codename: dwc:pointRadiusSpatialFit
       type: float
       required: false
       description: Ratio of point-radius area to actual area
+      example: 1.0
     - name: verbatim_coordinates
       codename: dwc:verbatimCoordinates
       type: string
       required: false
       description: Original coordinate text
+      example: 52 09 36 N 004 29 49 E
     - name: verbatim_latitude
       codename: dwc:verbatimLatitude
       type: string
       required: false
       description: Original latitude text
+      example: 52 09 36 N
     - name: verbatim_longitude
       codename: dwc:verbatimLongitude
       type: string
       required: false
       description: Original longitude text
+      example: 004 29 49 E
     - name: verbatim_coordinate_system
       codename: dwc:verbatimCoordinateSystem
       type: string
       required: false
       description: Original coordinate system
+      example: degrees minutes seconds
     - name: verbatim_srs
       codename: dwc:verbatimSRS
       type: string
       required: false
       description: Original spatial reference system
+      example: EPSG:4326
     - name: footprint_wkt
       codename: dwc:footprintWKT
       type: string
       required: false
       description: Well-Known Text representation
+      example: POINT (4.4970 52.1601)
     - name: footprint_srs
       codename: dwc:footprintSRS
       type: string
       required: false
       description: SRS for footprint WKT
+      example: EPSG:4326
     - name: footprint_spatial_fit
       codename: dwc:footprintSpatialFit
       type: float
       required: false
       description: Ratio of footprint area to actual area
+      example: 1.0
     - name: georeferenced_by
       codename: dwc:georeferencedBy
       type: string
       required: false
       description: Who georeferenced
+      example: Example Georeferencer
     - name: georeferenced_date
       codename: dwc:georeferencedDate
       type: string
       required: false
       description: When georeferenced
+      example: '2024-06-10'
     - name: georeference_protocol
       codename: dwc:georeferenceProtocol
       type: string
       required: false
       description: Protocol used
+      example: Georeferencing Quick Reference Guide (Zermoglio et al. 2020)
     - name: georeference_sources
       codename: dwc:georeferenceSources
       type: string
       required: false
       description: Sources used
+      example: GPS reading on the label
     - name: georeference_remarks
       codename: dwc:georeferenceRemarks
       type: string
       required: false
       description: Comments about georeference
+      example: Coordinates transcribed from the label
   Assertion:
     ontology_term: ods:Assertion
     description: A measurement, fact, or assertion
@@ -1046,11 +1204,13 @@ entities:
       type: string
       required: false
       description: Identifier for the assertion
+      example: https://doi.org/10.3535/ABC-DEF-GHI/assertion/1
     - name: type
       codename: '@type'
       type: string
       required: true
       description: Type of the object
+      example: ods:Assertion
       constraints:
         enum:
         - ods:Assertion
@@ -1059,46 +1219,55 @@ entities:
       type: string
       required: false
       description: Identifier for the measurement
+      example: MEAS-001
     - name: parent_measurement_id
       codename: dwc:parentMeasurementID
       type: string
       required: false
       description: Parent measurement identifier
+      example: MEAS-000
     - name: measurement_type
       codename: dwc:measurementType
       type: string
       required: false
       description: Nature of the assertion
+      example: plant height
     - name: measurement_value
       codename: dwc:measurementValue
       type: string
       required: false
       description: Value of the assertion
+      example: '24.5'
     - name: measurement_accuracy
       codename: dwc:measurementAccuracy
       type: string
       required: false
       description: Accuracy description
+      example: '0.5'
     - name: measurement_unit
       codename: dwc:measurementUnit
       type: string
       required: false
       description: Unit of measurement
+      example: cm
     - name: measurement_determined_date
       codename: dwc:measurementDeterminedDate
       type: string
       required: false
       description: Date of measurement
+      example: '2023-05-15'
     - name: measurement_method
       codename: dwc:measurementMethod
       type: string
       required: false
       description: Method used
+      example: ruler, soil surface to tip of inflorescence
     - name: measurement_remarks
       codename: dwc:measurementRemarks
       type: string
       required: false
       description: Comments
+      example: Measured before pressing
     - name: agents
       codename: ods:hasAgents
       type: list
@@ -1120,11 +1289,13 @@ entities:
       type: string
       required: false
       description: Identifier (DOI, ISBN, etc.)
+      example: https://doi.org/10.1234/example.2024.005
     - name: type
       codename: '@type'
       type: string
       required: true
       description: Type of the object
+      example: ods:Citation
       constraints:
         enum:
         - ods:Citation
@@ -1133,41 +1304,49 @@ entities:
       type: string
       required: false
       description: Identifier for the citation
+      example: https://doi.org/10.1234/example.2024.005
     - name: citation_type
       codename: dcterms:type
       type: string
       required: false
       description: Type of citation
+      example: journal article
     - name: title
       codename: dcterms:title
       type: string
       required: false
       description: Title of the publication
+      example: Roadside populations of Arabidopsis thaliana in Exampleland
     - name: date
       codename: dcterms:date
       type: string
       required: false
       description: Publication date
+      example: '2024-03-01'
     - name: description
       codename: dcterms:description
       type: string
       required: false
       description: Abstract or remarks
+      example: Survey of 40 roadside populations with herbarium vouchers
     - name: bibliographic_citation
       codename: dcterms:bibliographicCitation
       type: string
       required: true
       description: Full bibliographic reference
+      example: Example A, Example B (2024) Roadside populations of Arabidopsis thaliana in Exampleland. J Example Botany 5:12-20
     - name: page_number
       codename: ods:pageNumber
       type: string
       required: false
       description: Page number reference
+      example: '15'
     - name: is_peer_reviewed
       codename: ods:isPeerReviewed
       type: boolean
       required: false
       description: Whether peer reviewed
+      example: true
     - name: agents
       codename: ods:hasAgents
       type: list
@@ -1183,11 +1362,13 @@ entities:
       type: string
       required: false
       description: Identifier for the relationship
+      example: https://doi.org/10.3535/ABC-DEF-GHI/relationship/1
     - name: type
       codename: '@type'
       type: string
       required: true
       description: Type of the object
+      example: ods:EntityRelationship
       constraints:
         enum:
         - ods:EntityRelationship
@@ -1196,16 +1377,19 @@ entities:
       type: string
       required: false
       description: Type of relationship
+      example: hasDigitalMedia
     - name: related_resource_id
       codename: dwc:relatedResourceID
       type: string
       required: false
       description: Identifier of related resource
+      example: https://doi.org/10.3535/JKL-MNO-PQR
     - name: relationship_remarks
       codename: dwc:relationshipRemarks
       type: string
       required: false
       description: Comments about the relationship
+      example: Image of the herbarium sheet
   SpecimenPart:
     ontology_term: ods:SpecimenPart
     description: A part of a specimen
@@ -1215,11 +1399,13 @@ entities:
       type: string
       required: false
       description: Identifier for the specimen part
+      example: https://doi.org/10.3535/ABC-DEF-GHI/part/1
     - name: type
       codename: '@type'
       type: string
       required: true
       description: Type of the object
+      example: ods:SpecimenPart
       constraints:
         enum:
         - ods:SpecimenPart
@@ -1228,26 +1414,31 @@ entities:
       type: string
       required: false
       description: Name of the part
+      example: seed packet
     - name: part_type
       codename: ods:partType
       type: string
       required: false
       description: Type of part
+      example: seeds
     - name: preparations
       codename: dwc:preparations
       type: string
       required: false
       description: Preparation methods
+      example: dried seeds in a paper packet
     - name: disposition
       codename: dwc:disposition
       type: string
       required: false
       description: Current state
+      example: in collection
     - name: part_remarks
       codename: ods:partRemarks
       type: string
       required: false
       description: Comments about the part
+      example: Attached to the sheet
   ChronometricAge:
     ontology_term: ods:ChronometricAge
     description: Age determination for a specimen
@@ -1257,11 +1448,13 @@ entities:
       type: string
       required: false
       description: Identifier for the age determination
+      example: https://doi.org/10.3535/ABC-DEF-GHI/age/1
     - name: type
       codename: '@type'
       type: string
       required: true
       description: Type of the object
+      example: ods:ChronometricAge
       constraints:
         enum:
         - ods:ChronometricAge
@@ -1270,86 +1463,103 @@ entities:
       type: string
       required: false
       description: Identifier for the age
+      example: AGE-001
     - name: verbatim_chronometric_age
       codename: chrono:verbatimChronometricAge
       type: string
       required: false
       description: Original age text
+      example: 12,500 +/- 80 BP
     - name: chronometric_age_protocol
       codename: chrono:chronometricAgeProtocol
       type: string
       required: false
       description: Dating method used
+      example: AMS radiocarbon dating
     - name: uncalibrated_chronometric_age
       codename: chrono:uncalibratedChronometricAge
       type: string
       required: false
       description: Raw dating result
+      example: 12500 +/- 80 radiocarbon years BP
     - name: chronometric_age_conversion_protocol
       codename: chrono:chronometricAgeConversionProtocol
       type: string
       required: false
       description: Calibration method
+      example: IntCal20 calibration in OxCal 4.4
     - name: earliest_chronometric_age
       codename: chrono:earliestChronometricAge
       type: string
       required: false
       description: Earliest age estimate
+      example: '15000'
     - name: earliest_chronometric_age_reference_system
       codename: chrono:earliestChronometricAgeReferenceSystem
       type: string
       required: false
       description: Reference system for earliest age
+      example: cal BP
     - name: latest_chronometric_age
       codename: chrono:latestChronometricAge
       type: string
       required: false
       description: Latest age estimate
+      example: '14500'
     - name: latest_chronometric_age_reference_system
       codename: chrono:latestChronometricAgeReferenceSystem
       type: string
       required: false
       description: Reference system for latest age
+      example: cal BP
     - name: chronometric_age_uncertainty_in_years
       codename: chrono:chronometricAgeUncertaintyInYears
       type: integer
       required: false
       description: Uncertainty in years
+      example: 80
     - name: chronometric_age_uncertainty_method
       codename: chrono:chronometricAgeUncertaintyMethod
       type: string
       required: false
       description: How uncertainty was determined
+      example: 1 sigma counting error
     - name: material_dated
       codename: chrono:materialDated
       type: string
       required: false
       description: Material that was dated
+      example: bone collagen
     - name: material_dated_id
       codename: chrono:materialDatedID
       type: string
       required: false
       description: Identifier for dated material
+      example: https://doi.org/10.3535/ABC-DEF-GHI/part/2
     - name: chronometric_age_determined_by
       codename: chrono:chronometricAgeDeterminedBy
       type: string
       required: false
       description: Who determined the age
+      example: Example Radiocarbon Laboratory
     - name: chronometric_age_determined_date
       codename: chrono:chronometricAgeDeterminedDate
       type: string
       required: false
       description: When age was determined
+      example: '2023-11-20'
     - name: chronometric_age_references
       codename: chrono:chronometricAgeReferences
       type: string
       required: false
       description: References for the dating
+      example: https://doi.org/10.1234/example.2023.009
     - name: chronometric_age_remarks
       codename: chrono:chronometricAgeRemarks
       type: string
       required: false
       description: Comments about the age
+      example: Sample pretreated with ultrafiltration
   TombstoneMetadata:
     ontology_term: ods:Tombstone
     description: Metadata about a tombstoned (deleted) digital object
@@ -1359,6 +1569,7 @@ entities:
       type: string
       required: true
       description: Type of the object
+      example: ods:Tombstone
       constraints:
         enum:
         - ods:Tombstone
@@ -1367,11 +1578,13 @@ entities:
       type: datetime
       required: true
       description: Timestamp when the object was tombstoned
+      example: '2024-09-01T08:00:00+00:00'
     - name: tombstone_text
       codename: ods:tombstoneText
       type: string
       required: true
       description: Reason why the object was tombstoned
+      example: Duplicate of https://doi.org/10.3535/STU-VWX-YZA
     - name: agents
       codename: ods:hasAgents
       type: list
@@ -1393,11 +1606,13 @@ entities:
       type: string
       required: false
       description: Identifier for the agent
+      example: https://orcid.org/0000-0002-1825-0097
     - name: type
       codename: '@type'
       type: string
       required: true
       description: Type of agent
+      example: schema:Person
       constraints:
         enum:
         - schema:Person
@@ -1410,21 +1625,25 @@ entities:
       type: string
       required: false
       description: Primary identifier (ORCID, ROR, etc.)
+      example: https://orcid.org/0000-0002-1825-0097
     - name: name
       codename: schema:name
       type: string
       required: false
       description: Full name of the agent
+      example: Example Collector
     - name: email
       codename: schema:email
       type: string
       required: false
       description: Email address
+      example: collector@example.org
     - name: url
       codename: schema:url
       type: uri
       required: false
       description: URL for the agent
+      example: https://example.org/people/collector
     - name: roles
       codename: ods:hasRoles
       type: list
@@ -1446,11 +1665,13 @@ entities:
       type: string
       required: false
       description: Identifier for the role
+      example: https://doi.org/10.3535/ABC-DEF-GHI/role/1
     - name: type
       codename: '@type'
       type: string
       required: true
       description: Type of the object
+      example: schema:Role
       constraints:
         enum:
         - schema:Role
@@ -1459,21 +1680,25 @@ entities:
       type: string
       required: true
       description: Name of the role
+      example: collector
     - name: start_date
       codename: schema:startDate
       type: string
       required: false
       description: When the role began
+      example: '2023-05-15'
     - name: end_date
       codename: schema:endDate
       type: string
       required: false
       description: When the role ended
+      example: '2023-05-15'
     - name: position
       codename: schema:position
       type: integer
       required: false
       description: Order of importance
+      example: 1
   Identifier:
     ontology_term: ods:Identifier
     description: An identifier for an object
@@ -1483,11 +1708,13 @@ entities:
       type: string
       required: false
       description: Identifier for the identifier object
+      example: https://doi.org/10.3535/ABC-DEF-GHI/identifier/1
     - name: type
       codename: '@type'
       type: string
       required: true
       description: Type of the object
+      example: ods:Identifier
       constraints:
         enum:
         - ods:Identifier
@@ -1496,11 +1723,13 @@ entities:
       type: string
       required: true
       description: Name for the identifier
+      example: catalogue number
     - name: identifier_type
       codename: dcterms:type
       type: string
       required: false
       description: Type of identifier
+      example: Locally unique identifier
       constraints:
         enum:
         - ARK
@@ -1530,16 +1759,19 @@ entities:
       type: string
       required: true
       description: The identifier value
+      example: L.1234567
     - name: is_part_of_label
       codename: ods:isPartOfLabel
       type: boolean
       required: false
       description: Whether on physical label
+      example: true
     - name: gupri_level
       codename: ods:gupriLevel
       type: string
       required: false
       description: Persistence level
+      example: LocallyUniqueStable
       constraints:
         enum:
         - LocallyUniqueStable
@@ -1552,6 +1784,7 @@ entities:
       type: string
       required: false
       description: Status of the identifier
+      example: Preferred
       constraints:
         enum:
         - Preferred
@@ -1566,6 +1799,7 @@ entities:
       type: string
       required: true
       description: Type of the object
+      example: ods:RelatedPid
       constraints:
         enum:
         - ods:RelatedPid
@@ -1574,16 +1808,19 @@ entities:
       type: string
       required: false
       description: PID for Annotation, DigitalMedia, or DigitalSpecimen
+      example: https://doi.org/10.3535/STU-VWX-YZA
     - name: schema_identifier
       codename: schema:identifier
       type: string
       required: false
       description: PID for DataMapping, SourceSystem, or MachineAnnotationService
+      example: https://hdl.handle.net/20.5000.1025/ABC-123
     - name: relationship_type
       codename: ods:relationshipType
       type: string
       required: true
       description: Type of relationship to the tombstoned object
+      example: IsDuplicateOf
       constraints:
         enum:
         - RelatedTo

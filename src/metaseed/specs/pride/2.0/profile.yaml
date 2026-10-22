@@ -103,6 +103,7 @@ entities:
       type: string
       required: true
       description: A locally unique identifier for the dataset
+      example: DS-001
       constraints:
         min_length: 1
         max_length: 100
@@ -115,12 +116,14 @@ entities:
       type: string
       required: false
       description: ProteomeXchange accession number (assigned upon submission)
+      example: PXD000001
 
     - name: title
       dcat: dct:title
       type: string
       required: true
       description: A concise descriptive title for the dataset
+      example: Proteome of Arabidopsis thaliana leaves under drought stress
       constraints:
         min_length: 10
         max_length: 500
@@ -130,6 +133,7 @@ entities:
       type: string
       required: true
       description: Detailed description of the dataset and experimental goals
+      example: Label-free quantitative proteomics of rosette leaves from well-watered and drought-stressed plants, three biological replicates each
       constraints:
         min_length: 50
 
@@ -137,6 +141,7 @@ entities:
       type: string
       required: true
       description: Description of sample processing and preparation
+      example: Proteins were extracted with phenol, digested with trypsin and desalted on C18 StageTips
       constraints:
         min_length: 50
 
@@ -144,6 +149,7 @@ entities:
       type: string
       required: true
       description: Description of data processing and analysis methods
+      example: Raw files were searched with MaxQuant 2.4 against the TAIR10 proteome at 1% FDR; label-free quantification with match between runs
       constraints:
         min_length: 50
 
@@ -151,6 +157,7 @@ entities:
       type: string
       required: true
       description: Type of submission (COMPLETE or PARTIAL)
+      example: COMPLETE
       constraints:
         enum: [COMPLETE, PARTIAL]
 
@@ -159,33 +166,39 @@ entities:
       items: string
       required: false
       description: Experiment type(s), e.g. "Shotgun proteomics" (PX experiment_type)
+      example: [Shotgun proteomics]
 
     - name: reason_for_partial
       type: string
       required: false
       description: Why the submission is PARTIAL (required by PX for PARTIAL submissions)
+      example: Search engine output is in a format PRIDE cannot convert
 
     - name: doi
       type: string
       required: false
       description: DOI assigned to the dataset by ProteomeXchange
+      example: 10.6019/PXD000001
 
     - name: license
       dcat: dct:license
       type: string
       required: false
       description: Terms under which the dataset may be reused
+      example: CC0 1.0
 
     - name: submission_date
       type: date
       required: false
       description: Date the dataset was submitted
+      example: '2024-06-01'
 
     - name: announcement_date
       dcat: dct:issued
       type: date
       required: false
       description: Date the dataset was announced
+      example: '2024-09-15'
 
     - name: keywords
       dcat: dcat:keyword
@@ -193,6 +206,7 @@ entities:
       items: string
       required: true
       description: Keywords describing the dataset
+      example: [Arabidopsis, drought, label-free quantification]
 
     - name: species
       type: list
@@ -245,26 +259,31 @@ entities:
       type: string
       required: true
       description: Sample name
+      example: leaf-drought-rep1
 
     - name: species
       type: string
       required: true
       description: Source organism name
+      example: Arabidopsis thaliana
 
     - name: ncbi_taxonomy_id
       type: string
       required: true
       description: NCBI Taxonomy ID
+      example: '3702'
 
     - name: tissue
       type: string
       required: false
       description: Tissue type
+      example: leaf
 
     - name: tissue_accession
       type: ontology_term
       required: false
       description: Tissue ontology accession
+      example: BTO:0000713
       ontologies:
         - uberon
 
@@ -272,16 +291,19 @@ entities:
       type: string
       required: false
       description: Cell type
+      example: mesophyll cell
 
     - name: disease
       type: string
       required: false
       description: Disease state
+      example: none
 
     - name: description
       type: string
       required: false
       description: Sample description
+      example: Rosette leaves of a 4-week-old plant after 72 hours without watering
 
     - name: custom_attributes
       type: list
@@ -297,11 +319,13 @@ entities:
       type: string
       required: true
       description: Species name
+      example: Arabidopsis thaliana
 
     - name: ncbi_taxonomy_id
       type: string
       required: true
       description: NCBI Taxonomy ID
+      example: '3702'
 
   Instrument:
     ontology_term: pride:Instrument
@@ -311,32 +335,38 @@ entities:
       type: string
       required: true
       description: Instrument name
+      example: Q Exactive HF
 
     - name: cv_accession
       type: string
       required: true
       description: PSI-MS controlled vocabulary accession
+      example: MS:1002523
 
     - name: cv_name
       type: string
       required: false
       description: CV term name
+      example: Q Exactive HF
 
     - name: source
       type: string
       required: false
       description: Ion source type
+      example: electrospray ionization
 
     - name: analyzer
       type: list
       items: string
       required: false
       description: Mass analyzer types
+      example: [quadrupole, orbitrap]
 
     - name: detector
       type: string
       required: false
       description: Detector type
+      example: inductive detector
 
   Modification:
     ontology_term: pride:Modification
@@ -346,16 +376,19 @@ entities:
       type: string
       required: true
       description: Modification name
+      example: Oxidation
 
     - name: cv_accession
       type: string
       required: true
       description: PSI-MOD or UNIMOD accession
+      example: UNIMOD:35
 
     - name: mass_delta
       type: float
       required: false
       description: Mass delta in Daltons
+      example: 15.994915
       constraints:
         minimum: -500
         maximum: 500
@@ -364,6 +397,7 @@ entities:
       type: string
       required: false
       description: Target amino acid residues
+      example: M
       constraints:
         pattern: ^[ACDEFGHIKLMNPQRSTVWY]+$
 
@@ -371,6 +405,7 @@ entities:
       type: string
       required: false
       description: Position specificity (anywhere, N-term, C-term)
+      example: Anywhere
       constraints:
         enum: [Anywhere, Any N-term, Any C-term, Protein N-term, Protein C-term]
 
@@ -382,26 +417,31 @@ entities:
       type: string
       required: true
       description: Full name
+      example: Example Submitter
 
     - name: email
       type: string
       required: true
       description: Email address
+      example: submitter@example.org
 
     - name: affiliation
       type: string
       required: true
       description: Institutional affiliation
+      example: Example University, Department of Plant Sciences
 
     - name: orcid
       type: string
       required: false
       description: ORCID identifier
+      example: 0000-0002-1825-0097
 
     - name: role
       type: string
       required: true
       description: Role in the project (submitter, lab head, principal investigator, researcher)
+      example: submitter
       constraints:
         enum: [submitter, lab head, principal investigator, researcher]
 
@@ -413,6 +453,7 @@ entities:
       type: string
       required: false
       description: Publication title
+      example: Leaf proteome remodelling during progressive drought in Arabidopsis thaliana
 
     - name: doi
       type: string
@@ -420,16 +461,19 @@ entities:
       is_identifier: true
       description: Digital Object Identifier — the publication's identity;
         title is a display label two submissions can share (#249)
+      example: 10.1234/example.2024.001
 
     - name: pubmed_id
       type: string
       required: false
       description: PubMed ID
+      example: '38123456'
 
     - name: reference
       type: string
       required: false
       description: Full reference string
+      example: Example A, Example B (2024) Leaf proteome remodelling during progressive drought in Arabidopsis thaliana. J Example Proteomics 12:345-356
 
   DataFile:
     ontology_term: pride:DataFile
@@ -439,11 +483,13 @@ entities:
       type: string
       required: true
       description: Name of the file
+      example: leaf-drought-rep1.raw
 
     - name: file_type
       type: string
       required: true
       description: Type of file (RAW, PEAK, RESULT, SEARCH, QUANT, etc.)
+      example: RAW
       constraints:
         enum: [RAW, PEAK, RESULT, SEARCH, QUANT, GEL, FASTA, SPECTRUM_LIBRARY, MS_IMAGE_DATA, OTHER]
 
@@ -451,11 +497,13 @@ entities:
       type: string
       required: false
       description: File format (mzML, mzIdentML, etc.)
+      example: Thermo RAW
 
     - name: checksum
       type: string
       required: false
       description: MD5 checksum
+      example: d41d8cd98f00b204e9800998ecf8427e
       constraints:
         pattern: ^[a-fA-F0-9]{32}$
 
@@ -463,6 +511,7 @@ entities:
       type: integer
       required: false
       description: File size in bytes
+      example: 1073741824
       constraints:
         minimum: 1
 
@@ -471,6 +520,7 @@ entities:
       items: string
       required: false
       description: Names of associated samples
+      example: [leaf-drought-rep1]
 
   CustomAttribute:
     ontology_term: pride:CustomAttribute
@@ -480,13 +530,16 @@ entities:
       type: string
       required: true
       description: Attribute name
+      example: growth_condition
 
     - name: value
       type: string
       required: true
       description: Attribute value
+      example: 22 C, 16 h light / 8 h dark
 
     - name: cv_accession
       type: string
       required: false
       description: Controlled vocabulary accession if applicable
+      example: EFO:0000727
