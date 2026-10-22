@@ -14,6 +14,7 @@ from fastapi.templating import Jinja2Templates
 from starlette.requests import Request
 
 from metaseed.profiles import ProfileFactory
+from metaseed.ui.services.heading_note import field_notes
 
 from ..helpers import (
     build_ancestor_breadcrumb,
@@ -109,6 +110,7 @@ def register_form_routes(  # noqa: C901
             request,
             "partials/form.html",
             {
+                "field_notes": field_notes(helper, facade.profile_spec),
                 "entity_type": entity_type,
                 "is_edit": False,
                 "node_id": None,
@@ -163,6 +165,7 @@ def register_form_routes(  # noqa: C901
             request,
             "partials/form.html",
             {
+                "field_notes": field_notes(helper, facade.profile_spec),
                 "entity_type": child_entity_type,
                 "is_edit": False,
                 "node_id": None,
@@ -226,6 +229,7 @@ def register_form_routes(  # noqa: C901
             request,
             "partials/form.html",
             {
+                "field_notes": field_notes(helper, facade.profile_spec),
                 "entity_type": entity_type,
                 "is_edit": True,
                 "node_id": node_id,

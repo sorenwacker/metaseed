@@ -42,6 +42,10 @@ nested = ctx.get_nested_fields()      # holding entities, required or not
 
 A field that holds entities, a list of entities or a single entity, is rendered once: as its table under Related Entities, whose header marks the field required and a single-entity field as holding exactly one. A single-entity table offers no second row, and the add-row route refuses one ([ADR 006](decisions/006-relationships-are-recorded-edges.md)).
 
+### Field notes
+
+Hovering over a field's label in the entity form, required or optional, opens its note: the description, whether it is required, its type, an example, and its pattern, length or range, allowed values and the validation rules that name it. `field_notes(helper, spec)` in `metaseed.ui.services.heading_note` builds the notes for one entity type from `heading_note`, the builder the exported Excel headings use, so the form and the workbook describe a field in the same words. The label carries the note as `data-note`; `static/js/field-notes.js` draws it in one box attached to the page body, which stays open while the pointer is on it so a long note can be scrolled. metaseed-hub loads the same script and builds its notes with the same function.
+
 | Property | Description |
 |----------|-------------|
 | `is_edit` | True if editing existing entity |

@@ -1,6 +1,6 @@
 {% set field_error = field_errors.get(field.name) if field_errors is defined and field_errors else None %}
 <div class="form-group{% if field_error %} has-error{% endif %}">
-    <label class="form-label" for="field-{{ field.name }}">
+    <label class="form-label" for="field-{{ field.name }}"{% if field_notes is defined and field_notes.get(field.name) %} data-note="{{ field_notes[field.name] }}"{% endif %}>
         {{ field.name }}
         {% if field.required %}<span class="required">*</span>{% endif %}
         {% if auto_fields and field.name in auto_fields %}<span class="auto-field">(auto)</span>{% endif %}
