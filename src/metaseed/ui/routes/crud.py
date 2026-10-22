@@ -12,6 +12,8 @@ from fastapi.templating import Jinja2Templates
 from pydantic import ValidationError
 from starlette.requests import Request
 
+from metaseed.ui.services.heading_note import field_notes
+
 from ..helpers import (
     FormContext,
     build_inline_tables,
@@ -404,6 +406,7 @@ def render_entity_form(
         request,
         "partials/form.html",
         {
+            "field_notes": field_notes(helper, facade.profile_spec),
             "entity_type": ctx.entity_type,
             "is_edit": ctx.is_edit,
             "node_id": ctx.node_id,

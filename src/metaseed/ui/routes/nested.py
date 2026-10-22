@@ -13,6 +13,8 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from starlette.requests import Request
 
+from metaseed.ui.services.heading_note import field_notes
+
 from ..helpers import (
     build_breadcrumb,
     build_inline_tables,
@@ -154,6 +156,9 @@ def register_nested_routes(  # noqa: C901
             request,
             "partials/nested_form.html",
             {
+                "field_notes": field_notes(nested_helper, facade.profile_spec)
+                if nested_helper
+                else {},
                 "entity_type": nested_entity_type,
                 "parent_entity_type": parent_type,
                 "field_name": field_name,
@@ -260,6 +265,9 @@ def register_nested_routes(  # noqa: C901
             request,
             "partials/nested_form.html",
             {
+                "field_notes": field_notes(nested_helper, facade.profile_spec)
+                if nested_helper
+                else {},
                 "entity_type": nested_entity_type,
                 "parent_entity_type": parent_type,
                 "field_name": field_name,

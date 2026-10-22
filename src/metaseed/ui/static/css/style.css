@@ -6162,3 +6162,68 @@ details.sidebar-section summary:hover {
 .profile-subtitle { color: var(--clr-ink-muted, #666); font-size: 0.85em; margin-bottom: var(--space-xs); }
 .profile-description { margin: 0 0 var(--space-xs); font-size: 0.9em; line-height: 1.45; }
 .profile-facts { font-size: 0.85em; color: var(--clr-ink-muted, #666); }
+
+/* Field notes: the box field-notes.js opens over a [data-note]. */
+.note-tooltip {
+    position: fixed;
+    z-index: 2000;
+    width: max-content;
+    max-width: 380px;
+    max-height: 320px;
+    overflow-y: auto;
+    padding: var(--space-sm) var(--space-md);
+    background: #2b2b2b;
+    color: #f4f1ea;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    text-transform: none;
+    letter-spacing: normal;
+    font-weight: 400;
+}
+
+.note-tooltip-description {
+    margin: 0 0 var(--space-sm);
+    color: white;
+}
+
+.note-tooltip dl {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 4px var(--space-sm);
+    margin: 0;
+    padding-top: var(--space-sm);
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.note-tooltip dt {
+    color: #b9b3a6;
+    white-space: nowrap;
+}
+
+.note-tooltip dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.note-tooltip ul {
+    margin: 0;
+    padding-left: 1.1em;
+}
+
+.note-tooltip-chip {
+    display: inline-block;
+    margin: 0 4px 4px 0;
+    padding: 0 6px;
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.12);
+    font-family: var(--font-mono, monospace);
+    font-size: 0.75rem;
+}
+
+label[data-note] {
+    cursor: help;
+    text-decoration: underline dotted rgba(0, 0, 0, 0.35);
+    text-underline-offset: 3px;
+}

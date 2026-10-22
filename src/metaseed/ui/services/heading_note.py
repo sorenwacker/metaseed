@@ -240,3 +240,32 @@ def _unique(values: Iterable[Any]) -> list[Any]:
         if value and value not in seen:
             seen.append(value)
     return seen
+
+
+def field_notes(helper: Any, spec: Any) -> dict[str, str]:
+    """Field name -> its note, for every field of one entity type.
+
+    The note a form label and a table heading show on hover, built by
+    :func:`heading_note` so they and the exported workbook describe a field in
+    the same words.
+
+    Args:
+        helper: The facade's helper for the entity type.
+        spec: The profile specification, for the validation rules naming a
+            field; ``None`` leaves the rules out.
+
+    Returns:
+        A note for each field that has something to say.
+    """
+    from metaseed.specs.schema import applies_to_entity
+
+    fields = {
+        f.name: f for f in getattr(getattr(helper, "spec", None), "fields", None) or []
+    }
+    rules = [
+        rule
+        for rule in getattr(spec, "validation_rules", None) or []
+        if applies_to_entity(rule.applies_to, helper.name)
+    ]
+    notes = {name: heading_note(name, field, rules) for name, field in fields.items()}
+    return {name: note for name, note in notes.items() if note}
