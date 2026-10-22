@@ -213,8 +213,9 @@ def apply_reference_validations(
     """Point every cross-sheet reference at the rows it may name.
 
     A dataset's sheets are a small relational model: a Study names its
-    Investigation, a Sample names the Assay that measured it, and ``_parent``
-    names the row above. Typed by hand these are the commonest way an import
+    Investigation, and a Sample names the Assay that measured it. (Where a row
+    sits in the tree has its own dropdown: :mod:`metaseed.ui.services.belongs_to`.)
+    Typed by hand these are the commonest way an import
     arrives with orphans — a transposed character in an identifier and the row
     attaches to nothing.
 
@@ -222,8 +223,6 @@ def apply_reference_validations(
     the sheet it points at, so the person filling it in picks an existing row
     instead of retyping its name.
     """
-    parents = _parents_by_child(facade)
-
     for entity, columns in columns_by_entity.items():
         helper = getattr(facade, entity, None)
         ws = sheets.get(entity)
@@ -239,9 +238,6 @@ def apply_reference_validations(
         # correct value is wrong.
         for external in getattr(helper, "external_reference_fields", set()) or set():
             targets.pop(external, None)
-        if "_parent" in columns and entity in parents:
-            parent_entity, parent_field = parents[entity]
-            targets["_parent"] = (parent_entity, parent_field)
 
         for column, (target_entity, target_field) in targets.items():
             if column not in columns:
@@ -432,25 +428,6 @@ def apply_uniqueness_validations(
             )
             ws.add_data_validation(validation)
             validation.add(f"{letter}2:{letter}{VALIDATED_ROWS}")
-
-
-def _parents_by_child(facade: Any) -> dict[str, tuple[str, str]]:
-    """Child entity -> the entity that nests it and that entity's identifier.
-
-    Read from the nesting the profile declares, so ``_parent`` points at
-    whatever the specification says holds this entity rather than a guess.
-    """
-    parents: dict[str, tuple[str, str]] = {}
-    for parent in getattr(facade, "entities", []) or []:
-        parent_helper = getattr(facade, parent, None)
-        if parent_helper is None:
-            continue
-        identifier = getattr(parent_helper, "identifier_field", None)
-        if not identifier:
-            continue
-        for child in (getattr(parent_helper, "nested_fields", {}) or {}).values():
-            parents.setdefault(child, (parent, identifier))
-    return parents
 
 
 def apply_validations(

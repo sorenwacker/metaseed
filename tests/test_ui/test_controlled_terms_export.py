@@ -156,10 +156,10 @@ class TestTheSheetIsReadable:
 
     def test_the_parent_column_explains_what_it_is_for(self) -> None:
         ws = self._sheet()
-        parent = next(cell for cell in ws[1] if cell.value == "_parent")
+        parent = next(cell for cell in ws[1] if cell.value == "Belongs to")
 
         assert parent.comment is not None
-        assert "parent sheet" in parent.comment.text
+        assert "Type: identifier" in parent.comment.text
 
     def test_columns_are_wide_enough_to_read_the_heading(self) -> None:
         ws = self._sheet()
@@ -185,7 +185,7 @@ class TestTheSheetIsReadable:
 
 
 class TestTheStructuralColumn:
-    """_parent is not metadata: nobody observed or measured it, and inventing a
+    """Belongs to is not metadata: nobody observed or measured it, and inventing a
     value for it breaks the tree. It stays visible only because a row added in
     Excel has no other way to say where it belongs."""
 
@@ -203,7 +203,7 @@ class TestTheStructuralColumn:
     def test_it_is_set_apart_from_the_metadata_columns(self) -> None:
         ws = self._study_sheet()
         columns = [cell.value for cell in ws[1]]
-        parent_index = columns.index("_parent") + 1
+        parent_index = columns.index("Belongs to") + 1
 
         parent_cell = ws.cell(row=2, column=parent_index)
         assert parent_cell.font.italic is True
@@ -211,10 +211,10 @@ class TestTheStructuralColumn:
 
     def test_it_says_what_to_do_when_adding_a_row(self) -> None:
         ws = self._study_sheet()
-        parent = next(cell for cell in ws[1] if cell.value == "_parent")
+        parent = next(cell for cell in ws[1] if cell.value == "Belongs to")
 
-        assert "Structure, not metadata" in parent.comment.text
-        assert "add a row" in parent.comment.text
+        assert "Where this row belongs" in parent.comment.text
+        assert "row you add" in parent.comment.text
 
 
 class TestEachSheetIsATable:

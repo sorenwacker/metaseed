@@ -12,12 +12,20 @@ from typing import TYPE_CHECKING, Any
 from openpyxl import Workbook
 
 from metaseed.ui.helpers import to_dict
+from metaseed.ui.services.belongs_to import (
+    BELONGS_TO,
+    Placement,
+    apply_belongs_to_validation,
+    holders,
+)
+from metaseed.ui.services.belongs_to import value_for as belongs_to_value
 from metaseed.ui.services.controlled_terms import (
     apply_reference_validations,
     apply_uniqueness_validations,
     apply_validations,
     flag_invalid_cells,
 )
+from metaseed.ui.services.instructions import write_instructions
 from metaseed.ui.services.sheet_style import style_sheet
 
 if TYPE_CHECKING:
@@ -85,7 +93,7 @@ def _stated_values(data: dict[str, Any]) -> dict[str, str]:
     return {
         key: str(value)
         for key, value in data.items()
-        if key != "_parent"
+        if key not in ("_parent", "_belongs_to")
         and not isinstance(value, list | dict)
         and value not in (None, "")
     }
@@ -107,21 +115,44 @@ def _is_contained_in(candidate: dict[str, Any], rows: list[dict[str, Any]]) -> b
 
 
 def _stored_rows(facade: Any) -> list[tuple[str, dict[str, Any]]]:
-    """Every stored entity as ``(type, data)``, carrying its parent."""
+    """Every stored entity as ``(type, data)``, carrying where it sits.
+
+    ``_parent`` is the holding record's identifier, which the counts and the
+    copy check key on; ``_belongs_to`` is the **Belongs to** cell, which names
+    the holding record's type as well, because an identifier alone cannot tell
+    an investigation's contact from a study's person.
+    """
     from metaseed import MetaseedClient
 
+    client = MetaseedClient.from_facade(facade)
+    nodes: dict[str, Any] = {}
+
+    def walk(node: Any) -> None:
+        nodes[node.id] = node
+        for child in client.get_children(node.id):
+            walk(child)
+
+    for root in client.get_roots():
+        walk(root)
+
     rows: list[tuple[str, dict[str, Any]]] = []
-    payload = MetaseedClient.from_facade(facade).serialize()
-    for entity in payload.get("entities", []):
+    for entity in client.serialize().get("entities", []):
         entity_type = entity.get("_type")
         if not entity_type:
             continue
         data = {k: v for k, v in entity.items() if not k.startswith("_")}
-        if entity.get("_parent_unique_id"):
-            # The tree, as a business key. No profile declares parent_ref
-            # fields, so without this column the export cannot be reimported
-            # with its structure intact.
-            data["_parent"] = entity["_parent_unique_id"]
+        node = nodes.get(entity.get("_node_id", ""))
+        parent_id = client.get_entity(node.id).parent_id if node else None
+        parent = client.get_entity(parent_id) if parent_id else None
+        if node is not None and parent is not None:
+            identifier = _identifier_of(facade, parent.entity_type, parent.data)
+            data["_parent"] = identifier
+            if identifier and node.parent_field:
+                data["_belongs_to"] = belongs_to_value(
+                    facade,
+                    entity_type,
+                    Placement(parent.entity_type, identifier, node.parent_field),
+                )
         rows.append((entity_type, data))
     return rows
 
@@ -145,9 +176,12 @@ def collect_rows_by_type(facade: Any) -> dict[str, list[dict[str, Any]]]:
     stored row knows what it hangs from — which read as a column of duplicate
     identifiers and a row belonging to nothing.
 
-    Stored rows are taken first and an embedded dict is emitted only when no
-    stored row under the same parent already contains it, which is what happens
-    for a child that was never materialised.
+    Stored rows are taken first. An embedded dict is emitted only when its
+    parent has no stored child of that type -- a child that was never
+    materialised -- and no stored row under the same parent already contains
+    it. A parent that does have stored children may still carry an old copy of
+    them, saved before they were edited; emitting that copy wrote every child
+    a second time, as it was before the edits.
     """
     by_type: dict[str, list[dict[str, Any]]] = {}
     emitted: dict[tuple[str, str], list[dict[str, Any]]] = {}
@@ -162,6 +196,8 @@ def collect_rows_by_type(facade: Any) -> dict[str, list[dict[str, Any]]]:
             return
         parent = _identifier_of(facade, entity_type, data)
         for field_name, nested_type in helper.nested_fields.items():
+            if (nested_type, parent) in stored_children:
+                continue
             for item in data.get(field_name) or []:
                 if not isinstance(item, dict):
                     continue
@@ -170,6 +206,11 @@ def collect_rows_by_type(facade: Any) -> dict[str, list[dict[str, Any]]]:
                 walk_embedded(nested_type, item)
 
     rows = _stored_rows(facade)
+    stored_children = {
+        (entity_type, str(data["_parent"]))
+        for entity_type, data in rows
+        if data.get("_parent")
+    }
     for entity_type, data in rows:
         emit(entity_type, str(data.get("_parent", "")), data)
     for entity_type, data in rows:
@@ -204,6 +245,7 @@ def build_workbook_from_facade(facade: Any) -> Workbook:
 
     wb = Workbook()
     wb.remove(wb.active)
+    write_instructions(wb)
 
     # Kept so the controlled columns can be restricted once every sheet exists.
     sheets: dict[str, Any] = {}
@@ -218,7 +260,9 @@ def build_workbook_from_facade(facade: Any) -> Workbook:
         ws = wb.create_sheet(entity_type)
         sheets[entity_type] = ws
         nested_types = helper.nested_fields  # field name -> contained entity type
-        columns = [*helper.all_fields, "_parent"]
+        columns = list(helper.all_fields)
+        if holders(facade, entity_type):
+            columns.append(BELONGS_TO)
         columns_by_entity[entity_type] = columns
         fields_by_entity[entity_type] = _field_specs(spec, entity_type)
 
@@ -228,7 +272,9 @@ def build_workbook_from_facade(facade: Any) -> Workbook:
         for row_offset, entity_data in enumerate(entities, start=2):
             parent_id = _identifier_of(facade, entity_type, entity_data)
             for col_offset, col in enumerate(columns, start=1):
-                if col in nested_types:
+                if col == BELONGS_TO:
+                    text = _format_cell_value(entity_data.get("_belongs_to", ""), False)
+                elif col in nested_types:
                     # How many children of this type hang from this row.
                     text = _format_cell_value(
                         child_counts.get((nested_types[col], parent_id), 0), False
@@ -256,6 +302,7 @@ def build_workbook_from_facade(facade: Any) -> Workbook:
     term_ranges: dict[tuple[str, str], str] = {}
     apply_validations(wb, sheets, columns_by_entity, fields_by_entity, term_ranges)
     apply_reference_validations(facade, sheets, columns_by_entity)
+    apply_belongs_to_validation(wb, facade, sheets, columns_by_entity)
     apply_uniqueness_validations(facade, sheets, columns_by_entity, fields_by_entity)
     # Validation stops at the keyboard; pasted values need a check that keeps
     # looking.
