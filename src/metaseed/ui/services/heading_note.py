@@ -17,16 +17,16 @@ from collections.abc import Iterable, Sequence
 from typing import Any
 
 from metaseed.specs.schema import PRIMITIVE_TYPES, FieldType
+from metaseed.ui.services.belongs_to import BELONGS_TO
 
 #: Allowed values listed in the note before it defers to the cell's dropdown.
 MAX_LISTED_VALUES = 10
 
 PARENT_NOTE = (
-    "Structure, not metadata: which row of the parent sheet this row "
-    "belongs to, named by that row's identifier.\n\n"
-    "Written by the export — leave the existing values alone. If you "
-    "add a row, choose its parent from the dropdown, or the row will "
-    "have nothing to attach to on import."
+    "Where this row belongs: the record that holds it, as 'Type: identifier', "
+    "for example 'Study: STU-1'.\n\n"
+    "Written by the export -- leave the existing values alone. For a row you "
+    "add, choose the record from the dropdown, or the import cannot place it."
 )
 
 _TYPE_WORDS: dict[Any, str] = {
@@ -62,7 +62,7 @@ def heading_note(column: str, field: Any, rules: Sequence[Any]) -> str:
     Returns:
         The note text, or an empty string when there is nothing to say.
     """
-    if column == "_parent":
+    if column == BELONGS_TO:
         return PARENT_NOTE
     if field is None:
         return ""

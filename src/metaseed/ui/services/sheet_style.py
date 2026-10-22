@@ -27,6 +27,7 @@ from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.table import Table, TableStyleInfo
 
+from metaseed.ui.services.belongs_to import BELONGS_TO
 from metaseed.ui.services.heading_note import NOTE_WIDTH, heading_note, note_height
 
 if TYPE_CHECKING:
@@ -65,7 +66,7 @@ TABLE_STYLE = TableStyleInfo(
 SYSTEM_FILL = PatternFill("solid", fgColor="ECEFE9")
 SYSTEM_HEADER_FONT = Font(name="Calibri", size=11, italic=True, color="C9D3C6")
 SYSTEM_FONT = Font(name="Calibri", size=11, italic=True, color="6B7A70")
-SYSTEM_COLUMNS = frozenset({"_parent"})
+SYSTEM_COLUMNS = frozenset({BELONGS_TO})
 
 #: One empty row is kept inside the table when an entity has no data: a table
 #: cannot be a header alone, and it gives the person a row to type into that is

@@ -789,8 +789,20 @@ class EntityStore:
         """The candidate whose type can hold ``child``, else the last one indexed.
 
         A stored parent reference is an identifier value, and a value can
-        belong to records of several types (ADR 006).
+        belong to records of several types (ADR 006). When the child states the
+        field that holds it, the candidate whose type has that field for the
+        child's type is taken first: an investigation and a study can share an
+        identifier, and only ``contacts`` or ``persons`` says which holds a
+        person.
         """
+        if child.parent_field:
+            for candidate in candidates:
+                try:
+                    helper = self._get_helper(candidate.entity_type)
+                except (KeyError, AttributeError):
+                    continue
+                if helper.child_fields.get(child.parent_field) == child.entity_type:
+                    return candidate
         for candidate in candidates:
             try:
                 helper = self._get_helper(candidate.entity_type)
