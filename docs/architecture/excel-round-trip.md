@@ -23,16 +23,16 @@ leading zeros from identifiers. `_format_cell_value` in `ui/services/export.py` 
 
 Some columns are structural rather than data:
 
-- **`_parent`** carries the parent's identifier. No profile declares a
-  `parent_ref` field, so without this column the tree would not survive the
-  round trip.
-- **`_parent_field`** names the field of the parent that holds the row, written as `Type.field`, for example `Study.persons`. `_parent` and `_parent_field` are written together, on the sheet of every entity type that some field can hold, and on no other sheet. See [Adding a row](#adding-a-row).
+- **`Belongs to`** names the record that holds the row, as `Type: identifier`, for example `Study: STU-1`. No profile declares a `parent_ref` field, so without this column the tree would not survive the round trip. It is written on the sheet of every entity type that some field can hold, and on no other sheet. See [Adding a row](#adding-a-row).
 - **A containment column per nested field** (`studies` on Investigation,
   `observation_units` on Study) holds *how many* children of that type hang from
   the row. The children themselves are rows on their own sheet, so the column is
   a summary for a human reading the workbook.
+- **The first sheet, `How to add data`**, explains filling in the workbook: extending a sheet's table, choosing **Belongs to**, reading a heading's note, and importing.
 - **Sheets prefixed `metaseed `** belong to the export (controlled terms, field
   documentation) rather than to any entity type.
+
+Every entity is written once. A record can also be present as a copy embedded in its parent's data, from a nested document or from a dataset saved before its children were stored as records of their own. The export writes an embedded copy only when the parent has no stored child of that type: a dataset carrying stale copies next to its stored records would otherwise write every child twice, and the copies, which may predate edits, come back as extra records.
 
 Scalar list fields are joined into one cell, and a cell whose text would make
 Excel evaluate a formula is prefixed with a quote.
@@ -41,41 +41,13 @@ The dropdowns, heading notes and rules come from the dataset's specification. A 
 
 ### Adding a row
 
-A field that can hold an entity type is a *holder*, written `Type.field`. A MIAPPE Study has one holder, `Investigation.studies`. A MIAPPE Person has two, `Investigation.contacts` and `Study.persons`, and a DCAT Agent is held by one catalogue as both `creator` and `publisher`, so an identifier alone cannot say where a row belongs.
+A row is added by typing in the first empty row below a sheet's table: Excel and LibreOffice extend the table to it, and its dropdowns and checks apply to the new row.
 
-The export fills `_parent_field` and `_parent` for every row it writes, from the edge the dataset records. A person adding a row fills both, from dropdowns: `_parent_field` lists the holders of the sheet's entity type, and `_parent` lists the identifier column of the chosen holder's sheet. While `_parent_field` is empty, `_parent` offers nothing. A type with one holder has one entry to choose; the column is still there, so every sheet is filled in the same way and the import reads every sheet by one rule.
+**Belongs to** says where the row goes. Its dropdown lists every record that can hold the sheet's entity type, as `Type: identifier`: on the MIAPPE Sample sheet, every observation unit; on the Person sheet, every investigation and every study, because both hold persons. The list is read from the sheets as they are, so a parent added in the same edit can be chosen for a new child. When one type holds the entity in two fields, as a DCAT catalogue holds an agent as `creator` and as `publisher`, the entry names the field: `Catalog.creator: CAT-1`. The dropdown warns rather than refuses, as every dropdown in the workbook does; what a value may be is decided by the import.
 
-Both dropdowns read the sheets as they are, down to row 5000, so a parent row added in the same edit can be chosen for a new child. They warn rather than refuse, as every dropdown in the workbook does; what a typed value may be is decided by the import.
+A row leaves **Belongs to** empty when it is not contained in anything: the root entity, or a record placed by a reference field it carries, as a Darwin Core Event is by `parentEventID`.
 
-A row leaves both cells empty when it is not contained in anything: the root entity, or a record placed by a reference field it carries, as a Darwin Core Event is by `parentEventID`. The sheet of a type that no field holds has neither column. If a stored entity has a parent but no recorded field, which data saved before ADR 006 can have when its parent holds the type twice, the export writes `_parent`, leaves `_parent_field` empty and marks the cell, and the import refuses the row until a holder is chosen.
-
-### Column headings explain themselves
-
-Hovering over a heading shows a note built from the field's specification, in this order, leaving out any line the field does not define:
-
-- The description.
-- Required or optional, the type in words, the unit, and an example, on one line. The type is one of: text, whole number, decimal number, date (YYYY-MM-DD), date and time, web address, ontology term, yes/no, or a list of values separated by commas. A field that holds other entities has no type in the note.
-- **Pattern**: the regular expression a value must match.
-- **Length**: the minimum and maximum number of characters.
-- **Range**: the minimum and maximum value.
-- **Number of values**: the minimum and maximum, for list fields.
-- **Allowed values**: the first 10, then "and N more, see the dropdown".
-- **Ontologies** the term may come from, or **Terms under** the term it must descend from.
-- **Must match**: the entity and field a value refers to, for example `Study.unique_id`.
-- **Unique**: within the parent, or across the dataset.
-- **Rules**: the description of every profile-level validation rule that applies to the entity and names the field, whether as its `field`, in its `condition`, in its `when` or `require`, or as a start, end, latitude or longitude field.
-
-A constraint can be declared on the field or in a profile-level rule; the note shows it once either way. The note grows with its content. It is a comment rather than a row, because the import reads every row below the heading as data.
-
-The note on `start_date` of a MIAPPE 1.2 Study:
-
-```text
-Start date/time. Format: ISO 8601.
-
-Optional · Date and time
-Pattern: ^[0-9]{4}-[0-9]{2}-[0-9]{2}$
-Rules: End date must not be before start date; Dates must be ISO 8601 format (YYYY-MM-DD)
-```
+Workbooks exported before 0.67.0 carry a `_parent` column with the parent's identifier alone. The import still reads it, choosing among the records with that identifier one whose type holds the row.
 
 ## What the import does
 
@@ -88,8 +60,7 @@ must not be reimplemented:
   has nothing to contribute on the way back.
 - **Scalar lists are split** on the separator the export joined them with.
 - **Formula-escaped cells are unescaped**, or a round trip changes the data.
-- **`_parent` becomes `_parent_unique_id`**, which the loader resolves.
-- **`_parent_field` becomes `_parent_type` and `_parent_field`**: `Study.persons` is read as parent type `Study` and field `persons`. The import states the parent completely or not at all; see [What the import refuses](#what-the-import-refuses).
+- **`Belongs to` becomes `_parent_unique_id` and `_parent_field`**: `Study: STU-1` is read as identifier `STU-1` and the one field of Study that holds the row, `persons` on the Person sheet; `Catalog.creator: CAT-1` names the field itself. A legacy `_parent` cell becomes `_parent_unique_id` alone.
 - **Placeholder rows** — the `<field>` cells a downloaded template carries — are
   not entities and are skipped.
 - **A workbook matching no entity type is refused**, because the usual cause is
@@ -100,10 +71,9 @@ must not be reimplemented:
 
 A workbook is imported whole or not at all. Each of the following refuses it, with a message naming every sheet and row concerned, because an import that places what it can leaves a dataset the person has to repair by comparing it with the workbook:
 
-- `_parent` filled and `_parent_field` empty, or the reverse.
-- A `_parent_field` that is not a holder of the sheet's entity type. The message lists the holders.
-- A `_parent` that names no record of the holder's type, or more than one. The records are the rows of the holder's sheet and, when the workbook is added to an existing dataset, the records of that type already in it.
-- A sheet of a held type without a `_parent_field` column while any of its rows has a `_parent`. Workbooks exported before 0.54.0 are in this state: re-export the dataset, or add the column.
+- A **Belongs to** value that is not `Type: identifier` or `Type.field: identifier`.
+- A type that does not hold the sheet's entity type, or a type holding it in more than one field when the value names none. The message lists what may be written.
+- An identifier that names no record of that type in the workbook.
 
 ## Installing the entities
 
@@ -115,14 +85,14 @@ it has already created — only among those whose type can hold the child
 several types, so a lookup by value alone could attach a child to the wrong
 record ([ADR 006](decisions/006-relationships-are-recorded-edges.md)).
 
-When a payload states `_parent_type`, the loader takes the record of that type among those sharing the identifier, and `_parent_field` files the child in that field. A payload from a workbook always states both, so nothing about a workbook row's parent is inferred. Payloads saved before `_parent_type` existed are resolved as ADR 006 describes; that path is not reachable from a workbook.
+When a payload states `_parent_field`, the loader takes, among the records sharing the identifier, the one whose type holds the child in that field, and files the child there. A payload from a workbook states it for every row with a **Belongs to**, so nothing about such a row's parent is inferred. A payload without it, from a legacy `_parent` column or saved before ADR 006, is resolved as ADR 006 describes.
 
 Installing into an *existing* dataset rather than replacing one is not yet the
 library's: the hub still does that itself, in `add_entities_in_order`, together
 with the placement rules it needs — a breadth-first containment order so a
 parent precedes the types it contains, `_parent` matched against the declared
 identifier field only, and a message per row that could not be placed as
-written. It reads `_parent_type` and `_parent_field` the same way the loader does. That is a remaining fork, and moving it here is the next step. Until
+written. It reads `_parent_field` the same way the loader does. That is a remaining fork, and moving it here is the next step. Until
 then it is named rather than left to be discovered.
 
 ## Why the parsing is the library's
