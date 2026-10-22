@@ -9,6 +9,7 @@ field in the same words.
 
 from __future__ import annotations
 
+import csv
 import io
 from typing import Any
 
@@ -198,6 +199,40 @@ def _sheet(
                 cell.alignment = wrap
 
 
+def _field_rows(spec: ProfileSpec) -> list[list[Any]]:
+    """One row per field, entities in containment order, as ``FIELD_COLUMNS``."""
+    return [
+        [
+            name,
+            field.name,
+            field_type(field),
+            "yes" if field.required else "no",
+            (field.description or "").strip(),
+            field_constraints(name, field, spec),
+            _example(spec.entities[name], field),
+            field.ontology_term or "",
+        ]
+        for name in entity_order(spec)
+        for field in spec.entities[name].fields
+    ]
+
+
+def profile_fields_csv(spec: ProfileSpec) -> str:
+    """The profile's fields as CSV: the workbook's *Fields* sheet.
+
+    Args:
+        spec: The profile to document.
+
+    Returns:
+        CSV text with a header row of ``FIELD_COLUMNS``.
+    """
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(FIELD_COLUMNS)
+    writer.writerows(_field_rows(spec))
+    return buffer.getvalue()
+
+
 def profile_workbook(spec: ProfileSpec) -> bytes:
     """The profile's model as an Excel workbook.
 
@@ -228,25 +263,7 @@ def profile_workbook(spec: ProfileSpec) -> bytes:
             for name in order
         ],
     )
-    _sheet(
-        book,
-        "Fields",
-        FIELD_COLUMNS,
-        [
-            [
-                name,
-                field.name,
-                field_type(field),
-                "yes" if field.required else "no",
-                (field.description or "").strip(),
-                field_constraints(name, field, spec),
-                _example(spec.entities[name], field),
-                field.ontology_term or "",
-            ]
-            for name in order
-            for field in spec.entities[name].fields
-        ],
-    )
+    _sheet(book, "Fields", FIELD_COLUMNS, _field_rows(spec))
     _sheet(
         book,
         "Rules",

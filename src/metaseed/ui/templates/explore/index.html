@@ -77,7 +77,7 @@
                             <div style="display: flex; gap: 6px; margin-top: 6px;">
                                 <button class="btn btn-secondary btn-sm" onclick="exportReport('markdown')">MD</button>
                                 <button class="btn btn-secondary btn-sm" onclick="exportReport('csv')">CSV</button>
-                                <button class="btn btn-secondary btn-sm" onclick="exportReport('html')">HTML</button>
+                                <button class="btn btn-secondary btn-sm" id="export-html" onclick="exportReport('html')">HTML</button>
                                 <button class="btn btn-secondary btn-sm" id="export-xlsx" onclick="exportReport('xlsx')" title="With one profile: its model as an Excel workbook">XLSX</button>
                                 <button class="btn btn-secondary btn-sm" onclick="ERD.exportPng(currentProfiles.join('_vs_').replaceAll('/', '-'), visibleLegend())" data-testid="export-png">PNG</button>
                             </div>
@@ -315,6 +315,7 @@
                     document.getElementById('compare-legend').style.display = 'none';
                     document.getElementById('explore-legend').style.display = 'flex';
                     document.getElementById('export-xlsx').style.display = '';
+                    document.getElementById('export-html').style.display = 'none';
                     document.getElementById('canvas-info').innerHTML =
                         `Exploring <strong>${escapeHtml(profiles[0])}</strong> - ${data.statistics.total_entities} entities, ${data.statistics.total_fields} fields`;
                 } else {
@@ -323,6 +324,7 @@
                     document.getElementById('compare-legend').style.display = 'flex';
                     document.getElementById('explore-legend').style.display = 'none';
                     document.getElementById('export-xlsx').style.display = 'none';
+                    document.getElementById('export-html').style.display = '';
                     document.getElementById('canvas-info').innerHTML =
                         `<strong>${data.statistics.total_entities}</strong> entities`;
 
