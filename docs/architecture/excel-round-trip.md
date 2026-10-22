@@ -56,7 +56,7 @@ must not be reimplemented:
 
 - **A containment column is never imported.** It holds a count, and a count
   written into a field meant to hold children puts the string `'0'` where a list
-  belongs. The tree is rebuilt from the sheets and from `_parent`, so the column
+  belongs. The tree is rebuilt from the sheets and from **Belongs to**, so the column
   has nothing to contribute on the way back.
 - **Scalar lists are split** on the separator the export joined them with.
 - **Formula-escaped cells are unescaped**, or a round trip changes the data.
