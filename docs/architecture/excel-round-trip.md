@@ -63,9 +63,7 @@ must not be reimplemented:
 - **`Belongs to` becomes `_parent_unique_id` and `_parent_field`**: `Study: STU-1` is read as identifier `STU-1` and the one field of Study that holds the row, `persons` on the Person sheet; `Catalog.creator: CAT-1` names the field itself. A legacy `_parent` cell becomes `_parent_unique_id` alone.
 - **Placeholder rows** — the `<field>` cells a downloaded template carries — are
   not entities and are skipped.
-- **A workbook matching no entity type is refused**, because the usual cause is
-  a workbook exported from a different profile, and loading it would silently
-  produce nothing.
+- **A workbook that yields no row is refused**, because an empty import is never what was meant, and the message says which of the two causes it found: no sheet is named after an entity type of the profile (the workbook was exported from a different profile; the message lists the sheets it holds), or the matching sheets hold no rows (the message names them, so the person sees where a row was expected).
 
 ### What the import refuses
 
