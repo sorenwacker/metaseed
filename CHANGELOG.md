@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.67.0 (261022)
+
+### Changed
+- A workbook places each row with one **Belongs to** column, `Type: identifier` (for example `Study: STU-1`), instead of `_parent` with the identifier alone. Its dropdown lists every record that may hold the row, including records added in the same edit; a type holding the row in two fields is written `Type.field: identifier`. Workbooks with the old `_parent` column still import.
+- The import refuses a workbook whose **Belongs to** names no record or a type that does not hold the row, listing every such row, and imports nothing.
+
+### Added
+- The workbook opens with a **How to add data** sheet: adding a row below a table, choosing Belongs to, the heading notes, and importing.
+
+### Fixed
+- A dataset carrying an old copy of its children embedded in a parent, next to the stored records, exported every child twice and imported the copies as extra records.
+- An investigation's contact and a study's person sharing a parent identifier could be placed under the wrong one; the loader now takes the record whose type holds the row in the stated field.
+
 ## v0.66.2 (261022)
 
 ### Changed
