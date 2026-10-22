@@ -17,13 +17,6 @@
 <body>
     <div class="layout layout-fixed">
         {% call header('explorer') %}
-            <div class="header-actions">
-                <button class="btn btn-header" onclick="autoLayout()">Layout</button>
-                <button id="btn-hierarchical" class="btn btn-header" onclick="toggleHierarchicalLayout()"
-                        data-testid="btn-tree-layout"
-                        title="Arrange entities as the containment tree they describe, root at the top">Tree</button>
-                <button class="btn btn-header" onclick="fitGraph()">Fit</button>
-            </div>
         {% endcall %}
 
         <div class="erd-layout">
@@ -72,17 +65,6 @@
                             </button>
                         </div>
 
-                        <div id="export-section" class="form-section" style="display: none; margin-top: 16px;">
-                            <label class="form-label">Export</label>
-                            <div style="display: flex; gap: 6px; margin-top: 6px;">
-                                <button class="btn btn-secondary btn-sm" onclick="exportReport('markdown')">MD</button>
-                                <button class="btn btn-secondary btn-sm" onclick="exportReport('csv')">CSV</button>
-                                <button class="btn btn-secondary btn-sm" id="export-html" onclick="exportReport('html')">HTML</button>
-                                <button class="btn btn-secondary btn-sm" id="export-xlsx" onclick="exportReport('xlsx')" title="With one profile: its model as an Excel workbook">XLSX</button>
-                                <button class="btn btn-secondary btn-sm" onclick="ERD.exportPng(currentProfiles.join('_vs_').replaceAll('/', '-'), visibleLegend())" data-testid="export-png">PNG</button>
-                            </div>
-                        </div>
-
                         <div id="filter-section" class="form-section" style="display: none; margin-top: 16px;">
                             <label class="form-label">Show/Hide</label>
                             <div class="filter-toggles">
@@ -124,6 +106,22 @@
                         <button class="btn btn-sm btn-secondary" onclick="zoomIn()">+</button>
                         <button class="btn btn-sm btn-secondary" onclick="zoomOut()">-</button>
                         <button class="btn btn-sm btn-secondary" onclick="fitGraph()">Fit</button>
+                        <button class="btn btn-sm btn-secondary" onclick="autoLayout()">Layout</button>
+                        <button id="btn-hierarchical" class="btn btn-sm btn-secondary" onclick="toggleHierarchicalLayout()"
+                                data-testid="btn-tree-layout"
+                                title="Arrange entities as the containment tree they describe, root at the top">Tree</button>
+                        <span id="export-section" class="canvas-exports" style="display: none;">
+                            <button class="btn btn-sm btn-secondary" onclick="ERD.exportPng(currentProfiles.join('_vs_').replaceAll('/', '-'), visibleLegend())" data-testid="export-png"
+                                    title="Download the whole graph as a PNG image">PNG</button>
+                            <button class="btn btn-sm btn-secondary" onclick="exportReport('markdown')"
+                                    title="One profile: its model as Markdown. Two or more: the comparison report">MD</button>
+                            <button class="btn btn-sm btn-secondary" onclick="exportReport('csv')"
+                                    title="One profile: its fields, one row per field. Two or more: the comparison">CSV</button>
+                            <button class="btn btn-sm btn-secondary" id="export-html" onclick="exportReport('html')"
+                                    title="The comparison report as a web page">HTML</button>
+                            <button class="btn btn-sm btn-secondary" id="export-xlsx" onclick="exportReport('xlsx')"
+                                    title="The model as an Excel workbook: Entities, Fields and Rules sheets">XLSX</button>
+                        </span>
                     </div>
                 </div>
                 <div class="erd-canvas-wrapper">
@@ -307,7 +305,7 @@
                 renderProfileMeta(data.graph.profiles_meta || {}, profiles[0]);
                 hiddenEntities.clear();
                 initERD(data.graph);
-                document.getElementById('export-section').style.display = 'block';
+                document.getElementById('export-section').style.display = 'inline-flex';
 
                 if (exploreMode) {
                     // Explore mode: hide profile filters, show explore legend
