@@ -88,6 +88,10 @@ After selection, terms display as **"label (ID)"** for readability:
 
 The underlying data stores only the ID for interoperability.
 
+### Where it is offered
+
+Every input that holds an `ontology_term` field has the lookup: the field in an entity's form, a cell of the main table, and a cell of a table under **Related Entities**. In a table cell, press **Tab** or click the search button in the cell; the chosen term is saved to that row.
+
 ### Modal Search
 
 For more detailed browsing:
