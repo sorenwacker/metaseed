@@ -3162,6 +3162,12 @@ body::before {
     gap: var(--space-xs);
 }
 
+/* The exports follow the view controls in the same bar, as in the hub. */
+.canvas-exports {
+    align-items: center;
+    gap: var(--space-xs);
+}
+
 .toolbar-divider {
     width: 1px;
     height: 20px;

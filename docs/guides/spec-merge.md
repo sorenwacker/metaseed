@@ -93,7 +93,7 @@ The panel is one script, `static/js/explore-panel.js`, that metaseed serves; met
 
 ### Export Reports
 
-After comparing, export the results:
+After comparing, export the results with the buttons in the canvas toolbar, next to the zoom, Fit, Layout and Tree controls:
 
 - **MD**: Markdown report with tables: statistics, entities, conflicts, and every added, removed or modified field
 - **CSV**: Spreadsheet-compatible format
@@ -102,7 +102,7 @@ After comparing, export the results:
 
 ### Specification Documentation
 
-With one profile open (explore mode), the export section offers the profile's documentation instead of a comparison, which has nothing to compare (HTML is a comparison format only and is hidden):
+With one profile open (explore mode), the export buttons in the canvas toolbar, after PNG, offer the profile's documentation instead of a comparison, which has nothing to compare (HTML is a comparison format only and is hidden):
 
 - **MD**: A `.md` file download: the entities in containment order, root first. Each entity has its description, its ontology term, the entities it is contained in and contains, and a table of its fields: name, type, whether it is required, description, constraints (pattern, length and value bounds, allowed values, ontologies, references, uniqueness, and the validation rules that name the field) and the example value from the specification. The profile's validation rules follow as a table.
 - **CSV**: The *Fields* sheet of the workbook below, one row per field.
