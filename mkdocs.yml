@@ -88,6 +88,7 @@ nav:
   - Guides:
       - Connecting an MCP client: guides/mcp-setup.md
       - Spec Builder: guides/spec-builder.md
+      - Editing a Dataset in Excel: guides/excel.md
       - Ontology Lookup: guides/ontology-lookup.md
       - Profile Comparison: guides/spec-merge.md
       - Publishing to SEEK: guides/seek-export.md
