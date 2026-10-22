@@ -126,6 +126,12 @@ body::before {
     min-height: 100vh;
 }
 
+/* With a dataset open its bar is a row of its own under the header; without
+   this the bar took the row that fills the screen. */
+.layout:has(> .dataset-bar) {
+    grid-template-rows: auto auto 1fr auto;
+}
+
 /* Footer */
 .footer {
     padding: var(--space-sm) var(--space-xl);
@@ -6237,4 +6243,15 @@ label[data-note] {
     cursor: help;
     text-decoration: underline dotted rgba(0, 0, 0, 0.35);
     text-underline-offset: 3px;
+}
+
+/* The open dataset's bar under the page header (partials/dataset_toolbar.html). */
+.dataset-bar {
+    margin: 0;
+    padding: var(--space-md) var(--space-xl);
+    background: var(--clr-paper);
+}
+
+th[data-note] {
+    cursor: help;
 }

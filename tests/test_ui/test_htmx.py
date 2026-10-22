@@ -235,9 +235,10 @@ class TestBaseUrlPrefix:
         node_id = next(iter(client.app.state.ui_state.nodes_by_id.keys()))
         delete_response = client.delete(f"/entity/{node_id}")
         assert delete_response.status_code == 200
-        assert 'href="/hub/export"' in delete_response.text
-        assert 'hx-post="/hub/import"' in delete_response.text
+        # Export and import sit in the dataset bar, outside this partial; see
+        # test_record_form_keeps_the_dataset_toolbar.py.
         assert 'hx-delete="/hub/entity/' in delete_response.text
+        assert 'hx-get="/hub/form/' in delete_response.text
 
     def test_update_back_partial_includes_base_url_prefix(self):
         """Update 'back' action re-render emits links with the base_url prefix."""
@@ -262,8 +263,7 @@ class TestBaseUrlPrefix:
             },
         )
         assert update_response.status_code == 200
-        assert 'href="/hub/export"' in update_response.text
-        assert 'hx-post="/hub/import"' in update_response.text
+        assert 'hx-get="/hub/form/' in update_response.text
 
 
 class TestProfileSwitch:
@@ -559,13 +559,13 @@ class TestExport:
         # Check content disposition header has filename
         assert "attachment" in response.headers.get("content-disposition", "")
 
-    def test_export_button_in_edit_form(self, client_with_entity):
-        """Edit form contains Export All button."""
-        # Export button moved from navbar to edit form
-        state = client_with_entity.app.state.ui_state
-        node = next(iter(state.nodes_by_id.values()))
-        response = client_with_entity.get(f"/form/{node.entity_type}/{node.id}")
-        assert "Export All" in response.text
+    def test_export_button_in_the_dataset_bar(self):
+        """The Excel export sits in the open dataset's bar, above every form."""
+        state = AppState()
+        client = TestClient(create_app(state), follow_redirects=True)
+        client.get("/load-example/miappe/1.2")
+        page = client.get(f"/dataset/{state._current_dataset}/edit").text
+        assert 'data-testid="btn-export"' in page
 
 
 class TestResetState:

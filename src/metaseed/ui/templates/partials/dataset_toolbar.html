@@ -1,0 +1,54 @@
+{# The open dataset's toolbar, under the page header and outside #main: a
+   record's form replaces #main, and the bar, Graph included, stays. Everything
+   here acts on the open dataset, so it appears only when one is open. #}
+<div class="entity-overview-header dataset-bar" data-testid="dataset-bar">
+    <div class="entity-overview-title">
+        <h2>{{ current_dataset or 'Entities' }}</h2>
+        <span class="entity-overview-meta">{{ current_profile }} {{ version }} - {{ tree_nodes|length }} root entities</span>
+    </div>
+    <div class="entity-overview-actions">
+        <button id="validate-btn" class="btn btn-secondary btn-sm" onclick="validateDataset()" data-testid="btn-validate-dataset" title="Validate all entities">
+            Validate
+        </button>
+        {# The list and the graph are switched on and off independently;
+           whatever is on shares the full width. #}
+        <span class="view-toggles" role="group" aria-label="Views">
+            <button id="view-list-btn" class="btn btn-secondary btn-sm view-toggle" onclick="toggleView('list')" data-testid="btn-view-list" aria-pressed="true" title="Show or hide the entity list">List</button>
+            <button id="view-graph-btn" class="btn btn-secondary btn-sm view-toggle" onclick="toggleView('graph')" data-testid="btn-view-graph" aria-pressed="false" title="Show or hide the graph">Graph</button>
+        </span>
+        <button id="dcat-btn" class="btn btn-secondary btn-sm" onclick="showDcatCard()" data-testid="btn-dcat" title="DCAT catalog card">
+            DCAT
+        </button>
+        <span class="toolbar-sep" aria-hidden="true"></span>
+        {# Adapter exports the active profile offers, straight from the
+           plugin registry: a new exporter appears here by declaring
+           itself, with no template change. #}
+        {% for opt in export_options %}
+        <a href="{{ base_url }}/export/adapter/{{ opt.key }}"
+           class="btn btn-secondary btn-sm"
+           data-testid="btn-export-{{ opt.key }}"
+           title="Download {{ opt.label }}" download>
+            {{ opt.label }}
+        </a>
+        {% endfor %}
+        <a href="{{ base_url }}/export" class="btn btn-secondary btn-sm" data-testid="btn-export" title="The whole dataset as an Excel workbook" download>
+            Export Excel
+        </a>
+        <span class="toolbar-sep" aria-hidden="true"></span>
+        <label class="btn btn-secondary btn-sm btn-file">
+            Import
+            <input type="file"
+                   accept=".json,.xlsx"
+                   hx-post="{{ base_url }}/import"
+                   hx-trigger="change"
+                   hx-target="#notification-container"
+                   hx-swap="beforeend"
+                   hx-encoding="multipart/form-data"
+                   name="file"
+                   hidden>
+        </label>
+        <a href="{{ base_url }}/" class="btn btn-secondary btn-sm toolbar-end">
+            ← Datasets
+        </a>
+    </div>
+</div>

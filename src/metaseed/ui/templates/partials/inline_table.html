@@ -38,7 +38,7 @@
             <thead>
                 <tr>
                     {% for col in columns %}
-                    <th>
+                    <th data-col="{{ col }}"{% if table_data.column_notes and table_data.column_notes.get(col) %} data-note="{{ table_data.column_notes[col] }}"{% endif %}>
                         {{ col|replace('_', ' ')|title }}{% if required_columns and col in required_columns %}<span class="required">*</span>{% endif %}
                     </th>
                     {% endfor %}
@@ -94,7 +94,16 @@
                     </td>
                     {% endfor %}
                     <td class="row-actions">
-                        {% if has_nested_children %}
+                        {% if row._node_id %}
+                        <button type="button" class="btn btn-sm btn-secondary"
+                                hx-get="{{ base_url }}/form/{{ table_data.nested_entity_type }}/{{ row._node_id }}"
+                                hx-target="#main"
+                                hx-swap="innerHTML"
+                                title="Open this {{ table_data.nested_entity_type }}"
+                                data-testid="inline-open-{{ field_name }}-{{ row._idx }}">
+                            Edit
+                        </button>
+                        {% elif has_nested_children %}
                         <button type="button" class="btn btn-sm btn-secondary"
                                 hx-get="/nested/{{ parent_entity_type }}/{{ field_name }}/{{ row._idx }}"
                                 hx-target="#main"

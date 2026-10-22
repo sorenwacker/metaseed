@@ -53,3 +53,12 @@ def test_required_and_optional_labels_carry_their_note() -> None:
 def test_the_page_loads_the_note_box() -> None:
     base = (TEMPLATES_DIR / "base.html").read_text()
     assert "/static/js/field-notes.js" in base
+
+
+def test_table_headings_carry_their_note_as_in_the_hub() -> None:
+    """The tables under Related Entities said nothing on hover; the hub's do."""
+    page, _ = _form()
+    match = re.search(r'<th[^>]*data-col="title"[^>]*data-note="([^"]+)"', page)
+
+    assert match, "the Study table's title heading has no note"
+    assert "Required" in html.unescape(match.group(1))
