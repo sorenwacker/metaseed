@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.66.2 (261022)
+
+### Changed
+- The explorer's controls and exports share the canvas toolbar, as in the hub: zoom, Fit, Layout, Tree, then PNG, MD, CSV, HTML and XLSX. Layout, Tree and Fit left the page header and the exports left the sidebar.
+
 ## v0.66.1 (261022)
 
 ### Fixed
