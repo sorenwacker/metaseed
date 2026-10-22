@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.66.1 (261022)
+
+### Fixed
+- With one profile open, the explorer's CSV export returned the Markdown documentation; it is now the fields table as CSV, and the HTML button, a comparison format only, is hidden.
+- The Markdown documentation downloads as a `.md` file instead of opening as text in a tab.
+
 ## v0.66.0 (261021)
 
 ### Added
