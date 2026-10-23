@@ -243,7 +243,7 @@ erDiagram
         string unique_id PK
         string study_id FK
         string name
-        uri link
+        string link
         string description
         string version
         string file_type
@@ -305,6 +305,8 @@ erDiagram
 **Observed variables**: Measurements are defined by ObservedVariable entities using a trait/method/scale triplet. The trait describes what is measured (e.g., "plant height"), the method describes how (e.g., "ruler measurement"), and the scale describes the units and range (e.g., "centimeters, 0-300").
 
 **Environmental context**: Event entities track things that happen during the experiment (planting, irrigation, harvest). Environment entities describe growth conditions (temperature, humidity, light).
+
+**Data file location**: `DataFile.link` (MIAPPE DM-38, `PPEO:hasDigitalLocation`) holds either a URL (`https://`, `http://`, `s3://` or `ftp://`) or a path relative to the submission (`raw/plot1.csv`), as MIAPPE allows. An absolute local path (`/home/...`, `C:\...`) is rejected, because it names a file on one computer rather than in the submission. The field is typed `string` rather than `uri`, because a `uri` field accepts only absolute URLs.
 
 ## Entity Linking
 

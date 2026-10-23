@@ -226,11 +226,11 @@ validation_rules:
   field: license
   pattern: ^https?://.*$
 - name: datafile_link_format
-  description: DataFile link must be a valid URI
+  description: DataFile link must be a URL (http, https, s3, ftp) or a path relative to the submission
   applies_to:
   - DataFile
   field: link
-  pattern: ^https?://.*$|^s3://.*$|^ftp://.*$
+  pattern: ^https?://.*$|^s3://.*$|^ftp://.*$|^[^/:]+(/[^/:]+)*$
 - name: altitude_range
   description: Altitude must be reasonable (-500 to 9000 meters)
   applies_to:
@@ -1603,9 +1603,9 @@ entities:
         max_length: 255
     - name: link
       codename: url
-      type: uri
+      type: string
       required: false
-      description: URL or path to file.
+      description: URL of the file, or its path relative to the submission (MIAPPE DM-38).
       example: https://doi.org/10.5281/zenodo.1234567
       ontology_term: PPEO:hasDigitalLocation
     - name: description
