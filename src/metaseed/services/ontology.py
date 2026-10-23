@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import time
 from contextvars import ContextVar
 from dataclasses import dataclass, field
@@ -76,6 +77,26 @@ class _MissingSentinel:
 
 # Sentinel distinguishing "key absent/expired" from a cached negative result.
 _MISSING = _MissingSentinel()
+
+
+_IDENTIFIER = re.compile(
+    r"(?:(?:https?://purl\.obolibrary\.org/obo/)?[A-Za-z][A-Za-z0-9]*[:_])?(\d+)"
+)
+
+
+def _identifier_query(text: str) -> str:
+    """The identifier as OLS's identifier fields match it: ``PREFIX:number``."""
+    match = re.fullmatch(
+        r"(?:https?://purl\.obolibrary\.org/obo/)?([A-Za-z][A-Za-z0-9]*)[:_](\d+)",
+        text.strip(),
+    )
+    return f"{match.group(1)}:{match.group(2)}" if match else text.strip()
+
+
+def _identifier_number(text: str) -> str | None:
+    """The number of an identifier: ``3702``, ``NCBITaxon:3702``, its IRI; else None."""
+    match = _IDENTIFIER.fullmatch(str(text).strip())
+    return match.group(1).lstrip("0") or "0" if match else None
 
 
 class OntologyServiceError(Exception):
@@ -328,10 +349,6 @@ class OntologyService:
             # Return a copy so a caller mutating the list cannot corrupt the cache.
             return list(cached)
 
-        # Rate limit
-        self._rate_limiter.acquire_sync()
-
-        # Build request
         params: dict[str, Any] = {
             "q": query,
             "rows": rows,
@@ -347,6 +364,40 @@ class OntologyService:
             if iri:
                 params["childrenOf"] = iri
 
+        results = self._search_request(params)
+
+        # OLS searches names, so a typed identifier ("3702" in an NCBITaxon
+        # field) found terms with that number in their name. Asked by the
+        # identifier fields, the term that is exactly it goes first.
+        number = _identifier_number(query)
+        if number is not None:
+            by_id = self._search_request(
+                {
+                    **params,
+                    "q": _identifier_query(query),
+                    "queryFields": "obo_id,short_form",
+                }
+            )
+            exact_hits = [r for r in by_id if _identifier_number(r.term_id) == number]
+            seen = {r.term_id for r in exact_hits}
+            results = exact_hits + [r for r in results if r.term_id not in seen]
+
+        # Cache results
+        self._set_cached(cache_key, results)
+        logger.debug("Cached search results for: %s (%d results)", query, len(results))
+
+        # Return a copy so a caller mutating the list cannot corrupt the cache.
+        return list(results)
+
+    def _search_request(
+        self: Self, params: dict[str, Any]
+    ) -> list[OntologySearchResult]:
+        """One OLS search request, parsed.
+
+        Raises:
+            TermSourceUnavailableError: If OLS does not answer.
+        """
+        self._rate_limiter.acquire_sync()
         try:
             with httpx.Client(
                 timeout=DEFAULT_TIMEOUT, headers=DEFAULT_HEADERS
@@ -363,11 +414,8 @@ class OntologyService:
                 f"{self.base_url} did not answer the search: {e}"
             ) from e
 
-        # Parse results
         results: list[OntologySearchResult] = []
-        docs = data.get("response", {}).get("docs", [])
-
-        for doc in docs:
+        for doc in data.get("response", {}).get("docs", []):
             term_id = doc.get("obo_id") or doc.get("short_form") or ""
             results.append(
                 OntologySearchResult(
@@ -381,13 +429,7 @@ class OntologyService:
                     short_form=doc.get("short_form"),
                 )
             )
-
-        # Cache results
-        self._set_cached(cache_key, results)
-        logger.debug("Cached search results for: %s (%d results)", query, len(results))
-
-        # Return a copy so a caller mutating the list cannot corrupt the cache.
-        return list(results)
+        return results
 
     def get_term_sync(self: Self, term_id: str) -> OntologyTerm | None:
         """Synchronous version of get_term.

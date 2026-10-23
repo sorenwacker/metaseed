@@ -54,6 +54,10 @@ source = get_term_source()
 
 Registration is context-scoped, like the ontology service it composes, so a test or a request can install its own sources without touching global state.
 
+## Searching by identifier
+
+OLS searches term names, so typing a taxon's number found organisms with that number in their name (`3702` found *Bradyrhizobium sp. LCM 3702*, not *Arabidopsis thaliana*). When the text looks like an identifier, `OntologyService.search_sync` also asks OLS by the identifier fields (`obo_id`, `short_form`) and lists the term whose identifier is exactly that first, followed by the name matches. An identifier is a number, `PREFIX:number`, `PREFIX_number` or the term's OBO IRI; a bare number is read within the ontology the search is scoped to, so `3702` in an NCBITaxon field finds `NCBITaxon:3702`.
+
 ## Scoping to a branch
 
 `ontologies:` says which ontologies a field takes. It cannot say *which part* of
