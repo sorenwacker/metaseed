@@ -182,6 +182,14 @@ class BrapiClient:
             "germplasm", {"studyDbId": study_db_id} if study_db_id else None
         )
 
+    def variables(self, study_db_id: str) -> list[dict[str, Any]]:
+        """Return the BrAPI ``variables`` one study uses, with trait, method and scale.
+
+        Observations name a variable only; its definition, which MIAPPE needs
+        for the method and scale, is here.
+        """
+        return self._get("variables", {"studyDbId": study_db_id})
+
     def _get_one(self, path: str) -> dict[str, Any]:
         """Issue one GET for a single record and return its ``result``.
 

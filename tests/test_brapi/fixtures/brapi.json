@@ -186,5 +186,47 @@
         }
       ]
     }
+  },
+  "variables": {
+    "metadata": {
+      "pagination": {
+        "currentPage": 0,
+        "totalCount": 3,
+        "totalPages": 1
+      }
+    },
+    "result": {
+      "data": [
+        {
+          "observationVariableDbId": "VAR_HEIGHT",
+          "observationVariableName": "Plant height",
+          "trait": {
+            "traitName": "Plant height",
+            "traitDescription": "Height of the plant from the soil"
+          },
+          "method": {
+            "methodName": "Ruler measurement",
+            "description": "Measured with a ruler"
+          },
+          "scale": {
+            "scaleName": "cm"
+          }
+        },
+        {
+          "observationVariableDbId": "VAR_YIELD",
+          "observationVariableName": "Grain yield",
+          "trait": {
+            "traitName": "Grain yield"
+          },
+          "method": {
+            "methodName": "Plot harvest",
+            "description": "Combine weight per plot"
+          },
+          "scale": {
+            "scaleName": "t/ha"
+          }
+        }
+      ]
+    }
   }
 }

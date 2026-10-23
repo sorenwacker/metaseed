@@ -288,7 +288,9 @@ def register_api_routes(  # noqa: C901
             from ..datasets import set_current_dataset_name
 
             set_current_dataset_name(state, name)
-            return JSONResponse(content={"status": "loaded", **asdict(result)})
+            return JSONResponse(
+                content={"status": result.load_status, **asdict(result)}
+            )
         except FileNotFoundError as e:
             return JSONResponse(status_code=404, content={"error": str(e)})
         except ValueError as e:

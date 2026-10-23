@@ -115,6 +115,27 @@ def test_faidare_s_level_strings_are_read_as_block_replicate_and_plot() -> None:
     assert ou["observation_unit_replicate"] == "2"
 
 
+def test_a_single_level_order_is_the_unit_s_level() -> None:
+    """FAIDARE gives a unit at the top of its hierarchy a one-level order
+    (``PLANT``), with the unit's number again in ``levelName``. Only a path
+    with ``>`` was read, so the number became the unit's type (#348)."""
+    unit = {
+        "observationUnitDbId": "ou-5",
+        "studyDbId": "S1",
+        "observationUnitPosition": {
+            "observationLevel": {"levelName": "5", "levelOrder": "PLANT"},
+        },
+    }
+
+    client = build_dataset([{"studyDbId": "S1", "studyName": "S"}], [unit], [], [])
+
+    (ou,) = [
+        e for e in client.serialize()["entities"] if e["_type"] == "ObservationUnit"
+    ]
+    assert ou["observation_unit_type"] == "plant"
+    assert ou["observation_level_code"] == "5"
+
+
 def test_the_server_s_spelling_becomes_miappe_s_vocabulary() -> None:
     """Breedbase sends TEST, FAIDARE a list of CO_715 descriptions; MIAPPE's
     rules know test and field. What cannot be placed is kept as sent (#353)."""
