@@ -48,6 +48,7 @@ def _seek_client():
 _DELETE_ORDER = (
     ("samples", "samples"),
     ("data_files", "data_files"),
+    ("sops", "sops"),
     ("assays", "assays"),
     ("assay_streams", "assays"),
     ("studies", "studies"),
@@ -483,3 +484,70 @@ def test_pushing_the_same_dataset_twice_updates_instead_of_duplicating(
     assert set(second.assays.values()) == set(first.assays.values())
     assert set(second.samples.values()) == set(first.samples.values())
     assert second.created_count == 0, "a re-push created something new"
+
+
+def _seek_ready_4_dataset_with_an_sop():
+    """A seek-ready-template 4.0 dataset whose Assay follows one SOP."""
+    from metaseed import MetaseedClient
+
+    client = MetaseedClient("seek-ready-template", "4.0")
+    inv = client.create_entity(
+        "Investigation", {"title": "sop round-trip inv", "description": "d"}
+    )
+    study = client.create_entity(
+        "Study",
+        {"title": "sop round-trip study", "description": "d"},
+        parent_id=inv.id,
+        skip_validation=True,
+    )
+    assay = client.create_entity(
+        "Assay",
+        {
+            "title": "sop round-trip assay",
+            "assay_class": "EXP",
+            "assay_type": "http://jermontology.org/ontology/JERMOntology#Experimental_assay_type",
+        },
+        parent_id=study.id,
+        skip_validation=True,
+    )
+    client.create_entity(
+        "SOP",
+        {
+            "title": "sop round-trip protocol",
+            "description": "Drying and milling",
+            # SEEK fetches the link when registering it, so it must resolve.
+            "url": "https://example.org/",
+        },
+        parent_id=assay.id,
+        skip_validation=True,
+    )
+    source = client.create_entity(
+        "Source", {"source_name": "SRC-sop"}, parent_id=study.id, skip_validation=True
+    )
+    sample = client.create_entity(
+        "Sample", {"sample_name": "SMP-sop"}, parent_id=source.id, skip_validation=True
+    )
+    client.create_entity(
+        "AssayMaterial",
+        {"material_name": "MAT-sop", "assay": "sop round-trip assay"},
+        parent_id=sample.id,
+        skip_validation=True,
+    )
+    return client
+
+
+def test_an_sop_is_registered_in_seek_and_linked_to_its_assay(created_in_seek):
+    """#359: a profile with an SOP-role entity uploads its SOPs."""
+    seek = _seek_client()
+    result = _provision_and_sync(
+        seek, _seek_ready_4_dataset_with_an_sop(), created_in_seek
+    )
+
+    assert not result.errors, result.errors
+    assert len(result.sops) == 1, (result.sops, result.skipped)
+    sop = seek.get(f"/sops/{next(iter(result.sops.values()))}")["data"]
+    assert sop["attributes"]["title"] == "sop round-trip protocol"
+    linked = {a["id"] for a in sop["relationships"]["assays"]["data"]}
+    assert linked & {str(a) for a in result.assays.values()}, (
+        f"the SOP is linked to {linked}, not to the pushed assay"
+    )

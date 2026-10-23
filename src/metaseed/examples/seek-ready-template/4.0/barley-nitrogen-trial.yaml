@@ -52,6 +52,10 @@ studies:
       - title: Leaf nitrogen content
         assay_class: EXP
         assay_type: http://jermontology.org/ontology/JERMOntology#Experimental_assay_type
+        sops:
+          - title: Leaf nitrogen by Dumas combustion
+            description: Sample drying, milling and combustion settings
+            url: https://protocols.example.org/sop/leaf-nitrogen-v2.pdf
         measurement_type: elemental analysis
         technology_type: Dumas combustion
         technology_platform: Example CN analyser

@@ -8,7 +8,8 @@ description: 'An ISA-shaped template whose datasets upload to FAIRDOM-SEEK as IS
   the Assay that measured it by reference. Breaking change from 3.0: the Investigation, Study and Assay records carry SEEK''s
   own fields. SEEK has no identifier attribute for them, so the separate identifier field is gone and the title identifies
   the record; an Assay carries SEEK''s required assay_class and assay_type, and its title is required. Fields SEEK has no
-  attribute for are marked seek_isa_only: they reach SEEK only inside the ISA-JSON export.'
+  attribute for are marked seek_isa_only: they reach SEEK only inside the ISA-JSON export. An Assay lists the SOPs it follows;
+  each is registered in SEEK by its document''s location.'
 ontology: OBI
 root_entity: Investigation
 validation_rules: []
@@ -158,8 +159,35 @@ entities:
       description: Instrument or platform. Carried in the ISA-JSON export only; SEEK's Assay has no such attribute.
       example: Thermo Q Exactive HF
       seek_isa_only: true
+    - name: sops
+      type: list
+      required: false
+      description: The SOPs this assay follows. Each is registered in SEEK by its location and linked to this assay.
+      items: SOP
     seek:
       role: Assay
+  SOP:
+    description: A standard operating procedure the assay follows, registered in SEEK by the location of its document.
+    fields:
+    - name: title
+      type: string
+      required: true
+      description: SOP title; identifies it, and SEEK titles the SOP with it.
+      example: Leaf nitrogen by Dumas combustion
+      is_identifier: true
+      is_label: true
+    - name: description
+      type: string
+      required: false
+      description: What the procedure covers.
+      example: Sample drying, milling and combustion settings
+    - name: url
+      type: uri
+      required: true
+      description: Where the SOP document is; SEEK registers it by this link.
+      example: https://protocols.example.org/sop/leaf-nitrogen-v2.pdf
+    seek:
+      role: SOP
   Source:
     description: A source material the study started from -- the head of the ISA material chain.
     fields:

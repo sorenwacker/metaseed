@@ -519,6 +519,29 @@ class SeekClient:
             ),
         )
 
+    def create_sop(
+        self,
+        *,
+        title: str,
+        project_id: str,
+        url: str,
+        original_filename: str,
+        description: str | None = None,
+        assay_ids: list[str | int] | None = None,
+    ) -> str:
+        """Register a remote SOP (its document by URL); return its id."""
+        return self._create(
+            "/sops",
+            payloads.sop_payload(
+                title=title,
+                project_id=project_id,
+                url=url,
+                original_filename=original_filename,
+                description=description,
+                assay_ids=assay_ids,
+            ),
+        )
+
     def create_controlled_vocab(
         self,
         *,
@@ -629,15 +652,25 @@ class SeekClient:
         return None
 
     def find_data_file_id_by_title(self, title: str, *, project_id: str) -> str | None:
-        """An existing Data File titled ``title`` in ``project_id``, if any.
+        """An existing Data File titled ``title`` in ``project_id``, if any."""
+        return self._find_asset_id_by_title("data_files", title, project_id)
+
+    def find_sop_id_by_title(self, title: str, *, project_id: str) -> str | None:
+        """An existing SOP titled ``title`` in ``project_id``, if any."""
+        return self._find_asset_id_by_title("sops", title, project_id)
+
+    def _find_asset_id_by_title(
+        self, resource: str, title: str, project_id: str
+    ) -> str | None:
+        """An asset of ``resource`` titled ``title`` in ``project_id``, if any.
 
         The list omits the ``projects`` relationship, so a title match is
         confirmed against the item, as for Sample Types.
         """
-        for row in self.get("/data_files").get("data", []):
+        for row in self.get(f"/{resource}").get("data", []):
             if row["attributes"].get("title") != title:
                 continue
-            detail = self.get(f"/data_files/{row['id']}").get("data", {})
+            detail = self.get(f"/{resource}/{row['id']}").get("data", {})
             if _relates_to_project(detail, project_id):
                 return str(row["id"])
         return None

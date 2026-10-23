@@ -129,7 +129,9 @@ provisioning makes no profile-named copies of them.
 
 With a dataset loaded, click **Sync to SEEK →**. It pushes the dataset's
 entities in as Investigations, Studies, Assays and Samples, matched to the
-Sample Types provisioned in step 1. The push runs in the background — every
+Sample Types provisioned in step 1. Entities with the `SOP` role are registered
+as SOPs by their location and linked to the Assay above them; see
+[Authoring a SEEK-ready profile](seek-ready-profiles.md#6-sops-are-registered-by-link). The push runs in the background — every
 entity is a request to SEEK, and a registered data file makes SEEK fetch it —
 so the page shows a progress bar (entities placed of the total) and replaces
 it with the result when the push finishes. Leaving the page does not stop
@@ -205,10 +207,11 @@ The class names recognised in an annotation are those the export can place:
 | `Investigation`, `Study`, `Sample` | itself |
 | `Assay`, and JERM's `experimental_assay`, `informatics_analysis`, `modelling_analysis` | Assay |
 | PPEO's `observation_unit` | ObservationUnit |
+| JERM's `SOP` | SOP |
 
 Anything else is left out, and every entity left out is named in a warning when
 the export runs. That includes real JERM classes with no position in the chain
-SEEK reads — `treatment`, `Data`, `Model`, `SOP` — which are reported rather
+SEEK reads — `treatment`, `Data`, `Model` — which are reported rather
 than placed as something they are not. JERM identifies its classes by name and
 has no numeric accessions, so an annotation such as `JERM:00021` names nothing
 in it; give such an entity a SEEK role instead.

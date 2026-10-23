@@ -85,6 +85,10 @@ class IsaWriter(Protocol):
         """An existing Data File with this title in the project, if any."""
         ...
 
+    def find_sop_id_by_title(self, title: str, *, project_id: str) -> str | None:
+        """An existing SOP with this title in the project, if any."""
+        ...
+
     def extended_metadata_type_ids(self) -> dict[str, str]:
         """Extended Metadata Type title -> id on this instance (top-level types)."""
         ...
@@ -175,6 +179,17 @@ class IsaWriter(Protocol):
     def sample_attribute_type_id(self, title: str) -> str: ...
 
     def create_data_file(
+        self,
+        *,
+        title: str,
+        project_id: str,
+        url: str,
+        original_filename: str,
+        description: str | None = None,
+        assay_ids: list[str | int] | None = None,
+    ) -> str: ...
+
+    def create_sop(
         self,
         *,
         title: str,

@@ -11,6 +11,7 @@ erDiagram
     Investigation ||--o{ Study : studies
     Study ||--o{ Source : sources
     Study ||--o{ Assay : assays
+    Assay ||--o{ SOP : sops
     Source ||--o{ Sample : samples
     Sample ||--o{ AssayMaterial : assay_materials
 ```
@@ -21,6 +22,7 @@ erDiagram
 - **Sample**: a sample collected from a Source.
 - **AssayMaterial**: a material or data file measured from a Sample. It names the Assay that measured it by that Assay's title (`assay`), because one Assay measures materials from many Samples and containment cannot express that.
 - **Assay**: a measurement performed on the materials.
+- **SOP**: a standard operating procedure an Assay follows. The SEEK export registers it by the location of its document (`url`) and links it to the Assay.
 
 There is no ObservationUnit level: the SEEK export synthesises one per sample.
 
@@ -40,7 +42,7 @@ SEEK has no identifier attribute on these records, so `title` is the identifier 
 
 | Version | Change |
 | --- | --- |
-| 4.0 | Breaking: no `identifier` field on Investigation, Study and Assay (the title identifies them); Assay gains `description`, `assay_class` and `assay_type`, and its title is required; `AssayMaterial.assay` names the Assay by title; fields SEEK has no attribute for are marked `seek_isa_only`. |
+| 4.0 | Breaking: no `identifier` field on Investigation, Study and Assay (the title identifies them); Assay gains `description`, `assay_class` and `assay_type`, and its title is required; an Assay lists its SOPs (`sops`, the `SOP` role); `AssayMaterial.assay` names the Assay by title; fields SEEK has no attribute for are marked `seek_isa_only`. |
 | 3.0 | Breaking: the material chain Source, Sample, AssayMaterial is explicit. |
 | 2.0 | A single Sample level under Assay. |
 | 1.0 | Investigation, Study, Sample and Assay. |

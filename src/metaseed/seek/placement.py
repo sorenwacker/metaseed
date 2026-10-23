@@ -146,6 +146,8 @@ def place_node(
             next_depth = depth + 1
         elif jerm_class == "DataFile":
             collect_file(ctx, node, values, study_id)
+        elif jerm_class == "SOP":
+            place_sop(ctx, node, values, title, assay_id)
         else:
             r.skipped.append(
                 (
@@ -899,3 +901,48 @@ def collect_file(
     filename = str((name_f and values.get(name_f)) or node.id)
     location = str((url_f and values.get(url_f)) or "")
     ctx.files_by_study.setdefault(study_id, []).append((filename, location))
+
+
+def place_sop(
+    ctx: SyncContext,
+    node: Any,
+    values: Mapping[str, Any],
+    title: str,
+    assay_id: str | None,
+) -> None:
+    """Register an SOP by its document's location, linked to the Assay above it.
+
+    An SOP already registered under the same title in the project is reused, so
+    a second push does not make a copy. One without a location is reported as
+    skipped: SEEK holds an SOP's document, and there is none to point at.
+    """
+    name_f, url_f = ctx.file_fields_by_entity.get(node.entity_type, (None, None))
+    location = str((url_f and values.get(url_f)) or "")
+    if not location:
+        ctx.result.skipped.append(
+            (node.id, f"SOP {title!r} has no location URL to register it by")
+        )
+        return
+    existing = ctx.client.find_sop_id_by_title(title, project_id=ctx.project_id)
+    if existing is not None:
+        ctx.result.sops[node.id] = existing
+        ctx.result.reused[node.id] = existing
+        return
+    filename = str((name_f and values.get(name_f)) or location.rsplit("/", 1)[-1])
+    try:
+        ctx.result.sops[node.id] = ctx.client.create_sop(
+            title=title,
+            project_id=ctx.project_id,
+            url=location,
+            original_filename=filename,
+            description=values.get("description") or None,
+            assay_ids=[assay_id] if assay_id else None,
+        )
+    except Exception as exc:
+        # SEEK fetches a remote link when it registers it and answers only
+        # "bad upload" when the link does not resolve.
+        if "bad upload" not in str(exc):
+            raise
+        ctx.result.errors.append(
+            (node.id, f"SEEK could not reach the SOP's location {location}: {exc}")
+        )

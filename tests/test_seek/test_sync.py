@@ -77,9 +77,13 @@ class _FakeSeek:
 
     # Data Files a previous push registered: title -> id.
     existing_data_files: dict[str, str] = field(default_factory=dict)
+    existing_sops: dict[str, str] = field(default_factory=dict)
 
     def find_data_file_id_by_title(self, title: str, *, project_id: str) -> str | None:
         return self.existing_data_files.get(title)
+
+    def find_sop_id_by_title(self, title: str, *, project_id: str) -> str | None:
+        return self.existing_sops.get(title)
 
     def template_attribute_ids(self, template_id: str) -> dict[str, str]:
         return dict(self.template_attributes.get(template_id, {}))
@@ -270,6 +274,29 @@ class _FakeSeek:
     ) -> str:
         self.calls.append(
             ("data_file", {"url": url, "description": description, "title": title})
+        )
+        return self._next()
+
+    def create_sop(
+        self,
+        *,
+        title: str,
+        project_id: str,
+        url: str,
+        original_filename: str,
+        description: str | None = None,
+        assay_ids: Any = None,
+    ) -> str:
+        self.calls.append(
+            (
+                "sop",
+                {
+                    "title": title,
+                    "url": url,
+                    "description": description,
+                    "assay_ids": assay_ids,
+                },
+            )
         )
         return self._next()
 

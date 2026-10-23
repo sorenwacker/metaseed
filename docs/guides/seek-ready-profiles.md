@@ -70,12 +70,9 @@ upload. If you need multiple distinct values preserved, give the field an enum.
 
 Mark one field `is_identifier` and one `is_label` (they may be the same field). SEEK derives a resource's title from the label; an entity with neither can be rejected on upload. An Investigation, Study or Assay record has no identifier attribute in SEEK (the `investigationPost`, `studyPost` and `assayPost` schemas of its API), so on those entities the `title` is both: mark it `is_identifier` and `is_label`, and add no separate identifier field. An Assay also needs SEEK's required `assay_class` (`EXP` experimental, `MODEL` modelling) and `assay_type` (a JERM ontology URI); the sync sends the record's values, and an Assay without them is created as an experimental assay of the default type.
 
-### 6. Protocols are fields; SOPs are out
+### 6. SOPs are registered by link
 
-A `protocol` field is fine — it uploads as an ordinary attribute. **SOPs are a
-separate SEEK resource that metaseed does not create**, so do not model a profile
-around them expecting them to sync. They are optional enrichment, not part of a
-clean upload.
+A `protocol` field uploads as an ordinary attribute. A protocol document of its own is an SOP: give the entity the `SOP` role and nest it under the Assay that follows it (or under the Study when no single Assay does). The sync registers each SOP in SEEK by its location, a remote content blob like a data file, titled after the record's label and linked to the Assay above it. The location is the entity's `uri` field (or one named `url`, `location` or `file_location`); an SOP without one is reported as skipped. SEEK fetches the location when it registers the SOP, so it must resolve from the SEEK server; one that does not is reported with the location named. A second push finds an SOP already registered under the same title in the project and reuses it.
 
 ### 7. Data files are registered by link
 

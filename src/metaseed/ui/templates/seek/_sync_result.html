@@ -27,7 +27,9 @@
         {{ sync_result.investigations|length }} investigation(s),
         {{ sync_result.studies|length }} study(ies),
         {{ sync_result.assays|length }} assay(s),
-        {{ sync_result.samples|length }} sample(s).</div>
+        {{ sync_result.samples|length }} sample(s),
+        {{ sync_result.data_files|length }} data file(s),
+        {{ sync_result.sops|length }} SOP(s).</div>
     {% if not_uploaded %}<div style="font-size:0.85rem; color:#c60; margin-top:0.3rem;">
         <strong>{{ not_uploaded }} of your entit{{ "y" if not_uploaded == 1 else "ies" }} did not reach SEEK</strong> — see below. Your SEEK copy is incomplete.</div>{% endif %}
     {% if sync_result.skipped %}<div class="muted" style="font-size:0.85rem;">Skipped: {{ reasons(sync_result.skipped) }}</div>{% endif %}

@@ -58,7 +58,7 @@ The package ships these profiles. Counts refer to each profile's latest version.
 | REMBI | `rembi` | 1.5 | 14 | 101 | Biological imaging |
 | Health-RI core | `health-ri-core` | 2.0 | 13 | 156 | Health data catalogues (DCAT-AP) |
 | SEEK | `seek` | 1.0 | 24 | 229 | The FAIRDOM-SEEK data model |
-| SEEK-ready template | `seek-ready-template` | 1.0, 2.0, 3.0, 4.0 | 6 | 33 | Minimal ISA shape for a SEEK upload |
+| SEEK-ready template | `seek-ready-template` | 1.0, 2.0, 3.0, 4.0 | 7 | 37 | Minimal ISA shape for a SEEK upload |
 
 Profiles you write yourself go under `~/.local/share/metaseed/specs/`. The web interface's spec builder and the `metaseed spec` commands author them; the explorer compares them; `metaseed merge` combines them.
 
