@@ -63,6 +63,7 @@ from metaseed.ui.helpers.validation import (
     ValidationResult,
     materialize_nested_children,
     rebuild_nested_items_with_failures,
+    store_children_and_save,
 )
 
 __all__ = [
@@ -93,6 +94,7 @@ __all__ = [
     "materialize_nested_children",
     "missing_required_fields",
     "rebuild_nested_items_with_failures",
+    "store_children_and_save",
     "to_dict",
     "walk_nested_entities",
 ]

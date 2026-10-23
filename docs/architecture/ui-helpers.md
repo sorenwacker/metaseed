@@ -50,7 +50,7 @@ The open dataset's toolbar (Validate, List, Graph, the exports, Import) is one p
 
 A table under Related Entities lists the records stored as children of the open record in that field. A record can also carry a copy of its children embedded in its own data, from a nested document or a dataset saved before its children were stored as records of their own; `get_nested_items_for_edit` uses that copy only for a field with no stored child records, as the Excel export does. A copy shown next to the records it duplicates showed values the records no longer held: a renamed Source kept its old name in the Study's table.
 
-Every row has an **Edit** button that opens the record the row stands for in its own form (`_node_id`); a row with no stored record keeps only the delete button.
+Every row has an **Edit** button. A row with a stored record (`_node_id`) opens that record in its own form. A row added with **+ Add** has no stored record yet; its **Edit** opens the row in the nested form (`/nested/<parent>/<field>/<row>`). Saving the nested form stores the row as a record and writes the dataset, as the open record's own **Save** does; the confirmation appears only after the write. A save that reported success while only the session held the row lost the record when the session ended (#356).
 
 ### Field notes
 

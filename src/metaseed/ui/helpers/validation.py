@@ -399,3 +399,50 @@ __all__ = [
     "materialize_nested_children",
     "rebuild_nested_items_with_failures",
 ]
+
+
+def store_children_and_save(
+    state: AppState,
+    facade: ProfileFacade,
+    node_id: str,
+    factory: Any = None,
+) -> tuple[ValidationResult, str | None]:
+    """Store the open record's table rows as child records and write the dataset.
+
+    The open record's Save and the Save of a row's own form both end here, so a
+    row confirmed as saved from either form is on disk. The nested form once
+    changed only the session and still answered "Saved"; the record was gone
+    when the dataset was next opened (#356).
+
+    Args:
+        state: Application state holding the open record and its table rows.
+        facade: Profile facade for entity helpers.
+        node_id: ID of the open record whose rows are stored.
+        factory: The dataset manager factory the app was composed with.
+
+    Returns:
+        The rows that could not be stored, and the reason the dataset was not
+        written (None when it was).
+    """
+    from ..datasets import auto_save
+
+    node = state.nodes_by_id[node_id]
+    helper = getattr(facade, node.entity_type)
+    parent_data = (
+        node.instance.model_dump() if hasattr(node.instance, "model_dump") else {}
+    )
+    result = materialize_nested_children(
+        state=state,
+        facade=facade,
+        node_id=node_id,
+        entity_type=node.entity_type,
+        parent_identifier=parent_data.get("alias") or parent_data.get("unique_id"),
+    )
+    rebuild_nested_items_with_failures(
+        state=state,
+        node_id=node_id,
+        helper=helper,
+        facade=facade,
+        failed_items=result.failed_items,
+    )
+    return result, auto_save(state, factory)
