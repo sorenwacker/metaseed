@@ -222,6 +222,7 @@ def register_table_routes(  # noqa: C901
                 "field_name": field_name,
                 "parent_entity_type": parent_entity_type,
                 "entity_type": entity_type,
+                "nested_entity_type": entity_type,
                 "has_nested_children": col_info["has_nested_children"],
             },
         )

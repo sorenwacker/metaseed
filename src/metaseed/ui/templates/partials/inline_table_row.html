@@ -5,16 +5,29 @@
         {% set col_type = column_types.get(col, 'string') if column_types else 'string' %}
         {% set constraints = column_constraints.get(col, {}) if column_constraints else {} %}
         {% set ref_info = reference_fields.get(col, {}) if reference_fields else {} %}
-        {% set show_lookup = ref_info and not is_parent_id %}
+        {% set ontologies = column_ontologies.get(col, []) if column_ontologies else [] %}
+        {% set is_ontology = col_type == 'ontology_term' and not is_parent_id %}
+        {% set show_lookup = (ref_info and not is_parent_id) or is_ontology %}
         <span class="cell-display" data-testid="cell-display-{{ field_name }}-{{ row._idx }}-{{ col }}">{{ row.get(col, '')|display }}</span>
         <div class="cell-input-wrapper{% if show_lookup %} has-lookup{% endif %}">
-            <input type="text"
+            {# A table cell gets the same control as the field
+               it holds: a date column was a text box here
+               while the form gave it a picker, so one value
+               was typed in one place and chosen in the other. #}
+            {% set cell_value = row.get(col, '')|display %}
+            <input type="{% if col_type == 'date' %}date{% elif col_type == 'datetime' %}datetime-local{% else %}text{% endif %}"
                    class="form-input cell-input{% if show_lookup %} lookup-input{% endif %}"
                    name="{{ col }}"
-                   value="{{ row.get(col, '')|display }}"
+                   value="{% if col_type == 'date' %}{{ cell_value|string|replace(' ', 'T')|truncate(10, true, '') }}{% elif col_type == 'datetime' %}{{ cell_value|string|replace(' ', 'T')|truncate(16, true, '') }}{% else %}{{ cell_value }}{% endif %}"
                    {% if is_parent_id %}
                    readonly
                    title="Auto-filled from parent"
+                   {% elif is_ontology %}
+                   data-lookup-type="ontology"
+                   {% if ontologies %}data-ontologies="{{ ontologies|join(',') }}"{% endif %}
+                   autocomplete="off"
+                   placeholder="Search terms..."
+                   title="Press Tab to search ontology terms"
                    {% elif show_lookup %}
                    data-lookup="{{ ref_info.target_entity }}"
                    data-lookup-field="{{ ref_info.target_field }}"
@@ -22,15 +35,20 @@
                    placeholder="Tab for options"
                    title="Press Tab to see available {{ ref_info.target_entity }} values"
                    {% endif %}
-                   {% if col_type == 'date' %}
-                   pattern="\d{4}-\d{2}-\d{2}"
-                   placeholder="YYYY-MM-DD"
-                   {% endif %}
                    hx-post="/table/{{ parent_entity_type }}/{{ field_name }}/row/{{ row._idx }}/cell"
                    hx-trigger="change"
                    hx-swap="none"
                    data-testid="inline-cell-{{ field_name }}-{{ row._idx }}-{{ col }}">
-            {% if show_lookup %}
+            {% if is_ontology %}
+            <button type="button"
+                    class="ontology-lookup-btn"
+                    data-input="inline-cell-{{ field_name }}-{{ row._idx }}-{{ col }}"
+                    {% if ontologies %}data-ontologies="{{ ontologies|join(',') }}"{% endif %}
+                    title="Browse ontology"
+                    data-testid="ontology-btn-{{ field_name }}-{{ row._idx }}-{{ col }}">
+                &#128269;
+            </button>
+            {% elif show_lookup %}
             <button type="button"
                     class="lookup-btn"
                     data-lookup="{{ ref_info.target_entity }}"
@@ -44,12 +62,21 @@
     </td>
     {% endfor %}
     <td class="row-actions">
-        {% if has_nested_children %}
+        {% if row._node_id %}
+        <button type="button" class="btn btn-sm btn-secondary"
+                hx-get="{{ base_url }}/form/{{ nested_entity_type }}/{{ row._node_id }}"
+                hx-target="#main"
+                hx-swap="innerHTML"
+                title="Open this {{ nested_entity_type }}"
+                data-testid="inline-open-{{ field_name }}-{{ row._idx }}">
+            Edit
+        </button>
+        {% else %}
         <button type="button" class="btn btn-sm btn-secondary"
                 hx-get="/nested/{{ parent_entity_type }}/{{ field_name }}/{{ row._idx }}"
                 hx-target="#main"
                 hx-swap="innerHTML"
-                title="Edit nested items"
+                title="Edit this {{ nested_entity_type }}"
                 data-testid="inline-edit-{{ field_name }}-{{ row._idx }}">
             Edit
         </button>
