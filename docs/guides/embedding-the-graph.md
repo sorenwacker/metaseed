@@ -50,6 +50,10 @@ The graph does no work while it cannot be seen. When `graph-container` is hidden
 
 `graphIsVisible()` reports that state, and `pauseGraph()` and `resumeGraph()` apply it. A host driving its own visibility — a tab strip, an accordion — calls them when its own container shows or hides.
 
+## Hiding an entity type
+
+Unticking a type in the legend hides its nodes and their edges without redrawing the graph. The hidden nodes leave the layout simulation: they neither push the visible nodes nor pull on them through their edges, and they do not move. The visible nodes keep their positions and settle from there. Ticking the type again shows its nodes where they were hidden, and they rejoin the simulation. A poll keeps a hidden type hidden, including nodes of that type added since.
+
 ## What the host still owns
 
 Styling beyond the canvas background, when the graph becomes visible, and how often it refreshes. While a visible graph is open, the script polls `/api/graph` every 2 s so that changes made outside the browser (an MCP agent editing the dataset) appear. It also redraws on `htmx:afterSwap` when `graph-container` is visible and on a colour-scheme change; a host without htmx simply never triggers the former.

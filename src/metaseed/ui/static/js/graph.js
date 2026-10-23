@@ -365,14 +365,12 @@ function prepareGraphData(data) {
 function updateGraphIncremental(newNodes, newEdges) {
     if (!graphData || !graphData.nodes || !graphData.edges) return false;
 
-    // Filter new data by visible groups
-    var visibleNewNodes = newNodes.filter(function(n) {
-        return visibleGroups.has(n.group);
-    });
+    // Every node stays in the graph; a hidden type's are added hidden.
+    var visibleNewNodes = newNodes.map(withVisibility);
     var visibleNewNodeIds = new Set(visibleNewNodes.map(function(n) { return n.id; }));
     var visibleNewEdges = newEdges.filter(function(e) {
         return visibleNewNodeIds.has(e.from) && visibleNewNodeIds.has(e.to);
-    });
+    }).map(function(e) { return edgeWithVisibility(e, visibleNewNodes); });
 
     // Build maps of current data
     var currentNodeIds = new Set(graphData.nodes.getIds());
@@ -628,39 +626,33 @@ function toggleNodeType(group) {
     }
 }
 
+// Whether a node is shown follows its type's legend checkbox. A hidden node
+// stays in the graph but leaves the layout simulation, so it neither moves nor
+// pushes the visible nodes, and it reappears where it was hidden.
+function withVisibility(node) {
+    var shown = visibleGroups.has(node.group);
+    return Object.assign({}, node, { hidden: !shown, physics: shown });
+}
+
+// An edge is hidden, and pulls on nothing, when either of its nodes is hidden.
+function edgeWithVisibility(edge, nodes) {
+    var hiddenIds = new Set(nodes.filter(function(n) { return n.hidden; })
+        .map(function(n) { return n.id; }));
+    var shown = !hiddenIds.has(edge.from) && !hiddenIds.has(edge.to);
+    return Object.assign({}, edge, { hidden: !shown, physics: shown });
+}
+
 function filterGraph() {
     if (!graphData || !allGraphNodes.length) return;
 
-    var visibleNodeIds = new Set();
-    var filteredNodes = allGraphNodes.filter(function(n) {
-        if (visibleGroups.has(n.group)) {
-            visibleNodeIds.add(n.id);
-            return true;
-        }
-        return false;
-    });
-
-    var filteredEdges = allGraphEdges.filter(function(e) {
-        return visibleNodeIds.has(e.from) && visibleNodeIds.has(e.to);
-    });
-
-    filteredNodes.forEach(function(n) {
-        var display = getEntityDisplay(n.group);
-        n.color = display.color;
-        n.shape = display.shape;
-    });
-
-    graphData.nodes.clear();
-    graphData.nodes.add(filteredNodes);
-    graphData.edges.clear();
-    graphData.edges.add(filteredEdges);
-
-    if (graphNetwork) {
-        if (currentGraphLayout === 'physics' && graphPhysicsRunning) {
-            graphNetwork.setOptions({ physics: { enabled: true } });
-        }
-        graphNetwork.fit({ animation: { duration: 300 } });
-    }
+    var nodes = allGraphNodes.map(withVisibility);
+    graphData.nodes.update(nodes.map(function(n) {
+        return { id: n.id, hidden: n.hidden, physics: n.physics };
+    }));
+    graphData.edges.update(graphData.edges.get().map(function(e) {
+        var edge = edgeWithVisibility(e, nodes);
+        return { id: edge.id, hidden: edge.hidden, physics: edge.physics };
+    }));
 }
 
 function toggleGraphPhysics() {
