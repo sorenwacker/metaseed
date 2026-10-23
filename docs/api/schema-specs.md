@@ -628,11 +628,13 @@ Common patterns:
 |------------|----------------------|
 | `string` | pattern, min_length, max_length, enum |
 | `integer`, `float` | minimum, maximum |
-| `list` | min_items, max_items |
+| `list` | min_items, max_items; pattern on a list of `string` items |
 | `uri`, `ontology_term` | pattern, min_length, max_length |
 | `boolean`, `date`, `datetime`, `entity` | none (field-level) |
 
 A `pattern` on a `uri` field, whether declared as a field constraint or as a [validation rule](#validation-rules), is matched against the value as written, for example `urn:uuid:69658110-5216-4e10-95c3-b1bdca2a1e52`. Pydantic cannot apply a regex to its parsed `AnyUrl` type, so the model factory leaves the pattern off the field and the validation engine checks it with a `PatternRule`. On `string` and `ontology_term` fields, which are strings in the model, the pattern is a Pydantic constraint; a rule `pattern` on such a field is merged onto the field. A `pattern` rule on a `date`/`datetime` field is not enforced (the field's own date parsing applies).
+
+A `pattern` on a `list` field with `items: string` applies to each item, as for a list of ORCIDs or DOIs; an item that does not match is reported with its position, `agent_identifier.1`. On a list of any other item type a pattern is refused when the profile is read, naming the field, so `spec_validate` and `metaseed check` report it before a dataset is created. The model factory once passed the pattern to the list itself, and the first entity created against the profile failed with a TypeError (#337).
 
 ## Relationships
 

@@ -290,6 +290,28 @@ class FieldSpec(BaseModel):
             raise ValueError(f"isa_tag must be one of {ISA_TAGS}, got {value!r}")
         return value
 
+    @model_validator(mode="after")
+    def _pattern_needs_text(self: Self) -> Self:
+        """Refuse a pattern on a list whose items are not strings.
+
+        On a list of strings the pattern applies to each item. On any other
+        list no item can be matched against it, and the model factory once
+        passed it to the list itself, failing the first entity created rather
+        than the profile (#337).
+        """
+        constraints = self.constraints
+        if (
+            self.type == FieldType.LIST
+            and constraints is not None
+            and constraints.pattern
+            and self.items != "string"
+        ):
+            raise ValueError(
+                f"{self.name}: a pattern applies to each item of a list of "
+                f"strings, but this list holds {self.items or 'no item type'}"
+            )
+        return self
+
     def is_nested(self: Self) -> bool:
         """Check if this field represents a nested entity.
 

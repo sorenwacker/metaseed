@@ -421,8 +421,9 @@ def _build_field_constraints(field: FieldSpec) -> dict[str, Any]:
         return kwargs
 
     # Pydantic cannot apply a regex to AnyUrl; the validation engine enforces a
-    # uri pattern instead (engine._uri_pattern_rules).
-    if constraints.pattern and field.type != FieldType.URI:
+    # uri pattern instead (engine._uri_pattern_rules). A list's pattern is its
+    # items' (see _create_field_definition).
+    if constraints.pattern and field.type not in (FieldType.URI, FieldType.LIST):
         kwargs["pattern"] = constraints.pattern
     if constraints.min_length is not None:
         kwargs["min_length"] = constraints.min_length
@@ -483,6 +484,11 @@ def _create_field_definition(field: FieldSpec) -> tuple[Any, Any]:
             # The element is a dynamically built Literal special form, which
             # cannot be expressed as a static type subscript.
             python_type = list[_build_enum_type(enum_values)]  # type: ignore[misc]
+        elif field.constraints and field.constraints.pattern:
+            # Each item matches the pattern; FieldSpec admits one only on a
+            # list of strings.
+            item = Annotated[str, Field(pattern=field.constraints.pattern)]
+            python_type = list[item]
         constraints["default_factory"] = list
         return (python_type, Field(**constraints))
 
