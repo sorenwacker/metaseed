@@ -26,6 +26,7 @@ class SyncResult:
     assays: dict[str, str] = dc_field(default_factory=dict)
     samples: dict[str, str] = dc_field(default_factory=dict)
     data_files: dict[str, str] = dc_field(default_factory=dict)
+    sops: dict[str, str] = dc_field(default_factory=dict)
     skipped: list[tuple[str, str]] = dc_field(default_factory=list)
     errors: list[tuple[str, str]] = dc_field(default_factory=list)
     # Attribute-level omissions on a record that WAS pushed: a field the
@@ -65,6 +66,7 @@ class SyncResult:
                 self.assays,
                 self.samples,
                 self.data_files,
+                self.sops,
             )
         )
 

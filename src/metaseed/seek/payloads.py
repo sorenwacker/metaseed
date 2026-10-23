@@ -243,6 +243,35 @@ def controlled_vocab_payload(
     return _document("sample_controlled_vocabs", attributes)
 
 
+def _remote_asset_payload(
+    resource: str,
+    *,
+    title: str,
+    project_id: str | int,
+    url: str,
+    original_filename: str,
+    description: str | None = None,
+    assay_ids: list[str | int] | None = None,
+) -> dict[str, Any]:
+    """A POST body for a SEEK asset held as a **remote** content blob.
+
+    SEEK registers a reference to the content -- a ``url`` plus the
+    ``original_filename`` -- rather than holding the bytes: its remote
+    ContentBlob, which its API doc describes as "URI to the content's
+    location". Data files and SOPs share the shape; no upload follows.
+    """
+    attributes: dict[str, Any] = {
+        "title": title,
+        "content_blobs": [{"url": url, "original_filename": original_filename}],
+    }
+    if description is not None:
+        attributes["description"] = description
+    relationships: dict[str, Any] = {"projects": _to_many("projects", [project_id])}
+    if assay_ids:
+        relationships["assays"] = _to_many("assays", assay_ids)
+    return _document(resource, attributes, relationships)
+
+
 def data_file_payload(
     *,
     title: str,
@@ -252,12 +281,7 @@ def data_file_payload(
     description: str | None = None,
     assay_ids: list[str | int] | None = None,
 ) -> dict[str, Any]:
-    """Build a POST body for ``/data_files`` as a **remote** content blob.
-
-    The file itself stays in external storage (an S3 bucket); SEEK registers a
-    reference to it -- a ``url`` plus the ``original_filename`` -- rather than
-    holding the bytes. This is SEEK's remote ContentBlob, the shape its API doc
-    describes for "URI to the content's location". No upload follows.
+    """Build a POST body for ``/data_files``, registering a file by its location.
 
     Args:
         title: Human-readable title for the data file.
@@ -270,16 +294,48 @@ def data_file_payload(
     Returns:
         A JSON:API request document.
     """
-    attributes: dict[str, Any] = {
-        "title": title,
-        "content_blobs": [{"url": url, "original_filename": original_filename}],
-    }
-    if description is not None:
-        attributes["description"] = description
-    relationships: dict[str, Any] = {"projects": _to_many("projects", [project_id])}
-    if assay_ids:
-        relationships["assays"] = _to_many("assays", assay_ids)
-    return _document("data_files", attributes, relationships)
+    return _remote_asset_payload(
+        "data_files",
+        title=title,
+        project_id=project_id,
+        url=url,
+        original_filename=original_filename,
+        description=description,
+        assay_ids=assay_ids,
+    )
+
+
+def sop_payload(
+    *,
+    title: str,
+    project_id: str | int,
+    url: str,
+    original_filename: str,
+    description: str | None = None,
+    assay_ids: list[str | int] | None = None,
+) -> dict[str, Any]:
+    """Build a POST body for ``/sops``, registering an SOP by its document's location.
+
+    Args:
+        title: The SOP's title.
+        project_id: SEEK project it belongs to.
+        url: Where the SOP document is.
+        original_filename: The filename SEEK shows for it.
+        description: What the procedure covers.
+        assay_ids: The SEEK assays that follow it.
+
+    Returns:
+        A JSON:API request document.
+    """
+    return _remote_asset_payload(
+        "sops",
+        title=title,
+        project_id=project_id,
+        url=url,
+        original_filename=original_filename,
+        description=description,
+        assay_ids=assay_ids,
+    )
 
 
 def isa_sample_attribute(

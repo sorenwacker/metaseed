@@ -13,7 +13,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from metaseed.seek.values import CORE_FIELDS
+from metaseed.seek.roles import SEEK_RECORD_ATTRIBUTES
+from metaseed.seek.values import is_seek_attribute
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
@@ -170,8 +171,11 @@ def extended_metadata_for(
     data: dict[str, Any] = {}
     unknown: list[str] = []
     references: list[str] = []
+    # SEEK's own record attributes (an Assay's class and type) are sent on
+    # the record, not as metadata beside it.
+    record = SEEK_RECORD_ATTRIBUTES.get(level or "", frozenset())
     metadata_fields = {
-        f.name for f in entity.fields if not f.is_nested() and f.name not in CORE_FIELDS
+        f.name for f in entity.fields if is_seek_attribute(f) and f.name not in record
     }
     for name, value in values.items():
         # Identity and description fields are the record itself (its title,

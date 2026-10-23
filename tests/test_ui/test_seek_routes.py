@@ -293,6 +293,24 @@ def test_a_complete_sync_still_reads_as_success(make_client):
     assert "not uploaded" not in html
 
 
+def test_the_sync_result_counts_data_files_and_sops(make_client):
+    """Both count towards the total, so the breakdown names them too (#359)."""
+    from jinja2 import Environment, FileSystemLoader
+
+    import metaseed.ui.app as appmod
+
+    result = _sync_result(created=2)
+    result.data_files = {"d1": "11"}
+    result.sops = {"p1": "21", "p2": "22"}
+    env = Environment(
+        loader=FileSystemLoader(str(appmod.TEMPLATES_DIR)), autoescape=True
+    )
+    html = env.get_template("seek/_sync_result.html").render(sync_result=result)
+
+    assert "1 data file(s)" in html
+    assert "2 SOP(s)" in html
+
+
 def test_seek_page_shows_model_preview_panel(make_client):
     # The page carries the browsable "what will be created" panel on load.
     client, _settings, _state = make_client()  # default profile isa/1.0

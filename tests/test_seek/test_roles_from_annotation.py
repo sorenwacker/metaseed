@@ -67,7 +67,11 @@ class TestReadingTheAnnotation:
         Assay, which has no slot for it, so it is reported rather than placed as
         something it is not."""
         assert role_from_annotation("JERM:treatment") is None
-        assert role_from_annotation("JERM:SOP") is None
+
+    def test_an_sop_is_registered_beside_the_chain(self) -> None:
+        """JERM's ``SOP`` has no slot in the chain either, but SEEK holds it as a
+        resource of its own, so it maps to the SOP role (#359)."""
+        assert role_from_annotation("JERM:SOP") == "SOP"
 
     def test_an_explicit_role_still_wins(self) -> None:
         assert entity_jerm_class("Experiment", "Study", "JERM:Assay") == "Study"

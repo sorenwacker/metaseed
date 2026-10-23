@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
     from metaseed.api.client import MetaseedClient
-    from metaseed.specs.schema import EntityDefSpec, ProfileSpec
+    from metaseed.specs.schema import EntityDefSpec, FieldSpec, ProfileSpec
 
 
 # The one definition of SEEK's core fields: which metaseed field names map
@@ -40,6 +40,22 @@ _CORE_PRIORITY = {"unique_id": 0, "identifier": 1, "name": 2, "title": 3}
 #: attributes of their own. Derived, not restated: the mapping above is the one
 #: place the names live.
 CORE_FIELDS = frozenset(_CORE_TO_ATTRIBUTE)
+
+
+def is_seek_attribute(field: FieldSpec) -> bool:
+    """Whether a field becomes an attribute of its own in SEEK.
+
+    Not a nested field (structure), not a core field (the record's own title
+    or description) and not one marked ``seek_isa_only`` (carried in the
+    ISA-JSON export only). Every SEEK path -- provisioning, the FAIR Data
+    Station model, Extended Metadata and the preview -- filters with this one
+    test, so a marked field cannot reach SEEK through one of them.
+    """
+    return (
+        not field.is_nested()
+        and field.name not in CORE_FIELDS
+        and not field.seek_isa_only
+    )
 
 
 def sample_data(

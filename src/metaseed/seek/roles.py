@@ -21,6 +21,7 @@ SEEK_ROLES: tuple[str, ...] = (
     "Sample",
     "Assay",
     "DataFile",
+    "SOP",
 )
 """The object types a metaseed entity may declare as its SEEK ``role``.
 
@@ -31,10 +32,28 @@ through a local import, so the core schema does not depend on this package at
 import time.
 
 Note it is NOT the same set as :data:`JERM_CLASSES`, and deliberately so today:
-``DataFile`` is a declarable role handled by ``placement``, while the material
+``DataFile`` and ``SOP`` are declarable roles handled by ``placement`` (each is
+registered by its location rather than placed in the ISA chain), while the material
 classes (``Source``, ``Extract``, ``LabeledExtract``, ``OtherMaterial``) are
 inferred rather than declared. Any change to either belongs in one review of
 both.
+"""
+
+SEEK_RECORD_ATTRIBUTES: dict[str, frozenset[str]] = {
+    "Investigation": frozenset({"title", "description"}),
+    "Study": frozenset({"title", "description"}),
+    "Assay": frozenset(
+        {"title", "description", "assay_class", "assay_type", "technology_type"}
+    ),
+}
+"""The attributes SEEK's own Investigation, Study and Assay records have.
+
+Read from SEEK's API schemas (``investigationPost``, ``studyPost``,
+``assayPost``), leaving out what metaseed sets itself (projects, policy,
+creators, position) and the links between records. None has an identifier: the
+title identifies the record. A field outside this set is not a record attribute;
+it becomes Extended Metadata when the entity names a type for it, and is
+otherwise marked ``seek_isa_only``.
 """
 
 # metaseed entity type -> (JERM class, URI id-prefix). Only ISA-structural and
@@ -70,6 +89,9 @@ ANNOTATION_CLASSES: dict[str, str] = {
     # this exporter. ``ObservationUnit`` is SEEK's own name for that resource.
     "observation_unit": "ObservationUnit",
     "ObservationUnit": "ObservationUnit",
+    # A JERM asset class SEEK holds as a resource of its own, registered by
+    # its document's location and linked to its Assay.
+    "SOP": "SOP",
 }
 """The class an annotation may name, and the role this exporter places it as.
 
@@ -82,8 +104,9 @@ Only four JERM classes have a place in the chain SEEK's reader walks
 real JERM class — a subclass of ``process``, sibling to ``Assay``, ``Study`` and
 ``Investigation`` — but that chain has no slot for it, so an entity annotated
 with it is reported by :func:`unmapped_entities` rather than placed as something
-it is not. The same holds for JERM's asset classes (``Data``, ``Model``,
-``SOP``, ``Publication``): real classes, no position in this export.
+it is not. The same holds for JERM's asset classes ``Data``, ``Model`` and
+``Publication``: real classes, no position in this export. ``SOP`` is the
+exception, registered beside the chain rather than in it.
 """
 
 

@@ -38,7 +38,7 @@ if TYPE_CHECKING:
     from metaseed.specs.schema import FieldSpec, ProfileSpec
 
 
-from metaseed.seek.values import CORE_FIELDS as _CORE_FIELDS
+from metaseed.seek.values import is_seek_attribute
 from metaseed.services.term_check import TermSourceUnavailableError
 
 logger = logging.getLogger(__name__)
@@ -227,11 +227,7 @@ def build_provisioning_plan(
         # Non-core, non-nested (scalar/list-of-scalar) fields become PID-matched
         # attributes; core identity/description fields are carried by Title /
         # Description above.
-        field_idx = [
-            i
-            for i, f in enumerate(entity.fields)
-            if not f.is_nested() and f.name not in _CORE_FIELDS
-        ]
+        field_idx = [i for i, f in enumerate(entity.fields) if is_seek_attribute(f)]
         for pos, i in enumerate(field_idx, start=len(attributes) + 1):
             field = entity.fields[i]
             cv_title: str | None = None

@@ -60,8 +60,7 @@ if TYPE_CHECKING:
 
 # Core fields emitted as native schema.org triples (or the identifier), so they
 # do not get a property definition of their own.
-from metaseed.seek.values import CORE_FIELDS as _CORE_FIELDS
-from metaseed.seek.values import profile_of, title_of
+from metaseed.seek.values import is_seek_attribute, profile_of, title_of
 
 logger = logging.getLogger(__name__)
 
@@ -128,7 +127,7 @@ def to_fair_data_station_model_rdf(profile: ProfileSpec) -> str:
     seen: set[str] = set()
     for entity in profile.entities.values():
         for field in entity.fields:
-            if field.is_nested() or field.name in _CORE_FIELDS or field.name in seen:
+            if not is_seek_attribute(field) or field.name in seen:
                 continue
             seen.add(field.name)
             _emit_property_definition(graph, field.name, field)
@@ -194,7 +193,7 @@ def _emit_skeleton_instances(graph: Graph, profile: ProfileSpec) -> None:
         filler = by_level.get(level)
         if filler is not None:
             for field in filler.fields:
-                if field.is_nested() or field.name in _CORE_FIELDS:
+                if not is_seek_attribute(field):
                     continue
                 graph.add((uri, URIRef(property_uri(field.name)), Literal("")))
         parent = uri

@@ -144,9 +144,17 @@ def _place_study_contents(
             ctx.result.samples.get(sample_anc or ""),
             depth,
         )
-    for _, node, cls, _, _, _ in entries:
+    # The rest (data files, SOPs) with the SEEK Assay above them, which an SOP
+    # is linked to.
+    for _, node, cls, assay_anc, _, _ in entries:
         if cls not in ("Assay", "Sample"):
-            place_node(ctx, node, investigation_id, study_id, None)
+            place_node(
+                ctx,
+                node,
+                investigation_id,
+                study_id,
+                seek_assay_by_node.get(assay_anc or ""),
+            )
 
 
 def _walk(

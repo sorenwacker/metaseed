@@ -146,6 +146,8 @@ def place_node(
             next_depth = depth + 1
         elif jerm_class == "DataFile":
             collect_file(ctx, node, values, study_id)
+        elif jerm_class == "SOP":
+            place_sop(ctx, node, values, title, assay_id)
         else:
             r.skipped.append(
                 (
@@ -448,14 +450,20 @@ def _create_assay(
     input_type_id: str | None,
     extended_metadata: tuple[str, dict[str, Any]] | None = None,
     stream_id: str | None = None,
+    assay_kind: tuple[int, str | None] = (ASSAY_CLASS_IDS["EXP"], None),
 ) -> tuple[str, str | None]:
-    """Create one SEEK Assay in a stream (the Study's by default) with its type."""
+    """Create one SEEK Assay in a stream (the Study's by default) with its type.
+
+    ``assay_kind`` is SEEK's assay class id and assay type URI; an Assay record
+    that names neither is experimental, of SEEK's default type.
+    """
     sample_type_title = f"{title} - Sample Type"
     template = template_id_for(ctx, level, entity)
     assay_id = ctx.client.create_isa_assay(
         title=title,
         study_id=study_id,
-        assay_class_id=ASSAY_CLASS_IDS["EXP"],
+        assay_class_id=assay_kind[0],
+        assay_type_uri=assay_kind[1],
         assay_stream_id=stream_id or ctx.study_stream.get(study_id),
         input_sample_type_id=input_type_id,
         sample_type_title=sample_type_title,
@@ -559,6 +567,20 @@ def _reuse_assay(
             last_type_at[level] = owned
 
 
+def assay_kind(values: Mapping[str, Any]) -> tuple[int, str | None]:
+    """SEEK's assay class id and assay type URI for an Assay record.
+
+    Read from the record's ``assay_class`` (``EXP``, ``MODEL``) and
+    ``assay_type`` fields, which SEEK requires of every assay. A record without
+    them -- a profile older than seek-ready-template 4.0 -- is experimental, of
+    SEEK's default type, as every assay was before.
+    """
+    key = str(values.get("assay_class") or "EXP").upper()
+    class_id = ASSAY_CLASS_IDS.get(key, ASSAY_CLASS_IDS["EXP"])
+    assay_type = values.get("assay_type")
+    return class_id, str(assay_type) if assay_type else None
+
+
 def place_assay(
     ctx: SyncContext, node: Any, title: str, study_id: str, values: Mapping[str, Any]
 ) -> str:
@@ -583,6 +605,7 @@ def place_assay(
     entity_names = assay_level_entities_under(ctx, node)
     # The profile Assay's own fields; every SEEK Assay it becomes carries them.
     metadata = extended_metadata_for(ctx, node, values)
+    kind = assay_kind(values)
     if not entity_names:
         assay_id, _ = _create_assay(
             ctx,
@@ -593,6 +616,7 @@ def place_assay(
             "assay",
             collection_id,
             metadata,
+            assay_kind=kind,
         )
     else:
         # SEEK Sample Type id per entity placed so far, so an entity whose
@@ -644,6 +668,7 @@ def place_assay(
                     input_type_id,
                     metadata,
                     stream_id=stream_id,
+                    assay_kind=kind,
                 )
                 if first_id is None:
                     first_id = created_id
@@ -876,3 +901,48 @@ def collect_file(
     filename = str((name_f and values.get(name_f)) or node.id)
     location = str((url_f and values.get(url_f)) or "")
     ctx.files_by_study.setdefault(study_id, []).append((filename, location))
+
+
+def place_sop(
+    ctx: SyncContext,
+    node: Any,
+    values: Mapping[str, Any],
+    title: str,
+    assay_id: str | None,
+) -> None:
+    """Register an SOP by its document's location, linked to the Assay above it.
+
+    An SOP already registered under the same title in the project is reused, so
+    a second push does not make a copy. One without a location is reported as
+    skipped: SEEK holds an SOP's document, and there is none to point at.
+    """
+    name_f, url_f = ctx.file_fields_by_entity.get(node.entity_type, (None, None))
+    location = str((url_f and values.get(url_f)) or "")
+    if not location:
+        ctx.result.skipped.append(
+            (node.id, f"SOP {title!r} has no location URL to register it by")
+        )
+        return
+    existing = ctx.client.find_sop_id_by_title(title, project_id=ctx.project_id)
+    if existing is not None:
+        ctx.result.sops[node.id] = existing
+        ctx.result.reused[node.id] = existing
+        return
+    filename = str((name_f and values.get(name_f)) or location.rsplit("/", 1)[-1])
+    try:
+        ctx.result.sops[node.id] = ctx.client.create_sop(
+            title=title,
+            project_id=ctx.project_id,
+            url=location,
+            original_filename=filename,
+            description=values.get("description") or None,
+            assay_ids=[assay_id] if assay_id else None,
+        )
+    except Exception as exc:
+        # SEEK fetches a remote link when it registers it and answers only
+        # "bad upload" when the link does not resolve.
+        if "bad upload" not in str(exc):
+            raise
+        ctx.result.errors.append(
+            (node.id, f"SEEK could not reach the SOP's location {location}: {exc}")
+        )
