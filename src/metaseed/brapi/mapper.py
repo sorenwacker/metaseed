@@ -227,7 +227,8 @@ def _level(level: Any) -> dict[str, Any]:
     BrAPI names the level (``plot``) in ``levelName`` and numbers it in
     ``levelCode``. FAIDARE puts the number in ``levelName`` and the path of
     level names in ``levelOrder`` (``REPLICATE>BLOCK>PLOT``), whose last
-    segment is the level.
+    segment is the level; a unit at the top of its hierarchy has a one-level
+    order (``PLANT``), which is the level itself.
     """
     if not isinstance(level, dict):
         return {}
@@ -235,7 +236,8 @@ def _level(level: Any) -> dict[str, Any]:
     name = level.get("levelName")
     if (
         isinstance(order, str)
-        and ">" in order
+        and order.strip()
+        and not order.strip().isdigit()
         and (name is None or str(name).isdigit())
     ):
         return {"levelName": order.rsplit(">", 1)[-1].lower(), "levelCode": name}
