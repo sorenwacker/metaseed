@@ -183,9 +183,17 @@ def register_core_routes(
         state = get_state()
         manager = resolve_dataset_manager(app, state)
 
+        load_warning = None
         if manager.current_dataset != name:
             try:
-                manager.load_dataset(name)
+                loaded = manager.load_dataset(name)
+                if loaded.skipped_count:
+                    total = loaded.entity_count + loaded.skipped_count
+                    load_warning = (
+                        f"{loaded.skipped_count} of {total} entities could not be "
+                        "loaded: their type is not in the profile or their values "
+                        "do not fit it."
+                    )
                 from ..datasets import set_current_dataset_name
 
                 set_current_dataset_name(state, name)
@@ -213,6 +221,7 @@ def register_core_routes(
             {
                 "profiles": profile_factory.list_profiles(),
                 "current_profile": state.profile,
+                "dataset_load_warning": load_warning,
                 "version": facade.version,
                 "root_types": state.get_root_entity_types()[:3],
                 "tree_nodes": state.get_tree_data(),

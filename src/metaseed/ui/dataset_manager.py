@@ -215,6 +215,7 @@ class DatasetManager:
             entity_count=loaded_count,
             modified=data.modified,
             created=data.created,
+            skipped_count=max(0, len(data.entities) - loaded_count),
         )
 
     def delete_dataset(self: Self, name: str) -> bool:

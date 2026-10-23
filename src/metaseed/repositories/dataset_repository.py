@@ -14,7 +14,7 @@ cases).
 import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Self
 
 
 @dataclass
@@ -35,6 +35,21 @@ class DatasetInfo:
     hub: dict[str, str] | None = None
     """Where the dataset last went to or came from: a metaseed-hub URL,
     account, direction (push/pull) and time; None when it never travelled."""
+    skipped_count: int = 0
+    """Entities in the file a load could not build (no ``_type``, a type the
+    profile lacks, or values the entity cannot be built from); 0 for a listing."""
+
+    @property
+    def load_status(self: Self) -> str:
+        """``loaded``, ``partially_loaded``, or ``not_loaded`` when the file held
+        entities and none of them loaded.
+
+        A load answered "loaded" with an entity count of 0, and the entities it
+        dropped appeared only in the log (#348).
+        """
+        if not self.skipped_count:
+            return "loaded"
+        return "partially_loaded" if self.entity_count else "not_loaded"
 
 
 @dataclass

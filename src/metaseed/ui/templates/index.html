@@ -1,3 +1,6 @@
+{% if dataset_load_warning %}
+<div class="notification notification-warning mb-4" data-testid="dataset-load-warning">{{ dataset_load_warning }}</div>
+{% endif %}
 {% if tree_nodes %}
 <div class="entity-overview">
     <div class="entity-list">

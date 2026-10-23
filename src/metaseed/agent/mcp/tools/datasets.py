@@ -132,7 +132,7 @@ def register_dataset_tools(  # noqa: C901
 
             return json.dumps(
                 {
-                    "status": "loaded",
+                    "status": result.load_status,
                     **asdict(result),
                 },
                 indent=2,

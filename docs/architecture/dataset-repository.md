@@ -81,7 +81,10 @@ class DatasetInfo:
     version: str        # Profile version (e.g., "1.2")
     entity_count: int   # Number of entities
     modified: str       # ISO timestamp
+    skipped_count: int = 0  # Entities in the file a load could not build
 ```
+
+A load returns a `DatasetInfo` whose `entity_count` is the number of entities it built and whose `skipped_count` is the number in the file it could not build: one with no `_type`, a type the profile lacks, or values the entity cannot be constructed from. Each is logged with the reason. `load_status` reads the two counts: `loaded` when nothing was skipped, `partially_loaded` when some entities were, and `not_loaded` when the file held entities and none loaded. The MCP `load_dataset` tool and `POST /api/datasets/load` answer with that status, and the dataset page shows a warning naming the count, so a load that lost entities is not reported as a success (#348).
 
 ### DatasetData
 
