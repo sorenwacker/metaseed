@@ -317,11 +317,20 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+// The one ordering that gives each entity type its colour and shape: the
+// profile's types, then any type only the data names. The nodes and the legend
+// both read it; numbering only the types present for the nodes and every
+// profile type for the legend gave a type two different symbols.
+function displayOrder(data) {
+    var types = (data.entity_types || []).slice();
+    data.nodes.forEach(function(n) {
+        if (n.group && types.indexOf(n.group) === -1) types.push(n.group);
+    });
+    return types;
+}
+
 function prepareGraphData(data) {
-    // Collect unique entity types and assign colors/shapes
-    var entityTypes = new Set();
-    data.nodes.forEach(function(n) { entityTypes.add(n.group); });
-    assignEntityDisplay(entityTypes);
+    assignEntityDisplay(displayOrder(data));
 
     // Count edges per node for sizing
     var edgeCount = {};
@@ -578,11 +587,9 @@ function renderGraphLegend(data) {
         }
     });
 
-    // Use entity_types from spec (maintains spec order), fallback to node groups
-    var entityTypes = data.entity_types || Object.keys(typeCounts);
-
-    // Assign colors/shapes to all spec types
-    assignEntityDisplay(new Set(entityTypes));
+    // The order prepareGraphData assigned the symbols in, so each legend entry
+    // shows its nodes' colour and shape.
+    var entityTypes = displayOrder(data);
 
     var html = '';
     entityTypes.forEach(function(type, index) {
@@ -638,7 +645,9 @@ function filterGraph() {
     });
 
     filteredNodes.forEach(function(n) {
-        n.color = getEntityDisplay(n.group).color;
+        var display = getEntityDisplay(n.group);
+        n.color = display.color;
+        n.shape = display.shape;
     });
 
     graphData.nodes.clear();
