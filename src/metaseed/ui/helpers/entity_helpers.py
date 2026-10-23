@@ -179,13 +179,14 @@ def extract_nested_from_tree(
 def get_nested_items_for_edit(
     node: Any, helper: Any, facade: Any = None
 ) -> dict[str, list[dict[str, Any]]]:
-    """Get all nested items for editing, combining instance data and tree children.
+    """Get all nested items for editing: stored children, else the embedded copy.
 
     This is the canonical function for getting nested items when editing an entity.
-    It combines items from:
-    1. The instance's nested fields (for inline nested objects)
-    2. The tree's child nodes (for entities created via MCP with parent_id)
-    3. Children linked via reference fields (e.g., File.run_ref -> Run)
+    For each field it takes:
+    1. The tree's child nodes, including children linked via reference fields
+       (e.g., File.run_ref -> Run), when the field has any;
+    2. otherwise the instance's own nested items (an inline nested object, or a
+       copy saved before the children were stored as records).
 
     Args:
         node: TreeNode being edited.
@@ -204,16 +205,14 @@ def get_nested_items_for_edit(
             # Only include actual dicts, not string references
             result[field_name] = [item for item in items if isinstance(item, dict)]
 
-    # Then, add items from tree children (includes reference-linked children if facade provided)
+    # The stored child records replace an embedded copy of the same field: the
+    # copy may predate edits to the records (a renamed Source kept its old name
+    # in the Study's table). A copy is shown only for a field with no stored
+    # record, as the Excel export does.
     tree_items = extract_nested_from_tree(node, facade)
     for field_name, items in tree_items.items():
-        if field_name not in result:
-            result[field_name] = []
-        # Add tree children that aren't already in result (by node_id)
-        existing_ids = {item.get("_node_id") for item in result[field_name]}
-        for item in items:
-            if item.get("_node_id") not in existing_ids:
-                result[field_name].append(item)
+        if items:
+            result[field_name] = list(items)
 
     return result
 

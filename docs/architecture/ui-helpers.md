@@ -48,7 +48,9 @@ The open dataset's toolbar (Validate, List, Graph, the exports, Import) is one p
 
 ### Editing a row's record
 
-Every row of a table under Related Entities has an **Edit** button that opens the record the row stands for in its own form. `build_inline_tables` gives each row the id of that record (`_node_id`), the child records of the open record held in the table's field, in order; a row it cannot match keeps only the delete button.
+A table under Related Entities lists the records stored as children of the open record in that field. A record can also carry a copy of its children embedded in its own data, from a nested document or a dataset saved before its children were stored as records of their own; `get_nested_items_for_edit` uses that copy only for a field with no stored child records, as the Excel export does. A copy shown next to the records it duplicates showed values the records no longer held: a renamed Source kept its old name in the Study's table.
+
+Every row has an **Edit** button that opens the record the row stands for in its own form (`_node_id`); a row with no stored record keeps only the delete button.
 
 ### Field notes
 
