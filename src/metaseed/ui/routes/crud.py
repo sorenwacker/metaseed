@@ -22,9 +22,8 @@ from ..helpers import (
     field_errors_from_validation,
     format_missing_required,
     format_validation_errors,
-    materialize_nested_children,
     missing_required_fields,
-    rebuild_nested_items_with_failures,
+    store_children_and_save,
 )
 
 if TYPE_CHECKING:
@@ -213,33 +212,15 @@ def register_entity_crud_routes(
 
         state.update_node(node_id, instance, skip_validation=parent_warning is not None)
 
-        parent_data = instance.model_dump() if hasattr(instance, "model_dump") else {}
-        parent_identifier = parent_data.get("alias") or parent_data.get("unique_id")
-
-        validation_result = materialize_nested_children(
-            state=state,
-            facade=facade,
-            node_id=node_id,
-            entity_type=entity_type,
-            parent_identifier=parent_identifier,
-        )
-
-        rebuild_nested_items_with_failures(
-            state=state,
-            node_id=node_id,
-            helper=helper,
-            facade=facade,
-            failed_items=validation_result.failed_items,
-        )
-
         # Always persist — a draft save is not rejected for incompleteness.
-        from ..datasets import auto_save
-
         # Through the factory the app was composed with, not the ambient one:
         # a host serving several sessions would otherwise read through its own
         # repository and write through a private default.
-        save_error = auto_save(
-            state, getattr(request.app.state, "dataset_factory", None)
+        validation_result, save_error = store_children_and_save(
+            state,
+            facade,
+            node_id,
+            getattr(request.app.state, "dataset_factory", None),
         )
 
         action = form_data.get("_action", "")

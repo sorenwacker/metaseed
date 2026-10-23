@@ -25,6 +25,7 @@ from ..helpers import (
     get_parent_id_fields,
     get_reference_fields,
     get_table_columns,
+    store_children_and_save,
 )
 from ..state import NestedEditContext
 
@@ -33,7 +34,42 @@ if TYPE_CHECKING:
 
     from fastapi import FastAPI
 
+    from metaseed.facade import ProfileFacade
+
     from ..state import AppState
+
+
+def _save_through_the_open_record(
+    state: AppState, facade: ProfileFacade, request: Request
+) -> str | None:
+    """Fold the nested edits into the open record's rows, then store and write.
+
+    A row being edited at depth k lives in the rows of the form at depth k-1,
+    and only the open record's rows (``current_nested_items``) are stored as
+    records, so each level's edits are copied down into the row it belongs to
+    first.
+
+    Returns:
+        The reason the dataset was not written, or None when it was.
+    """
+    if not state.editing_node_id or state.editing_node_id not in state.nodes_by_id:
+        return "no record is open"
+    stack = state.nested_edit_stack
+    for depth in range(len(stack) - 1, -1, -1):
+        ctx = stack[depth]
+        store = stack[depth - 1].nested_items if depth else state.current_nested_items
+        rows = store.get(ctx.field_name, [])
+        if ctx.row_idx < len(rows) and isinstance(rows[ctx.row_idx], dict):
+            for nested_field, nested_values in ctx.nested_items.items():
+                if nested_values:
+                    rows[ctx.row_idx][nested_field] = nested_values
+    _, save_error = store_children_and_save(
+        state,
+        facade,
+        state.editing_node_id,
+        getattr(request.app.state, "dataset_factory", None),
+    )
+    return save_error
 
 
 def _coerce_form_value(value: str, field_type: str | None) -> object | None:
@@ -220,6 +256,11 @@ def register_nested_routes(  # noqa: C901
                     if nested_values:
                         item[nested_field] = nested_values
 
+        # Saving the row's form writes the dataset, as the open record's Save
+        # does; answering "Saved" for a change held only in the session lost
+        # the record when the session ended (#356).
+        save_error = _save_through_the_open_record(state, facade, request)
+
         if go_back:
             if state.nested_edit_stack:
                 state.nested_edit_stack.pop()
@@ -280,6 +321,7 @@ def register_nested_routes(  # noqa: C901
                 "editing_node_id": state.editing_node_id,
                 "breadcrumb": build_breadcrumb(state),
                 "inline_tables": inline_tables,
-                "success_message": "Saved",
+                "success_message": None if save_error else "Saved",
+                "error_message": f"Not saved: {save_error}" if save_error else None,
             },
         )
