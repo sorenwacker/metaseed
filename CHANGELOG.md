@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.68.0 (261023)
+
+### Added
+- **Taxon fields.** A field of type `ontology_term` scoped to `ontologies: [ncbitaxon]` stores the NCBI Taxonomy term chosen by name (`NCBITaxon:3702`). The ENA export writes the NCBI number to `TAXON_ID`, and the SEEK export (FAIR Data Station file and API route) writes the number to an attribute provisioned as `Integer`.
+- Form labels, required and optional, and the headings of the tables under Related Entities show the field's note on hover: description, requirement, type, example, pattern, allowed values and rules. The hover box is `static/js/field-notes.js`, which metaseed-hub loads as well.
+- The open dataset's toolbar (Validate, List, Graph, exports, Import) is a bar under the page header, so the graph can be switched on while a record is open. The form's first crumb, Entities, returns to the dataset.
+- Every row of a table under Related Entities has an Edit button that opens its record.
+- Cells of those tables offer the ontology lookup (Tab or the search button).
+- Typing an identifier in the ontology search (`3702`, `NCBITaxon:3702`, `NCBITaxon_3702` or the OBO IRI) lists that term first.
+- Selecting a heading in an exported workbook shows its note, besides hovering over it. A user guide describes editing a dataset in Excel.
+
+### Fixed
+- A table under Related Entities showed a parent's embedded copy of its children over the stored records, so a renamed record kept its old name there.
+- Long breadcrumbs wrapped onto two lines and broke the record's name.
+
 ## v0.67.0 (261022)
 
 ### Changed
