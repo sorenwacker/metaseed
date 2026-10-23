@@ -50,7 +50,7 @@ them as separate entities; they will be skipped.
 Instead, **move their fields onto the Study** (prefix to avoid clashes:
 `site_country`, `facility_description`, `design_type`). On upload they become the
 Study's **Extended Metadata** in SEEK — which is exactly what they are: extra
-descriptive fields of the study.
+descriptive fields of the study. This needs the Study to name an Extended Metadata Type installed on the SEEK (`seek.extended_metadata`); without one, the fields reach SEEK only in the ISA-JSON export and are marked as such (rule 8).
 
 ### 3. No normalized reference tables
 
@@ -68,9 +68,7 @@ upload. If you need multiple distinct values preserved, give the field an enum.
 
 ### 5. Give every entity an identifier and a label
 
-Mark one field `is_identifier` and one `is_label` (they may be the same field).
-SEEK derives a resource's title from the label; an entity with neither can be
-rejected on upload.
+Mark one field `is_identifier` and one `is_label` (they may be the same field). SEEK derives a resource's title from the label; an entity with neither can be rejected on upload. An Investigation, Study or Assay record has no identifier attribute in SEEK (the `investigationPost`, `studyPost` and `assayPost` schemas of its API), so on those entities the `title` is both: mark it `is_identifier` and `is_label`, and add no separate identifier field. An Assay also needs SEEK's required `assay_class` (`EXP` experimental, `MODEL` modelling) and `assay_type` (a JERM ontology URI); the sync sends the record's values, and an Assay without them is created as an experimental assay of the default type.
 
 ### 6. Protocols are fields; SOPs are out
 
@@ -79,12 +77,22 @@ separate SEEK resource that metaseed does not create**, so do not model a profil
 around them expecting them to sync. They are optional enrichment, not part of a
 clean upload.
 
-### 7. Data files have no role yet
+### 7. Data files are registered by link
 
-Entities that represent files (a raw data file, a results file) map to SEEK data
-files — which metaseed's sync does **not** create. There is no data-file role
-today. Such entities are skipped; keep them out of a profile you need to upload
-completely, or accept that they stay in metaseed only.
+An entity with the `DataFile` role is registered in SEEK as a data file pointing at its location; the file itself stays where it is. See [Publishing to FAIRDOM-SEEK](seek-export.md).
+
+### 8. Mark the fields SEEK has no attribute for
+
+An Investigation, Study or Assay record in SEEK has a fixed set of attributes (title, description; an Assay also `assay_class`, `assay_type` and `technology_type`), plus the attributes of an Extended Metadata Type when the entity names one in `seek.extended_metadata`. Any other field on such an entity reaches SEEK only inside the ISA-JSON export, not as a record attribute. Mark it with `seek_isa_only: true` and say so in its description:
+
+```yaml
+- name: submission_date
+  type: date
+  description: When the metadata was submitted. Carried in the ISA-JSON export only; SEEK's Investigation has no such attribute.
+  seek_isa_only: true
+```
+
+A marked field is left out of the record's Extended Metadata, the SEEK preview lists it as ISA-JSON only, and the shipped profiles are gated: a test fails when the latest version of a profile has an unmarked field on an Investigation, Study or Assay entity that SEEK cannot hold.
 
 ## Checking a profile
 

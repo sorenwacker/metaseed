@@ -116,6 +116,7 @@ class IsaWriter(Protocol):
         title: str,
         study_id: str,
         assay_class_id: int,
+        assay_type_uri: str | None = None,
         assay_stream_id: str | None = None,
         input_sample_type_id: str | None = None,
         sample_type_title: str | None = None,

@@ -172,6 +172,7 @@ def _markers(
     seek_attribute_type: str | None,
     seek_controlled_vocab: str | None,
     seek_cv_free_text: bool | None,
+    seek_isa_only: bool | None,
 ) -> dict[str, Any]:
     """Collect the field markers both field tools accept.
 
@@ -204,6 +205,7 @@ def _markers(
             "seek_attribute_type": seek_attribute_type,
             "seek_controlled_vocab": seek_controlled_vocab,
             "seek_cv_free_text": seek_cv_free_text,
+            "seek_isa_only": seek_isa_only,
         }
     )
 
@@ -458,6 +460,7 @@ def register_spec_builder_tools(  # noqa: C901
         seek_attribute_type: str | None = None,
         seek_controlled_vocab: str | None = None,
         seek_cv_free_text: bool | None = None,
+        seek_isa_only: bool | None = None,
     ) -> str:
         """Add a field. Nested fields auto-create the parent id and back-reference.
 
@@ -470,6 +473,8 @@ def register_spec_builder_tools(  # noqa: C901
         `seek_controlled_vocab` and `seek_cv_free_text` pin the exact SEEK column
         of an entity bound to an installed ISA Template. `isa_tag`
         names the ISA tag the field carries into a SEEK Sample Type attribute.
+        `seek_isa_only` marks a field SEEK's record has no attribute for, so it
+        reaches SEEK only inside the ISA-JSON export.
         """
         markers = _markers(
             codename=codename,
@@ -490,6 +495,7 @@ def register_spec_builder_tools(  # noqa: C901
             seek_attribute_type=seek_attribute_type,
             seek_controlled_vocab=seek_controlled_vocab,
             seek_cv_free_text=seek_cv_free_text,
+            seek_isa_only=seek_isa_only,
         )
         marker_error = validate_marker_values(markers)
         if marker_error:
@@ -566,6 +572,7 @@ def register_spec_builder_tools(  # noqa: C901
         seek_attribute_type: str | None = None,
         seek_controlled_vocab: str | None = None,
         seek_cv_free_text: bool | None = None,
+        seek_isa_only: bool | None = None,
         clear: list[str] | None = None,
     ) -> str:
         """Update a field in place. Unset arguments keep their current value.
@@ -614,6 +621,7 @@ def register_spec_builder_tools(  # noqa: C901
             seek_attribute_type=seek_attribute_type,
             seek_controlled_vocab=seek_controlled_vocab,
             seek_cv_free_text=seek_cv_free_text,
+            seek_isa_only=seek_isa_only,
         )
         # Checked first so the error names the bad argument.
         name_error = validate_constraint_names(clear or ()) or validate_marker_values(

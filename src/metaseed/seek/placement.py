@@ -448,14 +448,20 @@ def _create_assay(
     input_type_id: str | None,
     extended_metadata: tuple[str, dict[str, Any]] | None = None,
     stream_id: str | None = None,
+    assay_kind: tuple[int, str | None] = (ASSAY_CLASS_IDS["EXP"], None),
 ) -> tuple[str, str | None]:
-    """Create one SEEK Assay in a stream (the Study's by default) with its type."""
+    """Create one SEEK Assay in a stream (the Study's by default) with its type.
+
+    ``assay_kind`` is SEEK's assay class id and assay type URI; an Assay record
+    that names neither is experimental, of SEEK's default type.
+    """
     sample_type_title = f"{title} - Sample Type"
     template = template_id_for(ctx, level, entity)
     assay_id = ctx.client.create_isa_assay(
         title=title,
         study_id=study_id,
-        assay_class_id=ASSAY_CLASS_IDS["EXP"],
+        assay_class_id=assay_kind[0],
+        assay_type_uri=assay_kind[1],
         assay_stream_id=stream_id or ctx.study_stream.get(study_id),
         input_sample_type_id=input_type_id,
         sample_type_title=sample_type_title,
@@ -559,6 +565,20 @@ def _reuse_assay(
             last_type_at[level] = owned
 
 
+def assay_kind(values: Mapping[str, Any]) -> tuple[int, str | None]:
+    """SEEK's assay class id and assay type URI for an Assay record.
+
+    Read from the record's ``assay_class`` (``EXP``, ``MODEL``) and
+    ``assay_type`` fields, which SEEK requires of every assay. A record without
+    them -- a profile older than seek-ready-template 4.0 -- is experimental, of
+    SEEK's default type, as every assay was before.
+    """
+    key = str(values.get("assay_class") or "EXP").upper()
+    class_id = ASSAY_CLASS_IDS.get(key, ASSAY_CLASS_IDS["EXP"])
+    assay_type = values.get("assay_type")
+    return class_id, str(assay_type) if assay_type else None
+
+
 def place_assay(
     ctx: SyncContext, node: Any, title: str, study_id: str, values: Mapping[str, Any]
 ) -> str:
@@ -583,6 +603,7 @@ def place_assay(
     entity_names = assay_level_entities_under(ctx, node)
     # The profile Assay's own fields; every SEEK Assay it becomes carries them.
     metadata = extended_metadata_for(ctx, node, values)
+    kind = assay_kind(values)
     if not entity_names:
         assay_id, _ = _create_assay(
             ctx,
@@ -593,6 +614,7 @@ def place_assay(
             "assay",
             collection_id,
             metadata,
+            assay_kind=kind,
         )
     else:
         # SEEK Sample Type id per entity placed so far, so an entity whose
@@ -644,6 +666,7 @@ def place_assay(
                     input_type_id,
                     metadata,
                     stream_id=stream_id,
+                    assay_kind=kind,
                 )
                 if first_id is None:
                     first_id = created_id

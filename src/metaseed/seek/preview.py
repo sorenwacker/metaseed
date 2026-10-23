@@ -20,14 +20,14 @@ from dataclasses import dataclass
 
 from metaseed.seek.isa_types import sample_type_attribute_plans
 from metaseed.seek.provision import build_provisioning_plan
-from metaseed.seek.roles import entity_jerm_class
+from metaseed.seek.roles import SEEK_RECORD_ATTRIBUTES, entity_jerm_class
 from metaseed.seek.templates import (
     LEVEL_ORDER,
     entities_by_level,
     seek_level_for,
     template_title,
 )
-from metaseed.seek.values import CORE_FIELDS as _CORE_FIELDS
+from metaseed.seek.values import is_seek_attribute
 from metaseed.specs.schema import FieldSpec, ProfileSpec
 
 # ISA-native records that carry Extended Metadata rather than becoming Sample
@@ -112,7 +112,8 @@ def _extended_metadata(profile: ProfileSpec) -> list[PreviewExtendedMetadata]:
                 controlled_vocabulary=_field_is_cv(f),
             )
             for f in entity.fields
-            if not f.is_nested() and f.name not in _CORE_FIELDS
+            if is_seek_attribute(f)
+            and f.name not in SEEK_RECORD_ATTRIBUTES.get(jerm, frozenset())
         )
         records.append(
             PreviewExtendedMetadata(role=jerm, entity_type=name, attributes=attributes)

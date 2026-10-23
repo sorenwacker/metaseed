@@ -37,6 +37,23 @@ inferred rather than declared. Any change to either belongs in one review of
 both.
 """
 
+SEEK_RECORD_ATTRIBUTES: dict[str, frozenset[str]] = {
+    "Investigation": frozenset({"title", "description"}),
+    "Study": frozenset({"title", "description"}),
+    "Assay": frozenset(
+        {"title", "description", "assay_class", "assay_type", "technology_type"}
+    ),
+}
+"""The attributes SEEK's own Investigation, Study and Assay records have.
+
+Read from SEEK's API schemas (``investigationPost``, ``studyPost``,
+``assayPost``), leaving out what metaseed sets itself (projects, policy,
+creators, position) and the links between records. None has an identifier: the
+title identifies the record. A field outside this set is not a record attribute;
+it becomes Extended Metadata when the entity names a type for it, and is
+otherwise marked ``seek_isa_only``.
+"""
+
 # metaseed entity type -> (JERM class, URI id-prefix). Only ISA-structural and
 # sample-bearing entities become SEEK/FDS resources; other entities are skipped.
 JERM_CLASSES: dict[str, tuple[str, str]] = {

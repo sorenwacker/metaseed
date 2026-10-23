@@ -234,6 +234,10 @@ class FieldSpec(BaseModel):
         seek_controlled_vocab: Title of the Controlled Vocabulary on the target
             SEEK the column binds, instead of one provisioned from ``enum``.
         seek_cv_free_text: Whether that vocabulary accepts values outside its terms.
+        seek_isa_only: Whether the field reaches SEEK only inside the ISA-JSON
+            export: SEEK's record for the entity has no attribute for it, so the
+            SEEK export leaves it out of the record and its Extended Metadata.
+            See ``docs/guides/seek-ready-profiles.md``.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -271,6 +275,7 @@ class FieldSpec(BaseModel):
     seek_attribute_type: str | None = None
     seek_controlled_vocab: str | None = None
     seek_cv_free_text: bool | None = None
+    seek_isa_only: bool | None = None
 
     @field_validator("isa_tag")
     @classmethod
