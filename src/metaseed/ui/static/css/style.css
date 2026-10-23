@@ -4920,12 +4920,13 @@ details.sidebar-section summary:hover {
     font-size: 0.625rem;
 }
 
+/* The list scrolls with the panel around it. Capped at 400 px as a scroll
+   box of its own, a long entity showed a few fields in a small window and left
+   the rest of the panel blank. */
 .field-diff-list {
     display: flex;
     flex-direction: column;
     gap: var(--space-xs);
-    max-height: 400px;
-    overflow-y: auto;
 }
 
 .field-diff-item {
