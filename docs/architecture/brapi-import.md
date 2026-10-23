@@ -69,9 +69,12 @@ returned under more than one unit is imported once, keyed by `observationDbId`.
 | --- | --- | --- |
 | `studies[].trialDbId` | Investigation | One Investigation per distinct trial; falls back to the `studyDbId` when a study has no trial. |
 | `studies[]` | Study | `studyDbId` → `unique_id`, `trialDbId` → `investigation_id`. |
-| `germplasm[]` | BiologicalMaterial | `germplasmDbId` → `unique_id`; `study_id` from the germplasm's `studyDbIds[0]`; for germplasm fetched per study (a trial or study import) that the server returns without `studyDbIds`, the study it was fetched for; otherwise the first imported study. Germplasm shared by several studies is one BiologicalMaterial under the first. |
+| `studies[].contacts[]` | Person (under the Study) | `name`, `email`, `instituteName` → `institution`, `type` → `role`, `orcid`. |
+| `germplasm[]` | BiologicalMaterial | `germplasmDbId` → `unique_id`. One BiologicalMaterial in each imported study the germplasm's `studyDbIds` names, since MIAPPE places a biological material in a study and its identifier need only be unique there; for germplasm fetched per study (a trial or study import) that the server returns without `studyDbIds`, the study it was fetched for; otherwise the first imported study. |
 | `observationunits[]` | ObservationUnit | Position and level fields flattened from `observationUnitPosition` and `observationLevel`. |
-| `observations[]` | ObservedVariable | Deduplicated by `observationVariableDbId` (see limitation below). |
+| `observationunits[].treatments[]` | Factor, FactorValue | One Factor per study and treatment `factor` (`water_regime`); one FactorValue on the unit holding the `modality`. |
+| `variables[]` (`/variables?studyDbId=`) | ObservedVariable | `trait`, `method` and `scale` with their names, descriptions and ontology accessions, so the variable meets MIAPPE's method and scale rules. |
+| `observations[]` | ObservedVariable | Only for a variable `/variables` did not list: its name, deduplicated by `observationVariableDbId` (see limitation below). |
 | `studies[].dataLinks[]` | DataFile | URL referenced via the `link` field. |
 
 ## Design choices
@@ -101,6 +104,8 @@ returned under more than one unit is imported once, keyed by `observationDbId`.
   the web framework.
 
 ## Limitations
+
+- **A trial's PUI or DOI and the breeding programme are not imported.** MIAPPE 1.2's Investigation has no field for either (its `unique_id` is the trial's `trialDbId`, which the Studies refer to), so they are left out rather than written into a field that means something else.
 
 - **Observations carry no value entity.** MIAPPE 1.2 has no entity for an
   individual measured value, so BrAPI `observations` are reduced to the distinct

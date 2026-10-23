@@ -76,6 +76,21 @@ def parse_address(address: str) -> BrapiAddress:
     return BrapiAddress(address.rstrip("/"))
 
 
+def _study_variables(client: BrapiClient, study_id: str) -> list[dict[str, Any]]:
+    """The variable definitions one study uses, each naming that study.
+
+    A server without the ``variables`` endpoint gives none, and each variable
+    stays as its observations name it.
+    """
+    from metaseed.brapi.client import BrapiEndpointError
+
+    try:
+        found = client.variables(study_id)
+    except BrapiEndpointError:
+        return []
+    return [{**variable, "studyDbIds": [study_id]} for variable in found]
+
+
 #: BrAPI resources an address may name below the base URL.
 _RESOURCES = frozenset(
     {"trials", "studies", "germplasm", "observationunits", "observations", "programs"}
@@ -141,6 +156,7 @@ def import_brapi(
     observations: list[dict[str, Any]] = []
     germplasm: list[dict[str, Any]] = []
     seen_germplasm: set[str] = set()
+    variables: list[dict[str, Any]] = []
     for study_id in study_ids:
         units = client.observation_units(study_id)
         observation_units.extend(units)
@@ -174,6 +190,7 @@ def import_brapi(
                     continue
                 seen_observations.add(key)
             observations.append(observation)
+        variables.extend(_study_variables(client, study_id))
         if scoped:
             # The germplasm of these studies, not of the whole server; a study
             # may share accessions with the one before it.
@@ -192,5 +209,10 @@ def import_brapi(
         germplasm = client.germplasm()
 
     return build_dataset(
-        studies, observation_units, observations, germplasm, version=version
+        studies,
+        observation_units,
+        observations,
+        germplasm,
+        variables=variables,
+        version=version,
     )
