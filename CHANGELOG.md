@@ -1,5 +1,25 @@
 # Changelog
 
+## v0.69.0 (261026)
+
+### Added
+- **seek-ready-template 4.0** (breaking against 3.0). Investigation, Study and Assay carry SEEK's own record fields: no `identifier` (the title identifies the record), and an Assay has `description`, `assay_class` and `assay_type`, which the sync sends. Fields SEEK has no attribute for are marked `seek_isa_only` and reach SEEK only inside the ISA-JSON export; a test fails when the latest version of a shipped profile has an unmarked one.
+- **SOP role** for the SEEK export: an SOP is registered by its document's location, linked to the Assay above it, and reused by title on a second push. A location SEEK cannot reach is reported with the link named.
+- The BrAPI import keeps a study's contacts (Persons), units' treatments (a Factor with FactorValues), each variable's trait, method and scale (from `/variables`), and germplasm shared by several studies in each of them.
+- A dataset load reports `skipped_count` and a status (`loaded`, `partially_loaded`, `not_loaded`) in the MCP tool and the API, and the dataset page warns when entities could not be loaded.
+
+### Changed
+- MIAPPE `DataFile.link` accepts a path relative to the submission besides an `http`, `https`, `s3` or `ftp` URL; an absolute local path is still refused.
+- Unticking a type in the graph legend hides its nodes and takes them out of the layout instead of redrawing the graph; the rest stay where they are.
+
+### Fixed
+- Saving a row's own form answered "Saved" without writing the dataset, so a record added that way was gone at the next session.
+- A row added with **+ Add** lacked the ontology lookup and the Edit button; table rows now come from one template.
+- Graph nodes and their legend entries could show different symbols.
+- The explorer's field list scrolled in a 400 px box of its own and left the panel below it blank.
+- A pattern on a list of strings crashed the first entity created; it now applies to each item, and on a list of other items it is refused when the profile is read.
+- A FAIDARE unit with a one-level `levelOrder` (`PLANT`) took its number as its type.
+
 ## v0.68.0 (261023)
 
 ### Added
