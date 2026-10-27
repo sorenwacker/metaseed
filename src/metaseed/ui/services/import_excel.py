@@ -23,6 +23,8 @@ downstream can tell it is missing.
 
 from __future__ import annotations
 
+import datetime as dt
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from io import BytesIO
 from typing import TYPE_CHECKING, Any
@@ -69,6 +71,41 @@ def _is_placeholder(value: str) -> bool:
         and "<" not in text[1:-1]
         and ">" not in text[1:-1]
     )
+
+
+def _boolean(value: str) -> bool:
+    """Read the text the export writes for a boolean, or Excel's own spelling."""
+    lowered = value.strip().lower()
+    if lowered in {"true", "yes", "1"}:
+        return True
+    if lowered in {"false", "no", "0"}:
+        return False
+    raise ValueError(value)
+
+
+#: How the text of a cell becomes the type its field declares.
+_CONVERTERS: dict[FieldType, Callable[[str], Any]] = {
+    FieldType.INTEGER: lambda v: int(v.strip()),
+    FieldType.FLOAT: lambda v: float(v.strip()),
+    FieldType.BOOLEAN: _boolean,
+    FieldType.DATE: lambda v: dt.date.fromisoformat(v.strip()[:10]),
+    FieldType.DATETIME: lambda v: dt.datetime.fromisoformat(v.strip()),
+}
+
+
+def _as_declared(value: str, spec_field: Any) -> Any:
+    """The cell's text as its field's declared type, or the text when it does not convert.
+
+    Keeping the text leaves what the person wrote for validation to report,
+    rather than discarding it to satisfy the type.
+    """
+    convert = _CONVERTERS.get(spec_field.type) if spec_field is not None else None
+    if convert is None:
+        return value
+    try:
+        return convert(value)
+    except ValueError:
+        return value
 
 
 def _unescape_formula(value: str) -> str:
@@ -134,7 +171,7 @@ class _Reading:
                 elif column in scalar_lists:
                     data[column] = [v.strip() for v in value.split(",") if v.strip()]
                 elif column not in nested:
-                    data[column] = value
+                    data[column] = _as_declared(value, fields.get(column))
             if len(data) > 1:  # a row of empties is not an entity
                 self.entities.append(data)
                 if identifier_field and data.get(identifier_field):

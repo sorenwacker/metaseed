@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- **An Excel import reads a typed field as its declared type.** Every cell came back as text, so `taxon_id` held `'4577'` instead of `4577`, and a date field held a string. Integer, float, boolean, date and datetime cells are now converted; a value that does not convert, such as `n/a`, keeps the text written and validation reports it.
+
 ## v0.69.0 (261026)
 
 ### Added
