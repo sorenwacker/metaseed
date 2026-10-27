@@ -58,6 +58,7 @@ must not be reimplemented:
   written into a field meant to hold children puts the string `'0'` where a list
   belongs. The tree is rebuilt from the sheets and from **Belongs to**, so the column
   has nothing to contribute on the way back.
+- **A typed field is read back as its declared type.** The export writes every cell as text, but a profile declares fields such as `taxon_id` an integer, `insert_size_stddev` a float and `run_date` a date. Kept as text, each would hold a string where its type says otherwise, which the dataset stores without complaint. Each cell is converted to the type the specification declares for its field: `integer`, `float`, `boolean`, `date` and `datetime`. A value that does not convert, such as `n/a` in an integer field, keeps the text the person wrote, and validating the dataset reports it, so nothing typed into the workbook is discarded and no workbook that imports today stops importing.
 - **Scalar lists are split** on the separator the export joined them with.
 - **Formula-escaped cells are unescaped**, or a round trip changes the data.
 - **`Belongs to` becomes `_parent_unique_id` and `_parent_field`**: `Study: STU-1` is read as identifier `STU-1` and the one field of Study that holds the row, `persons` on the Person sheet; `Catalog.creator: CAT-1` names the field itself. A legacy `_parent` cell becomes `_parent_unique_id` alone.
