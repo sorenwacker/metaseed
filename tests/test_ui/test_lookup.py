@@ -58,8 +58,7 @@ class TestGetReferenceFields:
     def test_entity_without_references_returns_empty(self):
         """Entity without reference fields returns empty dict."""
         ref_fields = get_reference_fields("miappe", "1.1", "Investigation")
-        # Investigation doesn't have reference fields
-        assert isinstance(ref_fields, dict)
+        assert ref_fields == {}
 
     def test_invalid_profile_returns_empty(self):
         """Invalid profile returns empty dict without error."""

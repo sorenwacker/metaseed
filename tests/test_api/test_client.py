@@ -539,8 +539,8 @@ class TestValidation:
 
         result = client.validate_entity(entity.id)
         assert isinstance(result, ValidationResult)
-        # Validation should return issues (studies/contacts required) or pass
-        assert isinstance(result.issues, list)
+        assert not result.valid
+        assert {i.field for i in result.issues} == {"studies", "contacts"}
 
     def test_validate_entity_by_id_counts_children_for_cardinality(
         self, client: MetaseedClient
@@ -918,8 +918,8 @@ class TestSkipValidation:
         )
 
         result = client.validate_entity(entity.id)
-        # Should have validation issues since required fields are missing
-        assert isinstance(result, ValidationResult)
+        assert not result.valid
+        assert "unique_id" in {i.field for i in result.issues}
 
 
 class TestEntityObject:

@@ -77,8 +77,10 @@ class TestSpecMerger:
             output_name="test",
         )
 
-        # Should have some warnings about added/modified fields
-        assert isinstance(result.warnings, list)
+        assert any(
+            w.resolution_applied == "first_wins" and w.field_name
+            for w in result.warnings
+        )
 
     def test_merge_to_yaml(self, merger: SpecMerger) -> None:
         """Merged result can export to YAML."""
@@ -117,8 +119,8 @@ class TestMergeFunction:
             output_name="test",
         )
 
-        assert result is not None
-        assert result.merged_profile is not None
+        assert result.merged_profile.name == "test"
+        assert "Investigation" in result.merged_profile.entities
 
     def test_merge_with_different_strategies(self) -> None:
         """Test merge with different strategies."""
@@ -180,8 +182,8 @@ class TestMergeResult:
             output_name="test",
         )
 
-        # Property should be accessible
-        assert isinstance(result.has_unresolved_conflicts, bool)
+        # first_wins resolves every conflict it meets
+        assert result.has_unresolved_conflicts is False
 
     def test_merge_preserves_root_entity(self) -> None:
         """Merged profile preserves root entity."""

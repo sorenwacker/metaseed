@@ -323,9 +323,9 @@ class TestFieldDiff:
 
     def test_conflicting_fields_identified(self, comparison) -> None:
         """Conflicting fields are identified."""
-        conflicts = comparison.conflicting_fields
-        # May or may not have conflicts depending on profiles
-        assert isinstance(conflicts, list)
+        names = {f.field_name for f in comparison.conflicting_fields}
+        # miappe/1.1 and isa/1.0 both define these with different attributes
+        assert {"title", "factors"} <= names
 
 
 class TestEveryFieldAttributeIsCompared:
