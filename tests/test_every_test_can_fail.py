@@ -51,7 +51,8 @@ def _checks(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
                 if isinstance(func, ast.Attribute)
                 else getattr(func, "id", "")
             )
-            if name in _CHECKING_CALLS:
+            # A mock's assert_called_with, assert_not_awaited, ...
+            if name in _CHECKING_CALLS or name.startswith("assert_"):
                 return True
     return False
 
