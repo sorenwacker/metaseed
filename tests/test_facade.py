@@ -140,9 +140,8 @@ class TestProfileFacade:
         """Use latest version when not specified."""
         facade = ProfileFacade("miappe")
 
-        # Should use latest version without raising
-        assert facade.version is not None
-        assert len(facade.entities) > 0
+        assert facade.version == "1.2"
+        assert "Investigation" in facade.entities
 
 
 class TestEntityHelper:
@@ -178,9 +177,8 @@ class TestEntityHelper:
         """Get optional fields."""
         optional = investigation_helper.optional_fields
 
-        assert isinstance(optional, list)
-        # Description should be optional
-        assert len(optional) > 0
+        assert "description" in optional
+        assert "unique_id" not in optional
 
     def test_all_fields(self, investigation_helper: EntityHelper) -> None:
         """Get all fields."""
@@ -439,7 +437,8 @@ class TestEntityHelperOutput:
         """example_data property returns example values."""
         data = miappe_facade.Investigation.example_data
 
-        assert isinstance(data, dict)
+        assert data["unique_id"]
+        assert data["title"]
 
     def test_field_info_with_constraints(self, miappe_facade: ProfileFacade) -> None:
         """field_info includes constraints when present."""

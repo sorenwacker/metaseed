@@ -302,8 +302,13 @@ class _FakeSeek:
 
 
 def test_the_fake_satisfies_the_port_the_sync_depends_on() -> None:
-    writer: IsaWriter = _FakeSeek()
-    assert writer is not None
+    # mypy checks src/ only, so the annotation alone would prove nothing here.
+    missing = [
+        name
+        for name in IsaWriter.__protocol_attrs__  # type: ignore[attr-defined]
+        if not callable(getattr(_FakeSeek, name, None))
+    ]
+    assert not missing, missing
 
 
 def _dataset(*, assays: int = 1, materials_per_assay: int = 1) -> MetaseedClient:

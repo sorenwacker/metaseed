@@ -82,9 +82,9 @@ class TestProfileFactoryInfo:
 
     def test_get_profile_info_returns_list(self, factory: ProfileFactory) -> None:
         """get_profile_info returns list of dicts."""
-        info = factory.get_profile_info()
-        assert isinstance(info, list)
-        assert len(info) > 0
+        info = {p["name"]: p for p in factory.get_profile_info()}
+        assert info["miappe"]["versions"] == ["1.1", "1.2"]
+        assert info["miappe"]["latest"] == "1.2"
 
     def test_get_profile_info_has_required_keys(self, factory: ProfileFactory) -> None:
         """Each profile info dict has required keys."""
@@ -150,11 +150,6 @@ class TestProfileFactoryDefault:
     def factory(self) -> ProfileFactory:
         """Create ProfileFactory instance."""
         return ProfileFactory()
-
-    def test_get_default_profile_returns_string(self, factory: ProfileFactory) -> None:
-        """get_default_profile returns a string."""
-        default = factory.get_default_profile()
-        assert isinstance(default, str)
 
     def test_get_default_profile_is_valid(self, factory: ProfileFactory) -> None:
         """get_default_profile returns a valid profile name."""

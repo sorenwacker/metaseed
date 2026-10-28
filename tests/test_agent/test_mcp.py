@@ -60,7 +60,7 @@ class TestMCPServer:
         result = list_profiles_fn()
         data = json.loads(result)
 
-        assert isinstance(data, list)
+        assert "miappe" in {p["name"] for p in data}
         # Should have at least MIAPPE if tests are running with specs
         # This may be empty in a minimal test environment
 

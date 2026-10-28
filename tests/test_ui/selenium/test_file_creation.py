@@ -224,57 +224,6 @@ def get_all_entity_types_in_tree(driver) -> list[str]:
     return types
 
 
-def navigate_to_entity_form(driver, entity_type: str, label: str):
-    """Navigate to an entity form, handling nested tree structures.
-
-    This function will try to find the entity in the tree. If not directly
-    visible, it will look for it as a nested child.
-    """
-    try:
-        click_entity_in_tree(driver, entity_type, label)
-    except ValueError:
-        # Entity might be nested - get all visible types for debugging
-        visible_types = get_all_entity_types_in_tree(driver)
-        raise ValueError(
-            f"Entity {entity_type} - {label} not found in tree. Visible types: {visible_types}"
-        ) from None
-
-
-def create_ena_dataset_with_run(browser, dataset_name: str):
-    """Create a new ENA dataset with Study, Sample, Experiment, and Run.
-
-    This helper creates a minimal ENA dataset structure to test File creation.
-    """
-    # Navigate to home
-    browser.get(BASE_URL)
-    time.sleep(1)
-
-    # Click New Dataset
-    click_button(browser, "btn-new-dataset")
-    time.sleep(CLICK_DELAY)
-
-    # Fill dataset name
-
-    # Select ENA profile
-    click_button(browser, "profile-ena-v1.0")
-    fill_field(browser, "new-dataset-name", dataset_name)
-    click_button(browser, "btn-create-dataset")
-    time.sleep(1)
-
-    # Fill Study form (root entity for ENA)
-    fill_field(browser, "input-alias", "test-study-001")
-    fill_field(browser, "input-title", "Test Study for Selenium")
-    fill_field(browser, "input-description", "A test study")
-
-    # Create the Study
-    click_button(browser, "btn-create")
-    time.sleep(1)
-
-    # Save and go back to tree
-    click_button(browser, "btn-save-back")
-    time.sleep(1)
-
-
 @pytest.mark.ui
 class TestFileCreationWorkflow:
     """Test creating File entities via the inline table in Run forms."""
@@ -545,42 +494,6 @@ class TestFileCreationWithSimpleDataset:
         # The Study should be in the tree
         study_count = get_entity_count_in_tree(browser, "Study")
         assert study_count > 0, "Study should appear in tree"
-
-    def test_file_validation_errors(self, browser):
-        """Test that validation errors are shown when required File fields are missing."""
-        loaded = load_dataset(browser, "prjda51199")
-        if not loaded or get_entity_count_in_tree(browser, "Run") == 0:
-            pytest.skip("Could not load dataset with Run entities")
-
-        # Navigate to a Run
-        click_entity_in_tree(browser, "Run", "DRR000618")
-        time.sleep(1)
-
-        # Add a new file row
-        add_inline_row(browser, "files")
-        time.sleep(CLICK_DELAY)
-
-        # Get the new row index
-        files_table = browser.find_element(By.CSS_SELECTOR, "#inline-table-body-files")
-        rows = files_table.find_elements(By.TAG_NAME, "tr")
-        new_row_idx = len(rows) - 1
-
-        # Only fill filename, leave other required fields empty
-        fill_inline_cell(
-            browser, "files", new_row_idx, "filename", "incomplete_file.fastq.gz"
-        )
-
-        # Try to save
-        click_button(browser, "btn-update")
-        time.sleep(1)
-
-        # Check for validation error message
-        page_text = browser.find_element(By.TAG_NAME, "body").text.lower()
-        # Should have some indication of missing fields or validation error
-        # Note: The test documents expected behavior - validation should catch missing fields
-        _has_error = (
-            "error" in page_text or "missing" in page_text or "required" in page_text
-        )
 
 
 @pytest.mark.ui

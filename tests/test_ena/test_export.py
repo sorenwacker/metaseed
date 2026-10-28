@@ -71,13 +71,6 @@ def test_runs_reference_files_with_checksums():
     assert all(f.get("checksum_method") == "MD5" for f in files)
 
 
-def test_roundtrip_import_then_export_is_well_formed():
-    # import (mapper) -> export (xml) must round-trip without error
-    docs = to_ena_xml(_dataset())
-    for xml in docs.values():
-        ET.fromstring(xml)  # no exception
-
-
 @pytest.mark.network
 def test_ena_export_validates_against_official_sra_xsd():
     """The exported XML conforms to ENA's official SRA schemas (would be

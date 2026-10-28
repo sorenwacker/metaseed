@@ -66,6 +66,10 @@ that a passing suite failed to catch (see issue #139 and its follow-ups).
   certified a header-only MetaboLights export as valid, and an importer produced
   zero samples under a passing test.
 - For adapters and validators, assert on content, not on existence or counts.
+- A test that is always skipped, has an empty body or checks nothing is deleted, not
+  kept. `tests/test_every_test_can_fail.py` fails on an unconditional
+  `pytest.mark.skip` and on a test with no `assert`, `raise` or `pytest.raises`/
+  `warns`/`fail`; a test that checks through a helper is listed there by name.
 - Do not record a bug or review finding without a runnable reproduction. An
   unreproducible finding is a hypothesis.
 

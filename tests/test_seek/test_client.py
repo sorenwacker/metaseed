@@ -358,8 +358,13 @@ def test_seek_client_satisfies_the_isa_writer_port():
     """
     from metaseed.seek.ports import IsaWriter
 
-    writer: IsaWriter = SeekClient("http://seek.test", token="t")  # noqa: S106
-    assert writer is not None
+    # mypy checks src/ only, so an annotation alone would prove nothing here.
+    missing = [
+        name
+        for name in IsaWriter.__protocol_attrs__  # type: ignore[attr-defined]
+        if not callable(getattr(SeekClient, name, None))
+    ]
+    assert not missing, missing
 
 
 def test_every_send_path_carries_the_api_token():

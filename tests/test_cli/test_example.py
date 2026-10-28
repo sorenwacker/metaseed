@@ -111,8 +111,7 @@ class TestExportExampleToExcel:
         _export_investigation_example_to_excel(miappe_example_data, output_path)
 
         wb = load_workbook(output_path)
-        # At minimum should have Investigation and Study
-        assert len(wb.sheetnames) >= 2
+        assert {"Investigation", "Study"} <= set(wb.sheetnames)
 
 
 class TestExportExampleCommand:
