@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.71.0 (261029)
 
 ### Changed
 - **The hierarchical graph layout is the containment tree.** Each record sits one row below the record that holds it, and a subtree keeps its own columns; reference edges are drawn over the tree instead of deciding where a node goes, which pulled referenced records out of their branch.
