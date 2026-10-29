@@ -38,6 +38,10 @@ loadGraph();
 
 `loadGraph()` reads `window.METASEED_GRAPH_URL` **at call time**, so a host can set or change it after the script has loaded. `loadGraph(url)` takes an explicit URL, which wins over the global. With neither, it falls back to metaseed's own `BASE_URL + '/api/graph'`, which is what metaseed's UI uses.
 
+## The hierarchical layout
+
+**Hierarchical** lays the dataset out as its containment tree: the root at the top, each record one row below the record that holds it, and the records a parent holds side by side beneath it, so a subtree occupies its own columns. Only parent-child edges place a node. Reference edges (the dashed ones, such as a sample's link to its source) are drawn over the finished tree and do not move anything: a reference crosses between branches, and laying out by every edge pulled referenced nodes out of their subtree. A poll that adds or removes a record lays the tree out again; one that changes nothing leaves it in place.
+
 ## Drawing on a plain page load
 
 When the page contains `graph-view` at load time, the script draws once on `DOMContentLoaded` by itself — a host that sets `window.METASEED_GRAPH_URL` before loading the file needs no init call.
