@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Changed
+- **The hierarchical graph layout is the containment tree.** Each record sits one row below the record that holds it, and a subtree keeps its own columns; reference edges are drawn over the tree instead of deciding where a node goes, which pulled referenced records out of their branch.
+
 ### Fixed
 - **A dataset whose profile version is not installed says so.** Opening one answered with a server error, after clearing the dataset already open, and the graph poll failed from then on. The datasets page now names the profile and version the dataset needs and the installed versions, and the open dataset stays open.
 - **The graph no longer redraws part of a dataset every two seconds.** Records stored with the same id, as a record copied into a second parent is, were given a new random id on every load, and the graph reloads on every poll, so it removed and redrew them each time. The repeat now takes a counted suffix (`<id>-2`), the same on every load.

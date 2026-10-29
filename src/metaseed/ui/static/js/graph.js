@@ -154,17 +154,10 @@ function getGraphOptions(layout) {
     };
 
     if (layout === 'hierarchical') {
+        // Positions come from applyTreeLayout, not from vis.js: its directed
+        // sort ranks nodes by every edge, references included.
         return Object.assign({}, baseOptions, {
-            layout: {
-                hierarchical: {
-                    enabled: true,
-                    direction: 'UD',
-                    sortMethod: 'directed',
-                    levelSeparation: 120,
-                    nodeSpacing: 180,
-                    treeSpacing: 200
-                }
-            },
+            layout: { hierarchical: { enabled: false } },
             physics: { enabled: false }
         });
     } else {
@@ -454,6 +447,9 @@ function updateGraphIncremental(newNodes, newEdges) {
         }
     }
 
+    // Added or removed records change the tree; reference edges alone do not
+    // move anything, but laying out again is cheap and keeps one rule.
+    applyTreeLayout();
     return true;
 }
 
@@ -558,6 +554,48 @@ function loadGraph(url) {
         });
 }
 
+// The hierarchical layout, documented in docs/guides/embedding-the-graph.md:
+// the containment tree alone places a node, one row per depth, a parent above
+// the middle of what it holds. Reference edges (dashes) are drawn over it.
+var TREE_ROW = 120;
+var TREE_COLUMN = 180;
+
+function treePositions(nodes, edges) {
+    var children = {};
+    var hasParent = {};
+    edges.forEach(function(e) {
+        if (e.dashes) return;
+        (children[e.from] = children[e.from] || []).push(e.to);
+        hasParent[e.to] = true;
+    });
+    var positions = {};
+    var column = 0;
+    function place(id, depth) {
+        var kids = children[id] || [];
+        kids.forEach(function(kid) { place(kid, depth + 1); });
+        var x = kids.length
+            ? (positions[kids[0]].x + positions[kids[kids.length - 1]].x) / 2
+            : (column++) * TREE_COLUMN;
+        positions[id] = { x: x, y: depth * TREE_ROW };
+    }
+    nodes.forEach(function(n) {
+        if (!hasParent[n.id] && !positions[n.id]) {
+            place(n.id, 0);
+            column += 1;  // a gap between separate trees
+        }
+    });
+    return positions;
+}
+
+function applyTreeLayout() {
+    if (!graphNetwork || !graphData || currentGraphLayout !== 'hierarchical') return;
+    var positions = treePositions(graphData.nodes.get(), graphData.edges.get());
+    graphData.nodes.update(Object.keys(positions).map(function(id) {
+        return { id: id, x: positions[id].x, y: positions[id].y };
+    }));
+    graphNetwork.fit();
+}
+
 function renderGraph(data) {
     var container = document.getElementById('graph-view');
     if (!container) return;
@@ -571,6 +609,7 @@ function renderGraph(data) {
     };
 
     graphNetwork = new vis.Network(container, graphData, getGraphOptions(currentGraphLayout));
+    applyTreeLayout();
 }
 
 function renderGraphLegend(data) {
@@ -681,6 +720,7 @@ function toggleGraphLayout() {
     if (graphNetwork && graphData) {
         var container = document.getElementById('graph-view');
         graphNetwork = new vis.Network(container, graphData, getGraphOptions(currentGraphLayout));
+        applyTreeLayout();
     }
 }
 
