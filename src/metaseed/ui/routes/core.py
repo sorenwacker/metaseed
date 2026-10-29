@@ -6,7 +6,6 @@ Provides the main page, profile switching, and shared helper functions.
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
-from urllib.parse import quote
 
 from fastapi import HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -177,6 +176,10 @@ def register_core_routes(
     @app.get("/", response_class=HTMLResponse)
     async def index(request: Request) -> HTMLResponse:
         """Render the datasets list page."""
+        return _datasets_page(request, profile_missing=None)
+
+    def _datasets_page(request: Request, profile_missing: str | None) -> HTMLResponse:
+        """The datasets list, with a notice when a dataset could not be opened."""
         state = get_state()
         manager = resolve_dataset_manager(app, state)
         datasets = manager.list_datasets()
@@ -198,9 +201,6 @@ def register_core_routes(
         except ValueError:
             page = 1
         shown = matching[(page - 1) * DATASETS_PER_PAGE : page * DATASETS_PER_PAGE]
-        profile_missing = _missing_profile(
-            datasets, request.query_params.get("missing")
-        )
 
         return templates.TemplateResponse(
             request,
@@ -231,20 +231,19 @@ def register_core_routes(
             },
         )
 
-    @app.get("/dataset/{name}/edit", response_class=HTMLResponse, response_model=None)
-    async def edit_dataset(
-        request: Request, name: str
-    ) -> HTMLResponse | RedirectResponse:
+    @app.get("/dataset/{name}/edit", response_class=HTMLResponse)
+    async def edit_dataset(request: Request, name: str) -> HTMLResponse:
         """Edit a specific dataset."""
         state = get_state()
         manager = resolve_dataset_manager(app, state)
 
-        if manager.current_dataset != name and _missing_profile(
+        missing = manager.current_dataset != name and _missing_profile(
             manager.list_datasets(), name
-        ):
-            return RedirectResponse(
-                url=f"{base_url}/?missing={quote(name)}", status_code=303
-            )
+        )
+        if missing:
+            # Rendered, not redirected: the dataset already open stays open,
+            # and nothing from the request goes into a URL.
+            return _datasets_page(request, profile_missing=missing)
         load_warning = (
             _open_dataset(manager, state, name)
             if manager.current_dataset != name
