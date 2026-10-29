@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- **The graph no longer redraws part of a dataset every two seconds.** Records stored with the same id, as a record copied into a second parent is, were given a new random id on every load, and the graph reloads on every poll, so it removed and redrew them each time. The repeat now takes a counted suffix (`<id>-2`), the same on every load.
+
 ## v0.70.0 (261027)
 
 ### Fixed

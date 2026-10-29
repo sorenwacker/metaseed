@@ -731,13 +731,19 @@ class EntityStore:
             # for entities that have neither. Never reuse an id already in use:
             # entities that collide on the same value must stay distinct nodes
             # rather than overwriting each other and silently disappearing.
+            # The repeat takes a suffix counting it, not a random id: it
+            # depends only on the file's order, so it is the same on every
+            # load, and the graph does not redraw the node on every poll.
             id_field = helper.identifier_field
             entity_id = fields.get(id_field) if id_field else None
-            node_id = old_node_id or (
+            base_id = old_node_id or (
                 str(entity_id) if entity_id else _generate_node_id()
             )
+            node_id = base_id
+            repeat = 1
             while node_id in self._instances:
-                node_id = _generate_node_id()
+                repeat += 1
+                node_id = f"{base_id}-{repeat}"
 
             node = EntityNode(
                 id=node_id,

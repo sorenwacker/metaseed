@@ -199,6 +199,10 @@ repo._save()  # Write to file
 repo.reload()  # Read from file
 ```
 
+### A node keeps its id across reloads
+
+The web interface's graph reloads the dataset from disk on every poll, every two seconds, and matches nodes by id; a node whose id changes is removed and drawn again, so the graph jumps. Each entity therefore keeps the `_node_id` stored with it. Two entities stored with the same `_node_id` (a record copied into a second parent keeps the copy's id) must still become two nodes, so the second takes the stored id with a suffix counting the repeat, `<id>-2`, then `<id>-3`. The suffix depends only on the order of the file, so it is the same on every load; a random id here gave the duplicates a new identity on every poll.
+
 ## When the file cannot be read
 
 `FileEntityRepository` reads the dataset file when it is constructed. A read that fails — a truncated file, a permission error, a half-written save — leaves the repository with no entities, which is indistinguishable from a dataset that is genuinely empty. Writing that state back would replace the user's records with nothing, so the repository does not:
