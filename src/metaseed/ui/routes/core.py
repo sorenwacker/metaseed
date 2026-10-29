@@ -108,6 +108,55 @@ def profile_select_context(base_url: str) -> dict[str, Any]:
     }
 
 
+def _open_dataset(manager: Any, state: Any, name: str) -> str | None:
+    """Load dataset ``name`` as the open one; the warning a lossy load earns.
+
+    Raises:
+        HTTPException: 404 when no dataset has that name.
+    """
+    try:
+        loaded = manager.load_dataset(name)
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=404, detail=f"Dataset not found: {name}"
+        ) from None
+    from ..datasets import set_current_dataset_name
+
+    set_current_dataset_name(state, name)
+    state.editing_node_id = None
+    if not loaded.skipped_count:
+        return None
+    total = loaded.entity_count + loaded.skipped_count
+    return (
+        f"{loaded.skipped_count} of {total} entities could not be "
+        "loaded: their type is not in the profile or their values "
+        "do not fit it."
+    )
+
+
+def _missing_profile(datasets: list[Any], name: str | None) -> str | None:
+    """Why dataset ``name`` cannot be opened here, or None if it can.
+
+    Checked before loading: a load clears the open dataset first and only then
+    fails on the absent specification.
+    """
+    info = next((d for d in datasets if d.name == name), None)
+    if info is None or not info.version:
+        return None
+    profile, version = info.profile, info.version
+    try:
+        installed = SpecLoader(profile=profile).list_versions(profile)
+    except SpecLoadError:
+        installed = []
+    if version in installed:
+        return None
+    have = ", ".join(installed) if installed else "none"
+    return (
+        f"{name} uses the profile {profile} {version}, which is not installed here. "
+        f"Installed versions of {profile}: {have}."
+    )
+
+
 def register_core_routes(
     app: FastAPI,
     templates: Jinja2Templates,
@@ -127,6 +176,10 @@ def register_core_routes(
     @app.get("/", response_class=HTMLResponse)
     async def index(request: Request) -> HTMLResponse:
         """Render the datasets list page."""
+        return _datasets_page(request, profile_missing=None)
+
+    def _datasets_page(request: Request, profile_missing: str | None) -> HTMLResponse:
+        """The datasets list, with a notice when a dataset could not be opened."""
         state = get_state()
         manager = resolve_dataset_manager(app, state)
         datasets = manager.list_datasets()
@@ -166,6 +219,7 @@ def register_core_routes(
                     for d in shown
                 ],
                 "has_datasets": bool(datasets),
+                "profile_missing": profile_missing,
                 "query": query,
                 "page": page,
                 "pages": pages,
@@ -183,25 +237,18 @@ def register_core_routes(
         state = get_state()
         manager = resolve_dataset_manager(app, state)
 
-        load_warning = None
-        if manager.current_dataset != name:
-            try:
-                loaded = manager.load_dataset(name)
-                if loaded.skipped_count:
-                    total = loaded.entity_count + loaded.skipped_count
-                    load_warning = (
-                        f"{loaded.skipped_count} of {total} entities could not be "
-                        "loaded: their type is not in the profile or their values "
-                        "do not fit it."
-                    )
-                from ..datasets import set_current_dataset_name
-
-                set_current_dataset_name(state, name)
-                state.editing_node_id = None
-            except FileNotFoundError:
-                raise HTTPException(
-                    status_code=404, detail=f"Dataset not found: {name}"
-                ) from None
+        missing = manager.current_dataset != name and _missing_profile(
+            manager.list_datasets(), name
+        )
+        if missing:
+            # Rendered, not redirected: the dataset already open stays open,
+            # and nothing from the request goes into a URL.
+            return _datasets_page(request, profile_missing=missing)
+        load_warning = (
+            _open_dataset(manager, state, name)
+            if manager.current_dataset != name
+            else None
+        )
 
         from .import_export import (
             export_options_for_profile,

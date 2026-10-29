@@ -86,6 +86,8 @@ class DatasetInfo:
 
 A load returns a `DatasetInfo` whose `entity_count` is the number of entities it built and whose `skipped_count` is the number in the file it could not build: one with no `_type`, a type the profile lacks, or values the entity cannot be constructed from. Each is logged with the reason. `load_status` reads the two counts: `loaded` when nothing was skipped, `partially_loaded` when some entities were, and `not_loaded` when the file held entities and none loaded. The MCP `load_dataset` tool and `POST /api/datasets/load` answer with that status, and the dataset page shows a warning naming the count, so a load that lost entities is not reported as a success (#348).
 
+A dataset whose profile version is not installed cannot be built at all: the specification that defines its entities is absent. A dataset is portable, and its file names a profile a user-defined specification provides, so this happens when a dataset arrives from another machine or its specification was removed. Opening it from the web interface does not load it: the state of the dataset already open is left as it was, and the datasets page says which profile and version the dataset needs and which versions of that profile are installed (`data-testid="dataset-profile-missing"`). Loading first and failing on the specification left the previous dataset cleared and answered with a server error, which every graph poll then repeated.
+
 ### DatasetData
 
 Full dataset contents for save/load:

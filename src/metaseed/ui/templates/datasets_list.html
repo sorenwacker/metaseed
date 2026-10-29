@@ -1,4 +1,7 @@
 <div class="datasets-page" id="datasets-page">
+    {% if profile_missing %}
+    <div class="notification notification-warning mb-4" data-testid="dataset-profile-missing">{{ profile_missing }}</div>
+    {% endif %}
     <div class="datasets-header">
         <div class="datasets-title">
             <h2>Datasets</h2>
