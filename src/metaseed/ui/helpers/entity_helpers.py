@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from metaseed.facade import ProfileFacade
-    from metaseed.ui.state import AppState
+    from metaseed.ui.state import AppState, NestedEditContext
 
 
 def to_dict(item: Any, exclude_none: bool = True) -> dict[str, Any] | None:
@@ -215,6 +215,107 @@ def get_nested_items_for_edit(
             result[field_name] = list(items)
 
     return result
+
+
+def _rows_by_node_id(rows: list[Any]) -> dict[str, dict[str, Any]]:
+    return {
+        row["_node_id"]: row
+        for row in rows
+        if isinstance(row, dict) and row.get("_node_id")
+    }
+
+
+def reconcile_nested_rows(
+    kept: dict[str, list[Any]],
+    before: dict[str, list[dict[str, Any]]],
+    after: dict[str, list[dict[str, Any]]],
+) -> dict[str, list[Any]]:
+    """Reconcile an open form's nested rows with its record's reloaded children.
+
+    The rows of the open record's tables hold work not yet saved (a cell typed,
+    a row added or removed), so a reload cannot simply rebuild them from the
+    file; nor can it restore them as they were, since the reload exists to pick
+    up what an agent wrote to the file, and stale rows made the next save undo
+    that. Each row is compared with the child it stands for, before and after
+    the reload:
+
+    - a row with no stored record (added in the browser) is kept;
+    - a row whose record left the file is dropped;
+    - a row whose record changed in the file takes the file's values;
+    - any other row is kept, with its unsaved edits;
+    - a record new to the file gains a row at the end; a record that was
+      already there but has no row (removed in the browser) stays removed.
+
+    Args:
+        kept: The rows as the form holds them, by field.
+        before: The record's children as they were loaded before the reload.
+        after: The record's children as reloaded.
+
+    Returns:
+        The reconciled rows by field. A row that is kept is the same object, so
+        a caller can tell a surviving row from a replaced one by identity.
+    """
+    result: dict[str, list[Any]] = {}
+    for field_name in dict.fromkeys([*kept, *after]):
+        kept_rows = kept.get(field_name, [])
+        was = _rows_by_node_id(before.get(field_name, []))
+        now = _rows_by_node_id(after.get(field_name, []))
+        rows: list[Any] = []
+        for row in kept_rows:
+            node_id = row.get("_node_id") if isinstance(row, dict) else None
+            if node_id is None:
+                rows.append(row)
+            elif node_id not in now:
+                continue
+            elif now[node_id] != was.get(node_id):
+                rows.append(now[node_id])
+            else:
+                rows.append(row)
+        seen = set(_rows_by_node_id(kept_rows))
+        rows.extend(
+            row
+            for node_id, row in now.items()
+            if node_id not in was and node_id not in seen
+        )
+        if rows or field_name in kept:
+            result[field_name] = rows
+    return result
+
+
+def nested_chain_surviving(
+    stack: list[NestedEditContext],
+    kept: dict[str, list[Any]],
+    reconciled: dict[str, list[Any]],
+) -> list[NestedEditContext]:
+    """The nested-edit chain that survives a reconciliation of the form's rows.
+
+    The chain's first context names a row of the open record by index. If that
+    row survived unchanged (the same object is still among the reconciled
+    rows), the index is updated to where it now sits and the whole chain
+    survives: the deeper contexts live in the first one's own rows, which the
+    reload did not touch. Otherwise the chain is cut.
+
+    Args:
+        stack: The nested-edit chain before the reload.
+        kept: The rows the chain's indices referred to.
+        reconciled: The rows after reconciliation.
+
+    Returns:
+        The chain, with its first index updated, or an empty list.
+    """
+    if not stack:
+        return stack
+    context = stack[0]
+    old_rows = kept.get(context.field_name, [])
+    if context.row_idx >= len(old_rows):
+        return []
+    row = old_rows[context.row_idx]
+    new_rows = reconciled.get(context.field_name, [])
+    new_idx = next((i for i, r in enumerate(new_rows) if r is row), None)
+    if new_idx is None:
+        return []
+    context.row_idx = new_idx
+    return stack
 
 
 def collect_entities_by_type(  # noqa: C901
