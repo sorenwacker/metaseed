@@ -35,8 +35,10 @@ STYLESHEET = (
 def _rule(selector: str) -> str:
     """The declarations of the first rule whose selector list matches exactly."""
     css = STYLESHEET.read_text()
-    pattern = rf"(?:^|\}}|\*/)\s*{re.escape(selector)}\s*\{{([^}}]*)\}}"
-    match = re.search(pattern, css, re.MULTILINE)
+    # Not `^`: a selector that is the tail of a comma-separated list also
+    # starts a line, and would pass for a rule of its own.
+    pattern = rf"(?:\A|\}}|\*/)\s*{re.escape(selector)}\s*\{{([^}}]*)\}}"
+    match = re.search(pattern, css)
     assert match, f"no rule for {selector!r}"
     return match.group(1)
 
@@ -49,6 +51,25 @@ def test_the_actions_cell_fills_its_row() -> None:
     )
     assert "vertical-align: middle" in declarations
     assert "text-align: center" in declarations
+
+
+def test_the_actions_column_is_no_wider_than_its_buttons() -> None:
+    """The readable minimum for data cells applied to the actions column too,
+    leaving a strip of blank paper beside two small buttons."""
+    declarations = _rule(
+        ".inline-data-table th:last-child,\n.inline-data-table td.row-actions"
+    )
+
+    assert "min-width: 0" in declarations
+    assert "width: 1%" in declarations
+
+
+def test_the_action_buttons_sit_side_by_side() -> None:
+    """A later `.btn-icon` rule made the icon a block-level flex box, so the
+    delete icon dropped under the Edit button instead of beside it."""
+    declarations = _rule(".row-actions .btn-icon")
+
+    assert "display: inline-flex" in declarations
 
 
 def test_a_long_value_does_not_make_the_whole_row_tall() -> None:

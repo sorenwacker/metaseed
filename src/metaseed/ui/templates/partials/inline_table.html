@@ -44,7 +44,7 @@
                         {{ col|replace('_', ' ')|title }}{% if required_columns and col in required_columns %}<span class="required">*</span>{% endif %}
                     </th>
                     {% endfor %}
-                    <th style="width: 80px;">Actions</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody id="inline-table-body-{{ field_name }}">

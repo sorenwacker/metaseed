@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- **The actions column of an inline table is no wider than its buttons.** The readable minimum for data cells applied to it too, leaving a strip of blank paper beside two small buttons, and a later rule stacked the delete icon under the Edit button.
+
 ## v0.71.0 (261029)
 
 ### Changed
