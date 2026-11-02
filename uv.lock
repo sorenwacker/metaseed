@@ -1560,6 +1560,7 @@ dev = [
     { name = "pytest-cov" },
     { name = "pytest-timeout" },
     { name = "selenium" },
+    { name = "types-regex" },
     { name = "vulture" },
     { name = "watchfiles" },
 ]
@@ -1618,6 +1619,7 @@ dev = [
     { name = "pytest-cov", specifier = ">=7.1.0" },
     { name = "pytest-timeout", specifier = ">=2.3" },
     { name = "selenium", specifier = ">=4.20" },
+    { name = "types-regex", specifier = ">=2024.5.15" },
     { name = "vulture", specifier = ">=2.11" },
     { name = "watchfiles", specifier = ">=1.2.0" },
 ]

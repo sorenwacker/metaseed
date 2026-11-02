@@ -237,18 +237,19 @@ def register_core_routes(
         state = get_state()
         manager = resolve_dataset_manager(app, state)
 
-        missing = manager.current_dataset != name and _missing_profile(
-            manager.list_datasets(), name
-        )
+        from ..datasets import get_current_dataset_name
+
+        # The state's pointer says which dataset is open. The manager's own can
+        # name another one once the MCP load tool, through a fresh manager, has
+        # moved the state on; trusting it here skipped the load and showed the
+        # page for one dataset over the records of another.
+        already_open = get_current_dataset_name(state) == name
+        missing = not already_open and _missing_profile(manager.list_datasets(), name)
         if missing:
             # Rendered, not redirected: the dataset already open stays open,
             # and nothing from the request goes into a URL.
             return _datasets_page(request, profile_missing=missing)
-        load_warning = (
-            _open_dataset(manager, state, name)
-            if manager.current_dataset != name
-            else None
-        )
+        load_warning = None if already_open else _open_dataset(manager, state, name)
 
         from .import_export import (
             export_options_for_profile,

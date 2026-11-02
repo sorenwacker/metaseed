@@ -316,6 +316,7 @@ dev = [
     "httpx>=0.28.1",
     "jupyterlab>=4.5.6",
     "mypy>=1.10",
+    "types-regex>=2024.5.15",
     "pre-commit>=4.5.1",
     "pylint>=3.0",
     "pyshacl>=0.40.1",

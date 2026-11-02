@@ -2420,13 +2420,23 @@ body::before {
 }
 
 /* The actions stay reachable when the table is wider than the card and has to
-   be scrolled sideways. */
+   be scrolled sideways. The readable minimum for data cells does not apply:
+   two small buttons need no 18ch, and the strip of blank paper the minimum
+   left beside them read as wasted space. */
 .inline-data-table th:last-child,
 .inline-data-table td.row-actions {
     position: sticky;
     right: 0;
     z-index: 2;
     background: var(--clr-paper);
+    min-width: 0;
+    width: 1%;
+}
+
+/* A later rule makes .btn-icon a block-level flex box for toolbars; in a row
+   that dropped the delete icon under the Edit button. */
+.row-actions .btn-icon {
+    display: inline-flex;
 }
 
 /* ============================================

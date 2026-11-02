@@ -21,7 +21,7 @@ import logging
 import re
 import weakref
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING, Any, Self
 
 from metaseed.repositories.dataset_repository import (
     DatasetData,
@@ -105,7 +105,9 @@ class DatasetManager:
             catalog_metadata=self._state.catalog_metadata,
         )
 
-    def _restore_state_from_data(self: Self, data: DatasetData) -> int:
+    def _restore_state_from_data(
+        self: Self, data: DatasetData, keep_edit: bool = False
+    ) -> int:
         """Restore state from DatasetData, returns loaded count.
 
         Delegates to facade.load_from_dict() for entity loading and linking.
@@ -113,6 +115,15 @@ class DatasetManager:
         - Parent-child relationships via _parent_id/_parent_unique_id
         - Nested array linking (e.g., Study.samples)
         - Reference field linking (e.g., File.run_ref -> Run.alias)
+
+        Args:
+            data: The dataset to restore.
+            keep_edit: Whether the record open in the form survives the
+                restore. True when the dataset already open is reloaded from
+                disk (the graph and validation polls do this every tick). The
+                edit is kept as long as the record still exists in the reloaded
+                data; its nested rows are reconciled with the reloaded children
+                and the nested-edit chain survives only where its row did.
         """
         self._state.profile = data.profile
         # AppState uses None to mean "latest"; an empty/missing version must
@@ -125,6 +136,10 @@ class DatasetManager:
         # pointer was wiped mid-session and the next auto-save fell back to a
         # label-derived name, writing the edit into a different file.
         current = self._state._current_dataset
+        editing_node_id = self._state.editing_node_id
+        kept_rows = self._state.current_nested_items
+        nested_stack = self._state.nested_edit_stack
+        rows_before = self._nested_rows_of(editing_node_id) if keep_edit else {}
         self._state.reset()
         self._state._current_dataset = current
         # After the reset, not before: reset() clears catalog metadata (a reset
@@ -139,7 +154,37 @@ class DatasetManager:
         # Invalidate AppState cache to pick up new data
         self._state._invalidate_cache()
 
+        if keep_edit and editing_node_id in self._state.nodes_by_id:
+            # Imported here: the helpers package pulls in FastAPI through its
+            # route helpers, and the MCP server imports this module without it.
+            from metaseed.ui.helpers.entity_helpers import (
+                nested_chain_surviving,
+                reconcile_nested_rows,
+            )
+
+            rows = reconcile_nested_rows(
+                kept_rows, rows_before, self._nested_rows_of(editing_node_id)
+            )
+            self._state.editing_node_id = editing_node_id
+            self._state.current_nested_items = rows
+            self._state.nested_edit_stack = nested_chain_surviving(
+                nested_stack, kept_rows, rows
+            )
+
         return loaded_count
+
+    def _nested_rows_of(self: Self, node_id: str | None) -> dict[str, list[Any]]:
+        """The nested rows the form would show for ``node_id``, as stored now."""
+        node = self._state.nodes_by_id.get(node_id) if node_id else None
+        if node is None:
+            return {}
+        from metaseed.ui.helpers.entity_helpers import get_nested_items_for_edit
+
+        facade = self._state.get_or_create_facade()
+        helper = getattr(facade, node.entity_type, None)
+        if helper is None:
+            return {}
+        return get_nested_items_for_edit(node, helper, facade)
 
     def import_data(self: Self, data: DatasetData) -> DatasetInfo:
         """Restore state from in-memory dataset data, e.g. an uploaded file.
@@ -205,7 +250,12 @@ class DatasetManager:
             FileNotFoundError: If dataset doesn't exist.
         """
         data = self._repo.load(name)
-        loaded_count = self._restore_state_from_data(data)
+        # The same dataset reloaded from disk is not a change of dataset. Only
+        # the state's pointer says which one is open: the MCP load tool moves it
+        # through a fresh manager, so this manager's own pointer can still name
+        # the dataset it loaded before, and opening that one is a change.
+        reloading = name == self._state._current_dataset
+        loaded_count = self._restore_state_from_data(data, keep_edit=reloading)
         self._current = name
 
         return DatasetInfo(
