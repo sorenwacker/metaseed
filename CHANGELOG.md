@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.71.1 (261105)
 
 ### Fixed
 - **The graph poll no longer loses or undoes an edit in progress.** Every two seconds the open dataset is reloaded from disk to show an agent's changes. The reload forgot the record open in the form and emptied its nested tables, so the Edit button on a row answered "Row not found". The record now stays open, and its rows are reconciled with the file: a row whose record an agent deleted is dropped instead of being recreated at the next save, a row whose record an agent edited takes the new values, a record an agent added gains a row, and rows added or typed in the browser are kept. Opening a dataset from the list also goes by the dataset the state names as open, so a dataset loaded through the MCP is not mistaken for one already shown.
