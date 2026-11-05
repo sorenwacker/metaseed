@@ -10,6 +10,8 @@
 
 Metaseed helps research teams create, validate and share standardized metadata. It supports domain standards such as MIAPPE, ISA and Darwin Core, and the submission formats of repositories such as ENA, PRIDE and MetaboLights. Each standard becomes a guided form with automated checks and suggestions from controlled vocabularies. Researchers can import public records, export files in the format a repository expects, and compare or combine standards without programming. Metaseed runs in the browser (locally or on the hosted hub), from the command line, from Python, or through an AI assistant.
 
+Each standard becomes a self-describing context that people and AI agents share: people work in forms, agents connect through the Model Context Protocol (MCP), and both are checked against the same rules. FAIR starts before the data is even created: Metaseed plants the seed from which FAIR data grows.
+
 [Documentation](https://sorenwacker.github.io/metaseed/) · [Introduction slides](https://sorenwacker.github.io/metaseed/slides/) · [Try it hosted](https://metaseed.ewi.tudelft.nl/hub/) · [Changelog](CHANGELOG.md)
 
 ## What it does
