@@ -200,7 +200,10 @@ def test_profile_descriptions_carry_their_full_text_as_a_tooltip() -> None:
     html = client.get("/new-dataset").text
     # seek-ready-template's description is several sentences; the first is
     # enough to prove the attribute carries it.
-    assert 'data-description="An ISA-shaped template' in html
+    assert (
+        'data-description="Start here for a profile whose datasets upload to FAIRDOM-SEEK'
+        in html
+    )
 
 
 def test_a_long_optional_section_gets_a_filter_and_a_short_one_does_not() -> None:

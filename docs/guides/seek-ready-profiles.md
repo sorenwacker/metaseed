@@ -6,8 +6,7 @@ strays from the shape produces datasets that upload *partially*: the entities
 that map go in, the rest are silently left behind. These are the rules for a
 profile whose datasets upload **completely**.
 
-Start from the built-in **`seek-ready-template`** profile (Investigation → Study → Assay
-→ Sample). Clone it, add your own fields, and keep the shape. A dataset built on
+Start from the built-in **`seek-ready-template`** profile (Investigation → Study with its Sources, Samples and Assays, and AssayMaterials under their Assay, linked by `Input`). Clone it, add your own fields, and keep the shape; [its page](../profiles/seek-ready-template.md) lists what is fixed and what you can change. A dataset built on
 it syncs to SEEK with nothing skipped — verified in the test suite against a live
 instance.
 
@@ -22,7 +21,7 @@ SEEK has exactly these containers, and nothing else:
 | ObservationUnit | an optional level between Study and Sample |
 | Sample | a material or biological sample |
 | Assay | a measurement performed on samples |
-| (Data file) | a file attached to an assay — **not yet synced by metaseed** |
+| DataFile | a file attached to an assay, registered by link (rule 7) |
 
 Every entity in your profile must map to one of these, through its **SEEK role**
 (set on the entity in the Spec Builder). An entity with no role, and whose name
@@ -90,6 +89,10 @@ An Investigation, Study or Assay record in SEEK has a fixed set of attributes (t
 ```
 
 A marked field is left out of the record's Extended Metadata, the SEEK preview lists it as ISA-JSON only, and the shipped profiles are gated: a test fails when the latest version of a profile has an unmarked field on an Investigation, Study or Assay entity that SEEK cannot hold.
+
+### 9. Keep SEEK's own fields
+
+Some fields are hard-coded in SEEK: the title of an Investigation, Study, Assay or SOP, an Assay's `assay_class` and `assay_type`, each sample type's title column, and the `Input` and `Protocol` columns of a chained sample type. `seek-ready-template` 5.0 declares every one of them, and each says so in its description. Renaming, retyping or removing one breaks the upload. The [template page](../profiles/seek-ready-template.md#what-seek-requires) lists them with the ones that need a value.
 
 ## Checking a profile
 

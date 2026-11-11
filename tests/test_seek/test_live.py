@@ -551,3 +551,78 @@ def test_an_sop_is_registered_in_seek_and_linked_to_its_assay(created_in_seek):
     assert linked & {str(a) for a in result.assays.values()}, (
         f"the SOP is linked to {linked}, not to the pushed assay"
     )
+
+
+def _seek_ready_5_dataset():
+    """A seek-ready-template 5.0 dataset: the chain linked by Input, one material
+    produced from two samples."""
+    from metaseed import MetaseedClient
+
+    client = MetaseedClient("seek-ready-template", "5.0")
+    inv = client.create_entity(
+        "Investigation", {"title": "5.0 round-trip inv", "description": "d"}
+    )
+    study = client.create_entity(
+        "Study", {"title": "5.0 round-trip study", "description": "d"}, parent_id=inv.id
+    )
+    for source in ("SRC-5a", "SRC-5b"):
+        client.create_entity(
+            "Source",
+            {"source_name": source, "organism": "Arabidopsis thaliana"},
+            parent_id=study.id,
+        )
+        client.create_entity(
+            "Sample",
+            {
+                "sample_name": f"SMP-{source}",
+                "Input": [source],
+                "Protocol": "leaf punch",
+            },
+            parent_id=study.id,
+        )
+    assay = client.create_entity(
+        "Assay",
+        {
+            "title": "5.0 round-trip assay",
+            "description": "d",
+            "assay_class": "EXP",
+            "assay_type": "http://jermontology.org/ontology/JERMOntology#Experimental_assay_type",
+        },
+        parent_id=study.id,
+    )
+    client.create_entity(
+        "AssayMaterial",
+        {
+            "material_name": "MAT-5-combined",
+            "Input": ["SMP-SRC-5a", "SMP-SRC-5b"],
+            "Protocol": "combined analysis",
+        },
+        parent_id=assay.id,
+    )
+    assert client.validate().valid
+    return client
+
+
+def test_a_seek_ready_5_dataset_is_exportable_as_isa_json(created_in_seek):
+    """5.0 declares SEEK's columns instead of leaving the sync to add them; the
+    pushed structure must still place every material and export.
+
+    Needs the 5.0 ISA Templates installed on the instance.
+    """
+    seek = _seek_client()
+    result = _provision_and_sync(seek, _seek_ready_5_dataset(), created_in_seek)
+    assert not result.errors, result.errors
+    assert not result.unlinked, f"materials not placed: {result.unlinked}"
+    investigation_id = next(iter(result.investigations.values()))
+    response = seek._send(
+        "GET",
+        f"/investigations/{investigation_id}/export_isa",
+        headers={"Accept": "application/json"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 200, f"{response.status_code} {response.text[:200]}"
+    isa = response.json()
+    assays = isa["studies"][0].get("assays")
+    assert assays, "the exported study carries no assays"
+    sources = {s["name"] for s in isa["studies"][0]["materials"]["sources"]}
+    assert {"SRC-5a", "SRC-5b"} <= sources
