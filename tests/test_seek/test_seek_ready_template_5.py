@@ -17,6 +17,18 @@ from metaseed.seek.isa_types import entity_level, sample_type_attribute_plans
 from metaseed.specs.loader import SpecLoader
 
 REQUIRED_BY_SEEK = "Required by SEEK"
+SEEKS_OWN = "SEEK's own attribute"
+COLUMN_REQUIRED = "SEEK requires this column"
+
+# Fields SEEK names but does not require a value in: the record's description,
+# and the protocol column a chained sample type must have.
+_OPTIONAL_VALUE = {
+    ("Investigation", "description"): SEEKS_OWN,
+    ("Study", "description"): SEEKS_OWN,
+    ("Assay", "description"): SEEKS_OWN,
+    ("Sample", "Protocol"): COLUMN_REQUIRED,
+    ("AssayMaterial", "Protocol"): COLUMN_REQUIRED,
+}
 
 # entity -> {field: (isa_tag or None, reference or None)}
 _SEEK_FIELDS: dict[str, dict[str, tuple[str | None, str | None]]] = {
@@ -70,7 +82,9 @@ def test_every_column_seek_requires_is_declared_and_marked(
     tag, reference = _SEEK_FIELDS[entity][name]
     assert field.isa_tag == tag
     assert field.reference == reference
-    assert REQUIRED_BY_SEEK in (field.description or "")
+    marker = _OPTIONAL_VALUE.get((entity, name), REQUIRED_BY_SEEK)
+    assert marker in (field.description or "")
+    assert field.required == (marker == REQUIRED_BY_SEEK)
 
 
 @pytest.mark.parametrize("entity", ["Sample", "AssayMaterial"])

@@ -30,19 +30,19 @@ There is no ObservationUnit level: the SEEK export creates one per Sample.
 
 ## What SEEK requires
 
-These fields are hard-coded in SEEK. Each one's description says so. Renaming, retyping or removing any of them breaks the upload.
+These fields are hard-coded in SEEK. Renaming, retyping or removing any of them breaks the upload; each one's description says so.
 
-| Entity | SEEK object | Required fields |
-| --- | --- | --- |
-| Investigation | Investigation | `title` (identifies the record), `description` |
-| Study | Study | `title` (identifies the record), `description` |
-| Assay | Assay | `title` (identifies the record), `description`, `assay_class` (`EXP` or `MODEL`), `assay_type` (a JERM ontology URI) |
-| SOP | SOP | `title`, `url` |
-| Source | Source sample type | `source_name`, the title column (ISA tag `source`) |
-| Sample | Sample Collection sample type | `sample_name`, the title column (ISA tag `sample`); `Input`, the Sources it came from (`Registered Sample List`, ISA tag `input`); `Protocol`, how it was taken (ISA tag `protocol`) |
-| AssayMaterial | Assay sample type | `material_name`, the title column (ISA tag `other_material`); `Input`, the Samples it came from (`Registered Sample List`, ISA tag `input`); `Protocol`, how it was produced (ISA tag `protocol`) |
+| Entity | SEEK object | A value is required | The field must exist, a value is optional |
+| --- | --- | --- | --- |
+| Investigation | Investigation | `title`, which identifies the record | `description` |
+| Study | Study | `title`, which identifies the record | `description` |
+| Assay | Assay | `title`, which identifies the record; `assay_class` (`EXP` or `MODEL`); `assay_type` (a JERM ontology URI) | `description` |
+| SOP | SOP | `title`; `url`, the location SEEK registers it by | |
+| Source | Source sample type | `source_name`, the title column (ISA tag `source`) | |
+| Sample | Sample Collection sample type | `sample_name`, the title column (ISA tag `sample`); `Input`, the Sources it came from (`Registered Sample List`, ISA tag `input`) | `Protocol` (ISA tag `protocol`) |
+| AssayMaterial | Assay sample type | `material_name`, the title column (ISA tag `other_material`); `Input`, the Samples it came from (`Registered Sample List`, ISA tag `input`) | `Protocol` (ISA tag `protocol`) |
 
-SEEK has no identifier attribute on an Investigation, Study or Assay, so the title identifies them. Every column of a sample type carries an ISA tag; a field you add takes its level's characteristic tag unless it declares another.
+SEEK has no identifier attribute on an Investigation, Study or Assay, so the title identifies them. A chained sample type must have exactly one protocol column, but a Sample need not fill it. Every column of a sample type carries an ISA tag; a field you add takes its level's characteristic tag unless it declares another.
 
 ## What you can change
 

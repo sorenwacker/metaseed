@@ -2,21 +2,22 @@ spec_version: '0.6'
 version: '5.0'
 name: seek-ready-template
 display_name: SEEK-ready template (ISA)
-description: 'Start here for a profile whose datasets upload to FAIRDOM-SEEK. Clone it, add fields, keep the shape. Every
-  column SEEK requires is a declared field whose description says ''Required by SEEK'': the title and description of the Investigation,
-  Study and Assay, an Assay''s assay_class and assay_type, an SOP''s url, each sample type''s name column, and the Input and
-  Protocol of Sample and AssayMaterial. Do not rename, retype or remove them. Structure: Source, Sample and Assay sit under
-  the Study and AssayMaterial under its Assay; Sample and AssayMaterial name their predecessors in Input, so one material
-  can come from several samples. A Study has one Source type and one Sample type. You can add fields to Source, Sample and
-  AssayMaterial, add assay types as copies of AssayMaterial, and add Extended Metadata to Investigation, Study and Assay;
-  a field there needs an Extended Metadata Type installed on SEEK, else mark it seek_isa_only. Full rules and a worked example:
-  https://sorenwacker.github.io/metaseed/profiles/seek-ready-template/'
+description: 'Start here for a profile whose datasets upload to FAIRDOM-SEEK. Clone it, add fields, keep the shape. Fields
+  hard-coded in SEEK are declared and say so in their description; do not rename, retype or remove them. ''Required by SEEK''
+  needs a value: the title of the Investigation, Study, Assay and SOP, an Assay''s assay_class and assay_type, an SOP''s url,
+  each sample type''s name column, and the Input of Sample and AssayMaterial. The description of the Investigation, Study
+  and Assay and the Protocol of Sample and AssayMaterial must exist but may be empty. Structure: Source, Sample and Assay
+  sit under the Study and AssayMaterial under its Assay; Sample and AssayMaterial name their predecessors in Input, so one
+  material can come from several samples. A Study has one Source type and one Sample type. You can add fields to Source, Sample
+  and AssayMaterial, add assay types as copies of AssayMaterial, and add fields to Investigation, Study and Assay as Extended
+  Metadata, which needs an Extended Metadata Type installed on SEEK; otherwise mark the field seek_isa_only. Full rules and
+  a worked example: https://sorenwacker.github.io/metaseed/profiles/seek-ready-template/'
 ontology: OBI
 root_entity: Investigation
 validation_rules: []
 entities:
   Investigation:
-    description: The overarching project or investigation.
+    description: The project. SEEK's Investigation; the root of the dataset.
     fields:
     - name: title
       type: string
@@ -29,7 +30,8 @@ entities:
     - name: description
       type: string
       required: false
-      description: What the investigation is about. Required by SEEK; do not rename, retype or remove.
+      description: What the investigation is about. SEEK's own attribute; a value is optional, but do not rename, retype or
+        remove.
       example: Growth, transcriptome and metabolite measurements of two ecotypes under progressive drought
     - name: submission_date
       type: date
@@ -53,7 +55,8 @@ entities:
     seek:
       role: Investigation
   Study:
-    description: A study within the investigation.
+    description: One line of work in the project. SEEK's Study; SEEK gives it exactly one Source sample type and one Sample
+      Collection sample type, built from the Source and Sample entities.
     fields:
     - name: title
       type: string
@@ -66,7 +69,7 @@ entities:
     - name: description
       type: string
       required: false
-      description: Study description. Required by SEEK; do not rename, retype or remove.
+      description: Study description. SEEK's own attribute; a value is optional, but do not rename, retype or remove.
       example: Plants were grown for four weeks under controlled conditions, then water was withheld for 72 hours
     - name: study_design_type
       type: string
@@ -102,8 +105,7 @@ entities:
     - name: sources
       type: list
       required: false
-      description: Source materials the study started from. Each becomes a Sample of the study's Source Sample Type, the head
-        of the ISA material chain.
+      description: What the study starts from, one Source each.
       items: Source
     - name: samples
       type: list
@@ -131,7 +133,8 @@ entities:
     - name: description
       type: string
       required: false
-      description: What the assay measured and how. Required by SEEK; do not rename, retype or remove.
+      description: What the assay measured and how. SEEK's own attribute; a value is optional, but do not rename, retype or
+        remove.
       example: Leaf metabolite profiling by LC-MS
     - name: assay_class
       type: string
@@ -209,7 +212,8 @@ entities:
     - name: source_name
       type: string
       required: true
-      description: Unique source name. Required by SEEK; do not rename, retype or remove.
+      description: Unique name of the source; SEEK's title column for the Source sample type. Required by SEEK; do not rename,
+        retype or remove.
       example: SRC-001
       is_identifier: true
       is_label: true
@@ -233,7 +237,8 @@ entities:
     - name: sample_name
       type: string
       required: true
-      description: Unique sample name. Required by SEEK; do not rename, retype or remove.
+      description: Unique name of the sample; SEEK's title column for the Sample Collection sample type. Required by SEEK;
+        do not rename, retype or remove.
       example: SMP-001
       is_identifier: true
       is_label: true
@@ -251,7 +256,7 @@ entities:
     - name: Protocol
       type: string
       required: false
-      description: How this sample was obtained. Required by SEEK; do not rename, retype or remove.
+      description: How this sample was obtained. SEEK requires this column, not a value in it; do not rename, retype or remove.
       isa_tag: protocol
       example: Leaf disc punch, 4 mm
     - name: organism
@@ -267,7 +272,7 @@ entities:
     - name: collection_date
       type: date
       required: false
-      description: ''
+      description: When the sample was taken.
       example: '2024-03-15'
     seek:
       role: Sample
@@ -278,7 +283,8 @@ entities:
     - name: material_name
       type: string
       required: true
-      description: Unique material or data file name. Required by SEEK; do not rename, retype or remove.
+      description: Unique name of the material, data file or result; SEEK's title column for the assay sample type. Required
+        by SEEK; do not rename, retype or remove.
       example: MAT-001
       is_identifier: true
       is_label: true
@@ -296,7 +302,8 @@ entities:
     - name: Protocol
       type: string
       required: false
-      description: How this material was obtained. Required by SEEK; do not rename, retype or remove.
+      description: How this material was obtained. SEEK requires this column, not a value in it; do not rename, retype or
+        remove.
       isa_tag: protocol
       example: Methanol extraction
     - name: measurement_value
