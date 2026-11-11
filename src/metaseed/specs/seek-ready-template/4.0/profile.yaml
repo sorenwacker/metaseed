@@ -2,14 +2,7 @@ spec_version: '0.6'
 version: '4.0'
 name: seek-ready-template
 display_name: SEEK-ready template (ISA)
-description: 'An ISA-shaped template whose datasets upload to FAIRDOM-SEEK as ISA-JSON compliant content. Every entity maps
-  to a SEEK/ISA role and nothing sits outside that hierarchy. There is no ObservationUnit level -- the SEEK export synthesises
-  one per sample. A Source yields Samples, a Sample yields the AssayMaterials measured from it, and an AssayMaterial names
-  the Assay that measured it by reference. Breaking change from 3.0: the Investigation, Study and Assay records carry SEEK''s
-  own fields. SEEK has no identifier attribute for them, so the separate identifier field is gone and the title identifies
-  the record; an Assay carries SEEK''s required assay_class and assay_type, and its title is required. Fields SEEK has no
-  attribute for are marked seek_isa_only: they reach SEEK only inside the ISA-JSON export. An Assay lists the SOPs it follows;
-  each is registered in SEEK by its document''s location.'
+description: 'Start here for a profile whose datasets upload to FAIRDOM-SEEK. Clone it, add fields, keep the shape. Fixed structure: Investigation, Study, Source, Sample, AssayMaterial, with Assays listed under the Study; every entity keeps its SEEK role. A Study has exactly one Source type and one Sample type, because SEEK creates one of each per study. Fixed columns: the title of the Investigation, Study and Assay identifies the record, as SEEK has no separate identifier; an Assay''s assay_class and assay_type are required by SEEK; source_name, sample_name and material_name identify each level and carry its ISA title tag; AssayMaterial.assay names the Assay by title. Renaming or removing these breaks the upload. What you can change: add fields to any entity; add assay types, each of which gets its own sample type; mark Investigation, Study and Assay fields SEEK has no attribute for with seek_isa_only; record different kinds of source in the one Source type, for example a plant or a reused dataset named by its accession. An Assay never nests under its inputs: an Assay with several inputs has an AssayMaterial under each Sample it used, all naming it.'
 ontology: OBI
 root_entity: Investigation
 validation_rules: []
@@ -110,8 +103,7 @@ entities:
     seek:
       role: Study
   Assay:
-    description: A measurement performed on materials. The materials it measured name it by reference (AssayMaterial.assay)
-      rather than nesting under it, because they descend from the Samples they were derived from.
+    description: 'A measurement or an analysis. It does not nest under its inputs: each AssayMaterial it produced names it by title (AssayMaterial.assay), so one Assay can draw on materials from many Samples and Sources.'
     fields:
     - name: title
       type: string
@@ -189,7 +181,7 @@ entities:
     seek:
       role: SOP
   Source:
-    description: A source material the study started from -- the head of the ISA material chain.
+    description: 'What the study starts from, at the head of the ISA material chain: a plant or other biological material, or an existing dataset reused for analysis, named by its accession.'
     fields:
     - name: source_name
       type: string
@@ -216,8 +208,7 @@ entities:
     seek:
       role: Sample
   Sample:
-    description: A sample collected from a Source. Nests under the Source it was derived from, which is what SEEK's ISA-JSON
-      exporter reads as the sample's input.
+    description: 'Something taken from a Source: tissue, an extract, or the part of a reused dataset you work with. Nests under its Source, which SEEK''s ISA-JSON export reads as the sample''s input.'
     fields:
     - name: sample_name
       type: string
@@ -249,8 +240,7 @@ entities:
     seek:
       role: Sample
   AssayMaterial:
-    description: A material or data file produced by measuring a Sample -- the tail of the ISA material chain. Names the Assay
-      that measured it by reference.
+    description: 'What an Assay produced from a Sample: a material, a data file or an analysis result, at the tail of the ISA material chain. Nests under its Sample and names its Assay by title; an Assay with several inputs has one AssayMaterial under each.'
     fields:
     - name: material_name
       type: string

@@ -26,6 +26,36 @@ erDiagram
 
 There is no ObservationUnit level: the SEEK export synthesises one per sample.
 
+## What is fixed and what you can change
+
+| Fixed | Why |
+| --- | --- |
+| The structure Investigation, Study, Source, Sample, AssayMaterial, with Assays under the Study, and each entity's SEEK role | The sync places each level by its role and position in the chain |
+| One Source type and one Sample type per Study | SEEK creates exactly one of each for an ISA study |
+| `title` identifies an Investigation, Study or Assay | SEEK has no identifier attribute on these records |
+| An Assay's `assay_class` and `assay_type` | SEEK requires both |
+| `source_name`, `sample_name`, `material_name` identify their level | Each carries the ISA title tag SEEK validates |
+| `AssayMaterial.assay` names an Assay by title | It is how an AssayMaterial links to the Assay that produced it |
+
+Renaming or removing any of these breaks the upload.
+
+You can add fields to any entity, add assay types (each Assay gets its own sample type), and mark Investigation, Study and Assay fields SEEK has no attribute for with `seek_isa_only`. Different kinds of source, such as plants and reused datasets, share the one Source type; a field records the kind. Kinds that need different columns go in separate Studies.
+
+## Mapping your data onto it
+
+| Your record | Entity | Where it goes |
+| --- | --- | --- |
+| The project | Investigation | the root |
+| One line of work in the project | Study | under the Investigation |
+| What the work starts from: a plant, a biological sample, or an existing dataset you reuse | Source | under the Study; a reused dataset is named by its accession |
+| Something taken from a Source: tissue, an extract, the part of a reused dataset you work with | Sample | under its Source |
+| A measurement or an analysis | Assay | under the Study |
+| What an Assay produced from a Sample: an extract, a data file, an analysis result | AssayMaterial | under its Sample, naming the Assay by title in `assay` |
+
+An Assay never nests under its inputs. An Assay that uses several Sources or Samples has an AssayMaterial under each of them, all naming it, so one Assay can combine inputs and one input can feed several Assays.
+
+**Example: reanalysing public data.** A study that combines two ENA datasets in one analysis has a Source per dataset (`source_name` `PRJEB1111` and `PRJEB2222`), a Sample under each for the reads used, and one Assay, *Combined RNA-seq analysis*, with `assay_class` `MODEL`. Each Sample holds an AssayMaterial for the analysis output from that dataset, and both name the Assay. A second analysis of the first dataset adds another AssayMaterial under its Sample, naming the second Assay.
+
 ## SEEK's record fields
 
 The Investigation, Study and Assay records carry SEEK's own attributes:
