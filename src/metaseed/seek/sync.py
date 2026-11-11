@@ -318,7 +318,11 @@ def sync_dataset_to_seek(
         name: frozenset(
             f.name
             for f in entity.fields
-            if f.type == FieldType.LIST and not (f.constraints and f.constraints.enum)
+            if f.type == FieldType.LIST
+            and not (f.constraints and f.constraints.enum)
+            # An Input names samples to link, resolved one by one; joined into
+            # text it names one sample nothing matches.
+            and f.isa_tag != "input"
         )
         for name, entity in profile.entities.items()
     }
