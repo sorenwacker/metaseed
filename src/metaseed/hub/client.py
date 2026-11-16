@@ -186,6 +186,23 @@ class HubClient:
         row: dict[str, Any] = response.json()
         return row, response.status_code == 201
 
+    def delete_spec_draft(self, name: str, version: str) -> bool:
+        """Delete the caller's own draft of ``name`` ``version``.
+
+        Returns:
+            False when the caller holds no such draft; True once deleted.
+
+        Raises:
+            HubApiError: For any other refusal, such as datasets built on it.
+        """
+        try:
+            self._request("DELETE", f"/specs/{name}/{version}")
+        except HubApiError as exc:
+            if exc.status_code == 404:
+                return False
+            raise
+        return True
+
     def unpublish_spec(self, spec_id: str) -> dict[str, Any]:
         """Withdraw a published specification back to a private draft."""
         row: dict[str, Any] = self._request(

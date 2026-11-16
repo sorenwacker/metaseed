@@ -357,6 +357,33 @@ def register_hub_routes(  # noqa: C901
             message=f"Withdrew {name} {version} on {hub.url}; it is your private draft again.",
         )
 
+    @app.post("/hub/profiles/{name}/{version}/delete", response_class=HTMLResponse)
+    async def delete_profile_now(
+        request: Request, name: str, version: str
+    ) -> HTMLResponse:
+        """Delete the caller's draft of a profile on the hub."""
+        from metaseed.hub.client import HubApiError
+        from metaseed.hub.profiles import ProfileRef, delete_draft
+
+        hub, error = _hub(request)
+        if hub is None:
+            return _status(request, error=error)
+        try:
+            deleted = delete_draft(hub, ProfileRef(name, version))
+        except HubApiError as exc:
+            return _status(request, error=f"The hub refused: {exc.detail}")
+        except Exception as exc:
+            return _status(request, error=_failure(exc, hub))
+        if not deleted:
+            return _status(
+                request, error=f"You hold no draft {name} {version} on {hub.url}."
+            )
+        return _status(
+            request,
+            ok=True,
+            message=f"Deleted your draft {name} {version} on {hub.url}.",
+        )
+
     @app.post("/hub/profiles/{name}/{version}/pull", response_class=HTMLResponse)
     async def pull_profile_now(
         request: Request, name: str, version: str

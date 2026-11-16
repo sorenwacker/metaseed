@@ -10,6 +10,7 @@ import pytest
 from metaseed.hub.client import HubApiError
 from metaseed.hub.profiles import (
     ProfileRef,
+    delete_draft,
     local_hash,
     local_profiles,
     profile_pull_target,
@@ -104,6 +105,9 @@ class _FakeHub:
             "audience": audience if publish else None,
             "mine": True,
         }, created
+
+    def delete_spec_draft(self, name: str, version: str) -> bool:
+        return self.drafts.pop((name, version), None) is not None
 
     def unpublish_spec(self, spec_id: str) -> dict[str, Any]:
         self.unpublished.append(spec_id)
@@ -217,3 +221,11 @@ def test_local_profiles_are_the_profile_files_under_the_specs_directory(
         ProfileRef("test-pushed", "1.0"),
     ]
     assert local_profiles(specs_dir / "missing") == []
+
+
+def test_a_draft_on_the_hub_can_be_deleted_and_a_missing_one_says_so() -> None:
+    hub = _FakeHub()
+    hub.drafts[("test-local-profile", "1.0")] = ("h", "text")
+    assert delete_draft(hub, ProfileRef("test-local-profile", "1.0")) is True
+    assert ("test-local-profile", "1.0") not in hub.drafts
+    assert delete_draft(hub, ProfileRef("test-local-profile", "1.0")) is False
