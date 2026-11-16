@@ -1,0 +1,315 @@
+spec_version: '0.6'
+version: '5.0'
+name: seek-ready-template
+display_name: SEEK-ready template (ISA)
+description: 'Start here for a profile whose datasets upload to FAIRDOM-SEEK. Clone it, add fields, keep the shape. Fields
+  hard-coded in SEEK are declared and say so in their description; do not rename, retype or remove them. ''Required by SEEK''
+  needs a value: the title of the Investigation, Study, Assay and SOP, an Assay''s assay_class and assay_type, an SOP''s url,
+  each sample type''s name column, and the Input of Sample and AssayMaterial. The description of the Investigation, Study
+  and Assay and the Protocol of Sample and AssayMaterial must exist but may be empty. Structure: Source, Sample and Assay
+  sit under the Study and AssayMaterial under its Assay; Sample and AssayMaterial name their predecessors in Input, so one
+  material can come from several samples. A Study has one Source type and one Sample type. You can add fields to Source, Sample
+  and AssayMaterial, add assay types as copies of AssayMaterial, and add fields to Investigation, Study and Assay as Extended
+  Metadata, which needs an Extended Metadata Type installed on SEEK; otherwise mark the field seek_isa_only. Full rules and
+  a worked example: https://sorenwacker.github.io/metaseed/profiles/seek-ready-template/'
+ontology: OBI
+root_entity: Investigation
+validation_rules: []
+entities:
+  Investigation:
+    description: The project. SEEK's Investigation; the root of the dataset.
+    fields:
+    - name: title
+      type: string
+      required: true
+      description: Investigation title; identifies the record, as SEEK has no separate identifier for an Investigation. Required
+        by SEEK; do not rename, retype or remove.
+      example: Drought response of Arabidopsis thaliana ecotypes
+      is_label: true
+      is_identifier: true
+    - name: description
+      type: string
+      required: false
+      description: What the investigation is about. SEEK's own attribute; a value is optional, but do not rename, retype or
+        remove.
+      example: Growth, transcriptome and metabolite measurements of two ecotypes under progressive drought
+    - name: submission_date
+      type: date
+      required: false
+      description: When the metadata was submitted. Carried in the ISA-JSON export only; SEEK's Investigation has no such
+        attribute.
+      example: '2024-06-01'
+      seek_isa_only: true
+    - name: public_release_date
+      type: date
+      required: false
+      description: When it may be released publicly. Carried in the ISA-JSON export only; SEEK's Investigation has no such
+        attribute.
+      example: '2025-06-01'
+      seek_isa_only: true
+    - name: studies
+      type: list
+      required: false
+      description: Studies in this investigation.
+      items: Study
+    seek:
+      role: Investigation
+  Study:
+    description: One line of work in the project. SEEK's Study; SEEK gives it exactly one Source sample type and one Sample
+      Collection sample type, built from the Source and Sample entities.
+    fields:
+    - name: title
+      type: string
+      required: true
+      description: Study title; identifies the record, as SEEK has no separate identifier for a Study. Required by SEEK; do
+        not rename, retype or remove.
+      example: Progressive drought in the growth chamber
+      is_label: true
+      is_identifier: true
+    - name: description
+      type: string
+      required: false
+      description: Study description. SEEK's own attribute; a value is optional, but do not rename, retype or remove.
+      example: Plants were grown for four weeks under controlled conditions, then water was withheld for 72 hours
+    - name: study_design_type
+      type: string
+      required: false
+      description: e.g. case-control, time series. Carried in the ISA-JSON export only; SEEK's Study has no such attribute.
+      example: time series
+      seek_isa_only: true
+    - name: start_date
+      type: date
+      required: false
+      description: When the study started. Carried in the ISA-JSON export only; SEEK's Study has no such attribute.
+      example: '2024-03-01'
+      seek_isa_only: true
+    - name: end_date
+      type: date
+      required: false
+      description: When the study ended. Carried in the ISA-JSON export only; SEEK's Study has no such attribute.
+      example: '2024-03-18'
+      seek_isa_only: true
+    - name: experimental_site
+      type: string
+      required: false
+      description: Where the study took place (folded context, not a separate entity). Carried in the ISA-JSON export only;
+        SEEK's Study has no such attribute.
+      example: Example University growth facility, chamber 3
+      seek_isa_only: true
+    - name: country
+      type: string
+      required: false
+      description: Country of the experimental site. Carried in the ISA-JSON export only; SEEK's Study has no such attribute.
+      example: Exampleland
+      seek_isa_only: true
+    - name: sources
+      type: list
+      required: false
+      description: What the study starts from, one Source each.
+      items: Source
+    - name: samples
+      type: list
+      required: false
+      description: Samples taken in this study; each names the Sources it came from in Input.
+      items: Sample
+    - name: assays
+      type: list
+      required: false
+      description: Assays performed in this study.
+      items: Assay
+    seek:
+      role: Study
+  Assay:
+    description: A measurement or an analysis. What it produced sits under it as AssayMaterials, each naming its input Samples.
+    fields:
+    - name: title
+      type: string
+      required: true
+      description: Assay title; identifies the record, as SEEK has no separate identifier for an Assay. Required by SEEK;
+        do not rename, retype or remove.
+      example: Leaf metabolite profiling
+      is_label: true
+      is_identifier: true
+    - name: description
+      type: string
+      required: false
+      description: What the assay measured and how. SEEK's own attribute; a value is optional, but do not rename, retype or
+        remove.
+      example: Leaf metabolite profiling by LC-MS
+    - name: assay_class
+      type: string
+      required: true
+      description: 'SEEK''s assay class: EXP for an experimental assay, MODEL for a modelling analysis. Required by SEEK;
+        do not rename, retype or remove.'
+      example: EXP
+      constraints:
+        enum:
+        - EXP
+        - MODEL
+    - name: assay_type
+      type: uri
+      required: true
+      description: SEEK's assay type, a JERM ontology URI. Required by SEEK; do not rename, retype or remove.
+      example: http://jermontology.org/ontology/JERMOntology#Experimental_assay_type
+    - name: measurement_type
+      type: string
+      required: false
+      description: What is measured (e.g. metabolite profiling). Carried in the ISA-JSON export only; SEEK's Assay has no
+        such attribute.
+      example: metabolite profiling
+      seek_isa_only: true
+    - name: technology_type
+      type: string
+      required: false
+      description: Technology used (e.g. mass spectrometry). Carried in the ISA-JSON export only; SEEK's Assay has no such
+        attribute.
+      example: mass spectrometry
+      seek_isa_only: true
+    - name: technology_platform
+      type: string
+      required: false
+      description: Instrument or platform. Carried in the ISA-JSON export only; SEEK's Assay has no such attribute.
+      example: Thermo Q Exactive HF
+      seek_isa_only: true
+    - name: sops
+      type: list
+      required: false
+      description: The SOPs this assay follows. Each is registered in SEEK by its location and linked to this assay.
+      items: SOP
+    - name: assay_materials
+      type: list
+      required: false
+      description: What this assay produced.
+      items: AssayMaterial
+    seek:
+      role: Assay
+  SOP:
+    description: A standard operating procedure the assay follows, registered in SEEK by the location of its document.
+    fields:
+    - name: title
+      type: string
+      required: true
+      description: SOP title; identifies it, and SEEK titles the SOP with it. Required by SEEK; do not rename, retype or remove.
+      example: Leaf nitrogen by Dumas combustion
+      is_identifier: true
+      is_label: true
+    - name: description
+      type: string
+      required: false
+      description: What the procedure covers.
+      example: Sample drying, milling and combustion settings
+    - name: url
+      type: uri
+      required: true
+      description: Where the SOP document is; SEEK registers it by this link. Required by SEEK; do not rename, retype or remove.
+      example: https://protocols.example.org/sop/leaf-nitrogen-v2.pdf
+    seek:
+      role: SOP
+  Source:
+    description: 'What the study starts from: a plant, a biological material, or an existing dataset you reuse, named by its
+      accession. SEEK''s Source sample type; one per Study.'
+    fields:
+    - name: source_name
+      type: string
+      required: true
+      description: Unique name of the source; SEEK's title column for the Source sample type. Required by SEEK; do not rename,
+        retype or remove.
+      example: SRC-001
+      is_identifier: true
+      is_label: true
+      isa_tag: source
+    - name: organism
+      type: string
+      required: false
+      description: Source organism (e.g. an NCBI taxon name).
+      example: Arabidopsis thaliana
+    - name: provider
+      type: string
+      required: false
+      description: Who or what supplied the source material.
+      example: Nottingham Arabidopsis Stock Centre
+    seek:
+      role: Sample
+  Sample:
+    description: 'Something taken from one or more Sources: tissue, an extract, or the part of a reused dataset you work with.
+      Sits under the Study and names its Sources in Input. SEEK''s Sample Collection sample type; one per Study.'
+    fields:
+    - name: sample_name
+      type: string
+      required: true
+      description: Unique name of the sample; SEEK's title column for the Sample Collection sample type. Required by SEEK;
+        do not rename, retype or remove.
+      example: SMP-001
+      is_identifier: true
+      is_label: true
+      isa_tag: sample
+    - name: Input
+      type: list
+      items: string
+      required: true
+      description: The Sources this sample came from, by name; one or more. Required by SEEK; do not rename, retype or remove.
+      isa_tag: input
+      seek_attribute_type: Registered Sample List
+      reference: Source
+      example:
+      - SRC-001
+    - name: Protocol
+      type: string
+      required: false
+      description: How this sample was obtained. SEEK requires this column, not a value in it; do not rename, retype or remove.
+      isa_tag: protocol
+      example: Leaf disc punch, 4 mm
+    - name: organism
+      type: string
+      required: false
+      description: Source organism (e.g. an NCBI taxon name).
+      example: Arabidopsis thaliana
+    - name: organism_part
+      type: string
+      required: false
+      description: Tissue or part sampled.
+      example: rosette leaf
+    - name: collection_date
+      type: date
+      required: false
+      description: When the sample was taken.
+      example: '2024-03-15'
+    seek:
+      role: Sample
+  AssayMaterial:
+    description: 'What an Assay produced: an extract, a data file or an analysis result. Sits under its Assay and names the
+      Samples it came from in Input, one or more. SEEK''s assay sample type; copy it under a new name for each kind of output.'
+    fields:
+    - name: material_name
+      type: string
+      required: true
+      description: Unique name of the material, data file or result; SEEK's title column for the assay sample type. Required
+        by SEEK; do not rename, retype or remove.
+      example: MAT-001
+      is_identifier: true
+      is_label: true
+      isa_tag: other_material
+    - name: Input
+      type: list
+      items: string
+      required: true
+      description: The Samples this material came from, by name; one or more. Required by SEEK; do not rename, retype or remove.
+      isa_tag: input
+      seek_attribute_type: Registered Sample List
+      reference: Sample
+      example:
+      - SMP-001
+    - name: Protocol
+      type: string
+      required: false
+      description: How this material was obtained. SEEK requires this column, not a value in it; do not rename, retype or
+        remove.
+      isa_tag: protocol
+      example: Methanol extraction
+    - name: measurement_value
+      type: string
+      required: false
+      description: The value or file produced.
+      example: MAT-001_leaf_extract.mzML
+    seek:
+      role: Sample

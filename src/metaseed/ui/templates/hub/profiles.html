@@ -79,6 +79,14 @@
                         hx-target="#hub-panel" hx-swap="innerHTML"
                         data-testid="btn-hub-pull-profile-{{ spec.name }}-{{ spec.version }}">Pull</button>
                 {% endif %}
+                {% if spec.visibility == 'draft' %}
+                <button class="btn btn-secondary btn-sm"
+                        hx-post="{{ base_url }}/hub/profiles/{{ spec.name }}/{{ spec.version }}/delete"
+                        hx-target="#hub-panel" hx-swap="innerHTML"
+                        hx-confirm="Delete your draft {{ spec.name }} {{ spec.version }} on the hub? This cannot be undone."
+                        data-testid="btn-hub-delete-profile-{{ spec.name }}-{{ spec.version }}"
+                        title="Delete this draft on the hub">Delete on hub</button>
+                {% endif %}
             </td>
         </tr>
         {% endfor %}
