@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.72.0 (261123)
+
+### Added
+- **seek-ready-template 5.0.** Every column SEEK requires is a declared field whose description says "Required by SEEK": title and description of Investigation, Study and Assay, an Assay's `assay_class` and `assay_type`, an SOP's `url`, each sample type's name column with its ISA title tag, and `Input` and `Protocol` on Sample and AssayMaterial. The sync no longer adds `Title`, `Input` and `Protocol` columns the profile does not show. Source, Sample and Assay sit under the Study and AssayMaterial under its Assay, linked by `Input`, so one material can come from several samples. 4.0 is unchanged. The template page lists what SEEK requires and what a clone may change.
+
+### Fixed
+- **Every input of a sample reaches SEEK.** A list `Input` was joined into one text value before it was resolved, and only the first resolved input was linked. Every named sample is now linked, and a name that resolves to nothing is reported.
+
 ## v0.71.1 (261105)
 
 ### Fixed
