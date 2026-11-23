@@ -108,6 +108,7 @@ Read-only `GET` routes are views of a capability rather than capabilities of the
 | List profiles on both sides | `hub profiles` | — | `GET /hub/profiles` |
 | Push a profile (private draft, or published to everyone or one collaboration) | `hub push-profile` | — | `POST /hub/profiles/{name}/{version}/push` |
 | Withdraw a published profile to a draft | `hub unpublish-profile` | — | `POST /hub/profiles/{name}/{version}/unpublish` |
+| Delete your draft of a profile on the hub | `hub delete-profile` | — | `POST /hub/profiles/{name}/{version}/delete` |
 | Fetch a published profile | `hub pull-profile` | — | `POST /hub/profiles/{name}/{version}/pull` |
 | **Plugins** | | | |
 | List the adapters | `plugin list` | — | `GET /settings` |

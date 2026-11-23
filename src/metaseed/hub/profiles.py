@@ -33,6 +33,8 @@ class HubSpecApi(Protocol):
 
     def unpublish_spec(self, spec_id: str) -> dict[str, Any]: ...
 
+    def delete_spec_draft(self, name: str, version: str) -> bool: ...
+
 
 @dataclass(frozen=True)
 class ProfileRef:
@@ -155,6 +157,16 @@ def unpublish_profile(hub: HubSpecApi, ref: ProfileRef) -> bool:
         return False
     hub.unpublish_spec(str(mine["id"]))
     return True
+
+
+def delete_draft(hub: HubSpecApi, ref: ProfileRef) -> bool:
+    """Delete the caller's draft ``ref`` on the hub.
+
+    Returns:
+        False when the caller holds no draft of that name and version; True
+        once deleted.
+    """
+    return hub.delete_spec_draft(ref.name, ref.version)
 
 
 @dataclass(frozen=True)

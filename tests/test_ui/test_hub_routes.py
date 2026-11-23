@@ -124,6 +124,12 @@ class _FakeHub:
             "mine": True,
         }, created
 
+    def delete_spec_draft(self, name: str, version: str) -> bool:
+        if self.specs.get((name, version), ("",))[0] != "draft":
+            return False
+        del self.specs[(name, version)]
+        return True
+
     def unpublish_spec(self, spec_id: str) -> dict[str, Any]:
         key = next(
             k
@@ -307,3 +313,13 @@ def test_profile_push_and_pull_live_on_the_plugins_page_not_the_explorer(
     web, _manager = client
     assert 'data-testid="btn-hub-profiles"' in web.get("/settings").text
     assert 'data-testid="btn-hub-profiles"' not in web.get("/explore").text
+
+
+def test_a_draft_on_the_hub_has_a_delete_button_that_deletes_it(client, hub) -> None:
+    web, _manager = client
+    hub.specs[("test-remote-draft", "0.1")] = ("draft", "h" * 20, "x")
+    panel = web.get("/hub/profiles").text
+    assert 'data-testid="btn-hub-delete-profile-test-remote-draft-0.1"' in panel
+    deleted = web.post("/hub/profiles/test-remote-draft/0.1/delete")
+    assert "Deleted your draft test-remote-draft 0.1" in deleted.text
+    assert ("test-remote-draft", "0.1") not in hub.specs

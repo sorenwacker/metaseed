@@ -90,6 +90,12 @@ class _FakeHub:
             "mine": True,
         }, True
 
+    def delete_spec_draft(self, name: str, version: str) -> bool:
+        if self.specs.get((name, version)) != "draft":
+            return False
+        del self.specs[(name, version)]
+        return True
+
     def unpublish_spec(self, spec_id: str) -> dict[str, Any]:
         self.specs[("test-local-profile", "1.0")] = "draft"
         return {"id": spec_id, "visibility": "draft"}
@@ -249,6 +255,15 @@ class TestHubCommands:
             app, ["hub", "unpublish-profile", "test-local-profile", "1.0"]
         )
         assert result.exit_code == 2, "nothing published: nothing to withdraw"
+        result = runner.invoke(
+            app, ["hub", "delete-profile", "test-local-profile", "1.0"]
+        )
+        assert result.exit_code == 0, result.output
+        assert ("test-local-profile", "1.0") not in hub.specs
+        result = runner.invoke(
+            app, ["hub", "delete-profile", "test-local-profile", "1.0"]
+        )
+        assert result.exit_code == 2, "no draft: nothing to delete"
 
     def test_profiles_says_draft_or_published_for_each_entry(
         self, hub: _FakeHub, tmp_path: Any, monkeypatch: pytest.MonkeyPatch

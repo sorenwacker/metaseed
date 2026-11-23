@@ -404,6 +404,30 @@ def unpublish_profile(
     )
 
 
+@app.command("delete-profile")
+def delete_profile(
+    name: Annotated[str, typer.Argument(help="Profile name")],
+    version: Annotated[str, typer.Argument(help="Profile version")],
+) -> None:
+    """Delete your private draft of a profile on the hub."""
+    from metaseed.hub.client import HubApiError
+    from metaseed.hub.profiles import ProfileRef, delete_draft
+
+    hub = client()
+    try:
+        deleted = delete_draft(hub, ProfileRef(name, version))
+    except HubApiError as exc:
+        echo_error(f"The hub refused it: {exc.detail}")
+        raise typer.Exit(ExitCode.VALIDATION_ERROR) from exc
+    except Exception as exc:
+        _fail(exc, hub)
+        return
+    if not deleted:
+        echo_error(f"You hold no draft {name} {version} on {hub.url}.")
+        raise typer.Exit(ExitCode.INPUT_ERROR)
+    echo_success(f"Deleted your draft {name} {version} on {hub.url}.")
+
+
 @app.command("pull-profile")
 def pull_profile(
     name: Annotated[str, typer.Argument(help="Profile name")],

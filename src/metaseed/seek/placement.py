@@ -807,7 +807,6 @@ def place_sample(
     sample_title = str(data[title_attribute])
 
     input_field = input_field_of(entity) if bound else None
-    predecessor_id = parent_sample_id
     if input_field is not None:
         # The profile references its predecessor by title instead of nesting;
         # resolve it among what is already placed in the predecessor type.
@@ -818,23 +817,28 @@ def place_sample(
             ctx.sample_by_type_and_title.get((predecessor_type or "", str(n)))
             for n in names
         ]
-        predecessor_id = next((s for s in resolved if s), None)
-        if names and predecessor_id is None:
+        missing = [str(n) for n, s in zip(names, resolved, strict=True) if not s]
+        if missing:
             # Not pushed: the chain is broken here whatever else is sent, and
             # the installed templates require the input, so SEEK would refuse
             # it anyway -- with a message naming the attribute, not the cause.
             r.unlinked.append(
                 (
                     node.id,
-                    f"{node.entity_type} names {named!r} as its input, but no "
-                    "sample with that title was placed in the preceding level",
+                    f"{node.entity_type} names {', '.join(missing)!r} as its input, but "
+                    "no sample with that title was placed in the preceding level",
                 )
             )
             return None
-    if predecessor_id is not None:
+        predecessor_ids = [s for s in resolved if s]
+    else:
+        predecessor_ids = [parent_sample_id] if parent_sample_id is not None else []
+    if predecessor_ids:
         # The exporter reads this as the sample's input and fails without it.
-        data.setdefault(_input_key(ctx, sample_type_id), [predecessor_id])
-        ctx.successor_nodes.setdefault(predecessor_id, []).append(node.id)
+        # Every input is linked: a material may come from several samples.
+        data.setdefault(_input_key(ctx, sample_type_id), predecessor_ids)
+        for predecessor in predecessor_ids:
+            ctx.successor_nodes.setdefault(predecessor, []).append(node.id)
     if level != "source" or referenced_assay is not None:
         # The exporter rejects a Sample with no protocol. The attribute stays
         # optional on the Sample Type -- a Sample created by other means must not
