@@ -171,18 +171,48 @@ function fetchLookupSuggestions(input, entityType, query) {
             return response.json();
         })
         .then(function(data) {
-            showAutocomplete(input, data.results);
+            showAutocomplete(input, data.results, entityType, query);
         })
         .catch(function(error) {
             console.error('Lookup error:', error);
+            showAutocompleteMessage(input, 'Lookup failed; try again or press Tab to search');
         });
 }
 
+// What a lookup for entityType says when nothing matched query.
+function noEntityMatch(entityType, query) {
+    return 'No ' + (entityType || 'entry') + ' matches "' + query + '"';
+}
+
+// A dropdown holding one message instead of suggestions: nothing matched, or
+// the request failed. The lookup never closes without saying which.
+function showAutocompleteMessage(input, message) {
+    hideAutocomplete();
+    var dropdown = document.createElement('div');
+    dropdown.className = 'autocomplete-dropdown';
+    dropdown.setAttribute('data-testid', 'autocomplete-dropdown');
+    var note = document.createElement('div');
+    note.className = 'autocomplete-empty';
+    note.textContent = message;
+    dropdown.appendChild(note);
+    attachDropdown(input, dropdown);
+}
+
+// Place a dropdown below its input: inside a table cell's wrapper, else beside it.
+function attachDropdown(input, dropdown) {
+    var wrapper = input.closest('.cell-input-wrapper');
+    (wrapper || input.parentElement).appendChild(dropdown);
+    activeAutocomplete = dropdown;
+}
+
 // Show simple autocomplete dropdown (no inline search - use Tab for modal)
-function showAutocomplete(input, results, entityType) {
+function showAutocomplete(input, results, entityType, query) {
     hideAutocomplete();
 
-    if (!results || results.length === 0) return;
+    if (!results || results.length === 0) {
+        showAutocompleteMessage(input, noEntityMatch(entityType, query));
+        return;
+    }
 
     var dropdown = document.createElement('div');
     dropdown.className = 'autocomplete-dropdown';
@@ -204,15 +234,7 @@ function showAutocomplete(input, results, entityType) {
         dropdown.appendChild(item);
     });
 
-    // Position dropdown below input
-    var wrapper = input.closest('.cell-input-wrapper');
-    if (wrapper) {
-        wrapper.appendChild(dropdown);
-    } else {
-        input.parentElement.appendChild(dropdown);
-    }
-
-    activeAutocomplete = dropdown;
+    attachDropdown(input, dropdown);
 }
 
 // Hide autocomplete dropdown
@@ -390,6 +412,10 @@ function loadModalResults(entityType, query) {
         .then(function(data) {
             if (!data.results || data.results.length === 0) {
                 resultsDiv.innerHTML = '';
+                var empty = document.createElement('div');
+                empty.className = 'lookup-modal-empty';
+                empty.textContent = noEntityMatch(entityType, query);
+                resultsDiv.appendChild(empty);
                 return;
             }
 
@@ -698,8 +724,12 @@ function loadOntologyModalResults(query) {
             }
 
             if (!data.results || data.results.length === 0) {
+                var scope = ontologyModalOntologies
+                    ? ontologyModalOntologies.split(',').join(', ')
+                    : 'any ontology';
                 resultsDiv.innerHTML = notAsked +
-                    '<div class="lookup-modal-empty">No terms found</div>';
+                    '<div class="lookup-modal-empty">No terms found for "' +
+                    escapeHtml(query) + '" in ' + escapeHtml(scope) + '</div>';
                 return;
             }
 

@@ -7,6 +7,7 @@
 
 ### Fixed
 - **`ena()`, `pride()` and `metabolights()` work after their adapter is imported.** Importing `metaseed.ena`, `metaseed.pride` or `metaseed.metabolights` rebound the shortcut name to the package, so `from metaseed import ena; ena()` failed with "'module' object is not callable". These packages are now callable and return the profile facade.
+- **A lookup that finds nothing says so.** The inline suggestions and the search dialog of a field that references another entity showed nothing when nothing matched, and a failed request only reached the browser console. They now say `No Study matches "tomato"` or that the lookup failed. The ontology dialog names the scope it searched: `No terms found for "tomato" in NCBITaxon`.
 
 ## v0.72.0 (261123)
 
