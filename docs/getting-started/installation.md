@@ -5,6 +5,16 @@
 - Python 3.11 or higher
 - [uv](https://docs.astral.sh/uv/) package manager
 
+## Install from PyPI
+
+```bash
+uv tool install metaseed          # core: library, command line, MCP server
+uv tool install 'metaseed[ui]'    # core plus the web interface
+uv tool install 'metaseed[all]'   # core, web interface, and every adapter
+```
+
+In a virtual environment, use `pip install metaseed` or `pip install 'metaseed[ui]'`. The `ui` extra adds FastAPI, Jinja2 and python-multipart; the core does not import them. Run without the extra, `metaseed ui` exits with code 3 and prints the install command for `metaseed[ui]`.
+
 ## Install from Source
 
 ```bash

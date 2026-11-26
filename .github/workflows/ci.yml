@@ -50,7 +50,7 @@ jobs:
       - name: Install dependencies
         # dcat (rdflib) is needed so mypy sees real types for dcat/serialize.py;
         # the other extras are just httpx, already pulled in by dev.
-        run: uv sync --extra dev --extra dcat
+        run: uv sync --extra dev --extra ui --extra dcat
 
       - name: Run linting
         run: uv run ruff check .
@@ -100,7 +100,7 @@ jobs:
         run: uv python install 3.12
 
       - name: Install dependencies
-        run: uv sync --extra dev --extra dcat
+        run: uv sync --extra dev --extra ui --extra dcat
 
       - name: Run Selenium tests (headless Chrome)
         # --timeout caps any hung browser so a stuck test cannot stall the job.

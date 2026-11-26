@@ -152,6 +152,8 @@ Launch the web interface:
 metaseed ui --host 127.0.0.1 --port 8080
 ```
 
+The web interface is the `ui` extra. Without it, the command exits with code 3 and prints the install command: `uv tool install 'metaseed[ui]'`, or `pip install 'metaseed[ui]'` in a virtual environment.
+
 Options:
 
 | Option | Description |

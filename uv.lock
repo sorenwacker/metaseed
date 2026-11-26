@@ -9,8 +9,8 @@ resolution-markers = [
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'win32'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform != 'win32'",
     "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'win32'",
-    "python_full_version < '3.11.5' and sys_platform == 'win32'",
     "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform != 'win32'",
+    "python_full_version < '3.11.5' and sys_platform == 'win32'",
     "python_full_version < '3.11.5' and sys_platform != 'win32'",
 ]
 
@@ -1512,14 +1512,11 @@ wheels = [
 name = "metaseed"
 source = { editable = "." }
 dependencies = [
-    { name = "fastapi" },
     { name = "httpx" },
-    { name = "jinja2" },
     { name = "mcp" },
     { name = "openpyxl" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
-    { name = "python-multipart" },
     { name = "pyyaml" },
     { name = "regex" },
     { name = "typer" },
@@ -1528,7 +1525,10 @@ dependencies = [
 
 [package.optional-dependencies]
 all = [
+    { name = "fastapi" },
     { name = "httpx" },
+    { name = "jinja2" },
+    { name = "python-multipart" },
     { name = "rdflib" },
 ]
 brapi = [
@@ -1572,6 +1572,11 @@ seek = [
     { name = "httpx" },
     { name = "rdflib" },
 ]
+ui = [
+    { name = "fastapi" },
+    { name = "jinja2" },
+    { name = "python-multipart" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -1592,7 +1597,8 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "fastapi", specifier = ">=0.110,<1" },
+    { name = "fastapi", marker = "extra == 'all'", specifier = ">=0.110,<1" },
+    { name = "fastapi", marker = "extra == 'ui'", specifier = ">=0.110,<1" },
     { name = "httpx", specifier = ">=0.27,<1" },
     { name = "httpx", marker = "extra == 'all'", specifier = ">=0.27,<1" },
     { name = "httpx", marker = "extra == 'brapi'", specifier = ">=0.27,<1" },
@@ -1602,7 +1608,8 @@ requires-dist = [
     { name = "httpx", marker = "extra == 'metabolights'", specifier = ">=0.27,<1" },
     { name = "httpx", marker = "extra == 'pride'", specifier = ">=0.27,<1" },
     { name = "httpx", marker = "extra == 'seek'", specifier = ">=0.27,<1" },
-    { name = "jinja2", specifier = ">=3.1,<4" },
+    { name = "jinja2", marker = "extra == 'all'", specifier = ">=3.1,<4" },
+    { name = "jinja2", marker = "extra == 'ui'", specifier = ">=3.1,<4" },
     { name = "jsonschema", marker = "extra == 'dev'", specifier = ">=4.0,<5" },
     { name = "jupyter", marker = "extra == 'dev'", specifier = ">=1.0" },
     { name = "mcp", specifier = ">=1.28,<2" },
@@ -1618,7 +1625,8 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5.0" },
     { name = "pytest-xdist", marker = "extra == 'dev'", specifier = ">=3.5" },
-    { name = "python-multipart", specifier = ">=0.0.9,<1" },
+    { name = "python-multipart", marker = "extra == 'all'", specifier = ">=0.0.9,<1" },
+    { name = "python-multipart", marker = "extra == 'ui'", specifier = ">=0.0.9,<1" },
     { name = "pyyaml", specifier = ">=6.0,<7" },
     { name = "rdflib", marker = "extra == 'all'", specifier = ">=7.0,<8" },
     { name = "rdflib", marker = "extra == 'dcat'", specifier = ">=7.0,<8" },
@@ -1630,7 +1638,7 @@ requires-dist = [
     { name = "uvicorn", specifier = ">=0.29,<1" },
     { name = "xmlschema", marker = "extra == 'dev'", specifier = ">=3.0,<5" },
 ]
-provides-extras = ["all", "brapi", "dcat", "dev", "docs", "ena", "hub", "metabolights", "pride", "seek"]
+provides-extras = ["all", "brapi", "dcat", "dev", "docs", "ena", "hub", "metabolights", "pride", "seek", "ui"]
 
 [package.metadata.requires-dev]
 dev = [
