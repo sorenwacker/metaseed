@@ -28,11 +28,26 @@ jobs:
       - name: Build the wheel from this commit
         run: uv build
 
+      - name: Install the core wheel alone and check it runs without the web stack
+        run: |
+          WHEEL=$(ls dist/*.whl)
+          uv venv --python 3.12 core
+          uv pip install --python core "metaseed @ file://$PWD/$WHEEL"
+          core/bin/metaseed --help
+          core/bin/python -c "import importlib.util, sys; sys.exit(importlib.util.find_spec('fastapi') is not None)"
+          core/bin/python -c "from metaseed.agent.mcp.server import create_server; create_server()"
+          set +e
+          OUT=$(core/bin/metaseed ui 2>&1); CODE=$?
+          set -e
+          echo "$OUT"
+          test "$CODE" = 3
+          echo "$OUT" | grep -F "metaseed[ui]"
+
       - name: Install the wheel with a fresh dependency resolution
         run: |
           WHEEL=$(ls dist/*.whl)
           uv venv --python 3.12 smoke
-          uv pip install --python smoke "metaseed[dcat,ena,brapi,pride] @ file://$PWD/$WHEEL"
+          uv pip install --python smoke "metaseed[ui,dcat,ena,brapi,pride] @ file://$PWD/$WHEEL"
 
       - name: Smoke-test the entry point and every import users hit first
         run: |

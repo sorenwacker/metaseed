@@ -20,10 +20,10 @@ help:
 	@echo "  clean           - Remove build artifacts"
 
 install:
-	uv sync
+	uv sync --extra ui
 
 setup:
-	uv sync --extra dev --extra docs
+	uv sync --extra dev --extra docs --extra ui
 	uv run pre-commit install
 
 # The marker expression must match CI (.github/workflows/ci.yml), and

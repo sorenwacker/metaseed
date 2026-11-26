@@ -34,7 +34,13 @@ Metaseed requires Python 3.11 or later.
 uv tool install metaseed
 ```
 
-To include every integration, install `metaseed[all]`. To pick individual integrations, name their extras: for example, `metaseed[seek,dcat]` adds the FAIRDOM-SEEK and DCAT adapters. The **Plugins** page in the web interface lists which adapters are available.
+This installs the core: the Python library, the command line, and the MCP server. The web interface is an optional extra:
+
+```bash
+uv tool install 'metaseed[ui]'
+```
+
+Without it, `metaseed ui` exits and prints that install command. To include the web interface and every integration, install `metaseed[all]`. To pick individual integrations, name their extras: for example, `metaseed[seek,dcat]` adds the FAIRDOM-SEEK and DCAT adapters. The **Plugins** page in the web interface lists which adapters are available.
 
 For development:
 

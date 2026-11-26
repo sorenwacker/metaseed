@@ -4,6 +4,7 @@ The ``app`` object is re-exported from :mod:`metaseed.cli` and wired as the
 ``metaseed`` console script.
 """
 
+import importlib.util
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -396,7 +397,13 @@ def web_ui(
     ] = "127.0.0.1",
     port: Annotated[int, typer.Option("--port", "-p", help="Port to bind to")] = 8080,
 ) -> None:
-    """Launch the web interface."""
+    """Launch the web interface (the `ui` extra)."""
+    if importlib.util.find_spec("fastapi") is None:
+        echo_error(
+            "the web interface is not installed: uv tool install 'metaseed[ui]' "
+            "(or pip install 'metaseed[ui]' in a virtual environment)"
+        )
+        raise typer.Exit(ExitCode.CONFIG_ERROR)
     from metaseed.ui import run_ui
 
     typer.echo(f"Starting Metaseed web interface at http://{host}:{port}")

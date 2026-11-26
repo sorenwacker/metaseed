@@ -33,7 +33,13 @@ def test_the_smoke_is_one_reusable_workflow() -> None:
     steps = " ".join(
         step.get("run", "") for job in smoke["jobs"].values() for step in job["steps"]
     )
-    for probe in ("uv build", "metaseed --help", "metaseed ui", "create_server()"):
+    for probe in (
+        "uv build",
+        "metaseed --help",
+        "metaseed ui",
+        "create_server()",
+        "metaseed[ui]",  # the core install alone must name the ui extra
+    ):
         assert probe in steps, f"the smoke no longer runs {probe!r}"
 
 

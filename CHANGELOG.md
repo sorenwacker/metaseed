@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+- **The web interface is the `ui` extra.** `pip install metaseed` installs the library, the command line and the MCP server; FastAPI, Jinja2 and python-multipart arrive only with `metaseed[ui]` (or `metaseed[all]`). Without the extra, `metaseed ui` exits with code 3 and prints `uv tool install 'metaseed[ui]'`. To keep the web interface on upgrade, install `metaseed[ui]`.
+
 ## v0.72.0 (261123)
 
 ### Added
