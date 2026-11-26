@@ -105,6 +105,16 @@ The modal provides:
 - Chip display of selected terms
 - Detailed term information
 
+### When nothing is found
+
+Every lookup ends with something on screen: matches, a statement that nothing matched, or a statement that the search failed. It never closes or goes blank without saying why.
+
+- **No match:** the message repeats the query and names the scope searched, e.g. `No terms found for "tomato" in NCBITaxon` or `No Study matches "tomato"`. A field restricted to one ontology searches only that ontology, so a common name that ontology does not carry finds nothing; the scope in the message shows which field you are in. NCBITaxon, for example, finds *Solanum lycopersicum* but not "tomato".
+- **Source not asked:** when OLS or another source could not answer, the message says `Not searched` and names it, so an outage is not read as an empty result.
+- **Request failed:** the lookup says the search failed instead of closing.
+
+This applies to the ontology search, the inline suggestions of a field that references another entity, and the search dialog of such a field.
+
 ## API Endpoint
 
 The lookup uses the `/api/ontology/search` endpoint:

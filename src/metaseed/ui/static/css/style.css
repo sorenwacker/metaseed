@@ -1841,6 +1841,12 @@ body::before {
     font-size: 0.875rem;
 }
 
+.autocomplete-empty {
+    padding: var(--space-sm) var(--space-md);
+    color: var(--clr-ink-light);
+    font-style: italic;
+}
+
 .autocomplete-item {
     padding: var(--space-sm) var(--space-md);
     cursor: pointer;
