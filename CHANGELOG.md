@@ -1,6 +1,9 @@
 # Changelog
 
-## Unreleased
+## v0.73.0 (261126)
+
+### Added
+- **Tutorials for MetaseedClient and ProfileFacade** under *Tutorials* in the documentation. They replace the unlinked demo notebooks, and a test runs every code block of each page in order.
 
 ### Changed
 - **The web interface is the `ui` extra.** `pip install metaseed` installs the library, the command line and the MCP server; FastAPI, Jinja2 and python-multipart arrive only with `metaseed[ui]` (or `metaseed[all]`). Without the extra, `metaseed ui` exits with code 3 and prints `uv tool install 'metaseed[ui]'`. To keep the web interface on upgrade, install `metaseed[ui]`.
