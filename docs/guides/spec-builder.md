@@ -226,6 +226,8 @@ entities:
 5. For `list` or `entity` types, set **Items/Target** to the entity name
 6. Click **Save Field**
 
+The ERD canvas follows every field edit without a reload: adding, changing, moving or removing a field redraws that entity's box and its relationship lines in place, and the other entities keep their positions.
+
 ### Type-Specific Settings
 
 For certain field types, additional settings appear:
