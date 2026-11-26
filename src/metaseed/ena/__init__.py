@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING
 
 from metaseed.ena.export import to_ena_xml
 from metaseed.ena.mapper import build_dataset
+from metaseed.facade.profiles import make_package_callable
 
 if TYPE_CHECKING:
     from metaseed.api.client import MetaseedClient
@@ -76,3 +77,8 @@ def import_accession(
         len(analyses),
     )
     return build_dataset(runs, study=study, analyses=analyses, version=version)
+
+
+# ``metaseed.ena`` is also the ``ena()`` facade shortcut; importing this
+# package rebinds that name, so the package itself calls the shortcut.
+make_package_callable(__name__)

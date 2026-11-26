@@ -5,6 +5,9 @@
 ### Changed
 - **The web interface is the `ui` extra.** `pip install metaseed` installs the library, the command line and the MCP server; FastAPI, Jinja2 and python-multipart arrive only with `metaseed[ui]` (or `metaseed[all]`). Without the extra, `metaseed ui` exits with code 3 and prints `uv tool install 'metaseed[ui]'`. To keep the web interface on upgrade, install `metaseed[ui]`.
 
+### Fixed
+- **`ena()`, `pride()` and `metabolights()` work after their adapter is imported.** Importing `metaseed.ena`, `metaseed.pride` or `metaseed.metabolights` rebound the shortcut name to the package, so `from metaseed import ena; ena()` failed with "'module' object is not callable". These packages are now callable and return the profile facade.
+
 ## v0.72.0 (261123)
 
 ### Added

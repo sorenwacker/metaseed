@@ -8,7 +8,7 @@ Every code block on this page runs in order, in one session; a test executes the
 
 ## 1. Create a facade
 
-Functions such as `miappe()` and `isa()` return a facade for their profile. `ProfileFacade` takes any profile by name.
+The [profile shortcuts](../api/facade.md#profile-shortcuts) such as `miappe()`, `isa()` and `metabolights()` return a facade for their profile. `ProfileFacade` takes any profile by name.
 
 ```python
 from metaseed import ProfileFacade, miappe
@@ -111,7 +111,9 @@ print(isa_inv.title)
 MetaboLights describes NMR, LC-MS and GC-MS experiments with one Assay entity type, distinguished by its technology fields:
 
 ```python
-mtbls = ProfileFacade("metabolights")
+from metaseed import metabolights
+
+mtbls = metabolights()
 mtbls.Assay.help()
 
 assay = mtbls.Assay(

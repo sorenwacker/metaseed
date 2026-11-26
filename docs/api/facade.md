@@ -15,6 +15,12 @@ i = isa()
 m = ProfileFacade("miappe", "1.1")
 ```
 
+### Profile shortcuts
+
+`miappe()`, `isa()`, `ena()`, `pride()`, `metabolights()`, `dissco()`, `darwin_core()`, `health_ri_core()` and `rembi()` each take an optional `version` and return a `ProfileFacade` for their profile.
+
+`metaseed.ena`, `metaseed.pride` and `metaseed.metabolights` are also the names of the adapter packages. Python rebinds `metaseed.<name>` to the package when the package is imported, so these three packages are callable: calling the package is the same as calling the shortcut. `from metaseed import ena; ena()` returns the ENA facade whether or not `metaseed.ena` has been imported. A test fails when a shortcut shares its name with a subpackage that is not callable.
+
 ## ProfileFacade
 
 `ProfileFacade` is the main entry point for working with a metadata profile.
