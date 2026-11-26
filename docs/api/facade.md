@@ -1,6 +1,6 @@
 # Facade API
 
-The Facade API provides an interactive interface for exploring and creating metadata entities. It features tab completion, built-in help, and guided entity creation.
+The Facade API provides an interactive interface for exploring and creating metadata entities. It features tab completion, built-in help, and guided entity creation. For a step-by-step introduction, see the [ProfileFacade tutorial](../tutorials/facade.md).
 
 ## Quick Start
 

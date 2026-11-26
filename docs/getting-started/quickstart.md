@@ -15,7 +15,7 @@ metaseed convert data.yaml data.json
 
 ### MetaseedClient (Recommended)
 
-The `MetaseedClient` provides a clean programmatic API for working with metadata:
+The `MetaseedClient` is the programmatic API for scripts and applications. The [MetaseedClient tutorial](../tutorials/client.md) builds a complete dataset step by step.
 
 ```python
 from metaseed import MetaseedClient
@@ -58,7 +58,7 @@ See [MetaseedClient API](../api/client.md) for complete documentation.
 
 ### Interactive Facade (Jupyter/Notebooks)
 
-For interactive use with tab completion:
+For interactive use with tab completion. The [ProfileFacade tutorial](../tutorials/facade.md) covers field discovery, example generation and search.
 
 ```python
 from metaseed import miappe

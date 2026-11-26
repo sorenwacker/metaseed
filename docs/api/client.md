@@ -1,6 +1,6 @@
 # MetaseedClient API
 
-`MetaseedClient` is the recommended entry point for programmatic use of metaseed. It provides a clean, stable API for working with metadata schemas, creating entities, and validating data.
+`MetaseedClient` is the recommended entry point for programmatic use of metaseed. It provides a clean, stable API for working with metadata schemas, creating entities, and validating data. For a step-by-step introduction, see the [MetaseedClient tutorial](../tutorials/client.md).
 
 ## Quick Start
 
