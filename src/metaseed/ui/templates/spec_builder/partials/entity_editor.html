@@ -1,4 +1,11 @@
 <div class="panel-entity-editor">
+    {# The entity's current fields, read by spec-builder-core.js so the ERD
+       follows every edit without a reload. Same shape as base.html's map. #}
+    <script type="application/json" data-entity-fields="{{ entity_name }}">[
+        {%- for field in entity.fields %}
+        {"name": {{ field.name | tojson }}, "type": {{ field.type | tojson }}, "required": {{ 'true' if field.required else 'false' }}, "items": {{ (field.items or none) | tojson }}, "reference": {{ (field.reference or none) | tojson }}}{% if not loop.last %},{% endif %}
+        {%- endfor %}
+    ]</script>
     {% if error %}
     <div class="notification notification-error">{{ error }}</div>
     {% endif %}

@@ -405,6 +405,40 @@ const SpecBuilderGraph = (function() {
             const container = document.getElementById('editor-content');
             container.innerHTML = html;
             if (typeof htmx !== 'undefined') htmx.process(container);
+            syncEntityFromEditor();
+        }
+
+        /**
+         * Bring the entity map and its box up to date with the editor panel.
+         *
+         * The map is inlined once at page load, so a field edit that only
+         * swaps the editor left the diagram showing the old fields. The editor
+         * partial carries the entity's current fields as JSON
+         * (<script type="application/json" data-entity-fields="Name">); this
+         * redraws that one node and every edge in place, so the other
+         * entities keep their positions.
+         */
+        function syncEntityFromEditor() {
+            const block = document.querySelector('#editor-content script[data-entity-fields]');
+            if (!block || !network) return;
+            const name = block.dataset.entityFields;
+            const entities = getEntities();
+            if (!entities[name]) return;
+
+            const fields = JSON.parse(block.textContent);
+            entities[name].fields = fields;
+
+            const nodeConfig = buildNodeConfig(name, entities[name], name === config.rootEntity(), fields);
+            storeOriginalColors(name, nodeConfig);
+            if (hiddenEntities.has(name)) delete nodeConfig.color;
+            nodes.update(nodeConfig);
+
+            const { edgeData } = buildGraphData(Object.keys(entities));
+            edges.clear();
+            edges.add(edgeData.map(edge => ({
+                ...edge,
+                hidden: hiddenEntities.has(edge.from) || hiddenEntities.has(edge.to)
+            })));
         }
 
         function updateEntity(event, oldName) {
@@ -795,6 +829,15 @@ const SpecBuilderGraph = (function() {
             }
         });
 
+        // Every htmx swap into the editor (add, move, delete a field) may have
+        // changed the entity; the diagram follows it. On document, not body:
+        // the script can run before <body> exists, and htmx events bubble.
+        document.addEventListener('htmx:afterSwap', function(event) {
+            if (event.detail.target && event.detail.target.id === 'editor-content') {
+                syncEntityFromEditor();
+            }
+        });
+
         document.addEventListener('DOMContentLoaded', initERD);
         // Also try immediately in case DOMContentLoaded already fired
         if (document.readyState !== 'loading') {
@@ -820,6 +863,7 @@ const SpecBuilderGraph = (function() {
             updateEntity,
             updateField,
             rebuildGraph,
+            syncEntityFromEditor,
             showAddEntityModal,
             hideAddEntityModal,
             onEntityAdded,
