@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from metaseed.facade.profiles import make_package_callable
 from metaseed.metabolights.export import to_metabolights
 from metaseed.metabolights.mapper import build_dataset
 from metaseed.metabolights.validate import validate_cv
@@ -67,3 +68,8 @@ def import_accession(
     except (httpx.HTTPError, OSError):
         isatab_files = {}
     return build_dataset(document, version=version, isatab_files=isatab_files)
+
+
+# ``metaseed.metabolights`` is also the ``metabolights()`` facade shortcut; importing this
+# package rebinds that name, so the package itself calls the shortcut.
+make_package_callable(__name__)

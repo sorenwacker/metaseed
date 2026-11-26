@@ -6,6 +6,8 @@ instances for commonly used metadata profiles.
 
 from __future__ import annotations
 
+import sys
+import types
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -181,3 +183,26 @@ def health_ri_core(version: str | None = None) -> ProfileFacade:
     from metaseed.facade.core import ProfileFacade
 
     return ProfileFacade("health-ri-core", version)
+
+
+class _ShortcutPackage(types.ModuleType):
+    """A package that shares its name with a profile shortcut and calls it.
+
+    Importing ``metaseed.ena`` rebinds the attribute ``metaseed.ena`` from the
+    ``ena()`` shortcut to the package. Calling the package delegates to the
+    shortcut, so ``from metaseed import ena; ena()`` works in either state.
+    """
+
+    def __call__(self, version: str | None = None) -> ProfileFacade:
+        shortcut = globals()[self.__name__.rsplit(".", 1)[1]]
+        return shortcut(version)  # type: ignore[no-any-return]
+
+
+def make_package_callable(package_name: str) -> None:
+    """Make the package ``package_name`` callable as its profile shortcut.
+
+    Args:
+        package_name: Full name of a ``metaseed`` subpackage whose last
+            component is also the name of a shortcut in this module.
+    """
+    sys.modules[package_name].__class__ = _ShortcutPackage

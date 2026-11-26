@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from metaseed.facade.profiles import make_package_callable
 from metaseed.pride.export import to_pride_bundle, to_pride_sdrf, to_pride_submission
 from metaseed.pride.mapper import build_dataset
 from metaseed.pride.validate import validate_cv, validate_submission
@@ -60,3 +61,8 @@ def import_accession(
     project = client.project(accession)
     files = client.files(accession)
     return build_dataset(project, files, version=version)
+
+
+# ``metaseed.pride`` is also the ``pride()`` facade shortcut; importing this
+# package rebinds that name, so the package itself calls the shortcut.
+make_package_callable(__name__)
