@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.74.0 (261127)
 
 ### Fixed
 - **The spec builder's ERD follows field edits.** Adding, changing, moving or removing a field updated the editor panel but not the diagram until a reload. The entity's box and its relationship lines are now redrawn in place, and the other entities keep their positions.
