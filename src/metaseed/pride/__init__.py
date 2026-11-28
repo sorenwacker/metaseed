@@ -16,10 +16,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from metaseed.dcat.publication import origin_url
 from metaseed.facade.profiles import make_package_callable
 from metaseed.pride.export import to_pride_bundle, to_pride_sdrf, to_pride_submission
 from metaseed.pride.mapper import build_dataset
 from metaseed.pride.validate import validate_cv, validate_submission
+from metaseed.provenance import EBI_TERMS_OF_USE, imported_now
 
 if TYPE_CHECKING:
     from metaseed.api.client import MetaseedClient
@@ -60,7 +62,15 @@ def import_accession(
     client = client or PrideClient()
     project = client.project(accession)
     files = client.files(accession)
-    return build_dataset(project, files, version=version)
+    dataset = build_dataset(project, files, version=version)
+    dataset.origin = imported_now(
+        "PRIDE",
+        accession,
+        record_url=origin_url("pride", accession),
+        stated_license=project.get("license"),
+        repository_terms=EBI_TERMS_OF_USE,
+    )
+    return dataset
 
 
 # ``metaseed.pride`` is also the ``pride()`` facade shortcut; importing this

@@ -37,6 +37,7 @@ from metaseed.api.validation import ValidationMixin
 if TYPE_CHECKING:
     from metaseed.facade import EntityNode as InternalEntityNode
     from metaseed.facade import ProfileFacade
+    from metaseed.provenance import ImportOrigin
     from metaseed.specs.schema import ProfileSpec
 
 
@@ -81,6 +82,11 @@ class MetaseedClient(SerializationMixin, ValidationMixin):
     """
 
     _facade: ProfileFacade
+
+    #: The public record this dataset was imported from; set by importers, and
+    #: ``None`` for a dataset built any other way. A class default, so the
+    #: constructors that bypass ``__init__`` have it too.
+    origin: ImportOrigin | None = None
 
     def __init__(self, profile: str, version: str | None = None) -> None:
         """Initialize the client with a profile.

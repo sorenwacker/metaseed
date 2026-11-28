@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING, Any
 
 from metaseed.brapi.export import to_brapi
 from metaseed.brapi.mapper import build_dataset
+from metaseed.provenance import imported_now, normalize_license
 
 if TYPE_CHECKING:
     from metaseed.api.client import MetaseedClient
@@ -208,7 +209,7 @@ def import_brapi(
     if not scoped:
         germplasm = client.germplasm()
 
-    return build_dataset(
+    dataset = build_dataset(
         studies,
         observation_units,
         observations,
@@ -216,3 +217,26 @@ def import_brapi(
         variables=variables,
         version=version,
     )
+    # A BrAPI server can be run by anyone, so there are no repository terms to
+    # fall back on: the license is the studies' own, when they share one.
+    dataset.origin = imported_now(
+        "BrAPI",
+        address,
+        record_url=address,
+        stated_license=shared_license(studies),
+        repository_terms=None,
+    )
+    return dataset
+
+
+def shared_license(studies: list[dict[str, Any]]) -> str | None:
+    """The license every study names, or ``None`` when they do not all name the same one.
+
+    One dataset-level license cannot state terms the imported studies do not
+    share, so a study naming none, or a different one, leaves the import
+    without a license.
+    """
+    licenses = {normalize_license(study.get("license")) for study in studies}
+    if len(licenses) != 1:
+        return None
+    return licenses.pop()
