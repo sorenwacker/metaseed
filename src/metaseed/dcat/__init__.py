@@ -13,6 +13,7 @@ imported lazily, never from this module, so the model stays usable without the
 """
 
 from metaseed.dcat.model import (
+    ADMS_STATUS,
     DcatAgent,
     DcatCatalog,
     DcatChecksum,
@@ -29,6 +30,7 @@ from metaseed.dcat.publication import (
 from metaseed.dcat.resolver import build_dcat_catalog, build_dcat_dataset
 
 __all__ = [
+    "ADMS_STATUS",
     "DcatAgent",
     "DcatCatalog",
     "DcatChecksum",

@@ -17,9 +17,11 @@ import logging
 import re
 from typing import TYPE_CHECKING
 
+from metaseed.dcat.publication import origin_url
 from metaseed.ena.export import to_ena_xml
 from metaseed.ena.mapper import build_dataset
 from metaseed.facade.profiles import make_package_callable
+from metaseed.provenance import INSDC_POLICY, imported_now
 
 if TYPE_CHECKING:
     from metaseed.api.client import MetaseedClient
@@ -76,7 +78,16 @@ def import_accession(
         len(runs),
         len(analyses),
     )
-    return build_dataset(runs, study=study, analyses=analyses, version=version)
+    dataset = build_dataset(runs, study=study, analyses=analyses, version=version)
+    # ENA records name no license; the INSDC policy covers every one of them.
+    dataset.origin = imported_now(
+        "ENA",
+        accession,
+        record_url=origin_url("ena", accession),
+        stated_license=None,
+        repository_terms=INSDC_POLICY,
+    )
+    return dataset
 
 
 # ``metaseed.ena`` is also the ``ena()`` facade shortcut; importing this

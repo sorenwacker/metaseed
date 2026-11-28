@@ -118,6 +118,29 @@ Two failures are distinguished, because the fix differs:
 (`metaseed[pride]`) is not installed, which no host can resolve on the user's
 behalf.
 
+### Origin and license
+
+Every importer sets `client.origin` on the `MetaseedClient` it returns: an `ImportOrigin` (`metaseed.provenance`) naming the repository, the identifier that was imported, a link to the record, the license, and when the record was retrieved (UTC). A dataset built any other way has `origin` `None`. The origin is what lets a host say later that a dataset was derived from a public record, and under which terms; nothing in the entities themselves can say that, because a dataset authored for submission carries an accession too.
+
+The license is attached automatically, never chosen, because the data is already public under the source's terms. Each importer decides it in this order:
+
+1. The license the record names, where the repository records one per dataset.
+2. Otherwise the repository's own terms, declared once by the importer for every record it imports.
+3. Otherwise `None`.
+
+| Importer | Record field | Repository terms |
+|---|---|---|
+| ENA | none | `https://www.insdc.org/policy/` (the INSDC policy) |
+| PRIDE | `license` on the project | `https://www.ebi.ac.uk/about/terms-of-use/` |
+| MetaboLights | `datasetLicenseUrl`, else `datasetLicense`, on the study | `https://www.ebi.ac.uk/about/terms-of-use/` |
+| BrAPI | `license` on each study | none: a BrAPI server can be run by anyone |
+
+A BrAPI import can hold several studies. The license is attached only when every imported study names the same one; studies that disagree or name none leave it `None`, because one dataset-level license cannot state terms the records do not share.
+
+`metaseed.provenance.normalize_license` turns what a record says into the value stored: a name or URL of a known license becomes its SPDX identifier (`Creative Commons Public Domain (CC0)` and `https://creativecommons.org/licenses/by/4.0` become `CC0-1.0` and `CC-BY-4.0`), the EMBL-EBI terms of use become their URL under either of the names PRIDE and MetaboLights use, any other URL is kept as given, and any other text becomes `None`, because a license nobody can resolve states nothing. The values in the table were read from live records on 261128.
+
+The local web UI does not store the origin with a saved dataset; metaseed-hub stores it and shows it in the dataset overview.
+
 ### The hosts
 
 | Host | Entry point |

@@ -27,6 +27,8 @@ except (
         "DCAT serialization requires rdflib. Install with: pip install 'metaseed[dcat]'"
     ) from exc
 
+from metaseed.dcat.model import ADMS_STATUS
+
 if TYPE_CHECKING:
     from rdflib.term import Node
 
@@ -50,6 +52,7 @@ the term is valid DCAT 3. Same namespace IRI, so the emitted RDF is identical
 either way; this just stops a correct term from looking like a typo.
 """
 SPDX = Namespace("http://spdx.org/rdf/terms#")
+ADMS = Namespace("http://www.w3.org/ns/adms#")
 _BASE = Namespace("urn:metaseed:")
 
 # Minimal JSON-LD context — only the vocabularies the card actually uses, so the
@@ -61,6 +64,7 @@ _JSONLD_CONTEXT: dict[str, str] = {
     "vcard": str(VCARD),
     "spdx": str(SPDX),
     "prov": str(PROV),
+    "adms": str(ADMS),
 }
 
 
@@ -173,6 +177,12 @@ def _add_provenance(graph: Graph, node: Node, dataset: DcatDataset) -> None:
         graph.add((node, DCAT3.version, Literal(dataset.version)))
     if dataset.is_version_of:
         graph.add((node, DCTERMS.isVersionOf, _uri_or_literal(dataset.is_version_of)))
+    if dataset.previous_version:
+        graph.add(
+            (node, DCAT3.previousVersion, _uri_or_literal(dataset.previous_version))
+        )
+    if dataset.status:
+        graph.add((node, ADMS.status, URIRef(ADMS_STATUS[dataset.status])))
     for origin in dataset.source:
         # Both predicates, one object: dct:source is the DCAT-AP reader's term
         # and prov:wasDerivedFrom the provenance reader's, for the same fact.
@@ -181,6 +191,25 @@ def _add_provenance(graph: Graph, node: Node, dataset: DcatDataset) -> None:
         graph.add((node, PROV.wasDerivedFrom, origin_node))
     for standard in dataset.conforms_to:
         graph.add((node, DCTERMS.conformsTo, _uri_or_literal(standard)))
+
+
+def _add_landing_page(graph: Graph, node: Node, url: str) -> None:
+    """Link the landing page, typed as DCAT-AP requires."""
+    page = _safe_uriref(url)
+    graph.add((node, DCAT.landingPage, page))
+    # DCAT-AP requires the page to be a foaf:Document; without the type a
+    # published record fails its shapes. A literal cannot carry a type.
+    if isinstance(page, URIRef):
+        graph.add((page, RDF.type, FOAF.Document))
+
+
+def _add_agents(graph: Graph, node: Node, dataset: DcatDataset) -> None:
+    """Emit the dataset's publisher and creators."""
+    if _identifies(dataset.publisher):
+        graph.add((node, DCTERMS.publisher, _add_agent(graph, dataset.publisher)))
+    for creator in dataset.creators:
+        if _identifies(creator):
+            graph.add((node, DCTERMS.creator, _add_agent(graph, creator)))
 
 
 def _add_dataset(graph: Graph, dataset: DcatDataset) -> Node:
@@ -201,7 +230,7 @@ def _add_dataset(graph: Graph, dataset: DcatDataset) -> Node:
     if dataset.access_rights:
         graph.add((node, DCTERMS.accessRights, Literal(dataset.access_rights)))
     if dataset.landing_page:
-        graph.add((node, DCAT.landingPage, _safe_uriref(dataset.landing_page)))
+        _add_landing_page(graph, node, dataset.landing_page)
     for keyword in dataset.keywords:
         graph.add((node, DCAT.keyword, Literal(keyword)))
     for theme in dataset.themes:
@@ -209,8 +238,7 @@ def _add_dataset(graph: Graph, dataset: DcatDataset) -> Node:
     for relation in dataset.related:
         graph.add((node, DCTERMS.relation, _uri_or_literal(relation)))
     _add_provenance(graph, node, dataset)
-    if _identifies(dataset.publisher):
-        graph.add((node, DCTERMS.publisher, _add_agent(graph, dataset.publisher)))
+    _add_agents(graph, node, dataset)
     if dataset.contact_point:
         graph.add((node, DCAT.contactPoint, _add_contact(graph, dataset.contact_point)))
     for dist in dataset.distributions:

@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- **Imports record where they came from and under which terms.** The ENA, PRIDE, MetaboLights and BrAPI importers set `client.origin`, an `ImportOrigin` naming the repository, the identifier, a link to the record, the license and when it was retrieved. The license is the one the record names, else the repository's terms (the INSDC policy for ENA, the EMBL-EBI terms of use for PRIDE and MetaboLights), else none; a BrAPI import carries a license only when every imported study names the same one. `metaseed.provenance.normalize_license` turns what a record states into an SPDX identifier or terms URL.
+- **DCAT records of released datasets.** `PublicationContext` and `DcatDataset` take `creators` (`dct:creator`), `previous_version` (`dcat:previousVersion`) and `status` (`adms:status`, one of `ADMS_STATUS`), so a host that publishes versions of a dataset can describe each release and a withdrawn one.
+
+### Fixed
+- **A published DCAT record conforms to DCAT-AP.** The landing page was not typed `foaf:Document`, which the DCAT-AP shapes require, so every record built with a landing page violated them.
+
 ## v0.74.0 (261127)
 
 ### Fixed

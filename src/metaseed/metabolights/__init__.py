@@ -16,10 +16,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from metaseed.dcat.publication import origin_url
 from metaseed.facade.profiles import make_package_callable
 from metaseed.metabolights.export import to_metabolights
 from metaseed.metabolights.mapper import build_dataset
 from metaseed.metabolights.validate import validate_cv
+from metaseed.provenance import EBI_TERMS_OF_USE, imported_now
 
 if TYPE_CHECKING:
     from metaseed.api.client import MetaseedClient
@@ -67,7 +69,16 @@ def import_accession(
         isatab_files = client.study_files(accession)
     except (httpx.HTTPError, OSError):
         isatab_files = {}
-    return build_dataset(document, version=version, isatab_files=isatab_files)
+    dataset = build_dataset(document, version=version, isatab_files=isatab_files)
+    study = document.get("mtblsStudy") or {}
+    dataset.origin = imported_now(
+        "MetaboLights",
+        accession,
+        record_url=origin_url("metabolights", accession),
+        stated_license=study.get("datasetLicenseUrl") or study.get("datasetLicense"),
+        repository_terms=EBI_TERMS_OF_USE,
+    )
+    return dataset
 
 
 # ``metaseed.metabolights`` is also the ``metabolights()`` facade shortcut; importing this

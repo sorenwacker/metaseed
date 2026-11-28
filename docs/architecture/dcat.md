@@ -158,6 +158,8 @@ published = build_published_dataset(
 )
 ```
 
+A publisher that releases versions of a dataset, as metaseed-hub does, also supplies `creators` (`dct:creator`, a list of `DcatAgent`), `previous_version` (`dcat:previousVersion`, the landing page of the release before) and `status` (`adms:status`). `status` is one of the ADMS status values in `ADMS_STATUS` (`completed`, `deprecated`, `underDevelopment`, `withdrawn`); a withdrawn release keeps its record with `status` `withdrawn` rather than disappearing.
+
 `landing_page` is the only required field: without somewhere to fetch the
 dataset nothing else is assessable, and it stands in as the identifier until a
 DOI exists. The publisher's identifier replaces any derived from content, the
@@ -194,4 +196,4 @@ landing page) is the remaining export step (#30).
   depend on where a dataset is hosted, so they come from the serving layer
   (e.g. metaseed-hub), not the core exporter. `mediaType`, `format`,
   `byteSize`, and `dcat:Checksum` are computed from the emitted file.
-- SHACL/DCAT-AP validation is a separate step (#29).
+- SHACL/DCAT-AP validation is not run at export time. `tests/test_dcat/test_shacl_conformance.py` checks exported and published records against the vendored DCAT-AP shapes (#29).
