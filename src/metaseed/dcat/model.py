@@ -11,6 +11,14 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict
 
+#: The ADMS status vocabulary, the values ``adms:status`` takes, by key.
+ADMS_STATUS: dict[str, str] = {
+    "completed": "http://purl.org/adms/status/Completed",
+    "deprecated": "http://purl.org/adms/status/Deprecated",
+    "underDevelopment": "http://purl.org/adms/status/UnderDevelopment",
+    "withdrawn": "http://purl.org/adms/status/Withdrawn",
+}
+
 
 class DcatAgent(BaseModel):
     """A `foaf:Agent` (e.g. a `dct:publisher`)."""
@@ -78,6 +86,12 @@ class DcatDataset(BaseModel):
     """`dcat:version` — the label of the snapshot this card describes."""
     is_version_of: str | None = None
     """`dct:isVersionOf` — set only when this dataset is a copy of another record."""
+    previous_version: str | None = None
+    """`dcat:previousVersion` — the landing page of the release before this one."""
+    creators: list[DcatAgent] = []
+    """`dct:creator` — the people credited for this dataset, in citation order."""
+    status: str | None = None
+    """`adms:status` — a key of :data:`ADMS_STATUS`."""
     source: list[str] = []
     """Records this dataset was derived from.
 

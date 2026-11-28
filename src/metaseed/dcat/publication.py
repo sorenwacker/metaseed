@@ -18,9 +18,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
-from metaseed.dcat.model import DcatAgent, DcatDataset, DcatDistribution
+from metaseed.dcat.model import ADMS_STATUS, DcatAgent, DcatDataset, DcatDistribution
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -55,6 +55,12 @@ class PublicationContext(BaseModel):
     version: str | None = None
     is_version_of: str | None = None
     """Set only when this publication is a copy of another record."""
+    previous_version: str | None = None
+    """The landing page of the release before this one."""
+    creators: list[DcatAgent] = []
+    """The people credited for the publication, in citation order."""
+    status: str | None = None
+    """A key of :data:`~metaseed.dcat.model.ADMS_STATUS`, e.g. ``withdrawn``."""
     publisher: DcatAgent | None = None
     distributions: list[DcatDistribution] = []
     """Where the published dataset can actually be fetched."""
@@ -63,6 +69,15 @@ class PublicationContext(BaseModel):
     conforms_to: list[str] = []
     issued: str | None = None
     modified: str | None = None
+
+    @field_validator("status")
+    @classmethod
+    def _known_status(cls, value: str | None) -> str | None:
+        """Refuse a status outside the ADMS vocabulary, which no reader could match."""
+        if value is not None and value not in ADMS_STATUS:
+            known = ", ".join(ADMS_STATUS)
+            raise ValueError(f"status must be one of {known}, got {value!r}")
+        return value
 
 
 def spdx_license_uri(value: str | None) -> str | None:
@@ -139,6 +154,12 @@ def build_published_dataset(
         published.version = context.version
     if context.is_version_of is not None:
         published.is_version_of = context.is_version_of
+    if context.previous_version is not None:
+        published.previous_version = context.previous_version
+    if context.creators:
+        published.creators = list(context.creators)
+    if context.status is not None:
+        published.status = context.status
     if context.issued is not None:
         published.issued = context.issued
     if context.modified is not None:
